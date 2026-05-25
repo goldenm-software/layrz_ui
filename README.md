@@ -33,7 +33,6 @@ Flutter's Material and Cupertino layers are opinionated and heavyweight. `layrz_
 
 - **Parity with `layrz_theme`** — full widget-by-widget port of every component in the latest release
 - **New layout system** — a redesigned responsive layout engine built from scratch on `widgets.dart`
-- **Riverpod deep integration** — first-class state management wiring throughout the design system
 - **go_router only** — Navigator 1.0 support will be dropped; `go_router` will be the sole routing solution
 
 ---
