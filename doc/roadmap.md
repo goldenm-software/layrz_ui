@@ -145,7 +145,7 @@ See [**milestone-1.md**](milestone-1.md) for the detailed 12-item plan, executio
 **Goal**: Widgets for displaying and exploring structured data.
 
 **Deliverables**:
-- `LayrzTable2<T>` (data table with columns, sorting, search, multiselect, row actions)
+- `LayrzTable<T>` (data table with columns, sorting, search, multiselect, row actions)
 - `LayrzCalendar` (month view with event rendering)
 - Grid delegate helpers (adaptive layouts)
 - Table support types: column definitions, controller, row actions, selection state

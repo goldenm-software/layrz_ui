@@ -226,7 +226,7 @@ Decision D1 settled on the `Layrz*` prefix for consistency with app-level types 
 **Settled on `Layrz*` prefix for ALL layrz_ui identifiers.** No source code rename is required — the code is already correct. D1 is reaffirmed.
 
 The convention is:
-- Components: `LayrzButton`, `LayrzTextInput`, `LayrzTable2`, etc.
+- Components: `LayrzButton`, `LayrzTextInput`, `LayrzTable`, etc.
 - App-level classes: `LayrzApp`, `LayrzTheme`, `LayrzThemeData`, `LayrzTextTheme`, `LayrzThemeMode`
 - Theme system: `LayrzColorExtensions`, `LayrzContextExtensions`, `LayrzThemeExtension<T>`, `LayrzPreviewTheme`
 - Utilities: `LayrzPlatform`, `LayrzFontHandler`, `LayrzTokens`, and all token subclasses
