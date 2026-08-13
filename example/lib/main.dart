@@ -1,85 +1,49 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-void main() {
-  runApp(const ExampleApp());
+import 'src/showroom.dart';
+
+/// Preload the Layrz brand font and run the showroom application.
+///
+/// Attempts to preload the default Layrz font (Open Sans from Google Fonts)
+/// to demonstrate the fonts module end-to-end. If preloading fails (e.g., offline),
+/// the app degrades gracefully and opens with fallback system fonts.
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Attempt to preload the Layrz brand font
+  const handler = LayrzGoogleFontsHandler();
+  try {
+    await handler.preload(kLayrzFont);
+  } catch (e) {
+    // Gracefully degrade if preload fails — allow the showroom to open offline
+    debugPrint('Font preload failed (likely offline): $e');
+    debugPrint('Opening showroom with fallback system fonts');
+  }
+
+  runApp(const ShowroomApp(fontHandler: handler));
 }
 
-class ExampleApp extends StatelessWidget {
-  const ExampleApp({super.key});
+/// Root widget of the showroom application.
+///
+/// Wraps the [Showroom] page in a [LayrzApp] with [LayrzThemeData.light],
+/// passing the font handler to ensure typography uses the preloaded fonts.
+class ShowroomApp extends StatelessWidget {
+  /// Creates a new [ShowroomApp].
+  ///
+  /// The [fontHandler] is passed to [LayrzThemeData.light] to provide
+  /// font family resolution for all typography tokens.
+  const ShowroomApp({required this.fontHandler, super.key});
+
+  /// The font handler used to resolve font families in typography tokens.
+  final LayrzGoogleFontsHandler fontHandler;
 
   @override
   Widget build(BuildContext context) {
     return LayrzApp(
       title: kAppTitle,
-      theme: LayrzThemeData.light(),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int _counter = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = context.theme;
-
-    return ColoredBox(
-      color: theme.backgroundColor,
-      child: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'layrz_ui Example',
-                style: theme.textTheme.headlineSmall.copyWith(
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text('Button taps: $_counter', style: theme.textTheme.bodyLarge),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () => setState(() => _counter++),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.primaryColor,
-                    borderRadius: BorderRadius.circular(theme.borderRadius),
-                  ),
-                  child: Text(
-                    'Tap me',
-                    style: theme.textTheme.labelLarge.copyWith(
-                      color: const Color(0xFFFFFFFF),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'layrz_ui: Light mode only',
-                style: theme.textTheme.bodySmall.copyWith(
-                  color: theme.hintColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      theme: LayrzThemeData.light(fontHandler: fontHandler),
+      home: const Showroom(),
     );
   }
 }
