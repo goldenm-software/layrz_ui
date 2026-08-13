@@ -124,6 +124,7 @@ class _HoverAnimationDemo extends StatefulWidget {
 }
 
 class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
+  /// Whether the mouse is hovering over the demo tile.
   bool _isHovered = false;
 
   @override
@@ -139,6 +140,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
           child: AnimatedContainer(
+            key: const Key('hover-demo-container'),
             duration: tokens.motion.dHover,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
@@ -146,7 +148,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
               borderRadius: BorderRadius.circular(tokens.radius.r8),
               border: Border.all(
                 color: _isHovered ? tokens.colors.primary : tokens.colors.divider,
-                width: _isHovered ? tokens.border.stroke2 : tokens.border.stroke1,
+                width: tokens.border.stroke1,
               ),
             ),
             padding: EdgeInsets.all(tokens.spacing.sp16),
@@ -178,6 +180,7 @@ class _PressAnimationDemo extends StatefulWidget {
 }
 
 class _PressAnimationDemoState extends State<_PressAnimationDemo> {
+  /// Whether the demo tile is currently pressed.
   bool _isPressed = false;
 
   @override
@@ -194,6 +197,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
           onTapUp: (_) => setState(() => _isPressed = false),
           onTapCancel: () => setState(() => _isPressed = false),
           child: AnimatedContainer(
+            key: const Key('press-demo-container'),
             duration: tokens.motion.dPress,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
@@ -201,7 +205,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
               borderRadius: BorderRadius.circular(tokens.radius.r8),
               border: Border.all(
                 color: _isPressed ? tokens.colors.primary : tokens.colors.divider,
-                width: _isPressed ? tokens.border.stroke2 : tokens.border.stroke1,
+                width: tokens.border.stroke1,
               ),
             ),
             padding: EdgeInsets.all(tokens.spacing.sp16),

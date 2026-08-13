@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -105,6 +106,135 @@ void main() {
 
       // Clamp case: outer=8, spacer=12, result should be clamped to 0
       expect(clampInnerRadius, closeTo(0.0, 0.1));
+    });
+
+    testWidgets('hover animation does not change container size', (WidgetTester tester) async {
+      // Test that hovering over the demo container does not change its size.
+      // The border width must remain constant to prevent geometry shifts.
+      await tester.pumpWidget(LayrzApp(title: kAppTitle, theme: LayrzThemeData.light(), home: const Showroom()));
+
+      final hoverDemoFinder = find.byKey(const Key('hover-demo-container'));
+      expect(hoverDemoFinder, findsOneWidget);
+
+      // Scroll the motion section into view
+      await tester.ensureVisible(hoverDemoFinder);
+      await tester.pumpAndSettle();
+
+      // Measure size before hover
+      final sizeBeforeHover = tester.getSize(hoverDemoFinder);
+      expect(sizeBeforeHover.height, greaterThan(0), reason: 'Container has zero height before hover');
+
+      // Get initial color to verify hover state later
+      final initialWidget = tester.widget<AnimatedContainer>(hoverDemoFinder);
+      final initialDecoration = initialWidget.decoration as BoxDecoration;
+      final initialColor = initialDecoration.color;
+
+      // Create a mouse gesture and move it to trigger hover
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(gesture.removePointer);
+
+      final containerCenter = tester.getCenter(hoverDemoFinder);
+      await gesture.addPointer(location: containerCenter);
+      await tester.pump();
+
+      // Move mouse over the container to trigger hover state
+      await gesture.moveTo(containerCenter);
+      await tester.pumpAndSettle(); // Wait for AnimatedContainer animation to complete
+
+      // Verify hover state actually changed by checking the color
+      final hoveredWidget = tester.widget<AnimatedContainer>(hoverDemoFinder);
+      final hoveredDecoration = hoveredWidget.decoration as BoxDecoration;
+      final hoveredColor = hoveredDecoration.color;
+      expect(
+        hoveredColor,
+        isNot(equals(initialColor)),
+        reason: 'Hover state did not change (color unchanged). Hover may not have been triggered.',
+      );
+
+      // Measure size after hover
+      final sizeAfterHover = tester.getSize(hoverDemoFinder);
+
+      // Assert sizes are identical (height should not grow from border width change)
+      expect(
+        sizeAfterHover.height,
+        equals(sizeBeforeHover.height),
+        reason:
+            'Height changed from ${sizeBeforeHover.height} to ${sizeAfterHover.height} on hover. '
+            'Border width must not change during interaction.',
+      );
+      expect(
+        sizeAfterHover.width,
+        equals(sizeBeforeHover.width),
+        reason: 'Width changed on hover. Geometry must not shift during interaction.',
+      );
+    });
+
+    testWidgets('press animation does not change container size', (WidgetTester tester) async {
+      // Test that pressing the demo container does not change its size.
+      // The border width must remain constant to prevent geometry shifts.
+      await tester.pumpWidget(LayrzApp(title: kAppTitle, theme: LayrzThemeData.light(), home: const Showroom()));
+
+      final pressDemoFinder = find.byKey(const Key('press-demo-container'));
+      expect(pressDemoFinder, findsOneWidget);
+
+      // Scroll the motion section into view
+      await tester.ensureVisible(pressDemoFinder);
+      await tester.pumpAndSettle();
+
+      // Measure size before press
+      final sizeBeforePress = tester.getSize(pressDemoFinder);
+      expect(sizeBeforePress.height, greaterThan(0), reason: 'Container has zero height before press');
+
+      // Get initial color to verify press state later
+      final initialWidget = tester.widget<AnimatedContainer>(pressDemoFinder);
+      final initialDecoration = initialWidget.decoration as BoxDecoration;
+      final initialColor = initialDecoration.color;
+
+      // Start a tap gesture (hold down)
+      final gesture = await tester.startGesture(tester.getCenter(pressDemoFinder));
+      addTearDown(gesture.removePointer);
+
+      // Wait for animation during press
+      await tester.pumpAndSettle();
+
+      // Verify press state actually changed by checking the color
+      final pressedWidget = tester.widget<AnimatedContainer>(pressDemoFinder);
+      final pressedDecoration = pressedWidget.decoration as BoxDecoration;
+      final pressedColor = pressedDecoration.color;
+      expect(
+        pressedColor,
+        isNot(equals(initialColor)),
+        reason: 'Press state did not change (color unchanged). Press may not have been triggered.',
+      );
+
+      // Measure size during press
+      final sizeDuringPress = tester.getSize(pressDemoFinder);
+
+      // Assert sizes are identical (height should not grow from border width change)
+      expect(
+        sizeDuringPress.height,
+        equals(sizeBeforePress.height),
+        reason:
+            'Height changed from ${sizeBeforePress.height} to ${sizeDuringPress.height} on press. '
+            'Border width must not change during interaction.',
+      );
+      expect(
+        sizeDuringPress.width,
+        equals(sizeBeforePress.width),
+        reason: 'Width changed during press. Geometry must not shift during interaction.',
+      );
+
+      // Release the gesture
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // Verify size returns to original after release
+      final sizeAfterRelease = tester.getSize(pressDemoFinder);
+      expect(
+        sizeAfterRelease.height,
+        equals(sizeBeforePress.height),
+        reason: 'Height did not return to original after release.',
+      );
     });
   });
 }
