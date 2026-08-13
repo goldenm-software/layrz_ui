@@ -58,7 +58,7 @@ lib/
   constants/
     constants.dart               # Barrel
     src/
-      colors.dart                # kPrimaryColor, kAccentColor, background colors
+      colors.dart                # kPrimaryColor, kLightBackgroundColor
       grid.dart                  # kExtraSmallGrid … kLargeGrid breakpoints
       durations.dart             # kHoverDuration, kPageTransitionDuration
       app.dart                   # kAppTitle and other app-level defaults

@@ -24,7 +24,6 @@ Colors are organized into three categories:
 
 **1. Semantic Brand Colors**
 - `primary` — Primary brand color used for interactive elements, focus states, and prominent calls-to-action
-- `accent` — Secondary brand color for emphasis or special states (e.g., warnings, highlights)
 
 **2. Surface and Background**
 - `surface` — Card, dialog, and elevated container backgrounds
@@ -57,7 +56,6 @@ Colors are accessed via `LayrzTheme.of(context).colors`:
 class LayrzColorTokens {
   // Brand colors
   final Color primary;
-  final Color accent;
   
   // Surface colors (elevation levels)
   final Color background;
@@ -533,12 +531,11 @@ final tonal7 = Color(scheme.primary.tone(70));  // Lightest
 
 ### lib/constants/src/colors.dart
 
-Currently holds three constants:
+Currently holds two constants:
 - `kPrimaryColor` — Layrz brand blue (#001E60)
-- `kAccentColor` — Layrz brand orange (#FF8200)
 - `kLightBackgroundColor` — Off-white (#FCFCFC)
 
-**After Milestone 1:** These remain as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` reads from these constants to initialize color tokens. Dark mode has been removed from scope entirely (see decision D7).
+**After Milestone 1:** These remain as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` reads from these constants to initialize color tokens. The accent color was removed entirely (see decision D14). Dark mode has been removed from scope entirely (see decision D7).
 
 ### lib/constants/src/durations.dart
 
@@ -562,7 +559,7 @@ Currently provides:
 ### layrz_theme Tokenizer Structure (Reference)
 
 layrz_theme provides a `LayrzTokenizer` class accessed via `LayrzTokenizer.of(context)`, backed by five extension getters:
-- `ColorTokenizer` — semantic color getters (primary, accent, success, warning, danger, info, error)
+- `ColorTokenizer` — semantic color getters (primary, success, warning, danger, info, error)
 - `ShadowTokenizer` — elevation → shadow mapping
 - `RadiusTokenizer` — border radius constants
 - `SpacerTokenizer` — spacing constants
@@ -593,7 +590,7 @@ Token names follow these rules:
 
 - **Category prefix** — Color tokens: `colors.primary`, spacing: `spacing.sp16`, radius: `radius.r12`
 - **Semantic names** — Never use color values in names (not `colors.blue`, use `colors.primary`)
-- **Consistent scaling** — Spacing multiples of 4, radius multiples of 2, durations in explicit units (ms)
+- **Consistent scaling** — Spacing from 4 to 48 pixels (not all multiples), radius from 8 to 24 pixels, durations in explicit units (ms)
 - **Abbreviated suffixes** — `sp` for spacing, `r` for radius, `d` for duration
 - **fg1–fg4** — Foreground levels for text, ordered by contrast (1 = highest)
 - **surface / surface2 / surface3** — Elevation levels for nested containers
@@ -602,7 +599,7 @@ Token names follow these rules:
 
 For Milestone 1, the token system must meet these criteria:
 
-- All color tokens defined for light theme, including `primary`, `accent`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
+- All color tokens defined for light theme, including `primary`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
 - Typography tokens (`LayrzTextTheme`) cover all 15 text styles: display (3 sizes), headline (3), title (3), body (3), label (3)
 - Spacing tokens are defined as `double` and include: `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, plus convenience accessors (`spacingSize`, `sizedBox`, `margin`, `reducedMargin`, `padding`)
 - Radius tokens include: `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `full` (pill shape), plus `borderRadius` getter and `innerRadius()` method

@@ -541,7 +541,7 @@ Many components (LayrzAlert, LayrzChip, LayrzSelect, LayrzButton, LayrzCalendar,
 
 **Utilities & Extensions:**
 - All extensions (NumToSizedBox, DateTimeExtension, HumanizeDuration, ORM helpers, page transitions, grid delegates, file utilities, state utils, i18n, styling) — port as-is
-- All helper functions (useBlack, validateColor, getPrimaryColor, getAccentColor, getThemeColor, generateSwatch, generateContainerElevation, openInfoDialog, parseFileToBase64, parseFileToByteArray) — port as-is
+- All helper functions (useBlack, validateColor, getPrimaryColor, getThemeColor, generateSwatch, generateContainerElevation, openInfoDialog, parseFileToBase64, parseFileToByteArray) — port as-is (note: `getAccentColor` dropped per D14)
 - Platform-conditional file operations (save_file, pick_file) — port with separate native/web implementations
 
 **Branded Assets:**
@@ -664,6 +664,52 @@ A second verified SDK finding for M1 item 8: `package:flutter/widget_previews.da
 ### Review Trigger
 
 When Material is removed from the Flutter SDK (planned for late 2026), re-verify that these state types remain exported from `package:flutter/widgets.dart` without Material dependency.
+
+---
+
+## D14: Accent Colour Removed From the Design System
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / Feature Scope
+
+### Context
+
+layrz_ui inherited a two-colour brand model from layrz_theme — `kPrimaryColor` (#001E60 navy) and `kAccentColor` (#FF8200 orange) — surfaced as a semantic `accent` token alongside `primary`. In practice a second undifferentiated brand colour competed with the semantic status tokens (`info`, `success`, `warning`, `danger`) for the same design jobs. An "accent" colour has no defined semantic meaning, so every component author would have had to decide independently when an accent state applied versus a warning or primary state. This invites inconsistent use across the system. The decision point arose before any component consumed the accent token, making this the cheapest moment to remove it.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep `accent` as a semantic token | Provides a second brand colour for emphasis; familiar from layrz_theme | Undefined semantics invite inconsistent use; semantic status colours already cover emphasis with actual meaning; removes design clarity |
+| (b) Keep `kAccentColor` constant, drop the token | Leaves the brand colour available to apps that need it | Invites someone to wire it back into components; creates a second colour path inconsistent with token-driven design |
+| (c) **Chosen** — Remove entirely, constant included | Forces clarity: apps needing the brand orange define it themselves; tokens stay semantically clear; no unused public constant | Breaking change with no alias; apps using the accent colour must migrate manually |
+
+### Decision
+
+**Chose (c): Remove `accent` entirely — both the `LayrzColorTokens.accent` field and the `kAccentColor` constant.**
+
+### Rationale
+
+- An undefined token is worse than a missing one, because it invites inconsistent use that is expensive to unwind later once components depend on it.
+- The semantic status colours (`danger`, `success`, `warning`, `info`) already provide a complete vocabulary for emphasis with actual meaning. A second undifferentiated colour adds no semantic value.
+- Removing an unused public constant prevents it from being wired back in later. Leaving `kAccentColor` would create a "second brand colour" path that contradicts the token system's design principle (all design values come from tokens, never hardcoded).
+- Milestone 1 is foundation-only (D4), so no component depends on the accent token. Removing it now costs nothing; removing it later (after 5+ components depend on it) would be expensive.
+
+### Consequences
+
+- **Breaking change.** This is consistent with D1's clean-break stance on naming and is expected for a ground-up rewrite.
+- `LayrzColorTokens.light()` loses its `accent` parameter.
+- `LayrzTokens.light()` loses its `accent` parameter.
+- `LayrzThemeData.light()` loses its `accent` parameter.
+- `LayrzTokenizer.accent` getter is removed.
+- `LayrzColorTokens` now has 17 fields (primary, background, surface, surface2, surface3, fg1, fg2, fg3, fg4, danger, success, warning, info, contextual, divider, overlay, tonalOpacity) instead of 18.
+- Apps migrating from layrz_theme that used the brand orange must define `kAccentColor` in their own code if needed.
+- The showroom's brand category now displays only the primary colour.
+
+### Review Trigger
+
+If M2+ component design repeatedly reaches for a second brand colour, revisit this decision. If reintroduced, it must come with a defined semantic role (not "accent" which is meaningless) and include updated token documentation and component guidelines.
 
 ---
 
