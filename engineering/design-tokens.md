@@ -12,7 +12,7 @@ This document specifies the design token system for layrz_ui — the semantic va
 
 4. **Composability** — Complex tokens (shadows, text styles) are built from simpler ones. Typography combines font family, size, weight, line height; shadows combine blur, spread, color.
 
-5. **Consistency** — All tokens scale proportionally (e.g., spacing uses a base unit of 4px; all multiples are multiples of 4).
+5. **Consistency** — All tokens scale proportionally. The spacing scale (4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48) is optimized for common layout needs, balancing grid alignment with practical sizing.
 
 ## Token Categories and Specifications
 
@@ -55,22 +55,35 @@ Colors are accessed via `LayrzTheme.of(context).colors`:
 ```dart
 // Design sketch
 class LayrzColorTokens {
+  // Brand colors
   final Color primary;
   final Color accent;
+  
+  // Surface colors (elevation levels)
+  final Color background;
   final Color surface;
   final Color surface2;
   final Color surface3;
-  final Color background;
-  final Color fg1;
-  final Color fg2;
-  final Color fg3;
-  final Color fg4;
+  
+  // Text and foreground colors
+  final Color fg1;  // Highest contrast
+  final Color fg2;  // Medium-high contrast
+  final Color fg3;  // Medium contrast
+  final Color fg4;  // Lowest contrast
+  
+  // Semantic status colors
   final Color danger;
   final Color success;
   final Color warning;
   final Color info;
+  
+  // Contextual and structural colors
+  final Color contextual;  // Neutral/informational (avoids 'context' naming collision)
   final Color divider;
   final Color overlay;
+  
+  // Opacity for tonal fills
+  final double tonalOpacity;
 }
 ```
 
@@ -78,6 +91,7 @@ In the light theme:
 - `fg1` = dark navy (high contrast on white surfaces)
 - `background` = off-white (#FCFCFC)
 - `overlay` = rgba(0, 0, 0, 0.5)
+- `tonalOpacity` = 0.2 (20% alpha for filledTonal variant fills)
 
 #### Use in Components
 
@@ -171,26 +185,36 @@ Spacing tokens define a consistent grid for margins, padding, and gaps.
 ```dart
 // Design sketch
 class LayrzSpacingTokens {
-  // Base: 4px grid
-  final int sp4 = 4;
-  final int sp6 = 6;
-  final int sp8 = 8;
-  final int sp10 = 10;
-  final int sp12 = 12;
-  final int sp14 = 14;
-  final int sp16 = 16;
-  final int sp20 = 20;
-  final int sp24 = 24;
-  final int sp28 = 28;
-  final int sp32 = 32;
-  final int sp36 = 36;
-  final int sp40 = 40;
-  final int sp44 = 44;
-  final int sp48 = 48;
+  // Base unit: 8 pixels
+  final double base = 8.0;
+  
+  // Spacing scale
+  final double sp4 = 4.0;
+  final double sp6 = 6.0;
+  final double sp8 = 8.0;
+  final double sp10 = 10.0;
+  final double sp12 = 12.0;
+  final double sp14 = 14.0;
+  final double sp16 = 16.0;
+  final double sp20 = 20.0;
+  final double sp24 = 24.0;
+  final double sp28 = 28.0;
+  final double sp32 = 32.0;
+  final double sp36 = 36.0;
+  final double sp40 = 40.0;
+  final double sp44 = 44.0;
+  final double sp48 = 48.0;
+  
+  // Convenience accessors
+  Size get spacingSize => Size(base, base);
+  Widget get sizedBox => SizedBox.fromSize(size: spacingSize);
+  EdgeInsets get margin => EdgeInsets.all(base);
+  EdgeInsets get reducedMargin => EdgeInsets.all(base / 2);
+  EdgeInsets get padding => EdgeInsets.all(base);
 }
 ```
 
-All spacing values are multiples of 4, making them harmonious and easy to reason about.
+All spacing values are stored as `double`, allowing fine-grained pixel control and eliminating the need for `.toDouble()` conversions at call sites.
 
 #### Use in Components
 
@@ -202,8 +226,8 @@ class LayrzButton extends StatelessWidget {
     final spacing = LayrzTheme.of(context).tokens.spacing;
     return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: spacing.sp16.toDouble(),
-        vertical: spacing.sp12.toDouble(),
+        horizontal: spacing.sp16,
+        vertical: spacing.sp12,
       ),
       child: ...,
     );
@@ -220,6 +244,10 @@ Radius tokens define border radius values for rounded corners.
 ```dart
 // Design sketch
 class LayrzRadiusTokens {
+  // Base radius
+  final double base = 8.0;
+  
+  // Predefined radii
   final double r8 = 8.0;
   final double r10 = 10.0;
   final double r12 = 12.0;
@@ -228,6 +256,13 @@ class LayrzRadiusTokens {
   final double r20 = 20.0;
   final double r24 = 24.0;
   final double full = 999.0;  // Fully rounded (pill shape)
+  
+  // Convenience accessors
+  BorderRadius get borderRadius => BorderRadius.circular(base);
+  BorderRadius innerRadius({
+    required double outerRadius,
+    required double spacer,
+  });  // Computes visually consistent inner radius for nested containers
 }
 ```
 
@@ -251,28 +286,45 @@ class LayrzCard extends StatelessWidget {
 
 ### Shadow and Elevation Tokens
 
-Shadow tokens define drop shadow and elevation definitions. Elevation levels map to shadow properties.
+Shadow tokens define drop shadow and elevation definitions. Elevation levels (0–5) map to shadows using a mathematical algorithm to ensure consistency.
 
-#### Token Structure
+#### Token Structure and Algorithm
 
 ```dart
 // Design sketch
 class LayrzShadowTokens {
-  // Elevation level to shadow mapping
+  // Elevation level getters
   final List<BoxShadow> elevation1;
   final List<BoxShadow> elevation2;
   final List<BoxShadow> elevation3;
   final List<BoxShadow> elevation4;
   final List<BoxShadow> elevation5;
   
-  // Each elevation has blur, spread, and color appropriate to light theme
+  // Builder method for custom elevation and radius
+  BoxDecoration elevation({
+    double elevation = 1,
+    double? radius,
+    Color? color,
+    bool reverse = false,
+    bool hideOnElevationZero = false,
+  });
 }
 ```
 
-Example for light theme:
-- `elevation1`: blur 1px, offset (0, 1), color rgba(0,0,0,0.08)
-- `elevation3`: blur 8px, offset (0, 3), color rgba(0,0,0,0.12)
-- `elevation5`: blur 16px, offset (0, 5), color rgba(0,0,0,0.15)
+The algorithm computes shadow properties from elevation level:
+- **Opacity**: `0.06 + (0.12 - 0.06) * t` where `t = clamp(elevation, 0, 5) / 5`
+  - elevation 0: opacity 0.06
+  - elevation 5: opacity 0.12
+- **Blur radius**: `3 * elevation + 2`
+  - elevation 1: blur 5
+  - elevation 3: blur 11
+  - elevation 5: blur 17
+- **Spread**: always 0
+- **Offset**: `Offset(0, elevation - 1)` pixels down (reversible for pressed states)
+  - elevation 1: offset (0, 0)
+  - elevation 3: offset (0, 2)
+  - elevation 5: offset (0, 4)
+- **Outline at elevation 0**: 1px border with outlineColor (black at 10% opacity), unless `hideOnElevationZero` is true
 
 #### Use in Components
 
@@ -301,6 +353,9 @@ Border tokens define stroke widths and border side definitions.
 ```dart
 // Design sketch
 class LayrzBorderTokens {
+  // Base stroke width
+  final double base = 1.5;
+  
   // Stroke widths
   final double stroke1 = 1.0;
   final double stroke2 = 2.0;
@@ -402,7 +457,7 @@ All token categories are aggregated into a top-level `LayrzTokens` class:
 // Design sketch
 class LayrzTokens {
   final LayrzColorTokens colors;
-  final LayrzTypographyTokens typography;
+  final LayrzTextTheme typography;
   final LayrzSpacingTokens spacing;
   final LayrzRadiusTokens radius;
   final LayrzShadowTokens shadow;
@@ -478,15 +533,12 @@ final tonal7 = Color(scheme.primary.tone(70));  // Lightest
 
 ### lib/constants/src/colors.dart
 
-Currently holds only four constants:
+Currently holds three constants:
 - `kPrimaryColor` — Layrz brand blue (#001E60)
 - `kAccentColor` — Layrz brand orange (#FF8200)
 - `kLightBackgroundColor` — Off-white (#FCFCFC)
-- `kDarkBackgroundColor` — Dark gray (#282828)
 
-**After Milestone 1:** These remain, but serve as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` reads from these constants to initialize color tokens.
-
-**Note on dark mode:** `LayrzThemeData.dark()` currently exists in the source code and will be removed in pending code work. Since dark mode is out of scope, the method is slated for deletion.
+**After Milestone 1:** These remain as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` reads from these constants to initialize color tokens. Dark mode has been removed from scope entirely (see decision D7).
 
 ### lib/constants/src/durations.dart
 
@@ -500,32 +552,40 @@ Currently holds two constants:
 
 Currently provides:
 - `context.theme` — shortcut for `LayrzTheme.of(context)`
-- `context.isDark` — true if dark theme
 - `context.primaryColor` — shortcut for `theme.primaryColor`
 - `context.titleStyle`, `subtitleStyle`, `bodyStyle` — pre-computed text styles
 
-**After Milestone 1:** No change to existing accessors, but new accessors will be added as needed for common token access patterns.
+**After Milestone 1:** No change to existing accessors, but new accessors will be added as needed for common token access patterns. Dark-theme conditionals have been removed (light mode only).
 
 ## Comparison with layrz_theme Tokenizer
 
 ### layrz_theme Tokenizer Structure (Reference)
 
-layrz_theme provides five tokenizer extensions:
-- `ColorTokenizer` — hardcoded semantic colors (info, success, warning, error, etc.)
+layrz_theme provides a `LayrzTokenizer` class accessed via `LayrzTokenizer.of(context)`, backed by five extension getters:
+- `ColorTokenizer` — semantic color getters (primary, accent, success, warning, danger, info, error)
 - `ShadowTokenizer` — elevation → shadow mapping
 - `RadiusTokenizer` — border radius constants
 - `SpacerTokenizer` — spacing constants
 - `BorderTokenizer` — stroke widths and border definitions
 
-Each is accessed via `LayrzTokenizer.of(context).info`, etc.
+Each extension reads from Material's `Theme.of(context)` when possible, with layrz_theme-specific semantic values otherwise.
 
 ### How layrz_ui Differs
 
-1. **Immutable vs. Extensions** — layrz_theme uses method-based extensions for lazy evaluation. layrz_ui uses immutable token classes (simpler, faster, testable without context)
-2. **Unified Access** — layrz_theme has five separate tokenizer extensions. layrz_ui aggregates all into `LayrzTokens`, accessed via `LayrzTheme.of(context).tokens.*`
-3. **Theme-Scoped** — layrz_theme can return different tokens based on context (e.g., `if (isDarkTheme) return darkColor`). layrz_ui builds theme-specific token instances at `LayrzThemeData.light()` / `.dark()` creation time
-4. **No Material Coupling** — layrz_theme's `ColorTokenizer` reads from `Theme.of(context)` (Material). layrz_ui provides its own complete token set independent of Material
-5. **Type Safety** — layrz_theme uses map-based access (e.g., `tokenizer['color.primary']`). layrz_ui uses strongly-typed field access (e.g., `tokens.colors.primary`)
+1. **Immutable Token Storage** — layrz_theme's tokenizer is context-bound; tokens are computed on-demand via getters. layrz_ui stores tokens as immutable classes on `LayrzThemeData`, making them testable without `BuildContext` and overridable per theme instance.
+
+2. **Two Access Paths** — layrz_ui provides both:
+   - Direct: `context.theme.tokens.colors.primary`
+   - Façade: `LayrzTokenizer.of(context).primary`
+   The façade preserves call-site compatibility with layrz_theme consuming apps, easing migration.
+
+3. **Unified Token Aggregate** — layrz_theme has five separate tokenizer extensions (each a different `extension on Theme`). layrz_ui aggregates all into a single `LayrzTokens` instance, with `LayrzTokenizer` as a thin stateless wrapper. This prevents drift between access paths.
+
+4. **No Material Coupling** — layrz_theme's `ColorTokenizer` reads from Material's `Theme.of(context)`. layrz_ui is Material-free: it defines its own complete token set, with `LayrzThemeData.light()` as the single wiring point where defaults are set.
+
+5. **Type Safety and Discoverability** — layrz_theme uses method-based access (`tokenizer.primary`, `tokenizer.success`, etc.). layrz_ui uses field-based access on immutable classes (`tokens.colors.primary`), which enables IDE autocomplete and compile-time error checking. No map-based string keys.
+
+6. **Semantic Color Renaming** — layrz_theme used `error` and `danger` as separate colors with slightly different meanings. layrz_ui consolidates to `danger` only, clarifying the semantic intent. Similarly, the old `context` color (which collided with `BuildContext` in widget code) is renamed `contextual`.
 
 ## Naming Conventions
 
@@ -542,17 +602,18 @@ Token names follow these rules:
 
 For Milestone 1, the token system must meet these criteria:
 
-- All color tokens defined for light theme
-- Typography tokens cover all text styles (display, headline, title, body, label)
-- Spacing tokens are multiples of 4 (4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48)
-- Radius tokens include common sizes and a "full" option
-- Shadow tokens define at least 3 elevation levels for light theme
-- Border tokens include stroke widths and pre-defined borders
-- Motion tokens cover hover, press, transition, page transition, dialog durations
+- All color tokens defined for light theme, including `primary`, `accent`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
+- Typography tokens (`LayrzTextTheme`) cover all 15 text styles: display (3 sizes), headline (3), title (3), body (3), label (3)
+- Spacing tokens are defined as `double` and include: `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, plus convenience accessors (`spacingSize`, `sizedBox`, `margin`, `reducedMargin`, `padding`)
+- Radius tokens include: `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `full` (pill shape), plus `borderRadius` getter and `innerRadius()` method
+- Shadow tokens define 5 elevation levels (1–5) using the mathematical algorithm, plus a builder method for custom elevation and radius
+- Border tokens include: `base`, `stroke1`, `stroke2`, `stroke3`, and pre-defined borders (`light`, `normal`, `thick`)
+- Motion tokens cover hover, press, transition, page transition, dialog durations, plus standard easing curves
 - Test: `LayrzTheme.of(context).tokens.colors.primary` resolves correctly in light theme
-- Test: `LayrzTheme.of(context).tokens.spacing.sp8` returns 8
+- Test: `LayrzTokenizer.of(context).primary` also resolves to the same value (both access paths in sync)
+- Test: `LayrzTheme.of(context).tokens.spacing.sp8` returns 8.0 as a `double`
 - Test: All tokens are immutable and never null
-- Documentation: Every token has a comment explaining its purpose and usage
+- Documentation: Every token has a doc comment explaining its purpose and usage
 
 ---
 

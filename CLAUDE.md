@@ -24,12 +24,37 @@ lib/
   app/
     app.dart                     # Barrel
     src/
-      app.dart                   # LayrzApp, LayrzApp.router, LayrzThemeMode
+      app.dart                   # LayrzApp, LayrzApp.router
   theme/
     theme.dart                   # Barrel
     src/
-      theme.dart                 # LayrzTheme (InheritedWidget)
-      theme_data.dart            # LayrzThemeData, LayrzTextTheme
+      theme.dart                 # LayrzTheme (InheritedTheme)
+      theme_data.dart            # LayrzThemeData (holds LayrzTokens + IconThemeData)
+  tokens/
+    tokens.dart                  # Barrel
+    src/
+      tokens.dart                # LayrzTokens aggregate
+      colors.dart                # LayrzColorTokens
+      typography.dart            # LayrzTextTheme
+      spacing.dart               # LayrzSpacingTokens
+      radius.dart                # LayrzRadiusTokens
+      shadow.dart                # LayrzShadowTokens
+      border.dart                # LayrzBorderTokens
+      motion.dart                # LayrzMotionTokens
+  tokenizer/
+    tokenizer.dart               # Barrel
+    src/
+      tokenizer.dart             # LayrzTokenizer (thin façade over tokens)
+  fonts/
+    fonts.dart                   # Barrel
+    src/
+      font.dart                  # LayrzFont, LayrzFontSource
+      font_handler.dart          # LayrzFontHandler interface
+      google_fonts_handler.dart  # LayrzGoogleFontsHandler implementation
+  state/
+    state.dart                   # Barrel (re-exports WidgetState family)
+    src/
+      widget_state.dart          # Documentation + re-exports from package:flutter/widgets.dart
   constants/
     constants.dart               # Barrel
     src/
@@ -163,7 +188,7 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 
 - Widgets → `testWidgets` in `test/`
 - Pure functions / extensions → `test()` in `test/`
-- Mirror the `lib/src/` directory structure under `test/src/` (export-only barrels are exempt)
+- Mirror the `lib/<module>/src/` directory structure under `test/<module>/` (export-only barrels are exempt)
 - Test all named constructors and factories independently
 - Test edge cases: null-safe fields, empty inputs, boundary values
 - Every visual component additionally requires accessibility tests
@@ -188,8 +213,8 @@ Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
 The real API in Flutter 3.47:
 - **Import**: `package:flutter/widget_previews.dart` (plural)
 - **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
-- **Theme type**: `PreviewThemeData` (interface)
-- **layrz_ui integration**: `LayrzPreviewTheme` (planned for M1, not yet available) will implement `PreviewThemeData` with a light variant only
+- **Theme type**: `PreviewThemeData` (abstract base class in the SDK)
+- **layrz_ui integration**: `LayrzPreviewTheme` extends `PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface) with a light variant only
 
 Rules:
 - Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
@@ -202,14 +227,14 @@ Rules:
 **Never put multiple unrelated things in a single file.** When a domain grows, split it.
 
 Examples of what belongs in separate files:
-- Each widget in its own file under `src/<domain>/src/`
-- Each category of constants in its own file under `src/constants/`
-- Each extension target (Color, BuildContext, String…) in its own file under `src/extensions/`
+- Each widget in its own file under `lib/<domain>/src/`
+- Each category of constants in its own file under `lib/constants/src/`
+- Each extension target (Color, BuildContext, String…) in its own file under `lib/extensions/src/`
 - Data classes, enums, and helpers each in their own file
 
 A domain folder always has:
 ```
-src/<domain>/
+lib/<domain>/
   <domain>.dart       ← barrel, only re-exports
   src/
     <thing_a>.dart
@@ -232,9 +257,17 @@ The barrel file must contain **only** `export` statements — no logic, no class
 
 ### Light Mode Only
 
-**layrz_ui targets light mode only for now.** Dark mode is out of scope and the brightness concept has been removed entirely. See `engineering/decisions.md` for the decision and its consequences.
+**layrz_ui targets light mode only.** Dark mode is out of scope and has been removed entirely. See decision D7 in `engineering/decisions.md` for the rationale.
 
-Note: `LayrzThemeData.dark()` currently exists in `lib/theme/src/theme_data.dart` and will be removed in pending code work. The decision was made to not architect for dark mode; adding it later will require revisiting every token and every component that assumed a single palette.
+Specifically removed from the codebase:
+- `LayrzThemeData.dark()` factory constructor
+- `LayrzThemeMode` enum and `LayrzApp.darkTheme`, `LayrzApp.themeMode` parameters
+- `context.isDark` extension
+- `kDarkBackgroundColor` constant
+- `errorColor` field (renamed to `dangerColor` for semantic clarity)
+- All dark-theme token variants
+
+The decision was made to not architect for dark mode; adding it later will require revisiting every token and every component that assumed a single light palette.
 
 ---
 
@@ -259,17 +292,19 @@ flutter test                   # from repo root
 flutter test --coverage        # with coverage report
 ```
 
-Tests live under `test/` and mirror the structure of `lib/src/`.
+Tests live under `test/` and mirror the structure of `lib/`. For example:
+- `lib/tokens/src/colors.dart` → `test/tokens/colors_test.dart`
+- `lib/theme/src/theme.dart` → `test/theme/theme_test.dart`
 
 ---
 
 ## Adding a new widget (checklist)
 
-1. Create `lib/src/<domain>/src/<widget_name>.dart` — one widget per file
-2. Create (or update) the barrel `lib/src/<domain>/<domain>.dart` with only `export` statements
+1. Create `lib/<domain>/src/<widget_name>.dart` — one widget per file
+2. Create (or update) the barrel `lib/<domain>/<domain>.dart` with only `export` statements
 3. Export from `lib/layrz_ui.dart`
 4. Document every argument (see rule #1)
-5. Write tests in `test/src/<domain>/<widget_name>_test.dart` (see rule #2)
+5. Write tests in `test/<domain>/<widget_name>_test.dart` (see rule #2)
 6. Add `@Preview` annotations at the bottom of the widget file if applicable (see rule #3)
 7. Run `flutter analyze` — must be clean
 8. Run `flutter test` — must be green

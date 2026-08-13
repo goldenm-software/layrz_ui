@@ -70,15 +70,14 @@ import 'package:flutter/widget_previews.dart';
 @Preview(
   name: 'Light',
   theme: LayrzPreviewTheme.light,
-  brightness: Brightness.light,
 )
 Widget previewMyWidget() => LayrzApp(...);
 ```
 
 The real API in Flutter 3.47:
-- Import: `package:flutter/widget_previews.dart`
+- Import: `package:flutter/widget_previews.dart` (plural)
 - Annotation: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
-- Theme type: `PreviewThemeData` (interface) — layrz_ui provides `LayrzPreviewTheme implements PreviewThemeData`
+- Theme type: `PreviewThemeData` (abstract base class) — layrz_ui provides `LayrzPreviewTheme extends PreviewThemeData` (must extend, not implement, because `PreviewThemeData` is declared `abstract base class` in the SDK)
 
 **Files affected**:
 - `CLAUDE.md`
@@ -178,8 +177,8 @@ class LayrzColorTokens {
 Colors are the most fundamental design decision. All components will read colors from tokens, not hardcodes. This centralizes theming and makes light/dark switching trivial.
 
 **Verification**:
-- `LayrzThemeData.light()` and `.dark()` have color tokens set
-- A test: read `LayrzTheme.of(context).colors.primary` in light and dark themes; assert they differ
+- `LayrzThemeData.light()` has all color tokens set and initialized to sensible defaults
+- A test: read `LayrzTheme.of(context).colors.primary` in light theme and verify it returns the expected primary color
 
 ---
 
@@ -218,10 +217,10 @@ These are aggregated into a top-level `LayrzTokens` class.
 These tokens define the visual language: how tight or loose the spacing is, how rounded or sharp the corners are, how fast animations feel. They are all interdependent (spacing scales with breakpoints, radii with component sizes). Treating them as a unified system prevents inconsistency.
 
 **Verification**:
-- `LayrzTokens.spacing.sp8` is an `int` representing 8 logical pixels
+- `LayrzTokens.spacing.sp8` is a `double` representing 8.0 logical pixels
 - `LayrzTokens.radius.r12` is a `double`
 - `LayrzTokens.motion.dHover` is a `Duration`
-- Light and dark themes may have different motion durations or shadow elevations; test both
+- Light theme tokens are correctly initialized with sensible defaults
 
 ---
 
@@ -232,7 +231,7 @@ These tokens define the visual language: how tight or loose the spacing is, how 
 - Implement a registry mechanism so components can store custom data on `LayrzThemeData` without modifying core theme fields
 
 **Design rationale**:
-`ThemeExtension<T>` is Material-only (part of `package:flutter/material.dart`). For the design system to be Material-free, we need our own extension mechanism. Later components (especially M3+ inputs and M4 pickers) will need to store per-component token overrides or state without polluting `LayrzThemeData`.
+`ThemeExtension<T>` is Material-only (part of `package:flutter/material.dart`). For the design system to be Material-free, we need our own extension mechanism. Later components (especially M2+ inputs and M4 pickers) will need to store per-component token overrides or state without polluting `LayrzThemeData`.
 
 **Token API** (sketch):
 ```dart
@@ -258,7 +257,7 @@ This mechanism is not immediately used in M1, but is prerequisite for M2+ compon
 
 **Verification**:
 - Create a dummy extension class, store it on a `LayrzThemeData`, retrieve it via `maybeExtension<T>()`
-- Light and dark variants can have different extensions
+- Extensions are retrievable and immutable
 
 ---
 
@@ -266,24 +265,22 @@ This mechanism is not immediately used in M1, but is prerequisite for M2+ compon
 
 **What changes**:
 - Create `lib/state/` module (new)
-- `lib/state/src/widget_state_property.dart` — define or re-export `WidgetStateProperty<T>` (check whether it's exported from `package:flutter/widgets.dart` in 3.47)
-- `lib/state/src/widget_states_controller.dart` — wrapper over `WidgetStatesController` to resolve hover/press/focus/disabled states
+- `lib/state/state.dart` — a documented `show` re-export of `WidgetState`, `WidgetStateProperty`, and related types from `package:flutter/widgets.dart`
 
-**OPEN QUESTION**:
-Is `WidgetStateProperty` exported from `package:flutter/widgets.dart` in Flutter 3.47, or is it Material-only? This must be verified before implementation. If Material-only, we hand-roll a replacement.
+**Resolved Question** (Decision D13):
+`WidgetStateProperty`, `WidgetStatesController`, and the complete state family are **material-free and exported from `package:flutter/widgets.dart`** in Flutter 3.47. Verification against the installed SDK confirms no Material dependency. Therefore, there is no need to hand-roll replacements; re-export only.
 
 **Why it matters**:
-All interactive components (buttons, inputs, chips, etc.) respond to hover, press, focus, disabled states. Rather than each component implementing state detection independently, we provide a centralized resolver. Later components use it to define `WidgetStateProperty<Color>` or `WidgetStateProperty<TextStyle>` cleanly.
+All interactive components (buttons, inputs, chips, etc.) respond to hover, press, focus, disabled states. The SDK provides a design-system-agnostic `WidgetStateProperty<T>` interface and `WidgetStateColor`, `WidgetStateTextStyle`, and other convenience implementations. Rather than hand-rolling our own, we re-export the SDK types and use them directly in M2+ components.
 
 **Files affected**:
 - `lib/state/` (new module)
-- `lib/state/state.dart` (barrel, new)
-- `lib/state/src/widget_state_property.dart` (new, or empty if we re-export)
-- `lib/state/src/widget_states_controller.dart` (new)
+- `lib/state/state.dart` (barrel with re-exports only)
+- `lib/state/src/widget_state.dart` (documentation file only)
 
 **Verification**:
-- Create a simple interactive widget that responds to press state via `WidgetStateProperty`
-- Verify it updates correctly when pressed/unpressed
+- `flutter analyze` on lib/state/; must be clean
+- Tests verify that `WidgetStateColor.resolve()` and `WidgetStateProperty<T>` work as expected
 
 ---
 
@@ -331,15 +328,13 @@ Components need a consistent way to apply fonts. google_fonts is the standard so
 
 **What changes**:
 - Create `lib/preview/` module (new)
-- `lib/preview/src/preview_theme.dart` — `LayrzPreviewTheme implements PreviewThemeData` with light and dark variants
-- Support layering multiple themes via `MultiPreviewThemeData` (from `package:flutter/widget_previews.dart`)
+- `lib/preview/src/preview_theme.dart` — `LayrzPreviewTheme extends PreviewThemeData` with light theme only
 - Update CLAUDE.md rule #3 example to show how to use it
 
 **Token API**:
 ```dart
-class LayrzPreviewTheme implements PreviewThemeData {
+class LayrzPreviewTheme extends PreviewThemeData {
   static PreviewThemeData light() => LayrzPreviewTheme(...);
-  static PreviewThemeData dark() => LayrzPreviewTheme(...);
   
   @override
   Widget apply(BuildContext context, Widget widget) =>
@@ -347,17 +342,13 @@ class LayrzPreviewTheme implements PreviewThemeData {
 }
 ```
 
+**Why `extends` not `implements`**: `PreviewThemeData` is declared as `abstract base class` in the SDK (`package:flutter/widget_previews.dart`). Only `extends` is valid for `base class` types.
+
 **Example usage** (from corrected CLAUDE.md rule #3):
 ```dart
 @Preview(
   name: 'Light',
   theme: LayrzPreviewTheme.light,
-  brightness: Brightness.light,
-)
-@Preview(
-  name: 'Dark',
-  theme: LayrzPreviewTheme.dark,
-  brightness: Brightness.dark,
 )
 Widget previewMyButton() => LayrzButton(...);
 ```
@@ -382,13 +373,15 @@ Flutter 3.47's widget preview system is production-ready. Previews let developer
 #### 11. Close the test gap
 
 **What changes**:
-- Write tests for all M1 infrastructure, matching the structure of lib/src/:
-  - `test/src/theme/` — LayrzTheme.of(), theme propagation, light/dark variants
-  - `test/src/constants/` — color, grid, duration, app constants exist and are sensible
-  - `test/src/extensions/` — LayrzColorExtensions, LayrzContextExtensions
-  - `test/src/platform/` — LayrzPlatform enum, platform detection
-  - `test/src/tokens/` — all token classes construct, copyWith works, light/dark differ appropriately
-  - `test/src/app/` — LayrzApp and LayrzApp.router construct and install theme
+- Write tests for all M1 infrastructure, matching the structure of lib/:
+  - `test/theme/` — LayrzTheme.of(), theme propagation, InheritedTheme.wrap() across Overlay boundaries
+  - `test/constants/` — color, grid, duration, app constants exist and are sensible
+  - `test/extensions/` — LayrzColorExtensions, LayrzContextExtensions
+  - `test/platform/` — LayrzPlatform enum, platform detection
+  - `test/tokens/` — all token classes construct, copyWith works, immutability verified
+  - `test/tokenizer/` — LayrzTokenizer.of() and maybeOf() work, both access paths stay in sync
+  - `test/app/` — LayrzApp and LayrzApp.router construct and install theme
+  - `test/state/` — WidgetState and WidgetStateProperty re-exports are accessible
 
 **Critical test**:
 ```dart
@@ -539,34 +532,21 @@ showDialog(
 
 ---
 
-## Open Question
-
-**Q: Is `WidgetStateProperty` exported from `package:flutter/widgets.dart` in Flutter 3.47?**
-
-Currently unclear. This must be verified before implementing M1 item 6.
-
-- **If YES**: Re-export it from `lib/state/` and implement `WidgetStatesController` wrapper only.
-- **If NO**: Hand-roll `WidgetStateProperty<T>` interface and a controller.
-
-**Action**: Add this question to `decisions.md` with the verification result once M1 item 6 is underway.
-
----
-
 ## Acceptance Criteria
 
 M1 is complete when all the following criteria are satisfied:
 
 - **Item 1**: LayrzTheme extends InheritedTheme; wrap() implemented; Overlay boundary test passes
-- **Item 2**: CLAUDE.md rule #3 corrected; @Preview (not @widgetPreview) documented
+- **Item 2**: CLAUDE.md rule #3 corrected; @Preview (not @widgetPreview) documented; LayrzPreviewTheme extends (not implements) PreviewThemeData
 - **Item 9**: CI pipeline active; all four checks (analyze, test, format, Material guard) pass
 - **Item 10**: `public_member_api_docs: true` in analysis_options.yaml; `flutter analyze` enforces it
-- **Item 3**: LayrzColorTokens defined; LayrzThemeData.colors field exists; light/dark differ
-- **Item 4**: All six token classes (typography, spacing, radius, shadow, border, motion) defined; aggregated into LayrzTokens; light/dark tested
+- **Item 3**: LayrzColorTokens defined with all light-theme colors; LayrzThemeData.tokens field exists; all colors initialized
+- **Item 4**: All six token classes (LayrzTextTheme, spacing, radius, shadow, border, motion) defined; aggregated into LayrzTokens; all light-theme values initialized
 - **Item 5**: LayrzThemeExtension interface defined; extensions map on LayrzThemeData; accessor works
-- **Item 6**: WidgetStateProperty verified or hand-rolled; WidgetStatesController wrapper implemented; test passes
+- **Item 6**: WidgetState family re-exported from package:flutter/widgets.dart (verified material-free per D13); tests verify state resolution works
 - **Item 7**: LayrzFontHandler interface; GoogleFontsHandler implementation; no `*TextTheme()` calls in lib/
-- **Item 8**: LayrzPreviewTheme implements PreviewThemeData; light + dark variants; @Preview example in CLAUDE.md
-- **Item 11**: test/ mirrors lib/; > 80% coverage; Overlay boundary test included; all testWidgets pass
+- **Item 8**: LayrzPreviewTheme extends PreviewThemeData; light theme only; @Preview example in CLAUDE.md working
+- **Item 11**: test/ mirrors lib/ structure; > 80% coverage; Overlay boundary test included; all testWidgets and tests pass; both token access paths (direct and tokenizer) synchronized
 - **Item 12**: CHANGELOG.md meaningful; pubspec version bumped; two separate commits created
 - **Invariant**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - **All code documented**: `flutter analyze` reports zero public API doc violations

@@ -227,9 +227,9 @@ Decision D1 settled on the `Layrz*` prefix for consistency with app-level types 
 
 The convention is:
 - Components: `LayrzButton`, `LayrzTextInput`, `LayrzTable`, etc.
-- App-level classes: `LayrzApp`, `LayrzTheme`, `LayrzThemeData`, `LayrzTextTheme`, `LayrzThemeMode`
+- App-level classes: `LayrzApp`, `LayrzTheme`, `LayrzThemeData`, `LayrzTextTheme`
 - Theme system: `LayrzColorExtensions`, `LayrzContextExtensions`, `LayrzThemeExtension<T>`, `LayrzPreviewTheme`
-- Utilities: `LayrzPlatform`, `LayrzFontHandler`, `LayrzTokens`, and all token subclasses
+- Utilities: `LayrzPlatform`, `LayrzTokenizer`, `LayrzFont`, `LayrzFontHandler`, `LayrzTokens`, and all token subclasses
 - Suffix convention: `*Input` for all form fields (including pickers), retiring the `*Picker` suffix from layrz_theme
 
 ### Rationale
@@ -329,7 +329,16 @@ layrz_ui currently has a dual light/dark theme architecture inherited from layrz
 
 ### Consequences
 
-- **LayrzThemeData.dark()** currently exists in `lib/theme/src/theme_data.dart` and its removal is pending code work, not yet done.
+- **Dark mode infrastructure removed.** The following symbols have been deleted from the codebase:
+  - `LayrzThemeData.dark()` factory
+  - `LayrzThemeData.brightness` field
+  - `LayrzThemeMode` enum
+  - `LayrzApp.darkTheme` and `LayrzApp.themeMode` parameters
+  - `context.isDark` extension getter
+  - `kDarkBackgroundColor` constant
+  - (Related to D12 token work) `LayrzThemeData.errorColor`, renamed to `dangerColor` as part of the new color token system
+  
+  **Update (2026-08-13)**: Removal is complete.
 - `design-tokens.md`'s requirement that every token resolve in both light and dark is **withdrawn**. Tokens are now light-only.
 - **CLAUDE.md rule #2** (test both light and dark variants) is **withdrawn** for this cycle; only light-mode tests are required.
 - **CLAUDE.md rule #3** (light-and-dark preview pattern) is **withdrawn**; `WidgetPreview` examples need only a light variant.
@@ -554,6 +563,107 @@ After the first batch of Milestone 2 components (3-5 components) ship:
 - Gather feedback on parameter lists and factory designs
 - Validate that the scope confirmations matched product expectations
 - Adjust subsequent components' scope if needed
+
+---
+
+## D12: Tokenizer Shape — Immutable Token Storage With a LayrzTokenizer Façade
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+layrz_theme shipped `LayrzTokenizer.of(context)` built from five `extension` groups (`ColorTokenizer`, `SpacerTokenizer`, `RadiusTokenizer`, `ShadowTokenizer`, `BorderTokenizer`) that read from Material's `Theme.of(context)`. The design-tokens.md specification instead argued for immutable token classes nested on `LayrzThemeData`, making tokens testable without `BuildContext`. layrz_ui needed to choose: immutable tokens only (no façade), port the `LayrzTokenizer` extensions 1:1, or provide both.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Immutable tokens only | Tokens are testable without context; no API redundancy | Call sites must use `context.theme.tokens.colors.primary` (verbose); migration from layrz_theme is harder (API surface changed) |
+| (b) Port LayrzTokenizer 1:1 as context-bound extensions | Familiar API; call sites unchanged (`tokenizer.primary`) | Tokens couple to BuildContext; testing requires mocks; no centralized storage |
+| (c) **Chosen**: Immutable tokens + thin façade | Tokens testable without context; `LayrzTokenizer.of(context)` preserves layrz_theme call sites; two access paths keep call sites migrating easily | Both access paths must never drift; adds API surface (requires coordination test) |
+
+### Decision
+
+**Chose (c): Immutable token classes as the storage on `LayrzThemeData`, with `LayrzTokenizer.of(context)` as a thin façade over them.**
+
+The tokens are stored in `LayrzThemeData.tokens` (a `LayrzTokens` instance). `LayrzTokenizer` is a stateless wrapper that reads tokens from a theme via `LayrzTheme.of(context)` and exposes them through both group getters (`tokenizer.colors`, `tokenizer.spacingTokens`) and flat shortcuts (`tokenizer.primary`) for API compatibility.
+
+### Rationale
+
+- Immutable tokens become testable and overridable per theme without reaching for `BuildContext`.
+- layrz_theme consuming apps can migrate incrementally: the old `LayrzTokenizer.of(context).primary` call pattern still works, easing migration friction.
+- Centralizing tokens on `LayrzThemeData` is the source of truth; the façade is transparent (a simple delegation layer).
+- The old `error`/`danger` alias pair was resolved by removing `error` entirely and keeping `danger` as the canonical semantic name.
+- The old `context` colour getter was renamed `contextual` to avoid collision with the `BuildContext` parameter naming throughout widget code.
+
+### Consequences
+
+- Two access paths exist: `context.theme.tokens.colors.primary` (direct) and `LayrzTokenizer.of(context).primary` (façade). A test asserts they are always equal, preventing drift.
+- The `LayrzTokenizer.of()` static method delegates to `LayrzTheme.of()`, so a missing theme raises layrz_ui's existing assertion instead of a layrz_theme-style `Exception("LayrzTokenizer context is null")`.
+- All derived tokens (shadow, border, typography) are seeded from base colors and radius at the `LayrzTokens.light()` factory, ensuring consistency.
+- Backward-compatibility getters on `LayrzThemeData` (e.g., `primaryColor`, `dangerColor`) delegate to `tokens`, keeping old call sites working.
+
+### Review Trigger
+
+After the first batch of M2 components ship and begin consuming tokens, verify that both access paths are actively earning their keep. If one access path is unused across the first 5 components, consider deprecating it to reduce API surface.
+
+---
+
+## D13: WidgetStateProperty Verified Available Material-Free — Re-Export, Do Not Hand-Roll
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / SDK Integration
+
+### Context
+
+Milestone 1 item 6 required verifying whether `WidgetStateProperty`, `WidgetStatesController`, and related state types were Material-only or available material-free from `package:flutter/widgets.dart`. The CLAUDE.md and milestone-1.md files had marked this as an "OPEN QUESTION" blocking M1 item 6. The code had previously anticipated implementing a wrapper around `WidgetStatesController` as an additional layer.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Material-only; hand-roll replacement | Forces layrz_ui to own the abstraction; no Material dependency | Duplicates SDK functionality; error-prone; maintenance burden |
+| (b) Material-only; defer item 6 | Unblocks other M1 work | Delays interactive component support; blocks M2 entirely |
+| (c) **Chosen**: Re-export from `package:flutter/widgets.dart` | SDK provides a design-system-agnostic implementation; zero maintenance; no hand-rolling | Requires trust in SDK stability; SDK major version change could affect availability |
+
+### Decision
+
+**Chose (c): Verified and re-exported from `package:flutter/widgets.dart`.**
+
+The installed Flutter SDK (3.47.0) at `/home/mochi/develop/flutter` exports `WidgetState`, `WidgetStateProperty`, `WidgetStateMapper`, `WidgetStatePropertyAll`, `WidgetStatesController`, `WidgetStatesConstraint`, `WidgetStateMap`, `WidgetPropertyResolver`, `WidgetStateColor`, `WidgetStateTextStyle`, `WidgetStateBorderSide`, `WidgetStateMouseCursor`, and `WidgetStateOutlinedBorder` from `packages/flutter/lib/widgets.dart` (line 187). None of these types depend on Material.
+
+`lib/state/` is a documented `show` re-export; nothing is hand-rolled. The `WidgetStatesController` *wrapper* anticipated in item 6 is **not** built because the SDK class is already design-system-agnostic and wrapping it would be dead weight.
+
+### Verification Detail
+
+At `/home/mochi/develop/flutter/packages/flutter/lib/widgets.dart`:
+```dart
+export 'src/widgets/widget_state.dart'
+    show
+        WidgetState,
+        WidgetStateProperty,
+        ...
+```
+
+The `src/widgets/widget_state.dart` module contains no Material imports. These types are SDK primitives.
+
+### Consequences
+
+- Item 6 shrinks: only one file (`lib/state/state.dart`) with a re-export, plus tests.
+- Consumers importing `package:layrz_ui/layrz_ui.dart` automatically have access to all state types without a second import.
+- M2 interactive components (buttons, inputs, etc.) can immediately use `WidgetStateProperty<Color>` and `WidgetStateColor` without any local abstraction layer.
+- No wrapper class exists; the SDK types are used directly.
+
+### Secondary Finding: PreviewThemeData API
+
+A second verified SDK finding for M1 item 8: `package:flutter/widget_previews.dart` declares `abstract base class PreviewThemeData` (emphasis: `base class`, not interface). Therefore, `LayrzPreviewTheme extends PreviewThemeData` is the correct shape, **not** `implements`. The `@Preview(theme:)` parameter type is `PreviewTheme = PreviewThemeData Function()`, so a `static PreviewThemeData light() => ...` tear-off is valid and correct.
+
+### Review Trigger
+
+When Material is removed from the Flutter SDK (planned for late 2026), re-verify that these state types remain exported from `package:flutter/widgets.dart` without Material dependency.
 
 ---
 
