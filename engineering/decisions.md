@@ -207,7 +207,7 @@ At the end of Milestone 1 (foundation release), collect feedback:
 - Were there token additions needed during Milestone 2 component development that should have been in Milestone 1?
 - Did the module/barrel structure prove adequate, or are there organizational lessons?
 
-Use this feedback to inform the token set for the 2.0 roadmap.
+Use this feedback to inform future development and refinements to the token set.
 
 ---
 
@@ -265,17 +265,17 @@ As layrz_ui components grow (M2–M7), the documentation directory would eventua
 
 **Documentation is split between repository and wiki:**
 
-- **Repository (`doc/`)** holds engineering documentation: architecture, design decisions, token specifications, dependency audit, Flutter 3.47 inventory, roadmap, and milestone plans. These 8 files are PR-reviewed and versioned with the code.
+- **Repository (`engineering/`)** holds engineering documentation: architecture, design decisions, token specifications, dependency audit, Flutter 3.47 inventory, roadmap, and milestone plans. These 8 files are PR-reviewed and versioned with the code.
 - **GitHub Wiki** (`wiki/` submodule, tracking [goldenm-software/layrz_ui.wiki.git](git@github.com:goldenm-software/layrz_ui.wiki.git)) holds user-facing documentation: 28 per-component widget pages, the input contract, and the component catalog. Wiki pages are published immediately (no PR review) and live at [github.com/goldenm-software/layrz_ui/wiki](https://github.com/goldenm-software/layrz_ui/wiki).
 
 ### Consequences
 
-- **Repository structure**: `doc/` remains singular with 8 files: README.md, roadmap.md, milestone-1.md, architecture.md, design-tokens.md, flutter-347-audit.md, dependencies.md, decisions.md.
+- **Repository structure**: `engineering/` holds 8 files: README.md, roadmap.md, milestone-1.md, architecture.md, design-tokens.md, flutter-347-audit.md, dependencies.md, decisions.md.
 - **Wiki is a git submodule**: `wiki/` is a git submodule over SSH pointing to the `master` branch (the wiki's default). Submodule must be initialized with `git clone --recurse-submodules` or `git submodule update --init --recursive`.
 - **Wiki is excluded from package**: `wiki/` is listed in `.pubignore`, so the submodule and its contents never ship in the published package on pub.dev.
 - **CI requirement**: GitHub Actions workflows that check out the repo must use `submodules: true` in `actions/checkout` to fetch wiki pages.
-- **Cross-link fragility**: Wiki pages link to repo docs via absolute GitHub URLs (e.g., `https://github.com/goldenm-software/layrz_ui/blob/main/doc/architecture.md`). If repo files move, wiki links rot. Mitigation: document this risk and establish a no-move policy for doc files, or create a redirect.
-- **New widget documentation**: ALL new widget documentation GOES IN THE WIKI. The rule is stated plainly in CLAUDE.md. If you add a widget, create a wiki page; do NOT create a doc/ file.
+- **Cross-link fragility**: Wiki pages link to repo docs via absolute GitHub URLs (e.g., `https://github.com/goldenm-software/layrz_ui/blob/main/engineering/architecture.md`). If repo files move, wiki links rot. Mitigation: document this risk and establish a no-move policy for engineering files, or create a redirect.
+- **New widget documentation**: ALL new widget documentation GOES IN THE WIKI. The rule is stated plainly in CLAUDE.md. If you add a widget, create a wiki page; do NOT create an engineering/ file.
 - **Wiki page structure**: Wiki pages are flat (no subdirectories) with names like `LayrzButton.md`, `LayrzTextInput.md`, etc. The wiki homepage links to all pages.
 
 ### Rationale
@@ -294,6 +294,266 @@ After the first 5 widgets are documented in the wiki (M2), audit:
 - Is the edit/publish workflow fast enough for contributors?
 
 Revisit date: After M2 component release.
+
+---
+
+## D7: Light Mode First, Dark Mode Dropped for Now
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / Feature Scope
+
+### Context
+
+layrz_ui currently has a dual light/dark theme architecture inherited from layrz_theme's design. The immediate scope for Milestone 1 is light mode only. The decision is whether to:
+1. Keep the architecture "dark-ready" by defining tokens as semantic roles with only light values populated, leaving dark to be filled in later
+2. Drop dark mode entirely, simplify the token system, and accept the cost of a dark-mode retrofit later
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Dark-ready architecture | Framework is in place for dark mode later; tokens are semantic; easier to add dark themes incrementally | Complexity and cognitive load now; all components must assume dual palette; all tests must cover both modes; design decisions are constrained by future-dark assumptions |
+| (b) Drop dark entirely (chosen) | Simplicity; focus on quality in light mode; no dual-palette burden on component design; tokens can be concrete rather than semantic | Dark mode retrofit will require revisiting every token and every component; consuming apps accustomed to layrz_theme's dark mode lose that support initially; requires a public review trigger before any stable release |
+
+### Decision
+
+**Chose (b): Light mode only.**
+
+### Rationale
+
+- Milestone 1's goal is to establish a stable foundation. Dual-palette complexity increases the risk of poor token choices early on.
+- layrz_ui's stated design principle is simplicity and consistency. A single palette is simpler to reason about and test.
+- All component decisions (shadows, hover states, disabled states) can assume a single light context, reducing parameter sprawl.
+- Dark mode retrofit is deferred. Adding dark mode later will require revisiting every token and every component that assumed a single palette, but this cost is acceptable compared to the upfront complexity.
+
+### Consequences
+
+- **LayrzThemeData.dark()** currently exists in `lib/theme/src/theme_data.dart` and its removal is pending code work, not yet done.
+- `design-tokens.md`'s requirement that every token resolve in both light and dark is **withdrawn**. Tokens are now light-only.
+- **CLAUDE.md rule #2** (test both light and dark variants) is **withdrawn** for this cycle; only light-mode tests are required.
+- **CLAUDE.md rule #3** (light-and-dark preview pattern) is **withdrawn**; `WidgetPreview` examples need only a light variant.
+- `LayrzPreviewTheme` (if introduced) needs only a light-mode variant.
+- Dark mode is out of scope for the 1.0 release. Consuming apps can implement their own dark themes using layrz_ui's light tokens as a base, or wait for dark mode support to be added in a future release (no target version set).
+
+### Review Trigger
+
+**Review date**: Before any `1.0.0` stable release.
+
+Revisit this decision if:
+- Multiple consuming apps report that lack of dark mode is a blocker
+- Flutter's Material Dark 3 guidance evolves in a way that impacts the retrofit plan
+- The team formally decides to add dark mode support and sets a target version for its release
+
+---
+
+## D8: LayrzLayout Ships Exactly One Layout Design
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+`ThemedLayout` in layrz_theme supports multiple desktop and mobile presentation modes:
+- **Desktop**: dual bar, sidebar, mini bar
+- **Mobile**: appBar, bottomBar
+
+LayrzLayout must choose whether to:
+1. Port all presentations as a multi-mode design system
+2. Ship a single, opinionated layout design
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Multi-mode (like layrz_theme) | Maximum flexibility; covers all use cases from layrz_theme | Massive scope blocker; every parameter list, navigator item type, and presentation variant must be finalized before any layout ship; five-way decision delays Milestone 2 |
+| (b) Single layout design (chosen) | Unblocks Milestone 2 immediately; smaller scope; focused UX; design can evolve later | Consuming apps using dropped presentations cannot upgrade without a layout redesign; two open sub-questions remain (which single design, which navigator items) |
+
+### Decision
+
+**Chose (b): One layout design.**
+
+### Rationale
+
+- Multi-mode layout design is the single largest scope blocker in Milestone 2. Resolving the five-way presentation decision requires product/design input and is not on the critical path for foundation stability.
+- A single, focused layout design is easier to iterate and validate. It can be ported and tested faster.
+- The layout can grow to support variants in a future release once the base design is proven and deployed.
+- Future design variants (sidebar, mini, appBar, bottomBar) can be ported as separate components if needed, rather than built into a monolithic multi-mode system.
+
+### Consequences
+
+- **All five presentations remain in scope only as future work.** ThemedLayout, ThemedLayoutStyle, ThemedMobileLayoutStyle, ThemedDualBar, ThemedSidebar, ThemedMiniBar, ThemedBottomBar, and all related navigator types are **dropped from Milestone 1**.
+- **Two sub-questions remain open**: which single layout design is chosen, and which navigator item types (page, action, widget, separator, label) survive in the first version.
+- **Consuming apps using multi-mode presentations cannot upgrade to layrz_ui without a layout redesign.** This is a breaking change, but acceptable for a ground-up rewrite.
+- LayrzLayout's first release will be smaller in scope but faster to ship and higher in quality.
+
+### Review Trigger
+
+When LayrzLayout's single design is selected and scoped, revisit whether to:
+- Restore some presentations (sidebar) as parallel components in a future release
+- Keep the single-design philosophy and declare others out of scope
+- Provide layout composition patterns for apps that need custom presentations
+
+---
+
+## D9: Responsive Grid Drops the Sizes Enum
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+layrz_theme's `ResponsiveRow` and `ResponsiveCol` use a `Sizes` enum (col1 through col12) to specify column widths in a 12-column grid. The decision is whether to:
+1. Keep the `Sizes` enum for type safety
+2. Replace with a plain integer column count
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep Sizes enum | Compile-time safety; impossible to pass invalid column counts; autocomplete support | Boilerplate; requires naming 12 values; slightly more verbose call sites (Sizes.col6 vs. 6) |
+| (b) Replace with integer (chosen) | Terser call sites (6 instead of Sizes.col6); less boilerplate; idiomatic Dart; matches CSS Grid mental model | Loss of enum's compile-time safety; invalid counts (13, 99) possible at runtime |
+
+### Decision
+
+**Chose (b): Plain integer column count.**
+
+### Rationale
+
+- Responsive layout parameters are low-risk: consumers intuitively know 1–12 are valid. Runtime assertion is sufficient safety.
+- Integer column counts match CSS Grid's familiar model (grid-column: span 6) and reduce cognitive friction.
+- Removing the enum simplifies the public API surface and reduces boilerplate.
+- A debug assertion (`assert(cols > 0 && cols <= 12)`) catches mistakes during development without requiring enum machinery.
+
+### Consequences
+
+- `Sizes` enum (col1–col12) is **dropped**; `SizesExt` extension is **dropped**.
+- `ResponsiveCol` now takes `int cols` instead of `Sizes size`. Example: `ResponsiveCol(cols: 6)` instead of `ResponsiveCol(size: Sizes.col6)`.
+- All consuming apps using `Sizes.*` must update to integer literals.
+- The debug assertion should be clear in documentation: invalid column counts will fail in debug builds.
+
+### Review Trigger
+
+**Before `1.0.0` release**: Verify that the debug assertion catches all practical errors and that call sites read clearly without the enum.
+
+Consider whether `ResponsiveRow.builder` should be carried over. If yes, ensure it integrates cleanly with the integer-based `ResponsiveCol` API.
+
+---
+
+## D10: Reopen D2, Audit layrz_models Material Coupling
+
+**Date**: 2026-08-13  
+**Status**: Reopened  
+**Category**: Dependency Policy
+
+### Context
+
+Decision D2 (deferred layrz_models integration on 2026-08-13) gates approximately 40 symbols: all localisation (LayrzAppLocalizations), avatars, colorblind support, and dynamic credential inputs. Today, colorblind support was **confirmed in scope** by the product team. ColorblindMode is a layrz_models type, which means D2's deferred status is now a hard blocker for a scoped feature.
+
+The question: does layrz_models' Material coupling (19 Material imports across multiple files) include load-bearing dependencies (e.g., Material enums the types depend on), or are the imports dead code (like google_fonts)?
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Accept the coupling; defer colorblind scope | Avoids audit work; treats layrz_models as a peer with its own design constraints | Blocks confirmed-in-scope feature; splits colorblind support between releases; contradicts product commitment |
+| (b) Audit layrz_models now (chosen) | Determines whether coupling is load-bearing or dead; applies D3's (google_fonts) methodology; unblocks colorblind support | Requires coordination with layrz_models maintainers; audit may reveal tight coupling, requiring a decoupling effort; timeline uncertain |
+
+### Decision
+
+**Chose (b): Reopen D2 and audit layrz_models.**
+
+Apply the same audit standard used for google_fonts (D3): trace every Material import to determine whether it is load-bearing (the package's API depends on Material types) or dead (left over from refactoring, e.g., unused constants or legacy code paths). If Material usage is dead (like google_fonts), layrz_models is usable as-is. If Material usage is load-bearing, determine the cost and timeline of a decoupling effort.
+
+### Rationale
+
+- Colorblind support is confirmed as in-scope and high-value. Deferring it again contradicts product intent.
+- D3's audit methodology (google_fonts) is proven and applicable. We have a tested framework for this decision.
+- layrz_models' Material coupling is the highest-leverage open question by far: 40 symbols hinge on this.
+- An audit takes days; a poor decoupling effort takes weeks. Invest in clarity now.
+
+### Consequences
+
+- **Audit has completed.** The audit found that layrz_models' Material coupling is dead code (like google_fonts), not load-bearing. layrz_ui can depend on layrz_models immediately.
+- **Pending team ratification**: whether D2 formally closes as "depend on layrz_models as-is" has not yet been confirmed by the team. This decision documents the audit result and unblocks the following symbols pending team approval:
+  - ColorblindFilter and six filter functions
+  - Avatar-bound components (ThemedDynamicAvatarInput, avatar pickers)
+  - Localisation (DateTimeExtension.format, HumanizeDuration, all translations)
+  - Dynamic credential inputs
+- The audit's favorable finding means no upstream decoupling work is required, and no separate layrz_ui_models package is needed.
+
+### Review Trigger
+
+**Immediate**: Team decision needed on whether to formally close D2 as "depend on layrz_models as-is" based on the audit's favorable finding. Once team confirms, colorblind support, avatar-bound components, localisation, and dynamic credential inputs can proceed.
+
+---
+
+## D11: Component Scope Confirmations
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Feature Scope / Release Planning
+
+### Context
+
+Many components (LayrzAlert, LayrzChip, LayrzSelect, LayrzButton, LayrzCalendar, etc.) have wiki pages and are listed in the GitHub Project, but have not received formal scope confirmation from the product team. This decision bundles a set of scope confirmations decided during the 2026-08-13 planning session, covering component naming, factories, parameter lists, and carry-over decisions.
+
+### Decision
+
+**Confirmed scoped for Milestone 2 (components):**
+
+**Inputs & Controls:**
+- `LayrzSelectItem` (port ThemedSelectItem; no parameter changes expected)
+- `LayrzButton`: Six semantic factories (`.primary`, `.secondary`, `.icon`, `.fab`, `.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`) — **NOT** `.legacyLoading()` (deliberately dropped)
+- All other input widgets and controls as listed in wiki pages
+
+**Feedback & Display:**
+- `LayrzAlert`, `LayrzAlertIcon`, `LayrzAlertType`, `LayrzAlertStyle` — port ThemedAlert family with styling variants (layrz, filledTonal, filled, outlined, filledIcon)
+- `LayrzChip`, `LayrzChipGroup`, `LayrzChipStyle`, `LayrzChipGroupBehavior` — port ThemedChip family with behavior modes (none, single, multi)
+- `LayrzTooltip`, `LayrzTooltipPosition` — port ThemedTooltip family with position control
+
+**Scaffolds & Views:**
+- `LayrzScaffoldView`, `LayrzScaffoldCell` — port ThemedScaffoldView and cell with no scope changes expected
+
+**Data Display:**
+- `LayrzTable<T>` and supporting types — port as preferred table API (supersedes deprecated table)
+- `LayrzCalendar`: **Port as LayrzCalendar, but flagged FULL REFACTOR.** (Not a straight port; architecture review required on four view modes: day, week, month, year. Dependency on `package:table_calendar` (Material-built) requires addressing.)
+- `LayrzDynamicCredentialsInput` — port but **scheduled late** (depends on D2 audit outcome)
+
+**Responsive Layout:**
+- `LayrzRow` (port ResponsiveRow; 12-column grid container)
+- `LayrzCol` (port ResponsiveCol; integer-based column count, debug assertion for validity)
+
+**Accessibility:**
+- All colorblind support (ColorblindFilter extension, six filter functions) — **port, confirmed in scope, gated on D2 audit**
+- See D10 for D2 audit status and timing.
+
+**Utilities & Extensions:**
+- All extensions (NumToSizedBox, DateTimeExtension, HumanizeDuration, ORM helpers, page transitions, grid delegates, file utilities, state utils, i18n, styling) — port as-is
+- All helper functions (useBlack, validateColor, getPrimaryColor, getAccentColor, getThemeColor, generateSwatch, generateContainerElevation, openInfoDialog, parseFileToBase64, parseFileToByteArray) — port as-is
+- Platform-conditional file operations (save_file, pick_file) — port with separate native/web implementations
+
+**Branded Assets:**
+- `Layo` widget (SVG asset widget) — **port, name unchanged** (not Layrz-prefixed; it is a brand asset)
+- `LayoEmotions` enum (12 emotion variants) — port as-is
+
+### Consequences
+
+- **No symbolic changes required** — this decision clarifies scope, not mechanics.
+- `LayrzButton`'s six semantic factories are confirmed. The wiki page for LayrzButton was correct; `.legacyLoading()` is deliberately dropped.
+- `LayrzCalendar` requires a **full refactor** (not a 1:1 port), with architecture review on Material dependency (package:table_calendar).
+- `LayrzDynamicCredentialsInput` is confirmed in scope but implementation is **scheduled after Milestone 2 initial release**, pending D2 audit.
+- Colorblind support is confirmed in scope; availability depends on D2 audit completion.
+- All other components proceed with no scope changes or surprises.
+
+### Review Trigger
+
+After the first batch of Milestone 2 components (3-5 components) ship:
+- Gather feedback on parameter lists and factory designs
+- Validate that the scope confirmations matched product expectations
+- Adjust subsequent components' scope if needed
 
 ---
 

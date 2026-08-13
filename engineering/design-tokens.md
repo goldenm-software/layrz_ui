@@ -1,12 +1,12 @@
 # Design Tokens
 
-This document specifies the design token system for layrz_ui — the semantic values (colors, typography, spacing, motion, etc.) that all components use, ensuring consistency across light and dark themes.
+This document specifies the design token system for layrz_ui — the semantic values (colors, typography, spacing, motion, etc.) that all components use, ensuring consistency in the light theme (dark mode is out of scope).
 
 ## Design Principles
 
 1. **Semantic Over Literal** — Token names reflect *purpose* (primary, danger, success), not color names (blue, red, green). This allows swapping brand colors at runtime without renaming tokens.
 
-2. **Light and Dark** — Every token that depends on brightness (colors, shadows) must resolve differently in light and dark themes. Tokens are never hardcoded to a single color value.
+2. **Light Theme Only** — All tokens define light theme values. Dark mode is out of scope for now. This choice was made knowingly; adding dark mode later will require revisiting every token and every component that assumed a single palette.
 
 3. **No Hardcoded Values in Components** — All design decisions (colors, spacing, animations) come from tokens. Components never have `const Color(0xFF...)` or `Duration(milliseconds: 150)` inline.
 
@@ -74,15 +74,10 @@ class LayrzColorTokens {
 }
 ```
 
-In a light theme:
+In the light theme:
 - `fg1` = dark navy (high contrast on white surfaces)
 - `background` = off-white (#FCFCFC)
 - `overlay` = rgba(0, 0, 0, 0.5)
-
-In a dark theme:
-- `fg1` = light gray (high contrast on dark surfaces)
-- `background` = dark gray (#282828)
-- `overlay` = rgba(0, 0, 0, 0.8)
 
 #### Use in Components
 
@@ -97,7 +92,7 @@ class LayrzButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: colors.primary,  // Resolves to Layrz navy in light, Layrz orange in dark
+        color: colors.primary,  // Resolves to Layrz brand color in light theme
         child: ...,
       ),
     );
@@ -270,7 +265,7 @@ class LayrzShadowTokens {
   final List<BoxShadow> elevation4;
   final List<BoxShadow> elevation5;
   
-  // Each elevation has blur, spread, and color appropriate to light/dark
+  // Each elevation has blur, spread, and color appropriate to light theme
 }
 ```
 
@@ -278,8 +273,6 @@ Example for light theme:
 - `elevation1`: blur 1px, offset (0, 1), color rgba(0,0,0,0.08)
 - `elevation3`: blur 8px, offset (0, 3), color rgba(0,0,0,0.12)
 - `elevation5`: blur 16px, offset (0, 5), color rgba(0,0,0,0.15)
-
-Dark theme elevations use lighter colors and often stronger blur (backgrounds are darker, so shadows must be more visible).
 
 #### Use in Components
 
@@ -463,22 +456,23 @@ This avoids explosion of token definitions while keeping state behavior consiste
 
 ## Optional: material_color_utilities for Tonal Palettes
 
-The `material_color_utilities` package (pure Dart, no Material import) provides tonal palette generation. A single brand color can be expanded into a full tonal palette:
+The `material_color_utilities` package (pure Dart, no Material import) provides tonal palette generation for light theme. A single brand color can be expanded into a full tonal palette:
 
 ```dart
 // Design sketch — optional feature
 import 'package:material_color_utilities/material_color_utilities.dart';
 
-// Given kPrimaryColor (#001E60), generate 5 tonal levels
+// Given kPrimaryColor (#001E60), generate tonal levels for light theme
 final brandColor = kPrimaryColor;
 final scheme = CorePalette.of(brandColor.value);
-final tonal2 = Color(scheme.primary.tone(20));  // Darkest
 final tonal3 = Color(scheme.primary.tone(30));
-// ...
+final tonal5 = Color(scheme.primary.tone(50));
 final tonal7 = Color(scheme.primary.tone(70));  // Lightest
 ```
 
 **Tradeoff**: Using material_color_utilities increases dependency bloat and adds an indirect Material coupling (though the package itself is Material-free). **Decision deferred** — document as optional, evaluate during M2 when components need tonal variants.
+
+**Note**: Since dark mode is out of scope, material_color_utilities now only needs to generate a light tonal palette.
 
 ## Relationship to lib/constants and lib/extensions
 
@@ -490,7 +484,9 @@ Currently holds only four constants:
 - `kLightBackgroundColor` — Off-white (#FCFCFC)
 - `kDarkBackgroundColor` — Dark gray (#282828)
 
-**After Milestone 1:** These remain, but serve as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` and `LayrzThemeData.dark()` read from these constants to initialize color tokens.
+**After Milestone 1:** These remain, but serve as **brand defaults only**. The token system (via `LayrzColorTokens`) provides the actual runtime values. `LayrzThemeData.light()` reads from these constants to initialize color tokens.
+
+**Note on dark mode:** `LayrzThemeData.dark()` currently exists in the source code and will be removed in pending code work. Since dark mode is out of scope, the method is slated for deletion.
 
 ### lib/constants/src/durations.dart
 
@@ -546,14 +542,14 @@ Token names follow these rules:
 
 For Milestone 1, the token system must meet these criteria:
 
-- All color tokens defined for light and dark themes
+- All color tokens defined for light theme
 - Typography tokens cover all text styles (display, headline, title, body, label)
 - Spacing tokens are multiples of 4 (4, 6, 8, 10, 12, 14, 16, 20, 24, 28, 32, 36, 40, 44, 48)
 - Radius tokens include common sizes and a "full" option
-- Shadow tokens define at least 3 elevation levels per theme
+- Shadow tokens define at least 3 elevation levels for light theme
 - Border tokens include stroke widths and pre-defined borders
 - Motion tokens cover hover, press, transition, page transition, dialog durations
-- Test: `LayrzTheme.of(context).tokens.colors.primary` resolves correctly in light and dark
+- Test: `LayrzTheme.of(context).tokens.colors.primary` resolves correctly in light theme
 - Test: `LayrzTheme.of(context).tokens.spacing.sp8` returns 8
 - Test: All tokens are immutable and never null
 - Documentation: Every token has a comment explaining its purpose and usage
