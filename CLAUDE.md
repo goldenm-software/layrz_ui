@@ -159,13 +159,16 @@ This applies to:
 
 ### 2. Full test coverage
 
-Every new widget, extension, helper, or utility **must** have corresponding tests. No code ships without tests.
+Testing is a hard requirement, not guidance. Every public API — widget, extension, helper, utility — **must** have corresponding tests. No code ships without tests.
 
 - Widgets → `testWidgets` in `test/`
 - Pure functions / extensions → `test()` in `test/`
-- Mirror the `lib/src/` directory structure under `test/src/`
+- Mirror the `lib/src/` directory structure under `test/src/` (export-only barrels are exempt)
 - Test all named constructors and factories independently
 - Test edge cases: null-safe fields, empty inputs, boundary values
+- Every visual component additionally requires accessibility tests
+
+CI will eventually enforce three gates via Milestone 1 item 9: tests pass, the mirror-file structure check, and a coverage ratchet that never decreases. The ratchet was chosen over a fixed percentage target so it works from the current baseline without backfill, and so untested code naturally penalises itself.
 
 ### 3. Use @Preview for visual widgets
 
@@ -225,7 +228,7 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **Theming** — always read colors and styles from `LayrzTheme.of(context)` / `context.theme`. Never hardcode design values inside widgets.
 - **Responsive grid** — use the breakpoint constants from `src/constants/grid.dart` (`kExtraSmallGrid`, etc.).
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
-- **SDK constraint** — `>=3.8.0 <4.0.0` / Flutter `>=3.29.0`. Do not raise without checking the CI environment.
+- **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, `RawRadio`, and the stable `@Preview` API exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
 
 ### Light Mode Only
 
