@@ -54,6 +54,76 @@ Makefile                         # Root — delegates to example/ via $(MAKE) -C
 
 ---
 
+## Documentation Directory
+
+Documentation is split between repository documentation (`doc/`) and widget documentation (GitHub wiki):
+
+### Repository Documentation (`doc/`)
+
+Documentation lives in `doc/` (singular), never `docs/`. The Pub layout convention uses singular directory names: `lib`, `test`, `doc`, `example`, `tool`, `bin`. Pub emits a warning for plural `docs` directories and tools may not correctly identify them.
+
+- `dartdoc` generates API documentation into `doc/api/`
+- Markdown documentation is authored in `doc/`, reviewed in pull requests alongside the code, and serves as the source of truth for architecture and design decisions
+
+**Repository doc files** (8 files):
+- `README.md` — index and quick start
+- `roadmap.md` — M1–M7 overview
+- `milestone-1.md` — detailed foundation plan
+- `architecture.md` — codebase organization and patterns
+- `design-tokens.md` — token system specification
+- `flutter-347-audit.md` — Flutter 3.47 widget inventory
+- `dependencies.md` — dependency audit and Material decoupling strategy
+- `decisions.md` — architectural and policy decisions
+
+### Widget Documentation (GitHub Wiki)
+
+The GitHub wiki (`wiki/`) is a git submodule tracking [goldenm-software/layrz_ui.wiki.git](git@github.com:goldenm-software/layrz_ui.wiki.git):
+- All per-component documentation (28 widget pages)
+- Input contract and component catalog
+- Wiki pages are authored flat at the root with no subdirectories
+- Wiki pushes go live immediately (no PR review)
+- Cross-links from wiki to repo docs use absolute GitHub URLs: `https://github.com/goldenm-software/layrz_ui/blob/main/doc/architecture.md`
+- `wiki/` is excluded from package distribution via `.pubignore`
+
+**Key distinction**: `doc/` holds engineering documentation (architecture, decisions, audit); `wiki/` holds user-facing widget documentation.
+
+### NEW WIDGET DOCUMENTATION GOES IN THE WIKI
+
+When you add a new widget, document it in the wiki, not in `doc/`.
+
+---
+
+## Progress Tracking
+
+Progress is tracked in the GitHub Project for `goldenm-software/layrz_ui`, not in documentation files.
+
+- The repo-scoped GitHub Project is the **sole source of truth** for what is done, in progress, or planned
+- Documentation files **must not** contain progress state: no checkbox lists representing status, no completion indicators, no "Done / In Progress / Blocked" markers
+- `doc/component-catalog.md` holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. Completion status is not allowed.
+- `doc/milestone-1.md` contains acceptance criteria as specification — plain prose or plain bullets describing what "done" means, NOT as tickable checkboxes
+- All acceptance criteria and verification checklists must be written as plain bullet points (`-`) without checkboxes, so readers understand them as specifications, not trackers
+
+### Project Location
+
+**GitHub Projects v2**, number 9 in the `goldenm-software` organization, linked to `goldenm-software/layrz_ui`:  
+https://github.com/orgs/goldenm-software/projects/9  
+Status: Private
+
+Components are tracked as **plain draft items** (not Issues).
+
+### Custom Fields
+
+- **Phase** (single select): `M1 Foundation`, `M2 Core primitives`, `M3 Inputs`, `M4 Pickers`, `M5 Layout & navigation`, `M6 Data display`, `M7 Blocked`
+- **Domain** (single select): Foundation, Theme, Buttons, Inputs, Pickers, Layout, Navigation, Feedback, Data, Grid, Blocked
+- **Primitive** (text): Flutter SDK primitive used (e.g. `RawTooltip`, `RawRadio`, `ToggleableStateMixin`) or `hand-rolled` for custom implementations
+- **Blocker** (text): blocking dependency, if any
+
+### Important: Phase ≠ Milestone
+
+Documentation refers to **milestones M1–M7**; the Project field recording them is **`Phase`**, NOT `Milestone`. GitHub reserves `Milestone` (along with `Labels`, `Repository`, and `Linked pull requests`) as built-in fields derived only from real Issues — they cannot be used on draft items. So `Phase` in the Project is the tracking mechanism; it maps to the M1–M7 references in `doc/roadmap.md` and `doc/component-catalog.md`.
+
+---
+
 ## CRITICAL rules — always follow these
 
 ### 1. Document EVERY argument at 100%
@@ -97,24 +167,38 @@ Every new widget, extension, helper, or utility **must** have corresponding test
 - Test all named constructors and factories independently
 - Test edge cases: null-safe fields, empty inputs, boundary values
 
-### 3. Use WidgetPreview where applicable
+### 3. Use @Preview for visual widgets
 
-For stateless or lightly-stateful widgets, add a `WidgetPreview` at the bottom of the widget file so it can be previewed without launching a device:
+For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with `LayrzPreviewTheme` (planned for Milestone 1).
 
 ```dart
-import 'package:flutter/widget_preview.dart';
+import 'package:flutter/widget_previews.dart';
+import 'package:layrz_ui/preview.dart';
 
-@widgetPreview
-Widget previewMyWidget() => LayrzApp(
-  home: MyWidget(color: kPrimaryColor, size: 48),
-  theme: LayrzThemeData.light(),
-);
+@Preview(
+  name: 'Light',
+  theme: LayrzPreviewTheme.light,
+  brightness: Brightness.light,
+)
+@Preview(
+  name: 'Dark',
+  theme: LayrzPreviewTheme.dark,
+  brightness: Brightness.dark,
+)
+Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
 ```
+
+The real API in Flutter 3.47:
+- **Import**: `package:flutter/widget_previews.dart` (plural)
+- **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
+- **Theme type**: `PreviewThemeData` (interface)
+- **layrz_ui integration**: `LayrzPreviewTheme` (planned for M1, not yet available) will implement `PreviewThemeData` with light and dark variants
 
 Rules:
 - Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Each preview must wrap its subject in `LayrzApp` so `LayrzTheme` is available.
-- Add a light **and** dark variant when the widget is theme-sensitive.
+- Use `LayrzPreviewTheme.light` and `LayrzPreviewTheme.dark` as theme callbacks once available in M1.
+- Add both light **and** dark `@Preview` annotations when the widget is theme-sensitive.
+- Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
 
 ### 4. One concern per file — always split, never pile
 
@@ -183,7 +267,7 @@ Tests live under `test/` and mirror the structure of `lib/src/`.
 3. Export from `lib/layrz_ui.dart`
 4. Document every argument (see rule #1)
 5. Write tests in `test/src/<domain>/<widget_name>_test.dart` (see rule #2)
-6. Add a `WidgetPreview` at the bottom of the widget file if applicable (see rule #3)
+6. Add `@Preview` annotations at the bottom of the widget file if applicable (see rule #3)
 7. Run `flutter analyze` — must be clean
 8. Run `flutter test` — must be green
 9. Verify no material/cupertino imports crept in

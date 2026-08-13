@@ -1,0 +1,2 @@
+# Keep the wiki submodule out of the pub package archive
+wiki/
