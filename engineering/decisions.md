@@ -713,6 +713,51 @@ If M2+ component design repeatedly reaches for a second brand colour, revisit th
 
 ---
 
+## D15: Interaction States Never Change Geometry
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Interaction states (hover, press, focus, disabled) can be expressed through appearance changes or geometry changes. The showroom's hover demo animated a button's border width from 1px to 2px; because `BoxDecoration.border` insets its child by the stroke width, the element grew by one pixel per side and its content shifted under the pointer, causing perceived flicker. The user identified this as a systemic problem to prevent across all components, not a one-off bug fix. Without a documented rule, every component author in Milestones 2–7 would face the same design decision independently, inviting repeated mistakes.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Allow geometry changes per component | Maximum flexibility; some components might genuinely need visual growth | Invites flicker and reflow; accessibility irritant; inconsistent system behaviour; expensive to fix once components are built |
+| (b) Standardize the geometry change amount | Consistent visual language; predictable reflow | Still causes flicker; reflow overhead per component; doesn't resolve the core accessibility problem |
+| (c) **Chosen** — Prohibit geometry changes entirely | No flicker; no sibling reflow; accessibility best practice; consistent interaction behaviour across all components | Interaction feedback limited to colour and shadow; some designs may feel less tactile initially |
+
+### Decision
+
+**Chose (c): Interaction states must change appearance only, never geometry.**
+
+Hover, press, focus, and disabled states may vary **colour, border colour, shadow and elevation, opacity, and cursor**. They must **not** change size, border *width*, padding, margin, or apply a scale transform.
+
+### Rationale
+
+- **Hit target stability**: When an element resizes under the pointer, its own hit target moves. At the boundary where the element grows, the original target position drifts out from under the cursor, the element shrinks back, and the cursor re-enters — a flicker loop familiar to users with motor impairments trying to acquire small targets.
+- **Reflow cost**: Growing an element reflows all siblings in tight layouts (grids, flex containers). This is computationally expensive and visually jarring.
+- **Accessibility precedent**: WCAG and mobile accessibility guidelines identify resizing elements on interaction as a documented friction point for users with fine motor control limitations.
+- **Sufficiency**: `boxShadow` and colour changes deliver the same affordance (visual emphasis) without layout side effects. A heavier shadow gives tactile feedback; a colour shift signals state change. Both are non-destructive.
+- **User preference**: The user stated this directly as a standing design principle, which is sufficient rationale on its own.
+
+### Consequences
+
+- Component authors animate **colour** (primary → pressed variant), **shadow/elevation** (static to elevated), and **opacity** (100% → 80% disabled) within the static layout bounds.
+- Where a thicker border is desired in an interaction state, the stroke must exist at constant width in every state with varying colour. Example: `border: Border.all(width: 2, color: _isHovered ? hoverColor : transparentColor)` instead of toggling the width.
+- `LayrzBorderTokens` supplies `stroke1`/`stroke2`/`stroke3` for *static* design-time weight choices (a button always at 2px, a field always at 1px), not for transitions between states.
+- The showroom's hover demo gains a regression test asserting the rendered size is unchanged while hovered.
+
+### Review Trigger
+
+If a component design genuinely needs a geometry change to be usable — an expanding search bar that grows to full width, a growing text field — that is a deliberate **layout behaviour** (expanding to fill space, revealing content) rather than an interaction state. Such cases should be argued on their own terms in the component's decision, not treated as an exception to this rule. The distinction is intent: state changes provide feedback within fixed bounds; layout changes intentionally restructure the view.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
