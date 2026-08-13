@@ -85,9 +85,6 @@ class LayrzTokenizer {
   /// Primary brand color used for interactive elements and prominent actions.
   Color get primary => tokens.colors.primary;
 
-  /// Secondary brand color used for emphasis and special states.
-  Color get accent => tokens.colors.accent;
-
   /// Semantic color for positive confirmations and good status.
   Color get success => tokens.colors.success;
 

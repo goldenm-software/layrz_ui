@@ -5,7 +5,7 @@ import '../../constants/constants.dart';
 /// Immutable semantic color tokens for the layrz_ui design system.
 ///
 /// All colors are defined for light mode only. Colors are organized by purpose:
-/// brand colors ([primary], [accent]), surface colors ([surface], [surface2], [surface3]),
+/// brand colors ([primary]), surface colors ([surface], [surface2], [surface3]),
 /// foreground/text colors ([fg1]–[fg4]), semantic status colors ([danger], [success],
 /// [warning], [info]), and structural colors ([divider], [overlay]).
 ///
@@ -14,9 +14,6 @@ import '../../constants/constants.dart';
 class LayrzColorTokens {
   /// The primary brand color used for interactive elements and prominent actions.
   final Color primary;
-
-  /// The secondary brand color used for emphasis and special states.
-  final Color accent;
 
   /// The scaffold / canvas background color drawn behind all surfaces.
   final Color background;
@@ -70,7 +67,6 @@ class LayrzColorTokens {
   /// Creates a new [LayrzColorTokens].
   const LayrzColorTokens({
     required this.primary,
-    required this.accent,
     required this.background,
     required this.surface,
     required this.surface2,
@@ -91,15 +87,13 @@ class LayrzColorTokens {
 
   /// Light theme color tokens using Layrz brand defaults.
   ///
-  /// [primary] defaults to [kPrimaryColor]. [accent] defaults to [kAccentColor].
+  /// [primary] defaults to [kPrimaryColor].
   /// All other colors use semantic light theme values.
   factory LayrzColorTokens.light({
     Color primary = kPrimaryColor,
-    Color accent = kAccentColor,
   }) {
     return LayrzColorTokens(
       primary: primary,
-      accent: accent,
       background: kLightBackgroundColor,
       surface: const Color(0xFFFFFFFF),
       surface2: const Color(0xFFF7F7F7),
@@ -122,7 +116,6 @@ class LayrzColorTokens {
   /// Returns a copy of this color tokens object with the given fields replaced.
   LayrzColorTokens copyWith({
     Color? primary,
-    Color? accent,
     Color? background,
     Color? surface,
     Color? surface2,
@@ -142,7 +135,6 @@ class LayrzColorTokens {
   }) {
     return LayrzColorTokens(
       primary: primary ?? this.primary,
-      accent: accent ?? this.accent,
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surface2: surface2 ?? this.surface2,
@@ -168,7 +160,6 @@ class LayrzColorTokens {
       other is LayrzColorTokens &&
           runtimeType == other.runtimeType &&
           primary == other.primary &&
-          accent == other.accent &&
           background == other.background &&
           surface == other.surface &&
           surface2 == other.surface2 &&
@@ -189,7 +180,6 @@ class LayrzColorTokens {
   @override
   int get hashCode => Object.hash(
     primary,
-    accent,
     background,
     surface,
     surface2,

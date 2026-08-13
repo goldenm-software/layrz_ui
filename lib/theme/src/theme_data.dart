@@ -36,11 +36,6 @@ class LayrzThemeData {
   /// Backwards-compatible shorthand for [tokens.colors.primary].
   Color get primaryColor => tokens.colors.primary;
 
-  /// Accent / secondary brand color (vibrant orange by default).
-  ///
-  /// Backwards-compatible shorthand for [tokens.colors.accent].
-  Color get accentColor => tokens.colors.accent;
-
   /// Canvas / scaffold background color.
   ///
   /// Backwards-compatible shorthand for [tokens.colors.background].
@@ -106,19 +101,16 @@ class LayrzThemeData {
   /// in a [LayrzThemeData] with an [IconThemeData] seeded from the text color.
   ///
   /// [primaryColor] overrides the default [kPrimaryColor].
-  /// [accentColor] overrides the default [kAccentColor].
   /// [titleFont] and [bodyFont] specify the font sources for typography.
   /// [fontHandler] resolves font family names; when null, uses font names directly.
   factory LayrzThemeData.light({
     Color primaryColor = kPrimaryColor,
-    Color accentColor = kAccentColor,
     LayrzFont titleFont = kLayrzFont,
     LayrzFont bodyFont = kLayrzFont,
     LayrzFontHandler? fontHandler,
   }) {
     final tokens = LayrzTokens.light(
       primaryColor: primaryColor,
-      accentColor: accentColor,
       titleFont: titleFont,
       bodyFont: bodyFont,
       fontHandler: fontHandler,

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/theme/theme.dart';
-import 'package:layrz_ui/constants/constants.dart';
 
 void main() {
   group('LayrzTheme', () {
@@ -70,7 +69,7 @@ void main() {
 
     test('updateShouldNotify is true for differing data', () {
       final data1 = LayrzThemeData.light();
-      final data2 = LayrzThemeData.light(primaryColor: kAccentColor);
+      final data2 = LayrzThemeData.light(primaryColor: const Color(0xFF888888));
 
       final widget1 = LayrzTheme(data: data1, child: const SizedBox());
       final widget2 = LayrzTheme(data: data2, child: const SizedBox());

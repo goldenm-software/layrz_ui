@@ -45,18 +45,10 @@ void main() {
       expect(tokens.colors.primary, equals(customPrimary));
     });
 
-    test('light factory respects accentColor parameter', () {
-      const customAccent = Color(0xFF654321);
-      final tokens = LayrzTokens.light(accentColor: customAccent);
-
-      expect(tokens.colors.accent, equals(customAccent));
-    });
-
     test('light factory uses default colors when not specified', () {
       final tokens = LayrzTokens.light();
 
       expect(tokens.colors.primary, equals(kPrimaryColor));
-      expect(tokens.colors.accent, equals(kAccentColor));
     });
 
     test('light factory wires shadow.baseRadius to radius.base', () {

@@ -8,7 +8,6 @@ void main() {
       final tokens = LayrzColorTokens.light();
 
       expect(tokens.primary, equals(const Color(0xFF001E60)));
-      expect(tokens.accent, equals(const Color(0xFFFF8200)));
       expect(tokens.background, equals(const Color(0xFFFCFCFC)));
       expect(tokens.tonalOpacity, equals(0.2));
     });
@@ -17,12 +16,6 @@ void main() {
       final customPrimary = const Color(0xFF123456);
       final tokens = LayrzColorTokens.light(primary: customPrimary);
       expect(tokens.primary, equals(customPrimary));
-    });
-
-    test('light factory respects accentColor parameter', () {
-      final customAccent = const Color(0xFF654321);
-      final tokens = LayrzColorTokens.light(accent: customAccent);
-      expect(tokens.accent, equals(customAccent));
     });
 
     test('light theme has correct surface colors', () {
@@ -67,7 +60,6 @@ void main() {
       final modified = original.copyWith(primary: newPrimary);
 
       expect(modified.primary, equals(newPrimary));
-      expect(modified.accent, equals(original.accent));
       expect(modified.background, equals(original.background));
       expect(
         original.primary,

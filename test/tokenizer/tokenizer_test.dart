@@ -74,14 +74,6 @@ void main() {
       expect(tokenizer.primary, equals(kPrimaryColor));
     });
 
-    test('accent shortcut returns colors.accent', () {
-      final tokens = LayrzTokens.light();
-      final tokenizer = LayrzTokenizer(tokens);
-
-      expect(tokenizer.accent, equals(tokens.colors.accent));
-      expect(tokenizer.accent, equals(kAccentColor));
-    });
-
     test('success shortcut returns colors.success', () {
       final tokens = LayrzTokens.light();
       final tokenizer = LayrzTokenizer(tokens);

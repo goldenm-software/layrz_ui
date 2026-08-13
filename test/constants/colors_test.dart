@@ -8,10 +8,6 @@ void main() {
       expect(kPrimaryColor, equals(const Color(0xFF001E60)));
     });
 
-    test('kAccentColor is vibrant orange', () {
-      expect(kAccentColor, equals(const Color(0xFFFF8200)));
-    });
-
     test('kLightBackgroundColor is light gray', () {
       expect(kLightBackgroundColor, equals(const Color(0xFFFCFCFC)));
     });

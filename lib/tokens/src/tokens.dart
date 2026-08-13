@@ -58,7 +58,7 @@ class LayrzTokens {
   /// Light theme tokens using Layrz brand defaults.
   ///
   /// Wires all derived tokens consistently:
-  /// - [LayrzColorTokens.light] is seeded with [primaryColor] and [accentColor]
+  /// - [LayrzColorTokens.light] is seeded with [primaryColor]
   /// - [LayrzShadowTokens] is seeded with the resulting [colors.surface] and [radius.base]
   /// - [LayrzBorderTokens] is seeded with [colors.divider]
   /// - [LayrzTextTheme.defaults] is constructed with [colors.fg1] as the text color
@@ -68,7 +68,6 @@ class LayrzTokens {
   /// are never inconsistent with each other.
   factory LayrzTokens.light({
     Color primaryColor = kPrimaryColor,
-    Color accentColor = kAccentColor,
     LayrzFont titleFont = kLayrzFont,
     LayrzFont bodyFont = kLayrzFont,
     LayrzFontHandler? fontHandler,
@@ -76,7 +75,6 @@ class LayrzTokens {
     // Build color tokens first — they seed other tokens
     final colorTokens = LayrzColorTokens.light(
       primary: primaryColor,
-      accent: accentColor,
     );
 
     // Build spacing and radius (independent of colors)

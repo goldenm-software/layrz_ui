@@ -13,11 +13,6 @@ void main() {
         expect(data.primaryColor, equals(kPrimaryColor));
       });
 
-      test('uses default accent color', () {
-        final data = LayrzThemeData.light();
-        expect(data.accentColor, equals(kAccentColor));
-      });
-
       test('uses default background color', () {
         final data = LayrzThemeData.light();
         expect(data.backgroundColor, equals(kLightBackgroundColor));
@@ -27,12 +22,6 @@ void main() {
         const customPrimary = Color(0xFF112233);
         final data = LayrzThemeData.light(primaryColor: customPrimary);
         expect(data.primaryColor, equals(customPrimary));
-      });
-
-      test('accepts custom accent color', () {
-        const customAccent = Color(0xFF445566);
-        final data = LayrzThemeData.light(accentColor: customAccent);
-        expect(data.accentColor, equals(customAccent));
       });
 
       test('creates IconThemeData with fg1 color and size 24', () {
@@ -65,10 +54,6 @@ void main() {
 
       test('primaryColor delegates to tokens.colors.primary', () {
         expect(data.primaryColor, equals(data.tokens.colors.primary));
-      });
-
-      test('accentColor delegates to tokens.colors.accent', () {
-        expect(data.accentColor, equals(data.tokens.colors.accent));
       });
 
       test('backgroundColor delegates to tokens.colors.background', () {
@@ -165,15 +150,6 @@ void main() {
         final data1 = LayrzThemeData.light();
         final data2 = LayrzThemeData.light(
           primaryColor: const Color(0xFF999999),
-        );
-
-        expect(data1, isNot(equals(data2)));
-      });
-
-      test('two instances with different accent colors are unequal', () {
-        final data1 = LayrzThemeData.light();
-        final data2 = LayrzThemeData.light(
-          accentColor: const Color(0xFF999999),
         );
 
         expect(data1, isNot(equals(data2)));
