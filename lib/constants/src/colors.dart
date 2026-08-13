@@ -8,6 +8,3 @@ const Color kAccentColor = Color(0xFFFF8200);
 
 /// Scaffold / canvas background color for light themes.
 const Color kLightBackgroundColor = Color(0xFFFCFCFC);
-
-/// Scaffold / canvas background color for dark themes.
-const Color kDarkBackgroundColor = Color(0xFF282828);

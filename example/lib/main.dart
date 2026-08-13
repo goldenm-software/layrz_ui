@@ -13,8 +13,6 @@ class ExampleApp extends StatelessWidget {
     return LayrzApp(
       title: kAppTitle,
       theme: LayrzThemeData.light(),
-      darkTheme: LayrzThemeData.dark(),
-      themeMode: LayrzThemeMode.system,
       home: const HomePage(),
     );
   }
@@ -49,15 +47,15 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 32),
-              Text(
-                'Button taps: $_counter',
-                style: theme.textTheme.bodyLarge,
-              ),
+              Text('Button taps: $_counter', style: theme.textTheme.bodyLarge),
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: () => setState(() => _counter++),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: theme.primaryColor,
                     borderRadius: BorderRadius.circular(theme.borderRadius),
@@ -73,8 +71,10 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Brightness: ${theme.brightness.name}',
-                style: theme.textTheme.bodySmall.copyWith(color: theme.hintColor),
+                'layrz_ui: Light mode only',
+                style: theme.textTheme.bodySmall.copyWith(
+                  color: theme.hintColor,
+                ),
               ),
             ],
           ),

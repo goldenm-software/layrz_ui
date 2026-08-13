@@ -2,32 +2,16 @@ import 'package:flutter/widgets.dart';
 
 import '../../theme/theme.dart';
 
-export '../../theme/theme.dart';
-
-/// Brightness mode selector — equivalent of Material's ThemeMode.
-enum LayrzThemeMode {
-  /// Always use [LayrzApp.theme] (light).
-  light,
-
-  /// Always use [LayrzApp.darkTheme] (dark).
-  dark,
-
-  /// Follow [MediaQuery.platformBrightnessOf]: light → [theme], dark → [darkTheme].
-  system,
-}
-
 /// Root application widget for layrz_ui.
 ///
-/// Drop-in replacement for [MaterialApp] / [MaterialApp.router] built exclusively
-/// on [WidgetsApp] — no Material or Cupertino dependency.
+/// Light-mode-only widget built exclusively on [WidgetsApp] — no Material
+/// or Cupertino dependency.
 ///
 /// Usage (declarative routing):
 /// ```dart
 /// LayrzApp.router(
 ///   routerConfig: myRouter,
 ///   theme: LayrzThemeData.light(primaryColor: brandColor),
-///   darkTheme: LayrzThemeData.dark(primaryColor: brandColor),
-///   themeMode: LayrzThemeMode.system,
 ///   title: 'My App',
 /// )
 /// ```
@@ -87,18 +71,8 @@ class LayrzApp extends StatefulWidget {
 
   // ── Theme ───────────────────────────────────────────────────────────
 
-  /// The light [LayrzThemeData]. Used when [themeMode] is [LayrzThemeMode.light]
-  /// or when [themeMode] is [LayrzThemeMode.system] and the platform brightness is light.
-  /// Defaults to [LayrzThemeData.light()] when not provided.
+  /// The light [LayrzThemeData]. Defaults to [LayrzThemeData.light()] when not provided.
   final LayrzThemeData? theme;
-
-  /// The dark [LayrzThemeData]. Used when [themeMode] is [LayrzThemeMode.dark]
-  /// or when [themeMode] is [LayrzThemeMode.system] and the platform brightness is dark.
-  /// Defaults to [LayrzThemeData.dark()] when not provided.
-  final LayrzThemeData? darkTheme;
-
-  /// Controls which theme variant is active. Defaults to [LayrzThemeMode.system].
-  final LayrzThemeMode themeMode;
 
   // ── App metadata ────────────────────────────────────────────────────
 
@@ -170,8 +144,6 @@ class LayrzApp extends StatefulWidget {
     this.navigatorObservers = const [],
     this.initialRoute,
     this.theme,
-    this.darkTheme,
-    this.themeMode = LayrzThemeMode.system,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -188,11 +160,11 @@ class LayrzApp extends StatefulWidget {
     this.shortcuts,
     this.actions,
     this.restorationScopeId,
-  })  : routerConfig = null,
-        routerDelegate = null,
-        routeInformationParser = null,
-        routeInformationProvider = null,
-        backButtonDispatcher = null;
+  }) : routerConfig = null,
+       routerDelegate = null,
+       routeInformationParser = null,
+       routeInformationProvider = null,
+       backButtonDispatcher = null;
 
   /// Declarative-routing constructor (go_router, auto_route, etc.).
   const LayrzApp.router({
@@ -203,8 +175,6 @@ class LayrzApp extends StatefulWidget {
     this.routeInformationProvider,
     this.backButtonDispatcher,
     this.theme,
-    this.darkTheme,
-    this.themeMode = LayrzThemeMode.system,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -221,29 +191,18 @@ class LayrzApp extends StatefulWidget {
     this.shortcuts,
     this.actions,
     this.restorationScopeId,
-  })  : home = null,
-        routes = null,
-        onGenerateRoute = null,
-        onUnknownRoute = null,
-        navigatorObservers = const [],
-        initialRoute = null;
+  }) : home = null,
+       routes = null,
+       onGenerateRoute = null,
+       onUnknownRoute = null,
+       navigatorObservers = const [],
+       initialRoute = null;
 
   @override
   State<LayrzApp> createState() => _LayrzAppState();
 }
 
 class _LayrzAppState extends State<LayrzApp> {
-  LayrzThemeData _resolveTheme(Brightness platformBrightness) {
-    final light = widget.theme ?? LayrzThemeData.light();
-    final dark = widget.darkTheme ?? LayrzThemeData.dark();
-
-    return switch (widget.themeMode) {
-      LayrzThemeMode.light => light,
-      LayrzThemeMode.dark => dark,
-      LayrzThemeMode.system => platformBrightness == Brightness.dark ? dark : light,
-    };
-  }
-
   Widget _wrapWithTheme({
     required BuildContext context,
     required LayrzThemeData themeData,
@@ -251,27 +210,32 @@ class _LayrzAppState extends State<LayrzApp> {
   }) {
     final userChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
 
-    return LayrzTheme(
+    final innerChild = LayrzTheme(
       data: themeData,
       child: DefaultTextStyle(
         style: themeData.textStyle,
         child: IconTheme(
           data: themeData.iconTheme,
-          child: ColoredBox(
-            color: themeData.backgroundColor,
-            child: userChild,
-          ),
+          child: ColoredBox(color: themeData.backgroundColor, child: userChild),
         ),
       ),
     );
+
+    if (widget.scrollBehavior != null) {
+      return ScrollConfiguration(
+        behavior: widget.scrollBehavior!,
+        child: innerChild,
+      );
+    }
+
+    return innerChild;
   }
 
   bool get _isRouter => widget.routerConfig != null || widget.routerDelegate != null;
 
   @override
   Widget build(BuildContext context) {
-    final platformBrightness = MediaQuery.platformBrightnessOf(context);
-    final themeData = _resolveTheme(platformBrightness);
+    final themeData = widget.theme ?? LayrzThemeData.light();
     final appColor = widget.color ?? themeData.primaryColor;
 
     if (_isRouter) {
@@ -296,11 +260,7 @@ class _LayrzAppState extends State<LayrzApp> {
         routeInformationParser: widget.routeInformationParser,
         routeInformationProvider: widget.routeInformationProvider,
         backButtonDispatcher: widget.backButtonDispatcher,
-        builder: (ctx, child) => _wrapWithTheme(
-          context: ctx,
-          themeData: themeData,
-          child: child,
-        ),
+        builder: (ctx, child) => _wrapWithTheme(context: ctx, themeData: themeData, child: child),
       );
     }
 
@@ -332,11 +292,7 @@ class _LayrzAppState extends State<LayrzApp> {
           pageBuilder: (ctx, animation, secondaryAnimation) => builder(ctx),
         );
       },
-      builder: (ctx, child) => _wrapWithTheme(
-        context: ctx,
-        themeData: themeData,
-        child: child,
-      ),
+      builder: (ctx, child) => _wrapWithTheme(context: ctx, themeData: themeData, child: child),
     );
   }
 }
