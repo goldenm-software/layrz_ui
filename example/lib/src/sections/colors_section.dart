@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element_parameter
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -24,7 +23,7 @@ Widget buildColorsSection() {
             // Brand colors
             _ColorCategory(
               title: 'Brand',
-              colors: [_ColorSample('primary', tokens.colors.primary), _ColorSample('accent', tokens.colors.accent)],
+              colors: [_ColorSample('primary', tokens.colors.primary)],
             ),
 
             SizedBox(height: tokens.spacing.sp24),
@@ -109,7 +108,7 @@ class _ColorCategory extends StatelessWidget {
   ///
   /// The [title] is the category name (e.g., 'Brand', 'Surface').
   /// The [colors] list contains samples to render.
-  const _ColorCategory({required this.title, required this.colors, super.key});
+  const _ColorCategory({required this.title, required this.colors});
 
   /// The category name.
   final String title;
@@ -141,7 +140,7 @@ class _ColorCategory extends StatelessWidget {
 /// A swatch demonstrating the overlay color composited over a background.
 class _OverlaySwatch extends StatelessWidget {
   /// Creates a new [_OverlaySwatch].
-  const _OverlaySwatch({required this.label, required this.color, super.key});
+  const _OverlaySwatch({required this.label, required this.color});
 
   /// The label for the swatch.
   final String label;
@@ -184,7 +183,7 @@ class _OverlaySwatch extends StatelessWidget {
 /// A swatch demonstrating tonal opacity by showing primary color at different opacities.
 class _TonalOpacitySwatch extends StatelessWidget {
   /// Creates a new [_TonalOpacitySwatch].
-  const _TonalOpacitySwatch({required this.tokens, super.key});
+  const _TonalOpacitySwatch({required this.tokens});
 
   /// The token set containing tonal opacity and primary color.
   final LayrzTokens tokens;

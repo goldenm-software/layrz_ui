@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element_parameter
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -65,7 +64,7 @@ Widget buildBordersSection() {
 /// A sample demonstrating a [BorderSide] with visual container.
 class _BorderSample extends StatelessWidget {
   /// Creates a new [_BorderSample].
-  const _BorderSample({required this.label, required this.side, super.key});
+  const _BorderSample({required this.label, required this.side});
 
   /// The label for the border (e.g., 'light', 'normal').
   final String label;
@@ -83,7 +82,7 @@ class _BorderSample extends StatelessWidget {
         Text(label, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
         SizedBox(height: tokens.spacing.sp8),
         Container(
-          height: 60,
+          height: tokens.spacing.sp48,
           decoration: BoxDecoration(
             color: tokens.colors.surface,
             border: Border(bottom: side),
@@ -99,7 +98,7 @@ class _BorderSample extends StatelessWidget {
 /// A row demonstrating a stroke width value with a horizontal line.
 class _StrokeValueRow extends StatelessWidget {
   /// Creates a new [_StrokeValueRow].
-  const _StrokeValueRow({required this.label, required this.width, required this.tokens, super.key});
+  const _StrokeValueRow({required this.label, required this.width, required this.tokens});
 
   /// The label for the stroke value.
   final String label;
@@ -116,7 +115,7 @@ class _StrokeValueRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: 60,
+          width: tokens.spacing.sp48,
           child: Text(label, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
         ),
         Expanded(
@@ -124,7 +123,7 @@ class _StrokeValueRow extends StatelessWidget {
         ),
         SizedBox(width: tokens.spacing.sp8),
         SizedBox(
-          width: 50,
+          width: tokens.spacing.sp48,
           child: Text(
             '${width.toStringAsFixed(1)} px',
             textAlign: TextAlign.right,

@@ -118,8 +118,7 @@ class Showroom extends StatelessWidget {
 /// This ensures each section is only built once, even if the parent rebuilds.
 class _SectionWrapper extends StatelessWidget {
   /// Creates a new [_SectionWrapper].
-  // ignore: unused_element_parameter
-  const _SectionWrapper({required this.builder, super.key});
+  const _SectionWrapper({required this.builder});
 
   /// The builder function that creates the section widget.
   final Widget Function() builder;

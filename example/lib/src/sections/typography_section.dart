@@ -88,8 +88,7 @@ class _TypographyCategory extends StatelessWidget {
   ///
   /// The [title] is the category name (e.g., 'Display', 'Body').
   /// The [styles] list contains samples to render.
-  // ignore: unused_element_parameter
-  const _TypographyCategory({required this.title, required this.styles, super.key});
+  const _TypographyCategory({required this.title, required this.styles});
 
   /// The category name.
   final String title;
@@ -125,8 +124,7 @@ class _TypographyCategory extends StatelessWidget {
 /// A single text style sample with its label and font size.
 class _StyleRow extends StatelessWidget {
   /// Creates a new [_StyleRow].
-  // ignore: unused_element_parameter
-  const _StyleRow({required this.sample, super.key});
+  const _StyleRow({required this.sample});
 
   /// The style sample to render.
   final _StyleSample sample;
@@ -141,7 +139,7 @@ class _StyleRow extends StatelessWidget {
       children: [
         // Style name label
         SizedBox(
-          width: 120,
+          width: tokens.spacing.sp48 * 2,
           child: Text(sample.name, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
         ),
 
@@ -150,7 +148,7 @@ class _StyleRow extends StatelessWidget {
 
         // Font size value
         SizedBox(
-          width: 60,
+          width: tokens.spacing.sp48,
           child: Text(
             '${sample.style.fontSize?.toStringAsFixed(0)} px',
             textAlign: TextAlign.right,

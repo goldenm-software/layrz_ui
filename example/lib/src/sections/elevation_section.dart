@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element_parameter
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -104,7 +103,6 @@ class _ElevationCard extends StatelessWidget {
     required this.label,
     this.reverse = false,
     this.hideOnElevationZero = false,
-    super.key,
   });
 
   /// The elevation level (0–5).

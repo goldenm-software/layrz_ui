@@ -1,4 +1,5 @@
-// ignore_for_file: unused_element_parameter
+import 'dart:math';
+
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -16,7 +17,7 @@ Widget buildSpacingSection() {
 
       return ShowroomSection(
         title: 'Spacing',
-        description: 'Spacing tokens form a harmonious 4-pixel grid',
+        description: 'Spacing tokens with values from 4 to 48 pixels (not all multiples of 4)',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -41,7 +42,7 @@ Widget buildSpacingSection() {
 /// A visual ruler showing all spacing values as bars with labels.
 class _SpacingRuler extends StatelessWidget {
   /// Creates a new [_SpacingRuler].
-  const _SpacingRuler({required this.tokens, super.key});
+  const _SpacingRuler({required this.tokens});
 
   /// The token set containing spacing tokens.
   final LayrzTokens tokens;
@@ -76,18 +77,30 @@ class _SpacingRuler extends StatelessWidget {
                 children: [
                   // Label
                   SizedBox(
-                    width: 50,
+                    width: tokens.spacing.sp48,
                     child: Text(item.$1, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
                   ),
 
-                  // Bar whose width is the spacing value
+                  // Track (background strip) with bar on top showing true width
                   Expanded(
                     child: Container(
-                      height: 24,
-                      width: item.$2,
+                      height: tokens.spacing.sp24,
                       decoration: BoxDecoration(
-                        color: tokens.colors.primary,
+                        color: tokens.colors.surface2,
                         borderRadius: BorderRadius.circular(tokens.radius.r8),
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        width: item.$2,
+                        height: tokens.spacing.sp24,
+                        key: ValueKey('spacing-bar-${item.$1}'),
+                        decoration: BoxDecoration(
+                          color: tokens.colors.primary,
+                          borderRadius: BorderRadius.circular(
+                            // Use small radius for very small bars (sp4, sp6), larger for bigger bars
+                            item.$2 <= 8.0 ? 2.0 : min(item.$2 / 4, tokens.radius.r8),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -95,7 +108,7 @@ class _SpacingRuler extends StatelessWidget {
                   // Value label
                   SizedBox(width: tokens.spacing.sp8),
                   SizedBox(
-                    width: 50,
+                    width: tokens.spacing.sp48,
                     child: Text(
                       '${item.$2.toStringAsFixed(0)} px',
                       textAlign: TextAlign.right,
@@ -114,7 +127,7 @@ class _SpacingRuler extends StatelessWidget {
 /// Demonstrates convenience spacing accessors (margin, padding, reducedMargin).
 class _SpacingAccessors extends StatelessWidget {
   /// Creates a new [_SpacingAccessors].
-  const _SpacingAccessors({required this.tokens, super.key});
+  const _SpacingAccessors({required this.tokens});
 
   /// The token set containing spacing tokens.
   final LayrzTokens tokens;
@@ -172,7 +185,7 @@ class _SpacingAccessors extends StatelessWidget {
                 padding: tokens.spacing.padding,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: tokens.colors.accent,
+                    color: tokens.colors.primary,
                     borderRadius: BorderRadius.circular(tokens.radius.r8),
                   ),
                   height: 40,

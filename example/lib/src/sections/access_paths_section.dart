@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element_parameter
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -105,7 +104,6 @@ class _AccessPathComparison extends StatelessWidget {
     required this.path2,
     required this.value2,
     required this.match,
-    super.key,
   });
 
   /// The token name being compared.
@@ -141,8 +139,8 @@ class _AccessPathComparison extends StatelessWidget {
                 Expanded(child: Text(label, style: tokens.typography.titleSmall)),
                 // Match indicator
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: tokens.spacing.sp32,
+                  height: tokens.spacing.sp32,
                   decoration: BoxDecoration(
                     color: match ? tokens.colors.success : tokens.colors.danger,
                     borderRadius: BorderRadius.circular(tokens.radius.full),
@@ -178,7 +176,7 @@ class _AccessPathComparison extends StatelessWidget {
 /// A row displaying a single access path and its value.
 class _AccessPathRow extends StatelessWidget {
   /// Creates a new [_AccessPathRow].
-  const _AccessPathRow({required this.path, required this.value, required this.tokens, super.key});
+  const _AccessPathRow({required this.path, required this.value, required this.tokens});
 
   /// The access path as a code string.
   final String path;

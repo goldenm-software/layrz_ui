@@ -1,4 +1,3 @@
-// ignore_for_file: unused_element_parameter
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -47,7 +46,7 @@ Widget buildMotionSection() {
 /// A table displaying all motion token values.
 class _MotionValuesTable extends StatelessWidget {
   /// Creates a new [_MotionValuesTable].
-  const _MotionValuesTable({required this.tokens, super.key});
+  const _MotionValuesTable({required this.tokens});
 
   /// The token set.
   final LayrzTokens tokens;
@@ -85,7 +84,7 @@ class _MotionValuesTable extends StatelessWidget {
 /// A row displaying a single motion token value.
 class _MotionValueRow extends StatelessWidget {
   /// Creates a new [_MotionValueRow].
-  const _MotionValueRow({required this.label, required this.value, required this.tokens, super.key});
+  const _MotionValueRow({required this.label, required this.value, required this.tokens});
 
   /// The token name.
   final String label;
@@ -100,7 +99,10 @@ class _MotionValueRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(width: 120, child: Text(label, style: tokens.typography.labelSmall)),
+        SizedBox(
+          width: tokens.spacing.sp48 * 2,
+          child: Text(label, style: tokens.typography.labelSmall),
+        ),
         Expanded(
           child: Text(value, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
         ),
@@ -112,7 +114,7 @@ class _MotionValueRow extends StatelessWidget {
 /// An interactive tile that animates on hover using [dHover] duration.
 class _HoverAnimationDemo extends StatefulWidget {
   /// Creates a new [_HoverAnimationDemo].
-  const _HoverAnimationDemo({required this.tokens, super.key});
+  const _HoverAnimationDemo({required this.tokens});
 
   /// The token set.
   final LayrzTokens tokens;
@@ -166,7 +168,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
 /// An interactive tile that animates on press using [dPress] duration.
 class _PressAnimationDemo extends StatefulWidget {
   /// Creates a new [_PressAnimationDemo].
-  const _PressAnimationDemo({required this.tokens, super.key});
+  const _PressAnimationDemo({required this.tokens});
 
   /// The token set.
   final LayrzTokens tokens;
@@ -195,10 +197,10 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
             duration: tokens.motion.dPress,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
-              color: _isPressed ? tokens.colors.accent : tokens.colors.surface,
+              color: _isPressed ? tokens.colors.primary : tokens.colors.surface,
               borderRadius: BorderRadius.circular(tokens.radius.r8),
               border: Border.all(
-                color: _isPressed ? tokens.colors.accent : tokens.colors.divider,
+                color: _isPressed ? tokens.colors.primary : tokens.colors.divider,
                 width: _isPressed ? tokens.border.stroke2 : tokens.border.stroke1,
               ),
             ),
