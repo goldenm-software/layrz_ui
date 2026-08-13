@@ -56,16 +56,16 @@ Makefile                         # Root — delegates to example/ via $(MAKE) -C
 
 ## Documentation Directory
 
-Documentation is split between repository documentation (`doc/`) and widget documentation (GitHub wiki):
+Documentation is split between repository documentation (`engineering/`) and widget documentation (GitHub wiki):
 
-### Repository Documentation (`doc/`)
+### Repository Documentation (`engineering/`)
 
-Documentation lives in `doc/` (singular), never `docs/`. The Pub layout convention uses singular directory names: `lib`, `test`, `doc`, `example`, `tool`, `bin`. Pub emits a warning for plural `docs` directories and tools may not correctly identify them.
+Engineering documentation lives in `engineering/` (singular). The Pub layout convention uses singular directory names: `lib`, `test`, `doc`, `example`, `tool`, `bin`. This directory was named `engineering/` (rather than `doc/`) to avoid triggering Pub's warning about plural `docs` directories, and to keep `doc/` available for dartdoc's generated API documentation.
 
-- `dartdoc` generates API documentation into `doc/api/`
-- Markdown documentation is authored in `doc/`, reviewed in pull requests alongside the code, and serves as the source of truth for architecture and design decisions
+- `doc/api/` — `dartdoc` generates API documentation here
+- Markdown documentation is authored in `engineering/`, reviewed in pull requests alongside the code, and serves as the source of truth for architecture and design decisions
 
-**Repository doc files** (8 files):
+**Repository engineering files** (9 files):
 - `README.md` — index and quick start
 - `roadmap.md` — M1–M7 overview
 - `milestone-1.md` — detailed foundation plan
@@ -74,6 +74,7 @@ Documentation lives in `doc/` (singular), never `docs/`. The Pub layout conventi
 - `flutter-347-audit.md` — Flutter 3.47 widget inventory
 - `dependencies.md` — dependency audit and Material decoupling strategy
 - `decisions.md` — architectural and policy decisions
+- `migration-gap.md` — gap analysis for layrz_theme → layrz_ui migration
 
 ### Widget Documentation (GitHub Wiki)
 
@@ -82,14 +83,14 @@ The GitHub wiki (`wiki/`) is a git submodule tracking [goldenm-software/layrz_ui
 - Input contract and component catalog
 - Wiki pages are authored flat at the root with no subdirectories
 - Wiki pushes go live immediately (no PR review)
-- Cross-links from wiki to repo docs use absolute GitHub URLs: `https://github.com/goldenm-software/layrz_ui/blob/main/doc/architecture.md`
+- Cross-links from wiki to repo docs use absolute GitHub URLs: `https://github.com/goldenm-software/layrz_ui/blob/main/engineering/architecture.md`
 - `wiki/` is excluded from package distribution via `.pubignore`
 
-**Key distinction**: `doc/` holds engineering documentation (architecture, decisions, audit); `wiki/` holds user-facing widget documentation.
+**Key distinction**: `engineering/` holds engineering documentation (architecture, decisions, audit); `wiki/` holds user-facing widget documentation.
 
 ### NEW WIDGET DOCUMENTATION GOES IN THE WIKI
 
-When you add a new widget, document it in the wiki, not in `doc/`.
+When you add a new widget, document it in the wiki, not in `engineering/`.
 
 ---
 
@@ -99,8 +100,8 @@ Progress is tracked in the GitHub Project for `goldenm-software/layrz_ui`, not i
 
 - The repo-scoped GitHub Project is the **sole source of truth** for what is done, in progress, or planned
 - Documentation files **must not** contain progress state: no checkbox lists representing status, no completion indicators, no "Done / In Progress / Blocked" markers
-- `doc/component-catalog.md` holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. Completion status is not allowed.
-- `doc/milestone-1.md` contains acceptance criteria as specification — plain prose or plain bullets describing what "done" means, NOT as tickable checkboxes
+- The **Component Catalog** in the wiki (https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog) holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. Completion status is not allowed.
+- `engineering/milestone-1.md` contains acceptance criteria as specification — plain prose or plain bullets describing what "done" means, NOT as tickable checkboxes
 - All acceptance criteria and verification checklists must be written as plain bullet points (`-`) without checkboxes, so readers understand them as specifications, not trackers
 
 ### Project Location
@@ -120,7 +121,7 @@ Components are tracked as **plain draft items** (not Issues).
 
 ### Important: Phase ≠ Milestone
 
-Documentation refers to **milestones M1–M7**; the Project field recording them is **`Phase`**, NOT `Milestone`. GitHub reserves `Milestone` (along with `Labels`, `Repository`, and `Linked pull requests`) as built-in fields derived only from real Issues — they cannot be used on draft items. So `Phase` in the Project is the tracking mechanism; it maps to the M1–M7 references in `doc/roadmap.md` and `doc/component-catalog.md`.
+Documentation refers to **milestones M1–M7**; the Project field recording them is **`Phase`**, NOT `Milestone`. GitHub reserves `Milestone` (along with `Labels`, `Repository`, and `Linked pull requests`) as built-in fields derived only from real Issues — they cannot be used on draft items. So `Phase` in the Project is the tracking mechanism; it maps to the M1–M7 references in `engineering/roadmap.md` and the Component Catalog in the wiki.
 
 ---
 
@@ -163,7 +164,6 @@ Every new widget, extension, helper, or utility **must** have corresponding test
 - Widgets → `testWidgets` in `test/`
 - Pure functions / extensions → `test()` in `test/`
 - Mirror the `lib/src/` directory structure under `test/src/`
-- Test both light and dark theme variants wherever theming is involved
 - Test all named constructors and factories independently
 - Test edge cases: null-safe fields, empty inputs, boundary values
 
@@ -178,12 +178,6 @@ import 'package:layrz_ui/preview.dart';
 @Preview(
   name: 'Light',
   theme: LayrzPreviewTheme.light,
-  brightness: Brightness.light,
-)
-@Preview(
-  name: 'Dark',
-  theme: LayrzPreviewTheme.dark,
-  brightness: Brightness.dark,
 )
 Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
 ```
@@ -192,12 +186,12 @@ The real API in Flutter 3.47:
 - **Import**: `package:flutter/widget_previews.dart` (plural)
 - **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
 - **Theme type**: `PreviewThemeData` (interface)
-- **layrz_ui integration**: `LayrzPreviewTheme` (planned for M1, not yet available) will implement `PreviewThemeData` with light and dark variants
+- **layrz_ui integration**: `LayrzPreviewTheme` (planned for M1, not yet available) will implement `PreviewThemeData` with a light variant only
 
 Rules:
 - Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Use `LayrzPreviewTheme.light` and `LayrzPreviewTheme.dark` as theme callbacks once available in M1.
-- Add both light **and** dark `@Preview` annotations when the widget is theme-sensitive.
+- Use `LayrzPreviewTheme.light` as the theme callback once available in M1.
+- Add a single `@Preview` annotation for the light theme.
 - Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
 
 ### 4. One concern per file — always split, never pile
@@ -232,6 +226,12 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **Responsive grid** — use the breakpoint constants from `src/constants/grid.dart` (`kExtraSmallGrid`, etc.).
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **SDK constraint** — `>=3.8.0 <4.0.0` / Flutter `>=3.29.0`. Do not raise without checking the CI environment.
+
+### Light Mode Only
+
+**layrz_ui targets light mode only for now.** Dark mode is out of scope and the brightness concept has been removed entirely. See `engineering/decisions.md` for the decision and its consequences.
+
+Note: `LayrzThemeData.dark()` currently exists in `lib/theme/src/theme_data.dart` and will be removed in pending code work. The decision was made to not architect for dark mode; adding it later will require revisiting every token and every component that assumed a single palette.
 
 ---
 
