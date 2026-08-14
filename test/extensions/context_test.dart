@@ -5,10 +5,12 @@ import 'package:layrz_ui/theme/theme.dart';
 import 'package:layrz_ui/tokenizer/tokenizer.dart';
 import 'package:layrz_ui/tokens/tokens.dart';
 
+import '../helpers/fake_font_handler.dart';
+
 void main() {
   group('LayrzContextExtensions', () {
     testWidgets('theme returns the injected LayrzThemeData', (tester) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late LayrzThemeData resolved;
 
       await tester.pumpWidget(
@@ -27,7 +29,7 @@ void main() {
     });
 
     testWidgets('tokens returns theme.tokens', (tester) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late LayrzTokens resolved;
 
       await tester.pumpWidget(
@@ -48,7 +50,7 @@ void main() {
     testWidgets('tokenizer returns a LayrzTokenizer wrapping theme.tokens', (
       tester,
     ) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late LayrzTokenizer resolved;
 
       await tester.pumpWidget(
@@ -87,7 +89,7 @@ void main() {
     });
 
     testWidgets('titleStyle is 18pt bold text style', (tester) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late TextStyle resolved;
 
       await tester.pumpWidget(
@@ -107,7 +109,7 @@ void main() {
     });
 
     testWidgets('subtitleStyle is 16pt bold text style', (tester) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late TextStyle resolved;
 
       await tester.pumpWidget(
@@ -127,7 +129,7 @@ void main() {
     });
 
     testWidgets('bodyStyle returns theme.textStyle', (tester) async {
-      final themeData = LayrzThemeData.light();
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late TextStyle resolved;
 
       await tester.pumpWidget(

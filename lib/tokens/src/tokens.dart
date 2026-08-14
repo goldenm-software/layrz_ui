@@ -66,11 +66,22 @@ class LayrzTokens {
   ///
   /// This factory ensures that color palette, shadows, borders, and typography
   /// are never inconsistent with each other.
+  ///
+  /// Note: This factory takes [LayrzFont] objects, not string names. For the convenience
+  /// of accepting a string [fontName] and wrapping it into a Google Font, use
+  /// [LayrzThemeData.light] instead, which is the public API entry point.
+  ///
+  /// Parameters:
+  ///   - [primaryColor]: The primary brand color (default: [kPrimaryColor]).
+  ///   - [titleFont]: The font used for display, headline, and title styles.
+  ///   - [bodyFont]: The font used for body and label styles.
+  ///   - [fontHandler]: The handler that resolves fonts and preloads their bytes.
+  ///     Defaults to [LayrzGoogleFontsHandler], ensuring fonts load from Google Fonts.
   factory LayrzTokens.light({
     Color primaryColor = kPrimaryColor,
     LayrzFont titleFont = kLayrzFont,
     LayrzFont bodyFont = kLayrzFont,
-    LayrzFontHandler? fontHandler,
+    LayrzFontHandler fontHandler = const LayrzGoogleFontsHandler(),
   }) {
     // Build color tokens first — they seed other tokens
     final colorTokens = LayrzColorTokens.light(

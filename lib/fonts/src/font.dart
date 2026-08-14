@@ -62,10 +62,13 @@ class LayrzFont {
   String toString() => 'LayrzFont(source: $source, name: $name, uri: $uri)';
 }
 
+/// The default font name for the Layrz design system.
+const String kLayrzFontName = 'Open Sans';
+
 /// The Layrz brand default font.
 const LayrzFont kLayrzFont = LayrzFont(
   source: LayrzFontSource.google,
-  name: 'Open Sans',
+  name: kLayrzFontName,
 );
 
 /// Font families tried in order when the requested family fails to resolve.

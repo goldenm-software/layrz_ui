@@ -101,22 +101,75 @@ class LayrzThemeData {
   /// in a [LayrzThemeData] with an [IconThemeData] seeded from the text color.
   ///
   /// [primaryColor] overrides the default [kPrimaryColor].
-  /// [titleFont] and [bodyFont] specify the font sources for typography.
-  /// [fontHandler] resolves font family names; when null, uses font names directly.
+  /// [fontName] is the convenience parameter for loading a Google Font by name (default: 'Open Sans').
+  ///   If provided, it is wrapped into a [LayrzFont] with [LayrzFontSource.google].
+  /// [titleFont] and [bodyFont] are advanced overrides that take precedence over [fontName].
+  ///   Use these for local or URI-based fonts, or to specify different fonts for titles vs. body.
+  /// [fontHandler] resolves font family names and preloads font bytes. Defaults to
+  ///   [LayrzGoogleFontsHandler], ensuring fonts are loaded via Google Fonts by default.
+  ///   Pass a custom handler to load from alternative sources.
   factory LayrzThemeData.light({
     Color primaryColor = kPrimaryColor,
-    LayrzFont titleFont = kLayrzFont,
-    LayrzFont bodyFont = kLayrzFont,
-    LayrzFontHandler? fontHandler,
+    String fontName = kLayrzFontName,
+    LayrzFont? titleFont,
+    LayrzFont? bodyFont,
+    LayrzFontHandler fontHandler = const LayrzGoogleFontsHandler(),
   }) {
+    // Use provided fonts, or wrap fontName into LayrzFont for Google Fonts
+    final resolvedTitleFont =
+        titleFont ??
+        LayrzFont(
+          source: LayrzFontSource.google,
+          name: fontName,
+        );
+    final resolvedBodyFont =
+        bodyFont ??
+        LayrzFont(
+          source: LayrzFontSource.google,
+          name: fontName,
+        );
+
     final tokens = LayrzTokens.light(
       primaryColor: primaryColor,
-      titleFont: titleFont,
-      bodyFont: bodyFont,
+      titleFont: resolvedTitleFont,
+      bodyFont: resolvedBodyFont,
       fontHandler: fontHandler,
     );
     final iconTheme = IconThemeData(color: tokens.colors.fg1, size: 24);
     return LayrzThemeData(tokens: tokens, iconTheme: iconTheme);
+  }
+
+  /// Preloads a font to avoid first-frame rendering in a fallback family.
+  ///
+  /// This is optional — fonts load either way when the theme is constructed.
+  /// Call this in your app's `main()` before `runApp()` to ensure the font is
+  /// fully loaded before the first frame is painted, avoiding visual flashing.
+  ///
+  /// Parameters:
+  ///   - [fontName]: The font name to preload (default: 'Open Sans').
+  ///   - [handler]: The font handler to use for preloading. Defaults to
+  ///     [LayrzGoogleFontsHandler], which handles Google Fonts.
+  ///
+  /// Example:
+  /// ```dart
+  /// Future<void> main() async {
+  ///   WidgetsFlutterBinding.ensureInitialized();
+  ///   try {
+  ///     await LayrzThemeData.preloadFont('Open Sans');
+  ///   } catch (e) {
+  ///     debugPrint('Font preload failed: $e');
+  ///   }
+  ///   runApp(const MyApp());
+  /// }
+  /// ```
+  static Future<void> preloadFont([String fontName = kLayrzFontName, LayrzFontHandler? fontHandler]) async {
+    final handler = fontHandler ?? const LayrzGoogleFontsHandler();
+    return handler.preload(
+      LayrzFont(
+        source: LayrzFontSource.google,
+        name: fontName,
+      ),
+    );
   }
 
   /// Returns a copy of this theme data with the given fields replaced.

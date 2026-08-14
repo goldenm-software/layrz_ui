@@ -4,10 +4,12 @@ import 'package:layrz_ui/constants/constants.dart';
 import 'package:layrz_ui/tokens/tokens.dart';
 import 'package:layrz_ui/tokenizer/tokenizer.dart';
 
+import '../helpers/fake_font_handler.dart';
+
 void main() {
   group('LayrzTokenizer', () {
     test('constructor stores tokens', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.tokens, equals(tokens));
@@ -16,49 +18,49 @@ void main() {
     // ===== GROUP GETTERS =====
 
     test('colors group getter returns tokens.colors', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.colors, equals(tokens.colors));
     });
 
     test('typography group getter returns tokens.typography', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.typography, equals(tokens.typography));
     });
 
     test('spacingTokens group getter returns tokens.spacing', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.spacingTokens, equals(tokens.spacing));
     });
 
     test('radiusTokens group getter returns tokens.radius', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.radiusTokens, equals(tokens.radius));
     });
 
     test('shadow group getter returns tokens.shadow', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.shadowTokens, equals(tokens.shadow));
     });
 
     test('border group getter returns tokens.border', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.border, equals(tokens.border));
     });
 
     test('motion group getter returns tokens.motion', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.motion, equals(tokens.motion));
@@ -67,7 +69,7 @@ void main() {
     // ===== FLAT COLOR SHORTCUTS =====
 
     test('primary shortcut returns colors.primary', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.primary, equals(tokens.colors.primary));
@@ -75,42 +77,42 @@ void main() {
     });
 
     test('success shortcut returns colors.success', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.success, equals(tokens.colors.success));
     });
 
     test('warning shortcut returns colors.warning', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.warning, equals(tokens.colors.warning));
     });
 
     test('danger shortcut returns colors.danger', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.danger, equals(tokens.colors.danger));
     });
 
     test('info shortcut returns colors.info', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.info, equals(tokens.colors.info));
     });
 
     test('contextual shortcut returns colors.contextual', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.contextual, equals(tokens.colors.contextual));
     });
 
     test('tonalOpacity shortcut returns colors.tonalOpacity', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.tonalOpacity, equals(tokens.colors.tonalOpacity));
@@ -120,7 +122,7 @@ void main() {
     // ===== FLAT SPACING SHORTCUTS =====
 
     test('spacing shortcut returns base spacing value', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.spacing, equals(tokens.spacing.base));
@@ -128,7 +130,7 @@ void main() {
     });
 
     test('margin shortcut returns spacing.margin', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.margin, equals(tokens.spacing.margin));
@@ -136,7 +138,7 @@ void main() {
     });
 
     test('reducedMargin shortcut returns spacing.reducedMargin', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.reducedMargin, equals(tokens.spacing.reducedMargin));
@@ -144,7 +146,7 @@ void main() {
     });
 
     test('padding shortcut returns spacing.padding', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.padding, equals(tokens.spacing.padding));
@@ -152,7 +154,7 @@ void main() {
     });
 
     test('sizedBox shortcut returns spacing.sizedBox', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.sizedBox, isA<Widget>());
@@ -161,7 +163,7 @@ void main() {
     // ===== FLAT RADIUS SHORTCUTS =====
 
     test('radius shortcut returns base radius value', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.radius, equals(tokens.radius.base));
@@ -169,7 +171,7 @@ void main() {
     });
 
     test('borderRadius shortcut returns radius.borderRadius', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.borderRadius, equals(tokens.radius.borderRadius));
@@ -177,7 +179,7 @@ void main() {
     });
 
     test('innerRadius shortcut delegates to tokens.radius.innerRadius', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       final result = tokenizer.innerRadius(outerRadius: 12.0, spacer: 4.0);
@@ -193,7 +195,7 @@ void main() {
     // ===== FLAT SHADOW SHORTCUTS =====
 
     test('shadow shortcut delegates to tokens.shadow.elevation', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       final result = tokenizer.shadow(elevation: 3);
@@ -207,7 +209,7 @@ void main() {
     // ===== FLAT BORDER SHORTCUTS =====
 
     test('borderWidth shortcut returns border.base', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.borderWidth, equals(tokens.border.base));
@@ -217,7 +219,7 @@ void main() {
     // ===== EQUALITY =====
 
     test('equality works for identical tokenizers', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tok1 = LayrzTokenizer(tokens);
       final tok2 = LayrzTokenizer(tokens);
 
@@ -225,7 +227,7 @@ void main() {
     });
 
     test('hashCode is stable for same tokens', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tok1 = LayrzTokenizer(tokens);
       final tok2 = LayrzTokenizer(tokens);
 
@@ -233,7 +235,7 @@ void main() {
     });
 
     test('inequality works for different tokens', () {
-      final tokens1 = LayrzTokens.light();
+      final tokens1 = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokens2 = LayrzTokens.light(primaryColor: const Color(0xFF888888));
       final tok1 = LayrzTokenizer(tokens1);
       final tok2 = LayrzTokenizer(tokens2);
@@ -244,7 +246,7 @@ void main() {
     // ===== INTEGRATION =====
 
     test('all shortcuts return values from tokens', () {
-      final tokens = LayrzTokens.light();
+      final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
       // Color shortcuts

@@ -3,46 +3,42 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import 'src/showroom.dart';
 
-/// Preload the Layrz brand font and run the showroom application.
+/// Run the showroom application with mandatory font loading.
 ///
-/// Attempts to preload the default Layrz font (Open Sans from Google Fonts)
-/// to demonstrate the fonts module end-to-end. If preloading fails (e.g., offline),
-/// the app degrades gracefully and opens with fallback system fonts.
+/// [LayrzThemeData.light] now requires no configuration — it automatically loads
+/// the default 'Open Sans' font from Google Fonts. The optional preload demonstrates
+/// how to avoid first-frame flashing by eagerly fetching the font before `runApp()`.
+/// If preloading fails (e.g., offline), the app degrades gracefully and opens with
+/// fallback fonts.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Attempt to preload the Layrz brand font
-  const handler = LayrzGoogleFontsHandler();
+  // Optional: preload the default Layrz font to avoid first-frame flashing.
+  // This is entirely optional — the font will load either way when the theme is constructed.
   try {
-    await handler.preload(kLayrzFont);
+    await LayrzThemeData.preloadFont();
   } catch (e) {
     // Gracefully degrade if preload fails — allow the showroom to open offline
     debugPrint('Font preload failed (likely offline): $e');
     debugPrint('Opening showroom with fallback system fonts');
   }
 
-  runApp(const ShowroomApp(fontHandler: handler));
+  runApp(const ShowroomApp());
 }
 
 /// Root widget of the showroom application.
 ///
-/// Wraps the [Showroom] page in a [LayrzApp] with [LayrzThemeData.light],
-/// passing the font handler to ensure typography uses the preloaded fonts.
+/// The [LayrzThemeData.light] constructor now automatically loads and resolves
+/// the Open Sans font from Google Fonts. No configuration is needed.
 class ShowroomApp extends StatelessWidget {
   /// Creates a new [ShowroomApp].
-  ///
-  /// The [fontHandler] is passed to [LayrzThemeData.light] to provide
-  /// font family resolution for all typography tokens.
-  const ShowroomApp({required this.fontHandler, super.key});
-
-  /// The font handler used to resolve font families in typography tokens.
-  final LayrzGoogleFontsHandler fontHandler;
+  const ShowroomApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return LayrzApp(
       title: kAppTitle,
-      theme: LayrzThemeData.light(fontHandler: fontHandler),
+      theme: LayrzThemeData.light(),
       home: const Showroom(),
     );
   }

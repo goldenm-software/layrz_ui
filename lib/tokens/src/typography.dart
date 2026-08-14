@@ -81,10 +81,11 @@ class LayrzTextTheme {
   /// [titleFont] is used for display, headline, and title styles; [bodyFont] is used
   /// for body and label styles.
   ///
-  /// [fontHandler] resolves font family names. When not null, it provides
-  /// [LayrzFontHandler.resolveFamily] for the family and [LayrzFontHandler.fallbacks]
-  /// for the fallback list. When null (e.g., in unit tests), uses the font name directly
-  /// and the layrz fallback constants, avoiding network calls and keeping const paths clean.
+  /// [fontHandler] resolves font family names and preloads font bytes. When not null,
+  /// it provides [LayrzFontHandler.resolveFamily] for the family and
+  /// [LayrzFontHandler.fallbacks] for the fallback list. When null (e.g., in unit tests),
+  /// uses the font name directly and the layrz fallback constants, avoiding network calls.
+  /// This is useful for tests that need to avoid GoogleFonts network calls.
   factory LayrzTextTheme.defaults({
     required Color textColor,
     LayrzFont titleFont = kLayrzFont,

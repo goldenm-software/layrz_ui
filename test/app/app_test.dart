@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/app/app.dart';
 import 'package:layrz_ui/theme/theme.dart';
 
+import '../helpers/fake_font_handler.dart';
+
 void main() {
   group('LayrzApp', () {
     testWidgets('imperative constructor pumps without error', (tester) async {
@@ -62,12 +64,12 @@ void main() {
         ),
       );
 
-      final defaultTheme = LayrzThemeData.light();
+      final defaultTheme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       expect(resolvedTheme.primaryColor, equals(defaultTheme.primaryColor));
     });
 
     testWidgets('DefaultTextStyle carries theme.textStyle', (tester) async {
-      final theme = LayrzThemeData.light();
+      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
 
       await tester.pumpWidget(
         LayrzApp(
@@ -90,7 +92,7 @@ void main() {
     });
 
     testWidgets('IconTheme carries theme.iconTheme', (tester) async {
-      final theme = LayrzThemeData.light();
+      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
 
       await tester.pumpWidget(
         LayrzApp(
@@ -118,7 +120,7 @@ void main() {
     });
 
     testWidgets('ColoredBox carries theme.backgroundColor', (tester) async {
-      final theme = LayrzThemeData.light();
+      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
 
       await tester.pumpWidget(
         LayrzApp(
@@ -173,7 +175,10 @@ void main() {
     });
 
     testWidgets('color defaults to theme.primaryColor', (tester) async {
-      final theme = LayrzThemeData.light(primaryColor: const Color(0xFFAABBCC));
+      final theme = LayrzThemeData.light(
+        primaryColor: const Color(0xFFAABBCC),
+        fontHandler: const FakeFontHandler(),
+      );
 
       await tester.pumpWidget(
         LayrzApp(
@@ -256,7 +261,7 @@ void main() {
     });
 
     testWidgets('router path applies DefaultTextStyle, IconTheme, and ColoredBox', (tester) async {
-      final theme = LayrzThemeData.light();
+      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       late TextStyle resolvedTextStyle;
       late IconThemeData resolvedIconTheme;
 
