@@ -196,8 +196,8 @@ layrz_ui depends on `google_fonts: ^8.2.1` but uses only the `TextStyle`-returni
 - **Flutter SDK**: 3.47.0 stable (framework revision 4cf2416426)
 - **Dart SDK**: 3.13.0
 - **SDK constraint**: `>=3.13.0 <4.0.0` (Flutter `>=3.47.0`)
-- **CI**: Not yet implemented (M1 item 9)
-- **Analysis**: `public_member_api_docs` not yet enabled (M1 item 10)
+- **CI**: Implemented (M1 item 9) — six gates plus coverage ratchet
+- **Analysis**: `public_member_api_docs` enabled (M1 item 10)
 
 ### Flutter 3.47 Material Decoupling Context
 

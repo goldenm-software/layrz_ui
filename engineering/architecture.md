@@ -132,7 +132,7 @@ Once this is done, dialogs, overlays, and new routes automatically preserve the 
 
 ## LayrzThemeExtension<T>: Custom Component Tokens
 
-**Status**: Planned for [M1 item 5](milestone-1.md). The following describes the design; implementation is not yet complete.
+**Status**: Implemented in [M1 item 5](milestone-1.md) (`lib/theme/src/theme_extension.dart`).
 
 ### The Problem: No Material, No ThemeExtension<T>
 
@@ -140,47 +140,64 @@ Once this is done, dialogs, overlays, and new routes automatically preserve the 
 
 Without it, layrz_ui would have two bad choices:
 1. Add every component's theme data directly to `LayrzThemeData` (bloats core theme)
-2. Let components hardcode their style values (breaks consistency and dark/light switching)
+2. Let components hardcode their style values (breaks consistency and theming)
 
 ### The Solution: Hand-Rolled Extension Registry
 
-**Milestone 1, item 5** defines `LayrzThemeExtension<T>`, a similar mechanism for Material-free systems:
+**Milestone 1, item 5** implements `LayrzThemeExtension<T>`, a similar mechanism for Material-free systems. The key design choice is the self-bounded generic `T extends LayrzThemeExtension<T>`, which makes the type itself the lookup key and ensures type safety:
 
 ```dart
-// Design sketch
-abstract class LayrzThemeExtension<T> {
+/// Base contract for custom component theme data.
+abstract class LayrzThemeExtension<T extends LayrzThemeExtension<T>> {
+  /// Return the type of this extension (used as the map key).
+  Object get type => T;
+  
   /// Return a copy with some fields changed.
-  LayrzThemeExtension<T> copyWith();
+  T copyWith();
   
   /// Linearly interpolate between two extensions.
-  LayrzThemeExtension<T> lerp(LayrzThemeExtension<T>? other, double t);
+  T lerp(covariant LayrzThemeExtension<T>? other, double t);
 }
 ```
 
 On `LayrzThemeData`:
 
 ```dart
-// Design sketch
 class LayrzThemeData {
   /// Map of extension type → extension instance.
-  final Map<Type, LayrzThemeExtension<dynamic>> extensions = {};
+  final Map<Object, LayrzThemeExtension<dynamic>> extensions;
 
-  /// Retrieve a custom extension by type.
-  T? extension<T extends LayrzThemeExtension<T>>() {
+  /// Retrieve a custom extension by type (asserts if not found).
+  T extension<T extends LayrzThemeExtension<T>>() {
+    assert(extensions.containsKey(T));
+    return extensions[T]! as T;
+  }
+
+  /// Retrieve a custom extension by type, returning null if not found.
+  T? maybeExtension<T extends LayrzThemeExtension<T>>() {
     return extensions[T] as T?;
   }
 }
 ```
 
-**Later components use it like this:**
+**Usage in M2+ components:**
 
 ```dart
 // In a button or input widget:
-final buttonExtension = LayrzTheme.of(context).extension<LayrzButtonExtension>();
+final buttonExtension = LayrzTheme.of(context).maybeExtension<LayrzButtonExtension>();
 final cornerRadius = buttonExtension?.borderRadius ?? 10.0;
 ```
 
-Each component defines its own extension class, stores it on the theme if needed, and retrieves it at build time. No core theme bloat. Light and dark themes can have different extensions.
+### Key Properties
+
+- **Self-bounded generics make type keys sound**: The constraint `T extends LayrzThemeExtension<T>` prevents type mismatches at the lookup site. You cannot accidentally ask for the wrong type.
+- **Extensions are immutable**: Every extension implements `copyWith()` for safe modification and `lerp()` for animations. Themes remain predictable across state changes.
+- **Automatic propagation across boundaries**: Because extensions live on `LayrzThemeData` and `LayrzTheme` implements `InheritedTheme.wrap()`, extensions automatically flow through Overlay and route boundaries. No special plumbing needed.
+- **No core theme bloat**: Components define their own extension classes in their modules. `LayrzThemeData` stays focused on universal tokens (colors, spacing, typography).
+
+### Design Comparison to Material
+
+Material's `ThemeExtension<T>` uses a similar approach but with slightly different accessor names (`extension<T>()` vs Material's `maybeExtension<T>()`). layrz_ui mirrors the pair convention used by `LayrzTheme` itself: `of()` (asserts) / `maybeOf()` (nullable).
 
 ## Widget State Resolution Layer: WidgetState and WidgetStatesController
 
@@ -240,31 +257,45 @@ See [flutter-347-audit.md](flutter-347-audit.md) for details on what's available
 
 ## Preview Architecture: LayrzPreviewTheme
 
-**Status**: Planned for [M1 item 8](milestone-1.md). Light theme only; dark mode is out of scope per [decision D7](decisions.md).
+**Status**: Implemented in [M1 item 8](milestone-1.md) (`lib/preview/src/preview_theme.dart` with top-level barrel `lib/preview.dart`). Light theme only; dark mode is out of scope per [decision D7](decisions.md).
 
 ### The Real API: @Preview and PreviewThemeData
 
-**Milestone 1, item 2** corrects [CLAUDE.md](../CLAUDE.md) rule #3 to document the real widget preview API, which is NOT `@widgetPreview`.
+**Milestone 1, item 2** corrected [CLAUDE.md](../CLAUDE.md) rule #3 to document the real widget preview API, which is NOT `@widgetPreview`.
 
 In Flutter 3.47, the preview system is defined in `package:flutter/widget_previews.dart`:
 
 - **Annotation**: `@Preview(name: 'Light', theme: LayrzPreviewTheme.light)`
-- **Theme type**: `PreviewThemeData` (interface with `apply(BuildContext, Widget)` method)
+- **Theme type**: `PreviewThemeData` (abstract base class, not interface — must be `extends`, not `implements`)
 
 **layrz_ui's contribution** (light theme only):
 
 ```dart
-// Design sketch
-class LayrzPreviewTheme extends PreviewThemeData {
-  final LayrzThemeData themeData;
+/// Preview theme for light mode. Integrates with Flutter 3.47's @Preview annotation system.
+final class LayrzPreviewTheme extends PreviewThemeData {
+  final LayrzThemeData _themeData;
   
-  const LayrzPreviewTheme(this.themeData);
+  const LayrzPreviewTheme(this._themeData);
   
-  static final light = LayrzPreviewTheme(LayrzThemeData.light());
+  /// Tear-off for use as @Preview(theme: LayrzPreviewTheme.light).
+  static PreviewThemeData light() => LayrzPreviewTheme(LayrzThemeData.light());
 
   @override
   Widget apply(BuildContext context, Widget widget) {
-    return LayrzTheme(data: themeData, child: widget);
+    // Wrap the widget with the full theme hierarchy.
+    return LayrzTheme(
+      data: _themeData,
+      child: DefaultTextStyle(
+        style: _themeData.typography.body1,
+        child: IconTheme(
+          data: _themeData.iconThemeData,
+          child: ColoredBox(
+            color: _themeData.tokens.colors.background,
+            child: widget,
+          ),
+        ),
+      ),
+    );
   }
 }
 ```
@@ -272,8 +303,8 @@ class LayrzPreviewTheme extends PreviewThemeData {
 **Component usage:**
 
 ```dart
-// Design sketch
 import 'package:flutter/widget_previews.dart';
+import 'package:layrz_ui/preview.dart';
 
 @Preview(
   name: 'Light',
@@ -287,7 +318,11 @@ Widget previewLayrzButton() {
 }
 ```
 
-Previews can be viewed inline in supporting IDEs without launching a device.
+Previews can be viewed inline in supporting IDEs without launching a device. The `apply()` method reproduces the full theme nesting that `LayrzApp` uses, ensuring previewed widgets see the same design-token context as production code.
+
+### Top-Level Entrypoint Exception
+
+`lib/preview.dart` is a deliberate exception to rule #4 (one concern per file, barrels at module root). See [decision D18](decisions.md) for rationale. This is the only top-level barrel outside `lib/layrz_ui.dart`; all other modules follow the standard `lib/<module>/<module>.dart` pattern.
 
 ## How Components Consume Theme
 
@@ -416,6 +451,7 @@ See [flutter-347-audit.md](flutter-347-audit.md) for the complete inventory and 
 ```
 lib/
   layrz_ui.dart                  ← Root barrel
+  preview.dart                   ← Preview system entrypoint [M1 item 8, D18 exception]
   
   app/                           ← App shell
     app.dart
@@ -425,7 +461,11 @@ lib/
     theme.dart
     src/theme.dart               (LayrzTheme extends InheritedTheme [M1 item 1])
     src/theme_data.dart          (LayrzThemeData)
-    src/theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5, planned])
+    src/theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5])
+  
+  preview/                       ← Widget preview theme [M1 item 8]
+    preview.dart
+    src/preview_theme.dart       (LayrzPreviewTheme extends PreviewThemeData)
   
   state/                         ← Widget state resolution [M1 item 6]
     state.dart
@@ -472,6 +512,8 @@ lib/
 ```
 
 Each module depends only on lower layers. Core theme has no dependencies on any component. This keeps the theme system simple and stable while components are added incrementally.
+
+**Note on `lib/preview.dart`**: This is a deliberate exception to the module-barrel rule (rule #4 in CLAUDE.md). It is the only top-level barrel outside `lib/layrz_ui.dart`. See decision D18 for rationale.
 
 ---
 

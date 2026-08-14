@@ -329,9 +329,17 @@ When the CI pipeline is established (see `milestone-1.md`, item 9), gate on:
 
 - `textContrastGuideline` — **explicitly do not enable** because contrast is deferred (see Deferred Criteria section). If a team member tries to add it without revisiting the palette decision, the code review should catch it and link back to this document.
 
-### Note
+### Implementation Status
 
-CI does not yet exist. These gates will be implemented as part of Milestone 1 work item 9.
+The six CI gates are now implemented as of Milestone 1 work item 9:
+1. **flutter analyze** — linting must be clean (including `public_member_api_docs`)
+2. **flutter test --coverage** — all tests pass and coverage is reported
+3. **dart format** — code must be formatted
+4. **Material/Cupertino guard** — no Material or Cupertino imports in lib/
+5. **GoogleFonts TextTheme guard** — no Material-coupled font methods
+6. **test mirror check** — every non-barrel `lib/**/src/*.dart` must have a corresponding `test/<module>/<name>_test.dart`
+
+A coverage ratchet also prevents regression below `tool/coverage_baseline`.
 
 ---
 

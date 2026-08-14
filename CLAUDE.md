@@ -21,6 +21,7 @@ implementation files live under `<module>/src/`.
 ```
 lib/
   layrz_ui.dart                  # Root barrel — re-exports all module barrels
+  preview.dart                   # Top-level preview entrypoint (D18 exception)
   app/
     app.dart                     # Barrel
     src/
@@ -30,6 +31,10 @@ lib/
     src/
       theme.dart                 # LayrzTheme (InheritedTheme)
       theme_data.dart            # LayrzThemeData (holds LayrzTokens + IconThemeData)
+      theme_extension.dart       # LayrzThemeExtension<T> (custom component theme data)
+  preview/
+    src/
+      preview_theme.dart         # LayrzPreviewTheme (extends PreviewThemeData)
   tokens/
     tokens.dart                  # Barrel
     src/
@@ -71,6 +76,13 @@ lib/
     src/
       color.dart                 # LayrzColorExtensions on Color
       context.dart               # LayrzContextExtensions on BuildContext
+.github/
+  workflows/
+    ci.yaml                      # Six CI gates: analyze, test, format, Material/Cupertino guard, GoogleFonts guard, test mirror check, coverage ratchet
+tool/
+  check_test_mirror.sh           # Verify every lib/**/src/*.dart has a test/<module>/<name>_test.dart
+  check_coverage.sh              # Coverage ratchet against tool/coverage_baseline
+  coverage_baseline              # Committed baseline; never allowed to decrease
 example/
   lib/main.dart                  # Example app (must use LayrzApp, not MaterialApp)
   Makefile                       # run-linux / run-android / run-ios / run-windows / run-macos
@@ -233,11 +245,19 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 - Test edge cases: null-safe fields, empty inputs, boundary values
 - Every visual component additionally requires accessibility tests
 
-CI will eventually enforce three gates via Milestone 1 item 9: tests pass, the mirror-file structure check, and a coverage ratchet that never decreases. The ratchet was chosen over a fixed percentage target so it works from the current baseline without backfill, and so untested code naturally penalises itself.
+CI enforces six gates (plus a coverage ratchet) as of Milestone 1 item 9:
+1. **flutter analyze** — linting must be clean
+2. **flutter test --coverage** — all tests pass and coverage is reported
+3. **dart format** — code must be formatted
+4. **Material/Cupertino guard** — no Material or Cupertino imports in lib/
+5. **GoogleFonts TextTheme guard** — no Material-coupled font methods
+6. **test mirror check** — every non-barrel `lib/**/src/*.dart` must have a corresponding `test/<module>/<name>_test.dart`
+
+The coverage ratchet prevents coverage from ever decreasing below `tool/coverage_baseline`. The ratchet was chosen over a fixed percentage target so it works from the current baseline without backfill, and so untested code naturally penalises itself.
 
 ### 3. Use @Preview for visual widgets
 
-For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with `LayrzPreviewTheme` (planned for Milestone 1).
+For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with `LayrzPreviewTheme`.
 
 ```dart
 import 'package:flutter/widget_previews.dart';
@@ -254,11 +274,13 @@ The real API in Flutter 3.47:
 - **Import**: `package:flutter/widget_previews.dart` (plural)
 - **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
 - **Theme type**: `PreviewThemeData` (abstract base class in the SDK)
-- **layrz_ui integration**: `LayrzPreviewTheme` extends `PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface) with a light variant only
+- **layrz_ui integration**: `LayrzPreviewTheme extends PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface). Light theme only; dark mode is out of scope per decision D7.
+
+**Important**: The `theme:` parameter accepts a tear-off: `@Preview(theme: LayrzPreviewTheme.light)`, not an instance. `LayrzPreviewTheme.light` is a static method that returns a `PreviewThemeData`.
 
 Rules:
 - Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Use `LayrzPreviewTheme.light` as the theme callback once available in M1.
+- Use `LayrzPreviewTheme.light` as a tear-off in the `@Preview` annotation.
 - Add a single `@Preview` annotation for the light theme.
 - Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
 
@@ -282,6 +304,8 @@ lib/<domain>/
 ```
 
 The barrel file must contain **only** `export` statements — no logic, no classes.
+
+**Exception**: `lib/preview.dart` is a deliberately placed top-level barrel (outside the module structure) to keep preview infrastructure opt-in. This is the only permitted top-level barrel besides `lib/layrz_ui.dart`. See decision D18 in `engineering/decisions.md` for rationale.
 
 ---
 

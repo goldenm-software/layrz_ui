@@ -865,6 +865,103 @@ If hand-moving draft cards becomes a bottleneck — because components are being
 
 ---
 
+## D17: CI Enforces Six Gates
+
+**Date**: 2026-08-14  
+**Status**: Decided  
+**Category**: Tooling / Release Planning
+
+### Context
+
+CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure check, and coverage ratchet. Milestone 1 item 9 originally specified four checks (analyze, test, format, Material guard) but did not mention the mirror check or ratchet, creating a contradiction between the rule and the item scope. The decision resolves this in favour of the stronger set, making the promise real rather than aspirational.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Follow item 9 only (4 checks) | Simpler CI; lower burden on contributors | Breaks the promise in CLAUDE.md rule #2; no automatic test/code structure pairing; coverage can degrade silently |
+| (b) **Chosen** — Implement all six gates | Fulfills CLAUDE.md rule #2 promise; test/code parity enforced automatically; coverage ratchet prevents regression | More complex CI setup; requires maintaining `tool/check_test_mirror.sh` and `tool/coverage_baseline` |
+
+### Decision
+
+**Chose (b): Implement all six gates.**
+
+The CI gates are:
+
+1. `flutter analyze` — catches linting violations
+2. `flutter test --coverage` — runs tests and generates coverage reports
+3. `dart format --set-exit-if-changed` — enforces code formatting
+4. `grep` Material/Cupertino guard — enforces the no-Material invariant
+5. `grep` GoogleFonts TextTheme guard — prevents Material-coupled font methods
+6. `tool/check_test_mirror.sh` — verifies test-to-code parity
+7. `tool/check_coverage.sh` — ratchet against `tool/coverage_baseline`
+
+### Rationale
+
+- **Consistency with documentation**: CLAUDE.md rule #2 is the project's testing and code quality standard. It explicitly mentions three gates; implementing them makes the documentation accurate.
+- **Prevent test decay**: Without the mirror check, a contributor could add code to `lib/` without adding tests, and CI would not catch it. The manual code review process would catch it eventually, but automatic checking is lower friction.
+- **Coverage ratchet over fixed percentage**: A fixed percentage (e.g., "90% coverage required") requires backfilling existing code to meet the threshold. A ratchet works from the current baseline (96–97%) and prevents new code from lowering it. Untested code naturally penalizes the system by raising the bar for all future work.
+- **Mirrors the test best practice**: Many projects enforce mirror directory structures. layrz_ui's mirror rule (every `lib/` file has a `test/` counterpart) is simple and verifiable by script.
+
+### Consequences
+
+- Contributors must maintain test/code parity; `tool/check_test_mirror.sh` will fail if a new file lacks tests.
+- The coverage ratchet is committed to `tool/coverage_baseline` and updated when coverage improves. Once set, the system never allows regressions.
+- The six gates ensure M1 code quality is locked in before M2 components are added. Milestone 2 will inherit a tested, formatted, structured foundation.
+- CI passes only when all six gates pass; a failure in any gate blocks the PR.
+
+### Review Trigger
+
+After the first batch of M2 components ship and CI has a track record, evaluate:
+- Is the mirror check catching meaningful gaps, or is it a formality that developers consistently fix before pushing?
+- Has the coverage ratchet prevented actual regressions, or is it a line item that developers work around?
+
+If either gate proves ineffective, consider adjusting or removing it.
+
+---
+
+## D18: lib/preview.dart is a Deliberate Top-Level Entrypoint
+
+**Date**: 2026-08-14  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+The standard layrz_ui module structure requires every module to live under `lib/<module>/` with a barrel `<module>.dart` at the root. Milestone 1 item 8 introduces `LayrzPreviewTheme`, which lives in `lib/preview/` with a barrel `lib/preview/preview.dart`. However, CLAUDE.md rule #3 and the shipped code also expose `lib/preview.dart` at the top level, following the pattern `import 'package:layrz_ui/preview.dart';` rather than the standard `import 'package:layrz_ui/preview/preview.dart';`. This violates the module structure rule, so the decision documents the deliberate exception and the rationale.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Follow standard pattern | Consistent with rule #4; only `lib/layrz_ui.dart` re-exports | Forces consumers to use `package:layrz_ui/preview/preview.dart` (verbose); `import 'package:layrz_ui/preview.dart'` does not work |
+| (b) **Chosen** — Create top-level `lib/preview.dart` | `import 'package:layrz_ui/preview.dart'` works as documented in CLAUDE.md rule #3; matches the documented consumer code pattern | Violates the one-barrel-per-module rule; adds an exception to rule #4; creates a second public entrypoint |
+
+### Decision
+
+**Chose (b): Create a top-level `lib/preview.dart` barrel that re-exports `LayrzPreviewTheme` from `lib/preview/src/preview_theme.dart`.**
+
+This is a **scoped exception to rule #4** (one concern per file, barrels at module root). Only `lib/preview.dart` is permitted as a top-level barrel. All other modules follow the standard pattern.
+
+### Rationale
+
+- **Consumer clarity**: Widget preview examples in CLAUDE.md rule #3 show `import 'package:layrz_ui/preview.dart';` with `@Preview(theme: LayrzPreviewTheme.light)`. This import pattern is intuitive and matches the mental model of "previews are a first-class layrz_ui feature."
+- **Opt-in scope**: Making previews require a separate import (vs. always importing from the root barrel) signals to consumers that preview support is opt-in. Projects using layrz_ui in production don't need `package:flutter/widget_previews.dart`; they can ignore this module entirely. The separate import means no token cost for non-preview use cases.
+- **Prevents scope creep**: The root barrel `lib/layrz_ui.dart` stays focused on core functionality. Preview infrastructure is orthogonal and intentionally separated.
+
+### Consequences
+
+- **Exception documented**: D18 permanently records that `lib/preview.dart` is an allowed exception to rule #4. Future architects reviewing the codebase will understand the decision.
+- **Consumer code matches docs**: All code examples in CLAUDE.md rule #3 work exactly as written.
+- **No other top-level barrels**: No other modules may follow this pattern. If future modules need similar treatment, they must argue for an exception explicitly (following D18's precedent).
+- **Module structure remains standard otherwise**: All M2–M7 components and utility modules continue to follow `lib/<module>/<module>.dart` pattern.
+
+### Review Trigger
+
+**None — this is a scoped, permanent exception.** If the pattern proves valuable for other modules, each would require its own decision following D18's template.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

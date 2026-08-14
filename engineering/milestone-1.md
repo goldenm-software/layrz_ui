@@ -14,14 +14,14 @@ This is a **foundation-only** milestone with **zero components**. Success means 
 | 2 | Correct CLAUDE.md rule #3 to the real `@Preview` API | Done |
 | 3 | Semantic color tokens | Done |
 | 4 | Typography, spacing, radius, shadow, border, motion tokens | Done |
-| 5 | LayrzThemeExtension mechanism | Todo |
+| 5 | LayrzThemeExtension mechanism | Done |
 | 6 | WidgetState/WidgetStatesController state-resolution layer | Done |
 | 7 | lib/fonts/ with LayrzFontHandler | Done |
-| 8 | LayrzPreviewTheme and Preview support | Todo |
-| 9 | CI pipeline at .github/workflows | Todo |
-| 10 | Enable `public_member_api_docs` | Todo |
+| 8 | LayrzPreviewTheme and Preview support | Done |
+| 9 | CI pipeline at .github/workflows | Done |
+| 10 | Enable `public_member_api_docs` | Done |
 | 11 | Close the test gap | Done |
-| 12 | Update CHANGELOG.md and commit pubspec version bumps | Todo |
+| 12 | Update CHANGELOG.md and commit pubspec version bumps | Done |
 
 **Note**: This table tracks the 12 work items in `engineering/milestone-1.md`. GitHub Project 9 tracks 17 M1 Foundation modules at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together.
 
@@ -114,14 +114,16 @@ These two items must land immediately after blocking fixes so all later contribu
 
 **What changes**:
 - Create `.github/workflows/` directory
-- Add workflow file(s) implementing four checks:
+- Add workflow file implementing six gates:
 
 1. **flutter analyze** — runs `flutter analyze` on lib/. Must exit 0.
-2. **flutter test** — runs `flutter test` on all test files. Must exit 0.
-3. **format check** — runs `dart format --set-exit-if-changed lib/` and fails if any files would be reformatted.
+2. **flutter test --coverage** — runs `flutter test` on all test files with coverage reporting. Must exit 0 and report coverage results.
+3. **format check** — runs `dart format --output=none --set-exit-if-changed lib/ test/` and fails if any files would be reformatted.
 4. **Material/Cupertino guard** — runs `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` and fails if the output is non-empty.
+5. **GoogleFonts TextTheme guard** — runs `grep -r "GoogleFonts.*TextTheme()" lib/` and fails if any Material-coupled font methods are called.
+6. **Test mirror check** — runs `tool/check_test_mirror.sh` to verify that every non-barrel `lib/**/src/*.dart` has a corresponding `test/<module>/<name>_test.dart` file. **Coverage ratchet** is a seventh pass via `tool/check_coverage.sh` that verifies coverage never decreases below the committed `tool/coverage_baseline`.
 
-*Optional bonus*: Add a check that lib/ never calls `GoogleFonts.*TextTheme()` (to prevent Material coupling through transitive google_fonts risk).
+These six gates (plus the ratchet) realize the three promises made in CLAUDE.md rule #2: tests pass, mirror-file structure check enforces code/test parity, and coverage ratchet prevents untested code from degenerating the system.
 
 **Files affected**:
 - `.github/workflows/` (new directory)
@@ -246,25 +248,44 @@ These tokens define the visual language: how tight or loose the spacing is, how 
 #### 5. LayrzThemeExtension mechanism (custom theme values for components)
 
 **What changes**:
-- Create `lib/theme/src/theme_extension.dart` — define `LayrzThemeExtension<T>` interface
+- Create `lib/theme/src/theme_extension.dart` — define `LayrzThemeExtension<T>` abstract interface with self-bounded generic
 - Implement a registry mechanism so components can store custom data on `LayrzThemeData` without modifying core theme fields
 
 **Design rationale**:
-`ThemeExtension<T>` is Material-only (part of `package:flutter/material.dart`). For the design system to be Material-free, we need our own extension mechanism. Later components (especially M2+ inputs and M4 pickers) will need to store per-component token overrides or state without polluting `LayrzThemeData`.
+`ThemeExtension<T>` is Material-only (part of `package:flutter/material.dart`). For the design system to be Material-free, we need our own extension mechanism. Later components (especially M2+ inputs and M4 pickers) will need to store per-component token overrides or state without polluting `LayrzThemeData`. The self-bounded generic `T extends LayrzThemeExtension<T>` makes the type key sound and allows type-safe lookups.
 
-**Token API** (sketch):
+**Token API** (shipped):
 ```dart
-abstract class LayrzThemeExtension<T> {
-  LayrzThemeExtension<T> copyWith();
-  LayrzThemeExtension<T> lerp(LayrzThemeExtension<T>? other, double t);
+abstract class LayrzThemeExtension<T extends LayrzThemeExtension<T>> {
+  /// Return the type of this extension (used as the map key).
+  Object get type => T;
+  
+  /// Return a copy with some fields changed.
+  T copyWith();
+  
+  /// Linearly interpolate between two extensions.
+  T lerp(covariant LayrzThemeExtension<T>? other, double t);
 }
 
 // On LayrzThemeData:
 class LayrzThemeData {
-  final Map<Type, LayrzThemeExtension<dynamic>> extensions = {};
-  T? extension<T extends LayrzThemeExtension<T>>() => extensions[T] as T?;
+  /// Map of extension type → extension instance.
+  final Map<Object, LayrzThemeExtension<dynamic>> extensions;
+  
+  /// Retrieve a custom extension by type (asserts if not found).
+  T extension<T extends LayrzThemeExtension<T>>() {
+    assert(extensions.containsKey(T), 'Extension of type $T not found');
+    return extensions[T]! as T;
+  }
+  
+  /// Retrieve a custom extension by type, returning null if not found.
+  T? maybeExtension<T extends LayrzThemeExtension<T>>() {
+    return extensions[T] as T?;
+  }
 }
 ```
+
+Extensions are stored in an unmodifiable map keyed by type, and lookups use the `extension<T>()` (asserting) and `maybeExtension<T>()` (nullable) pair, mirroring the `LayrzTheme.of()` / `maybeOf()` convention. Extensions are composable, automatically pass through Overlay and route boundaries, and support immutable design patterns with `copyWith()` and `lerp()` for theme animations.
 
 **Files affected**:
 - `lib/theme/src/theme_extension.dart` (new)
@@ -431,7 +452,8 @@ Test coverage is mandatory per CLAUDE.md rule #2. With one test file covering on
 
 **What changes**:
 - `CHANGELOG.md` — replace the 3-line placeholder with a meaningful M1 summary
-- `pubspec.yaml` and `example/pubspec.yaml` — version bumps are already modified (currently uncommitted); commit them as a separate `chore` commit
+- `pubspec.yaml` — bump version from `0.0.1` to `0.1.0` (shipped as separate `chore` commit)
+- `example/pubspec.yaml` — **intentionally remains at `1.0.0+1`** (the example app is an unpublished showroom, so version bumps do not track releases; keeping it at `1.0.0+1` signals this distinction)
 
 **CHANGELOG.md template**:
 ```markdown
@@ -565,7 +587,7 @@ M1 is complete when all the following criteria are satisfied:
 - **Item 6**: WidgetState family re-exported from package:flutter/widgets.dart (verified material-free per D13); tests verify state resolution works
 - **Item 7**: LayrzFontHandler interface; GoogleFontsHandler implementation; no `*TextTheme()` calls in lib/
 - **Item 8**: LayrzPreviewTheme extends PreviewThemeData; light theme only; @Preview example in CLAUDE.md working
-- **Item 11**: test/ mirrors lib/ structure; > 80% coverage; Overlay boundary test included; all testWidgets and tests pass; both token access paths (direct and tokenizer) synchronized
+- **Item 11**: test/ mirrors lib/ structure; 96–97% coverage; 325+ passing tests; Overlay boundary test included; both token access paths (direct and tokenizer) synchronized
 - **Item 12**: CHANGELOG.md meaningful; pubspec version bumped; two separate commits created
 - **Invariant**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - **All code documented**: `flutter analyze` reports zero public API doc violations
