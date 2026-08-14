@@ -67,7 +67,7 @@ The project's [CLAUDE.md](../CLAUDE.md) file contains critical rules for this co
 
 1. **Document every argument at 100%** — all public fields, parameters, and method arguments must have `///` dartdoc comments.
 2. **Full test coverage** — every new widget, extension, helper, or utility ships with tests.
-3. **Use `@Preview` for visual widgets** — add Flutter 3.47 preview annotations with `LayrzPreviewTheme` (planned for M1).
+3. **Use `@Preview` for visual widgets** — add Flutter 3.47 preview annotations with `LayrzPreviewTheme`.
 4. **One concern per file** — split large files, never pile unrelated things together.
 
 ---

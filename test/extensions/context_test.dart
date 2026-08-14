@@ -146,5 +146,102 @@ void main() {
 
       expect(resolved, equals(themeData.textStyle));
     });
+
+    testWidgets(
+      'themeExtension<T>() returns registered extension',
+      (tester) async {
+        final ext = _TestContextExtension(value: 'test');
+        final themeData = LayrzThemeData.light(
+          fontHandler: const FakeFontHandler(),
+          extensions: [ext],
+        );
+        late _TestContextExtension resolved;
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved = context.themeExtension<_TestContextExtension>();
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved, same(ext));
+        expect(resolved.value, equals('test'));
+      },
+    );
+
+    testWidgets(
+      'maybeThemeExtension<T>() returns null when not registered',
+      (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        _TestContextExtension? resolved;
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved = context.maybeThemeExtension<_TestContextExtension>();
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved, isNull);
+      },
+    );
+
+    testWidgets(
+      'maybeThemeExtension<T>() returns extension when registered',
+      (tester) async {
+        final ext = _TestContextExtension(value: 'maybe-test');
+        final themeData = LayrzThemeData.light(
+          fontHandler: const FakeFontHandler(),
+          extensions: [ext],
+        );
+        late _TestContextExtension? resolved;
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved = context.maybeThemeExtension<_TestContextExtension>();
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved, same(ext));
+      },
+    );
   });
+}
+
+/// Concrete extension for testing context accessors.
+class _TestContextExtension extends LayrzThemeExtension<_TestContextExtension> {
+  /// A simple string value.
+  final String value;
+
+  /// Creates a test extension with the given value.
+  const _TestContextExtension({required this.value});
+
+  @override
+  _TestContextExtension copyWith({String? value}) {
+    return _TestContextExtension(value: value ?? this.value);
+  }
+
+  @override
+  _TestContextExtension lerp(covariant _TestContextExtension? other, double t) {
+    if (other is! _TestContextExtension) {
+      return this;
+    }
+    return t < 0.5 ? this : other;
+  }
 }

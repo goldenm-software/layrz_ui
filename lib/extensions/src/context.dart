@@ -33,4 +33,35 @@ extension LayrzContextExtensions on BuildContext {
 
   /// Standard body text style from [LayrzThemeData.textTheme].
   TextStyle get bodyStyle => LayrzTheme.of(this).textStyle;
+
+  /// Retrieves a registered theme extension, throwing if it is not found.
+  ///
+  /// This is the ergonomic entry point for accessing theme extensions from the
+  /// widget tree. It delegates to [LayrzThemeData.extension].
+  ///
+  /// Throws an assertion error if the extension is not registered.
+  ///
+  /// Example:
+  /// ```dart
+  /// final extension = context.themeExtension<ButtonVariantsExtension>();
+  /// ```
+  T themeExtension<T extends LayrzThemeExtension<T>>() {
+    return LayrzTheme.of(this).extension<T>();
+  }
+
+  /// Retrieves a registered theme extension, returning null if it is not found.
+  ///
+  /// This is the ergonomic entry point for optional access to theme extensions
+  /// from the widget tree. It delegates to [LayrzThemeData.maybeExtension].
+  ///
+  /// Example:
+  /// ```dart
+  /// final extension = context.maybeThemeExtension<ButtonVariantsExtension>();
+  /// if (extension != null) {
+  ///   // Use the extension
+  /// }
+  /// ```
+  T? maybeThemeExtension<T extends LayrzThemeExtension<T>>() {
+    return LayrzTheme.of(this).maybeExtension<T>();
+  }
 }
