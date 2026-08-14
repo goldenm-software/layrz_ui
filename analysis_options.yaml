@@ -13,3 +13,7 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+
+linter:
+  rules:
+    - public_member_api_docs

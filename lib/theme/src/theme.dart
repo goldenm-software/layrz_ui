@@ -18,6 +18,9 @@ class LayrzTheme extends InheritedTheme {
   /// The theme data to propagate to all descendants.
   final LayrzThemeData data;
 
+  /// Creates a [LayrzTheme] widget.
+  ///
+  /// The [data] and [child] arguments are required.
   const LayrzTheme({super.key, required this.data, required super.child});
 
   /// Returns the nearest [LayrzThemeData], throwing if none is found.
