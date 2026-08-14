@@ -147,16 +147,39 @@ The decision is whether to:
 - If google_fonts later couples Material more tightly (not a risk in 8.2.1 per the changelog), a follow-up decision will be needed.
 - When Material is removed from the SDK in late 2026, google_fonts **must** migrate. If it adopts material_ui, layrz_ui will inherit a transitive material_ui dependency, which would violate the grep invariant. This is a recorded risk with a review trigger.
 
+**Update (2026-08-13)**
+
+A forensic audit of `google_fonts 8.2.1` has clarified D3's original reasoning. The claim that "Material is just dead code" was imprecise and matters because it is exactly the claim someone will lean on when deciding whether to fork.
+
+**Verified findings:**
+- **28 of 35 lib/ files** import `package:flutter/material.dart`
+- **The 329-line font-loading engine** (`google_fonts_base.dart`) imports Material but references **zero Material symbols** — genuinely dead code in the engine
+- **The 27 generated catalogue files** (`lib/src/google_fonts_parts/part_*.dart`) are **real libraries** (203,538 lines total), not `part of` files despite their naming
+- Material is **load-bearing in the catalogue only** — it supplies `TextTheme` and `ThemeData` for the **1,893 `static TextTheme()` methods**, but layrz_ui calls only the 1,893 TextStyle-returning twins, leaving the Material-coupled half entirely unreachable
+- `TextStyle` itself does not require Material — it comes from `dart:ui`/`painting`, which those files already import
+
+D3's **conclusion stands**: Material's presence is harmless to layrz_ui. The coupling is confined to unreachable API surface, and `LayrzFontHandler` makes the coupling reversible.
+
+**Forking is disqualified:** pub.dev refuses to publish any package with a git or path dependency. Since M1 item 12 plans a version bump and publication to pub.dev is anticipated, forking would trade the transitive Material import for the inability to publish layrz_ui.
+
+**Ranked alternatives should coupling removal become necessary:**
+1. **Upstream split** (ideal): petition google_fonts to emit `TextStyle()` methods into google_fonts, and `TextTheme()` methods into google_fonts/material. Mechanical change; benefits every Material-free design system.
+2. **Do nothing** (current): Material remains transitive but zero-cost at runtime. `LayrzFontHandler` is an interface; replacing google_fonts later touches one file and zero components.
+3. **Write a replacement loader** (medium): Material-free loader using only `dart:ui FontLoader`, `http`, `crypto`, `path_provider` — approximately 100–200 lines behind the interface. Loses runtime font discovery, retains custom font flexibility.
+4. **Fork** (worst): takes on maintenance, forfeits pub.dev publication, duplicates upstream burden indefinitely.
+
+**Why no action now:** The coupling's cost is latent — zero runtime impact (Dart AOT tree-shakes unreachable `*TextTheme()` methods), and the interface makes deferral cheap. Material remains in the SDK until late 2026. Revisit when Material leaves core or google_fonts announces its migration plan.
+
 ### Review Trigger
 
 **Date to Review**: Q4 2026 or when Material is removed from core (late 2026)
 
-- Monitor google_fonts changelog for deprecation / migration announcements
-- When google_fonts migrates off Material, verify whether it:
-  - Becomes design-system-free (ideal)
-  - Depends on material_ui or cupertino_ui (would affect layrz_ui)
-  - Removes TextStyle-returning APIs (would require layrz_ui to re-implement)
-- If google_fonts depends on material_ui, open decision D5 to resolve
+Watch for two specific signals in the google_fonts changelog:
+
+1. **API split**: Does google_fonts separate its `TextTheme()` methods (Material-bound) from `TextStyle()` methods (design-system-free)? A split is option (c) from D3 — elegant and solves the coupling long-term.
+2. **material_ui adoption**: When Material leaves the Flutter SDK, does google_fonts depend on `material_ui` for backward compatibility? If yes, layrz_ui inherits a transitive `material_ui` dependency, violating the grep invariant in consuming apps and escalating this to a follow-up decision (D5-style).
+
+If neither signal appears by Q4 2026, the decision stands unchanged and review is deferred another year.
 
 ---
 
