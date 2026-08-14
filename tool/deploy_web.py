@@ -260,21 +260,36 @@ def ensure_spa_error_responses(distribution_id: str, region: str) -> None:
   except Exception as e:
     raise RuntimeError(f"Failed to get CloudFront distribution config: {e}") from e
 
-  # Add or update error responses
-  if 'CustomErrorResponses' not in config:
-    config['CustomErrorResponses'] = []
+  # Read existing custom error responses.
+  # CloudFront API returns CustomErrorResponses as:
+  # {'Quantity': N, 'Items': [{'ErrorCode': 404, ...}, ...]}
+  custom_error_responses = config.get('CustomErrorResponses', {})
+  items = custom_error_responses.get('Items', [])
 
+  # Determine which error codes are missing
   error_codes = {404, 403}
-  existing = {item['ErrorCode'] for item in config['CustomErrorResponses']}
+  existing = {item['ErrorCode'] for item in items}
   missing = error_codes - existing
 
+  # If nothing is missing, skip the update entirely
+  if not missing:
+    logger.info(f"CloudFront distribution {distribution_id} already has SPA error responses configured")
+    return
+
+  # Add missing error responses
   for code in missing:
-    config['CustomErrorResponses'].append({
+    items.append({
       'ErrorCode': code,
       'ResponsePagePath': '/index.html',
       'ResponseCode': '200',
       'ErrorCachingMinTTL': 0,
     })
+
+  # Write back the correct AWS shape with updated Quantity
+  config['CustomErrorResponses'] = {
+    'Quantity': len(items),
+    'Items': items,
+  }
 
   try:
     cf.update_distribution(
