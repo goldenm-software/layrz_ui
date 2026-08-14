@@ -1,10 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:example/main.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:example/src/showroom.dart';
 
 void main() {
   testWidgets('Example app smoke test', (tester) async {
-    await tester.pumpWidget(const ExampleApp());
-    expect(find.text('layrz_ui Example'), findsOneWidget);
-    expect(find.text('Button taps: 0'), findsOneWidget);
+    await tester.pumpWidget(LayrzApp(title: kAppTitle, theme: LayrzThemeData.light(), home: const Showroom()));
+    expect(find.text('Design System Showroom'), findsOneWidget);
+    expect(find.text('Typography'), findsOneWidget);
   });
 }

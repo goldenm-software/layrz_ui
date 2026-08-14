@@ -30,4 +30,7 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Python/uv related
+.venv/
+
 .claude/settings.local.json

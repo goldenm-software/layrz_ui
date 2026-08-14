@@ -77,14 +77,14 @@ enum LayrzPlatform {
 
   @override
   String toString() => switch (this) {
-        LayrzPlatform.webWasm => 'Web (WASM)',
-        LayrzPlatform.web => 'Web (CanvasKit)',
-        LayrzPlatform.android => 'Google Android',
-        LayrzPlatform.iOS => 'Apple iOS',
-        LayrzPlatform.macOS => 'Apple macOS',
-        LayrzPlatform.windows => 'Microsoft Windows',
-        LayrzPlatform.linux => 'GNU/Linux',
-        LayrzPlatform.fuchsia => 'Google Fuchsia',
-        LayrzPlatform.unknown => 'Unknown',
-      };
+    LayrzPlatform.webWasm => 'Web (WASM)',
+    LayrzPlatform.web => 'Web (CanvasKit)',
+    LayrzPlatform.android => 'Google Android',
+    LayrzPlatform.iOS => 'Apple iOS',
+    LayrzPlatform.macOS => 'Apple macOS',
+    LayrzPlatform.windows => 'Microsoft Windows',
+    LayrzPlatform.linux => 'GNU/Linux',
+    LayrzPlatform.fuchsia => 'Google Fuchsia',
+    LayrzPlatform.unknown => 'Unknown',
+  };
 }
