@@ -168,6 +168,26 @@ Items follow two conversion paths based on work state:
 
 **Do not bulk-convert upcoming work.** Convert individually as work begins. See decision D16 in `engineering/decisions.md` for the rationale and the distinction between the two paths.
 
+### Working an item end to end
+
+An item moves from the board to Done through four stages. Two skills automate the process; this section describes the workflow so it survives the skills and so a human can follow it manually.
+
+**Start** — `/start-todo-process <item-title>`. Converts the named draft item(s) to Issues, sets Status to **In Progress**, and creates the working branch. Multiple items in one invocation are one unit of work sharing one branch; separate branches means separate invocations.
+
+**Build** — Do the work. Tests are mandatory (rule #2). A new widget also needs a wiki page (see D6), not an `engineering/` file.
+
+**Commit** — `/commit`. Split changes into logical, semantic commits in conventional format.
+
+**Complete** — `/complete-todo-process`. Runs `flutter analyze`, `flutter test`, format check, and the Material/Cupertino invariant; opens the PR with `Closes #N` lines for every linked issue; merges; verifies each issue is closed and the project Status moved to Done; updates the corresponding row in `engineering/milestone-N.md` Status table; deletes the branch.
+
+#### Traps — learned the hard way
+
+- **Nothing sets Status to In Progress.** The project's enabled automations cover *item added*, *item closed*, *pull request merged*, *auto-close issue*, *pull request linked to issue*, and *auto-add sub-issues*. None of them sets In Progress. Skip the start step and an item being actively worked still reads as untouched on the board.
+- **You cannot approve your own pull request.** GitHub refuses it and there is no admin override. It is not a blocker here only because neither `main` nor `development` has branch protection — which also means the checks in the **Complete** stage are the only gate on either branch.
+- **Do not trust the board automation.** The API does not expose which value each automation writes, so Status must be verified after merging and set by hand if it did not move.
+- **Both trackers must move together.** Update the GitHub Project status and the milestone Status table in the same commit.
+- **Convert one item at a time.** A previous concurrent run corrupted this project, duplicating an item three times and attaching bodies to the wrong components.
+
 ---
 
 ## CRITICAL rules — always follow these
