@@ -99,24 +99,24 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 | `ThemedLayout` | class | `lib/src/layout/layout.dart` | needs decision | LayrzLayout is a placeholder in Milestone 1. Scope unconfirmed on single layout design selection and navigator item types. See D8 in [decisions.md](decisions.md). |
 | `ThemedLayoutStyle` | enum (dual, sidebar, mini) | `lib/src/layout/layout.dart` | **drop** | Dropped by D8 (LayrzLayout ships exactly one layout design). Multiple desktop presentations are out of scope for Milestone 1. |
 | `ThemedMobileLayoutStyle` | enum (appBar, bottomBar) | `lib/src/layout/layout.dart` | **drop** | Dropped by D8 (LayrzLayout ships exactly one layout design). Multiple mobile presentations are out of scope for Milestone 1. |
-| `ThemedDualBar` | class | `lib/src/layout/dual_bar.dart` | **drop** | Dropped by D8. Dual bar presentation not carried over in single-design approach. |
-| `ThemedSidebar` | class | `lib/src/layout/sidebar.dart` | **drop** | Dropped by D8. Sidebar presentation not carried over in single-design approach. |
-| `ThemedMiniBar` | class | `lib/src/layout/mini_bar.dart` | **drop** | Dropped by D8. Mini bar presentation not carried over in single-design approach. |
-| `ThemedBottomBar` | class | `lib/src/layout/bottom_bar.dart` | **drop** | Dropped by D8. Bottom bar presentation not carried over in single-design approach. |
-| `ThemedAppBar` | class | `lib/src/layout/app_bar.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedMobileAppBar` | class | `lib/src/layout/mobile_app_bar.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedAppBarAvatar` | class | `lib/src/layout/app_bar_avatar.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNotificationIcon` | class | `lib/src/layout/notification_icon.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNotificationLocation` | enum (appBar, miniBar, bottomBar, sideBar, custom) | `lib/src/layout/notification_icon.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedCustomNotificationLocation` | class | `lib/src/layout/notification_icon.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| abstract `ThemedNavigatorItem` | abstract class | `lib/src/layout/navigator_item.dart` | needs decision | Navigator item types to be confirmed per D11. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNavigatorPage` | class extends ThemedNavigatorItem | `lib/src/layout/navigator_item.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorAction` | class extends ThemedNavigatorItem | `lib/src/layout/navigator_item.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorWidget` | class extends ThemedNavigatorItem | `lib/src/layout/navigator_item.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorSeparator` | class extends ThemedNavigatorItem | `lib/src/layout/navigator_item.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorLabel` | class extends ThemedNavigatorItem | `lib/src/layout/navigator_item.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNotificationItem` | class | `lib/src/layout/notification_item.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedSeparatorType` | enum | `lib/src/layout/navigator_item.dart` | needs decision | Depends on navigator item scope. Subject to D8. |
+| `ThemedDualBar` | class | `lib/src/layout/src/bars/dual.dart` | **drop** | Dropped by D8. Dual bar presentation not carried over in single-design approach. |
+| `ThemedSidebar` | class | `lib/src/layout/src/bars/side.dart` | **drop** | Dropped by D8. Sidebar presentation not carried over in single-design approach. |
+| `ThemedMiniBar` | class | `lib/src/layout/src/bars/mini.dart` | **drop** | Dropped by D8. Mini bar presentation not carried over in single-design approach. |
+| `ThemedBottomBar` | class | `lib/src/layout/src/bars/bottom.dart` | **drop** | Dropped by D8. Bottom bar presentation not carried over in single-design approach. |
+| `ThemedAppBar` | class | `lib/src/layout/src/appbar/desktop.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedMobileAppBar` | class | `lib/src/layout/src/appbar/mobile.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedAppBarAvatar` | class | `lib/src/layout/src/parts/avatar.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedNotificationIcon` | class | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedNotificationLocation` | enum (appBar, miniBar, bottomBar, sideBar, custom) | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedCustomNotificationLocation` | class | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| abstract `ThemedNavigatorItem` | abstract class | `lib/src/layout/src/models.dart` | needs decision | Navigator item types to be confirmed per D11. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedNavigatorPage` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
+| `ThemedNavigatorAction` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
+| `ThemedNavigatorWidget` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
+| `ThemedNavigatorSeparator` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
+| `ThemedNavigatorLabel` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
+| `ThemedNotificationItem` | class | `lib/src/layout/src/models.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
+| `ThemedSeparatorType` | enum | `lib/src/layout/src/models.dart` | needs decision | Depends on navigator item scope. Subject to D8. |
 | typedef `ThemedNavigatorPushFunction` | typedef | `lib/src/layout/layout.dart` | needs decision | Depends on layout scope. Subject to D8. |
 | typedef `ThemedNavigatorPopFunction` | typedef | `lib/src/layout/layout.dart` | **needs decision — typo opportunity** | IMPORTANT: This symbol is misspelled in layrz_theme as `ThemdNavigatorPopFunction` (missing the "e"). D8 offers an opportunity to correct it to `LayrzNavigatorPopFunction` in layrz_ui. Scope depends on navigator types decision. |
 
@@ -128,17 +128,17 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedAlert` → `LayrzAlert` | class | `lib/src/alert/alert.dart` | port | LayrzAlert wiki exists; formal scope confirmed in D11. |
-| `ThemedAlertIcon` → `LayrzAlertIcon` | class | `lib/src/alert/alert_icon.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
-| `ThemedAlertType` → `LayrzAlertType` | enum (info, success, warning, danger, context, custom) | `lib/src/alert/alert_type.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
-| `ThemedAlertStyle` → `LayrzAlertStyle` | enum (layrz, filledTonal, filled, outlined, filledIcon) | `lib/src/alert/alert_style.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
-| `ThemedChip` → `LayrzChip` | class | `lib/src/chip/chip.dart` | port | LayrzChip wiki exists; formal scope confirmed in D11. |
-| `ThemedChipGroup` → `LayrzChipGroup` | class | `lib/src/chip/chip_group.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |
-| `ThemedChipStyle` → `LayrzChipStyle` | enum (filled, outlined, elevated) | `lib/src/chip/chip_style.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |
-| `ThemedChipGroupBehavior` → `LayrzChipGroupBehavior` | enum (none, single, multi) | `lib/src/chip/chip_group_behavior.dart` | port | Required by LayrzChipGroup. Part of LayrzChip family (D11). |
-| `ThemedTooltip` → `LayrzTooltip` | class | `lib/src/tooltip/tooltip.dart` | port | LayrzTooltip wiki exists; formal scope confirmed in D11. Prevents default Flutter tooltip. |
-| `ThemedTooltipPosition` → `LayrzTooltipPosition` | enum (top, bottom, left, right) | `lib/src/tooltip/tooltip_position.dart` | port | Required by LayrzTooltip. Part of LayrzTooltip family (D11). |
-| `ThemedImage` → `LayrzImage` | class | `lib/src/image/image.dart` | port | **CRITICAL**: Owns private base64 image cache that `LayrzDynamicAvatar` delegates to. Cannot implement avatar-bound components without `LayrzImage` or equivalent cache. |
+| `ThemedAlert` → `LayrzAlert` | class | `lib/src/alerts/src/alert.dart` | port | LayrzAlert wiki exists; formal scope confirmed in D11. |
+| `ThemedAlertIcon` → `LayrzAlertIcon` | class | `lib/src/alerts/src/icon.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
+| `ThemedAlertType` → `LayrzAlertType` | enum (info, success, warning, danger, context, custom) | `lib/src/alerts/src/type.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
+| `ThemedAlertStyle` → `LayrzAlertStyle` | enum (layrz, filledTonal, filled, outlined, filledIcon) | `lib/src/alerts/src/style.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
+| `ThemedChip` → `LayrzChip` | class | `lib/src/chips/src/chip.dart` | port | LayrzChip wiki exists; formal scope confirmed in D11. |
+| `ThemedChipGroup` → `LayrzChipGroup` | class | `lib/src/chips/src/group.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |
+| `ThemedChipStyle` → `LayrzChipStyle` | enum (filled, outlined, elevated) | `lib/src/chips/src/chip.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |
+| `ThemedChipGroupBehavior` → `LayrzChipGroupBehavior` | enum (none, single, multi) | `lib/src/chips/src/group.dart` | port | Required by LayrzChipGroup. Part of LayrzChip family (D11). |
+| `ThemedTooltip` → `LayrzTooltip` | class | `lib/src/tooltips/src/custom_tooltip.dart` | port | LayrzTooltip wiki exists; formal scope confirmed in D11. Prevents default Flutter tooltip. |
+| `ThemedTooltipPosition` → `LayrzTooltipPosition` | enum (top, bottom, left, right) | `lib/src/tooltips/src/custom_tooltip.dart` | port | Required by LayrzTooltip. Part of LayrzTooltip family (D11). |
+| `ThemedImage` → `LayrzImage` | class | `lib/src/helpers/src/get_image.dart` | port | **CRITICAL**: Owns private base64 image cache that `LayrzDynamicAvatar` delegates to. Cannot implement avatar-bound components without `LayrzImage` or equivalent cache. |
 
 ---
 
@@ -146,15 +146,15 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedScaffoldView` → `LayrzScaffoldView` | class | `lib/src/scaffold_view/scaffold_view.dart` | port | Scope confirmed in D11. Remains standalone, not folded into LayrzLayout. |
-| `ThemedScaffoldCell` → `LayrzScaffoldCell` | class | `lib/src/scaffold_view/scaffold_cell.dart` | port | Required by LayrzScaffoldView. Part of LayrzScaffoldView subsystem (D11). |
-| `ThemedLicense` → `LayrzLicense` | class | `lib/src/scaffold_view/license.dart` | needs decision | Scope unconfirmed. Related to LayrzScaffoldView but specific scope pending. |
-| `ThemedTab` → `LayrzTab` | class | `lib/src/tab/tab.dart` | port | LayrzTab wiki exists; formal scope confirmed in D11. |
-| `ThemedTabView` → `LayrzTabView` | class | `lib/src/tab/tab_view.dart` | port | Required by LayrzTab. Part of LayrzTab subsystem (D11). |
-| `ThemedTabStyle` → `LayrzTabStyle` | enum (underline, filledTonal) | `lib/src/tab/tab_style.dart` | port | Required by LayrzTab. Part of LayrzTab subsystem (D11). |
-| `ThemedAboutDialog` | class | `lib/src/about_dialog/about_dialog.dart` | needs decision | Scope unconfirmed. |
-| function `showThemedAboutDialog` | function | `lib/src/about_dialog/show_about_dialog.dart` | needs decision | Scope unconfirmed; depends on ThemedAboutDialog. |
-| `WorkInProgressView` | class | `lib/src/work_in_progress_view.dart` | drop | Placeholder widget; not a production component. Remove on migration. |
+| `ThemedScaffoldView` → `LayrzScaffoldShell` | class | `lib/src/scaffolds/src/sidebar.dart` | port | Scope confirmed in D11; merged into single adaptive component. ThemedScaffoldView and ThemedScaffoldCell retired (not ported one-to-one). |
+| `ThemedScaffoldCell` → `LayrzScaffoldShell` | (retired) | `lib/src/scaffolds/src/cell.dart` | (merged) | Folded into LayrzScaffoldShell; not separate public API. |
+| `ThemedLicense` → `LayrzLicense` | class | `lib/src/views/views.dart` | needs decision | Scope unconfirmed. Separate component from layout infrastructure; scope still open. |
+| `ThemedTab` → `LayrzTab` | class | `lib/src/tabs/src/tab.dart` | port | LayrzTab wiki exists; formal scope confirmed in D11. |
+| `ThemedTabView` → `LayrzTabView` | class | `lib/src/tabs/src/view.dart` | port | Required by LayrzTab. Part of LayrzTab subsystem (D11). |
+| `ThemedTabStyle` → `LayrzTabStyle` | enum (underline, filledTonal) | `lib/src/tabs/src/style.dart` | port | Required by LayrzTab. Part of LayrzTab subsystem (D11). |
+| `ThemedAboutDialog` | class | `lib/src/views/src/about.dart` | needs decision | Scope unconfirmed. |
+| function `showThemedAboutDialog` | function | `lib/src/views/src/about.dart` | needs decision | Scope unconfirmed; depends on ThemedAboutDialog. |
+| `WorkInProgressView` | class | `lib/src/widgets/src/wip.dart` | drop | Placeholder widget; not a production component. Remove on migration. |
 
 ---
 
@@ -162,13 +162,13 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedCalendar` → `LayrzCalendar` | class (1,039 lines) | `lib/src/calendar/calendar.dart` | **port — FULL REFACTOR** | Scope confirmed in D11. Four view modes (day, week, month, year) to be ported. **WARNING**: Dependency on `package:table_calendar` (Material-built, 14 Material imports). Full architecture refactor required; cannot be a 1:1 port. Requires Material-free alternative or rewrite. |
-| `ThemedCalendarMode` → `LayrzCalendarMode` | enum (day, week, month, year) | `lib/src/calendar/calendar_mode.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
-| `ThemedCalendarEntry` → `LayrzCalendarEntry` | class | `lib/src/calendar/calendar_entry.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
-| `ThemedCalendarRangeEntry` → `LayrzCalendarRangeEntry` | class | `lib/src/calendar/calendar_range_entry.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
-| `ThemedCodeSnippet` | class | `lib/src/code_snippet/code_snippet.dart` | needs decision | Scope unconfirmed; syntactic highlighting deferred. |
-| `ThemedTable` | class (with @Deprecated) | `lib/src/table/table.dart` | drop | Superseded by ThemedTable2. Do not port. |
-| `ThemedColumn` | class (with @Deprecated) | `lib/src/table/column.dart` | drop | Superseded by table2 column config. Do not port. |
+| `ThemedCalendar` → `LayrzCalendar` | class (1,039 lines) | `lib/src/widgets/src/calendar.dart` | **port — FULL REFACTOR** | Scope confirmed in D11. Four view modes (day, week, month, year) to be ported. **WARNING**: Dependency on `package:table_calendar` (Material-built, 14 Material imports). Full architecture refactor required; cannot be a 1:1 port. Requires Material-free alternative or rewrite. |
+| `ThemedCalendarMode` → `LayrzCalendarMode` | enum (day, week, month, year) | `lib/src/widgets/src/calendar.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
+| `ThemedCalendarEntry` → `LayrzCalendarEntry` | class | `lib/src/widgets/src/calendar.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
+| `ThemedCalendarRangeEntry` → `LayrzCalendarRangeEntry` | class | `lib/src/widgets/src/calendar.dart` | port | Required by LayrzCalendar. Part of LayrzCalendar subsystem (D11). |
+| `ThemedCodeSnippet` | class | `lib/src/widgets/src/snippet.dart` | needs decision | Scope unconfirmed; syntactic highlighting deferred. |
+| `ThemedTable` | class (with @Deprecated) | `lib/src/table/src/table.dart` | drop | Superseded by ThemedTable2. Do not port. |
+| `ThemedColumn` | class (with @Deprecated) | `lib/src/table/src/column.dart` | drop | Superseded by table2 column config. Do not port. |
 
 ---
 
@@ -194,11 +194,11 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `Sizes` | enum (col1 through col12) | `lib/src/responsive/sizes.dart` | **drop** | Dropped by D9 (responsive grid drops Sizes enum). Replaced by plain integer column counts with debug assertion. `ResponsiveCol` now takes `int cols` instead of `Sizes size`. |
-| extension `SizesExt` on Sizes | extension | `lib/src/responsive/sizes_extension.dart` | **drop** | Dropped by D9. No longer needed since column counts are plain integers. |
-| `ResponsiveRow` → `LayrzRow` | class + `.builder` factory | `lib/src/responsive/responsive_row.dart` | port | Formal scope confirmed in D11. 12-column grid container. layrz-theme:responsive-row skill applies. |
-| `ResponsiveCol` → `LayrzCol` | class | `lib/src/responsive/responsive_col.dart` | port | Formal scope confirmed in D11. Column sizing within LayrzRow. Now takes `int cols` instead of `Sizes size`. layrz-theme:responsive-col skill applies. **API change**: `ResponsiveCol(size: Sizes.col6)` → `LayrzCol(cols: 6)`. |
-| **Breakpoint constants** (5 total) | constants | `lib/src/constants/grid.dart` | port | kExtraSmallGrid (600), kSmallGrid (960), kMediumGrid (1264), kLargeGrid (1904), implicit extra-large (>1904). Already ported. |
+| `Sizes` | enum (col1 through col12) | `lib/src/grid/src/sizes.dart` | **drop** | Dropped by D9 (responsive grid drops Sizes enum). Replaced by plain integer column counts with debug assertion. `ResponsiveCol` now takes `int cols` instead of `Sizes size`. |
+| extension `SizesExt` on Sizes | extension | `lib/src/grid/src/sizes.dart` | **drop** | Dropped by D9. No longer needed since column counts are plain integers. |
+| `ResponsiveRow` → `LayrzRow` | class + `.builder` factory | `lib/src/grid/src/row.dart` | port | Formal scope confirmed in D11. 12-column grid container. layrz-theme:responsive-row skill applies. |
+| `ResponsiveCol` → `LayrzCol` | class | `lib/src/grid/src/col.dart` | port | Formal scope confirmed in D11. Column sizing within LayrzRow. Now takes `int cols` instead of `Sizes size`. layrz-theme:responsive-col skill applies. **API change**: `ResponsiveCol(size: Sizes.col6)` → `LayrzCol(cols: 6)`. |
+| **Breakpoint constants** (5 total) | constants | `lib/src/theme/src/constants.dart` | port | kExtraSmallGrid (600), kSmallGrid (960), kMediumGrid (1264), kLargeGrid (1904), implicit extra-large (>1904). Already ported. |
 
 ---
 
@@ -206,25 +206,25 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedSelectItem` → `LayrzSelectItem` | class | `lib/src/inputs/select_input/select_item.dart` | port | Formal scope confirmed in D11. Required by LayrzSelectInput and other select-type inputs. |
-| `ThemedFieldDisplayError` → `LayrzFieldDisplayError` | class | `lib/src/inputs/support/field_display_error.dart` | port | Used across all input widgets. Formal scope confirmed in D11. |
-| `ThemedInputLikeContainer` → `LayrzInputLikeContainer` | class | `lib/src/inputs/support/input_like_container.dart` | port | Used as base container for inputs. Formal scope confirmed in D11. |
-| `DialogSelectInput` | class | `lib/src/inputs/support/dialog_select_input.dart` | port | Internal support type for select inputs. |
-| `SelectInputResult` | class | `lib/src/inputs/support/select_input_result.dart` | port | Return type for select operations. |
-| `Month` | enum | `lib/src/inputs/month_picker/month.dart` | port | Month enumeration; used by month-related pickers. |
-| `ThemedMonth` | class | `lib/src/inputs/month_picker/month.dart` | port | Month value holder. |
-| `NamedIcon` | class | `lib/src/icon_picker/named_icon.dart` | port | Icon wrapper with name metadata; used by ThemedIconPicker. |
-| `ThemedDateTimeRangeDialog` | class | `lib/src/inputs/support/datetime_range_dialog.dart` | port | Internal dialog for date/time range pickers. |
-| `ThemedCheckboxInputStyle` | enum (field, switch, flutterCheckbox) | `lib/src/inputs/checkbox_input/checkbox_style.dart` | port | Rendering variants for ThemedCheckboxInput. |
-| `ThemedDecimalSeparator` | enum | `lib/src/inputs/number_input/decimal_separator.dart` | port | Decimal point vs. comma locale config. |
-| `ThemedSearchPosition` | enum (top, center, bottom) | `lib/src/inputs/search_input/search_position.dart` | port | Search bar placement variant. |
-| `ThemedComboboxPosition` | enum (top, bottom) | `lib/src/inputs/combobox_input/combobox_position.dart` | port | Combobox dropdown placement. |
-| extension `ThemedUnitTranslation` | extension on Map<String, String> | `lib/src/inputs/duration_input/unit_translation.dart` | port | Duration unit translations (hours, minutes, seconds). |
-| typedef `ThemedDynamicAvatarOnChanged` | typedef | `lib/src/inputs/dynamic_avatar_input/dynamic_avatar_input.dart` | port | Callback type for avatar changes. |
-| typedef `CredentialOnChanged` | typedef | `lib/src/inputs/dynamic_credentials_input/dynamic_credentials_input.dart` | port | Callback type for credential changes. |
-| typedef `OnSearch` | typedef | `lib/src/inputs/search_input/search_input.dart` | port | Callback type for search events. |
-| typedef `EmojiTapCallback` | typedef | `lib/src/inputs/emoji_picker/emoji_picker.dart` | port | Callback for emoji selection. |
-| typedef `ThemedDynamicFieldConfigurationBlockOnChanged` | typedef | `lib/src/inputs/dynamic_configurable_block/dynamic_field_configuration.dart` | port | Callback for dynamic field block changes. |
+| `ThemedSelectItem` → `LayrzSelectItem` | class | `lib/src/inputs/src/utilities/select_item.dart` | port | Formal scope confirmed in D11. Required by LayrzSelectInput and other select-type inputs. |
+| `ThemedFieldDisplayError` → `LayrzFieldDisplayError` | class | `lib/src/inputs/src/utilities/field_error.dart` | port | Used across all input widgets. Formal scope confirmed in D11. |
+| `ThemedInputLikeContainer` → `LayrzInputLikeContainer` | class | `lib/src/inputs/src/utilities/input_like_container.dart` | port | Used as base container for inputs. Formal scope confirmed in D11. |
+| `DialogSelectInput` | class | `lib/src/inputs/src/general/select_input.dart` | port | Internal support type for select inputs. |
+| `SelectInputResult` | class | `lib/src/inputs/src/general/select_input.dart` | port | Return type for select operations. |
+| `Month` | enum | `lib/src/inputs/src/pickers/month/single.dart` | port | Month enumeration; used by month-related pickers. |
+| `ThemedMonth` | class | `lib/src/inputs/src/pickers/month/single.dart` | port | Month value holder. |
+| `NamedIcon` | class | `lib/src/inputs/src/pickers/general/icon.dart` | port | Icon wrapper with name metadata; used by ThemedIconPicker. |
+| `ThemedDateTimeRangeDialog` | class | `lib/src/inputs/src/pickers/datetime/range.dart` | port | Internal dialog for date/time range pickers. |
+| `ThemedCheckboxInputStyle` | enum (field, switch, flutterCheckbox) | `lib/src/inputs/src/general/checkbox_input.dart` | port | Rendering variants for ThemedCheckboxInput. |
+| `ThemedDecimalSeparator` | enum | `lib/src/inputs/src/general/number_input.dart` | port | Decimal point vs. comma locale config. |
+| `ThemedSearchPosition` | enum (top, center, bottom) | `lib/src/inputs/src/general/search_input.dart` | port | Search bar placement variant. |
+| `ThemedComboboxPosition` | enum (top, bottom) | `lib/src/inputs/src/general/text_input.dart` | port | Combobox dropdown placement. |
+| extension `ThemedUnitTranslation` | extension on Map<String, String> | `lib/src/inputs/src/general/duration_input.dart` | port | Duration unit translations (hours, minutes, seconds). |
+| typedef `ThemedDynamicAvatarOnChanged` | typedef | `lib/src/inputs/src/general/dynamic_avatar_input.dart` | port | Callback type for avatar changes. |
+| typedef `CredentialOnChanged` | typedef | `lib/src/inputs/src/general/dynamic_credentials_input.dart` | port | Callback type for credential changes. |
+| typedef `OnSearch` | typedef | `lib/src/inputs/src/general/search_input.dart` | port | Callback type for search events. |
+| typedef `EmojiTapCallback` | typedef | `lib/src/inputs/src/pickers/general/emoji.dart` | port | Callback for emoji selection. |
+| typedef `ThemedDynamicFieldConfigurationBlockOnChanged` | typedef | `lib/src/inputs/src/dynamic_configurable/block.dart` | port | Callback for dynamic field block changes. |
 
 **Important note**: Existing wiki pages incorrectly reference `SelectItem`, `FieldError`, and `InputLikeContainer` without the `Themed` prefix. Correct the wiki to use actual symbol names on next review.
 
@@ -234,8 +234,8 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedButton` → `LayrzButton` | class | `lib/src/button/button.dart` | port | Formal scope confirmed in D11. **Six semantic factories** (`.primary`, `.secondary`, `.icon`, `.fab`, `.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`). Note: `.legacyLoading()` exists in layrz_theme but is **deliberately not carried over** to layrz_ui. The wiki's list of six factories is correct. |
-| `ThemedActionButton` → `LayrzActionButton` | class | `lib/src/button/action_button.dart` | port | Related button widget with six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`). Formal scope pending; related to LayrzButton scope. |
+| `ThemedButton` → `LayrzButton` | class | `lib/src/buttons/src/button.dart` | port | Formal scope confirmed in D11. **Six semantic factories** (`.primary`, `.secondary`, `.icon`, `.fab`, `.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`). Note: `.legacyLoading()` exists in layrz_theme but is **deliberately not carried over** to layrz_ui. The wiki's list of six factories is correct. |
+| `ThemedActionButton` → `LayrzActionButton` | class | `lib/src/buttons/src/action_button.dart` | port | Related button widget with six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`). Formal scope pending; related to LayrzButton scope. |
 
 ---
 
@@ -243,9 +243,9 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedDynamicConfigurableBlock` | class (563 lines) | `lib/src/dynamic_configurable_block/dynamic_configurable_block.dart` | blocked | Requires Avatar, AvatarInput from layrz_models. Blocked by D10 (layrz_models audit pending). See [decisions.md](decisions.md). |
-| `ThemedDynamicConfigurableDialog` | class (194 lines) | `lib/src/dynamic_configurable_block/dynamic_configurable_dialog.dart` | blocked | Depends on ThemedDynamicConfigurableBlock and D10. |
-| `ThemedDynamicCredentialsInput` → `LayrzDynamicCredentialsInput` | class | `lib/src/inputs/dynamic_credentials_input/dynamic_credentials_input.dart` | **port — scheduled late** | Formal scope confirmed in D11. Depends on layrz_models schema types. Gated on D10 (layrz_models audit). Implementation scheduled after Milestone 2 initial release. |
+| `ThemedDynamicConfigurableBlock` | class (563 lines) | `lib/src/inputs/src/dynamic_configurable/block.dart` | blocked | Requires Avatar, AvatarInput from layrz_models. Blocked by D10 (layrz_models audit pending). See [decisions.md](decisions.md). |
+| `ThemedDynamicConfigurableDialog` | class (194 lines) | `lib/src/inputs/src/dynamic_configurable/dialog.dart` | blocked | Depends on ThemedDynamicConfigurableBlock and D10. |
+| `ThemedDynamicCredentialsInput` → `LayrzDynamicCredentialsInput` | class | `lib/src/inputs/src/general/dynamic_credentials_input.dart` | **port — scheduled late** | Formal scope confirmed in D11. Depends on layrz_models schema types. Gated on D10 (layrz_models audit). Implementation scheduled after Milestone 2 initial release. |
 
 ---
 
@@ -253,9 +253,9 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedCodeEditor` | class (632 lines) | `lib/src/code_editor/code_editor.dart` | blocked | Depends on `package:code_text_field` (1.1.0) and `package:flutter_highlight` (0.7.0). Architecture review required; Material-built status needs verification. |
-| `LayrzSupportedLanguage` | enum | `lib/src/code_editor/language.dart` | blocked | Depends on ThemedCodeEditor scope. |
-| `ThemedCodeError` | class | `lib/src/code_editor/code_error.dart` | blocked | Depends on ThemedCodeEditor scope. |
+| `ThemedCodeEditor` | class (632 lines) | `lib/src/inputs/src/code_editor.dart` | blocked | Depends on `package:code_text_field` (1.1.0) and `package:flutter_highlight` (0.7.0). Architecture review required; Material-built status needs verification. |
+| `LayrzSupportedLanguage` | enum | `lib/src/inputs/src/code_editor.dart` | blocked | Depends on ThemedCodeEditor scope. |
+| `ThemedCodeError` | class | `lib/src/inputs/src/code_editor.dart` | blocked | Depends on ThemedCodeEditor scope. |
 | LML highlight mode (`lml` constant) | Mode constant | `lib/src/languages/lml/` | blocked | Language definition; depends on flutter_highlight. |
 
 ---
@@ -264,23 +264,23 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedMapButton` | class | `lib/src/map/button.dart` | **blocked** | **flutter_map 8.3.0 is architecturally Material-built** (14 Material imports). Entire map subsystem must be rewritten or dropped. |
-| `ThemedMapDragButton` | class | `lib/src/map/drag_button.dart` | blocked | Depends on ThemedMapButton. |
-| `ThemedTileLayer` | class (502 lines) | `lib/src/map/tile_layer.dart` | blocked | Integrates Google Street View, Mapbox, HERE; blocked by flutter_map. |
-| `ThemedMapToolbar` | class | `lib/src/map/toolbar.dart` | blocked | Depends on ThemedMapButton and ThemedTileLayer. |
-| `ThemedMapToolbarFlow` | enum | `lib/src/map/toolbar_flow.dart` | blocked | Depends on ThemedMapToolbar. |
-| `ThemedChangeLayerDialog` | class | `lib/src/map/change_layer_dialog.dart` | blocked | Depends on map layer system. |
-| `ThemedMapController` | class | `lib/src/map/map_controller.dart` | blocked | Depends on flutter_map. |
-| abstract `ThemedMapEvent` | abstract class | `lib/src/map/map_event.dart` | blocked | Base for map event hierarchy. |
-| `ThemedMapEvent.StartGoogleStreetView` | class extends ThemedMapEvent | `lib/src/map/map_event.dart` | blocked | Depends on map events. |
-| `ThemedMapEvent.StopGoogleStreetView` | class extends ThemedMapEvent | `lib/src/map/map_event.dart` | blocked | Depends on map events. |
-| typedef `ThemedMapButtonDragCallback` | typedef | `lib/src/map/map_controller.dart` | blocked | Callback for map button drag. |
-| typedef `ThemedMapButtonDragNullCallback` | typedef | `lib/src/map/map_controller.dart` | blocked | Nullable variant of drag callback. |
-| function `subdivideLayersPerSource` | function | `lib/src/map/layer_source.dart` | blocked | Helper for layer subdivision. |
-| constant `kGoldenMHeadquarters` | const LatLng | `lib/src/map/constants.dart` | blocked | Default map location. |
-| constant `kDefaultLayer` | const TileLayer | `lib/src/map/constants.dart` | blocked | Default map layer. |
-| constant `kMinZoom` | const double | `lib/src/map/constants.dart` | blocked | Map minimum zoom. |
-| constant `kMaxZoom` | const double | `lib/src/map/constants.dart` | blocked | Map maximum zoom. |
+| `ThemedMapButton` | class | `lib/src/map/src/button.dart` | **blocked** | **flutter_map 8.3.0 is architecturally Material-built** (14 Material imports). Entire map subsystem must be rewritten or dropped. |
+| `ThemedMapDragButton` | class | `lib/src/map/src/button.dart` | blocked | Depends on ThemedMapButton. |
+| `ThemedTileLayer` | class (502 lines) | `lib/src/map/src/layers/tile.dart` | blocked | Integrates Google Street View, Mapbox, HERE; blocked by flutter_map. |
+| `ThemedMapToolbar` | class | `lib/src/map/src/layers/toolbar.dart` | blocked | Depends on ThemedMapButton and ThemedTileLayer. |
+| `ThemedMapToolbarFlow` | enum | `lib/src/map/src/layers/toolbar.dart` | blocked | Depends on ThemedMapToolbar. |
+| `ThemedChangeLayerDialog` | class | `lib/src/map/src/dialogs/change_layer.dart` | blocked | Depends on map layer system. |
+| `ThemedMapController` | class | `lib/src/map/src/events/controller.dart` | blocked | Depends on flutter_map. |
+| abstract `ThemedMapEvent` | abstract class | `lib/src/map/src/events/events.dart` | blocked | Base for map event hierarchy. |
+| `ThemedMapEvent.StartGoogleStreetView` | class extends ThemedMapEvent | `lib/src/map/src/events/events.dart` | blocked | Depends on map events. |
+| `ThemedMapEvent.StopGoogleStreetView` | class extends ThemedMapEvent | `lib/src/map/src/events/events.dart` | blocked | Depends on map events. |
+| typedef `ThemedMapButtonDragCallback` | typedef | `lib/src/map/src/button.dart` | blocked | Callback for map button drag. |
+| typedef `ThemedMapButtonDragNullCallback` | typedef | `lib/src/map/src/button.dart` | blocked | Nullable variant of drag callback. |
+| function `subdivideLayersPerSource` | function | `lib/src/map/src/helpers.dart` | blocked | Helper for layer subdivision. |
+| constant `kGoldenMHeadquarters` | const LatLng | `lib/src/map/src/constants.dart` | blocked | Default map location. |
+| constant `kDefaultLayer` | const TileLayer | `lib/src/map/src/constants.dart` | blocked | Default map layer. |
+| constant `kMinZoom` | const double | `lib/src/map/src/constants.dart` | blocked | Map minimum zoom. |
+| constant `kMaxZoom` | const double | `lib/src/map/src/constants.dart` | blocked | Map maximum zoom. |
 
 **Map subsystem decision**: The entire map subsystem is blocked on `flutter_map` 8.3.0's Material architecture. Options: (1) rewrite map widget from scratch using raw canvas/gestures; (2) accept flutter_map's Material dependency and relax the no-Material policy for maps only; (3) drop maps entirely. See [decisions.md](decisions.md) and [flutter-347-audit.md](flutter-347-audit.md).
 
@@ -296,18 +296,18 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `LayrzTokenizer` | class with static `.of(context)` | `lib/src/theme/tokenizer.dart` | port | Provides runtime access to design tokens. Five extensions below. Light mode only (D7). |
-| extension `ColorTokenizer` on LayrzTokenizer | extension | `lib/src/theme/tokenizer_color.dart` | port | Getters: `.info`, `.success`, `.warning`, `.error`, `.danger`, `.context`, `.primary`, `.tonalOpacity`. Light mode only (D7). |
-| extension `ShadowTokenizer` on LayrzTokenizer | extension | `lib/src/theme/tokenizer_shadow.dart` | port | Getter: `.shadow()` function. Light mode only (D7). |
-| extension `RadiusTokenizer` on LayrzTokenizer | extension | `lib/src/theme/tokenizer_radius.dart` | port | Getters: `.radius`, `.borderRadius()`, `.innerRadius()`. Light mode only (D7). |
-| extension `SpacerTokenizer` on LayrzTokenizer | extension | `lib/src/theme/tokenizer_spacing.dart` | port | Getters: `.spacing`, `.spacingSize()`, `.sizedBox()`, `.margin()`, `.reducedMargin()`, `.padding()`. Light mode only (D7). |
-| extension `BorderTokenizer` on LayrzTokenizer | extension | `lib/src/theme/tokenizer_border.dart` | port | Getter: `.borderWidth`. Light mode only (D7). |
-| `ThemedFontHandler` | class | `lib/src/theme/font_handler.dart` | port | Functions: `preloadFont()`, `generateFont()`. |
-| `ThemedInputBorder` | class | `lib/src/theme/input_border.dart` | port | Border configuration for input widgets. |
-| `ThemedPlatform` | class | `lib/src/theme/platform.dart` | needs decision | Platform-specific theme behavior; scope unclear. |
-| function `generateLightTheme` | function | `lib/src/theme/generate.dart` | port | Generates LayrzThemeData for light mode. Sole theme generation function (D7). |
-| function `generateDarkTheme` | function | `lib/src/theme/generate.dart` | **drop** | Dropped by D7 (light mode only). LayrzThemeData.dark() removal is pending code work. |
-| `RoundedRectangleSeekbarShape` | class | `lib/src/theme/seekbar_shape.dart` | port | Custom shape for slider/progress widgets. |
+| `LayrzTokenizer` | class with static `.of(context)` | `lib/src/tokenizer/tokenizer.dart` | port | Provides runtime access to design tokens. Five extensions below. Light mode only (D7). |
+| extension `ColorTokenizer` on LayrzTokenizer | extension | `lib/src/tokenizer/src/colors.dart` | port | Getters: `.info`, `.success`, `.warning`, `.error`, `.danger`, `.context`, `.primary`, `.tonalOpacity`. Light mode only (D7). |
+| extension `ShadowTokenizer` on LayrzTokenizer | extension | `lib/src/tokenizer/src/shadows.dart` | port | Getter: `.shadow()` function. Light mode only (D7). |
+| extension `RadiusTokenizer` on LayrzTokenizer | extension | `lib/src/tokenizer/src/radius.dart` | port | Getters: `.radius`, `.borderRadius()`, `.innerRadius()`. Light mode only (D7). |
+| extension `SpacerTokenizer` on LayrzTokenizer | extension | `lib/src/tokenizer/src/spacers.dart` | port | Getters: `.spacing`, `.spacingSize()`, `.sizedBox()`, `.margin()`, `.reducedMargin()`, `.padding()`. Light mode only (D7). |
+| extension `BorderTokenizer` on LayrzTokenizer | extension | `lib/src/tokenizer/src/border.dart` | port | Getter: `.borderWidth`. Light mode only (D7). |
+| `ThemedFontHandler` | class | `lib/src/theme/src/font.dart` | port | Functions: `preloadFont()`, `generateFont()`. |
+| `ThemedInputBorder` | class | `lib/src/theme/src/utilities.dart` | port | Border configuration for input widgets. |
+| `ThemedPlatform` | class | `lib/src/theme/src/platform.dart` | needs decision | Platform-specific theme behavior; scope unclear. |
+| function `generateLightTheme` | function | `lib/src/theme/src/light_theme.dart` | port | Generates LayrzThemeData for light mode. Sole theme generation function (D7). |
+| function `generateDarkTheme` | function | `lib/src/theme/src/dark_theme.dart` | **drop** | Dropped by D7 (light mode only). LayrzThemeData.dark() removal is pending code work. |
+| `RoundedRectangleSeekbarShape` | class | `lib/src/theme/src/custom_painters/thumb_shape.dart` | port | Custom shape for slider/progress widgets. |
 
 **Token system note**: LayrzTokenizer structure differs from what [design-tokens.md](design-tokens.md) currently assumes. Reconciling the two is a product decision. See [decisions.md](decisions.md). **With D7 (light mode only), design-tokens.md's dual light/dark requirement is withdrawn.**
 
@@ -325,23 +325,23 @@ These must be added to `lib/src/constants/` before any widget depending on them 
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| extension `NumToSizedBox` on num | extension | `lib/src/extensions/num.dart` | port | Getters: `.w` (width), `.width`, `.h` (height), `.height`, `.wh` (square), `.square`. |
-| extension `DateTimeExtension` on DateTime | extension | `lib/src/extensions/datetime.dart` | **blocked — gated on D10** | Getters/methods: `.secondsSinceEpoch`, `.thisWeek`, `.lastWeek`, `.thisMonth`, `.lastMonth`, `.standard`, `.format(String pattern, LayrzAppLocalizations i18n)` (strftime-style). Depends on LayrzAppLocalizations from layrz_models. Gated on D10 audit. |
-| `ThemedHumanizeOptions` | class | `lib/src/extensions/humanize_duration.dart` | **blocked — gated on D10** | Configuration for Duration humanization. Depends on LayrzAppLocalizations. Gated on D10 audit. |
-| abstract `ThemedHumanizeLanguage` | abstract class | `lib/src/extensions/humanize_duration.dart` | **blocked — gated on D10** | Language definition for humanize. Depends on LayrzAppLocalizations. Gated on D10 audit. |
-| `ThemedHumanizedDurationLanguage` | class extends ThemedHumanizeLanguage | `lib/src/extensions/humanize_duration.dart` | **blocked — gated on D10** | Concrete language implementation. Depends on LayrzAppLocalizations. Gated on D10 audit. |
-| `ThemedUnits` | enum | `lib/src/extensions/humanize_duration.dart` | **blocked — gated on D10** | Unit enumeration (years, months, days, hours, minutes, seconds). Depends on LayrzAppLocalizations. Gated on D10 audit. |
-| extension `HumanizeDuration` on Duration | extension | `lib/src/extensions/humanize_duration.dart` | **blocked — gated on D10** | Humanizes Duration to string. Depends on LayrzAppLocalizations. Gated on D10 audit. |
-| `ThemedOrm` | class | `lib/src/extensions/orm.dart` | port | ORM-like helper; scope unclear. Formal scope to be confirmed. |
-| extension `ThemedOrm` on BuildContext | extension | `lib/src/extensions/context.dart` | port | Adds `.orm` getter to BuildContext. Formal scope confirmed in D11. |
-| `ThemedPageTransition` | typedef | `lib/src/extensions/page_transition.dart` | port | Page transition curve/duration configuration. Formal scope confirmed in D11. |
-| `ThemedPageBuilder` | typedef | `lib/src/extensions/page_transition.dart` | port | Page builder for transitions. Formal scope confirmed in D11. |
-| `ThemedGridDelegateWithFixedHeight` | class | `lib/src/extensions/grid_delegate.dart` | port | Grid layout delegate with fixed row height. Formal scope confirmed in D11. |
-| `ThemedFile` | class | `lib/src/extensions/file.dart` | port | File wrapper with utilities. Formal scope confirmed in D11. |
-| mixin `VxStateUtilsMixin` | mixin | `lib/src/extensions/state_utils.dart` | drop | VxState integration; separate concern. Drop on migration. |
-| extension `I18nExtension` on BuildContext | extension | `lib/src/extensions/i18n.dart` | **blocked — gated on D10** | Provides `.i18n` getter for LayrzAppLocalizations. Depends on LayrzAppLocalizations from layrz_models. Gated on D10 audit. |
-| extension `StylingExtension` on BuildContext | extension | `lib/src/extensions/styling.dart` | port | Provides `.style` getter for text styling utilities. Formal scope confirmed in D11. |
-| extension `ThemedColorExtensions` on Color | extension | `lib/src/extensions/color.dart` | port | Color manipulation helpers. Already ported as LayrzColorExtensions in layrz_ui. Formal scope confirmed in D11. |
+| extension `NumToSizedBox` on num | extension | `lib/src/extensions/src/separator.dart` | port | Getters: `.w` (width), `.width`, `.h` (height), `.height`, `.wh` (square), `.square`. |
+| extension `DateTimeExtension` on DateTime | extension | `lib/src/extensions/src/datetime.dart` | **blocked — gated on D10** | Getters/methods: `.secondsSinceEpoch`, `.thisWeek`, `.lastWeek`, `.thisMonth`, `.lastMonth`, `.standard`, `.format(String pattern, LayrzAppLocalizations i18n)` (strftime-style). Depends on LayrzAppLocalizations from layrz_models. Gated on D10 audit. |
+| `ThemedHumanizeOptions` | class | `lib/src/utilities/src/duration/config.dart` | **blocked — gated on D10** | Configuration for Duration humanization. Depends on LayrzAppLocalizations. Gated on D10 audit. |
+| abstract `ThemedHumanizeLanguage` | abstract class | `lib/src/utilities/src/duration/config.dart` | **blocked — gated on D10** | Language definition for humanize. Depends on LayrzAppLocalizations. Gated on D10 audit. |
+| `ThemedHumanizedDurationLanguage` | class extends ThemedHumanizeLanguage | `lib/src/utilities/src/duration/config.dart` | **blocked — gated on D10** | Concrete language implementation. Depends on LayrzAppLocalizations. Gated on D10 audit. |
+| `ThemedUnits` | enum | `lib/src/utilities/src/duration/enums.dart` | **blocked — gated on D10** | Unit enumeration (years, months, days, hours, minutes, seconds). Depends on LayrzAppLocalizations. Gated on D10 audit. |
+| extension `HumanizeDuration` on Duration | extension | `lib/src/utilities/src/duration/extension.dart` | **blocked — gated on D10** | Humanizes Duration to string. Depends on LayrzAppLocalizations. Gated on D10 audit. |
+| `ThemedOrm` | class | `lib/src/extensions/src/orm.dart` | port | ORM-like helper; scope unclear. Formal scope to be confirmed. |
+| extension `ThemedOrm` on BuildContext | extension | `lib/src/extensions/src/orm.dart` | port | Adds `.orm` getter to BuildContext. Formal scope confirmed in D11. |
+| `ThemedPageTransition` | typedef | `lib/src/extensions/src/page_builder.dart` | port | Page transition curve/duration configuration. Formal scope confirmed in D11. |
+| `ThemedPageBuilder` | typedef | `lib/src/extensions/src/page_builder.dart` | port | Page builder for transitions. Formal scope confirmed in D11. |
+| `ThemedGridDelegateWithFixedHeight` | class | `lib/src/extensions/src/grid_fixed_height.dart` | port | Grid layout delegate with fixed row height. Formal scope confirmed in D11. |
+| `ThemedFile` | class | `lib/src/file.dart` | port | File wrapper with utilities. Formal scope confirmed in D11. |
+| mixin `VxStateUtilsMixin` | mixin | `lib/src/mixins/src/vx_state.dart` | drop | VxState integration; separate concern. Drop on migration. |
+| extension `I18nExtension` on BuildContext | extension | `lib/src/extensions/src/i18n.dart` | **blocked — gated on D10** | Provides `.i18n` getter for LayrzAppLocalizations. Depends on LayrzAppLocalizations from layrz_models. Gated on D10 audit. |
+| extension `StylingExtension` on BuildContext | extension | `lib/src/extensions/src/styling.dart` | port | Provides `.style` getter for text styling utilities. Formal scope confirmed in D11. |
+| extension `ThemedColorExtensions` on Color | extension | `lib/src/extensions/src/color.dart` | port | Color manipulation helpers. Already ported as LayrzColorExtensions in layrz_ui. Formal scope confirmed in D11. |
 
 **Helper functions** (all in `lib/src/helpers/`):
 - `useBlack(Color)` → bool | port | Determines if black text should overlay a color.
@@ -367,13 +367,13 @@ These must be added to `lib/src/constants/` before any widget depending on them 
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| extension `ColorblindFilter` on ColorblindMode | extension | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Provides filter transformation. Depends on ColorblindMode from layrz_models. Formal scope confirmed in D11; implementation gated on D10 (layrz_models audit). |
-| function `protanopiaFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Red-blind filter. Formal scope confirmed in D11; gated on D10. |
-| function `protanomalyFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Red-weak filter. Formal scope confirmed in D11; gated on D10. |
-| function `deuteranopiaFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Green-blind filter. Formal scope confirmed in D11; gated on D10. |
-| function `deuteranomalyFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Green-weak filter. Formal scope confirmed in D11; gated on D10. |
-| function `tritanopiaFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Blue-blind filter. Formal scope confirmed in D11; gated on D10. |
-| function `tritanomalyFilter(Color)` → Color | function | `lib/src/accessibility/colorblind_filter.dart` | **port — gated on D10** | Blue-weak filter. Formal scope confirmed in D11; gated on D10. |
+| extension `ColorblindFilter` on ColorblindMode | extension | `lib/src/colorblindness/src/filter.dart` | **port — gated on D10** | Provides filter transformation. Depends on ColorblindMode from layrz_models. Formal scope confirmed in D11; implementation gated on D10 (layrz_models audit). |
+| function `protanopiaFilter(Color)` → Color | function | `lib/src/colorblindness/src/propanopia.dart` | **port — gated on D10** | Red-blind filter. Formal scope confirmed in D11; gated on D10. |
+| function `protanomalyFilter(Color)` → Color | function | `lib/src/colorblindness/src/propanomaly.dart` | **port — gated on D10** | Red-weak filter. Formal scope confirmed in D11; gated on D10. |
+| function `deuteranopiaFilter(Color)` → Color | function | `lib/src/colorblindness/src/deuteranopia.dart` | **port — gated on D10** | Green-blind filter. Formal scope confirmed in D11; gated on D10. |
+| function `deuteranomalyFilter(Color)` → Color | function | `lib/src/colorblindness/src/deuteranomaly.dart` | **port — gated on D10** | Green-weak filter. Formal scope confirmed in D11; gated on D10. |
+| function `tritanopiaFilter(Color)` → Color | function | `lib/src/colorblindness/src/tritanopia.dart` | **port — gated on D10** | Blue-blind filter. Formal scope confirmed in D11; gated on D10. |
+| function `tritanomalyFilter(Color)` → Color | function | `lib/src/colorblindness/src/tritanomaly.dart` | **port — gated on D10** | Blue-weak filter. Formal scope confirmed in D11; gated on D10. |
 
 ---
 
@@ -381,8 +381,8 @@ These must be added to `lib/src/constants/` before any widget depending on them 
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `Layo` | widget | `lib/src/layo/layo.dart` | port | SVG asset widget; branded asset, name unchanged (not Layrz-prefixed). Formal scope confirmed in D11. |
-| `LayoEmotions` | enum (12 values: angry, dead, happy, idea, standard, love, question, sleep, warning, bolivariano, mrLayo, layo404) | `lib/src/layo/layo_emotions.dart` | port | Emotion variants for Layo. Formal scope confirmed in D11. |
+| `Layo` | widget | `lib/src/layo.dart` | port | SVG asset widget; branded asset, name unchanged (not Layrz-prefixed). Formal scope confirmed in D11. |
+| `LayoEmotions` | enum (12 values: angry, dead, happy, idea, standard, love, question, sleep, warning, bolivariano, mrLayo, layo404) | `lib/src/layo.dart` | port | Emotion variants for Layo. Formal scope confirmed in D11. |
 
 ---
 
@@ -520,7 +520,8 @@ This document is organized into the following sections:
 - From "port" to "drop" (2): Sizes, SizesExt
 - From "blocked by D2" to "port — gated on D10" (7): ColorblindFilter + 6 filter functions
 - From "blocked by D2" to "port — scheduled late" (1): ThemedDynamicCredentialsInput
-- From "needs decision" to "port" (6): ThemedScaffoldView, ThemedScaffoldCell, ThemedCalendar family (4 symbols)
+- From "needs decision" to "port (merged)" (2): ThemedScaffoldView, ThemedScaffoldCell → LayrzScaffoldShell
+- From "needs decision" to "port" (4): ThemedCalendar family (4 symbols)
 
 **Updated Symbol Inventory:**
 

@@ -125,8 +125,7 @@ See [**milestone-1.md**](milestone-1.md) for the detailed 12-item plan, executio
 - `LayrzAppBar` (top navigation)
 - Navigation variants: side nav, bottom nav, mini nav, dual nav
 - `LayrzNavigatorItem` types (page, action, widget, separator, label)
-- `LayrzScaffold` (view shell with app bar and nav)
-- `LayrzScaffoldCell` (sub-view within scaffold)
+- `LayrzScaffoldShell` (adaptive list-detail shell with internal pane/sheet swap)
 - `LayrzTabView` and `LayrzTab` (horizontal tabs)
 - `LayrzSnackbar` and `LayrzSnackbarMessenger` (transient feedback)
 - Dialogs on `RawDialogRoute` (general, alert, confirmation)

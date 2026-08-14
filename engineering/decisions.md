@@ -549,6 +549,10 @@ Many components (LayrzAlert, LayrzChip, LayrzSelect, LayrzButton, LayrzCalendar,
 **Scaffolds & Views:**
 - `LayrzScaffoldView`, `LayrzScaffoldCell` — port ThemedScaffoldView and cell with no scope changes expected
 
+**Update (2026-08-13)**
+
+This line is superseded. The scaffold family is not a 1:1 port of layrz_theme's two components. Instead, `ThemedScaffoldView` and `ThemedScaffoldCell` are retired entirely, and layrz_ui ships a single public component called `LayrzScaffoldShell` — an adaptive list-detail shell that internally swaps between side-pane (desktop) and bottom-sheet (mobile) presentations based on breakpoint. The view and cell concepts are folded into this single adaptive component and do not appear as separate public APIs. The full contract of `LayrzScaffoldShell` — including the programmatic-selection mechanism for deep-linking support — is not yet decided. This component answers D8's parked question about "which single layout design" the system will adopt.
+
 **Data Display:**
 - `LayrzTable<T>` and supporting types — port as preferred table API (supersedes deprecated table)
 - `LayrzCalendar`: **Port as LayrzCalendar, but flagged FULL REFACTOR.** (Not a straight port; architecture review required on four view modes: day, week, month, year. Dependency on `package:table_calendar` (Material-built) requires addressing.)
