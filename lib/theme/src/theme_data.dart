@@ -1,13 +1,16 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../constants/constants.dart';
 import '../../fonts/fonts.dart';
 import '../../tokens/tokens.dart';
+import 'theme_extension.dart';
 
 /// Immutable design data for the layrz_ui design system.
 ///
 /// Holds a complete [LayrzTokens] set (all colors, typography, spacing, radius, shadow, border,
-/// and motion tokens) and an [IconThemeData] for icon styling.
+/// and motion tokens), an [IconThemeData] for icon styling, and optional theme extensions
+/// for storing component-specific design data.
 ///
 /// Consumed by [LayrzTheme.of] in every layrz_ui widget.
 ///
@@ -22,8 +25,69 @@ class LayrzThemeData {
   /// Base icon theme applied via [IconTheme] at the root.
   final IconThemeData iconTheme;
 
-  /// Creates a new [LayrzThemeData] with all token and icon theme values explicitly set.
-  const LayrzThemeData({required this.tokens, required this.iconTheme});
+  /// Map of theme extensions, keyed by their runtime type.
+  ///
+  /// Extensions are registered when constructing a [LayrzThemeData] and retrieved
+  /// via [extension<T>()] or [maybeExtension<T>()]. This allows components to store
+  /// theme-scoped data without polluting the core theme fields.
+  ///
+  /// This map is always unmodifiable — callers cannot add or remove extensions
+  /// from a live theme.
+  final Map<Object, LayrzThemeExtension<dynamic>> extensions;
+
+  /// Creates a new [LayrzThemeData] with all token, icon theme, and extension values explicitly set.
+  ///
+  /// The [extensions] map is stored as-is; pass an empty map for no extensions.
+  /// For convenience, use [LayrzThemeData.light()] with the [Iterable] overload instead.
+  const LayrzThemeData({
+    required this.tokens,
+    required this.iconTheme,
+    this.extensions = const {},
+  });
+
+  // ===== EXTENSION ACCESSORS =====
+
+  /// Retrieves a registered theme extension, throwing if it is not found.
+  ///
+  /// Use this when the extension is guaranteed to be registered (e.g., as part
+  /// of the theme construction contract). For optional access, use [maybeExtension].
+  ///
+  /// Throws an assertion error if the extension is not registered. The error
+  /// message suggests registering the extension when creating the theme.
+  ///
+  /// Type parameter [T] must be a concrete subclass of [LayrzThemeExtension<T>].
+  ///
+  /// Example:
+  /// ```dart
+  /// final buttonExtension = theme.extension<ButtonVariantsExtension>();
+  /// ```
+  T extension<T extends LayrzThemeExtension<T>>() {
+    assert(
+      extensions.containsKey(T),
+      'No extension of type $T registered in LayrzThemeData. '
+      'Register it when creating the theme: '
+      'LayrzThemeData.light(extensions: [YourExtension(...)])',
+    );
+    return extensions[T]! as T;
+  }
+
+  /// Retrieves a registered theme extension, returning null if it is not found.
+  ///
+  /// Use this for optional access when an extension might not be registered.
+  /// For required access, use [extension] instead — it provides a clearer assertion.
+  ///
+  /// Type parameter [T] must be a concrete subclass of [LayrzThemeExtension<T>].
+  ///
+  /// Example:
+  /// ```dart
+  /// final buttonExtension = theme.maybeExtension<ButtonVariantsExtension>();
+  /// if (buttonExtension != null) {
+  ///   // Use the extension
+  /// }
+  /// ```
+  T? maybeExtension<T extends LayrzThemeExtension<T>>() {
+    return extensions[T] as T?;
+  }
 
   // ===== DELEGATING GETTERS — BACKWARDS COMPATIBILITY =====
   //
@@ -108,12 +172,16 @@ class LayrzThemeData {
   /// [fontHandler] resolves font family names and preloads font bytes. Defaults to
   ///   [LayrzGoogleFontsHandler], ensuring fonts are loaded via Google Fonts by default.
   ///   Pass a custom handler to load from alternative sources.
+  /// [extensions] is an iterable of [LayrzThemeExtension] instances that define
+  ///   component-specific theme data. They are normalized to a map keyed by runtime type
+  ///   and stored unmodifiable in the resulting theme. Defaults to an empty list.
   factory LayrzThemeData.light({
     Color primaryColor = kPrimaryColor,
     String fontName = kLayrzFontName,
     LayrzFont? titleFont,
     LayrzFont? bodyFont,
     LayrzFontHandler fontHandler = const LayrzGoogleFontsHandler(),
+    Iterable<LayrzThemeExtension<dynamic>> extensions = const [],
   }) {
     // Use provided fonts, or wrap fontName into LayrzFont for Google Fonts
     final resolvedTitleFont =
@@ -136,7 +204,10 @@ class LayrzThemeData {
       fontHandler: fontHandler,
     );
     final iconTheme = IconThemeData(color: tokens.colors.fg1, size: 24);
-    return LayrzThemeData(tokens: tokens, iconTheme: iconTheme);
+    final extensionsMap = Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
+      {for (final ext in extensions) ext.type: ext},
+    );
+    return LayrzThemeData(tokens: tokens, iconTheme: iconTheme, extensions: extensionsMap);
   }
 
   /// Preloads a font to avoid first-frame rendering in a fallback family.
@@ -174,13 +245,30 @@ class LayrzThemeData {
 
   /// Returns a copy of this theme data with the given fields replaced.
   ///
-  /// Replaces only [tokens] and [iconTheme] — other parameters are ignored.
+  /// Replaces [tokens], [iconTheme], and [extensions]. If [extensions] is not
+  /// provided (or is null), the existing extensions are preserved. Otherwise,
+  /// the provided extensions replace them entirely (not a merge).
+  ///
   /// The delegating getters (e.g. [primaryColor], [textColor]) automatically
   /// resolve from the new [tokens].
-  LayrzThemeData copyWith({LayrzTokens? tokens, IconThemeData? iconTheme}) {
+  ///
+  /// Note: Passing an empty iterable will clear all extensions; pass nothing
+  /// to preserve them.
+  LayrzThemeData copyWith({
+    LayrzTokens? tokens,
+    IconThemeData? iconTheme,
+    Iterable<LayrzThemeExtension<dynamic>>? extensions,
+  }) {
+    final newExtensions = extensions != null
+        ? Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
+            {for (final ext in extensions) ext.type: ext},
+          )
+        : this.extensions;
+
     return LayrzThemeData(
       tokens: tokens ?? this.tokens,
       iconTheme: iconTheme ?? this.iconTheme,
+      extensions: newExtensions,
     );
   }
 
@@ -190,8 +278,9 @@ class LayrzThemeData {
       other is LayrzThemeData &&
           runtimeType == other.runtimeType &&
           tokens == other.tokens &&
-          iconTheme == other.iconTheme;
+          iconTheme == other.iconTheme &&
+          mapEquals(extensions, other.extensions);
 
   @override
-  int get hashCode => Object.hash(runtimeType, tokens, iconTheme);
+  int get hashCode => Object.hash(runtimeType, tokens, iconTheme, Object.hashAllUnordered(extensions.values));
 }
