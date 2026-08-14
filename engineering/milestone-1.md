@@ -6,6 +6,25 @@ Establish the token system, enforce code standards, fix theme-boundary safety, a
 
 This is a **foundation-only** milestone with **zero components**. Success means the package ships a complete, tested token layer, enforced CI guards, and the critical InheritedTheme migration that unblocks all downstream work.
 
+## Status
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Migrate LayrzTheme to extend InheritedTheme with wrap() | Done |
+| 2 | Correct CLAUDE.md rule #3 to the real `@Preview` API | Done |
+| 3 | Semantic color tokens | Done |
+| 4 | Typography, spacing, radius, shadow, border, motion tokens | Done |
+| 5 | LayrzThemeExtension mechanism | Todo |
+| 6 | WidgetState/WidgetStatesController state-resolution layer | Done |
+| 7 | lib/fonts/ with LayrzFontHandler | Done |
+| 8 | LayrzPreviewTheme and Preview support | Todo |
+| 9 | CI pipeline at .github/workflows | Todo |
+| 10 | Enable `public_member_api_docs` | Todo |
+| 11 | Close the test gap | Done |
+| 12 | Update CHANGELOG.md and commit pubspec version bumps | Todo |
+
+**Note**: This table tracks the 12 work items in `engineering/milestone-1.md`. GitHub Project 9 tracks 17 M1 Foundation modules at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together.
+
 ## Definition of Done
 
 - All 12 work items below complete

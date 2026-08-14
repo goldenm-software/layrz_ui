@@ -38,8 +38,12 @@ The barrel file contains **only** `export` statements and is the public API. Imp
 
 ### Current Modules (Milestone 1)
 
-- **app** — `LayrzApp` and `LayrzThemeMode`
-- **theme** — `LayrzTheme` (InheritedWidget) and `LayrzThemeData` with `LayrzTextTheme`
+- **app** — `LayrzApp` entry point and app shell
+- **theme** — `LayrzTheme` (InheritedTheme with wrap()) and `LayrzThemeData`
+- **tokens** — Complete design token system: `LayrzColorTokens`, `LayrzTextTheme`, `LayrzSpacingTokens`, `LayrzRadiusTokens`, `LayrzShadowTokens`, `LayrzBorderTokens`, `LayrzMotionTokens`, aggregated in `LayrzTokens`
+- **tokenizer** — `LayrzTokenizer` façade providing lookup access to tokens
+- **state** — Re-exports of `WidgetState`, `WidgetStateProperty`, and related types from `package:flutter/widgets.dart`
+- **fonts** — `LayrzFontHandler` interface with `LayrzGoogleFontsHandler` implementation for runtime font loading
 - **constants** — Brand colors, breakpoints, durations, app defaults
 - **extensions** — Convenience getters on `Color` and `BuildContext`
 - **platform** — `LayrzPlatform` enum for runtime platform detection
@@ -57,7 +61,7 @@ Do not create a module for a single widget or utility — add it to the most rel
 
 ### The Problem: Theme Loss Across Boundaries
 
-`LayrzTheme` currently extends plain `InheritedWidget`. This works for the main widget tree, but **fails when widgets cross boundary transitions**:
+Without proper handling, `InheritedWidget` lookups fail when widgets cross boundary transitions. `LayrzTheme` now extends `InheritedTheme` to solve this problem. This section explains the issue and the solution.
 
 1. **Overlay boundaries**: Dialogs, tooltips, dropdowns, and menus render into an `Overlay`, which sits outside the normal widget tree. An `InheritedWidget` lookup from inside the overlay fails — the chain is broken.
 2. **Route boundaries**: When you push a new route (e.g., `Navigator.push`), the new route's tree is separate. Without special handling, the theme is not propagated.
@@ -67,11 +71,12 @@ Do not create a module for a single widget or utility — add it to the most rel
 ```dart
 // Inside LayrzDialog, which renders via showGeneralDialog():
 LayrzButton(
-  onTap: () { /* user expects dark theme colors here */ },
+  onTap: () { /* user expects theme colors here */ },
   child: Text('Click me'),
 )
-// But LayrzTheme.of(context) crashes because the context is inside an Overlay,
-// outside the LayrzTheme's inheritance chain.
+// Before the fix: LayrzTheme.of(context) would crash because the context is inside
+// an Overlay, outside the LayrzTheme's inheritance chain.
+// With wrap(): succeeds and theme colors are resolved correctly.
 ```
 
 ### The Solution: Extend InheritedTheme with wrap()
@@ -126,6 +131,8 @@ class LayrzTheme extends InheritedTheme {
 Once this is done, dialogs, overlays, and new routes automatically preserve the theme. No special handling needed in components.
 
 ## LayrzThemeExtension<T>: Custom Component Tokens
+
+**Status**: Planned for [M1 item 5](milestone-1.md). The following describes the design; implementation is not yet complete.
 
 ### The Problem: No Material, No ThemeExtension<T>
 
@@ -225,15 +232,15 @@ class LayrzButton extends StatefulWidget {
 }
 ```
 
-### Open Question: WidgetStateProperty Availability
+### Resolution: WidgetStateProperty is Available
 
-**Is `WidgetStateProperty` exported from `package:flutter/widgets.dart` in Flutter 3.47?**
-
-The design-agnostic description in the SDK docs suggests it should be. However, if it is Material-only, layrz_ui must implement its own equivalent. This will be clarified during Milestone 1 implementation.
+**[M1 item 6](milestone-1.md)** confirmed that `WidgetStateProperty`, `WidgetState`, and the complete state family are exported from `package:flutter/widgets.dart` in Flutter 3.47 and are **material-free**. layrz_ui re-exports them via `lib/state/` without hand-rolling replacements.
 
 See [flutter-347-audit.md](flutter-347-audit.md) for details on what's available in the SDK.
 
 ## Preview Architecture: LayrzPreviewTheme
+
+**Status**: Planned for [M1 item 8](milestone-1.md). Light theme only; dark mode is out of scope per [decision D7](decisions.md).
 
 ### The Real API: @Preview and PreviewThemeData
 
@@ -241,20 +248,19 @@ See [flutter-347-audit.md](flutter-347-audit.md) for details on what's available
 
 In Flutter 3.47, the preview system is defined in `package:flutter/widget_previews.dart`:
 
-- **Annotation**: `@Preview(name: 'Light', theme: LayrzPreviewTheme.light, brightness: Brightness.light)`
+- **Annotation**: `@Preview(name: 'Light', theme: LayrzPreviewTheme.light)`
 - **Theme type**: `PreviewThemeData` (interface with `apply(BuildContext, Widget)` method)
 
-**layrz_ui's contribution:**
+**layrz_ui's contribution** (light theme only):
 
 ```dart
 // Design sketch
-class LayrzPreviewTheme implements PreviewThemeData {
+class LayrzPreviewTheme extends PreviewThemeData {
   final LayrzThemeData themeData;
   
   const LayrzPreviewTheme(this.themeData);
   
   static final light = LayrzPreviewTheme(LayrzThemeData.light());
-  static final dark = LayrzPreviewTheme(LayrzThemeData.dark());
 
   @override
   Widget apply(BuildContext context, Widget widget) {
@@ -272,21 +278,8 @@ import 'package:flutter/widget_previews.dart';
 @Preview(
   name: 'Light',
   theme: LayrzPreviewTheme.light,
-  brightness: Brightness.light,
 )
 Widget previewLayrzButton() {
-  return LayrzButton(
-    onTap: () {},
-    child: const Text('Click me'),
-  );
-}
-
-@Preview(
-  name: 'Dark',
-  theme: LayrzPreviewTheme.dark,
-  brightness: Brightness.dark,
-)
-Widget previewLayrzButtonDark() {
   return LayrzButton(
     onTap: () {},
     child: const Text('Click me'),
@@ -320,7 +313,7 @@ class MyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = LayrzTheme.of(context);
     return Container(
-      color: theme.primaryColor,  // Resolves from light or dark theme.
+      color: theme.colors.primary,  // Resolves from theme tokens.
       child: ...,
     );
   }
@@ -335,7 +328,7 @@ class MyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.theme.primaryColor,  // Same, via BuildContext extension.
+      color: context.theme.colors.primary,  // Same, via BuildContext extension.
       child: ...,
     );
   }
@@ -360,7 +353,7 @@ No special setup needed. Use icons directly:
 LayrzIcon(
   icon: LayrzIconsClasses.soloBold.check,
   size: 24,
-  color: context.theme.successColor,
+  color: context.theme.colors.success,
 )
 ```
 
@@ -426,17 +419,17 @@ lib/
   
   app/                           ← App shell
     app.dart
-    src/app.dart                 (LayrzApp, LayrzThemeMode)
+    src/app.dart                 (LayrzApp)
   
   theme/                         ← Theme system (core)
     theme.dart
     src/theme.dart               (LayrzTheme extends InheritedTheme [M1 item 1])
-    src/theme_data.dart          (LayrzThemeData, LayrzTextTheme)
-    src/theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5])
+    src/theme_data.dart          (LayrzThemeData)
+    src/theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5, planned])
   
   state/                         ← Widget state resolution [M1 item 6]
     state.dart
-    src/widget_states_controller.dart
+    src/widget_state.dart        (re-exports from package:flutter/widgets.dart)
   
   tokens/                        ← Design token system [M1 items 3–4]
     tokens.dart
@@ -449,9 +442,15 @@ lib/
     src/motion.dart
     src/tokens.dart
   
+  tokenizer/                     ← Token lookup façade [M1 items 3–4]
+    tokenizer.dart
+    src/tokenizer.dart           (LayrzTokenizer)
+  
   fonts/                         ← Font loading [M1 item 7]
     fonts.dart
+    src/font.dart
     src/font_handler.dart
+    src/google_fonts_handler.dart
   
   constants/                     ← Brand defaults
     constants.dart

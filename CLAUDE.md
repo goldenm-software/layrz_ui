@@ -121,13 +121,19 @@ When you add a new widget, document it in the wiki, not in `engineering/`.
 
 ## Progress Tracking
 
-Progress is tracked in the GitHub Project for `goldenm-software/layrz_ui`, not in documentation files.
+Progress is tracked in **both** the GitHub Project and the engineering documentation (`engineering/milestone-N.md`). Both must be kept in step.
 
-- The repo-scoped GitHub Project is the **sole source of truth** for what is done, in progress, or planned
-- Documentation files **must not** contain progress state: no checkbox lists representing status, no completion indicators, no "Done / In Progress / Blocked" markers
-- The **Component Catalog** in the wiki (https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog) holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. Completion status is not allowed.
-- `engineering/milestone-1.md` contains acceptance criteria as specification — plain prose or plain bullets describing what "done" means, NOT as tickable checkboxes
-- All acceptance criteria and verification checklists must be written as plain bullet points (`-`) without checkboxes, so readers understand them as specifications, not trackers
+- The GitHub Project (number 9 in `goldenm-software` org, linked to `goldenm-software/layrz_ui`) is the authoritative per-module status record
+- Each `engineering/milestone-N.md` contains a `## Status` table near the top that mirrors the project's state at the milestone level
+- When work on a project item completes, update **both** the GitHub Project status field and the corresponding row in the milestone document's Status table in the same commit
+- **Checkboxes are forbidden everywhere.** Status lives in the GitHub Project field and the milestone Status tables only. Work items and acceptance criteria stay as plain-bullet specifications (`-`) without checkboxes.
+- The **Component Catalog** in the wiki (https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog) holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. **Completion status is not tracked in the wiki.**
+
+### Granularity: GitHub Project vs. Milestone Documents
+
+The GitHub Project tracks 17 M1 Foundation **modules** (each component, theme piece, token type, etc.), while `engineering/milestone-1.md` groups them into 12 **work items** by functionality. Both describe the same milestone at different decomposition levels:
+- The milestone Status table is the strategic view; it shows when major feature areas are complete
+- The GitHub Project is the operational view; it tracks individual modules so you know what needs to be done next
 
 ### Project Location
 
