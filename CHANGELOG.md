@@ -1,4 +1,4 @@
-## 0.1.0
+## 0.0.1
 
 ### Added
 - `LayrzApp` and `LayrzApp.router` — drop-in `WidgetsApp` replacements with zero Material or Cupertino dependency.

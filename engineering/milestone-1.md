@@ -452,12 +452,12 @@ Test coverage is mandatory per CLAUDE.md rule #2. With one test file covering on
 
 **What changes**:
 - `CHANGELOG.md` — replace the 3-line placeholder with a meaningful M1 summary
-- `pubspec.yaml` — bump version from `0.0.1` to `0.1.0` (shipped as separate `chore` commit)
+- `pubspec.yaml` — promote version from `0.0.1-alpha1` to `0.0.1` (shipped as separate `chore` commit)
 - `example/pubspec.yaml` — **intentionally remains at `1.0.0+1`** (the example app is an unpublished showroom, so version bumps do not track releases; keeping it at `1.0.0+1` signals this distinction)
 
 **CHANGELOG.md template**:
 ```markdown
-## 0.1.0
+## 0.0.1
 
 ### Added
 - Complete token system (colors, typography, spacing, radius, shadow, border, motion)
@@ -481,7 +481,7 @@ Test coverage is mandatory per CLAUDE.md rule #2. With one test file covering on
 
 **Commits** (two separate commits):
 1. All code changes from items 1–11 as a single `feat` commit with title like `feat: implement milestone 1 foundation`
-2. pubspec version bumps and CHANGELOG as a separate `chore` commit with title like `chore: bump version to 0.1.0 and close M1`
+2. pubspec version bumps and CHANGELOG as a separate `chore` commit with title like `chore: bump version to 0.0.1 and close M1`
 
 **Files affected**:
 - `CHANGELOG.md`
@@ -490,7 +490,7 @@ Test coverage is mandatory per CLAUDE.md rule #2. With one test file covering on
 
 **Verification**:
 - `git log` shows two commits, both with proper formatting
-- `pubspec.yaml` version is 0.1.0 or higher
+- `pubspec.yaml` version is 0.0.1 or higher
 - CHANGELOG.md is no longer a placeholder
 
 ---
