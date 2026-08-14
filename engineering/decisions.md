@@ -758,6 +758,58 @@ If a component design genuinely needs a geometry change to be usable — an expa
 
 ---
 
+## D16: Project Items Stay Drafts, Converted to Issues On Demand
+
+**Date**: 2026-08-13  
+**Status**: Decided  
+**Category**: Governance / Process
+
+### Context
+
+The GitHub Project for layrz_ui currently holds 47 items — all as draft items (not real Issues). This is a deliberate design: drafts exist only in the project and have no issue numbers, labels, or PR linkage. The question is whether to maintain this draft-only approach or convert items to Issues in bulk. A bulk conversion would create dozens of open Issues before anyone begins work on them, most of which would sit untouched for months (M2–M5 components especially). The 12 Milestone 1 items already shipped have no corresponding Issues and would manufacture trail-less completions if converted now.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Convert all 47 items now | Immediate issue numbers; PRs can reference them all | 35 open Issues before work starts; no PR linkage yet; manufactured trail (shipped M1 items would be opened and closed without a PR); noisy repository |
+| (b) Convert the 35 M2–M5 items now | Ready for future work | Same noise; premature issue creation; 3+ months of idle Issues before M2 begins |
+| (c) **Chosen** — Convert on demand, one at a time | Linkage exactly where it earns its keep (active branch + PR); drafts remain lightweight planning artifacts; only active work gets an Issue | Drafts cannot be referenced (no issue number) until converted; board must be moved by hand for non-converted items; contributor discipline needed to remember the conversion step |
+| (d) Never convert; pure planning board | Cleanest repo (no idle Issues); Project is the single source of truth | No GitHub Issue trail; PRs cannot auto-close items; board updates require manual intervention for all items |
+
+### Decision
+
+**Chose (c): Items stay as drafts by default. Convert to Issues individually when work begins.**
+
+When a contributor picks up `LayrzButton` for Milestone 2:
+1. Convert the `LayrzButton` draft to an Issue (GitHub Project UI button: "Convert to issue")
+2. Create a branch: `feat/buttons/layrz-button`
+3. Reference the Issue in the PR (`Closes #N` in the PR body)
+4. Merging the PR auto-closes the Issue and updates the Project board
+
+### Rationale
+
+- **Just-in-time linkage**: Issues are created only when someone is actively working on that component, with an immediate branch and PR context. No idle Issues.
+- **Lightweight backlog**: Drafts have no noise — no labels, no milestone (built-in field, can't be used on drafts), no linked PRs until converted. The Project remains the planning artifact.
+- **Shipped work has no manufactured trail**: The 12 Milestone 1 items already completed don't spawn ghost Issues. Future M2 items remain untracked until work actually begins.
+- **Repo stays clean**: Only active components have Issues. Prevents the pattern of opening 50 Issues in August for work planned in December.
+- **Process is documented**: CLAUDE.md makes the conversion step explicit, reducing the chance a contributor forgets.
+
+### Consequences
+
+- Draft items cannot be referenced by commit or PR until converted (GitHub doesn't issue numbers for drafts).
+- The board must be moved by hand for items that are not converted to Issues (if a contributor completes a component without creating an Issue, the draft must be moved manually).
+- Contributors must remember the conversion step when starting work — it is not automatic. Mitigation: documented in CLAUDE.md.
+- Only items being actively developed have Issues. M3–M5 components will have no Issues until work begins, which is the intended state.
+
+### Review Trigger
+
+**Revisit date**: After Milestone 2 first release (3-5 components shipped).
+
+If hand-moving draft cards becomes a bottleneck — because components are being completed faster than Issues can be created, or because the Project is crowded and filtering issues-only view becomes necessary — reconsider a bulk conversion of M2-phase items. At that point, there will be enough shipped components (M1) and in-flight components (M2 early items) to measure the pain. If none is observed, stay the course.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
