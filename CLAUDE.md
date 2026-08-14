@@ -78,11 +78,10 @@ lib/
       context.dart               # LayrzContextExtensions on BuildContext
 .github/
   workflows/
-    ci.yaml                      # Six CI gates: analyze, test, format, Material/Cupertino guard, GoogleFonts guard, test mirror check, coverage ratchet
+    checks.yaml                  # CI gates: analyze, test, Material/Cupertino guard, GoogleFonts guard, coverage (90% floor)
+    publish.yaml                 # Release workflow: tag validation, pub.dev publication, GitHub release, web showroom build
 tool/
-  check_test_mirror.sh           # Verify every lib/**/src/*.dart has a test/<module>/<name>_test.dart
-  check_coverage.sh              # Coverage ratchet against tool/coverage_baseline
-  coverage_baseline              # Committed baseline; never allowed to decrease
+  deploy_web.py                  # Deploy web showroom to hosting after release
 example/
   lib/main.dart                  # Example app (must use LayrzApp, not MaterialApp)
   Makefile                       # run-linux / run-android / run-ios / run-windows / run-macos
@@ -245,15 +244,16 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 - Test edge cases: null-safe fields, empty inputs, boundary values
 - Every visual component additionally requires accessibility tests
 
-CI enforces six gates (plus a coverage ratchet) as of Milestone 1 item 9:
+The convention of mirroring `lib/<module>/src/` structure under `test/<module>/` is now **enforced by code review**, not by CI. It remains a required pattern, but the `tool/check_test_mirror.sh` script that enforced it in CI has been removed. Maintain this structure on every PR.
+
+**CI enforces a 90% coverage floor** via the shared `goldenm-software/layrz-actions/check-dart` action, which runs:
 1. **flutter analyze** — linting must be clean
 2. **flutter test --coverage** — all tests pass and coverage is reported
-3. **dart format** — code must be formatted
-4. **Material/Cupertino guard** — no Material or Cupertino imports in lib/
-5. **GoogleFonts TextTheme guard** — no Material-coupled font methods
-6. **test mirror check** — every non-barrel `lib/**/src/*.dart` must have a corresponding `test/<module>/<name>_test.dart`
+3. **Material/Cupertino guard** (`grep` inline) — no Material or Cupertino imports in lib/
+4. **GoogleFonts TextTheme guard** (`grep` inline) — no Material-coupled font methods
+5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 97.21%, so up to ~7 percentage points of drift are permitted before the floor triggers
 
-The coverage ratchet prevents coverage from ever decreasing below `tool/coverage_baseline`. The ratchet was chosen over a fixed percentage target so it works from the current baseline without backfill, and so untested code naturally penalises itself.
+**Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
 ### 3. Use @Preview for visual widgets
 

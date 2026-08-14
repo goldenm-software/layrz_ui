@@ -865,15 +865,15 @@ If hand-moving draft cards becomes a bottleneck — because components are being
 
 ---
 
-## D17: CI Enforces Six Gates
+## D17: CI Enforces Six Gates — Superseded by Shared Action Integration
 
 **Date**: 2026-08-14  
-**Status**: Decided  
+**Status**: Superseded  
 **Category**: Tooling / Release Planning
 
 ### Context
 
-CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure check, and coverage ratchet. Milestone 1 item 9 originally specified four checks (analyze, test, format, Material guard) but did not mention the mirror check or ratchet, creating a contradiction between the rule and the item scope. The decision resolves this in favour of the stronger set, making the promise real rather than aspirational.
+CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure check, and coverage ratchet. Milestone 1 item 9 originally specified four checks (analyze, test, format, Material guard) but did not mention the mirror check or ratchet, creating a contradiction between the rule and the item scope. The decision resolved this in favour of the stronger set, making the promise real rather than aspirational.
 
 ### Options Considered
 
@@ -882,11 +882,11 @@ CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure che
 | (a) Follow item 9 only (4 checks) | Simpler CI; lower burden on contributors | Breaks the promise in CLAUDE.md rule #2; no automatic test/code structure pairing; coverage can degrade silently |
 | (b) **Chosen** — Implement all six gates | Fulfills CLAUDE.md rule #2 promise; test/code parity enforced automatically; coverage ratchet prevents regression | More complex CI setup; requires maintaining `tool/check_test_mirror.sh` and `tool/coverage_baseline` |
 
-### Decision
+### Decision (Original)
 
 **Chose (b): Implement all six gates.**
 
-The CI gates are:
+The intended CI gates were:
 
 1. `flutter analyze` — catches linting violations
 2. `flutter test --coverage` — runs tests and generates coverage reports
@@ -896,27 +896,67 @@ The CI gates are:
 6. `tool/check_test_mirror.sh` — verifies test-to-code parity
 7. `tool/check_coverage.sh` — ratchet against `tool/coverage_baseline`
 
-### Rationale
+### Rationale (Original)
 
 - **Consistency with documentation**: CLAUDE.md rule #2 is the project's testing and code quality standard. It explicitly mentions three gates; implementing them makes the documentation accurate.
 - **Prevent test decay**: Without the mirror check, a contributor could add code to `lib/` without adding tests, and CI would not catch it. The manual code review process would catch it eventually, but automatic checking is lower friction.
 - **Coverage ratchet over fixed percentage**: A fixed percentage (e.g., "90% coverage required") requires backfilling existing code to meet the threshold. A ratchet works from the current baseline (96–97%) and prevents new code from lowering it. Untested code naturally penalizes the system by raising the bar for all future work.
 - **Mirrors the test best practice**: Many projects enforce mirror directory structures. layrz_ui's mirror rule (every `lib/` file has a `test/` counterpart) is simple and verifiable by script.
 
-### Consequences
+### Consequences (Original)
 
-- Contributors must maintain test/code parity; `tool/check_test_mirror.sh` will fail if a new file lacks tests.
-- The coverage ratchet is committed to `tool/coverage_baseline` and updated when coverage improves. Once set, the system never allows regressions.
-- The six gates ensure M1 code quality is locked in before M2 components are added. Milestone 2 will inherit a tested, formatted, structured foundation.
-- CI passes only when all six gates pass; a failure in any gate blocks the PR.
+- Contributors must maintain test/code parity; `tool/check_test_mirror.sh` would fail if a new file lacks tests.
+- The coverage ratchet would be committed to `tool/coverage_baseline` and updated when coverage improves.
+- The six gates would ensure M1 code quality is locked in before M2 components are added.
+
+---
+
+### Update (2026-08-14) — CI Restructured; D17 Superseded
+
+On 2026-08-14, the CI pipeline was restructured. The original D17 design has been superseded by a new approach using shared org-wide GitHub Actions and a simpler local-enforced convention.
+
+**What changed:**
+
+1. **Shared action replaces repo-specific scripts**: The six local gates were replaced with the shared `goldenm-software/layrz-actions/check-dart@v1` action, which runs:
+   - `flutter pub get`
+   - `flutter analyze`
+   - `flutter test --machine --coverage`
+   - Coverage reporting (90% floor, not a ratchet)
+   - Material/Cupertino guard (inline `grep`)
+   - GoogleFonts TextTheme guard (inline `grep`)
+
+2. **Deleted tool scripts**: The following scripts have been removed:
+   - `tool/check_test_mirror.sh` — test-mirror structure check
+   - `tool/check_coverage.sh` — coverage ratchet enforcement
+   - `tool/coverage_baseline` — committed baseline file
+
+3. **Mirror structure becomes code-review convention**: The test-mirror pattern (every `lib/<module>/src/*.dart` has a corresponding `test/<module>/*_test.dart`) is **now enforced by code review**, not CI. The convention remains a hard requirement, but structural enforcement is no longer automatic.
+
+4. **Coverage enforcement changes to a floor**: Instead of a ratchet that works from the baseline (97.21%) and never decreases, coverage now has a **90% floor** enforced by the shared action. The current coverage is 97.21%, so approximately 7 percentage points of drift are permitted before the floor is breached.
+
+5. **dart format is local-only**: Code formatting with `dart format` is **not** a CI gate. It is a local-development concern. Contributors run `dart format -w lib/ test/` before committing.
+
+6. **Workflow files**: Two workflows exist in `.github/workflows/`:
+   - `checks.yaml` (named "CI") — lint, test, and code quality checks on every push and pull request
+   - `publish.yaml` (named "Publish to pub.dev") — release and deployment workflow triggered by version tags
+
+**Rationale for the change:**
+
+- **Shared actions reduce maintenance burden**: Repo-specific scripts required ongoing maintenance and were duplicated across multiple projects. A shared org-wide action provides a single source of truth and reduces complexity.
+- **Local format enforcement**: Formatting is better enforced locally before commit, not in CI. Developers who integrate `dart format` into their editor or pre-commit hook catch formatting issues before pushing, avoiding wasted CI runs.
+- **Simpler coverage model**: A 90% floor is simpler to understand and measure than a ratchet. It provides a reasonable quality bar without requiring constant baseline updates.
+- **Mirror structure by discipline**: Code review is sufficient for catching test-mirror violations. Removing the automatic check simplifies CI and forces contributors to develop the habit of maintaining structure, which is more reliable long-term than script enforcement.
+
+**Consequences of the change:**
+
+- **Simpler CI**: Two workflows instead of one; fewer inline checks; faster feedback cycles.
+- **Cleaner repo**: No tool scripts or baseline files to maintain; less boilerplate in the repo.
+- **Developer discipline**: The mirror structure requirement is now a **convention enforced by review**, not a CI gate. This relies on contributors understanding and following the pattern.
+- **Coverage floor instead of ratchet**: If coverage drops below 90%, the build fails. Unlike a ratchet, it permits some drift as long as the floor is not breached. At 97.21%, there is substantial headroom.
 
 ### Review Trigger
 
-After the first batch of M2 components ship and CI has a track record, evaluate:
-- Is the mirror check catching meaningful gaps, or is it a formality that developers consistently fix before pushing?
-- Has the coverage ratchet prevented actual regressions, or is it a line item that developers work around?
-
-If either gate proves ineffective, consider adjusting or removing it.
+None. D17's original decision (implement six gates) was made in good faith with the information available at that time. The restructuring on 2026-08-14 supersedes that decision based on org-wide tooling improvements and a simpler maintenance model. Future changes to CI should be decided independently on their own merits.
 
 ---
 
