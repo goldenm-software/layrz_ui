@@ -825,6 +825,23 @@ When a contributor picks up `LayrzButton` for Milestone 2:
 - Contributors must remember the conversion step when starting work — it is not automatic. Mitigation: documented in CLAUDE.md.
 - Only items being actively developed have Issues. M3–M5 components will have no Issues until work begins, which is the intended state.
 
+**Update (2026-08-13)**
+
+D16's "no bulk-convert" rule was refined after the decision date. The GitHub Project's all-draft state did not communicate that Milestone 1's work was complete, which the user identified as a legibility problem for the board. The refinement distinguishes two distinct cases:
+
+1. **Work not yet started** stays as a draft and converts individually on demand, as originally decided.
+2. **Work already shipped** is converted to an Issue and closed immediately, making board state reflect reality.
+
+Specifically:
+- The 12 completed M1 Foundation items (LayrzApp, LayrzTheme, LayrzThemeData, LayrzTokens, LayrzTokenizer, LayrzTextTheme, LayrzFontHandler, WidgetState re-export (lib/state), LayrzPlatform, Extensions (Color, BuildContext), Constants (colors, grid, durations, app), Example showroom) were converted from drafts to Issues **#2–#13** and closed with state reason `completed`.
+- Each issue body gained a **"Delivered by"** section listing commits from `git log` that implemented it, providing a genuine audit trail rather than empty closed tickets.
+- The remaining 35 items stay as drafts: the 5 open M1 items and all 30 M2–M5 component items.
+- Numbering begins at #2 because **PR #1** existed prior (merged 2026-05-25, "docs: add README, LICENSE, CONTRIBUTING and finalize roadmap").
+
+**The refined rule**: Bulk conversion of *upcoming* work remains prohibited. Conversion to Issues in bulk is only applied to work already delivered, to communicate completion and create an audit trail. Upcoming work converts on demand, individual items only, as the decision originally stated.
+
+**Weakness and mitigation**: Issues #2–#13 were never open during the work (no PR closed them), so the commit references in each body are what make them a real record rather than decoration. This is acceptable: the "Delivered by" trail carries the genuine evidence. In future work cycles, contributors should open Issues when work begins so PRs can close them naturally.
+
 ### Review Trigger
 
 **Revisit date**: After Milestone 2 first release (3-5 components shipped).

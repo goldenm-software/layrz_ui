@@ -154,16 +154,19 @@ Components are tracked as **plain draft items** (not Issues).
 
 Documentation refers to **milestones M1–M7**; the Project field recording them is **`Phase`**, NOT `Milestone`. GitHub reserves `Milestone` (along with `Labels`, `Repository`, and `Linked pull requests`) as built-in fields derived only from real Issues — they cannot be used on draft items. So `Phase` in the Project is the tracking mechanism; it maps to the M1–M7 references in `engineering/roadmap.md` and the Component Catalog in the wiki.
 
-### Project Workflow: Draft-to-Issue Conversion on Demand
+### Project Workflow: Draft-to-Issue Conversion
 
-Items stay as **draft items** by default. When you start work on a component:
+Items follow two conversion paths based on work state:
 
+**For upcoming work** (not yet started): Convert one item at a time when you begin work on it.
 1. Convert **that one item** to a real Issue in the project (button in the item's details panel: "Convert to issue")
 2. Create a branch: `feat/<domain>/<component-name>` — e.g., `feat/inputs/text-input`
 3. Reference the newly-created issue number in your PR title or body: `Closes #N` — GitHub will auto-link and close the issue when the PR merges
 4. The issue's Phase, Domain, Primitive, and Blocker fields remain intact after conversion
 
-**Do not bulk-convert.** Convert individually as work begins. See decision D16 in `engineering/decisions.md` for the rationale.
+**For completed work** (already shipped): Bulk conversion and closure happens to make the board legible — showing what the team has finished. Shipped Milestone 1 items (M1 Foundation) were converted to Issues #2–#13 and closed with a "Delivered by" commit trail.
+
+**Do not bulk-convert upcoming work.** Convert individually as work begins. See decision D16 in `engineering/decisions.md` for the rationale and the distinction between the two paths.
 
 ---
 
