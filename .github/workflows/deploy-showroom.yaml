@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
 
 jobs:
   deploy:
@@ -27,13 +23,14 @@ jobs:
       - name: Show Flutter version
         run: flutter --version
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
-          python-version: '3.12'
+          cache-python: true
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
-      - name: Install boto3
-        run: pip install --upgrade boto3
+      - name: Install dependencies (python)
+        run: uv sync
 
       - name: Download dependencies (root)
         run: flutter pub get
@@ -47,7 +44,7 @@ jobs:
         working-directory: example
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           aws-access-key-id: ${{ secrets.UI_AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.UI_AWS_ACCESS_SECRET }}
@@ -60,7 +57,7 @@ jobs:
           DEPLOY_BUCKET: ${{ secrets.UI_AWS_S3_BUCKET }}
           DEPLOY_DISTRIBUTION_ID: ${{ secrets.UI_AWS_CLOUDFRONT_DISTRIBUTION }}
           AWS_REGION: ${{ secrets.UI_AWS_REGION }}
-        run: python3 tool/deploy_web.py
+        run: uv run tool/deploy_web.py
 
       - name: Print deployed size
         run: du -sh example/build/web

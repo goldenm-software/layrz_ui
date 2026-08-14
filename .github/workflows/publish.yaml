@@ -117,10 +117,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-dart
 
-    permissions:  
-      pages: write  
-      id-token: write
-
     steps:
       - uses: actions/checkout@v6
 
