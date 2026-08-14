@@ -1,2 +1,17 @@
-# Keep the wiki submodule out of the pub package archive
+# Python project files (uv tooling for CI/deployment only)
+pyproject.toml
+uv.lock
+.python-version
+.venv/
+
+# CI tooling (internal use only)
+tool/
+.github/
+.vscode/
+engineering/
 wiki/
+Makefile
+CLAUDE.md
+
+# Claude
+.claude/
