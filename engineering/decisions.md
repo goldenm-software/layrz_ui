@@ -368,14 +368,25 @@ layrz_ui currently has a dual light/dark theme architecture inherited from layrz
 - `LayrzPreviewTheme` (if introduced) needs only a light-mode variant.
 - Dark mode is out of scope for the 1.0 release. Consuming apps can implement their own dark themes using layrz_ui's light tokens as a base, or wait for dark mode support to be added in a future release (no target version set).
 
+**Update (2026-08-13) — D7 Reaffirmed: Single-Mode Scope Locked**
+
+A consuming product's dark-mode UI raised the concrete question whether D7 should be reopened. The team has answered definitively: **D7 stands unchanged.** layrz_ui targets a single mode — light mode only. Dark mode and high contrast mode are both out of scope.
+
+Two points from that discussion strengthen the original decision:
+
+1. **High contrast mode is also explicitly deferred**, on the same architectural terms as dark mode. The system targets a single palette in normal contrast; supporting dark mode and high contrast mode requires a dedicated team conversation, not scheduled for the current release cycle.
+
+2. **The review trigger has changed.** Reopening D7 requires a **dedicated team conversation about multi-mode support** — not merely the 1.0.0 release date, not a single consuming product's feature request, and not SDK guidance shifts. The question has been raised and answered: the scope is light mode only, with full knowledge of the retrofit cost.
+
+**Cost accepted knowingly:** Retrofitting dark or high contrast mode later will require revisiting every token and every component that assumed a single palette. This cost, already noted in the original rationale, is the correct trade-off for current simplicity.
+
+Path forward: Consuming products needing additional modes should implement their own theme layer on top of layrz_ui's light foundation, or await the team's deliberate decision to undertake multi-mode support as a future initiative.
+
 ### Review Trigger
 
-**Review date**: Before any `1.0.0` stable release.
+**Locked pending explicit team decision.** Reopening this decision requires the team to formally commit to a multi-mode support project. This decision is not automatically revisited at the 1.0.0 milestone, on individual consuming products' feature requests, or based on framework guidance shifts.
 
-Revisit this decision if:
-- Multiple consuming apps report that lack of dark mode is a blocker
-- Flutter's Material Dark 3 guidance evolves in a way that impacts the retrofit plan
-- The team formally decides to add dark mode support and sets a target version for its release
+If a dedicated multi-mode initiative is formally undertaken, see the **Update (2026-08-13)** section above for the known retrofit costs.
 
 ---
 
