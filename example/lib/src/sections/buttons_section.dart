@@ -159,7 +159,8 @@ class _StylesDemo extends StatelessWidget {
   }
 }
 
-/// Demonstrates the six semantic factories with both normal and Fab layouts.
+/// Demonstrates the six semantic factories with both normal and Fab layouts,
+/// and elevation variants (for plain surfaces vs. inside containers).
 class _SemanticFactoriesDemo extends StatelessWidget {
   /// Creates a new [_SemanticFactoriesDemo].
   const _SemanticFactoriesDemo({required this.tokens});
@@ -169,34 +170,40 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    /// A list of semantic factory buttons parameterized by isFab.
+    /// A list of semantic factory buttons parameterized by isFab and isElevated.
     /// Each tuple contains a label and a builder function that accepts
-    /// an isFab flag, ensuring both normal and Fab layouts are driven
+    /// an isFab and isElevated flag, ensuring all variants are driven
     /// from a single source of truth.
-    final semanticButtons = <(String, LayrzButton Function({required bool isFab}))>[
+    final semanticButtons = <(String, LayrzButton Function({required bool isFab, required bool isElevated}))>[
       (
         'Save',
-        ({required bool isFab}) => LayrzButton.save(labelText: 'Save', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.save(labelText: 'Save', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
       (
         'Cancel',
-        ({required bool isFab}) => LayrzButton.cancel(labelText: 'Cancel', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.cancel(labelText: 'Cancel', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
       (
         'Info',
-        ({required bool isFab}) => LayrzButton.info(labelText: 'Info', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.info(labelText: 'Info', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
       (
         'Show',
-        ({required bool isFab}) => LayrzButton.show(labelText: 'Show', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.show(labelText: 'Show', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
       (
         'Edit',
-        ({required bool isFab}) => LayrzButton.edit(labelText: 'Edit', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.edit(labelText: 'Edit', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
       (
         'Delete',
-        ({required bool isFab}) => LayrzButton.delete(labelText: 'Delete', isFab: isFab, onTap: () {}),
+        ({required bool isFab, required bool isElevated}) =>
+            LayrzButton.delete(labelText: 'Delete', isFab: isFab, isElevated: isElevated, onTap: () {}),
       ),
     ];
 
@@ -206,24 +213,46 @@ class _SemanticFactoriesDemo extends StatelessWidget {
         Text('Semantic Factories', style: tokens.typography.titleMedium),
         SizedBox(height: tokens.spacing.sp12),
 
-        // Normal layout
-        Text('Normal Layout', style: tokens.typography.labelMedium),
+        // Normal layout, elevated (default)
+        Text('Normal Layout - Elevated (on plain surface)', style: tokens.typography.labelMedium),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
           runSpacing: tokens.spacing.sp12,
-          children: semanticButtons.map((e) => e.$2(isFab: false)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: false, isElevated: true)).toList(),
         ),
 
         SizedBox(height: tokens.spacing.sp16),
 
-        // Mobile (Fab) layout
-        Text('Mobile / Fab Layout', style: tokens.typography.labelMedium),
+        // Normal layout, flat (inside container)
+        Text('Normal Layout - Flat (inside elevated container)', style: tokens.typography.labelMedium),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
           runSpacing: tokens.spacing.sp12,
-          children: semanticButtons.map((e) => e.$2(isFab: true)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: false, isElevated: false)).toList(),
+        ),
+
+        SizedBox(height: tokens.spacing.sp16),
+
+        // Mobile (Fab) layout, elevated
+        Text('Fab Layout - Elevated (on plain surface)', style: tokens.typography.labelMedium),
+        SizedBox(height: tokens.spacing.sp8),
+        Wrap(
+          spacing: tokens.spacing.sp12,
+          runSpacing: tokens.spacing.sp12,
+          children: semanticButtons.map((e) => e.$2(isFab: true, isElevated: true)).toList(),
+        ),
+
+        SizedBox(height: tokens.spacing.sp16),
+
+        // Mobile (Fab) layout, flat (inside container)
+        Text('Fab Layout - Flat (inside elevated container)', style: tokens.typography.labelMedium),
+        SizedBox(height: tokens.spacing.sp8),
+        Wrap(
+          spacing: tokens.spacing.sp12,
+          runSpacing: tokens.spacing.sp12,
+          children: semanticButtons.map((e) => e.$2(isFab: true, isElevated: false)).toList(),
         ),
       ],
     );
