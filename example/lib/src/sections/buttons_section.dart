@@ -57,11 +57,11 @@ class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
 
     return ShowroomSection(
       title: 'Buttons',
-      description: 'Material-free button component with ten styles, semantic factories, and live state indicators',
+      description: 'Material-free button component with twelve styles, semantic factories, and live state indicators',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. All ten styles
+          // 1. All twelve styles
           _StylesDemo(tokens: tokens),
 
           SizedBox(height: tokens.spacing.sp32),
@@ -123,7 +123,7 @@ class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
   }
 }
 
-/// Demonstrates all ten [LayrzButtonStyle] values.
+/// Demonstrates all twelve [LayrzButtonStyle] values.
 class _StylesDemo extends StatelessWidget {
   /// Creates a new [_StylesDemo].
   const _StylesDemo({required this.tokens});
