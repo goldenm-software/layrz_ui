@@ -146,7 +146,11 @@ class LayrzButtonStyleSpec {
           borderColor: const Color(0x00000000),
           borderWidth: tokens.border.base,
           contentColor: contrastColor,
-          shadows: tokens.shadow.elevation1,
+          // Small components use the compact shadow ramp rather than elevation.
+          // Compact shadows have greater vertical drop and higher opacity so they
+          // provide clear separation at small sizes where elevation's faint offset
+          // shadow would dissolve into the surface.
+          shadows: tokens.shadow.compact1,
         );
 
       case LayrzButtonStyle.filledTonal || LayrzButtonStyle.filledTonalFab:

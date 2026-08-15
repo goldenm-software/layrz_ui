@@ -137,7 +137,7 @@ class LayrzButton extends StatefulWidget {
     this.controller,
     this.type = LayrzButtonType.custom,
     this.color,
-    this.style = LayrzButtonStyle.filledTonal,
+    this.style = LayrzButtonStyle.elevated,
     this.hintText,
   }) : assert(
          type == LayrzButtonType.custom || color == null,
@@ -191,10 +191,18 @@ class LayrzButton extends StatefulWidget {
 
   /// Creates a cancel button with danger accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [outlined]; when `true`, as [outlinedFab].
-  /// The [isElevated] parameter has no effect on this factory — destructive actions remain
-  /// visually quiet in all contexts, whether on a plain surface or inside an elevated container.
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `false` (default), renders as [filled];
+  /// when [isFab] is `false` and [isElevated] is `true`, renders as [elevated].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [filledFab]
+  /// (default, for buttons inside elevated containers) and [elevatedFab] (for buttons on a plain surface).
+  ///
+  /// **Unlike other semantic factories, `.cancel()` defaults to `isElevated: false`.** This reflects
+  /// the design intent: cancel/destructive actions are visually quiet by default (solid fill, no shadow),
+  /// and developers explicitly opt into shadow depth with `isElevated: true`. This inversion prevents
+  /// accidentally over-emphasizing destructive actions.
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `false` for this factory only.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -205,13 +213,18 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    bool isElevated = true,
+    bool isElevated = false,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
-    final style = isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined;
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
 
     return LayrzButton(
       key: key,
@@ -573,13 +586,6 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                             final cooldownProgress = controller?.cooldownProgress ?? 0.0;
                             final isDeterminateMode = hasCooldown && cooldownProgress < 1.0;
 
-                            // Calculate remaining seconds for determinate mode.
-                            int? remainingSeconds;
-                            if (isDeterminateMode && controller != null) {
-                              final remaining = controller.cooldownRemaining;
-                              remainingSeconds = remaining.inSeconds;
-                            }
-
                             return LayrzButtonIndicator(
                               trackColor: spec.contentColor.withOpacityValue(0.2),
                               indicatorColor: spec.contentColor,
@@ -589,7 +595,6 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                               ),
                               height: kLayrzButtonHeight,
                               progress: isDeterminateMode ? cooldownProgress : null,
-                              remainingSeconds: remainingSeconds,
                             );
                           },
                         ),

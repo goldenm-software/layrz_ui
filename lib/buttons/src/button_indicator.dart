@@ -9,8 +9,7 @@ import 'package:flutter/widgets.dart';
 /// repeatedly. Used for loading and post-countdown states.
 ///
 /// **Determinate mode** (progress: 0.0–1.0):
-/// Renders a filled bar that depletes from full to empty over the duration,
-/// with remaining whole seconds displayed as text overlay.
+/// Renders a filled bar that depletes from full to empty over the duration.
 class LayrzButtonIndicator extends StatefulWidget {
   /// The color of the track (background of the progress bar).
   final Color trackColor;
@@ -27,14 +26,8 @@ class LayrzButtonIndicator extends StatefulWidget {
   /// The progress value (0.0–1.0) for determinate mode.
   ///
   /// When null, renders indeterminate sweep animation.
-  /// When a value between 0.0 and 1.0, renders a depleting bar with remaining seconds text.
+  /// When a value between 0.0 and 1.0, renders a depleting progress bar.
   final double? progress;
-
-  /// The remaining seconds to display during determinate mode.
-  ///
-  /// Ignored when [progress] is null (indeterminate mode).
-  /// Displayed as centered text overlay on the progress bar.
-  final int? remainingSeconds;
 
   /// Creates a new [LayrzButtonIndicator].
   const LayrzButtonIndicator({
@@ -44,7 +37,6 @@ class LayrzButtonIndicator extends StatefulWidget {
     required this.borderRadius,
     required this.height,
     this.progress,
-    this.remainingSeconds,
   });
 
   @override
@@ -77,32 +69,17 @@ class LayrzButtonIndicatorState extends State<LayrzButtonIndicator> with SingleT
   Widget build(BuildContext context) {
     final determinateProgress = widget.progress;
 
-    // Determinate mode: show progress bar with remaining seconds.
+    // Determinate mode: show progress bar.
     if (determinateProgress != null) {
-      return Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            painter: _IndicatorPainter(
-              progress: determinateProgress,
-              trackColor: widget.trackColor,
-              indicatorColor: widget.indicatorColor,
-              borderRadius: widget.borderRadius,
-              isDeterminate: true,
-            ),
-            size: Size(double.infinity, widget.height),
-          ),
-          // Remaining seconds text overlay.
-          if (widget.remainingSeconds != null)
-            Text(
-              '${widget.remainingSeconds}',
-              style: TextStyle(
-                color: widget.indicatorColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-        ],
+      return CustomPaint(
+        painter: _IndicatorPainter(
+          progress: determinateProgress,
+          trackColor: widget.trackColor,
+          indicatorColor: widget.indicatorColor,
+          borderRadius: widget.borderRadius,
+          isDeterminate: true,
+        ),
+        size: Size(double.infinity, widget.height),
       );
     }
 
@@ -128,7 +105,7 @@ class LayrzButtonIndicatorState extends State<LayrzButtonIndicator> with SingleT
 /// Paints progress indicators for [LayrzButtonIndicator].
 ///
 /// Supports two modes:
-/// - **Determinate**: filled bar depleting from full to empty with remaining seconds text
+/// - **Determinate**: filled bar depleting from full to empty
 /// - **Indeterminate**: animated sweep oscillating across the button width
 class _IndicatorPainter extends CustomPainter {
   /// The current animation progress (0.0–1.0).
@@ -143,7 +120,7 @@ class _IndicatorPainter extends CustomPainter {
   /// The border radius of the capsule.
   final double borderRadius;
 
-  /// True for determinate mode (progress bar + remaining seconds).
+  /// True for determinate mode (depleting progress bar).
   /// False for indeterminate mode (animated sweep).
   final bool isDeterminate;
 
