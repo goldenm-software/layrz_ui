@@ -1,4 +1,5 @@
 export 'src/border.dart';
+export 'src/color_swatch.dart';
 export 'src/colors.dart';
 export 'src/motion.dart';
 export 'src/radius.dart';
