@@ -14,6 +14,37 @@ import 'button_style_spec.dart';
 import 'button_tooltip_position.dart';
 import 'button_type.dart';
 
+/// Resolves the appropriate button style for semantic factories based on elevation context.
+///
+/// This helper encapsulates the style resolution logic used by the semantic factories
+/// (`.save`, `.info`, `.show`, `.edit`) to determine whether to use the elevated or filled
+/// variant based on the [isElevated] flag and the [isFab] layout.
+///
+/// Parameters:
+/// - [isFab]: whether the button should use a Fab (square, icon-only) layout
+/// - [isElevated]: whether the button sits on a plain surface (true) or inside an elevated container (false)
+/// - [baseStyle]: the regular-layout style to use when [isElevated] is true
+/// - [baseFabStyle]: the Fab-layout style to use when [isElevated] is true
+///
+/// Returns the appropriate [LayrzButtonStyle], swapping the base styles for their filled
+/// counterparts when [isElevated] is false.
+LayrzButtonStyle _resolveSemanticStyle({
+  required bool isFab,
+  required bool isElevated,
+  required LayrzButtonStyle baseStyle,
+  required LayrzButtonStyle baseFabStyle,
+}) {
+  if (!isElevated) {
+    // When not elevated, swap elevated styles for filled styles.
+    if (baseStyle == LayrzButtonStyle.elevated) {
+      return isFab ? LayrzButtonStyle.filledFab : LayrzButtonStyle.filled;
+    }
+  }
+
+  // When elevated or for other styles, use the base styles as provided.
+  return isFab ? baseFabStyle : baseStyle;
+}
+
 /// A Material-free button widget in the layrz_ui design system.
 ///
 /// [LayrzButton] supports six visual styles (filled, elevated, filledTonal, outlined,
@@ -115,8 +146,13 @@ class LayrzButton extends StatefulWidget {
 
   /// Creates a save button with success accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `true` (default), renders as [elevated];
+  /// when [isFab] is `false` and [isElevated] is `false`, renders as [filled].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [elevatedFab]
+  /// (default, for buttons on a plain surface) and [filledFab] (for buttons inside elevated containers).
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `true`.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -127,11 +163,19 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = true,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -140,7 +184,7 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.success,
-      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      style: style,
       hintText: hintText,
     );
   }
@@ -148,6 +192,8 @@ class LayrzButton extends StatefulWidget {
   /// Creates a cancel button with danger accent and optional Fab layout.
   ///
   /// When [isFab] is `false`, renders as [outlined]; when `true`, as [outlinedFab].
+  /// The [isElevated] parameter has no effect on this factory — destructive actions remain
+  /// visually quiet in all contexts, whether on a plain surface or inside an elevated container.
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
@@ -159,11 +205,14 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = true,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined;
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -172,15 +221,20 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.danger,
-      style: isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined,
+      style: style,
       hintText: hintText,
     );
   }
 
   /// Creates an info button with info accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `true` (default), renders as [elevated];
+  /// when [isFab] is `false` and [isElevated] is `false`, renders as [filled].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [elevatedFab]
+  /// (default, for buttons on a plain surface) and [filledFab] (for buttons inside elevated containers).
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `true`.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -191,11 +245,19 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = true,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -204,15 +266,20 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.info,
-      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      style: style,
       hintText: hintText,
     );
   }
 
   /// Creates a show button with info accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `true` (default), renders as [elevated];
+  /// when [isFab] is `false` and [isElevated] is `false`, renders as [filled].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [elevatedFab]
+  /// (default, for buttons on a plain surface) and [filledFab] (for buttons inside elevated containers).
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `true`.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -223,11 +290,19 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = true,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -236,15 +311,20 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.info,
-      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      style: style,
       hintText: hintText,
     );
   }
 
   /// Creates an edit button with warning accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `true` (default), renders as [elevated];
+  /// when [isFab] is `false` and [isElevated] is `false`, renders as [filled].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [elevatedFab]
+  /// (default, for buttons on a plain surface) and [filledFab] (for buttons inside elevated containers).
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `true`.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -255,11 +335,19 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = true,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -268,15 +356,25 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.warning,
-      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      style: style,
       hintText: hintText,
     );
   }
 
   /// Creates a delete button with danger accent and optional Fab layout.
   ///
-  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
-  /// This is a layout choice that applies on any platform — not a platform check.
+  /// When [isFab] is `false` and [isElevated] is `false` (default), renders as [filled];
+  /// when [isFab] is `false` and [isElevated] is `true`, renders as [elevated].
+  /// When [isFab] is `true`, the [isElevated] parameter selects between [filledFab]
+  /// (default, for buttons inside elevated containers) and [elevatedFab] (for buttons on a plain surface).
+  ///
+  /// **Unlike other semantic factories, `.delete()` defaults to `isElevated: false`.** This reflects
+  /// the design intent: delete actions are visually quiet by default (solid fill, no shadow),
+  /// and developers explicitly opt into shadow depth with `isElevated: true`. This inversion prevents
+  /// accidentally over-emphasizing destructive actions.
+  ///
+  /// The [isElevated] parameter indicates whether the button sits on a plain surface (true)
+  /// or is inside an elevated container like a card (false). Defaults to `false` for this factory only.
   ///
   /// Sizing is standardised and not configurable.
   ///
@@ -287,11 +385,19 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
+    bool isElevated = false,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
     Key? key,
   }) {
+    final style = _resolveSemanticStyle(
+      isFab: isFab,
+      isElevated: isElevated,
+      baseStyle: isElevated ? LayrzButtonStyle.elevated : LayrzButtonStyle.filled,
+      baseFabStyle: isElevated ? LayrzButtonStyle.elevatedFab : LayrzButtonStyle.filledFab,
+    );
+
     return LayrzButton(
       key: key,
       labelText: labelText,
@@ -300,7 +406,7 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       controller: controller,
       type: LayrzButtonType.danger,
-      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      style: style,
       hintText: hintText,
     );
   }
