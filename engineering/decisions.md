@@ -1068,6 +1068,96 @@ The reasons the restructure is **still worth doing** are different and real:
 
 ---
 
+## D20: Cross-Module Imports Use `package:layrz_ui/` Form, Never Relative Paths
+
+**Date**: 2026-08-15  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Within layrz_ui, files often need to import types and constants from other modules. For example, a button component in `lib/buttons/src/button.dart` may need to import color tokens from `lib/tokens/tokens.dart`. The choice is how to form this import:
+
+- **Relative path**: `import '../../tokens/tokens.dart';` (leaves the module, climbs directory tree)
+- **Absolute package path**: `import 'package:layrz_ui/tokens/tokens.dart';` (explicit module boundary cross)
+
+This convention applies to cross-module imports in `lib/`, `test/`, and `example/lib/` alike. Same-module relative imports within `src/` subdirectories (e.g., `import 'button_style.dart';` in the same directory) are unaffected.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Relative paths (climbing `../`) | Shorter syntax; familiar from any file system navigation | Breaks silently when files move; hides module boundaries; harder to trace; difficult to refactor as a unit |
+| (b) **Chosen** — Absolute `package:layrz_ui/` form | Survives refactors; explicit module boundaries; improves discoverability; matches Dart/Flutter ecosystem convention | Slightly more verbose; requires knowing the package name |
+
+### Decision
+
+**Chose (b): All cross-module imports within layrz_ui use the `package:layrz_ui/...` form.**
+
+Any import containing `../` (leaving the current module) must be rewritten to use `package:layrz_ui/`. This applies to:
+- Imports in `lib/<module>/src/` reaching into other modules
+- Imports in `test/` reaching into `lib/`
+- Imports in `example/lib/` reaching into the package
+
+Same-module relative imports are fine:
+```dart
+// In lib/buttons/src/layrz_button.dart
+import 'button_style.dart';  // OK — same module, same directory
+```
+
+Cross-module imports must use the absolute form:
+```dart
+// In lib/buttons/src/layrz_button.dart
+import 'package:layrz_ui/tokens/tokens.dart';  // OK — absolute cross-module
+import 'package:layrz_ui/constants/constants.dart';  // OK — absolute cross-module
+
+// NOT:
+import '../../tokens/tokens.dart';  // WRONG — relative, leaves module
+```
+
+### Verification
+
+A one-line check to find violations in `lib/`:
+```bash
+grep -rn "import '\.\./" lib/
+```
+This must return empty. If any results appear, rewrite those imports to use `package:` form.
+
+**Note**: `test/` is deliberately excluded from this grep. Test files legitimately import test-local helpers with relative paths (e.g., `import '../helpers/pump_themed.dart';`) because the package URI space covers only `lib/`, making `package:layrz_ui/...` imports impossible for test infrastructure. This exemption applies to relative imports within `test/` that reference other `test/` files only; imports from `test/` into `lib/` must still use the `package:` form.
+
+### Rationale
+
+- **Refactor resilience**: When the per-domain library restructure (D19) moves every file in the package (`lib/buttons/src/` → `lib/src/buttons/`, or similar), relative imports will all break and require rewriting. Absolute `package:` imports survive the restructure with no changes — the package name stays the same regardless of internal layout.
+- **Module boundary visibility**: A `package:layrz_ui/` import is an obvious signal that you are crossing a module boundary. A relative path `../../` hides the fact that you are leaving your domain. Explicit boundaries make it easier to understand dependencies at a glance and easier to spot over-coupling.
+- **Discoverability**: In a large codebase, seeing `import 'package:layrz_ui/tokens/tokens.dart';` makes it clear which modules exist and what is exported. Relative paths obscure this.
+- **Ecosystem alignment**: The Flutter SDK, Dart packages, and the wider Dart community all use absolute `package:` imports for cross-package and cross-library dependencies. Using the same convention reduces cognitive friction.
+- **D19 enabler**: The deferred per-domain library restructure (D19) explicitly lists absolute imports as the precondition for cheap refactoring. This decision makes that refactor viable at low cost.
+
+### Consequences
+
+- New code and refactored code must use `package:layrz_ui/` form for all cross-module imports.
+- Existing code using relative paths (`../../`) should be rewritten as code is touched. No bulk rewrite is needed unless D19's restructure is triggered (at which point all imports will be rewritten anyway).
+- Code review must verify that no relative `../` imports are introduced.
+
+**Update (2026-08-15) — Verification Corrected; Test-Local Relative Imports Exempted**
+
+The original Verification section contained an impossible requirement: `grep -rn "import '\.\./" lib/ test/ example/lib/` as a unified check. This fails on `test/` because test files legitimately and necessarily use relative paths to import test-local helpers (`import '../helpers/pump_themed.dart';`). The package URI space (`package:layrz_ui/...`) covers only `lib/`, so test infrastructure cannot use absolute imports for test-only files.
+
+The corrected Verification now:
+- Checks only `lib/` with `grep -rn "import '\.\./" lib/` (which must be empty)
+- Documents the exemption explicitly: relative imports **within `test/`** for test-local files are required and correct
+- Clarifies that imports **from `test/` into `lib/`** must still use `package:layrz_ui/...` form
+
+This amendment does not change the decision itself, only clarifies its scope. The rule applies to cross-module imports within `lib/`, and to imports from `test/` and `example/lib/` into the package — not to test-local relative imports, which have no alternative.
+
+### Review Trigger
+
+**Before per-domain library restructure (D19)**: Verify that no cross-module relative imports remain in `lib/`, `test/`, or `example/lib/`. This check ensures the restructure's refactoring tools can work with consistent import paths.
+
+If code review finds a cross-module relative import, ask the author to rewrite it to `package:layrz_ui/` form before approval. This is a non-negotiable code quality gate.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

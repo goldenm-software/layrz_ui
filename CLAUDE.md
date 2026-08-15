@@ -318,6 +318,7 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **Responsive grid** — use the breakpoint constants from `src/constants/grid.dart` (`kExtraSmallGrid`, etc.).
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **Interaction states** — hover, press, focus, and disabled states must vary colour, border colour, shadow, opacity, and cursor only; never size, border width, padding, margin, or scale. Geometry changes cause flicker and reflow. See decision D15 in `engineering/decisions.md`.
+- **Cross-module imports use `package:layrz_ui/`** — for any import within `lib/` or from `test/` and `example/lib/` into the package, use the absolute form `import 'package:layrz_ui/constants/constants.dart';` instead of relative paths. Same-module imports within `src/` may remain relative. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.
 - **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, `RawRadio`, and the stable `@Preview` API exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
 
 ### Light Mode Only
