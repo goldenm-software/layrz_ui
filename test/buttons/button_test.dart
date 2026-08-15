@@ -411,68 +411,38 @@ void main() {
     });
 
     group('Tooltip behavior', () {
-      testWidgets('non-Fab with hintText and tooltipEnabled: true shows tooltip on long-press', (tester) async {
-        tester.view.physicalSize = const Size(800, 600);
-        addTearDown(tester.view.resetPhysicalSize);
-
+      testWidgets('non-Fab with hintText mounts RawTooltip', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Button',
             hintText: 'This is a hint',
-            tooltipEnabled: true,
             onTap: () {},
           ),
         );
 
         await tester.pump();
 
-        // Long press to trigger tooltip.
-        await tester.longPress(find.text('Button'));
-        await tester.pump();
-
-        // Tooltip should appear (we can't easily verify visual appearance,
-        // but the widget should render without throwing).
-        expect(find.byType(LayrzButton), findsOneWidget);
+        // Non-Fab with hintText should mount RawTooltip
+        expect(find.byType(RawTooltip), findsOneWidget);
       });
 
-      testWidgets('non-Fab with hintText and tooltipEnabled: false does not show tooltip', (tester) async {
+      testWidgets('non-Fab without hintText does not mount RawTooltip', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Button',
-            hintText: 'This is a hint',
-            tooltipEnabled: false,
             onTap: () {},
           ),
         );
 
         await tester.pump();
 
-        // The button should render, but no tooltip wrapper should be used.
-        expect(find.byType(LayrzButton), findsOneWidget);
+        // Non-Fab without hintText should not mount RawTooltip
+        expect(find.byType(RawTooltip), findsNothing);
       });
 
-      testWidgets('non-Fab without hintText does not show tooltip even if tooltipEnabled: true', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'Button',
-            hintText: null,
-            tooltipEnabled: true,
-            onTap: () {},
-          ),
-        );
-
-        await tester.pump();
-
-        expect(find.byType(LayrzButton), findsOneWidget);
-      });
-
-      testWidgets('Fab uses labelText as tooltip', (tester) async {
-        tester.view.physicalSize = const Size(800, 600);
-        addTearDown(tester.view.resetPhysicalSize);
-
+      testWidgets('Fab always mounts RawTooltip', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
@@ -484,29 +454,78 @@ void main() {
 
         await tester.pump();
 
-        // Long press on the Fab.
-        await tester.longPress(find.byType(LayrzButton));
-        await tester.pump();
-
-        // Fab should always show tooltip with labelText.
-        expect(find.byType(LayrzButton), findsOneWidget);
+        // Fab should always mount RawTooltip
+        expect(find.byType(RawTooltip), findsOneWidget);
       });
 
-      testWidgets('Fab tooltipEnabled parameter has no effect', (tester) async {
+      testWidgets('Fab tooltip message is labelText only when no hintText', (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        addTearDown(tester.view.resetPhysicalSize);
+
         await pumpThemed(
           tester,
           LayrzButton(
-            labelText: 'Fab Always Shows Tooltip',
+            labelText: 'Fab Label',
             style: LayrzButtonStyle.filledTonalFab,
-            tooltipEnabled: false,
             onTap: () {},
           ),
         );
 
         await tester.pump();
 
-        // Even with tooltipEnabled: false, Fab should still be tappable.
-        expect(find.byType(LayrzButton), findsOneWidget);
+        // Long press on the Fab to trigger tooltip
+        await tester.longPress(find.byType(LayrzButton));
+        await tester.pump();
+
+        // Tooltip should contain only the label text
+        expect(find.text('Fab Label'), findsWidgets);
+      });
+
+      testWidgets('Fab tooltip message is labelText plus hintText on new line', (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Fab Label',
+            hintText: 'Fab Hint',
+            style: LayrzButtonStyle.filledTonalFab,
+            onTap: () {},
+          ),
+        );
+
+        await tester.pump();
+
+        // Long press on the Fab to trigger tooltip
+        await tester.longPress(find.byType(LayrzButton));
+        await tester.pump();
+
+        // Tooltip should contain both label and hint (separated by newline)
+        expect(find.text('Fab Label\nFab Hint'), findsWidgets);
+      });
+
+      testWidgets('non-Fab tooltip message is hintText only', (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Button Label',
+            hintText: 'Button Hint',
+            onTap: () {},
+          ),
+        );
+
+        await tester.pump();
+
+        // Long press to trigger tooltip
+        await tester.longPress(find.text('Button Label'));
+        await tester.pump();
+
+        // Tooltip should contain only the hint, not the label
+        expect(find.text('Button Hint'), findsWidgets);
       });
     });
 
@@ -571,38 +590,8 @@ void main() {
       });
     });
 
-    group('Tooltip visibility', () {
-      testWidgets('regression: tooltipEnabled: false on Fab suppresses RawTooltip mount', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'Fab No Tooltip',
-            style: LayrzButtonStyle.filledTonalFab,
-            tooltipEnabled: false,
-            onTap: () {},
-          ),
-        );
-
-        // When tooltipEnabled: false, RawTooltip should not be mounted
-        expect(find.byType(RawTooltip), findsNothing);
-      });
-
-      testWidgets('regression: tooltipEnabled: false on non-Fab with hintText suppresses tooltip', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'Button Text',
-            hintText: 'Hint Text',
-            tooltipEnabled: false,
-            onTap: () {},
-          ),
-        );
-
-        // When tooltipEnabled: false, RawTooltip should not be mounted even with hintText
-        expect(find.byType(RawTooltip), findsNothing);
-      });
-
-      testWidgets('regression: tooltipEnabled: true (default) on Fab mounts RawTooltip', (tester) async {
+    group('Tooltip visibility (RawTooltip mount contract)', () {
+      testWidgets('Fab always mounts RawTooltip regardless of hintText', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
@@ -612,37 +601,31 @@ void main() {
           ),
         );
 
-        // By default, Fab mounts RawTooltip for the tooltip (tooltipEnabled: true is default)
         expect(find.byType(RawTooltip), findsOneWidget);
       });
 
-      testWidgets('regression: tooltipEnabled: true on non-Fab with hintText mounts RawTooltip', (tester) async {
+      testWidgets('non-Fab with hintText mounts RawTooltip', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Button Text',
             hintText: 'Hint Text',
-            tooltipEnabled: true,
             onTap: () {},
           ),
         );
 
-        // When hintText is provided and tooltipEnabled: true, RawTooltip should be mounted
         expect(find.byType(RawTooltip), findsOneWidget);
       });
 
-      testWidgets('regression: tooltipEnabled: true on non-Fab without hintText suppresses', (tester) async {
+      testWidgets('non-Fab without hintText does not mount RawTooltip', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Button Text',
-            // No hintText provided
-            tooltipEnabled: true,
             onTap: () {},
           ),
         );
 
-        // Non-Fab without hintText should not mount RawTooltip, even with tooltipEnabled: true
         expect(find.byType(RawTooltip), findsNothing);
       });
     });

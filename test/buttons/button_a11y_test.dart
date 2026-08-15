@@ -463,27 +463,41 @@ void main() {
         }
       });
 
-      testWidgets('regression: tooltipEnabled: false on Fab suppresses tooltip but preserves accessible label', (
-        tester,
-      ) async {
+      testWidgets('button exposes hint in semantics when hintText is provided', (tester) async {
         final handle = tester.ensureSemantics();
         try {
           await pumpThemed(
             tester,
             LayrzButton(
-              labelText: 'Fab No Tooltip Label',
-              style: LayrzButtonStyle.filledTonalFab,
-              tooltipEnabled: false,
+              labelText: 'Button Label',
+              hintText: 'Button Hint',
               onTap: () {},
             ),
           );
 
-          // Semantically, the label must still be accessible to screen readers
           final buttonSemantics = tester.getSemantics(find.byType(LayrzButton));
-          expect(buttonSemantics.label, equals('Fab No Tooltip Label'));
+          expect(buttonSemantics.label, equals('Button Label'));
+          expect(buttonSemantics.hint, equals('Button Hint'));
+        } finally {
+          handle.dispose();
+        }
+      });
 
-          // Visually, RawTooltip should not be mounted at all when tooltipEnabled: false
-          expect(find.byType(RawTooltip), findsNothing);
+      testWidgets('button does not expose hint in semantics when hintText is null', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            LayrzButton(
+              labelText: 'Button Label',
+              onTap: () {},
+            ),
+          );
+
+          final buttonSemantics = tester.getSemantics(find.byType(LayrzButton));
+          expect(buttonSemantics.label, equals('Button Label'));
+          // When hintText is null, hint should be empty
+          expect(buttonSemantics.hint, isEmpty);
         } finally {
           handle.dispose();
         }

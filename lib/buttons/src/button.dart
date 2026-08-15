@@ -9,6 +9,7 @@ import 'button_content.dart';
 import 'button_indicator.dart';
 import 'button_style.dart';
 import 'button_style_spec.dart';
+import 'button_tooltip_position.dart';
 import 'button_type.dart';
 
 /// A Material-free button widget in the layrz_ui design system.
@@ -65,15 +66,11 @@ class LayrzButton extends StatefulWidget {
 
   /// Text for a tooltip hint (non-Fab variants only).
   ///
-  /// When non-null and [tooltipEnabled] is `true`, hovering over or long-pressing
-  /// the button shows this tooltip. Fab buttons always show [labelText] as tooltip.
+  /// When non-null, hovering over or long-pressing the button shows a tooltip
+  /// containing this hint text. Fab buttons always show a tooltip composed of
+  /// [labelText] and optionally [hintText] if both are present.
+  /// For non-Fab buttons, this field alone determines whether a tooltip is shown.
   final String? hintText;
-
-  /// Whether tooltips are enabled.
-  ///
-  /// When `false`, no tooltip is rendered even if [hintText] is provided.
-  /// Fab buttons ignore this flag and always render the tooltip.
-  final bool tooltipEnabled;
 
   /// Creates a new [LayrzButton] with the given properties.
   ///
@@ -83,6 +80,10 @@ class LayrzButton extends StatefulWidget {
   ///
   /// The [color] parameter is only used when [type] is [LayrzButtonType.custom];
   /// passing a color with any other type triggers an assertion error.
+  ///
+  /// Tooltip behavior is determined by [style] and [hintText]:
+  /// - **Fab buttons** always show a tooltip (labelText, or labelText + hintText if hint is provided)
+  /// - **Non-Fab buttons** show a tooltip only when [hintText] is non-null
   ///
   /// Button sizing is fixed and not caller-configurable: height, width, icon size,
   /// and spacing all use design system constants. Buttons can be constrained by their
@@ -102,7 +103,6 @@ class LayrzButton extends StatefulWidget {
     this.color,
     this.style = LayrzButtonStyle.filledTonal,
     this.hintText,
-    this.tooltipEnabled = true,
   }) : assert(
          type == LayrzButtonType.custom || color == null,
          'color is only applied when type is LayrzButtonType.custom.',
@@ -133,7 +133,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.success,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -163,7 +162,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.danger,
       style: isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -193,7 +191,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.info,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -223,7 +220,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.info,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -253,7 +249,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.warning,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -283,7 +278,6 @@ class LayrzButton extends StatefulWidget {
       isCooldown: isCooldown,
       type: LayrzButtonType.danger,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isFab,
       hintText: isFab ? null : labelText,
     );
   }
@@ -339,24 +333,17 @@ class _LayrzButtonState extends State<LayrzButton> {
     setState(() {});
   }
 
-  /// Whether the button is disabled for interaction purposes.
+  /// Whether the button is disabled for interaction, visual, and semantic purposes.
   ///
   /// This includes actual disable states (onTap == null, isDisabled)
   /// and transient busy states (isLoading, isCooldown).
-  /// Used to suppress taps, set cursor, and control semantics.enabled.
+  /// Used to suppress taps, set cursor, control semantics.enabled, and render
+  /// the disabled visual style (greyed appearance).
   bool get _effectivelyDisabled =>
       widget.onTap == null ||
       widget.isDisabled ||
       (widget.isLoading?.value ?? false) ||
       (widget.isCooldown?.value ?? false);
-
-  /// Whether the button is disabled for visual/styling purposes.
-  ///
-  /// This excludes transient busy states (loading, cooldown).
-  /// Loading and cooldown buttons retain their normal style and only show
-  /// an indicator overlay; they do not render the disabled (greyed) spec.
-  /// Used to drive [WidgetState.disabled] in the style resolver.
-  bool get _visuallyDisabled => widget.onTap == null || widget.isDisabled;
 
   /// Resolves the accent color from the button's type and optional color override.
   Color _resolveAccent(LayrzTokens tokens) {
@@ -382,9 +369,9 @@ class _LayrzButtonState extends State<LayrzButton> {
     final accent = _resolveAccent(tokens);
 
     final states = _statesController.value;
-    if (_visuallyDisabled && !states.contains(WidgetState.disabled)) {
+    if (_effectivelyDisabled && !states.contains(WidgetState.disabled)) {
       _statesController.update(WidgetState.disabled, true);
-    } else if (!_visuallyDisabled && states.contains(WidgetState.disabled)) {
+    } else if (!_effectivelyDisabled && states.contains(WidgetState.disabled)) {
       _statesController.update(WidgetState.disabled, false);
     }
 
@@ -474,17 +461,19 @@ class _LayrzButtonState extends State<LayrzButton> {
       },
     );
 
+    final tooltipMessage = _composeTooltipMessage();
     final wrappedContent = _shouldShowTooltip()
         ? RawTooltip(
-            semanticsTooltip: widget.labelText,
+            semanticsTooltip: tooltipMessage,
             tooltipBuilder: (context, animation) {
               return FadeTransition(
                 opacity: animation,
-                child: _buildTooltip(context, tokens),
+                child: _buildTooltip(context, tokens, tooltipMessage),
               );
             },
             hoverDelay: Duration.zero,
             triggerMode: TooltipTriggerMode.longPress,
+            positionDelegate: layrzButtonTooltipPosition,
             child: buttonContent,
           )
         : buttonContent;
@@ -492,6 +481,7 @@ class _LayrzButtonState extends State<LayrzButton> {
     return Semantics(
       button: true,
       label: widget.labelText,
+      hint: widget.hintText,
       enabled: !_effectivelyDisabled,
       excludeSemantics: true,
       child: wrappedContent,
@@ -576,17 +566,38 @@ class _LayrzButtonState extends State<LayrzButton> {
   }
 
   bool _shouldShowTooltip() {
-    // tooltipEnabled is a hard gate for all variants.
-    if (!widget.tooltipEnabled) return false;
-
-    // Fab shows tooltip using labelText.
+    // Fab always shows a tooltip.
     if (widget.style.isFab) return true;
 
     // Non-Fab shows tooltip only if hintText is provided.
     return widget.hintText != null;
   }
 
-  Widget _buildTooltip(BuildContext context, LayrzTokens tokens) {
+  /// Composes the tooltip message content based on button style and text fields.
+  ///
+  /// For Fab buttons: returns [labelText], optionally followed by a newline and
+  /// [hintText] if [hintText] is provided.
+  ///
+  /// For non-Fab buttons: returns [hintText] only (the label is already visible
+  /// on the button itself, so repeating it would be redundant).
+  String _composeTooltipMessage() {
+    final isFab = widget.style.isFab;
+
+    if (isFab) {
+      if (widget.hintText != null) {
+        return '${widget.labelText}\n${widget.hintText}';
+      }
+      return widget.labelText;
+    }
+
+    return widget.hintText ?? '';
+  }
+
+  /// Builds the tooltip widget with the given [message].
+  ///
+  /// The tooltip displays text in the foreground color (fg1) with a contrasting
+  /// background, rendered in the small label style from the design system.
+  Widget _buildTooltip(BuildContext context, LayrzTokens tokens, String message) {
     const tooltipPadding = 12.0;
     const tooltipRadius = 8.0;
 
@@ -600,7 +611,7 @@ class _LayrzButtonState extends State<LayrzButton> {
         borderRadius: BorderRadius.circular(tooltipRadius),
       ),
       child: Text(
-        widget.style.isFab ? widget.labelText : (widget.hintText ?? ''),
+        message,
         style: tokens.typography.labelSmall.copyWith(
           color: tokens.colors.background,
         ),
