@@ -32,13 +32,13 @@ class _ButtonsSectionContent extends StatefulWidget {
 
 class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
   late ValueNotifier<bool> _isLoading;
-  late ValueNotifier<bool> _isCooldown;
+  late ValueNotifier<Duration?> _isCooldown;
 
   @override
   void initState() {
     super.initState();
     _isLoading = ValueNotifier<bool>(false);
-    _isCooldown = ValueNotifier<bool>(false);
+    _isCooldown = ValueNotifier<Duration?>(null);
   }
 
   @override
@@ -134,6 +134,7 @@ class _StylesDemo extends StatelessWidget {
               .map(
                 (style) => LayrzButton(
                   labelText: style.toString().split('.').last,
+                  icon: LayrzIcons.solarOutlineCheckCircle,
                   style: style,
                   onTap: () {},
                   color: tokens.colors.primary,
@@ -272,7 +273,7 @@ class _CooldownDemo extends StatelessWidget {
   final LayrzTokens tokens;
 
   /// The external [ValueNotifier] that drives the cooldown state.
-  final ValueNotifier<bool> isCooldown;
+  final ValueNotifier<Duration?> isCooldown;
 
   @override
   Widget build(BuildContext context) {
@@ -282,8 +283,9 @@ class _CooldownDemo extends StatelessWidget {
         Text('Cooldown State (External Listenable)', style: tokens.typography.titleMedium),
         SizedBox(height: tokens.spacing.sp12),
         Text(
-          'Cooldown is an externally-driven overlay that never completes on its own. '
-          'It is tinted with fg3 to visually distinguish it from loading.',
+          'Cooldown runs a countdown over a Duration. When the countdown finishes but '
+          'the value is still non-null, it switches to indeterminate mode. '
+          'Only the developer clearing the value to null re-enables the button.',
           style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
@@ -291,17 +293,24 @@ class _CooldownDemo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
-            ValueListenableBuilder<bool>(
+            ValueListenableBuilder<Duration?>(
               valueListenable: isCooldown,
               builder: (context, isCooldownValue, _) {
-                return LayrzButton(
-                  labelText: isCooldownValue ? 'Clear Cooldown' : 'Start Cooldown',
-                  style: LayrzButtonStyle.outlined,
-                  onTap: () => isCooldown.value = !isCooldown.value,
+                final isActive = isCooldownValue != null;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: tokens.spacing.sp8,
+                  children: [
+                    LayrzButton(
+                      labelText: isActive ? 'Clear Cooldown' : 'Start 5s Cooldown',
+                      style: LayrzButtonStyle.outlined,
+                      onTap: () => isCooldown.value = isActive ? null : const Duration(seconds: 5),
+                    ),
+                  ],
                 );
               },
             ),
-            ValueListenableBuilder<bool>(
+            ValueListenableBuilder<Duration?>(
               valueListenable: isCooldown,
               builder: (context, _, _) {
                 return SizedBox(
