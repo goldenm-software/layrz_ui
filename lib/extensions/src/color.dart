@@ -67,10 +67,18 @@ extension LayrzColorExtensions on Color {
   /// Returns black or white, whichever has better contrast against this color.
   ///
   /// Uses the WCAG relative luminance formula with a 0.179 threshold.
+  /// See also [opposite], a shorthand alias for this getter.
   Color get contrastColor {
     final luminance = computeLuminance();
     return luminance > 0.179 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
   }
+
+  /// Alias for [contrastColor].
+  ///
+  /// Returns black or white, whichever has better contrast against this color.
+  /// Provided as a shorthand at call sites; [contrastColor] is the canonical
+  /// name and the two are always identical.
+  Color get opposite => contrastColor;
 
   /// Returns this color at the given [opacity] (0.0–1.0).
   ///

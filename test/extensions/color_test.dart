@@ -203,6 +203,60 @@ void main() {
       });
     });
 
+    group('opposite', () {
+      test('returns black for light colors', () {
+        const lightColor = Color(0xFFFFFFFF); // white
+        expect(lightColor.opposite, equals(const Color(0xFF000000)));
+      });
+
+      test('returns white for dark colors', () {
+        const darkColor = Color(0xFF000000); // black
+        expect(darkColor.opposite, equals(const Color(0xFFFFFFFF)));
+      });
+
+      test('opposite and contrastColor return identical values for pure white', () {
+        const white = Color(0xFFFFFFFF);
+        expect(white.opposite, equals(white.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for pure black', () {
+        const black = Color(0xFF000000);
+        expect(black.opposite, equals(black.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for mid grey', () {
+        const midGrey = Color(0xFF808080);
+        expect(midGrey.opposite, equals(midGrey.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for primary color', () {
+        const primary = Color(0xFF001E60); // Layrz primary
+        expect(primary.opposite, equals(primary.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for light background', () {
+        const lightBg = Color(0xFFFCFCFC);
+        expect(lightBg.opposite, equals(lightBg.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values at luminance boundary (0.179 threshold)', () {
+        const threshold = Color(0xFFB3B3B3);
+        expect(threshold.opposite, equals(threshold.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for color just below threshold', () {
+        // A color with luminance just below 0.179 (should return white)
+        const belowThreshold = Color(0xFFB0B0B0);
+        expect(belowThreshold.opposite, equals(belowThreshold.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for color just above threshold', () {
+        // A color with luminance just above 0.179 (should return black)
+        const aboveThreshold = Color(0xFFB8B8B8);
+        expect(aboveThreshold.opposite, equals(aboveThreshold.contrastColor));
+      });
+    });
+
     group('withOpacityValue', () {
       test('sets opacity to specified value', () {
         const color = Color(0xFF001E60);
