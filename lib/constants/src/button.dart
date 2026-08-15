@@ -26,3 +26,17 @@ const double kLayrzButtonHorizontalPadding = 16.0;
 /// Provides visual separation so the tooltip does not visually overlap the button.
 /// Measured in logical pixels below the button's lower edge.
 const double kLayrzButtonTooltipVerticalOffset = 10.0;
+
+/// Minimum duration a busy state (loading or cooldown) remains visible on [LayrzButton].
+///
+/// When a button enters a busy state, it remains visually and interactively disabled for at least
+/// this duration, even if the underlying busy condition (loading, cooldown) expires sooner.
+///
+/// **Purpose:** Prevents flicker and rapid state changes from quick server responses.
+/// A 20ms loading state would otherwise strobe, confusing the user. This floor ensures visual
+/// calm by holding the busy indicator visible for a full frame (~100ms at 60fps).
+///
+/// **Tradeoff:** The indicator can briefly outlive the real busy state, deliberately trading
+/// strict truthfulness for visual calm and tactile responsiveness. The button stays disabled
+/// for the entire held window, so a tap cannot land mid-fade.
+const Duration kLayrzButtonMinBusyDuration = Duration(milliseconds: 100);

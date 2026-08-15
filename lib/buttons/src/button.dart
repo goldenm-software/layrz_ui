@@ -7,6 +7,7 @@ import 'package:layrz_ui/extensions/extensions.dart';
 import 'package:layrz_ui/tokens/tokens.dart';
 
 import 'button_content.dart' show buildButtonContent, buildFabContent, buildButtonContentSpan;
+import 'button_controller.dart';
 import 'button_indicator.dart';
 import 'button_style.dart';
 import 'button_style_spec.dart';
@@ -32,35 +33,26 @@ class LayrzButton extends StatefulWidget {
   /// Called when the button is tapped. `null` disables the button.
   final VoidCallback? onTap;
 
-  /// If `true`, the button is disabled regardless of [onTap] and [isLoading].
+  /// If `true`, the button is disabled regardless of [onTap] and [controller].
   final bool isDisabled;
 
-  /// A listenable that drives the loading indicator overlay.
+  /// An optional controller that drives the busy state (loading or cooldown).
   ///
-  /// When `true`, an indeterminate progress bar renders over the button content.
-  /// Ownership is external; [LayrzButton] reads but does not own the listenable.
-  /// Null means no loading state.
-  final ValueListenable<bool>? isLoading;
-
-  /// A listenable that drives the cooldown overlay with automatic countdown.
+  /// When non-null, the controller manages all busy-state rendering and interaction:
+  /// - Loading indicator from [LayrzButtonController.isLoading]
+  /// - Cooldown countdown from [LayrzButtonController.cooldownTotal]
   ///
-  /// **Semantics:**
-  /// - `null` → not in cooldown. Button behaves normally.
-  /// - non-null `Duration` → cooldown begins. An internal countdown runs over that
-  ///   Duration, showing determinate progress + remaining whole seconds. Button is disabled.
-  /// - **When countdown reaches zero but value is still non-null** → button switches to
-  ///   indeterminate busy mode (like [isLoading]), still disabled, no numeral shown.
-  ///   It does **NOT** re-enable. Only the integrating developer clearing the value to
-  ///   `null` ends cooldown.
+  /// Multiple buttons can share a single controller instance, enabling lockstep busy-state
+  /// management across a form or action group. All buttons subscribed to the same controller
+  /// move in perfect sync, preventing frame-by-frame drift.
   ///
-  /// Ownership is external; the button listens but never clears the value itself.
-  /// Null means no cooldown.
+  /// When null, the button has no loading or cooldown states and behaves normally.
   ///
-  /// **IMPORTANT GOTCHA:** `Duration` has value equality, so assigning the same
-  /// Duration object twice will not trigger notification and will not restart the
-  /// countdown. To re-trigger an identical cooldown, set `null` first, then set the
-  /// new Duration.
-  final ValueListenable<Duration?>? isCooldown;
+  /// The button attaches and detaches listeners dynamically. If the controller is swapped
+  /// via `didUpdateWidget`, the old listener is detached and the new one attached.
+  /// Disposal is caller-owned. If a button's controller is disposed before the button unmounts,
+  /// the button remains functional and will not throw or `setState` after unmount.
+  final LayrzButtonController? controller;
 
   /// The semantic type of the button — determines which token color to use.
   ///
@@ -111,8 +103,7 @@ class LayrzButton extends StatefulWidget {
     this.icon,
     this.onTap,
     this.isDisabled = false,
-    this.isLoading,
-    this.isCooldown,
+    this.controller,
     this.type = LayrzButtonType.custom,
     this.color,
     this.style = LayrzButtonStyle.filledTonal,
@@ -128,13 +119,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.save({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -143,11 +138,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlineInboxIn,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.success,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -157,13 +151,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.cancel({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -172,11 +170,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlineCloseSquare,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.danger,
       style: isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -186,13 +183,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.info({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -201,11 +202,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlineInfoSquare,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.info,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -215,13 +215,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.show({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -230,11 +234,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlineEyeScan,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.info,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -244,13 +247,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.edit({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -259,11 +266,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlinePenNewSquare,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.warning,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -273,13 +279,17 @@ class LayrzButton extends StatefulWidget {
   /// This is a layout choice that applies on any platform — not a platform check.
   ///
   /// Sizing is standardised and not configurable.
+  ///
+  /// The [hintText] parameter is optional and applies only to Fab buttons, where it
+  /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
+  /// label is already visible, so hintText is not shown unless explicitly provided.
   factory LayrzButton.delete({
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
     bool isDisabled = false,
-    ValueListenable<bool>? isLoading,
-    ValueListenable<Duration?>? isCooldown,
+    LayrzButtonController? controller,
+    String? hintText,
     Key? key,
   }) {
     return LayrzButton(
@@ -288,11 +298,10 @@ class LayrzButton extends StatefulWidget {
       icon: LayrzIcons.solarOutlineTrashBinMinimalisticN2,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
-      isLoading: isLoading,
-      isCooldown: isCooldown,
+      controller: controller,
       type: LayrzButtonType.danger,
       style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      hintText: isFab ? null : labelText,
+      hintText: hintText,
     );
   }
 
@@ -310,23 +319,15 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
     _statesController = WidgetStatesController();
     _cooldownController = AnimationController(vsync: this);
     _subscribe();
-    _updateCooldownTimer();
   }
 
   @override
   void didUpdateWidget(LayrzButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Resubscribe if loading/cooldown listenables changed identity.
-    if (oldWidget.isLoading != widget.isLoading || oldWidget.isCooldown != widget.isCooldown) {
+    // Resubscribe if controller changed identity.
+    if (oldWidget.controller != widget.controller) {
       _unsubscribe();
       _subscribe();
-    }
-
-    // Handle cooldown value changes (same notifier, new value).
-    final oldCooldownValue = oldWidget.isCooldown?.value;
-    final newCooldownValue = widget.isCooldown?.value;
-    if (oldCooldownValue != newCooldownValue) {
-      _updateCooldownTimer();
     }
   }
 
@@ -339,57 +340,25 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   }
 
   void _subscribe() {
-    widget.isLoading?.addListener(_onLoadingChanged);
-    widget.isCooldown?.addListener(_onCooldownChanged);
+    widget.controller?.addListener(_onControllerChanged);
   }
 
   void _unsubscribe() {
-    widget.isLoading?.removeListener(_onLoadingChanged);
-    widget.isCooldown?.removeListener(_onCooldownChanged);
+    widget.controller?.removeListener(_onControllerChanged);
   }
 
-  void _onLoadingChanged() {
+  void _onControllerChanged() {
     if (!mounted) return;
     setState(() {});
-  }
-
-  void _onCooldownChanged() {
-    if (!mounted) return;
-    _updateCooldownTimer();
-    setState(() {});
-  }
-
-  /// Updates the cooldown timer based on the current cooldown value.
-  ///
-  /// - If cooldown is null: stops the animation
-  /// - If cooldown is a Duration: starts a countdown animation over that duration
-  /// - On animation completion: leaves animation at 1.0 to trigger indeterminate mode
-  void _updateCooldownTimer() {
-    final cooldownDuration = widget.isCooldown?.value;
-
-    _cooldownController.stop();
-
-    if (cooldownDuration == null) {
-      // No cooldown; reset controller.
-      _cooldownController.reset();
-    } else {
-      // Start countdown over the given duration.
-      _cooldownController.duration = cooldownDuration;
-      _cooldownController.forward(from: 0.0);
-    }
   }
 
   /// Whether the button is disabled for interaction, visual, and semantic purposes.
   ///
   /// This includes actual disable states (onTap == null, isDisabled)
-  /// and transient busy states (isLoading, isCooldown).
+  /// and transient busy states (controller reports isBusy).
   /// Used to suppress taps, set cursor, control semantics.enabled, and render
   /// the disabled visual style (greyed appearance).
-  bool get _effectivelyDisabled =>
-      widget.onTap == null ||
-      widget.isDisabled ||
-      (widget.isLoading?.value ?? false) ||
-      (widget.isCooldown?.value != null);
+  bool get _effectivelyDisabled => widget.onTap == null || widget.isDisabled || (widget.controller?.isBusy ?? false);
 
   /// Resolves the accent color from the button's type and optional color override.
   Color _resolveAccent(LayrzTokens tokens) {
@@ -430,9 +399,9 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
     final isFab = widget.style.isFab;
 
-    final isLoading = widget.isLoading?.value ?? false;
-    final isCooldownValue = widget.isCooldown?.value;
-    final hasCooldown = isCooldownValue != null;
+    final controller = widget.controller;
+    final isLoading = controller?.isLoading ?? false;
+    final hasCooldown = controller?.cooldownTotal != null;
 
     final buttonContent = LayoutBuilder(
       builder: (context, constraints) {
@@ -492,26 +461,26 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                     // Indicator overlay (loading or cooldown).
                     if (isLoading || hasCooldown)
                       Positioned.fill(
-                        child: AnimatedBuilder(
-                          animation: _cooldownController,
-                          builder: (context, _) {
-                            // During countdown: show determinate progress.
-                            // After countdown (when controller.value >= 1.0): show indeterminate.
-                            final cooldownProgress = hasCooldown ? _cooldownController.value : null;
-                            final isDeterminateMode = cooldownProgress != null && cooldownProgress < 1.0;
+                        child: ValueListenableBuilder<double>(
+                          valueListenable: _CooldownProgressListenable(controller),
+                          builder: (context, _, _) {
+                            final cooldownProgress = controller?.cooldownProgress ?? 0.0;
+                            final isDeterminateMode = hasCooldown && cooldownProgress < 1.0;
 
                             // Calculate remaining seconds for determinate mode.
                             int? remainingSeconds;
-                            if (isDeterminateMode && isCooldownValue != null) {
-                              final totalSeconds = isCooldownValue.inSeconds;
-                              final elapsedSeconds = (totalSeconds * cooldownProgress).toInt();
-                              remainingSeconds = totalSeconds - elapsedSeconds;
+                            if (isDeterminateMode && controller != null) {
+                              final remaining = controller.cooldownRemaining;
+                              remainingSeconds = remaining.inSeconds;
                             }
 
                             return LayrzButtonIndicator(
                               trackColor: spec.contentColor.withOpacityValue(0.2),
                               indicatorColor: spec.contentColor,
-                              borderRadius: tokens.radius.base,
+                              borderRadius: tokens.radius.innerRadiusValue(
+                                outerRadius: tokens.radius.base,
+                                spacer: spec.borderWidth,
+                              ),
                               height: kLayrzButtonHeight,
                               progress: isDeterminateMode ? cooldownProgress : null,
                               remainingSeconds: remainingSeconds,
@@ -689,5 +658,34 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
         ),
       ),
     );
+  }
+}
+
+/// A ValueListenable that exposes the cooldown progress from a controller.
+///
+/// This allows high-frequency progress updates (every ~16ms) without rebuilding
+/// the entire button subtree. Only the progress indicator repaints.
+class _CooldownProgressListenable implements ValueListenable<double> {
+  /// The button controller that owns the cooldown state.
+  final LayrzButtonController? controller;
+
+  /// Creates a new [_CooldownProgressListenable].
+  _CooldownProgressListenable(this.controller);
+
+  @override
+  double get value => controller?.cooldownProgress ?? 0.0;
+
+  @override
+  void addListener(VoidCallback listener) {
+    controller?.addListener(listener);
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    controller?.removeListener(listener);
+  }
+
+  void dispose() {
+    // No-op; the controller is owned by the application.
   }
 }
