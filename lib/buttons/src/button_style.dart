@@ -46,44 +46,40 @@ enum LayrzButtonStyle {
   outlinedTonal,
 
   /// Fab variant of [outlinedTonal] — identical styling, square layout.
-  outlinedTonalFab,
-}
+  outlinedTonalFab;
 
-/// Extension on [LayrzButtonStyle] providing computed properties about the style.
-extension LayrzButtonStyleX on LayrzButtonStyle {
   /// Whether this style is a floating action button (Fab) variant.
   ///
   /// Fab variants differ from their base style only in layout—they are always
   /// square and icon-only, rendered at [kLayrzButtonHeight] × [kLayrzButtonHeight].
-  bool get isFab =>
-      this == LayrzButtonStyle.filledFab ||
-      this == LayrzButtonStyle.elevatedFab ||
-      this == LayrzButtonStyle.filledTonalFab ||
-      this == LayrzButtonStyle.outlinedFab ||
-      this == LayrzButtonStyle.outlinedTonalFab;
+  bool get isFab => switch (this) {
+    filledFab || elevatedFab || filledTonalFab || outlinedFab || outlinedTonalFab => true,
+    _ => false,
+  };
 
   /// Whether this style uses a tonal (semi-transparent) background fill.
   ///
   /// Tonal styles reduce visual weight by applying opacity to the accent color
   /// background rather than using a fully opaque color.
-  bool get isTonal =>
-      this == LayrzButtonStyle.filledTonal ||
-      this == LayrzButtonStyle.filledTonalFab ||
-      this == LayrzButtonStyle.outlinedTonal ||
-      this == LayrzButtonStyle.outlinedTonalFab;
+  bool get isTonal => switch (this) {
+    filledTonal || filledTonalFab || outlinedTonal || outlinedTonalFab => true,
+    _ => false,
+  };
 
   /// Whether this style renders a visible border.
   ///
   /// Bordered styles use the accent color and help define the button's edges
   /// when fill is minimal or absent.
-  bool get hasBorder =>
-      this == LayrzButtonStyle.outlined ||
-      this == LayrzButtonStyle.outlinedFab ||
-      this == LayrzButtonStyle.outlinedTonal ||
-      this == LayrzButtonStyle.outlinedTonalFab;
+  bool get hasBorder => switch (this) {
+    outlined || outlinedFab || outlinedTonal || outlinedTonalFab => true,
+    _ => false,
+  };
 
   /// Whether this style includes an elevation shadow.
   ///
   /// Shadowed styles use [LayrzTokens.shadow.elevation1] to create visual depth.
-  bool get hasShadow => this == LayrzButtonStyle.elevated || this == LayrzButtonStyle.elevatedFab;
+  bool get hasShadow => switch (this) {
+    elevated || elevatedFab => true,
+    _ => false,
+  };
 }
