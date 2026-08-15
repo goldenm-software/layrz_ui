@@ -84,36 +84,41 @@ void main() {
       expect(tapCount, equals(0));
     });
 
-    testWidgets('supports isLoading parameter', (tester) async {
-      final loading = ValueNotifier<bool>(true);
+    testWidgets('supports controller parameter', (tester) async {
+      final controller = LayrzButtonController();
 
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
-          isLoading: loading,
+          controller: controller,
         ),
       );
 
       await tester.pump();
       expect(find.byType(LayrzButton), findsOneWidget);
+
+      controller.dispose();
     });
 
-    testWidgets('supports isCooldown parameter', (tester) async {
-      final cooldown = ValueNotifier<Duration?>(const Duration(seconds: 5));
+    testWidgets('controller with cooldown works in factory', (tester) async {
+      final controller = LayrzButtonController();
 
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
-          isCooldown: cooldown,
+          controller: controller,
         ),
       );
 
+      controller.startCooldown(const Duration(seconds: 5));
       await tester.pump();
       expect(find.byType(LayrzButton), findsOneWidget);
+
+      controller.dispose();
     });
   });
 

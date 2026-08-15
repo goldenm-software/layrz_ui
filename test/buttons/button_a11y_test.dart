@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/buttons/buttons.dart';
+import 'package:layrz_ui/constants/constants.dart';
 
 import '../helpers/pump_themed.dart';
 
@@ -54,57 +55,63 @@ void main() {
         expect(tapped, isFalse);
       });
 
-      testWidgets('button is not tappable when isLoading: true', (tester) async {
-        final loading = ValueNotifier<bool>(true);
+      testWidgets('button is not tappable when controller.isLoading', (tester) async {
+        final controller = LayrzButtonController();
         var tapped = false;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Loading',
-            isLoading: loading,
+            controller: controller,
             onTap: () {
               tapped = true;
             },
           ),
         );
 
+        controller.startLoading();
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
         expect(tapped, isFalse);
+
+        controller.dispose();
       });
 
-      testWidgets('button is not tappable when isCooldown: true', (tester) async {
-        final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
+      testWidgets('button is not tappable when controller.cooldownTotal', (tester) async {
+        final controller = LayrzButtonController();
         var tapped = false;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Cooldown',
-            isCooldown: cooldown,
+            controller: controller,
             onTap: () {
               tapped = true;
             },
           ),
         );
 
+        controller.startCooldown(const Duration(seconds: 10));
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
         expect(tapped, isFalse);
+
+        controller.dispose();
       });
 
-      testWidgets('tappability reflects isLoading changes', (tester) async {
-        final loading = ValueNotifier<bool>(false);
+      testWidgets('tappability reflects loading changes', (tester) async {
+        final controller = LayrzButtonController();
         var tappedCount = 0;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Toggle',
-            isLoading: loading,
+            controller: controller,
             onTap: () {
               tappedCount++;
             },
@@ -114,28 +121,31 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         expect(tappedCount, equals(1));
 
-        loading.value = true;
+        controller.startLoading();
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
         expect(tappedCount, equals(1));
 
-        loading.value = false;
-        await tester.pump();
+        controller.stopLoading();
+        // Wait for the anti-flash floor to complete.
+        await tester.pump(kLayrzButtonMinBusyDuration + const Duration(milliseconds: 20));
 
         await tester.tap(find.byType(LayrzButton));
         expect(tappedCount, equals(2));
+
+        controller.dispose();
       });
 
-      testWidgets('tappability reflects isCooldown changes', (tester) async {
-        final cooldown = ValueNotifier<Duration?>(null);
+      testWidgets('tappability reflects cooldown changes', (tester) async {
+        final controller = LayrzButtonController();
         var tappedCount = 0;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Toggle',
-            isCooldown: cooldown,
+            controller: controller,
             onTap: () {
               tappedCount++;
             },
@@ -145,17 +155,20 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         expect(tappedCount, equals(1));
 
-        cooldown.value = Duration(seconds: 10);
+        controller.startCooldown(const Duration(seconds: 10));
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
         expect(tappedCount, equals(1));
 
-        cooldown.value = null;
-        await tester.pump();
+        controller.clearCooldown();
+        // Wait for the anti-flash floor to complete
+        await tester.pump(kLayrzButtonMinBusyDuration + const Duration(milliseconds: 20));
 
         await tester.tap(find.byType(LayrzButton));
         expect(tappedCount, equals(2));
+
+        controller.dispose();
       });
     });
 
@@ -257,22 +270,23 @@ void main() {
         }
       });
 
-      testWidgets('button is disabled when isLoading is true (verified via tappability + semantics)', (tester) async {
+      testWidgets('button is disabled when loading (verified via tappability + semantics)', (tester) async {
         final handle = tester.ensureSemantics();
         try {
-          final loading = ValueNotifier<bool>(true);
+          final controller = LayrzButtonController();
           var tapped = false;
           await pumpThemed(
             tester,
             LayrzButton(
               labelText: 'Loading Button',
-              isLoading: loading,
+              controller: controller,
               onTap: () {
                 tapped = true;
               },
             ),
           );
 
+          controller.startLoading();
           // Don't use pumpAndSettle on loading buttons — the animation is infinite
           await tester.pump(const Duration(milliseconds: 100));
 
@@ -283,27 +297,30 @@ void main() {
           // Verify button does not respond to taps while loading
           await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
           expect(tapped, isFalse);
+
+          controller.dispose();
         } finally {
           handle.dispose();
         }
       });
 
-      testWidgets('button is disabled when isCooldown is true (verified via tappability + semantics)', (tester) async {
+      testWidgets('button is disabled when in cooldown (verified via tappability + semantics)', (tester) async {
         final handle = tester.ensureSemantics();
         try {
-          final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
+          final controller = LayrzButtonController();
           var tapped = false;
           await pumpThemed(
             tester,
             LayrzButton(
               labelText: 'Cooldown Button',
-              isCooldown: cooldown,
+              controller: controller,
               onTap: () {
                 tapped = true;
               },
             ),
           );
 
+          controller.startCooldown(const Duration(seconds: 10));
           // Don't use pumpAndSettle on cooldown buttons — the animation is infinite
           await tester.pump(const Duration(milliseconds: 100));
 
@@ -314,6 +331,8 @@ void main() {
           // Verify button does not respond to taps during cooldown
           await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
           expect(tapped, isFalse);
+
+          controller.dispose();
         } finally {
           handle.dispose();
         }
@@ -374,14 +393,14 @@ void main() {
       testWidgets('button semantics remain correct across loading transition', (tester) async {
         final handle = tester.ensureSemantics();
         try {
-          final loading = ValueNotifier<bool>(false);
+          final controller = LayrzButtonController();
           var tappedCount = 0;
 
           await pumpThemed(
             tester,
             LayrzButton(
               labelText: 'Toggle Loading',
-              isLoading: loading,
+              controller: controller,
               onTap: () {
                 tappedCount++;
               },
@@ -396,7 +415,7 @@ void main() {
           expect(tappedCount, equals(1));
 
           // Start loading — button is disabled and does not respond to taps
-          loading.value = true;
+          controller.startLoading();
           await tester.pump(const Duration(milliseconds: 100));
 
           buttonSemantics = tester.getSemantics(find.byType(LayrzButton));
@@ -406,14 +425,17 @@ void main() {
           expect(tappedCount, equals(1)); // Should not have incremented
 
           // Stop loading — button is enabled again and responds to taps
-          loading.value = false;
-          await tester.pump();
+          controller.stopLoading();
+          // Wait for the anti-flash floor to complete
+          await tester.pump(kLayrzButtonMinBusyDuration + const Duration(milliseconds: 20));
 
           buttonSemantics = tester.getSemantics(find.byType(LayrzButton));
           expect(buttonSemantics.label, contains('Toggle Loading'));
 
           await tester.tap(find.byType(LayrzButton));
           expect(tappedCount, equals(2));
+
+          controller.dispose();
         } finally {
           handle.dispose();
         }

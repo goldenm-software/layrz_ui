@@ -255,51 +255,34 @@ void main() {
       });
     });
 
-    group('Loading state', () {
-      testWidgets('isLoading: null renders normally without indicator', (tester) async {
+    group('Controller-based busy states', () {
+      testWidgets('controller: null renders normally without indicator', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
-            labelText: 'No Loading',
-            isLoading: null,
+            labelText: 'No Controller',
+            controller: null,
             onTap: () {},
           ),
         );
 
         expect(find.byType(LayrzButton), findsOneWidget);
-        // No loading indicator should be present.
-        // We can't directly check for the absence of _LayrzButtonIndicator,
-        // but we can verify the button renders normally.
       });
 
-      testWidgets('isLoading: false renders normally without indicator', (tester) async {
-        final loading = ValueNotifier<bool>(false);
-
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'Not Loading',
-            isLoading: loading,
-            onTap: () {},
-          ),
-        );
-
-        expect(findButtonLabel('Not Loading'), findsOneWidget);
-      });
-
-      testWidgets('isLoading: true shows indicator and suppresses tap', (tester) async {
-        final loading = ValueNotifier<bool>(true);
+      testWidgets('controller.startLoading shows indicator and suppresses tap', (tester) async {
+        final controller = LayrzButtonController();
         int tapCount = 0;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Loading Button',
-            isLoading: loading,
+            controller: controller,
             onTap: () => tapCount++,
           ),
         );
 
+        controller.startLoading();
         await tester.pump();
 
         // Try to tap while loading.
@@ -307,115 +290,182 @@ void main() {
         await tester.pump();
 
         expect(tapCount, equals(0), reason: 'Tap should be suppressed during loading');
+
+        controller.dispose();
       });
 
-      testWidgets('isLoading transitions from false to true to false', (tester) async {
-        final loading = ValueNotifier<bool>(false);
+      testWidgets('controller.stopLoading ends loading with anti-flash floor', (tester) async {
+        final controller = LayrzButtonController();
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Toggle Loading',
-            isLoading: loading,
+            controller: controller,
             onTap: () {},
           ),
         );
 
-        // Initially not loading.
+        // Start loading
+        controller.startLoading();
         await tester.pump();
-        expect(findButtonLabel('Toggle Loading'), findsOneWidget);
-
-        // Change to loading. When loading, the indicator appears,
-        // but the label should still be present (hidden under the indicator).
-        loading.value = true;
-        await tester.pump();
-        expect(find.byType(LayrzButton), findsOneWidget, reason: 'Button should still be mounted while loading');
-
-        // Change back to not loading.
-        loading.value = false;
-        await tester.pump();
-        expect(findButtonLabel('Toggle Loading'), findsOneWidget);
-      });
-    });
-
-    group('Cooldown state', () {
-      testWidgets('isCooldown: null renders normally without indicator', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'No Cooldown',
-            isCooldown: null,
-            onTap: () {},
-          ),
-        );
-
         expect(find.byType(LayrzButton), findsOneWidget);
+
+        // Stop loading
+        controller.stopLoading();
+        await tester.pump();
+        // Button should still be in busy state due to anti-flash floor
+        expect(find.byType(LayrzButton), findsOneWidget);
+
+        controller.dispose();
       });
 
-      testWidgets('isCooldown: null (via notifier) renders normally without indicator', (tester) async {
-        final cooldown = ValueNotifier<Duration?>(null);
-
-        await pumpThemed(
-          tester,
-          LayrzButton(
-            labelText: 'Not Cooling',
-            isCooldown: cooldown,
-            onTap: () {},
-          ),
-        );
-
-        expect(findButtonLabel('Not Cooling'), findsOneWidget);
-      });
-
-      testWidgets('isCooldown: Duration shows indicator and suppresses tap during countdown', (tester) async {
-        final cooldown = ValueNotifier<Duration?>(const Duration(seconds: 5));
+      testWidgets('controller.startCooldown shows indicator and suppresses tap', (tester) async {
+        final controller = LayrzButtonController();
         int tapCount = 0;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Cooldown Button',
-            isCooldown: cooldown,
+            controller: controller,
             onTap: () => tapCount++,
           ),
         );
 
+        controller.startCooldown(const Duration(seconds: 5));
         await tester.pump();
 
+        // Try to tap while in cooldown.
         await tester.tap(find.byType(LayrzButton));
         await tester.pump();
 
         expect(tapCount, equals(0), reason: 'Tap should be suppressed during cooldown');
+
+        controller.dispose();
       });
 
-      testWidgets('isCooldown: Duration transitions through countdown and post-countdown states', (tester) async {
-        final cooldown = ValueNotifier<Duration?>(null);
+      testWidgets('controller.clearCooldown ends cooldown', (tester) async {
+        final controller = LayrzButtonController();
+        int tapCount = 0;
 
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Toggle Cooldown',
-            isCooldown: cooldown,
-            onTap: () {},
+            controller: controller,
+            onTap: () => tapCount++,
           ),
         );
 
+        // Start cooldown
+        controller.startCooldown(const Duration(seconds: 5));
         await tester.pump();
-        expect(findButtonLabel('Toggle Cooldown'), findsOneWidget);
-
-        // Start cooldown with 2-second duration. Button should be present during cooldown.
-        cooldown.value = const Duration(seconds: 2);
-        await tester.pump();
-        expect(find.byType(LayrzButton), findsOneWidget, reason: 'Button should be mounted during cooldown');
-
-        // Advance time through the countdown (1 second)
-        await tester.pump(const Duration(seconds: 1));
-        expect(find.byType(LayrzButton), findsOneWidget, reason: 'Button should still be mounted during cooldown');
 
         // Clear cooldown
-        cooldown.value = null;
+        controller.clearCooldown();
         await tester.pump();
-        expect(findButtonLabel('Toggle Cooldown'), findsOneWidget);
+
+        // Button should be tappable again
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pump();
+
+        expect(tapCount, equals(1), reason: 'Tap should work after cooldown cleared');
+
+        controller.dispose();
+      });
+    });
+
+    group('Multiple buttons sharing one controller', () {
+      testWidgets('two buttons sharing controller both go busy together', (tester) async {
+        final controller = LayrzButtonController();
+        int tap1Count = 0;
+        int tap2Count = 0;
+
+        await pumpThemed(
+          tester,
+          Column(
+            children: [
+              LayrzButton(
+                labelText: 'Button 1',
+                controller: controller,
+                onTap: () => tap1Count++,
+              ),
+              LayrzButton(
+                labelText: 'Button 2',
+                controller: controller,
+                onTap: () => tap2Count++,
+              ),
+            ],
+          ),
+        );
+
+        // Both buttons should be tappable initially
+        await tester.tap(find.byType(LayrzButton).first);
+        await tester.pump();
+        expect(tap1Count, equals(1));
+
+        // Start loading on controller
+        controller.startLoading();
+        await tester.pump();
+
+        // Both buttons should be disabled now
+        await tester.tap(find.byType(LayrzButton).at(0));
+        await tester.tap(find.byType(LayrzButton).at(1));
+        await tester.pump();
+
+        expect(tap1Count, equals(1), reason: 'Button 1 should still be disabled');
+        expect(tap2Count, equals(0), reason: 'Button 2 should be disabled');
+
+        controller.dispose();
+      });
+
+      testWidgets('both buttons re-enable together when controller clears cooldown', (tester) async {
+        final controller = LayrzButtonController();
+        int tap1Count = 0;
+        int tap2Count = 0;
+
+        await pumpThemed(
+          tester,
+          Column(
+            children: [
+              LayrzButton(
+                labelText: 'Button 1',
+                controller: controller,
+                onTap: () => tap1Count++,
+              ),
+              LayrzButton(
+                labelText: 'Button 2',
+                controller: controller,
+                onTap: () => tap2Count++,
+              ),
+            ],
+          ),
+        );
+
+        // Start cooldown
+        controller.startCooldown(const Duration(seconds: 5));
+        await tester.pump();
+
+        // Both disabled
+        await tester.tap(find.byType(LayrzButton).at(0));
+        await tester.tap(find.byType(LayrzButton).at(1));
+        await tester.pump();
+        expect(tap1Count, equals(0));
+        expect(tap2Count, equals(0));
+
+        // Clear cooldown
+        controller.clearCooldown();
+        await tester.pump();
+
+        // Both should be enabled again
+        await tester.tap(find.byType(LayrzButton).at(0));
+        await tester.tap(find.byType(LayrzButton).at(1));
+        await tester.pump();
+        expect(tap1Count, equals(1));
+        expect(tap2Count, equals(1));
+
+        controller.dispose();
       });
     });
 
@@ -769,7 +819,7 @@ void main() {
       });
 
       testWidgets('regression: loading indicator in unbounded Row does not throw', (tester) async {
-        final isLoading = ValueNotifier<bool>(true);
+        final controller = LayrzButtonController();
 
         await pumpThemed(
           tester,
@@ -777,12 +827,14 @@ void main() {
             children: [
               LayrzButton(
                 labelText: 'Loading in Row',
-                isLoading: isLoading,
+                controller: controller,
                 onTap: () {},
               ),
             ],
           ),
         );
+
+        controller.startLoading();
 
         // Use pump() not pumpAndSettle() because the indicator animates forever.
         await tester.pump(const Duration(milliseconds: 100));
@@ -793,10 +845,12 @@ void main() {
           isNull,
           reason: 'Loading button should layout in unbounded context without exception',
         );
+
+        controller.dispose();
       });
 
       testWidgets('regression: cooldown indicator in unbounded Row does not throw', (tester) async {
-        final isCooldown = ValueNotifier<Duration?>(const Duration(seconds: 5));
+        final controller = LayrzButtonController();
 
         await pumpThemed(
           tester,
@@ -804,12 +858,14 @@ void main() {
             children: [
               LayrzButton(
                 labelText: 'Cooldown in Row',
-                isCooldown: isCooldown,
+                controller: controller,
                 onTap: () {},
               ),
             ],
           ),
         );
+
+        controller.startCooldown(const Duration(seconds: 5));
 
         // Use pump() not pumpAndSettle() because the indicator animates forever.
         await tester.pump(const Duration(milliseconds: 100));
@@ -820,6 +876,8 @@ void main() {
           isNull,
           reason: 'Cooldown button should layout in unbounded context without exception',
         );
+
+        controller.dispose();
       });
 
       testWidgets('regression: very long label in constrained parent clamps to width '
