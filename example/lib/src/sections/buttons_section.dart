@@ -507,18 +507,15 @@ class _TooltipDemo extends StatelessWidget {
           runSpacing: tokens.spacing.sp12,
           children: [
             LayrzButton(
-              labelText: 'Hover me',
+              labelText: 'With tooltip',
               icon: LayrzIcons.solarOutlineQuestionSquare,
               onTap: () {},
-              hintText: 'This is a helpful tooltip',
-              tooltipEnabled: true,
+              hintText: 'This is a helpful hint',
             ),
             LayrzButton(
               labelText: 'No tooltip',
               icon: LayrzIcons.solarOutlineCloseSquare,
               onTap: () {},
-              hintText: 'This text is ignored',
-              tooltipEnabled: false,
             ),
           ],
         ),
