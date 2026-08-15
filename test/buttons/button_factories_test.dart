@@ -22,26 +22,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses filledTonal style', (tester) async {
+    testWidgets('isFab: false uses filledTonal style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Save'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses filledTonalFab style', (tester) async {
+    testWidgets('isFab: true uses filledTonalFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 
@@ -130,26 +130,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses outlined style', (tester) async {
+    testWidgets('isFab: false uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Cancel'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses outlinedFab style', (tester) async {
+    testWidgets('isFab: true uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 
@@ -186,26 +186,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses filledTonal style', (tester) async {
+    testWidgets('isFab: false uses filledTonal style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Info'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses filledTonalFab style', (tester) async {
+    testWidgets('isFab: true uses filledTonalFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 
@@ -242,26 +242,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses filledTonal style', (tester) async {
+    testWidgets('isFab: false uses filledTonal style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Show'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses filledTonalFab style', (tester) async {
+    testWidgets('isFab: true uses filledTonalFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 
@@ -298,26 +298,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses filledTonal style', (tester) async {
+    testWidgets('isFab: false uses filledTonal style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Edit'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses filledTonalFab style', (tester) async {
+    testWidgets('isFab: true uses filledTonalFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 
@@ -354,26 +354,26 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
     });
 
-    testWidgets('isMobile: false uses filledTonal style', (tester) async {
+    testWidgets('isFab: false uses filledTonal style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
-          isMobile: false,
+          isFab: false,
         ),
       );
 
       expect(find.text('Delete'), findsOneWidget);
     });
 
-    testWidgets('isMobile: true uses filledTonalFab style', (tester) async {
+    testWidgets('isFab: true uses filledTonalFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
-          isMobile: true,
+          isFab: true,
         ),
       );
 

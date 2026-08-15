@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/buttons/buttons.dart';
+import 'package:layrz_ui/constants/constants.dart';
 
 import '../helpers/pump_themed.dart';
 
@@ -64,10 +65,12 @@ void main() {
       testWidgets('long labelText ellipsises instead of overflowing', (tester) async {
         await pumpThemed(
           tester,
-          LayrzButton(
-            labelText: 'This is a very long button label that should ellipsize',
+          SizedBox(
             width: 100,
-            onTap: () {},
+            child: LayrzButton(
+              labelText: 'This is a very long button label that should ellipsize',
+              onTap: () {},
+            ),
           ),
         );
 
@@ -641,6 +644,266 @@ void main() {
 
         // Non-Fab without hintText should not mount RawTooltip, even with tooltipEnabled: true
         expect(find.byType(RawTooltip), findsNothing);
+      });
+    });
+
+    group('Layout regression tests', () {
+      testWidgets('regression: non-Fab button in unbounded Row does not throw '
+          'BoxConstraints assertion', (tester) async {
+        await pumpThemed(
+          tester,
+          Row(
+            children: [
+              LayrzButton(
+                labelText: 'Row Button',
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Row Button'), findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Button should layout correctly in unbounded Row without throwing',
+        );
+      });
+
+      testWidgets('regression: Fab button in unbounded Row does not throw '
+          'BoxConstraints assertion', (tester) async {
+        await pumpThemed(
+          tester,
+          Row(
+            children: [
+              LayrzButton(
+                labelText: 'Row Fab',
+                style: LayrzButtonStyle.filledTonalFab,
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.byType(LayrzButton), findsOneWidget);
+        expect(tester.takeException(), isNull, reason: 'Fab should layout correctly in unbounded Row without throwing');
+      });
+
+      testWidgets('regression: button in Wrap does not throw', (tester) async {
+        await pumpThemed(
+          tester,
+          Wrap(
+            children: [
+              LayrzButton(
+                labelText: 'Wrap Button',
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        await tester.pump();
+
+        expect(find.text('Wrap Button'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('regression: button with icon is wider than button without icon', (tester) async {
+        // Verify width calculation by comparing buttons with and without icons.
+        // Icon size directly affects computed width in the measurement function.
+        await pumpThemed(
+          tester,
+          Row(
+            children: [
+              LayrzButton(
+                labelText: 'OK',
+                onTap: () {},
+              ),
+              LayrzButton(
+                labelText: 'OK',
+                icon: LayrzIcons.solarOutlineCheckCircle,
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        await tester.pump();
+
+        final buttons = find.byType(LayrzButton);
+        final buttonWithoutIcon = tester.getSize(buttons.at(0));
+        final buttonWithIcon = tester.getSize(buttons.at(1));
+
+        expect(
+          buttonWithIcon.width,
+          greaterThan(buttonWithoutIcon.width),
+          reason: 'Button with icon should be wider due to icon + separator in width calculation',
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('regression: Fab button is square (width == height)', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Fab Square',
+            style: LayrzButtonStyle.filledTonalFab,
+            onTap: () {},
+          ),
+        );
+
+        await tester.pump();
+
+        final fabSize = tester.getSize(find.byType(LayrzButton));
+        expect(
+          fabSize.width,
+          closeTo(kLayrzButtonHeight, 1.0),
+          reason: 'Fab button width should equal standard button height',
+        );
+        expect(
+          fabSize.height,
+          closeTo(kLayrzButtonHeight, 1.0),
+          reason: 'Fab button height should equal standard button height',
+        );
+        expect(
+          fabSize.width,
+          equals(fabSize.height),
+          reason: 'Fab button should be square',
+        );
+      });
+
+      testWidgets('regression: loading indicator in unbounded Row does not throw', (tester) async {
+        final isLoading = ValueNotifier<bool>(true);
+
+        await pumpThemed(
+          tester,
+          Row(
+            children: [
+              LayrzButton(
+                labelText: 'Loading in Row',
+                isLoading: isLoading,
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        // Use pump() not pumpAndSettle() because the indicator animates forever.
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Loading in Row'), findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Loading button should layout in unbounded context without exception',
+        );
+      });
+
+      testWidgets('regression: cooldown indicator in unbounded Row does not throw', (tester) async {
+        final isCooldown = ValueNotifier<bool>(true);
+
+        await pumpThemed(
+          tester,
+          Row(
+            children: [
+              LayrzButton(
+                labelText: 'Cooldown in Row',
+                isCooldown: isCooldown,
+                onTap: () {},
+              ),
+            ],
+          ),
+        );
+
+        // Use pump() not pumpAndSettle() because the indicator animates forever.
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Cooldown in Row'), findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Cooldown button should layout in unbounded context without exception',
+        );
+      });
+
+      testWidgets('regression: very long label in constrained parent clamps to width '
+          'and ellipsises with no overflow', (tester) async {
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 200,
+            child: LayrzButton(
+              labelText:
+                  'This is an extremely long button label that should definitely '
+                  'exceed the parent width and get clamped and ellipsised',
+              onTap: () {},
+            ),
+          ),
+        );
+
+        await tester.pump();
+
+        final buttonSize = tester.getSize(find.byType(LayrzButton));
+        expect(buttonSize.width, closeTo(200.0, 1.0), reason: 'Button width should be clamped to parent width');
+        expect(tester.takeException(), isNull, reason: 'No overflow exception should be thrown');
+      });
+
+      testWidgets('regression: width consistent between default and hovered states (D15)', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Test Width Consistency',
+            onTap: () {},
+          ),
+        );
+
+        await tester.pump();
+        final defaultSize = tester.getSize(find.byType(LayrzButton));
+
+        // Simulate hover.
+        final buttonCenter = tester.getCenter(find.byType(LayrzButton));
+        await tester.startGesture(buttonCenter);
+        await tester.pump();
+
+        final hoveredSize = tester.getSize(find.byType(LayrzButton));
+
+        expect(
+          hoveredSize.width,
+          closeTo(defaultSize.width, 0.1),
+          reason: 'Width should not change between default and hovered states (D15)',
+        );
+      });
+
+      testWidgets('regression: width consistent between default and pressed states (D15)', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Test Width Stability',
+            onTap: () {},
+          ),
+        );
+
+        await tester.pump();
+        final defaultSize = tester.getSize(find.byType(LayrzButton));
+
+        // Simulate press.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        final pressedSize = tester.getSize(find.byType(LayrzButton));
+
+        expect(
+          pressedSize.width,
+          closeTo(defaultSize.width, 0.1),
+          reason: 'Width should not change between default and pressed states (D15)',
+        );
+
+        await gesture.up();
+        await tester.pump();
       });
     });
   });

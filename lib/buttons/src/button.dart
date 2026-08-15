@@ -9,9 +9,7 @@ import 'button_content.dart';
 import 'button_indicator.dart';
 import 'button_style.dart';
 import 'button_style_spec.dart';
-
-/// Semantic button marker enum for internal style resolution.
-enum _LayrzButtonSemantic { save, cancel, info, show, edit, delete }
+import 'button_type.dart';
 
 /// A Material-free button widget in the layrz_ui design system.
 ///
@@ -49,7 +47,17 @@ class LayrzButton extends StatefulWidget {
   /// Cooldown carries no duration information — there is no countdown text.
   final ValueListenable<bool>? isCooldown;
 
-  /// The accent color for the button. Defaults to primary brand color if not set.
+  /// The semantic type of the button — determines which token color to use.
+  ///
+  /// When [type] is [LayrzButtonType.custom], the [color] parameter is honoured.
+  /// For any other type, [color] must be null (enforced by assertion).
+  final LayrzButtonType type;
+
+  /// The accent color for the button.
+  ///
+  /// Only applied when [type] is [LayrzButtonType.custom].
+  /// Defaults to primary brand color if both [type] is custom and [color] is null.
+  /// Must be null for any other [type].
   final Color? color;
 
   /// The visual style of the button.
@@ -67,33 +75,21 @@ class LayrzButton extends StatefulWidget {
   /// Fab buttons ignore this flag and always render the tooltip.
   final bool tooltipEnabled;
 
-  /// The height of the button in logical pixels.
-  ///
-  /// Non-Fab buttons use this as their height; Fab buttons use it as their width
-  /// and height (square).
-  final double height;
-
-  /// The width of the button in logical pixels.
-  ///
-  /// When `null`, the button shrink-wraps to its content. Fab buttons ignore this.
-  final double? width;
-
-  /// The size of the icon in logical pixels.
-  final double iconSize;
-
-  /// The spacing between icon and label when both are present.
-  final double iconSeparatorSize;
-
-  /// The font size of the label text.
-  final double fontSize;
-
-  /// Internal semantic marker (null for public constructor, set by factories).
-  final _LayrzButtonSemantic? _semantic;
-
   /// Creates a new [LayrzButton] with the given properties.
   ///
-  /// The button accent color defaults to [LayrzTokens.colors.primary].
-  /// Use the semantic factories (`.save()`, `.cancel()`, etc.) for semantic colors.
+  /// The button accent color is determined by [type]:
+  /// - For [LayrzButtonType.custom], uses the explicit [color] parameter (or primary if null)
+  /// - For any other type, resolves to the corresponding semantic token color
+  ///
+  /// The [color] parameter is only used when [type] is [LayrzButtonType.custom];
+  /// passing a color with any other type triggers an assertion error.
+  ///
+  /// Button sizing is fixed and not caller-configurable: height, width, icon size,
+  /// and spacing all use design system constants. Buttons can be constrained by their
+  /// parent (e.g. `SizedBox(width: 120)`) and will clamp to that constraint,
+  /// but the intrinsic sizing is standardised.
+  ///
+  /// Use the semantic factories (`.save()`, `.cancel()`, etc.) for convenience.
   const LayrzButton({
     super.key,
     required this.labelText,
@@ -102,52 +98,32 @@ class LayrzButton extends StatefulWidget {
     this.isDisabled = false,
     this.isLoading,
     this.isCooldown,
+    this.type = LayrzButtonType.custom,
     this.color,
     this.style = LayrzButtonStyle.filledTonal,
     this.hintText,
     this.tooltipEnabled = true,
-    this.height = kLayrzButtonHeight,
-    this.width,
-    this.iconSize = kLayrzButtonIconSize,
-    this.iconSeparatorSize = kLayrzButtonIconSeparator,
-    this.fontSize = kLayrzButtonFontSize,
-  }) : _semantic = null;
-
-  /// Internal constructor for semantic factories.
-  // ignore_for_file: prefer_initializing_formals
-  const LayrzButton._semantic({
-    super.key,
-    required this.labelText,
-    this.icon,
-    this.onTap,
-    this.isDisabled = false,
-    this.isLoading,
-    this.isCooldown,
-    this.style = LayrzButtonStyle.filledTonal,
-    this.hintText,
-    this.tooltipEnabled = true,
-    required _LayrzButtonSemantic semantic,
-  }) : _semantic = semantic,
-       color = null,
-       height = kLayrzButtonHeight,
-       width = null,
-       iconSize = kLayrzButtonIconSize,
-       iconSeparatorSize = kLayrzButtonIconSeparator,
-       fontSize = kLayrzButtonFontSize;
+  }) : assert(
+         type == LayrzButtonType.custom || color == null,
+         'color is only applied when type is LayrzButtonType.custom.',
+       );
 
   /// Creates a save button with success accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.save({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlineInboxIn,
@@ -155,26 +131,29 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.save,
+      type: LayrzButtonType.success,
+      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
   /// Creates a cancel button with danger accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [outlined]; when `true`, as [outlinedFab].
+  /// When [isFab] is `false`, renders as [outlined]; when `true`, as [outlinedFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.cancel({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlineCloseSquare,
@@ -182,26 +161,29 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.cancel,
+      type: LayrzButtonType.danger,
+      style: isFab ? LayrzButtonStyle.outlinedFab : LayrzButtonStyle.outlined,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
   /// Creates an info button with info accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.info({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlineInfoSquare,
@@ -209,26 +191,29 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.info,
+      type: LayrzButtonType.info,
+      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
   /// Creates a show button with info accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.show({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlineEyeScan,
@@ -236,26 +221,29 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.show,
+      type: LayrzButtonType.info,
+      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
   /// Creates an edit button with warning accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.edit({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlinePenNewSquare,
@@ -263,26 +251,29 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.edit,
+      type: LayrzButtonType.warning,
+      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
   /// Creates a delete button with danger accent and optional Fab layout.
   ///
-  /// When [isMobile] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// When [isFab] is `false`, renders as [filledTonal]; when `true`, as [filledTonalFab].
+  /// This is a layout choice that applies on any platform — not a platform check.
+  ///
+  /// Sizing is standardised and not configurable.
   factory LayrzButton.delete({
     required String labelText,
     required VoidCallback onTap,
-    bool isMobile = false,
+    bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
     ValueListenable<bool>? isCooldown,
     Key? key,
   }) {
-    return LayrzButton._semantic(
+    return LayrzButton(
       key: key,
       labelText: labelText,
       icon: LayrzIcons.solarOutlineTrashBinMinimalisticN2,
@@ -290,10 +281,10 @@ class LayrzButton extends StatefulWidget {
       isDisabled: isDisabled,
       isLoading: isLoading,
       isCooldown: isCooldown,
-      style: isMobile ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
-      tooltipEnabled: !isMobile,
-      hintText: isMobile ? null : labelText,
-      semantic: _LayrzButtonSemantic.delete,
+      type: LayrzButtonType.danger,
+      style: isFab ? LayrzButtonStyle.filledTonalFab : LayrzButtonStyle.filledTonal,
+      tooltipEnabled: !isFab,
+      hintText: isFab ? null : labelText,
     );
   }
 
@@ -348,31 +339,40 @@ class _LayrzButtonState extends State<LayrzButton> {
     setState(() {});
   }
 
+  /// Whether the button is disabled for interaction purposes.
+  ///
+  /// This includes actual disable states (onTap == null, isDisabled)
+  /// and transient busy states (isLoading, isCooldown).
+  /// Used to suppress taps, set cursor, and control semantics.enabled.
   bool get _effectivelyDisabled =>
       widget.onTap == null ||
       widget.isDisabled ||
       (widget.isLoading?.value ?? false) ||
       (widget.isCooldown?.value ?? false);
 
-  /// Resolves the accent color from explicit color parameter or semantic marker.
-  Color _resolveAccent(LayrzTokens tokens) {
-    // Explicit color always wins.
-    if (widget.color != null) return widget.color!;
+  /// Whether the button is disabled for visual/styling purposes.
+  ///
+  /// This excludes transient busy states (loading, cooldown).
+  /// Loading and cooldown buttons retain their normal style and only show
+  /// an indicator overlay; they do not render the disabled (greyed) spec.
+  /// Used to drive [WidgetState.disabled] in the style resolver.
+  bool get _visuallyDisabled => widget.onTap == null || widget.isDisabled;
 
-    // Resolve based on semantic marker (set by factories, null for public constructor).
-    switch (widget._semantic) {
-      case _LayrzButtonSemantic.save:
+  /// Resolves the accent color from the button's type and optional color override.
+  Color _resolveAccent(LayrzTokens tokens) {
+    switch (widget.type) {
+      case LayrzButtonType.success:
         return tokens.colors.success;
-      case _LayrzButtonSemantic.cancel:
-      case _LayrzButtonSemantic.delete:
-        return tokens.colors.danger;
-      case _LayrzButtonSemantic.info:
-      case _LayrzButtonSemantic.show:
+      case LayrzButtonType.info:
         return tokens.colors.info;
-      case _LayrzButtonSemantic.edit:
+      case LayrzButtonType.context:
+        return tokens.colors.contextual;
+      case LayrzButtonType.danger:
+        return tokens.colors.danger;
+      case LayrzButtonType.warning:
         return tokens.colors.warning;
-      case null:
-        return tokens.colors.primary;
+      case LayrzButtonType.custom:
+        return widget.color ?? tokens.colors.primary;
     }
   }
 
@@ -382,9 +382,9 @@ class _LayrzButtonState extends State<LayrzButton> {
     final accent = _resolveAccent(tokens);
 
     final states = _statesController.value;
-    if (_effectivelyDisabled && !states.contains(WidgetState.disabled)) {
+    if (_visuallyDisabled && !states.contains(WidgetState.disabled)) {
       _statesController.update(WidgetState.disabled, true);
-    } else if (!_effectivelyDisabled && states.contains(WidgetState.disabled)) {
+    } else if (!_visuallyDisabled && states.contains(WidgetState.disabled)) {
       _statesController.update(WidgetState.disabled, false);
     }
 
@@ -396,82 +396,82 @@ class _LayrzButtonState extends State<LayrzButton> {
     );
 
     final isFab = widget.style.isFab;
-    final buttonHeight = isFab ? widget.height : widget.height;
-    final buttonWidth = isFab ? widget.height : (widget.width ?? double.infinity);
 
     final isLoading = widget.isLoading?.value ?? false;
     final isCooldown = widget.isCooldown?.value ?? false;
 
-    final buttonContent = FocusableActionDetector(
-      onShowHoverHighlight: (show) {
-        _statesController.update(WidgetState.hovered, show);
-      },
-      onShowFocusHighlight: (show) {
-        _statesController.update(WidgetState.focused, show);
-      },
-      child: MouseRegion(
-        cursor: _effectivelyDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: _effectivelyDisabled ? null : widget.onTap,
-          onTapDown: (_) {
-            _statesController.update(WidgetState.pressed, true);
-          },
-          onTapUp: (_) {
-            _statesController.update(WidgetState.pressed, false);
-          },
-          onTapCancel: () {
-            _statesController.update(WidgetState.pressed, false);
-          },
-          child: AnimatedContainer(
-            duration: tokens.motion.dHover,
-            curve: tokens.motion.easing,
-            width: buttonWidth,
-            height: buttonHeight,
-            decoration: BoxDecoration(
-              color: spec.backgroundColor,
-              border: Border.all(
-                color: spec.borderColor,
-                width: spec.borderWidth,
-              ),
-              borderRadius: BorderRadius.circular(tokens.radius.base),
-              boxShadow: spec.shadows,
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Content layer (icon + label or Fab icon).
-                if (!isFab)
-                  buildButtonContent(
-                    labelText: widget.labelText,
-                    icon: widget.icon,
-                    iconSize: widget.iconSize,
-                    iconSeparatorSize: widget.iconSeparatorSize,
-                    fontSize: widget.fontSize,
-                    spec: spec,
-                    tokens: tokens,
-                  )
-                else
-                  buildFabContent(
-                    icon: widget.icon,
-                    iconSize: widget.iconSize,
-                    spec: spec,
-                  ),
+    final buttonContent = LayoutBuilder(
+      builder: (context, constraints) {
+        final buttonWidth = _computeButtonWidth(context, tokens, constraints);
 
-                // Indicator overlay (loading or cooldown).
-                if (isLoading || isCooldown)
-                  Positioned.fill(
-                    child: LayrzButtonIndicator(
-                      trackColor: (isLoading ? spec.contentColor : tokens.colors.fg3).withOpacityValue(0.2),
-                      indicatorColor: isLoading ? spec.contentColor : tokens.colors.fg3,
-                      borderRadius: tokens.radius.base,
-                      height: buttonHeight,
-                    ),
+        return FocusableActionDetector(
+          onShowHoverHighlight: (show) {
+            _statesController.update(WidgetState.hovered, show);
+          },
+          onShowFocusHighlight: (show) {
+            _statesController.update(WidgetState.focused, show);
+          },
+          child: MouseRegion(
+            cursor: _effectivelyDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _effectivelyDisabled ? null : widget.onTap,
+              onTapDown: (_) {
+                _statesController.update(WidgetState.pressed, true);
+              },
+              onTapUp: (_) {
+                _statesController.update(WidgetState.pressed, false);
+              },
+              onTapCancel: () {
+                _statesController.update(WidgetState.pressed, false);
+              },
+              child: AnimatedContainer(
+                duration: tokens.motion.dHover,
+                curve: tokens.motion.easing,
+                width: buttonWidth,
+                height: kLayrzButtonHeight,
+                decoration: BoxDecoration(
+                  color: spec.backgroundColor,
+                  border: Border.all(
+                    color: spec.borderColor,
+                    width: spec.borderWidth,
                   ),
-              ],
+                  borderRadius: BorderRadius.circular(tokens.radius.base),
+                  boxShadow: spec.shadows,
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Content layer (icon + label or Fab icon).
+                    if (!isFab)
+                      buildButtonContent(
+                        labelText: widget.labelText,
+                        icon: widget.icon,
+                        spec: spec,
+                        tokens: tokens,
+                      )
+                    else
+                      buildFabContent(
+                        icon: widget.icon,
+                        spec: spec,
+                      ),
+
+                    // Indicator overlay (loading or cooldown).
+                    if (isLoading || isCooldown)
+                      Positioned.fill(
+                        child: LayrzButtonIndicator(
+                          trackColor: spec.contentColor.withOpacityValue(0.2),
+                          indicatorColor: spec.contentColor,
+                          borderRadius: tokens.radius.base,
+                          height: kLayrzButtonHeight,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
 
     final wrappedContent = _shouldShowTooltip()
@@ -496,6 +496,83 @@ class _LayrzButtonState extends State<LayrzButton> {
       excludeSemantics: true,
       child: wrappedContent,
     );
+  }
+
+  /// Returns the exact [TextStyle] used to render the button label.
+  ///
+  /// This style is used by both [_measureLabelWidth] and [buildButtonContent]
+  /// to ensure consistency between measurement and rendering.
+  TextStyle _labelStyle(LayrzTokens tokens) {
+    return tokens.typography.labelLarge.copyWith(
+      fontSize: kLayrzButtonFontSize,
+    );
+  }
+
+  /// Measures the width of the label text using TextPainter.
+  ///
+  /// Returns the width in logical pixels, accounting for the given [style],
+  /// [fontSize], and the current context's text scaling.
+  double _measureLabelWidth(BuildContext context, LayrzTokens tokens) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: widget.labelText,
+        style: _labelStyle(tokens),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    return painter.width;
+  }
+
+  /// Computes the button width based on content and constraints.
+  ///
+  /// For Fab buttons: returns [kLayrzButtonHeight] (square).
+  ///
+  /// For non-Fab buttons: measures the label width and adds:
+  /// - Horizontal padding (left + right)
+  /// - Icon size + separator (if icon is present)
+  /// - Border widths
+  ///
+  /// The result is clamped to available constraints. When constraints are
+  /// unbounded, the full computed width is used. When bounded, it is clamped
+  /// to [maxWidth]. This allows callers to constrain the button via parent
+  /// (e.g. `SizedBox(width: 120)`) while still using intrinsic sizing by default.
+  double _computeButtonWidth(
+    BuildContext context,
+    LayrzTokens tokens,
+    BoxConstraints constraints,
+  ) {
+    final isFab = widget.style.isFab;
+
+    // Fab is always square.
+    if (isFab) return kLayrzButtonHeight;
+
+    // Compute width from content: padding + icon (if any) + label + border.
+    double computed = 0;
+
+    // Horizontal padding
+    computed += kLayrzButtonHorizontalPadding * 2;
+
+    // Icon and separator.
+    if (widget.icon != null) {
+      computed += kLayrzButtonIconSize + kLayrzButtonIconSeparator;
+    }
+
+    // Measured label width.
+    computed += _measureLabelWidth(context, tokens);
+
+    // Border width — all buttons have a Border.all() applied, regardless of color.
+    // The border always insets the child, so we must account for it in width computation.
+    computed += tokens.border.base * 2;
+
+    // Clamp to constraints. If maxWidth is infinite (unbounded context like Row/Wrap),
+    // use the full computed width. Otherwise, clamp to the available width.
+    if (constraints.maxWidth.isFinite) {
+      computed = computed.clamp(0, constraints.maxWidth);
+    }
+
+    return computed;
   }
 
   bool _shouldShowTooltip() {

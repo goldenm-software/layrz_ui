@@ -103,7 +103,7 @@ class LayrzButtonStyleSpec {
     if (isDisabled) {
       return LayrzButtonStyleSpec(
         backgroundColor: _disabledBackground(baseSpec, tokens),
-        borderColor: tokens.colors.fg3,
+        borderColor: style.hasBorder ? tokens.colors.fg3 : const Color(0x00000000),
         borderWidth: baseSpec.borderWidth,
         contentColor: tokens.colors.fg3,
         shadows: const [],
@@ -205,6 +205,7 @@ class LayrzButtonStyleSpec {
     // Pressed state uses ~16% lerp factor toward content.
     const lerpFactor = 0.16;
     const pressedTonalExtraOpacity = 0.2;
+    const plainOutlinedPressedOpacity = 0.16;
 
     var backgroundColor = baseSpec.backgroundColor;
     var contentColor = baseSpec.contentColor;
@@ -223,6 +224,9 @@ class LayrzButtonStyleSpec {
         contentColor,
         lerpFactor,
       )!;
+    } else if (style.hasBorder && !style.isTonal) {
+      // Outlined (non-tonal) gets a tonal fill on press.
+      backgroundColor = accent.withOpacityValue(plainOutlinedPressedOpacity);
     }
 
     if (style.isTonal && style.hasBorder) {
@@ -258,6 +262,7 @@ class LayrzButtonStyleSpec {
     // Hovered state uses ~8% lerp factor (half of pressed's 16%).
     const lerpFactor = 0.08;
     const hoveredTonalExtraOpacity = 0.1;
+    const plainOutlinedHoveredOpacity = 0.08;
 
     var backgroundColor = baseSpec.backgroundColor;
     var contentColor = baseSpec.contentColor;
@@ -270,6 +275,9 @@ class LayrzButtonStyleSpec {
         contentColor,
         lerpFactor,
       )!;
+    } else if (style.hasBorder && !style.isTonal) {
+      // Outlined (non-tonal) gets a tonal fill on hover.
+      backgroundColor = accent.withOpacityValue(plainOutlinedHoveredOpacity);
     }
 
     if (style.isTonal && style.hasBorder) {
