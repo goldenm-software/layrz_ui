@@ -10,7 +10,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 | # | Item | Status |
 |---|---|---|
-| 1 | LayrzButton with ten styles and six semantic factories | In Progress |
+| 1 | LayrzButton with twelve styles and six semantic factories | In Progress |
 | 2 | LayrzActionButton and LayrzActionsButtons | Todo |
 | 3 | LayrzTooltip on RawTooltip | Todo |
 | 4 | LayrzChip and LayrzChipGroup | Todo |
@@ -49,11 +49,11 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 ## Work Items
 
-### 1. LayrzButton with Ten Styles and Six Semantic Factories
+### 1. LayrzButton with Twelve Styles and Six Semantic Factories
 
 **What changes**:
 - Create `lib/buttons/src/button.dart` — `LayrzButton` widget
-- Implement ten style variants via parameter
+- Implement twelve style variants via parameter: `filled`, `elevated`, `filledTonal`, `outlined`, `outlinedTonal`, `text`, and their Fab counterparts (`filledFab`, `elevatedFab`, `filledTonalFab`, `outlinedFab`, `outlinedTonalFab`, `fab`)
 - Implement six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`)
 - Material-free construction: RawTooltip → FocusableActionDetector → MouseRegion → GestureDetector → AnimatedContainer
 - Create `lib/buttons/buttons.dart` barrel with re-exports
@@ -66,7 +66,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 - `onTap` (VoidCallback?, nullable) — null disables the button; also respects `isDisabled` flag
 - `isDisabled` (bool, default false) — explicit disable flag; either `onTap: null` OR `isDisabled: true` disables
 - `color` (Color?, optional) — overrides the accent, defaulting to tokens.colors.primary
-- `style` (LayrzButtonStyle, required or with sensible default) — one of the ten variants
+- `style` (LayrzButtonStyle, required or with sensible default) — one of the twelve variants
 - `isLoading` (ValueListenable<bool>?, optional) — externally-owned loading state; nullable for callers that don't need it
 - `isCooldown` (ValueListenable<bool>?, optional) — externally-owned cooldown state; nullable for callers that don't need it
 - `height` (double, default 40) — button height in logical pixels
