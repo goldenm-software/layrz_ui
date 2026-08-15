@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
-import '../../fonts/fonts.dart';
-import '../../tokens/tokens.dart';
+import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/fonts/fonts.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
+
 import 'theme_extension.dart';
 
 /// Immutable design data for the layrz_ui design system.

@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 
-import '../../theme/theme.dart';
-import '../../tokenizer/tokenizer.dart';
-import '../../tokens/tokens.dart';
+import 'package:layrz_ui/theme/theme.dart';
+import 'package:layrz_ui/tokenizer/tokenizer.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
 
 /// Convenience extensions on [BuildContext] for quick access to the active
 /// [LayrzThemeData] and common derived styles.

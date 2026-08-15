@@ -2,7 +2,8 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 
-import '../../preview.dart';
+import 'package:layrz_ui/preview.dart';
+
 import 'button.dart';
 import 'button_style.dart';
 

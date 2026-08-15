@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../fonts/fonts.dart';
+import 'package:layrz_ui/fonts/fonts.dart';
 
 /// Full text-style scale — mirrors the names from Material's TextTheme
 /// so migration from layrz_theme is mechanical.

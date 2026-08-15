@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
+import 'package:layrz_ui/constants/constants.dart';
 
 /// Positions a tooltip centred horizontally on its target and offset below it.
 ///

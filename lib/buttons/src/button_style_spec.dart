@@ -1,8 +1,9 @@
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
-import '../../extensions/extensions.dart';
-import '../../tokens/tokens.dart';
+import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/extensions/extensions.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
+
 import 'button_style.dart';
 
 /// Immutable specification of visual properties for a [LayrzButton] in a given state.

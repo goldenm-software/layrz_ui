@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
+import 'package:layrz_ui/constants/constants.dart';
 
 /// Immutable semantic color tokens for the layrz_ui design system.
 ///
