@@ -82,7 +82,7 @@ Each factory takes:
 - `labelText` (String, required) — button label
 - `onTap` (VoidCallback, required) — callback
 - `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant; otherwise the full regular variant. This is a layout choice and applies on any platform.
-- `isElevated` (bool, default depends on factory) — controls whether the button is elevated or flat. For `.save()`, `.info()`, `.show()`, `.edit()`, and `.cancel()`, defaults to `true` (elevated for plain surfaces). For `.delete()`, defaults to `false` (flat for quiet appearance). When true, buttons use elevated or outlined styles; when false, buttons use filled or outlined styles.
+- `isElevated` (bool, default depends on factory) — controls whether the button is elevated or flat. For `.save()`, `.info()`, `.show()`, and `.edit()`, defaults to `true` (elevated for plain surfaces). For `.delete()` and `.cancel()`, defaults to `false` (flat for quiet appearance of destructive/cancel actions). When true, buttons use elevated or outlined styles; when false, buttons use filled or outlined styles.
 - `isLoading` (ValueListenable<bool>?, optional)
 - `isCooldown` (ValueListenable<bool>?, optional)
 - `isDisabled` (bool, default false)
@@ -90,16 +90,15 @@ Each factory takes:
 | Factory | Icon | Semantic Color | isElevated Default | Style (true → false) |
 |---|---|---|---|---|
 | `.save()` | `solarOutlineInboxIn` | `success` (green) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | `true` (inert) | `outlined` → `outlined` (Fab: `outlinedFab` → `outlinedFab`) |
+| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | **`false`** | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
 | `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
 | `.show()` | `solarOutlineEyeScan` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
 | `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
 | `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | **`false`** | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
 
 **Elevation context**: The `isElevated` parameter expresses visual context — whether a button needs drop-shadow depth to stand out from the background, or whether it should flatten to avoid stacked depth-on-depth.
-- **Five factories** (`.save`, `.info`, `.show`, `.edit`, `.cancel`) default to `true`, reflecting typical button placement on plain surfaces. Set to `false` when nesting inside cards, dialogs, or other elevated containers.
-- **One exception**: `.delete()` defaults to `false`, reflecting the design intent to keep destructive actions visually quiet by default. Developers explicitly opt into shadow depth with `isElevated: true`.
-- `.cancel()` remains `outlined` in both modes (the `isElevated` flag is inert for this factory), as cancel/abort actions should stay understated regardless of context.
+- **Four factories** (`.save`, `.info`, `.show`, `.edit`) default to `true`, reflecting typical button placement on plain surfaces. Set to `false` when nesting inside cards, dialogs, or other elevated containers.
+- **Two exceptions**: `.delete()` and `.cancel()` both default to `false`, reflecting the design intent to keep destructive/cancellative actions visually quiet by default. Developers explicitly opt into shadow depth with `isElevated: true`.
 
 **Ten style variants**:
 
@@ -112,11 +111,10 @@ Each factory takes:
 | 5 | `.outlinedTonal` | `.outlinedTonalFab` | Transparent background with semi-transparent border |
 
 **Loading and cooldown states**:
-- `isLoading` and `isCooldown` are externally-owned `ValueListenable<bool>?` — the caller owns the state object and the button listens for changes
-- Neither parameter requires the button to manage timers, durations, or callbacks
-- When `isLoading` is true: a single indeterminate progress bar/spinner is shown; the button is disabled; no countdown is displayed
-- When `isCooldown` is true: the same indeterminate bar is shown (with different tint); the button is disabled; **no countdown timer is displayed** — the caller manages the duration and decides when to clear `isCooldown`
-- `cooldownDuration`, `showCooldownRemainingDuration`, and `onCooldownFinish` are **not** implemented. Whoever owns the `ValueListenable<bool>` decides the duration and when cooldown ends
+- Loading indicator: shown as indeterminate progress bar; the button is disabled
+- Cooldown indicator: shown as determinate progress bar that depletes over the countdown duration; the button is disabled
+- No countdown numeral is displayed; the bar provides visual feedback of remaining time
+- The `LayrzButtonController` manages the cooldown timing and provides `cooldownRemaining` for callers that want to display custom countdown UI
 - `.legacyLoading()` is **not** ported from ThemedButton
 - `onLongPress` and `customLongPressDuration` are **not** ported
 
