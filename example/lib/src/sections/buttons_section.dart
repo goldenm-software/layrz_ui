@@ -357,7 +357,7 @@ class _CooldownDemo extends StatelessWidget {
                   children: [
                     LayrzButton(
                       labelText: isActive ? 'Clear Cooldown' : 'Start 5s Cooldown',
-                      style: LayrzButtonStyle.outlined,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (isActive) {
                           controller.clearCooldown();
@@ -628,7 +628,7 @@ class _SharedControllerDemo extends StatelessWidget {
                   children: [
                     LayrzButton(
                       labelText: controller.isLoading ? 'Stop Loading' : 'Start Loading',
-                      style: LayrzButtonStyle.outlined,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (controller.isLoading) {
                           controller.stopLoading();
@@ -639,7 +639,7 @@ class _SharedControllerDemo extends StatelessWidget {
                     ),
                     LayrzButton(
                       labelText: controller.cooldownTotal != null ? 'Clear Cooldown' : 'Start 3s Cooldown',
-                      style: LayrzButtonStyle.outlined,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (controller.cooldownTotal != null) {
                           controller.clearCooldown();
@@ -653,26 +653,27 @@ class _SharedControllerDemo extends StatelessWidget {
               },
             ),
             // Shared buttons (all three use the same controller)
-            Row(
-              spacing: tokens.spacing.sp12,
-              children: [
-                LayrzButton.save(
-                  labelText: 'Save',
-                  controller: controller,
-                  onTap: () {},
-                ),
-                LayrzButton.cancel(
-                  labelText: 'Cancel',
-                  controller: controller,
-                  onTap: () {},
-                ),
-                LayrzButton.delete(
-                  labelText: 'Delete',
-                  controller: controller,
-                  onTap: () {},
-                ),
-              ],
-            ),
+            ...{
+              "Elevated": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
+              "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
+              "FilledTonal": [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab],
+            }.entries.map((e) {
+              return Row(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('${e.key}:', style: tokens.typography.labelMedium),
+                  ...e.value.map((style) {
+                    return LayrzButton(
+                      labelText: style.toString().split('.').last,
+                      icon: LayrzIcons.solarOutlineHomeN2,
+                      style: style,
+                      onTap: () {},
+                      controller: controller,
+                    );
+                  }),
+                ],
+              );
+            }),
           ],
         ),
       ],
