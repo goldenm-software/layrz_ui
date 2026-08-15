@@ -179,6 +179,15 @@ class LayrzButtonStyleSpec {
           contentColor: accent,
           shadows: const [],
         );
+
+      case LayrzButtonStyle.text || LayrzButtonStyle.fab:
+        return LayrzButtonStyleSpec(
+          backgroundColor: const Color(0x00000000),
+          borderColor: const Color(0x00000000),
+          borderWidth: tokens.border.base,
+          contentColor: accent,
+          shadows: const [],
+        );
     }
   }
 
@@ -232,6 +241,9 @@ class LayrzButtonStyleSpec {
     } else if (style.hasBorder && !style.isTonal) {
       // Outlined (non-tonal) gets a tonal fill on press.
       backgroundColor = accent.withOpacityValue(plainOutlinedPressedOpacity);
+    } else if (style == LayrzButtonStyle.text || style == LayrzButtonStyle.fab) {
+      // Text and fab (transparent) get a tonal fill on press.
+      backgroundColor = accent.withOpacityValue(plainOutlinedPressedOpacity);
     }
 
     if (style.isTonal && style.hasBorder) {
@@ -282,6 +294,9 @@ class LayrzButtonStyleSpec {
       )!;
     } else if (style.hasBorder && !style.isTonal) {
       // Outlined (non-tonal) gets a tonal fill on hover.
+      backgroundColor = accent.withOpacityValue(plainOutlinedHoveredOpacity);
+    } else if (style == LayrzButtonStyle.text || style == LayrzButtonStyle.fab) {
+      // Text and fab (transparent) get a tonal fill on hover.
       backgroundColor = accent.withOpacityValue(plainOutlinedHoveredOpacity);
     }
 

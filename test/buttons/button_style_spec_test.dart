@@ -88,6 +88,34 @@ void main() {
         expect(spec.borderColor, equals(primaryColor));
         expect(spec.shadows, isEmpty);
       });
+
+      test('text: transparent background, accent content, transparent border, no shadow', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor, equals(const Color(0x00000000)));
+        expect(spec.contentColor, equals(primaryColor));
+        expect(spec.borderColor, equals(const Color(0x00000000)));
+        expect(spec.shadows, isEmpty);
+      });
+
+      test('fab: transparent background, accent content, transparent border, no shadow', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor, equals(const Color(0x00000000)));
+        expect(spec.contentColor, equals(primaryColor));
+        expect(spec.borderColor, equals(const Color(0x00000000)));
+        expect(spec.shadows, isEmpty);
+      });
     });
 
     group('resolve() - Fab variants match non-Fab base specs', () {
@@ -195,6 +223,27 @@ void main() {
         expect(outlinedTonalFabSpec.borderColor, equals(outlinedTonalSpec.borderColor));
         expect(outlinedTonalFabSpec.shadows, equals(outlinedTonalSpec.shadows));
       });
+
+      test('fab matches text in default state', () {
+        final textSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final fabSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(fabSpec.backgroundColor, equals(textSpec.backgroundColor));
+        expect(fabSpec.contentColor, equals(textSpec.contentColor));
+        expect(fabSpec.borderColor, equals(textSpec.borderColor));
+        expect(fabSpec.shadows, equals(textSpec.shadows));
+      });
     });
 
     group('resolve() - Disabled state', () {
@@ -268,6 +317,30 @@ void main() {
         expect(disabledSpec.contentColor, equals(tokens.colors.fg3));
         expect(hoveredSpec.contentColor, isNot(equals(tokens.colors.fg3)));
       });
+
+      test('disabled text: transparent border, fg3 content', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {WidgetState.disabled},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.borderColor.a, equals(0.0));
+        expect(spec.contentColor, equals(tokens.colors.fg3));
+      });
+
+      test('disabled fab: transparent border, fg3 content', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {WidgetState.disabled},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.borderColor.a, equals(0.0));
+        expect(spec.contentColor, equals(tokens.colors.fg3));
+      });
     });
 
     group('resolve() - Pressed state', () {
@@ -307,6 +380,42 @@ void main() {
 
         expect(pressedSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
       });
+
+      test('text is not inert on press: background changes', () {
+        final baseSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(pressedSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
+      });
+
+      test('fab is not inert on press: background changes', () {
+        final baseSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(pressedSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
+      });
     });
 
     group('resolve() - Hovered state', () {
@@ -337,6 +446,42 @@ void main() {
         );
 
         expect(elevatedSpec.shadows, isNotEmpty);
+      });
+
+      test('text is not inert on hover: background changes', () {
+        final baseSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(hoveredSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
+      });
+
+      test('fab is not inert on hover: background changes', () {
+        final baseSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.fab,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(hoveredSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
       });
     });
 

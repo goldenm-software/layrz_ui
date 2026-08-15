@@ -46,14 +46,26 @@ enum LayrzButtonStyle {
   outlinedTonal,
 
   /// Fab variant of [outlinedTonal] — identical styling, square layout.
-  outlinedTonalFab;
+  outlinedTonalFab,
+
+  /// Fully transparent background and border, content in accent color, no shadow.
+  ///
+  /// The lowest-emphasis button style. Used for tertiary or minimal-weight actions.
+  /// Hover and press states add a subtle tonal fill for feedback.
+  text,
+
+  /// Fab variant of [text] — identical styling, square layout.
+  ///
+  /// Icon-only square button at [kLayrzButtonHeight] × [kLayrzButtonHeight].
+  /// The label supplies the tooltip and accessible name.
+  fab;
 
   /// Whether this style is a floating action button (Fab) variant.
   ///
   /// Fab variants differ from their base style only in layout—they are always
   /// square and icon-only, rendered at [kLayrzButtonHeight] × [kLayrzButtonHeight].
   bool get isFab => switch (this) {
-    filledFab || elevatedFab || filledTonalFab || outlinedFab || outlinedTonalFab => true,
+    filledFab || elevatedFab || filledTonalFab || outlinedFab || outlinedTonalFab || fab => true,
     _ => false,
   };
 

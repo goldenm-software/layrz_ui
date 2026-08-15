@@ -4,8 +4,8 @@ import 'package:layrz_ui/buttons/buttons.dart';
 void main() {
   group('LayrzButtonStyle', () {
     group('enum values', () {
-      test('has exactly 10 style variants', () {
-        expect(LayrzButtonStyle.values.length, equals(10));
+      test('has exactly 12 style variants', () {
+        expect(LayrzButtonStyle.values.length, equals(12));
       });
 
       test('contains all expected non-Fab styles', () {
@@ -75,6 +75,14 @@ void main() {
       test('outlinedTonalFab is Fab', () {
         expect(LayrzButtonStyle.outlinedTonalFab.isFab, isTrue);
       });
+
+      test('text is not Fab', () {
+        expect(LayrzButtonStyle.text.isFab, isFalse);
+      });
+
+      test('fab is Fab', () {
+        expect(LayrzButtonStyle.fab.isFab, isTrue);
+      });
     });
 
     group('isTonal extension property', () {
@@ -116,6 +124,14 @@ void main() {
 
       test('outlinedTonalFab is tonal', () {
         expect(LayrzButtonStyle.outlinedTonalFab.isTonal, isTrue);
+      });
+
+      test('text is not tonal', () {
+        expect(LayrzButtonStyle.text.isTonal, isFalse);
+      });
+
+      test('fab is not tonal', () {
+        expect(LayrzButtonStyle.fab.isTonal, isFalse);
       });
     });
 
@@ -159,6 +175,14 @@ void main() {
       test('outlinedTonalFab has border', () {
         expect(LayrzButtonStyle.outlinedTonalFab.hasBorder, isTrue);
       });
+
+      test('text does not have border', () {
+        expect(LayrzButtonStyle.text.hasBorder, isFalse);
+      });
+
+      test('fab does not have border', () {
+        expect(LayrzButtonStyle.fab.hasBorder, isFalse);
+      });
     });
 
     group('hasShadow extension property', () {
@@ -201,6 +225,14 @@ void main() {
       test('outlinedTonalFab does not have shadow', () {
         expect(LayrzButtonStyle.outlinedTonalFab.hasShadow, isFalse);
       });
+
+      test('text does not have shadow', () {
+        expect(LayrzButtonStyle.text.hasShadow, isFalse);
+      });
+
+      test('fab does not have shadow', () {
+        expect(LayrzButtonStyle.fab.hasShadow, isFalse);
+      });
     });
 
     group('Extension property matrix (all styles)', () {
@@ -242,6 +274,8 @@ LayrzButtonStyle _getFabCounterpart(LayrzButtonStyle style) {
       return LayrzButtonStyle.outlinedFab;
     case LayrzButtonStyle.outlinedTonal:
       return LayrzButtonStyle.outlinedTonalFab;
+    case LayrzButtonStyle.text:
+      return LayrzButtonStyle.fab;
     default:
       throw AssertionError('$style is already a Fab style');
   }
