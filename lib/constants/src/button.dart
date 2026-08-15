@@ -20,3 +20,9 @@ const double kLayrzButtonOutlinedTonalOpacity = 0.15;
 ///
 /// Controls the spacing between button edges and internal content (icon and label).
 const double kLayrzButtonHorizontalPadding = 16.0;
+
+/// Vertical offset between the bottom of a [LayrzButton] and its tooltip.
+///
+/// Provides visual separation so the tooltip does not visually overlap the button.
+/// Measured in logical pixels below the button's lower edge.
+const double kLayrzButtonTooltipVerticalOffset = 10.0;
