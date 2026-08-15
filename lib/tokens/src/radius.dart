@@ -55,14 +55,29 @@ class LayrzRadiusTokens {
   /// [BorderRadius] with all corners set to [base].
   BorderRadius get borderRadius => BorderRadius.circular(base);
 
-  /// Computes a visually consistent inner radius given an outer radius and spacer.
+  /// Computes a visually consistent inner radius value given an outer radius and spacer.
   ///
+  /// Returns the scalar radius value (not a BorderRadius object).
   /// This method maintains visual consistency when drawing nested container borders.
   /// It subtracts the [spacer] from the [outerRadius] to determine the inner radius,
   /// but clamps the result to zero to never produce negative radius values.
   ///
-  /// For example, given `outerRadius: 12, spacer: 4`, the inner radius is 8.
-  /// Given `outerRadius: 4, spacer: 10`, the inner radius clamps to 0 (pill shape).
+  /// For example, given `outerRadius: 12, spacer: 4`, returns 8.0.
+  /// Given `outerRadius: 4, spacer: 10`, returns 0.0 (pill shape).
+  double innerRadiusValue({
+    required double outerRadius,
+    required double spacer,
+  }) => max(outerRadius - spacer, 0.0);
+
+  /// Computes a visually consistent inner [BorderRadius] given an outer radius and spacer.
+  ///
+  /// Returns a BorderRadius object with all corners set to the computed inner radius.
+  /// This method maintains visual consistency when drawing nested container borders.
+  /// It subtracts the [spacer] from the [outerRadius] to determine the inner radius,
+  /// but clamps the result to zero to never produce negative radius values.
+  ///
+  /// For example, given `outerRadius: 12, spacer: 4`, returns BorderRadius.circular(8).
+  /// Given `outerRadius: 4, spacer: 10`, returns BorderRadius.circular(0) (pill shape).
   BorderRadius innerRadius({
     required double outerRadius,
     required double spacer,
