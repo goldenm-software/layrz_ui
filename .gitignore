@@ -34,3 +34,5 @@ migrate_working_dir/
 .venv/
 
 .claude/settings.local.json
+# Widget Preview related
+.widget_preview/
