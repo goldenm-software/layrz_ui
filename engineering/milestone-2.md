@@ -82,18 +82,24 @@ Each factory takes:
 - `labelText` (String, required) — button label
 - `onTap` (VoidCallback, required) — callback
 - `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant; otherwise the full regular variant. This is a layout choice and applies on any platform.
+- `isElevated` (bool, default depends on factory) — controls whether the button is elevated or flat. For `.save()`, `.info()`, `.show()`, `.edit()`, and `.cancel()`, defaults to `true` (elevated for plain surfaces). For `.delete()`, defaults to `false` (flat for quiet appearance). When true, buttons use elevated or outlined styles; when false, buttons use filled or outlined styles.
 - `isLoading` (ValueListenable<bool>?, optional)
 - `isCooldown` (ValueListenable<bool>?, optional)
 - `isDisabled` (bool, default false)
 
-| Factory | Icon | Semantic Color | Style (Regular → FAB) |
-|---|---|---|---|
-| `.save()` | `solarOutlineInboxIn` | `success` (green) | `filledTonal` → `filledTonalFab` |
-| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | `outlined` → `outlinedFab` |
-| `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `filledTonal` → `filledTonalFab` |
-| `.show()` | `solarOutlineEyeScan` | `info` (blue) | `filledTonal` → `filledTonalFab` |
-| `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `outlined` → `outlinedFab` |
-| `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | `filledTonal` → `filledTonalFab` |
+| Factory | Icon | Semantic Color | isElevated Default | Style (true → false) |
+|---|---|---|---|---|
+| `.save()` | `solarOutlineInboxIn` | `success` (green) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | `true` (inert) | `outlined` → `outlined` (Fab: `outlinedFab` → `outlinedFab`) |
+| `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+| `.show()` | `solarOutlineEyeScan` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+| `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+| `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | **`false`** | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+
+**Elevation context**: The `isElevated` parameter expresses visual context — whether a button needs drop-shadow depth to stand out from the background, or whether it should flatten to avoid stacked depth-on-depth.
+- **Five factories** (`.save`, `.info`, `.show`, `.edit`, `.cancel`) default to `true`, reflecting typical button placement on plain surfaces. Set to `false` when nesting inside cards, dialogs, or other elevated containers.
+- **One exception**: `.delete()` defaults to `false`, reflecting the design intent to keep destructive actions visually quiet by default. Developers explicitly opt into shadow depth with `isElevated: true`.
+- `.cancel()` remains `outlined` in both modes (the `isElevated` flag is inert for this factory), as cancel/abort actions should stay understated regardless of context.
 
 **Ten style variants**:
 
