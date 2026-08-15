@@ -97,8 +97,8 @@ void main() {
         data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
       });
 
-      test('primaryColor delegates to tokens.colors.primary', () {
-        expect(data.primaryColor, equals(data.tokens.colors.primary));
+      test('primaryColor delegates to tokens.colors.primary.shade500', () {
+        expect(data.primaryColor, equals(data.tokens.colors.primary.shade500));
       });
 
       test('backgroundColor delegates to tokens.colors.background', () {
@@ -121,16 +121,16 @@ void main() {
         expect(data.borderColor, equals(data.tokens.colors.divider));
       });
 
-      test('dangerColor delegates to tokens.colors.danger', () {
-        expect(data.dangerColor, equals(data.tokens.colors.danger));
+      test('dangerColor delegates to tokens.colors.danger.shade500', () {
+        expect(data.dangerColor, equals(data.tokens.colors.danger.shade500));
       });
 
-      test('successColor delegates to tokens.colors.success', () {
-        expect(data.successColor, equals(data.tokens.colors.success));
+      test('successColor delegates to tokens.colors.success.shade500', () {
+        expect(data.successColor, equals(data.tokens.colors.success.shade500));
       });
 
-      test('warningColor delegates to tokens.colors.warning', () {
-        expect(data.warningColor, equals(data.tokens.colors.warning));
+      test('warningColor delegates to tokens.colors.warning.shade500', () {
+        expect(data.warningColor, equals(data.tokens.colors.warning.shade500));
       });
 
       test('textTheme delegates to tokens.typography', () {
