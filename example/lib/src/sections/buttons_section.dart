@@ -17,10 +17,10 @@ Widget buildButtonsSection() {
   );
 }
 
-/// A stateful widget that owns [ValueNotifier]s for loading and cooldown states.
+/// A stateful widget that owns [LayrzButtonController]s for loading and cooldown states.
 ///
 /// This allows the showroom to demonstrate live state changes on buttons with
-/// external listenable ownership — the key behavioural difference between buttons
+/// controller ownership — the key behavioural difference between buttons
 /// in layrz_ui and previous implementations.
 class _ButtonsSectionContent extends StatefulWidget {
   /// Creates a new [_ButtonsSectionContent].
@@ -31,20 +31,23 @@ class _ButtonsSectionContent extends StatefulWidget {
 }
 
 class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
-  late ValueNotifier<bool> _isLoading;
-  late ValueNotifier<Duration?> _isCooldown;
+  late LayrzButtonController _loadingController;
+  late LayrzButtonController _cooldownController;
+  late LayrzButtonController _sharedFormController;
 
   @override
   void initState() {
     super.initState();
-    _isLoading = ValueNotifier<bool>(false);
-    _isCooldown = ValueNotifier<Duration?>(null);
+    _loadingController = LayrzButtonController();
+    _cooldownController = LayrzButtonController();
+    _sharedFormController = LayrzButtonController();
   }
 
   @override
   void dispose() {
-    _isLoading.dispose();
-    _isCooldown.dispose();
+    _loadingController.dispose();
+    _cooldownController.dispose();
+    _sharedFormController.dispose();
     super.dispose();
   }
 
@@ -71,7 +74,7 @@ class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
           // 3. Live loading state
           _LoadingDemo(
             tokens: tokens,
-            isLoading: _isLoading,
+            controller: _loadingController,
           ),
 
           SizedBox(height: tokens.spacing.sp32),
@@ -79,7 +82,15 @@ class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
           // 4. Live cooldown state
           _CooldownDemo(
             tokens: tokens,
-            isCooldown: _isCooldown,
+            controller: _cooldownController,
+          ),
+
+          SizedBox(height: tokens.spacing.sp32),
+
+          // 5. Shared controller driving multiple buttons
+          _SharedControllerDemo(
+            tokens: tokens,
+            controller: _sharedFormController,
           ),
 
           SizedBox(height: tokens.spacing.sp32),
@@ -158,13 +169,35 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final semanticButtons = [
-      ('Save', () => LayrzButton.save(labelText: 'Save', onTap: () {})),
-      ('Cancel', () => LayrzButton.cancel(labelText: 'Cancel', onTap: () {})),
-      ('Info', () => LayrzButton.info(labelText: 'Info', onTap: () {})),
-      ('Show', () => LayrzButton.show(labelText: 'Show', onTap: () {})),
-      ('Edit', () => LayrzButton.edit(labelText: 'Edit', onTap: () {})),
-      ('Delete', () => LayrzButton.delete(labelText: 'Delete', onTap: () {})),
+    /// A list of semantic factory buttons parameterized by isFab.
+    /// Each tuple contains a label and a builder function that accepts
+    /// an isFab flag, ensuring both normal and Fab layouts are driven
+    /// from a single source of truth.
+    final semanticButtons = <(String, LayrzButton Function({required bool isFab}))>[
+      (
+        'Save',
+        ({required bool isFab}) => LayrzButton.save(labelText: 'Save', isFab: isFab, onTap: () {}),
+      ),
+      (
+        'Cancel',
+        ({required bool isFab}) => LayrzButton.cancel(labelText: 'Cancel', isFab: isFab, onTap: () {}),
+      ),
+      (
+        'Info',
+        ({required bool isFab}) => LayrzButton.info(labelText: 'Info', isFab: isFab, onTap: () {}),
+      ),
+      (
+        'Show',
+        ({required bool isFab}) => LayrzButton.show(labelText: 'Show', isFab: isFab, onTap: () {}),
+      ),
+      (
+        'Edit',
+        ({required bool isFab}) => LayrzButton.edit(labelText: 'Edit', isFab: isFab, onTap: () {}),
+      ),
+      (
+        'Delete',
+        ({required bool isFab}) => LayrzButton.delete(labelText: 'Delete', isFab: isFab, onTap: () {}),
+      ),
     ];
 
     return Column(
@@ -179,7 +212,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
         Wrap(
           spacing: tokens.spacing.sp12,
           runSpacing: tokens.spacing.sp12,
-          children: semanticButtons.map((e) => e.$2()).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: false)).toList(),
         ),
 
         SizedBox(height: tokens.spacing.sp16),
@@ -190,42 +223,34 @@ class _SemanticFactoriesDemo extends StatelessWidget {
         Wrap(
           spacing: tokens.spacing.sp12,
           runSpacing: tokens.spacing.sp12,
-          children: semanticButtons
-              .map(
-                (e) => LayrzButton.save(
-                  labelText: e.$1,
-                  isFab: true,
-                  onTap: () {},
-                ),
-              )
-              .toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: true)).toList(),
         ),
       ],
     );
   }
 }
 
-/// Demonstrates live loading state with an external [ValueNotifier].
+/// Demonstrates live loading state with a [LayrzButtonController].
 class _LoadingDemo extends StatelessWidget {
   /// Creates a new [_LoadingDemo].
-  const _LoadingDemo({required this.tokens, required this.isLoading});
+  const _LoadingDemo({required this.tokens, required this.controller});
 
   /// The design system tokens.
   final LayrzTokens tokens;
 
-  /// The external [ValueNotifier] that drives the loading state.
-  final ValueNotifier<bool> isLoading;
+  /// The controller that drives the loading state.
+  final LayrzButtonController controller;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Loading State (External Listenable)', style: tokens.typography.titleMedium),
+        Text('Loading State (Controller)', style: tokens.typography.titleMedium),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'The button disables itself and shows an indeterminate progress bar when loading. '
-          'The loading state is owned externally—the button never ends loading by itself.',
+          'The loading state is driven by the controller.',
           style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
@@ -233,29 +258,30 @@ class _LoadingDemo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
-            ValueListenableBuilder<bool>(
-              valueListenable: isLoading,
-              builder: (context, isLoadingValue, _) {
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
                 return LayrzButton(
-                  labelText: isLoadingValue ? 'Stop Loading' : 'Start Loading',
+                  labelText: controller.isLoading ? 'Stop Loading' : 'Start Loading',
                   style: LayrzButtonStyle.filledTonal,
-                  onTap: () => isLoading.value = !isLoading.value,
+                  onTap: () {
+                    if (controller.isLoading) {
+                      controller.stopLoading();
+                    } else {
+                      controller.startLoading();
+                    }
+                  },
                 );
               },
             ),
-            ValueListenableBuilder<bool>(
-              valueListenable: isLoading,
-              builder: (context, isLoadingValue, _) {
-                return SizedBox(
-                  width: 200,
-                  child: LayrzButton(
-                    labelText: 'Processing...',
-                    icon: LayrzIcons.solarOutlineDownloadSquare,
-                    onTap: () {},
-                    isLoading: isLoading,
-                  ),
-                );
-              },
+            SizedBox(
+              width: 200,
+              child: LayrzButton(
+                labelText: 'Processing...',
+                icon: LayrzIcons.solarOutlineDownloadSquare,
+                onTap: () {},
+                controller: controller,
+              ),
             ),
           ],
         ),
@@ -264,28 +290,27 @@ class _LoadingDemo extends StatelessWidget {
   }
 }
 
-/// Demonstrates live cooldown state with an external [ValueNotifier].
+/// Demonstrates live cooldown state with a [LayrzButtonController].
 class _CooldownDemo extends StatelessWidget {
   /// Creates a new [_CooldownDemo].
-  const _CooldownDemo({required this.tokens, required this.isCooldown});
+  const _CooldownDemo({required this.tokens, required this.controller});
 
   /// The design system tokens.
   final LayrzTokens tokens;
 
-  /// The external [ValueNotifier] that drives the cooldown state.
-  final ValueNotifier<Duration?> isCooldown;
+  /// The controller that drives the cooldown state.
+  final LayrzButtonController controller;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Cooldown State (External Listenable)', style: tokens.typography.titleMedium),
+        Text('Cooldown State (Controller)', style: tokens.typography.titleMedium),
         SizedBox(height: tokens.spacing.sp12),
         Text(
-          'Cooldown runs a countdown over a Duration. When the countdown finishes but '
-          'the value is still non-null, it switches to indeterminate mode. '
-          'Only the developer clearing the value to null re-enables the button.',
+          'Cooldown runs a countdown over a Duration. When the countdown finishes, '
+          'it auto-clears and the button re-enables. The controller manages the timing.',
           style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
@@ -293,10 +318,10 @@ class _CooldownDemo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
-            ValueListenableBuilder<Duration?>(
-              valueListenable: isCooldown,
-              builder: (context, isCooldownValue, _) {
-                final isActive = isCooldownValue != null;
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                final isActive = controller.cooldownTotal != null;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: tokens.spacing.sp8,
@@ -304,25 +329,26 @@ class _CooldownDemo extends StatelessWidget {
                     LayrzButton(
                       labelText: isActive ? 'Clear Cooldown' : 'Start 5s Cooldown',
                       style: LayrzButtonStyle.outlined,
-                      onTap: () => isCooldown.value = isActive ? null : const Duration(seconds: 5),
+                      onTap: () {
+                        if (isActive) {
+                          controller.clearCooldown();
+                        } else {
+                          controller.startCooldown(const Duration(seconds: 5));
+                        }
+                      },
                     ),
                   ],
                 );
               },
             ),
-            ValueListenableBuilder<Duration?>(
-              valueListenable: isCooldown,
-              builder: (context, _, _) {
-                return SizedBox(
-                  width: 200,
-                  child: LayrzButton(
-                    labelText: 'Try again later',
-                    icon: LayrzIcons.solarOutlineClockCircle,
-                    onTap: () {},
-                    isCooldown: isCooldown,
-                  ),
-                );
-              },
+            SizedBox(
+              width: 200,
+              child: LayrzButton(
+                labelText: 'Try again later',
+                icon: LayrzIcons.solarOutlineClockCircle,
+                onTap: () {},
+                controller: controller,
+              ),
             ),
           ],
         ),
@@ -525,6 +551,98 @@ class _TooltipDemo extends StatelessWidget {
               labelText: 'No tooltip',
               icon: LayrzIcons.solarOutlineCloseSquare,
               onTap: () {},
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Demonstrates one controller driving three buttons in lockstep.
+///
+/// This is the headline feature: all three buttons move together, with no frame-by-frame drift.
+class _SharedControllerDemo extends StatelessWidget {
+  /// Creates a new [_SharedControllerDemo].
+  const _SharedControllerDemo({required this.tokens, required this.controller});
+
+  /// The design system tokens.
+  final LayrzTokens tokens;
+
+  /// The single controller shared by all three buttons.
+  final LayrzButtonController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('One Controller, Three Buttons (Lockstep Busy State)', style: tokens.typography.titleMedium),
+        SizedBox(height: tokens.spacing.sp12),
+        Text(
+          'All three buttons share the same controller. When you activate loading or cooldown, '
+          'all three respond together—no drift, no flicker. Perfect for form groups where all actions '
+          'should disable together.',
+          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+        ),
+        SizedBox(height: tokens.spacing.sp12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: tokens.spacing.sp16,
+          children: [
+            // Control buttons
+            AnimatedBuilder(
+              animation: controller,
+              builder: (context, _) {
+                return Row(
+                  spacing: tokens.spacing.sp12,
+                  children: [
+                    LayrzButton(
+                      labelText: controller.isLoading ? 'Stop Loading' : 'Start Loading',
+                      style: LayrzButtonStyle.outlined,
+                      onTap: () {
+                        if (controller.isLoading) {
+                          controller.stopLoading();
+                        } else {
+                          controller.startLoading();
+                        }
+                      },
+                    ),
+                    LayrzButton(
+                      labelText: controller.cooldownTotal != null ? 'Clear Cooldown' : 'Start 3s Cooldown',
+                      style: LayrzButtonStyle.outlined,
+                      onTap: () {
+                        if (controller.cooldownTotal != null) {
+                          controller.clearCooldown();
+                        } else {
+                          controller.startCooldown(const Duration(seconds: 3));
+                        }
+                      },
+                    ),
+                  ],
+                );
+              },
+            ),
+            // Shared buttons (all three use the same controller)
+            Row(
+              spacing: tokens.spacing.sp12,
+              children: [
+                LayrzButton.save(
+                  labelText: 'Save',
+                  controller: controller,
+                  onTap: () {},
+                ),
+                LayrzButton.cancel(
+                  labelText: 'Cancel',
+                  controller: controller,
+                  onTap: () {},
+                ),
+                LayrzButton.delete(
+                  labelText: 'Delete',
+                  controller: controller,
+                  onTap: () {},
+                ),
+              ],
             ),
           ],
         ),
