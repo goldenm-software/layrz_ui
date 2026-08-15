@@ -2,10 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 
-import '../../constants/constants.dart';
-import '../../extensions/extensions.dart';
-import '../../tokens/tokens.dart';
-import 'button_content.dart';
+import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/extensions/extensions.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
+
+import 'button_content.dart' show buildButtonContent, buildFabContent, buildButtonContentSpan;
 import 'button_indicator.dart';
 import 'button_style.dart';
 import 'button_style_spec.dart';
@@ -41,12 +42,25 @@ class LayrzButton extends StatefulWidget {
   /// Null means no loading state.
   final ValueListenable<bool>? isLoading;
 
-  /// A listenable that drives the cooldown overlay.
+  /// A listenable that drives the cooldown overlay with automatic countdown.
   ///
-  /// When `true`, an indeterminate progress bar (in `fg3` tint) renders.
-  /// Like [isLoading], ownership is external and null means no cooldown.
-  /// Cooldown carries no duration information — there is no countdown text.
-  final ValueListenable<bool>? isCooldown;
+  /// **Semantics:**
+  /// - `null` → not in cooldown. Button behaves normally.
+  /// - non-null `Duration` → cooldown begins. An internal countdown runs over that
+  ///   Duration, showing determinate progress + remaining whole seconds. Button is disabled.
+  /// - **When countdown reaches zero but value is still non-null** → button switches to
+  ///   indeterminate busy mode (like [isLoading]), still disabled, no numeral shown.
+  ///   It does **NOT** re-enable. Only the integrating developer clearing the value to
+  ///   `null` ends cooldown.
+  ///
+  /// Ownership is external; the button listens but never clears the value itself.
+  /// Null means no cooldown.
+  ///
+  /// **IMPORTANT GOTCHA:** `Duration` has value equality, so assigning the same
+  /// Duration object twice will not trigger notification and will not restart the
+  /// countdown. To re-trigger an identical cooldown, set `null` first, then set the
+  /// new Duration.
+  final ValueListenable<Duration?>? isCooldown;
 
   /// The semantic type of the button — determines which token color to use.
   ///
@@ -120,7 +134,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -149,7 +163,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -178,7 +192,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -207,7 +221,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -236,7 +250,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -265,7 +279,7 @@ class LayrzButton extends StatefulWidget {
     bool isFab = false,
     bool isDisabled = false,
     ValueListenable<bool>? isLoading,
-    ValueListenable<bool>? isCooldown,
+    ValueListenable<Duration?>? isCooldown,
     Key? key,
   }) {
     return LayrzButton(
@@ -286,14 +300,17 @@ class LayrzButton extends StatefulWidget {
   State<LayrzButton> createState() => _LayrzButtonState();
 }
 
-class _LayrzButtonState extends State<LayrzButton> {
+class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin {
   late WidgetStatesController _statesController;
+  late AnimationController _cooldownController;
 
   @override
   void initState() {
     super.initState();
     _statesController = WidgetStatesController();
+    _cooldownController = AnimationController(vsync: this);
     _subscribe();
+    _updateCooldownTimer();
   }
 
   @override
@@ -304,11 +321,19 @@ class _LayrzButtonState extends State<LayrzButton> {
       _unsubscribe();
       _subscribe();
     }
+
+    // Handle cooldown value changes (same notifier, new value).
+    final oldCooldownValue = oldWidget.isCooldown?.value;
+    final newCooldownValue = widget.isCooldown?.value;
+    if (oldCooldownValue != newCooldownValue) {
+      _updateCooldownTimer();
+    }
   }
 
   @override
   void dispose() {
     _unsubscribe();
+    _cooldownController.dispose();
     _statesController.dispose();
     super.dispose();
   }
@@ -330,7 +355,28 @@ class _LayrzButtonState extends State<LayrzButton> {
 
   void _onCooldownChanged() {
     if (!mounted) return;
+    _updateCooldownTimer();
     setState(() {});
+  }
+
+  /// Updates the cooldown timer based on the current cooldown value.
+  ///
+  /// - If cooldown is null: stops the animation
+  /// - If cooldown is a Duration: starts a countdown animation over that duration
+  /// - On animation completion: leaves animation at 1.0 to trigger indeterminate mode
+  void _updateCooldownTimer() {
+    final cooldownDuration = widget.isCooldown?.value;
+
+    _cooldownController.stop();
+
+    if (cooldownDuration == null) {
+      // No cooldown; reset controller.
+      _cooldownController.reset();
+    } else {
+      // Start countdown over the given duration.
+      _cooldownController.duration = cooldownDuration;
+      _cooldownController.forward(from: 0.0);
+    }
   }
 
   /// Whether the button is disabled for interaction, visual, and semantic purposes.
@@ -343,7 +389,7 @@ class _LayrzButtonState extends State<LayrzButton> {
       widget.onTap == null ||
       widget.isDisabled ||
       (widget.isLoading?.value ?? false) ||
-      (widget.isCooldown?.value ?? false);
+      (widget.isCooldown?.value != null);
 
   /// Resolves the accent color from the button's type and optional color override.
   Color _resolveAccent(LayrzTokens tokens) {
@@ -385,11 +431,12 @@ class _LayrzButtonState extends State<LayrzButton> {
     final isFab = widget.style.isFab;
 
     final isLoading = widget.isLoading?.value ?? false;
-    final isCooldown = widget.isCooldown?.value ?? false;
+    final isCooldownValue = widget.isCooldown?.value;
+    final hasCooldown = isCooldownValue != null;
 
     final buttonContent = LayoutBuilder(
       builder: (context, constraints) {
-        final buttonWidth = _computeButtonWidth(context, tokens, constraints);
+        final buttonWidth = _computeButtonWidth(context, tokens, constraints, spec);
 
         return FocusableActionDetector(
           onShowHoverHighlight: (show) {
@@ -443,13 +490,33 @@ class _LayrzButtonState extends State<LayrzButton> {
                       ),
 
                     // Indicator overlay (loading or cooldown).
-                    if (isLoading || isCooldown)
+                    if (isLoading || hasCooldown)
                       Positioned.fill(
-                        child: LayrzButtonIndicator(
-                          trackColor: spec.contentColor.withOpacityValue(0.2),
-                          indicatorColor: spec.contentColor,
-                          borderRadius: tokens.radius.base,
-                          height: kLayrzButtonHeight,
+                        child: AnimatedBuilder(
+                          animation: _cooldownController,
+                          builder: (context, _) {
+                            // During countdown: show determinate progress.
+                            // After countdown (when controller.value >= 1.0): show indeterminate.
+                            final cooldownProgress = hasCooldown ? _cooldownController.value : null;
+                            final isDeterminateMode = cooldownProgress != null && cooldownProgress < 1.0;
+
+                            // Calculate remaining seconds for determinate mode.
+                            int? remainingSeconds;
+                            if (isDeterminateMode && isCooldownValue != null) {
+                              final totalSeconds = isCooldownValue.inSeconds;
+                              final elapsedSeconds = (totalSeconds * cooldownProgress).toInt();
+                              remainingSeconds = totalSeconds - elapsedSeconds;
+                            }
+
+                            return LayrzButtonIndicator(
+                              trackColor: spec.contentColor.withOpacityValue(0.2),
+                              indicatorColor: spec.contentColor,
+                              borderRadius: tokens.radius.base,
+                              height: kLayrzButtonHeight,
+                              progress: isDeterminateMode ? cooldownProgress : null,
+                              remainingSeconds: remainingSeconds,
+                            );
+                          },
                         ),
                       ),
                   ],
@@ -488,30 +555,39 @@ class _LayrzButtonState extends State<LayrzButton> {
     );
   }
 
-  /// Returns the exact [TextStyle] used to render the button label.
+  /// Measures the width of the button content using the shared span.
   ///
-  /// This style is used by both [_measureLabelWidth] and [buildButtonContent]
-  /// to ensure consistency between measurement and rendering.
-  TextStyle _labelStyle(LayrzTokens tokens) {
-    return tokens.typography.labelLarge.copyWith(
-      fontSize: kLayrzButtonFontSize,
+  /// This uses the exact same span that [buildButtonContent] renders, ensuring
+  /// consistent width calculation without hand-summing icon, separator, and label widths.
+  /// Returns the width in logical pixels, accounting for text scaling.
+  double _measureButtonContentWidth(BuildContext context, LayrzTokens tokens, LayrzButtonStyleSpec spec) {
+    final span = buildButtonContentSpan(
+      labelText: widget.labelText,
+      icon: widget.icon,
+      spec: spec,
+      tokens: tokens,
     );
-  }
 
-  /// Measures the width of the label text using TextPainter.
-  ///
-  /// Returns the width in logical pixels, accounting for the given [style],
-  /// [fontSize], and the current context's text scaling.
-  double _measureLabelWidth(BuildContext context, LayrzTokens tokens) {
     final painter = TextPainter(
-      text: TextSpan(
-        text: widget.labelText,
-        style: _labelStyle(tokens),
-      ),
+      text: span,
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
-    )..layout();
+    );
+
+    // If the span contains a WidgetSpan (for icon), notify TextPainter of placeholder dimensions.
+    if (widget.icon != null) {
+      painter.setPlaceholderDimensions(
+        const [
+          PlaceholderDimensions(
+            size: Size(kLayrzButtonIconSize + kLayrzButtonIconSeparator, kLayrzButtonIconSize),
+            alignment: PlaceholderAlignment.middle,
+          ),
+        ],
+      );
+    }
+
+    painter.layout();
     return painter.width;
   }
 
@@ -519,10 +595,13 @@ class _LayrzButtonState extends State<LayrzButton> {
   ///
   /// For Fab buttons: returns [kLayrzButtonHeight] (square).
   ///
-  /// For non-Fab buttons: measures the label width and adds:
-  /// - Horizontal padding (left + right)
-  /// - Icon size + separator (if icon is present)
-  /// - Border widths
+  /// For non-Fab buttons:
+  /// - Measures the shared content span (icon + label) directly via TextPainter
+  /// - Adds horizontal padding (left + right) and border widths
+  /// - Clamps to constraints
+  ///
+  /// Using the shared span eliminates hand-summing of component widths and ensures
+  /// measurement matches rendering exactly.
   ///
   /// The result is clamped to available constraints. When constraints are
   /// unbounded, the full computed width is used. When bounded, it is clamped
@@ -532,25 +611,18 @@ class _LayrzButtonState extends State<LayrzButton> {
     BuildContext context,
     LayrzTokens tokens,
     BoxConstraints constraints,
+    LayrzButtonStyleSpec spec,
   ) {
     final isFab = widget.style.isFab;
 
     // Fab is always square.
     if (isFab) return kLayrzButtonHeight;
 
-    // Compute width from content: padding + icon (if any) + label + border.
-    double computed = 0;
+    // Measure content span (icon + label together) — single source of truth.
+    final contentWidth = _measureButtonContentWidth(context, tokens, spec);
 
     // Horizontal padding
-    computed += kLayrzButtonHorizontalPadding * 2;
-
-    // Icon and separator.
-    if (widget.icon != null) {
-      computed += kLayrzButtonIconSize + kLayrzButtonIconSeparator;
-    }
-
-    // Measured label width.
-    computed += _measureLabelWidth(context, tokens);
+    double computed = contentWidth + (kLayrzButtonHorizontalPadding * 2);
 
     // Border width — all buttons have a Border.all() applied, regardless of color.
     // The border always insets the child, so we must account for it in width computation.
