@@ -3,6 +3,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import 'sections/access_paths_section.dart';
 import 'sections/borders_section.dart';
+import 'sections/buttons_section.dart';
 import 'sections/colors_section.dart';
 import 'sections/elevation_section.dart';
 import 'sections/motion_section.dart';
@@ -30,6 +31,7 @@ class Showroom extends StatelessWidget {
   /// by inserting their builder widgets here without modifying any other files.
   static const List<Widget> _sections = [
     _SectionWrapper(builder: buildTypographySection),
+    _SectionWrapper(builder: buildButtonsSection),
     _SectionWrapper(builder: buildColorsSection),
     _SectionWrapper(builder: buildSpacingSection),
     _SectionWrapper(builder: buildRadiusSection),
