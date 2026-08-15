@@ -1,5 +1,5 @@
 /// Height of a standard [LayrzButton] in logical pixels.
-const double kLayrzButtonHeight = 40.0;
+const double kLayrzButtonHeight = 45.0;
 
 /// Size of the icon within a [LayrzButton] in logical pixels.
 const double kLayrzButtonIconSize = 22.0;
