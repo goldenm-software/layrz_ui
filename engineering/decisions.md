@@ -1002,6 +1002,72 @@ This is a **scoped exception to rule #4** (one concern per file, barrels at modu
 
 ---
 
+## D19: Per-Domain Library Entrypoints — Deferred Until LayrzButton Ships
+
+**Date**: 2026-08-15  
+**Status**: Deferred  
+**Category**: Architecture / API Design
+
+### Context
+
+layrz_ui's current structure exports every module through a single root barrel (`lib/layrz_ui.dart`), requiring consumers to write:
+
+```dart
+import 'package:layrz_ui/layrz_ui.dart';
+// Then use LayrzButton, LayrzTextInput, LayrzLayout, etc.
+```
+
+The proposed restructure follows the Flutter SDK's model, where each domain is its own importable library:
+
+```dart
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/inputs.dart';
+import 'package:layrz_ui/layout.dart';
+```
+
+This design has stated benefits around explicit dependency intent, no accidental coupling, and smaller analysis surfaces per library. However, the restructure moves every file in the package and rewrites every import path, making it a large diff that would block #21 (LayrzButton) from review if folded into that PR. The user's decision: defer this structural work until LayrzButton is complete and merged.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Proceed with current single-barrel structure | No refactoring needed; simpler file layout; all imports stay as-is | Requires every consumer to import the full barrel; accidental coupling between unrelated domains possible; no explicit dependency intent per call site |
+| (b) Restructure now, as part of #21 | Achieves the cleaner import structure immediately; ships with the first component | Balloons the #21 diff to ~5,000+ lines; makes both the component and the restructure impossible to review independently; blocks #21 indefinitely |
+| (c) **Chosen** — Defer until #21 ships, then restructure in its own PR | Component and package structure are reviewed separately; each change can be reverted independently; clearer git history; lower review friction | Consumes the remainder of M2 / early M3 as dedicated restructuring work; consumes a full PR + CI cycle; requires updating all downstream imports |
+
+### Decision
+
+**Chose (c): Defer the per-domain library restructure until LayrzButton (#21) has landed.**
+
+Rationale: Folding a 4,800-line component diff and a 2,000+ line package restructure into a single PR makes both impossible to review rigorously and impossible to revert independently if issues surface. The restructure earns its own issue, branch, and PR once #21 is complete. This keeps the review focused and the git history clear.
+
+### Rationale — Clarification on Initial Intent
+
+The user's initial framing was "to optimize what is loading" (implying tree-shaking efficiency). This reasoning **does not apply to Dart.** In Dart, the compiler tree-shakes unreachable code regardless of how it was imported — a single fat barrel costs nothing at runtime or in output size. That intuition is valid in JavaScript bundlers; it is false in Dart's AOT and JIT models.
+
+The reasons the restructure is **still worth doing** are different and real:
+
+- **Explicit dependency intent at each call site**: A consumer writing `import 'package:layrz_ui/buttons.dart';` makes it clear which domains they depend on, improving readability and discoverability.
+- **No accidental coupling**: Removing the root barrel prevents a team from accidentally importing LayrzButton to use LayrzTextInput, coupling unrelated concerns.
+- **Smaller analysis surface per library**: Fewer files per import means faster analyzer and IDE responsiveness.
+- **Familiarity**: It is exactly how the Flutter SDK is structured, easing mental model transfer for consumers.
+
+### Consequences
+
+- **Deferred work**: A new GitHub Project item will be created (separate from M2 components) to track the restructuring as its own 1–2 week effort.
+- **Timing**: Restructure begins after #21 merges and before M2 components enter code review. Estimated to land in early M2 or mid-M2.
+- **File/import updates**: Every `import` in `lib/`, `test/`, `example/`, and the wiki will change. CLAUDE.md's "Project structure" section will be rewritten. The `engineering/architecture.md` file will document the new layout.
+- **Root barrel fate**: Two unresolved sub-decisions:
+  - **Physical layout**: Either `lib/src/<module>/` entrypoints at the top of `lib/` (Flutter SDK exact), or the minimal-movement `lib/<module>.dart` + `lib/<module>/src/`. Both yield the same consumer import `package:layrz_ui/buttons.dart`, but the file layout differs.
+  - **Fate of `lib/layrz_ui.dart`**: Delete it entirely (Flutter SDK has no `flutter.dart` that exports everything), or keep it as a convenience barrel re-exporting each entrypoint for callers who want the old pattern. This is a **forward-compatibility decision** that could ease early adoption.
+- **Automation burden**: The `/complete-todo-process` skill and related automation will need no changes; only the import paths in newly-generated files will differ.
+
+### Review Trigger
+
+**Trigger date**: After LayrzButton (#21) is merged. Open a new GitHub Project item (not a Milestone 2 item) for the restructuring, estimate the scope (1–2 weeks), and assign a reviewer. The restructuring PR should reference the deferred work from D19 so the intent is visible in git history.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

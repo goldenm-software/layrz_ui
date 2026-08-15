@@ -36,6 +36,17 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 ---
 
+## Deferred Structural Work: Per-Domain Library Entrypoints
+
+**See decision D19** in `engineering/decisions.md`. After LayrzButton (#21) ships, a follow-up refactoring will restructure the package to use per-domain import entrypoints (e.g., `import 'package:layrz_ui/buttons.dart';` instead of `import 'package:layrz_ui/layrz_ui.dart';` for all imports). This restructure is intentionally deferred so that both the component and the package structure can be reviewed independently without creating a diff larger than ~5,000 lines.
+
+- **Timing**: Begins after #21 merges; estimated to land in early M2 or mid-M2
+- **Impact**: All imports in lib/, test/, example/, and the wiki will change; CLAUDE.md and engineering/architecture.md will be rewritten to reflect the new layout
+- **Sub-decisions open**: Physical layout strategy (lib/src/<module>/ vs lib/<module>/src/) and whether to keep a convenience root barrel for backward compatibility
+- **Scope**: One new standalone PR; no dependencies on M2 components themselves
+
+---
+
 ## Work Items
 
 ### 1. LayrzButton with Ten Styles and Six Semantic Factories
@@ -71,7 +82,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 Each factory takes:
 - `labelText` (String, required) — button label
 - `onTap` (VoidCallback, required) — callback
-- `isMobile` (bool, default false) — if true, renders as FAB variant; otherwise regular variant
+- `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant; otherwise the full regular variant. This is a layout choice and applies on any platform.
 - `isLoading` (ValueListenable<bool>?, optional)
 - `isCooldown` (ValueListenable<bool>?, optional)
 - `isDisabled` (bool, default false)
