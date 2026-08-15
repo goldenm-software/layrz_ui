@@ -76,7 +76,7 @@ void main() {
       });
 
       testWidgets('button is not tappable when isCooldown: true', (tester) async {
-        final cooldown = ValueNotifier<bool>(true);
+        final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
         var tapped = false;
 
         await pumpThemed(
@@ -128,7 +128,7 @@ void main() {
       });
 
       testWidgets('tappability reflects isCooldown changes', (tester) async {
-        final cooldown = ValueNotifier<bool>(false);
+        final cooldown = ValueNotifier<Duration?>(null);
         var tappedCount = 0;
 
         await pumpThemed(
@@ -145,13 +145,13 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         expect(tappedCount, equals(1));
 
-        cooldown.value = true;
+        cooldown.value = Duration(seconds: 10);
         await tester.pump(const Duration(milliseconds: 100));
 
         await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
         expect(tappedCount, equals(1));
 
-        cooldown.value = false;
+        cooldown.value = null;
         await tester.pump();
 
         await tester.tap(find.byType(LayrzButton));
@@ -291,7 +291,7 @@ void main() {
       testWidgets('button is disabled when isCooldown is true (verified via tappability + semantics)', (tester) async {
         final handle = tester.ensureSemantics();
         try {
-          final cooldown = ValueNotifier<bool>(true);
+          final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
           var tapped = false;
           await pumpThemed(
             tester,

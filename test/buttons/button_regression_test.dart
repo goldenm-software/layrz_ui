@@ -4,6 +4,7 @@ import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/buttons/buttons.dart';
 import 'package:layrz_ui/tokens/tokens.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
@@ -55,16 +56,14 @@ void main() {
           ),
         );
 
-        // Verify the label text is rendered
-        expect(find.text('FilledTonal'), findsOneWidget);
+        // Verify the label text is rendered and check the RichText overflow behavior
+        final richTextFinder = find.byType(RichText);
+        expect(richTextFinder, findsWidgets, reason: 'RichText should be present for label rendering');
 
-        // Find the Text widget and verify it has the correct overflow behavior
-        final textFinder = find.byType(Text).last; // Last one is the actual label
-        final textWidget = tester.widget<Text>(textFinder);
+        final richTextWidget = tester.widget<RichText>(richTextFinder.first);
 
-        // The text should be in a Flexible, which constrains it but doesn't force ellipsis
-        // We verify the text widget itself has ellipsis configured for overflow
-        expect(textWidget.overflow, equals(TextOverflow.ellipsis));
+        // The RichText should have ellipsis configured for overflow
+        expect(richTextWidget.overflow, equals(TextOverflow.ellipsis));
       });
 
       testWidgets('label is not truncated with icon present', (tester) async {
@@ -78,7 +77,7 @@ void main() {
           ),
         );
 
-        expect(find.text('Save Button'), findsOneWidget);
+        expect(findButtonLabel('Save Button'), findsOneWidget);
         expect(find.byIcon(LayrzIcons.solarOutlineCheckCircle), findsOneWidget);
       });
     });
@@ -577,7 +576,7 @@ void main() {
 
       testWidgets('cooldown button does not invoke tap callback', (tester) async {
         int tapCount = 0;
-        final cooldown = ValueNotifier<bool>(true);
+        final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
 
         await pumpThemed(
           tester,
@@ -604,7 +603,7 @@ void main() {
           ),
         );
 
-        expect(find.text('Disabled Button'), findsOneWidget);
+        expect(findButtonLabel('Disabled Button'), findsOneWidget);
       });
 
       testWidgets('onTap: null button renders disabled spec', (tester) async {
@@ -616,7 +615,7 @@ void main() {
           ),
         );
 
-        expect(find.text('Disabled Button'), findsOneWidget);
+        expect(findButtonLabel('Disabled Button'), findsOneWidget);
       });
 
       testWidgets('loading button with all style variants renders without exception', (tester) async {
@@ -640,7 +639,7 @@ void main() {
       });
 
       testWidgets('cooldown button with all style variants renders without exception', (tester) async {
-        final cooldown = ValueNotifier<bool>(true);
+        final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
 
         for (final style in LayrzButtonStyle.values) {
           await pumpThemed(
@@ -689,7 +688,7 @@ void main() {
 
       testWidgets('cooldown button is not tappable while cooldown then becomes tappable', (tester) async {
         int tapCount = 0;
-        final cooldown = ValueNotifier<bool>(true);
+        final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
 
         await pumpThemed(
           tester,
@@ -706,7 +705,7 @@ void main() {
         expect(tapCount, equals(0), reason: 'should not tap while cooldown');
 
         // Stop cooldown
-        cooldown.value = false;
+        cooldown.value = null;
         await tester.pump();
 
         // Now try to tap

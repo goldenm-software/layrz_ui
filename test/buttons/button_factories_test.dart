@@ -4,6 +4,7 @@ import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/buttons/buttons.dart';
 import 'package:layrz_ui/theme/theme.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
@@ -18,7 +19,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Save'), findsOneWidget);
+      expect(findButtonLabel('Save'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
     });
 
@@ -32,7 +33,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Save'), findsOneWidget);
+      expect(findButtonLabel('Save'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses filledTonalFab style', (tester) async {
@@ -62,7 +63,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Save'), findsOneWidget);
+      expect(findButtonLabel('Save'), findsOneWidget);
     });
 
     testWidgets('isDisabled: true disables the button', (tester) async {
@@ -77,7 +78,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Save'));
+      await tester.tap(find.byType(LayrzButton));
       await tester.pump();
 
       expect(tapCount, equals(0));
@@ -100,7 +101,7 @@ void main() {
     });
 
     testWidgets('supports isCooldown parameter', (tester) async {
-      final cooldown = ValueNotifier<bool>(true);
+      final cooldown = ValueNotifier<Duration?>(const Duration(seconds: 5));
 
       await pumpThemed(
         tester,
@@ -126,7 +127,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
     });
 
@@ -140,7 +141,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses outlinedFab style', (tester) async {
@@ -168,7 +169,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
     });
   });
 
@@ -182,7 +183,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Info'), findsOneWidget);
+      expect(findButtonLabel('Info'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
     });
 
@@ -196,7 +197,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Info'), findsOneWidget);
+      expect(findButtonLabel('Info'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses filledTonalFab style', (tester) async {
@@ -224,7 +225,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Info'), findsOneWidget);
+      expect(findButtonLabel('Info'), findsOneWidget);
     });
   });
 
@@ -238,7 +239,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Show'), findsOneWidget);
+      expect(findButtonLabel('Show'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
     });
 
@@ -252,7 +253,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Show'), findsOneWidget);
+      expect(findButtonLabel('Show'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses filledTonalFab style', (tester) async {
@@ -280,7 +281,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Show'), findsOneWidget);
+      expect(findButtonLabel('Show'), findsOneWidget);
     });
   });
 
@@ -294,7 +295,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Edit'), findsOneWidget);
+      expect(findButtonLabel('Edit'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
     });
 
@@ -308,7 +309,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Edit'), findsOneWidget);
+      expect(findButtonLabel('Edit'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses filledTonalFab style', (tester) async {
@@ -336,7 +337,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Edit'), findsOneWidget);
+      expect(findButtonLabel('Edit'), findsOneWidget);
     });
   });
 
@@ -350,7 +351,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Delete'), findsOneWidget);
+      expect(findButtonLabel('Delete'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
     });
 
@@ -364,7 +365,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Delete'), findsOneWidget);
+      expect(findButtonLabel('Delete'), findsOneWidget);
     });
 
     testWidgets('isFab: true uses filledTonalFab style', (tester) async {
@@ -392,7 +393,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Delete'), findsOneWidget);
+      expect(findButtonLabel('Delete'), findsOneWidget);
     });
   });
 
@@ -412,7 +413,7 @@ void main() {
       );
 
       // The button should render with the custom color, not the danger color.
-      expect(find.text('Custom Color Button'), findsOneWidget);
+      expect(findButtonLabel('Custom Color Button'), findsOneWidget);
       expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
     });
 
@@ -431,7 +432,7 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Primary Button'), findsOneWidget);
+      expect(findButtonLabel('Primary Button'), findsOneWidget);
     });
   });
 

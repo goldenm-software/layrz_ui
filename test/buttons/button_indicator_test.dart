@@ -24,7 +24,7 @@ void main() {
     });
 
     testWidgets('isCooldown displays indicator', (tester) async {
-      final cooldown = ValueNotifier<bool>(true);
+      final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
 
       await pumpThemed(
         tester,
@@ -111,7 +111,7 @@ void main() {
     });
 
     testWidgets('cooldown indicator suppresses taps', (tester) async {
-      final cooldown = ValueNotifier<bool>(true);
+      final cooldown = ValueNotifier<Duration?>(Duration(seconds: 10));
       int tapCount = 0;
 
       await pumpThemed(
@@ -130,7 +130,7 @@ void main() {
       expect(tapCount, equals(0));
 
       // Disable cooldown.
-      cooldown.value = false;
+      cooldown.value = null;
       await tester.pump();
 
       // Now taps should work.

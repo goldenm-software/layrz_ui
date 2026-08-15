@@ -30,7 +30,7 @@ void main() {
       // Correct centring: 100 (target centre) - 60 (half tooltip width) = 40.
       final context = createContext(
         target: const Offset(100, 200),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 600),
       );
@@ -41,19 +41,19 @@ void main() {
     });
 
     test('positions tooltip below target with correct vertical gap', () {
-      // Target at 100, 200 (centre) with height 40.
-      // Target bottom edge: 200 + 20 = 220.
-      // Tooltip top: 220 + kLayrzButtonTooltipVerticalOffset.
+      // Target at 100, 200 (centre) with height kLayrzButtonHeight.
+      // Target bottom edge: 200 + (kLayrzButtonHeight / 2).
+      // Tooltip top: that + kLayrzButtonTooltipVerticalOffset.
       final context = createContext(
         target: const Offset(100, 200),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 600),
       );
 
       final position = layrzButtonTooltipPosition(context);
 
-      final expectedY = 200 + 20 + kLayrzButtonTooltipVerticalOffset;
+      final expectedY = 200 + (kLayrzButtonHeight / 2) + kLayrzButtonTooltipVerticalOffset;
       expect(position.dy, expectedY);
     });
 
@@ -66,7 +66,7 @@ void main() {
         // (which the SDK hardcodes to 0.0 when using a positionDelegate).
         // This test would have caught the original bug where the gap was missing.
         final targetCenter = 200.0;
-        final targetHeight = 40.0;
+        final targetHeight = kLayrzButtonHeight;
 
         final context = createContext(
           target: Offset(100, targetCenter),
@@ -90,7 +90,7 @@ void main() {
       // Clamped to 0.
       final context = createContext(
         target: const Offset(30, 200),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(200, 600),
       );
@@ -106,7 +106,7 @@ void main() {
       // Clamped to 80 (200 - 120).
       final context = createContext(
         target: const Offset(170, 200),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(200, 600),
       );
@@ -117,20 +117,20 @@ void main() {
     });
 
     test('flips tooltip above target when below would overflow bottom', () {
-      // Target at 550 (centre) with height 40. Tooltip height 30.
-      // Below: 550 + 20 + kLayrzButtonTooltipVerticalOffset = 580.
-      // Bottom edge: 580 + 30 = 610 > 600 (overlay height).
-      // Flipped above: 550 - 20 - 30 - kLayrzButtonTooltipVerticalOffset = 490.
+      // Target at 550 (centre) with height kLayrzButtonHeight. Tooltip height 30.
+      // Below: 550 + (kLayrzButtonHeight / 2) + kLayrzButtonTooltipVerticalOffset.
+      // Bottom edge: that + 30. If > 600 (overlay height), flip above.
+      // Flipped above: 550 - (kLayrzButtonHeight / 2) - 30 - kLayrzButtonTooltipVerticalOffset.
       final context = createContext(
         target: const Offset(100, 550),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 600),
       );
 
       final position = layrzButtonTooltipPosition(context);
 
-      final expectedY = 550 - 20 - 30 - kLayrzButtonTooltipVerticalOffset;
+      final expectedY = 550 - (kLayrzButtonHeight / 2) - 30 - kLayrzButtonTooltipVerticalOffset;
       expect(position.dy, expectedY);
     });
 
@@ -138,7 +138,7 @@ void main() {
       // Verify the flipped position places the tooltip fully within bounds.
       final context = createContext(
         target: const Offset(100, 550),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 600),
       );
@@ -174,7 +174,7 @@ void main() {
 
       final context = createContext(
         target: const Offset(100, 200),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 600),
         verticalOffset: 0.0, // SDK always passes 0.0
@@ -183,26 +183,26 @@ void main() {
       final position = layrzButtonTooltipPosition(context);
 
       // The gap should be our design constant, not zero.
-      final gapFromBottomEdge = position.dy - (200 + 20);
+      final gapFromBottomEdge = position.dy - (200 + (kLayrzButtonHeight / 2));
       expect(gapFromBottomEdge, kLayrzButtonTooltipVerticalOffset);
       expect(gapFromBottomEdge, isNot(0.0));
     });
 
     test('prefers below when both below and above fit', () {
       // Target in the middle of a tall overlay.
-      // Below: 300 + 20 + kLayrzButtonTooltipVerticalOffset. Still well within 800.
-      // Should position below, not above.
+      // Below: 300 + (kLayrzButtonHeight / 2) + kLayrzButtonTooltipVerticalOffset.
+      // Still well within 800. Should position below, not above.
       final context = createContext(
         target: const Offset(100, 300),
-        targetSize: const Size(80, 40),
+        targetSize: Size(80, kLayrzButtonHeight),
         tooltipSize: const Size(120, 30),
         overlaySize: const Size(400, 800),
       );
 
       final position = layrzButtonTooltipPosition(context);
 
-      // Below would be 300 + 20 + gap.
-      final expectedBelow = 300 + 20 + kLayrzButtonTooltipVerticalOffset;
+      // Below would be 300 + (height/2) + gap.
+      final expectedBelow = 300 + (kLayrzButtonHeight / 2) + kLayrzButtonTooltipVerticalOffset;
       expect(position.dy, expectedBelow);
     });
 
