@@ -193,7 +193,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
               .map(
                 (e) => LayrzButton.save(
                   labelText: e.$1,
-                  isMobile: true,
+                  isFab: true,
                   onTap: () {},
                 ),
               )
