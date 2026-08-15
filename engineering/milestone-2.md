@@ -74,8 +74,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 - `iconSize` (double, default 22) — icon size in logical pixels
 - `iconSeparatorSize` (double, default 8) — spacing between icon and text
 - `fontSize` (double, default 14) — label text font size
-- `hintText` (String?, optional) — tooltip text; shown via RawTooltip on hover/long-press
-- `tooltipEnabled` (bool, default true) — whether tooltips are shown
+- `hintText` (String?, optional) — tooltip hint text. When non-null, shown via RawTooltip. Fab buttons always show a tooltip; non-Fab buttons show a tooltip only when hintText is non-null. Fab tooltip displays `labelText` alone, or `labelText\nhintText` if hint is provided.
 
 **Semantic factories**:
 
