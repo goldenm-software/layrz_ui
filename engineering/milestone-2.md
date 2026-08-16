@@ -128,7 +128,38 @@ The button is built without Material imports via this layer stack (inside-out):
 5. `GestureDetector` — tap and long-press gestures
 6. `AnimatedContainer` — visual state transitions (colour, shadow, opacity, border colour)
 
-**D15 compliance** (Interaction States via Geometry Invariants):
+**Four-State Interaction Model and Fill Ladder**:
+
+`LayrzButton` implements a four-state model with a shared fill ladder:
+
+| State | Meaning | Precedence |
+|---|---|---|
+| **Default** | Idle, no pointer or keyboard interaction | — |
+| **Hovered / Focused** | Pointer over the button, or keyboard focus | 2nd (hovered and focused render identically) |
+| **Pressed** | Pointer/finger held down | 3rd (highest visual weight among active states) |
+| **Disabled** | Non-interactive (disabled, loading, or cooldown) | **1st (overrides all others)** |
+
+**Fill Ladder Principle**:
+
+Each style starts on a different rung and climbs the same ladder as interaction increases: **transparent → tonal → solid**. This unified approach ensures visual consistency across all styles and makes adding new styles simple.
+
+| Style | Default | Hovered / Focused | Pressed |
+|---|---|---|---|
+| `text` / `fab` | transparent | tonal (light) | tonal (stronger) |
+| `outlined` / `outlinedFab` | transparent + border | tonal + border | solid + border |
+| `outlinedTonal` / `outlinedTonalFab` | tonal + border | tonal (stronger) + border | solid + border |
+| `filledTonal` / `filledTonalFab` | tonal | tonal (stronger) | solid |
+| `filled` / `filledFab` | solid | solid (lightened) | solid (stronger lightened) |
+| `elevated` / `elevatedFab` | solid + shadow | solid + bigger shadow | solid (no shadow) |
+
+**Key Invariants**:
+
+- **Outlined pair border**: The border color remains constant across default, hovered, and pressed states (only the fill changes). This prevents visual "pop" when the border would otherwise vanish or shift.
+- **Elevated shadow**: Only `elevated` and `elevatedFab` change shadows — they grow on hover (from `compact1` to `compact2`) and disappear on press (creating a "pressed down" metaphor). All other styles have fixed or zero shadows.
+- **Filled never gains shadow**: `filled` and `filledFab` use color changes alone; they never acquire shadows even on hover/press.
+- **Focus as hover**: Keyboard focus resolves to the same appearance as mouse hover, satisfying WCAG 2.4.7 (Focus Visible, AA) without adding a fifth visual state.
+
+**D15 Compliance** (Interaction States via Geometry Invariants):
 
 Hover, press, focus, and disabled states vary only:
 - Colour (background and text)
