@@ -1,9 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/buttons/buttons.dart';
-import 'package:layrz_ui/constants/constants.dart';
-import 'package:layrz_ui/extensions/extensions.dart';
-import 'package:layrz_ui/tokens/tokens.dart';
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/tokens.dart';
 
 import '../helpers/fake_font_handler.dart';
 

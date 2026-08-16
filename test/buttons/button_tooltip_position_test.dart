@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/buttons/src/button_tooltip_position.dart';
-import 'package:layrz_ui/constants/constants.dart';
+
+import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/src/buttons/button_tooltip_position.dart';
 
 void main() {
   group('layrzButtonTooltipPosition', () {

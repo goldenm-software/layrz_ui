@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/constants.dart';
 
 void main() {
   group('App Metadata', () {

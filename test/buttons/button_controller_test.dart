@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/buttons/buttons.dart';
+import 'package:layrz_ui/buttons.dart';
 
 void main() {
   group('LayrzButtonController', () {

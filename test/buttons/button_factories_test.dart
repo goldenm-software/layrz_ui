@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/buttons/buttons.dart';
-import 'package:layrz_ui/theme/theme.dart';
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/theme.dart';
 
 import '../helpers/find_button_label.dart';
 import '../helpers/fake_font_handler.dart';

@@ -1,4 +1,4 @@
-import 'package:layrz_ui/fonts/fonts.dart';
+import 'package:layrz_ui/fonts.dart';
 
 /// A test fake of [LayrzFontHandler] that returns font names without network calls.
 ///

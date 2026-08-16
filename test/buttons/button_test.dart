@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/buttons/buttons.dart';
-import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/constants.dart';
 
 import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';

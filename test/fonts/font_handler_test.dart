@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/fonts/fonts.dart';
+import 'package:layrz_ui/fonts.dart';
 
 /// A minimal test implementation of [LayrzFontHandler] for testing the contract.
 class _TestFontHandler extends LayrzFontHandler {

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/extensions.dart';
 
 import '../common/showroom_section.dart';
 
