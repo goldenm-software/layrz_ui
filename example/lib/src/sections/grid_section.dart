@@ -54,11 +54,6 @@ class _GridSectionContent extends StatelessWidget {
 
           // 4. Constrained view demo
           _ConstrainedViewDemo(tokens: tokens),
-
-          SizedBox(height: tokens.spacing.sp32),
-
-          // 5. useScreenWidth toggle demo
-          _UseScreenWidthDemo(tokens: tokens),
         ],
       ),
     );
@@ -287,93 +282,6 @@ class _ConstrainedViewDemo extends StatelessWidget {
   }
 }
 
-/// Demonstrates the [useScreenWidth] toggle in [LayrzRow].
-///
-/// Shows a [LayrzRow] inside a deliberately narrow fixed-width container,
-/// with a toggle to switch between layout-width and screen-width breakpoint selection.
-/// This clarifies the difference between the two width modes.
-class _UseScreenWidthDemo extends StatefulWidget {
-  /// Creates a new [_UseScreenWidthDemo].
-  const _UseScreenWidthDemo({required this.tokens});
-
-  /// The design system tokens.
-  final LayrzTokens tokens;
-
-  @override
-  State<_UseScreenWidthDemo> createState() => _UseScreenWidthDemoState();
-}
-
-/// State for [_UseScreenWidthDemo].
-class _UseScreenWidthDemoState extends State<_UseScreenWidthDemo> {
-  /// Whether to use screen width for breakpoint selection.
-  bool _useScreenWidth = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = widget.tokens;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('useScreenWidth Toggle', style: tokens.typography.titleMedium),
-        SizedBox(height: tokens.spacing.sp12),
-        Text(
-          'This row is constrained to 300px width. Toggle to see how useScreenWidth changes '
-          'breakpoint selection: when true, spans use screen width; when false, layout width.',
-          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
-        ),
-        SizedBox(height: tokens.spacing.sp12),
-        Row(
-          spacing: tokens.spacing.sp12,
-          children: [
-            _ToggleButton(
-              label: 'useScreenWidth: ${_useScreenWidth ? 'true' : 'false'}',
-              isActive: _useScreenWidth,
-              tokens: tokens,
-              onToggle: () => setState(() => _useScreenWidth = !_useScreenWidth),
-            ),
-          ],
-        ),
-        SizedBox(height: tokens.spacing.sp12),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: tokens.colors.divider, width: 2),
-            borderRadius: BorderRadius.circular(tokens.radius.r8),
-          ),
-          padding: EdgeInsets.all(tokens.spacing.sp8),
-          child: SizedBox(
-            width: 300,
-            child: LayrzRow(
-              useScreenWidth: _useScreenWidth,
-              spacing: tokens.spacing.sp8,
-              children: [
-                LayrzCol(
-                  xs: 12,
-                  sm: 6,
-                  md: 4,
-                  child: _ColumnBox(label: '12/6/4', tokens: tokens, color: tokens.colors.primary[500]!),
-                ),
-                LayrzCol(
-                  xs: 12,
-                  sm: 6,
-                  md: 4,
-                  child: _ColumnBox(label: '12/6/4', tokens: tokens, color: tokens.colors.success[500]!),
-                ),
-                LayrzCol(
-                  xs: 12,
-                  sm: 6,
-                  md: 4,
-                  child: _ColumnBox(label: '12/6/4', tokens: tokens, color: tokens.colors.warning[500]!),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// A colored container box used to visualize grid cells in the demo.
 ///
 /// Displays a label inside a colored background with border and rounded corners.
@@ -408,52 +316,6 @@ class _ColumnBox extends StatelessWidget {
         label,
         style: tokens.typography.labelMedium.copyWith(color: color),
         textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
-
-/// A simple toggle button for demonstration purposes.
-///
-/// Shows the current state and responds to taps to toggle a boolean flag.
-class _ToggleButton extends StatelessWidget {
-  /// Creates a new [_ToggleButton].
-  const _ToggleButton({
-    required this.label,
-    required this.isActive,
-    required this.tokens,
-    required this.onToggle,
-  });
-
-  /// The label text displayed on the button.
-  final String label;
-
-  /// Whether the toggle is currently active.
-  final bool isActive;
-
-  /// The design system tokens.
-  final LayrzTokens tokens;
-
-  /// Callback when the button is tapped.
-  final VoidCallback onToggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp16, vertical: tokens.spacing.sp12),
-        decoration: BoxDecoration(
-          color: isActive ? tokens.colors.primary[500] : tokens.colors.surface2,
-          border: Border.all(color: tokens.colors.fg2, width: 1),
-          borderRadius: BorderRadius.circular(tokens.radius.r8),
-        ),
-        child: Text(
-          label,
-          style: tokens.typography.labelMedium.copyWith(
-            color: isActive ? tokens.colors.surface : tokens.colors.fg1,
-          ),
-        ),
       ),
     );
   }
