@@ -7,6 +7,7 @@ import 'sections/borders_section.dart';
 import 'sections/buttons_section.dart';
 import 'sections/colors_section.dart';
 import 'sections/elevation_section.dart';
+import 'sections/grid_section.dart';
 import 'sections/motion_section.dart';
 import 'sections/radius_section.dart';
 import 'sections/spacing_section.dart';
@@ -33,6 +34,7 @@ class Showroom extends StatelessWidget {
   static const List<Widget> _sections = [
     _SectionWrapper(builder: buildTypographySection),
     _SectionWrapper(builder: buildButtonsSection),
+    _SectionWrapper(builder: buildGridSection),
     _SectionWrapper(builder: buildColorsSection),
     _SectionWrapper(builder: buildSpacingSection),
     _SectionWrapper(builder: buildRadiusSection),
