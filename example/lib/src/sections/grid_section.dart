@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/grid.dart';
 import 'package:layrz_ui/tokens.dart';
 
 import '../common/showroom_section.dart';
+import '../common/unit_display.dart';
 
 /// Displays responsive grid layout behavior with [LayrzRow], [LayrzCol], and [LayrzConstrainedView].
 ///
@@ -37,6 +37,22 @@ class _GridSectionContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Unit explanation
+          Container(
+            decoration: BoxDecoration(
+              color: tokens.colors.surface2,
+              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              border: Border.all(color: tokens.colors.divider, width: 1),
+            ),
+            padding: EdgeInsets.all(tokens.spacing.sp12),
+            margin: EdgeInsets.only(bottom: tokens.spacing.sp16),
+            child: Text(
+              'All values are shown in logical units (u). Flutter measures layout in device-independent logical pixels, not physical device pixels. '
+              'Hover over any value to see its physical-pixel equivalent on the current display.',
+              style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+            ),
+          ),
+
           // 1. Breakpoint readout
           _BreakpointReadout(tokens: tokens),
 
@@ -76,7 +92,7 @@ class _BreakpointReadout extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = MediaQuery.sizeOf(context).width;
-        final breakpoint = _getBreakpointLabel(width);
+        final breakpoint = _getBreakpointLabel(width, tokens.breakpoints);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,9 +111,17 @@ class _BreakpointReadout extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp8,
                 children: [
-                  Text(
-                    'Viewport Width: ${width.toStringAsFixed(0)}px',
-                    style: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg1),
+                  Row(
+                    children: [
+                      Text(
+                        'Viewport Width: ',
+                        style: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg1),
+                      ),
+                      UnitDisplay(
+                        value: width,
+                        textStyle: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg1),
+                      ),
+                    ],
                   ),
                   Text(
                     'Active Breakpoint: $breakpoint',
@@ -113,12 +137,12 @@ class _BreakpointReadout extends StatelessWidget {
   }
 
   /// Returns a human-readable breakpoint label for the given width.
-  String _getBreakpointLabel(double width) {
-    if (width < kExtraSmallGrid) return 'XS (< 600px)';
-    if (width < kSmallGrid) return 'SM (600–959px)';
-    if (width < kMediumGrid) return 'MD (960–1263px)';
-    if (width < kLargeGrid) return 'LG (1264–1903px)';
-    return 'XL (≥ 1904px)';
+  String _getBreakpointLabel(double width, LayrzBreakpointTokens breakpoints) {
+    if (width < breakpoints.xs) return 'XS (< ${breakpoints.xs.toInt()}u)';
+    if (width < breakpoints.sm) return 'SM (${breakpoints.xs.toInt()}–${(breakpoints.sm - 1).toInt()}u)';
+    if (width < breakpoints.md) return 'MD (${breakpoints.sm.toInt()}–${(breakpoints.md - 1).toInt()}u)';
+    if (width < breakpoints.lg) return 'LG (${breakpoints.md.toInt()}–${(breakpoints.lg - 1).toInt()}u)';
+    return 'XL (≥ ${breakpoints.lg.toInt()}u)';
   }
 }
 
@@ -253,7 +277,7 @@ class _ConstrainedViewDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Constrained View (max-width: 600px)', style: tokens.typography.titleMedium),
+        Text('Constrained View (max-width: 600u)', style: tokens.typography.titleMedium),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'Content is centered horizontally and constrained to max-width. '

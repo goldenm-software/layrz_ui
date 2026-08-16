@@ -5,6 +5,7 @@ import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
 
 import '../common/showroom_section.dart';
+import '../common/unit_display.dart';
 
 /// Displays all spacing tokens as a visual ruler and convenience accessor demonstrations.
 ///
@@ -110,10 +111,12 @@ class _SpacingRuler extends StatelessWidget {
                   SizedBox(width: tokens.spacing.sp8),
                   SizedBox(
                     width: tokens.spacing.sp48,
-                    child: Text(
-                      '${item.$2.toStringAsFixed(0)} px',
-                      textAlign: TextAlign.right,
-                      style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: UnitDisplay(
+                        value: item.$2,
+                        textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                      ),
                     ),
                   ),
                 ],
@@ -160,9 +163,9 @@ class _SpacingAccessors extends StatelessWidget {
                 ),
               ),
               SizedBox(height: tokens.spacing.sp8),
-              Text(
-                '${tokens.spacing.base} px',
-                style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
+              UnitDisplay(
+                value: tokens.spacing.base,
+                textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
               ),
             ],
           ),
@@ -193,9 +196,9 @@ class _SpacingAccessors extends StatelessWidget {
                 ),
               ),
               SizedBox(height: tokens.spacing.sp8),
-              Text(
-                '${(tokens.spacing.base / 2).toStringAsFixed(1)} px',
-                style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
+              UnitDisplay(
+                value: tokens.spacing.base / 2,
+                textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
               ),
             ],
           ),
