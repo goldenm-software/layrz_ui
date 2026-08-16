@@ -3,6 +3,7 @@ import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/extensions.dart';
 
 import 'sections/access_paths_section.dart';
+import 'sections/alerts_section.dart';
 import 'sections/borders_section.dart';
 import 'sections/buttons_section.dart';
 import 'sections/colors_section.dart';
@@ -11,6 +12,7 @@ import 'sections/grid_section.dart';
 import 'sections/motion_section.dart';
 import 'sections/radius_section.dart';
 import 'sections/spacing_section.dart';
+import 'sections/tooltips_section.dart';
 import 'sections/typography_section.dart';
 
 /// The main showroom page displaying all design system tokens.
@@ -34,6 +36,8 @@ class Showroom extends StatelessWidget {
   static const List<Widget> _sections = [
     _SectionWrapper(builder: buildTypographySection),
     _SectionWrapper(builder: buildButtonsSection),
+    _SectionWrapper(builder: buildAlertsSection),
+    _SectionWrapper(builder: buildTooltipsSection),
     _SectionWrapper(builder: buildGridSection),
     _SectionWrapper(builder: buildColorsSection),
     _SectionWrapper(builder: buildSpacingSection),
