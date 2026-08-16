@@ -1,1 +1,1 @@
-export 'preview/src/preview_theme.dart';
+export 'src/preview/preview_theme.dart';

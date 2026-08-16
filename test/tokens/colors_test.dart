@@ -1,13 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/tokens/tokens.dart';
+import 'package:layrz_ui/tokens.dart';
 
 void main() {
   group('LayrzColorTokens', () {
     test('light factory uses correct defaults', () {
       final tokens = LayrzColorTokens.light();
 
-      expect(tokens.primary, equals(const Color(0xFF001E60)));
+      expect(tokens.primary, isA<LayrzColorSwatch>());
+      expect(tokens.primary.shade500, equals(const Color(0xFF001E60)));
       expect(tokens.background, equals(const Color(0xFFFCFCFC)));
       expect(tokens.tonalOpacity, equals(0.2));
     });
@@ -15,7 +16,8 @@ void main() {
     test('light factory respects primaryColor parameter', () {
       final customPrimary = const Color(0xFF123456);
       final tokens = LayrzColorTokens.light(primary: customPrimary);
-      expect(tokens.primary, equals(customPrimary));
+      expect(tokens.primary, isA<LayrzColorSwatch>());
+      expect(tokens.primary.shade500, equals(customPrimary));
     });
 
     test('light theme has correct surface colors', () {
@@ -35,10 +37,10 @@ void main() {
 
     test('light theme has correct semantic colors', () {
       final tokens = LayrzColorTokens.light();
-      expect(tokens.danger, equals(const Color(0xFFE53935)));
-      expect(tokens.success, equals(const Color(0xFF43A047)));
-      expect(tokens.warning, equals(const Color(0xFFFB8C00)));
-      expect(tokens.info, equals(const Color(0xFF1E88E5)));
+      expect(tokens.danger.shade500, equals(const Color(0xFFF44336))); // red 500
+      expect(tokens.success.shade500, equals(const Color(0xFF4CAF50))); // green 500
+      expect(tokens.warning.shade500, equals(const Color(0xFFFF9800))); // orange 500
+      expect(tokens.info.shade500, equals(const Color(0xFF2196F3))); // blue 500
     });
 
     test('light theme has correct structural colors', () {
@@ -49,9 +51,9 @@ void main() {
 
     test('contextual color is distinct from context name', () {
       final tokens = LayrzColorTokens.light();
-      // Just verify it exists and is a color
-      expect(tokens.contextual, isA<Color>());
-      expect(tokens.contextual, equals(const Color(0xFF9E9E9E)));
+      // Verify it exists and is a swatch
+      expect(tokens.contextual, isA<LayrzColorSwatch>());
+      expect(tokens.contextual.shade500, equals(const Color(0xFF9E9E9E)));
     });
 
     test('copyWith creates new instance with replaced fields', () {
@@ -59,12 +61,10 @@ void main() {
       final newPrimary = const Color(0xFF999999);
       final modified = original.copyWith(primary: newPrimary);
 
-      expect(modified.primary, equals(newPrimary));
+      expect(modified.primary, isA<LayrzColorSwatch>());
+      expect(modified.primary.shade500, equals(newPrimary));
       expect(modified.background, equals(original.background));
-      expect(
-        original.primary,
-        equals(const Color(0xFF001E60)),
-      ); // original unchanged
+      expect(original.primary.shade500, equals(const Color(0xFF001E60))); // original unchanged
     });
 
     test('equality works for identical objects', () {
@@ -82,7 +82,7 @@ void main() {
     test('inequality works for different primary colors', () {
       final tokens1 = LayrzColorTokens.light();
       final tokens2 = LayrzColorTokens.light(primary: const Color(0xFF888888));
-      expect(tokens1, isNot(equals(tokens2)));
+      expect(tokens1.primary.shade500, isNot(equals(tokens2.primary.shade500)));
     });
 
     test('hashCode is stable for same values', () {

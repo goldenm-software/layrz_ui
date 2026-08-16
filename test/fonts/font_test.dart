@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/fonts/fonts.dart';
+import 'package:layrz_ui/fonts.dart';
 
 void main() {
   group('LayrzFontSource', () {

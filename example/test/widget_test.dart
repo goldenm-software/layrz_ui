@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/layrz_ui.dart';
+
+import 'package:layrz_ui/app.dart';
+import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/theme.dart';
+
 import 'package:example/src/showroom.dart';
 
 void main() {

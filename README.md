@@ -57,7 +57,8 @@ Replace `MaterialApp` with `LayrzApp` in your entry point:
 
 ```dart
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/app.dart';
+import 'package:layrz_ui/theme.dart';
 
 void main() => runApp(const MyApp());
 
@@ -68,9 +69,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayrzApp(
       title: 'My App',
-      theme: LayrzThemeData.light(primaryColor: Color(0xFF001E60)),
-      darkTheme: LayrzThemeData.dark(primaryColor: Color(0xFF001E60)),
-      themeMode: LayrzThemeMode.system,
+      theme: LayrzThemeData.light(primaryColor: const Color(0xFF001E60)),
       home: const HomePage(),
     );
   }

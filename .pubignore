@@ -15,3 +15,13 @@ CLAUDE.md
 
 # Claude
 .claude/
+
+# Build and tooling output. These MUST be listed here: a .pubignore fully
+# REPLACES .gitignore for publishing, so the /build/, /coverage/, doc/api/,
+# .dart_tool/ and *.iml exclusions in .gitignore no longer apply.
+build/
+coverage/
+doc/
+.dart_tool/
+*.iml
+.idea/

@@ -865,15 +865,15 @@ If hand-moving draft cards becomes a bottleneck — because components are being
 
 ---
 
-## D17: CI Enforces Six Gates
+## D17: CI Enforces Six Gates — Superseded by Shared Action Integration
 
 **Date**: 2026-08-14  
-**Status**: Decided  
+**Status**: Superseded  
 **Category**: Tooling / Release Planning
 
 ### Context
 
-CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure check, and coverage ratchet. Milestone 1 item 9 originally specified four checks (analyze, test, format, Material guard) but did not mention the mirror check or ratchet, creating a contradiction between the rule and the item scope. The decision resolves this in favour of the stronger set, making the promise real rather than aspirational.
+CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure check, and coverage ratchet. Milestone 1 item 9 originally specified four checks (analyze, test, format, Material guard) but did not mention the mirror check or ratchet, creating a contradiction between the rule and the item scope. The decision resolved this in favour of the stronger set, making the promise real rather than aspirational.
 
 ### Options Considered
 
@@ -882,11 +882,11 @@ CLAUDE.md rule #2 promised three CI gates: tests pass, mirror-file structure che
 | (a) Follow item 9 only (4 checks) | Simpler CI; lower burden on contributors | Breaks the promise in CLAUDE.md rule #2; no automatic test/code structure pairing; coverage can degrade silently |
 | (b) **Chosen** — Implement all six gates | Fulfills CLAUDE.md rule #2 promise; test/code parity enforced automatically; coverage ratchet prevents regression | More complex CI setup; requires maintaining `tool/check_test_mirror.sh` and `tool/coverage_baseline` |
 
-### Decision
+### Decision (Original)
 
 **Chose (b): Implement all six gates.**
 
-The CI gates are:
+The intended CI gates were:
 
 1. `flutter analyze` — catches linting violations
 2. `flutter test --coverage` — runs tests and generates coverage reports
@@ -896,27 +896,67 @@ The CI gates are:
 6. `tool/check_test_mirror.sh` — verifies test-to-code parity
 7. `tool/check_coverage.sh` — ratchet against `tool/coverage_baseline`
 
-### Rationale
+### Rationale (Original)
 
 - **Consistency with documentation**: CLAUDE.md rule #2 is the project's testing and code quality standard. It explicitly mentions three gates; implementing them makes the documentation accurate.
 - **Prevent test decay**: Without the mirror check, a contributor could add code to `lib/` without adding tests, and CI would not catch it. The manual code review process would catch it eventually, but automatic checking is lower friction.
 - **Coverage ratchet over fixed percentage**: A fixed percentage (e.g., "90% coverage required") requires backfilling existing code to meet the threshold. A ratchet works from the current baseline (96–97%) and prevents new code from lowering it. Untested code naturally penalizes the system by raising the bar for all future work.
 - **Mirrors the test best practice**: Many projects enforce mirror directory structures. layrz_ui's mirror rule (every `lib/` file has a `test/` counterpart) is simple and verifiable by script.
 
-### Consequences
+### Consequences (Original)
 
-- Contributors must maintain test/code parity; `tool/check_test_mirror.sh` will fail if a new file lacks tests.
-- The coverage ratchet is committed to `tool/coverage_baseline` and updated when coverage improves. Once set, the system never allows regressions.
-- The six gates ensure M1 code quality is locked in before M2 components are added. Milestone 2 will inherit a tested, formatted, structured foundation.
-- CI passes only when all six gates pass; a failure in any gate blocks the PR.
+- Contributors must maintain test/code parity; `tool/check_test_mirror.sh` would fail if a new file lacks tests.
+- The coverage ratchet would be committed to `tool/coverage_baseline` and updated when coverage improves.
+- The six gates would ensure M1 code quality is locked in before M2 components are added.
+
+---
+
+### Update (2026-08-14) — CI Restructured; D17 Superseded
+
+On 2026-08-14, the CI pipeline was restructured. The original D17 design has been superseded by a new approach using shared org-wide GitHub Actions and a simpler local-enforced convention.
+
+**What changed:**
+
+1. **Shared action replaces repo-specific scripts**: The six local gates were replaced with the shared `goldenm-software/layrz-actions/check-dart@v1` action, which runs:
+   - `flutter pub get`
+   - `flutter analyze`
+   - `flutter test --machine --coverage`
+   - Coverage reporting (90% floor, not a ratchet)
+   - Material/Cupertino guard (inline `grep`)
+   - GoogleFonts TextTheme guard (inline `grep`)
+
+2. **Deleted tool scripts**: The following scripts have been removed:
+   - `tool/check_test_mirror.sh` — test-mirror structure check
+   - `tool/check_coverage.sh` — coverage ratchet enforcement
+   - `tool/coverage_baseline` — committed baseline file
+
+3. **Mirror structure becomes code-review convention**: The test-mirror pattern (every `lib/<module>/src/*.dart` has a corresponding `test/<module>/*_test.dart`) is **now enforced by code review**, not CI. The convention remains a hard requirement, but structural enforcement is no longer automatic.
+
+4. **Coverage enforcement changes to a floor**: Instead of a ratchet that works from the baseline (97.21%) and never decreases, coverage now has a **90% floor** enforced by the shared action. The current coverage is 97.21%, so approximately 7 percentage points of drift are permitted before the floor is breached.
+
+5. **dart format is local-only**: Code formatting with `dart format` is **not** a CI gate. It is a local-development concern. Contributors run `dart format -w lib/ test/` before committing.
+
+6. **Workflow files**: Two workflows exist in `.github/workflows/`:
+   - `checks.yaml` (named "CI") — lint, test, and code quality checks on every push and pull request
+   - `publish.yaml` (named "Publish to pub.dev") — release and deployment workflow triggered by version tags
+
+**Rationale for the change:**
+
+- **Shared actions reduce maintenance burden**: Repo-specific scripts required ongoing maintenance and were duplicated across multiple projects. A shared org-wide action provides a single source of truth and reduces complexity.
+- **Local format enforcement**: Formatting is better enforced locally before commit, not in CI. Developers who integrate `dart format` into their editor or pre-commit hook catch formatting issues before pushing, avoiding wasted CI runs.
+- **Simpler coverage model**: A 90% floor is simpler to understand and measure than a ratchet. It provides a reasonable quality bar without requiring constant baseline updates.
+- **Mirror structure by discipline**: Code review is sufficient for catching test-mirror violations. Removing the automatic check simplifies CI and forces contributors to develop the habit of maintaining structure, which is more reliable long-term than script enforcement.
+
+**Consequences of the change:**
+
+- **Simpler CI**: Two workflows instead of one; fewer inline checks; faster feedback cycles.
+- **Cleaner repo**: No tool scripts or baseline files to maintain; less boilerplate in the repo.
+- **Developer discipline**: The mirror structure requirement is now a **convention enforced by review**, not a CI gate. This relies on contributors understanding and following the pattern.
+- **Coverage floor instead of ratchet**: If coverage drops below 90%, the build fails. Unlike a ratchet, it permits some drift as long as the floor is not breached. At 97.21%, there is substantial headroom.
 
 ### Review Trigger
 
-After the first batch of M2 components ship and CI has a track record, evaluate:
-- Is the mirror check catching meaningful gaps, or is it a formality that developers consistently fix before pushing?
-- Has the coverage ratchet prevented actual regressions, or is it a line item that developers work around?
-
-If either gate proves ineffective, consider adjusting or removing it.
+None. D17's original decision (implement six gates) was made in good faith with the information available at that time. The restructuring on 2026-08-14 supersedes that decision based on org-wide tooling improvements and a simpler maintenance model. Future changes to CI should be decided independently on their own merits.
 
 ---
 
@@ -954,11 +994,184 @@ This is a **scoped exception to rule #4** (one concern per file, barrels at modu
 - **Exception documented**: D18 permanently records that `lib/preview.dart` is an allowed exception to rule #4. Future architects reviewing the codebase will understand the decision.
 - **Consumer code matches docs**: All code examples in CLAUDE.md rule #3 work exactly as written.
 - **No other top-level barrels**: No other modules may follow this pattern. If future modules need similar treatment, they must argue for an exception explicitly (following D18's precedent).
-- **Module structure remains standard otherwise**: All M2–M7 components and utility modules continue to follow `lib/<module>/<module>.dart` pattern.
+- **Module structure remains standard otherwise**: All M2–M7 components and utility modules follow the standard pattern.
+
+**Update (2026-08-16) — D18 Superseded by D19**
+
+When D19 (per-domain library entrypoints) was implemented, the package structure changed such that every module now has a top-level entrypoint (`lib/<module>.dart`). The preview exception that D18 documented — a top-level barrel outside the standard module structure — is no longer an exception; it is the standard. D18's documented rationale and the `lib/preview.dart` file remain unchanged, but the "exception" framing is now historical. See D19 for the current module structure.
 
 ### Review Trigger
 
-**None — this is a scoped, permanent exception.** If the pattern proves valuable for other modules, each would require its own decision following D18's template.
+**None — D18's decision is permanent. See D19 for current module structure.**
+
+---
+
+## D19: Per-Domain Library Entrypoints — Implemented
+
+**Date**: 2026-08-15 (deferred)  
+**Status**: Accepted  
+**Category**: Architecture / API Design
+
+### Context
+
+layrz_ui's current structure exports every module through a single root barrel (`lib/layrz_ui.dart`), requiring consumers to write:
+
+```dart
+import 'package:layrz_ui/layrz_ui.dart';
+// Then use LayrzButton, LayrzTextInput, LayrzLayout, etc.
+```
+
+The proposed restructure follows the Flutter SDK's model, where each domain is its own importable library:
+
+```dart
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/inputs.dart';
+import 'package:layrz_ui/layout.dart';
+```
+
+This design has stated benefits around explicit dependency intent, no accidental coupling, and smaller analysis surfaces per library. However, the restructure moves every file in the package and rewrites every import path, making it a large diff that would block #21 (LayrzButton) from review if folded into that PR. The user's decision: defer this structural work until LayrzButton is complete and merged.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Proceed with current single-barrel structure | No refactoring needed; simpler file layout; all imports stay as-is | Requires every consumer to import the full barrel; accidental coupling between unrelated domains possible; no explicit dependency intent per call site |
+| (b) Restructure now, as part of #21 | Achieves the cleaner import structure immediately; ships with the first component | Balloons the #21 diff to ~5,000+ lines; makes both the component and the restructure impossible to review independently; blocks #21 indefinitely |
+| (c) **Chosen** — Defer until #21 ships, then restructure in its own PR | Component and package structure are reviewed separately; each change can be reverted independently; clearer git history; lower review friction | Consumes the remainder of M2 / early M3 as dedicated restructuring work; consumes a full PR + CI cycle; requires updating all downstream imports |
+
+### Decision
+
+**Chose (c): Defer the per-domain library restructure until LayrzButton (#21) has landed.**
+
+Rationale: Folding a 4,800-line component diff and a 2,000+ line package restructure into a single PR makes both impossible to review rigorously and impossible to revert independently if issues surface. The restructure earns its own issue, branch, and PR once #21 is complete. This keeps the review focused and the git history clear.
+
+### Rationale — Clarification on Initial Intent
+
+The user's initial framing was "to optimize what is loading" (implying tree-shaking efficiency). This reasoning **does not apply to Dart.** In Dart, the compiler tree-shakes unreachable code regardless of how it was imported — a single fat barrel costs nothing at runtime or in output size. That intuition is valid in JavaScript bundlers; it is false in Dart's AOT and JIT models.
+
+The reasons the restructure is **still worth doing** are different and real:
+
+- **Explicit dependency intent at each call site**: A consumer writing `import 'package:layrz_ui/buttons.dart';` makes it clear which domains they depend on, improving readability and discoverability.
+- **No accidental coupling**: Removing the root barrel prevents a team from accidentally importing LayrzButton to use LayrzTextInput, coupling unrelated concerns.
+- **Smaller analysis surface per library**: Fewer files per import means faster analyzer and IDE responsiveness.
+- **Familiarity**: It is exactly how the Flutter SDK is structured, easing mental model transfer for consumers.
+
+### Consequences
+
+- **Deferred work**: A new GitHub Project item will be created (separate from M2 components) to track the restructuring as its own 1–2 week effort.
+- **Timing**: Restructure begins after #21 merges and before M2 components enter code review. Estimated to land in early M2 or mid-M2.
+- **File/import updates**: Every `import` in `lib/`, `test/`, `example/`, and the wiki will change. CLAUDE.md's "Project structure" section will be rewritten. The `engineering/architecture.md` file will document the new layout.
+- **Root barrel fate**: Two unresolved sub-decisions:
+  - **Physical layout**: Either `lib/src/<module>/` entrypoints at the top of `lib/` (Flutter SDK exact), or the minimal-movement `lib/<module>.dart` + `lib/<module>/src/`. Both yield the same consumer import `package:layrz_ui/buttons.dart`, but the file layout differs.
+  - **Fate of `lib/layrz_ui.dart`**: Delete it entirely (Flutter SDK has no `flutter.dart` that exports everything), or keep it as a convenience barrel re-exporting each entrypoint for callers who want the old pattern. This is a **forward-compatibility decision** that could ease early adoption.
+- **Automation burden**: The `/complete-todo-process` skill and related automation will need no changes; only the import paths in newly-generated files will differ.
+
+**Update (2026-08-16) — D19 Implemented**
+
+The per-domain library restructure has been completed ahead of LayrzButton's merge. The implementation chose the second physical layout option from the original decision:
+
+- **Entrypoint location**: `lib/<module>.dart` (not `lib/src/<module>.dart`)
+- **Implementation location**: `lib/src/<module>/` (implementation files under src/)
+- **Consumer imports**: `import 'package:layrz_ui/buttons.dart';` (matching Flutter SDK convention)
+- **Root barrel fate**: The `lib/layrz_ui.dart` barrel was deleted entirely. There is deliberately no way to import all modules at once. Consumers must write per-domain imports.
+
+**Rationale for the choice**: Absolute imports survive refactors (D20's precondition). The root barrel deletion eliminates a footgun (accidentally importing unrelated modules). Per-domain imports force explicit dependency intent, improving code clarity.
+
+**Consequences of the change**: Every consuming app's import statements break when migrating to this version. The breaking change is explicit and unavoidable; this is acceptable for a ground-up rewrite (consistent with D1's stance on clean breaks).
+
+### Review Trigger
+
+None. D19 is now complete. The per-domain library structure is the new standard for layrz_ui.
+
+---
+
+## D20: Cross-Module Imports Use `package:layrz_ui/` Form, Never Relative Paths
+
+**Date**: 2026-08-15  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Within layrz_ui, files often need to import types and constants from other modules. For example, a button component in `lib/buttons/src/button.dart` may need to import color tokens from `lib/tokens/tokens.dart`. The choice is how to form this import:
+
+- **Relative path**: `import '../../tokens/tokens.dart';` (leaves the module, climbs directory tree)
+- **Absolute package path**: `import 'package:layrz_ui/tokens/tokens.dart';` (explicit module boundary cross)
+
+This convention applies to cross-module imports in `lib/`, `test/`, and `example/lib/` alike. Same-module relative imports within `src/` subdirectories (e.g., `import 'button_style.dart';` in the same directory) are unaffected.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Relative paths (climbing `../`) | Shorter syntax; familiar from any file system navigation | Breaks silently when files move; hides module boundaries; harder to trace; difficult to refactor as a unit |
+| (b) **Chosen** — Absolute `package:layrz_ui/` form | Survives refactors; explicit module boundaries; improves discoverability; matches Dart/Flutter ecosystem convention | Slightly more verbose; requires knowing the package name |
+
+### Decision
+
+**Chose (b): All cross-module imports within layrz_ui use the `package:layrz_ui/...` form.**
+
+Any import containing `../` (leaving the current module) must be rewritten to use `package:layrz_ui/`. This applies to:
+- Imports in `lib/<module>/src/` reaching into other modules
+- Imports in `test/` reaching into `lib/`
+- Imports in `example/lib/` reaching into the package
+
+Same-module relative imports are fine:
+```dart
+// In lib/buttons/src/layrz_button.dart
+import 'button_style.dart';  // OK — same module, same directory
+```
+
+Cross-module imports must use the absolute form:
+```dart
+// In lib/buttons/src/layrz_button.dart
+import 'package:layrz_ui/tokens/tokens.dart';  // OK — absolute cross-module
+import 'package:layrz_ui/constants/constants.dart';  // OK — absolute cross-module
+
+// NOT:
+import '../../tokens/tokens.dart';  // WRONG — relative, leaves module
+```
+
+### Verification
+
+A one-line check to find violations in `lib/`:
+```bash
+grep -rn "import '\.\./" lib/
+```
+This must return empty. If any results appear, rewrite those imports to use `package:` form.
+
+**Note**: `test/` is deliberately excluded from this grep. Test files legitimately import test-local helpers with relative paths (e.g., `import '../helpers/pump_themed.dart';`) because the package URI space covers only `lib/`, making `package:layrz_ui/...` imports impossible for test infrastructure. This exemption applies to relative imports within `test/` that reference other `test/` files only; imports from `test/` into `lib/` must still use the `package:` form.
+
+### Rationale
+
+- **Refactor resilience**: When the per-domain library restructure (D19) moves every file in the package (`lib/buttons/src/` → `lib/src/buttons/`, or similar), relative imports will all break and require rewriting. Absolute `package:` imports survive the restructure with no changes — the package name stays the same regardless of internal layout.
+- **Module boundary visibility**: A `package:layrz_ui/` import is an obvious signal that you are crossing a module boundary. A relative path `../../` hides the fact that you are leaving your domain. Explicit boundaries make it easier to understand dependencies at a glance and easier to spot over-coupling.
+- **Discoverability**: In a large codebase, seeing `import 'package:layrz_ui/tokens/tokens.dart';` makes it clear which modules exist and what is exported. Relative paths obscure this.
+- **Ecosystem alignment**: The Flutter SDK, Dart packages, and the wider Dart community all use absolute `package:` imports for cross-package and cross-library dependencies. Using the same convention reduces cognitive friction.
+- **D19 enabler**: The deferred per-domain library restructure (D19) explicitly lists absolute imports as the precondition for cheap refactoring. This decision makes that refactor viable at low cost.
+
+### Consequences
+
+- New code and refactored code must use `package:layrz_ui/` form for all cross-module imports.
+- Existing code using relative paths (`../../`) should be rewritten as code is touched. No bulk rewrite is needed unless D19's restructure is triggered (at which point all imports will be rewritten anyway).
+- Code review must verify that no relative `../` imports are introduced.
+
+**Update (2026-08-15) — Verification Corrected; Test-Local Relative Imports Exempted**
+
+The original Verification section contained an impossible requirement: `grep -rn "import '\.\./" lib/ test/ example/lib/` as a unified check. This fails on `test/` because test files legitimately and necessarily use relative paths to import test-local helpers (`import '../helpers/pump_themed.dart';`). The package URI space (`package:layrz_ui/...`) covers only `lib/`, so test infrastructure cannot use absolute imports for test-only files.
+
+The corrected Verification now:
+- Checks only `lib/` with `grep -rn "import '\.\./" lib/` (which must be empty)
+- Documents the exemption explicitly: relative imports **within `test/`** for test-local files are required and correct
+- Clarifies that imports **from `test/` into `lib/`** must still use `package:layrz_ui/...` form
+
+This amendment does not change the decision itself, only clarifies its scope. The rule applies to cross-module imports within `lib/`, and to imports from `test/` and `example/lib/` into the package — not to test-local relative imports, which have no alternative.
+
+### Review Trigger
+
+**Before per-domain library restructure (D19)**: Verify that no cross-module relative imports remain in `lib/`, `test/`, or `example/lib/`. This check ensures the restructure's refactoring tools can work with consistent import paths.
+
+If code review finds a cross-module relative import, ask the author to rewrite it to `package:layrz_ui/` form before approval. This is a non-negotiable code quality gate.
 
 ---
 

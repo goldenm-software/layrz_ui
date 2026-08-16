@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/constants/constants.dart';
-import 'package:layrz_ui/extensions/extensions.dart';
+import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/extensions.dart';
 
 void main() {
   group('LayrzColorExtensions', () {
@@ -170,36 +170,91 @@ void main() {
     });
 
     group('contrastColor', () {
-      test('returns black for light colors', () {
-        const lightColor = Color(0xFFFFFFFF); // white
-        expect(lightColor.contrastColor, equals(const Color(0xFF000000)));
+      test('returns black for white', () {
+        const white = Color(0xFFFFFFFF);
+        expect(white.contrastColor, equals(const Color(0xFF000000)));
       });
 
-      test('returns white for dark colors', () {
-        const darkColor = Color(0xFF000000); // black
-        expect(darkColor.contrastColor, equals(const Color(0xFFFFFFFF)));
+      test('returns white for black', () {
+        const black = Color(0xFF000000);
+        expect(black.contrastColor, equals(const Color(0xFFFFFFFF)));
       });
 
-      test('returns white for primary brand color', () {
-        const primary = Color(0xFF001E60); // Layrz primary
+      test('returns white for primary brand color (#001E60)', () {
+        const primary = Color(0xFF001E60);
         expect(primary.contrastColor, equals(const Color(0xFFFFFFFF)));
       });
 
-      test('returns black for light background color', () {
-        const lightBg = Color(0xFFFCFCFC); // Layrz light background
+      test('returns black for light background color (#FCFCFC)', () {
+        const lightBg = Color(0xFFFCFCFC);
         expect(lightBg.contrastColor, equals(const Color(0xFF000000)));
       });
 
-      test('uses luminance threshold of 0.179', () {
-        // Create a color near the luminance threshold
-        const threshold = Color(
-          0xFFB3B3B3,
-        ); // Approximately at the 0.179 threshold
-        final contrast = threshold.contrastColor;
-        expect([
-          const Color(0xFF000000),
-          const Color(0xFFFFFFFF),
-        ], contains(contrast));
+      test('returns white for Material green 500 (#4CAF50)', () {
+        const green = Color(0xFF4CAF50);
+        expect(green.contrastColor, equals(const Color(0xFFFFFFFF)));
+      });
+
+      test('returns white for Material red 500 (#F44336)', () {
+        const red = Color(0xFFF44336);
+        expect(red.contrastColor, equals(const Color(0xFFFFFFFF)));
+      });
+
+      test('returns white for Material blue 500 (#2196F3)', () {
+        const blue = Color(0xFF2196F3);
+        expect(blue.contrastColor, equals(const Color(0xFFFFFFFF)));
+      });
+
+      test('returns black for Material orange 500 (#FF9800)', () {
+        const orange = Color(0xFFFF9800);
+        expect(orange.contrastColor, equals(const Color(0xFF000000)));
+      });
+
+      test('returns black for Material grey 500 (#9E9E9E)', () {
+        const grey = Color(0xFF9E9E9E);
+        expect(grey.contrastColor, equals(const Color(0xFF000000)));
+      });
+    });
+
+    group('opposite', () {
+      test('opposite and contrastColor return identical values for white', () {
+        const white = Color(0xFFFFFFFF);
+        expect(white.opposite, equals(white.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for black', () {
+        const black = Color(0xFF000000);
+        expect(black.opposite, equals(black.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for grey', () {
+        const grey = Color(0xFF808080);
+        expect(grey.opposite, equals(grey.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for primary color', () {
+        const primary = Color(0xFF001E60);
+        expect(primary.opposite, equals(primary.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for light background', () {
+        const lightBg = Color(0xFFFCFCFC);
+        expect(lightBg.opposite, equals(lightBg.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for green 500', () {
+        const green = Color(0xFF4CAF50);
+        expect(green.opposite, equals(green.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for red 500', () {
+        const red = Color(0xFFF44336);
+        expect(red.opposite, equals(red.contrastColor));
+      });
+
+      test('opposite and contrastColor return identical values for blue 500', () {
+        const blue = Color(0xFF2196F3);
+        expect(blue.opposite, equals(blue.contrastColor));
       });
     });
 

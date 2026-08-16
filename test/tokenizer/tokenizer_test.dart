@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/constants/constants.dart';
-import 'package:layrz_ui/tokens/tokens.dart';
-import 'package:layrz_ui/tokenizer/tokenizer.dart';
+import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tokenizer.dart';
 
 import '../helpers/fake_font_handler.dart';
 
@@ -73,7 +73,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.primary, equals(tokens.colors.primary));
-      expect(tokenizer.primary, equals(kPrimaryColor));
+      expect((tokenizer.primary as LayrzColorSwatch).shade500, equals(kPrimaryColor));
     });
 
     test('success shortcut returns colors.success', () {

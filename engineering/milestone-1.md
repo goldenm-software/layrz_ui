@@ -136,6 +136,10 @@ Without CI, code quality degrades immediately. The Material/Cupertino guard and 
 - Commit a Material import to lib/, push, watch the CI fail
 - Run locally: `dart format --set-exit-if-changed lib/` should exit 0 and not reformat anything
 
+**Note on subsequent restructuring (2026-08-14)**:
+
+The CI pipeline described above was implemented at the time of Milestone 1's delivery. On 2026-08-14, shortly after this item shipped, the CI was restructured to use shared org-wide GitHub Actions from `goldenm-software/layrz-actions` and simplified per decision D17. The gate list, format enforcement mechanism, and coverage model have since changed. See decision D17 in `engineering/decisions.md` for the full record of what was originally decided versus what the current CI actually enforces today.
+
 ---
 
 #### 10. Enable `public_member_api_docs` in analysis_options.yaml

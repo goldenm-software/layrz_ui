@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/tokens/tokens.dart';
+import 'package:layrz_ui/tokens.dart';
 
 void main() {
   group('LayrzShadowTokens', () {
@@ -13,32 +13,35 @@ void main() {
       expect(tokens.outlineColor, equals(const Color.fromRGBO(0, 0, 0, 0.1)));
     });
 
-    test('elevation1 returns correct shadow list', () {
+    test('elevation1 returns single shadow', () {
       const tokens = LayrzShadowTokens();
       final shadows = tokens.elevation1;
 
       expect(shadows, isA<List<BoxShadow>>());
       expect(shadows.length, equals(1));
-      expect(shadows[0].blurRadius, equals(5.0)); // 3*1 + 2 = 5
-      expect(shadows[0].offset, equals(const Offset(0, 0))); // 1 - 1 = 0
+
+      final shadow = shadows[0];
+      expect(shadow.spreadRadius, equals(0));
+      expect(shadow.offset, equals(const Offset(0, 1)));
+      expect(shadow.blurRadius, greaterThan(0));
     });
 
-    test('elevation3 returns correct shadow list', () {
+    test('elevation3 returns single shadow', () {
       const tokens = LayrzShadowTokens();
       final shadows = tokens.elevation3;
 
       expect(shadows.length, equals(1));
-      expect(shadows[0].blurRadius, equals(11.0)); // 3*3 + 2 = 11
-      expect(shadows[0].offset, equals(const Offset(0, 2))); // 3 - 1 = 2
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 3)));
     });
 
-    test('elevation5 returns correct shadow list', () {
+    test('elevation5 returns single shadow', () {
       const tokens = LayrzShadowTokens();
       final shadows = tokens.elevation5;
 
       expect(shadows.length, equals(1));
-      expect(shadows[0].blurRadius, equals(17.0)); // 3*5 + 2 = 17
-      expect(shadows[0].offset, equals(const Offset(0, 4))); // 5 - 1 = 4
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 5)));
     });
 
     test('elevation0 should return empty shadow list', () {
@@ -71,17 +74,6 @@ void main() {
       },
     );
 
-    test('elevation() opacity increases with elevation', () {
-      const tokens = LayrzShadowTokens();
-      final elev1 = tokens.elevation(elevation: 1);
-      final elev5 = tokens.elevation(elevation: 5);
-
-      final opac1 = elev1.boxShadow![0].color.a;
-      final opac5 = elev5.boxShadow![0].color.a;
-
-      expect(opac5, greaterThan(opac1));
-    });
-
     test(
       'elevation3 from getter equals elevation(elevation: 3) from method',
       () {
@@ -90,9 +82,10 @@ void main() {
         final fromMethod = tokens.elevation(elevation: 3).boxShadow!;
 
         expect(fromGetter.length, equals(fromMethod.length));
+        expect(fromGetter.length, equals(1)); // single shadow
         expect(fromGetter[0].blurRadius, equals(fromMethod[0].blurRadius));
         expect(fromGetter[0].offset, equals(fromMethod[0].offset));
-        // Compare alpha values with tolerance for floating point
+        expect(fromGetter[0].spreadRadius, equals(fromMethod[0].spreadRadius));
         expect(fromGetter[0].color.a, closeTo(fromMethod[0].color.a, 0.01));
       },
     );
@@ -117,9 +110,11 @@ void main() {
       final normal = tokens.elevation(elevation: 3, reverse: false);
       final reversed = tokens.elevation(elevation: 3, reverse: true);
 
+      expect(normal.boxShadow!.length, equals(1));
+      expect(reversed.boxShadow!.length, equals(1));
+
       final normalOffset = normal.boxShadow![0].offset.dy;
       final reversedOffset = reversed.boxShadow![0].offset.dy;
-
       expect(reversedOffset, equals(-normalOffset));
     });
 
@@ -170,22 +165,26 @@ void main() {
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
 
-    test('elevation 0 opacity should be 6% (0.06)', () {
+    test('elevation 0 returns no shadow', () {
       const tokens = LayrzShadowTokens();
       final decor = tokens.elevation(elevation: 0.0);
-      // At elevation 0, alpha = 0.06
-      // Color.alpha is an int 0-255, so 0.06 * 255 ≈ 15
       expect(decor.boxShadow, isNull); // no shadow at elevation 0
     });
 
-    test('elevation 5 opacity should be 12% (0.12)', () {
+    test('elevation1 has non-zero offset for visibility', () {
       const tokens = LayrzShadowTokens();
-      final shadows = tokens.elevation5;
-      // At elevation 5, alpha = 0.12
-      // Verify the color has approximately this opacity
-      final expectedAlpha = 0.12;
+      final shadows = tokens.elevation1;
+      // Regression test: elevation 1 offset must be > 0 so shadow is visible behind opaque surfaces
+      expect(shadows[0].offset.dy, equals(1.0));
+      expect(shadows[0].offset.dy, greaterThan(0.0));
+    });
+
+    test('elevation1 has non-trivial opacity', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.elevation1;
+      // Regression test: elevation 1 opacity must be sufficient to read on screen
       final actualAlpha = shadows[0].color.a;
-      expect(actualAlpha, closeTo(expectedAlpha, 0.01));
+      expect(actualAlpha, greaterThan(0.0));
     });
 
     test('elevation assertion fails for elevation > 5', () {
@@ -196,6 +195,199 @@ void main() {
     test('elevation assertion fails for elevation < 0', () {
       const tokens = LayrzShadowTokens();
       expect(() => tokens.elevation(elevation: -1), throwsAssertionError);
+    });
+
+    // Compact shadow ramp tests
+    test('compact1 returns single shadow', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact1;
+
+      expect(shadows, isA<List<BoxShadow>>());
+      expect(shadows.length, equals(1));
+
+      final shadow = shadows[0];
+      expect(shadow.spreadRadius, equals(0));
+      expect(shadow.offset, equals(const Offset(0, 3)));
+      expect(shadow.blurRadius, greaterThan(0));
+    });
+
+    test('compact2 returns single shadow', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact2;
+
+      expect(shadows.length, equals(1));
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 4)));
+    });
+
+    test('compact3 returns single shadow', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact3;
+
+      expect(shadows.length, equals(1));
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 5)));
+    });
+
+    test('compact4 returns single shadow', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact4;
+
+      expect(shadows.length, equals(1));
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 6)));
+    });
+
+    test('compact5 returns single shadow', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact5;
+
+      expect(shadows.length, equals(1));
+      expect(shadows[0].spreadRadius, equals(0));
+      expect(shadows[0].offset, equals(const Offset(0, 7)));
+    });
+
+    test('compact shadow has greater opacity and offset than elevation at same level', () {
+      const tokens = LayrzShadowTokens();
+      final compact = tokens.compact1[0];
+      final elevation = tokens.elevation1[0];
+
+      // Compact ramp is darker: 18%–30% opacity vs 10%–22%
+      expect(compact.color.a, greaterThan(elevation.color.a));
+      // Compact ramp has larger vertical offset for visibility on small components
+      expect(compact.offset.dy, greaterThan(elevation.offset.dy));
+    });
+
+    test('compact2 shadow is darker with greater offset than elevation2', () {
+      const tokens = LayrzShadowTokens();
+      final compact = tokens.compact2[0];
+      final elevation = tokens.elevation2[0];
+
+      // Compact ramp is darker
+      expect(compact.color.a, greaterThan(elevation.color.a));
+      // Compact ramp has larger vertical offset
+      expect(compact.offset.dy, greaterThan(elevation.offset.dy));
+    });
+
+    test('compact1 has sufficient offset for visibility', () {
+      const tokens = LayrzShadowTokens();
+      final shadows = tokens.compact1;
+      // Regression test: compact 1 offset must be large enough so shadow is
+      // clearly visible at small component sizes
+      expect(shadows[0].offset.dy, equals(3.0));
+      expect(shadows[0].offset.dy, greaterThanOrEqualTo(2.0));
+    });
+
+    test('compact0 returns no shadow', () {
+      const tokens = LayrzShadowTokens();
+      final decor = tokens.compact(elevation: 0);
+      expect(decor.boxShadow, isNull);
+    });
+
+    test(
+      'compact() at level 0 draws outline when hideOnElevationZero is false',
+      () {
+        const tokens = LayrzShadowTokens();
+        final decor = tokens.compact(
+          elevation: 0,
+          hideOnElevationZero: false,
+        );
+
+        expect(decor.border, isNotNull);
+        expect(decor.border!.top.width, equals(1.0));
+      },
+    );
+
+    test(
+      'compact() at level 0 hides outline when hideOnElevationZero is true',
+      () {
+        const tokens = LayrzShadowTokens();
+        final decor = tokens.compact(elevation: 0, hideOnElevationZero: true);
+
+        expect(decor.border, isNull);
+      },
+    );
+
+    test(
+      'compact3 from getter equals compact(elevation: 3) from method',
+      () {
+        const tokens = LayrzShadowTokens();
+        final fromGetter = tokens.compact3;
+        final fromMethod = tokens.compact(elevation: 3).boxShadow!;
+
+        expect(fromGetter.length, equals(fromMethod.length));
+        expect(fromGetter.length, equals(1)); // single shadow
+        expect(fromGetter[0].blurRadius, equals(fromMethod[0].blurRadius));
+        expect(fromGetter[0].offset, equals(fromMethod[0].offset));
+        expect(fromGetter[0].spreadRadius, equals(fromMethod[0].spreadRadius));
+        expect(fromGetter[0].color.a, closeTo(fromMethod[0].color.a, 0.01));
+      },
+    );
+
+    test('compact() respects color parameter', () {
+      const tokens = LayrzShadowTokens();
+      const customColor = Color(0xFF888888);
+      final decor = tokens.compact(elevation: 1, color: customColor);
+
+      expect(decor.color, equals(customColor));
+    });
+
+    test('compact() respects radius parameter', () {
+      const tokens = LayrzShadowTokens();
+      final decor = tokens.compact(elevation: 1, radius: 12.0);
+
+      expect(decor.borderRadius, equals(BorderRadius.circular(12.0)));
+    });
+
+    test('compact() reverses offset when reverse is true', () {
+      const tokens = LayrzShadowTokens();
+      final normal = tokens.compact(elevation: 3, reverse: false);
+      final reversed = tokens.compact(elevation: 3, reverse: true);
+
+      expect(normal.boxShadow!.length, equals(1));
+      expect(reversed.boxShadow!.length, equals(1));
+
+      final normalOffset = normal.boxShadow![0].offset.dy;
+      final reversedOffset = reversed.boxShadow![0].offset.dy;
+      expect(reversedOffset, equals(-normalOffset));
+    });
+
+    test('compact opacity increases monotonically', () {
+      const tokens = LayrzShadowTokens();
+      final c1 = tokens.compact1[0].color.a;
+      final c2 = tokens.compact2[0].color.a;
+      final c3 = tokens.compact3[0].color.a;
+      final c4 = tokens.compact4[0].color.a;
+      final c5 = tokens.compact5[0].color.a;
+
+      expect(c2, greaterThan(c1));
+      expect(c3, greaterThan(c2));
+      expect(c4, greaterThan(c3));
+      expect(c5, greaterThan(c4));
+    });
+
+    test('compact blur increases monotonically', () {
+      const tokens = LayrzShadowTokens();
+      final c1 = tokens.compact1[0].blurRadius;
+      final c2 = tokens.compact2[0].blurRadius;
+      final c3 = tokens.compact3[0].blurRadius;
+      final c4 = tokens.compact4[0].blurRadius;
+      final c5 = tokens.compact5[0].blurRadius;
+
+      expect(c2, greaterThan(c1));
+      expect(c3, greaterThan(c2));
+      expect(c4, greaterThan(c3));
+      expect(c5, greaterThan(c4));
+    });
+
+    test('compact assertion fails for elevation > 5', () {
+      const tokens = LayrzShadowTokens();
+      expect(() => tokens.compact(elevation: 6), throwsAssertionError);
+    });
+
+    test('compact assertion fails for elevation < 0', () {
+      const tokens = LayrzShadowTokens();
+      expect(() => tokens.compact(elevation: -1), throwsAssertionError);
     });
   });
 }

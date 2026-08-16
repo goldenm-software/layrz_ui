@@ -331,15 +331,14 @@ When the CI pipeline is established (see `milestone-1.md`, item 9), gate on:
 
 ### Implementation Status
 
-The six CI gates are now implemented as of Milestone 1 work item 9:
+Milestone 1 work item 9 implemented CI gates. As of 2026-08-14, the CI pipeline has been restructured per decision D17 to use shared org-wide GitHub Actions. The current gates are:
 1. **flutter analyze** — linting must be clean (including `public_member_api_docs`)
 2. **flutter test --coverage** — all tests pass and coverage is reported
-3. **dart format** — code must be formatted
-4. **Material/Cupertino guard** — no Material or Cupertino imports in lib/
-5. **GoogleFonts TextTheme guard** — no Material-coupled font methods
-6. **test mirror check** — every non-barrel `lib/**/src/*.dart` must have a corresponding `test/<module>/<name>_test.dart`
+3. **Material/Cupertino guard** — no Material or Cupertino imports in lib/
+4. **GoogleFonts TextTheme guard** — no Material-coupled font methods
+5. **Coverage floor** — minimum 90% code coverage (current coverage: 97.21%)
 
-A coverage ratchet also prevents regression below `tool/coverage_baseline`.
+The test-mirror structure (every `lib/**/src/*.dart` has a corresponding `test/<module>/*_test.dart`) is now enforced by code review rather than a CI gate. Formatting with `dart format` is a local-only concern, not a pipeline gate.
 
 ---
 

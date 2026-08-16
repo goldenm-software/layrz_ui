@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart' as flutter_widgets;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/state.dart';
 
 /// Tests for the state module re-exports.
 ///
