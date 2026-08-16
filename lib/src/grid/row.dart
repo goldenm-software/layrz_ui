@@ -11,11 +11,11 @@ import 'col.dart';
 ///
 /// The row respects two independent widths:
 /// - **Layout width**: the row's own box width, used for pixel arithmetic when sizing children.
-/// - **Breakpoint width**: used to select which span (`xs`/`sm`/`md`/`lg`/`xl`) each column should use.
+/// - **Breakpoint width**: always the viewport width from [MediaQuery.sizeOf], used to select spans.
 ///
-/// By default, both are the same (the row's box width). When [useScreenWidth] is `true`,
-/// the breakpoint width is taken from [MediaQuery.sizeOf], enabling responsive spans
-/// based on the full screen width even when the row is narrower (e.g., in a sidebar).
+/// This means a row inside a narrow container (e.g. a 400px sidebar) on a wide screen (e.g. 1920px)
+/// will select wide-screen spans (lg/xl band) and divide its 400px width by those larger spans,
+/// resulting in narrower individual columns. This is the standard CSS Grid / Bootstrap behavior.
 class LayrzRow extends StatelessWidget {
   /// The columns to arrange in this row.
   ///
@@ -44,17 +44,6 @@ class LayrzRow extends StatelessWidget {
   /// Set to 0 for flush, adjacent columns.
   final double? spacing;
 
-  /// Whether to use the screen width (from [MediaQuery]) for breakpoint selection
-  /// instead of this row's own box width.
-  ///
-  /// Defaults to `false`, meaning the row's layout width determines which spans to use.
-  /// When `true`, the breakpoint width is [MediaQuery.sizeOf].width, even if the row
-  /// is narrower. Pixel arithmetic for sizing still uses the row's actual box width.
-  ///
-  /// This is useful for sidebars and embedded layouts where you want responsive spans
-  /// based on the screen size, not the container size.
-  final bool useScreenWidth;
-
   /// Creates a new [LayrzRow] with the given children and layout parameters.
   ///
   /// The [children] list may be empty. All alignment and spacing parameters use sensible
@@ -65,7 +54,6 @@ class LayrzRow extends StatelessWidget {
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.crossAxisAlignment = CrossAxisAlignment.start,
     this.spacing,
-    this.useScreenWidth = false,
   });
 
   @override
@@ -78,14 +66,15 @@ class LayrzRow extends StatelessWidget {
       builder: (context, constraints) {
         // Two-width rule:
         // layoutWidth: the row's own box width, used for pixel math to size children.
-        // breakpointWidth: which of xs/sm/md/lg/xl to select for each column.
+        // breakpointWidth: the viewport width, used to select which of xs/sm/md/lg/xl each column uses.
         // When a parent is unbounded horizontally, we clamp layoutWidth to the screen width
         // to prevent infinity from propagating into SizedBox calculations.
         final layoutWidth = constraints.maxWidth.isFinite ? constraints.maxWidth : MediaQuery.sizeOf(context).width;
 
-        // Breakpoint width determines span selection; it can differ from layout width
-        // if useScreenWidth is true. Both widths are thread through the layout helpers.
-        final breakpointWidth = useScreenWidth ? MediaQuery.sizeOf(context).width : layoutWidth;
+        // Breakpoint width is always the viewport width. It typically differs from layoutWidth
+        // when this row is inside a narrow container on a wide screen. Both widths are threaded
+        // through the layout helpers — breakpointWidth selects the spans, layoutWidth divides the pixels.
+        final breakpointWidth = MediaQuery.sizeOf(context).width;
 
         return _renderRows(
           context: context,

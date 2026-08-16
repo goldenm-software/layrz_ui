@@ -357,16 +357,15 @@ void main() {
       });
     });
 
-    group('useScreenWidth', () {
-      testWidgets(
-        'useScreenWidth=false: 400px container selects xs span, 400px wide col',
-        (tester) async {
-          await pumpThemed(
-            tester,
-            SizedBox(
+    group('band and pixel separation', () {
+      testWidgets('narrow container on wide screen: viewport selects band, container divides pixels', (tester) async {
+        await pumpThemed(
+          tester,
+          MediaQuery(
+            data: const MediaQueryData(size: Size(1920, 1080)),
+            child: SizedBox(
               width: 400,
               child: LayrzRow(
-                useScreenWidth: false,
                 spacing: 0,
                 children: [
                   LayrzCol(
@@ -377,43 +376,49 @@ void main() {
                 ],
               ),
             ),
-          );
+          ),
+        );
 
-          // 400px is xs band, so span = 12 → col width = 400 * 12/12 = 400px
-          final colSize = tester.getSize(find.byKey(const Key('col')));
-          expect(colSize.width, closeTo(400.0, 0.1));
-        },
-      );
+        // Viewport 1920px selects xl band, cascades xl → lg → md → 6
+        // Container width 400px divides by span: 400 * 6 / 12 = 200.0px
+        final colSize = tester.getSize(find.byKey(const Key('col')));
+        expect(
+          colSize.width,
+          closeTo(200.0, 0.01),
+          reason: '1920px viewport selects md span 6, dividing 400px = 200px',
+        );
+      });
 
-      testWidgets(
-        'useScreenWidth=true: 400px container but 1920px screen selects xl span, 200px wide col',
-        (tester) async {
-          await pumpThemed(
-            tester,
-            MediaQuery(
-              data: const MediaQueryData(size: Size(1920, 1080)),
-              child: SizedBox(
-                width: 400,
-                child: LayrzRow(
-                  useScreenWidth: true,
-                  spacing: 0,
-                  children: [
-                    LayrzCol(
-                      xs: 12,
-                      md: 6,
-                      child: SizedBox(height: 40, key: const Key('col')),
-                    ),
-                  ],
-                ),
+      testWidgets('narrow container on narrow screen: viewport selects band, container divides pixels', (tester) async {
+        await pumpThemed(
+          tester,
+          MediaQuery(
+            data: const MediaQueryData(size: Size(400, 800)),
+            child: SizedBox(
+              width: 400,
+              child: LayrzRow(
+                spacing: 0,
+                children: [
+                  LayrzCol(
+                    xs: 12,
+                    md: 6,
+                    child: SizedBox(height: 40, key: const Key('col')),
+                  ),
+                ],
               ),
             ),
-          );
+          ),
+        );
 
-          // 1920px screen selects xl band, cascades to md → 6 → col width = 400 * 6/12 = 200px
-          final colSize = tester.getSize(find.byKey(const Key('col')));
-          expect(colSize.width, closeTo(200.0, 0.1));
-        },
-      );
+        // Viewport 400px selects xs band
+        // Container width 400px divides by span: 400 * 12 / 12 = 400.0px
+        final colSize = tester.getSize(find.byKey(const Key('col')));
+        expect(
+          colSize.width,
+          closeTo(400.0, 0.01),
+          reason: '400px viewport selects xs span 12, dividing 400px = 400px',
+        );
+      });
     });
 
     group('LayrzCol in tree', () {
