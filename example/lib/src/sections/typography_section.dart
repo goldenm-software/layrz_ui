@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 
 import '../common/showroom_section.dart';
+import '../common/unit_display.dart';
 
 /// Displays all 15 typography styles from the design system.
 ///
@@ -149,10 +150,12 @@ class _StyleRow extends StatelessWidget {
         // Font size value
         SizedBox(
           width: tokens.spacing.sp48,
-          child: Text(
-            '${sample.style.fontSize?.toStringAsFixed(0)} px',
-            textAlign: TextAlign.right,
-            style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: UnitDisplay(
+              value: sample.style.fontSize ?? 0,
+              textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+            ),
           ),
         ),
       ],

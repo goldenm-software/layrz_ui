@@ -117,7 +117,7 @@ Engineering documentation lives in `engineering/` (singular). The Pub layout con
 The GitHub wiki (`wiki/`) is a git submodule tracking [goldenm-software/layrz_ui.wiki.git](git@github.com:goldenm-software/layrz_ui.wiki.git):
 - All per-component documentation (28 widget pages)
 - Input contract and component catalog
-- Wiki pages are authored flat at the root with no subdirectories
+- Cross-cutting topic pages (Home, Getting Started, Theming, Design Tokens, Component Catalog, etc.) live at the wiki root; per-widget pages live in `wiki/Widgets/` subdirectory and must be registered in `wiki/Widgets/_Sidebar.md` to appear in navigation
 - Wiki pushes go live immediately (no PR review)
 - Cross-links from wiki to repo docs use absolute GitHub URLs: `https://github.com/goldenm-software/layrz_ui/blob/main/engineering/architecture.md`
 - `wiki/` is excluded from package distribution via `.pubignore`
@@ -126,7 +126,7 @@ The GitHub wiki (`wiki/`) is a git submodule tracking [goldenm-software/layrz_ui
 
 ### NEW WIDGET DOCUMENTATION GOES IN THE WIKI
 
-When you add a new widget, document it in the wiki, not in `engineering/`.
+When you add a new widget, document it in `wiki/Widgets/` (not `engineering/`), and register it in `wiki/Widgets/_Sidebar.md` so it appears in the navigation sidebar.
 
 ---
 

@@ -1,4 +1,5 @@
 export 'src/tokens/border.dart';
+export 'src/tokens/breakpoints.dart';
 export 'src/tokens/color_swatch.dart';
 export 'src/tokens/colors.dart';
 export 'src/tokens/motion.dart';

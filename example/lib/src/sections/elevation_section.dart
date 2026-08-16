@@ -50,7 +50,7 @@ Widget buildElevationSection() {
                         style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
-                      _ElevationCard(elevation: 0, label: '0 px outline'),
+                      _ElevationCard(elevation: 0, label: '0u outline'),
                     ],
                   ),
                 ),

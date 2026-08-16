@@ -80,6 +80,9 @@ class LayrzTokenizer {
   /// All motion tokens (durations and easing curves).
   LayrzMotionTokens get motion => tokens.motion;
 
+  /// All breakpoint tokens (band thresholds for responsive design).
+  LayrzBreakpointTokens get breakpointTokens => tokens.breakpoints;
+
   // ===== FLAT SHORTCUTS FOR COLOR TOKENS =====
 
   /// Primary brand color used for interactive elements and prominent actions.

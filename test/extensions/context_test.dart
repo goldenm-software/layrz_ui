@@ -221,6 +221,78 @@ void main() {
         expect(resolved, same(ext));
       },
     );
+
+    testWidgets('breakpoint getter exists and returns LayrzBreakpoint', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint? resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              // Just verify the getter exists and returns a breakpoint
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // The getter should return a valid breakpoint, even if we can't control window size reliably
+      expect(resolved, isNotNull);
+      expect(resolved, isA<LayrzBreakpoint>());
+    });
+
+    testWidgets('context.tokens has breakpoints field', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpointTokens? breakpoints;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              breakpoints = context.tokens.breakpoints;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(breakpoints, isNotNull);
+      expect(breakpoints!.xs, equals(600.0));
+      expect(breakpoints!.sm, equals(960.0));
+      expect(breakpoints!.md, equals(1264.0));
+      expect(breakpoints!.lg, equals(1904.0));
+    });
+
+    testWidgets('custom breakpoint tokens are used in theme', (tester) async {
+      const customBreakpoints = LayrzBreakpointTokens(xs: 500, sm: 900, md: 1200, lg: 1800);
+      final customTheme = LayrzThemeData.light(
+        fontHandler: const FakeFontHandler(),
+        breakpointTokens: customBreakpoints,
+      );
+      late LayrzBreakpointTokens? resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: customTheme,
+          child: Builder(
+            builder: (context) {
+              resolved = context.tokens.breakpoints;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(customBreakpoints));
+      expect(resolved!.xs, equals(500.0));
+      expect(resolved!.sm, equals(900.0));
+      expect(resolved!.md, equals(1200.0));
+      expect(resolved!.lg, equals(1800.0));
+    });
   });
 }
 
