@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
-import '../../fonts/fonts.dart';
-import '../../tokens/tokens.dart';
+import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/fonts/fonts.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
+
 import 'theme_extension.dart';
 
 /// Immutable design data for the layrz_ui design system.
@@ -97,8 +98,8 @@ class LayrzThemeData {
 
   /// Primary brand color (deep navy blue by default).
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.primary].
-  Color get primaryColor => tokens.colors.primary;
+  /// Backwards-compatible shorthand for [tokens.colors.primary.shade500].
+  Color get primaryColor => tokens.colors.primary.shade500;
 
   /// Canvas / scaffold background color.
   ///
@@ -129,18 +130,18 @@ class LayrzThemeData {
   ///
   /// Renamed from [errorColor] to [dangerColor] in alignment with the token system.
   /// This getter provides backwards compatibility under the old name.
-  /// New code should use [tokens.colors.danger].
-  Color get dangerColor => tokens.colors.danger;
+  /// New code should use [tokens.colors.danger.shade500].
+  Color get dangerColor => tokens.colors.danger.shade500;
 
   /// Success semantic color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.success].
-  Color get successColor => tokens.colors.success;
+  /// Backwards-compatible shorthand for [tokens.colors.success.shade500].
+  Color get successColor => tokens.colors.success.shade500;
 
   /// Warning semantic color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.warning].
-  Color get warningColor => tokens.colors.warning;
+  /// Backwards-compatible shorthand for [tokens.colors.warning.shade500].
+  Color get warningColor => tokens.colors.warning.shade500;
 
   /// Full text-style scale for this theme.
   ///

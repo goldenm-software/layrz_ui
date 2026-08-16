@@ -42,13 +42,13 @@ void main() {
       const customPrimary = Color(0xFF123456);
       final tokens = LayrzTokens.light(primaryColor: customPrimary);
 
-      expect(tokens.colors.primary, equals(customPrimary));
+      expect(tokens.colors.primary.shade500, equals(customPrimary));
     });
 
     test('light factory uses default colors when not specified', () {
       final tokens = LayrzTokens.light();
 
-      expect(tokens.colors.primary, equals(kPrimaryColor));
+      expect(tokens.colors.primary.shade500, equals(kPrimaryColor));
     });
 
     test('light factory wires shadow.baseRadius to radius.base', () {
@@ -64,12 +64,9 @@ void main() {
       );
       final modified = original.copyWith(colors: newColors);
 
-      expect(modified.colors.primary, equals(const Color(0xFF888888)));
+      expect(modified.colors.primary.shade500, equals(const Color(0xFF888888)));
       expect(modified.typography, equals(original.typography));
-      expect(
-        original.colors.primary,
-        equals(kPrimaryColor),
-      ); // original unchanged
+      expect(original.colors.primary.shade500, equals(kPrimaryColor)); // original unchanged
     });
 
     test('equality works for identical light factories', () {

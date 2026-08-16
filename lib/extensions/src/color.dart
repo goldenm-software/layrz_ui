@@ -66,11 +66,38 @@ extension LayrzColorExtensions on Color {
 
   /// Returns black or white, whichever has better contrast against this color.
   ///
-  /// Uses the WCAG relative luminance formula with a 0.179 threshold.
+  /// This implementation matches Material's `estimateBrightnessForColor` algorithm
+  /// and threshold to ensure consistency across the Flutter ecosystem. It uses the formula:
+  ///
+  /// ```dart
+  /// const threshold = 0.15;
+  /// final v = (luminance + 0.05);
+  /// return v * v > threshold ? black : white;
+  /// ```
+  ///
+  /// This threshold (0.15) intentionally favours white text more than the strict WCAG 2.0
+  /// recommendation. The WCAG spec equivalent is `kThreshold=0.0525`, which corresponds
+  /// to a luminance crossover of approximately 0.179 (the value previously used here).
+  ///
+  /// **Trade-off**: Colours like the Material `success` green (`#4CAF50`, luminance ≈ 0.328)
+  /// will use white text, resulting in a contrast ratio of about 2.78:1, which falls
+  /// below the 4.5:1 AA threshold. Callers requiring strict WCAG AA compliance should
+  /// favour darker accent colours rather than adjusting this threshold.
+  ///
+  /// See also [opposite], a shorthand alias for this getter.
   Color get contrastColor {
     final luminance = computeLuminance();
-    return luminance > 0.179 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+    const threshold = 0.15;
+    final v = luminance + 0.05;
+    return v * v > threshold ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
   }
+
+  /// Alias for [contrastColor].
+  ///
+  /// Returns black or white, whichever has better contrast against this color.
+  /// Provided as a shorthand at call sites; [contrastColor] is the canonical
+  /// name and the two are always identical.
+  Color get opposite => contrastColor;
 
   /// Returns this color at the given [opacity] (0.0–1.0).
   ///

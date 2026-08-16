@@ -1,7 +1,7 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../theme/theme.dart';
+import 'package:layrz_ui/theme/theme.dart';
 
 /// A [PreviewThemeData] implementation that applies the layrz_ui light-mode theme
 /// to Flutter 3.47+ widget previews.

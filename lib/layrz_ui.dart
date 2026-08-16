@@ -1,6 +1,7 @@
 library;
 
 export 'app/app.dart';
+export 'buttons/buttons.dart';
 export 'constants/constants.dart';
 export 'extensions/extensions.dart';
 export 'fonts/fonts.dart';

@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
+import 'package:layrz_ui/constants/constants.dart';
+
+import 'color_swatch.dart';
 
 /// Immutable semantic color tokens for the layrz_ui design system.
 ///
@@ -13,7 +15,8 @@ import '../../constants/constants.dart';
 @immutable
 class LayrzColorTokens {
   /// The primary brand color used for interactive elements and prominent actions.
-  final Color primary;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch primary;
 
   /// The scaffold / canvas background color drawn behind all surfaces.
   final Color background;
@@ -40,20 +43,25 @@ class LayrzColorTokens {
   final Color fg4;
 
   /// Semantic color for errors, destructive actions, and critical alerts.
-  final Color danger;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch danger;
 
   /// Semantic color for positive confirmations, valid input, and good status.
-  final Color success;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch success;
 
   /// Semantic color for cautions, non-critical alerts, and warnings.
-  final Color warning;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch warning;
 
   /// Semantic color for informational and neutral alerts.
-  final Color info;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch info;
 
   /// Contextual color used for neutral status and informational elements.
   /// Named distinctly from "context" to avoid collision-prone naming in widget code.
-  final Color contextual;
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
+  final LayrzColorSwatch contextual;
 
   /// Color used for borders, dividers, and separator lines.
   final Color divider;
@@ -87,13 +95,14 @@ class LayrzColorTokens {
 
   /// Light theme color tokens using Layrz brand defaults.
   ///
-  /// [primary] defaults to [kPrimaryColor].
-  /// All other colors use semantic light theme values.
+  /// [primary] defaults to [kPrimaryColor] and is wrapped in a [LayrzColorSwatch]
+  /// that generates ten tonal shades algorithmically.
+  /// All other colors use semantic light theme values with standard Material palettes.
   factory LayrzColorTokens.light({
     Color primary = kPrimaryColor,
   }) {
     return LayrzColorTokens(
-      primary: primary,
+      primary: LayrzColorSwatch.fromColor(primary),
       background: kLightBackgroundColor,
       surface: const Color(0xFFFFFFFF),
       surface2: const Color(0xFFF7F7F7),
@@ -102,11 +111,84 @@ class LayrzColorTokens {
       fg2: const Color(0xFF4A4A5A),
       fg3: const Color(0xFF9E9E9E),
       fg4: const Color(0xFFC4C4C4),
-      danger: const Color(0xFFE53935),
-      success: const Color(0xFF43A047),
-      warning: const Color(0xFFFB8C00),
-      info: const Color(0xFF1E88E5),
-      contextual: const Color(0xFF9E9E9E),
+      // Semantic colors use the standard Material 500 shades and full swatch palettes
+      // (50, 100, 200, …, 900) for consistent, familiar appearance. These values mirror
+      // the Flutter Material palette to prevent unintended changes if later "tidied".
+      danger: LayrzColorSwatch(
+        0xFFF44336, // red 500
+        <int, Color>{
+          50: const Color(0xFFFFEBEE),
+          100: const Color(0xFFFFCDD2),
+          200: const Color(0xFFEF9A9A),
+          300: const Color(0xFFE57373),
+          400: const Color(0xFFEF5350),
+          500: const Color(0xFFF44336),
+          600: const Color(0xFFE53935),
+          700: const Color(0xFFD32F2F),
+          800: const Color(0xFFC62828),
+          900: const Color(0xFFB71C1C),
+        },
+      ),
+      success: LayrzColorSwatch(
+        0xFF4CAF50, // green 500
+        <int, Color>{
+          50: const Color(0xFFE8F5E9),
+          100: const Color(0xFFC8E6C9),
+          200: const Color(0xFFA5D6A7),
+          300: const Color(0xFF81C784),
+          400: const Color(0xFF66BB6A),
+          500: const Color(0xFF4CAF50),
+          600: const Color(0xFF43A047),
+          700: const Color(0xFF388E3C),
+          800: const Color(0xFF2E7D32),
+          900: const Color(0xFF1B5E20),
+        },
+      ),
+      warning: LayrzColorSwatch(
+        0xFFFF9800, // orange 500
+        <int, Color>{
+          50: const Color(0xFFFFF3E0),
+          100: const Color(0xFFFFE0B2),
+          200: const Color(0xFFFFCC80),
+          300: const Color(0xFFFFB74D),
+          400: const Color(0xFFFFA726),
+          500: const Color(0xFFFF9800),
+          600: const Color(0xFFFB8C00),
+          700: const Color(0xFFF57C00),
+          800: const Color(0xFFEF6C00),
+          900: const Color(0xFFE65100),
+        },
+      ),
+      info: LayrzColorSwatch(
+        0xFF2196F3, // blue 500
+        <int, Color>{
+          50: const Color(0xFFE3F2FD),
+          100: const Color(0xFFBBDEFB),
+          200: const Color(0xFF90CAF9),
+          300: const Color(0xFF64B5F6),
+          400: const Color(0xFF42A5F5),
+          500: const Color(0xFF2196F3),
+          600: const Color(0xFF1E88E5),
+          700: const Color(0xFF1976D2),
+          800: const Color(0xFF1565C0),
+          900: const Color(0xFF0D47A1),
+        },
+      ),
+      contextual: LayrzColorSwatch(
+        0xFF9E9E9E, // grey 500
+        <int, Color>{
+          50: const Color(0xFFFAFAFA),
+          100: const Color(0xFFF5F5F5),
+          200: const Color(0xFFEEEEEE),
+          300: const Color(0xFFE0E0E0),
+          400: const Color(0xFFBDBDBD),
+          500: const Color(0xFF9E9E9E),
+          600: const Color(0xFF757575),
+          700: const Color(0xFF616161),
+          800: const Color(0xFF424242),
+          900: const Color(0xFF212121),
+        },
+      ),
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
@@ -134,7 +216,9 @@ class LayrzColorTokens {
     double? tonalOpacity,
   }) {
     return LayrzColorTokens(
-      primary: primary ?? this.primary,
+      primary: primary == null
+          ? this.primary
+          : (primary is LayrzColorSwatch ? primary : LayrzColorSwatch.fromColor(primary)),
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surface2: surface2 ?? this.surface2,
@@ -143,11 +227,21 @@ class LayrzColorTokens {
       fg2: fg2 ?? this.fg2,
       fg3: fg3 ?? this.fg3,
       fg4: fg4 ?? this.fg4,
-      danger: danger ?? this.danger,
-      success: success ?? this.success,
-      warning: warning ?? this.warning,
-      info: info ?? this.info,
-      contextual: contextual ?? this.contextual,
+      danger: danger == null
+          ? this.danger
+          : (danger is LayrzColorSwatch ? danger : LayrzColorSwatch(danger.toARGB32(), {50: danger})),
+      success: success == null
+          ? this.success
+          : (success is LayrzColorSwatch ? success : LayrzColorSwatch(success.toARGB32(), {50: success})),
+      warning: warning == null
+          ? this.warning
+          : (warning is LayrzColorSwatch ? warning : LayrzColorSwatch(warning.toARGB32(), {50: warning})),
+      info: info == null
+          ? this.info
+          : (info is LayrzColorSwatch ? info : LayrzColorSwatch(info.toARGB32(), {50: info})),
+      contextual: contextual == null
+          ? this.contextual
+          : (contextual is LayrzColorSwatch ? contextual : LayrzColorSwatch(contextual.toARGB32(), {50: contextual})),
       divider: divider ?? this.divider,
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,

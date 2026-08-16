@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 
-import '../../constants/constants.dart';
-import '../../fonts/fonts.dart';
+import 'package:layrz_ui/constants/constants.dart';
+import 'package:layrz_ui/fonts/fonts.dart';
+
 import 'border.dart';
 import 'colors.dart';
 import 'motion.dart';

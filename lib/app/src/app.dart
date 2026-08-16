@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../../theme/theme.dart';
+import 'package:layrz_ui/theme/theme.dart';
 
 /// Root application widget for layrz_ui.
 ///

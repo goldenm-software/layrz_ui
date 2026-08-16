@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import '../../theme/theme.dart';
-import '../../tokens/tokens.dart';
+import 'package:layrz_ui/theme/theme.dart';
+import 'package:layrz_ui/tokens/tokens.dart';
 
 /// Immutable tokenizer providing semantic access to the layrz_ui design system tokens.
 ///
