@@ -9,11 +9,7 @@ tool/
 .github/
 .vscode/
 engineering/
-# NOTE: `wiki/` is deliberately NOT listed here. It is a git submodule, and
-# listing it makes `pub publish --dry-run` fail with "checked-in file is
-# ignored" in CI, where the submodule is not checked out. CI publishes with an
-# empty wiki/ directory, so nothing from it is included in the archive.
-# Re-adding it will break the release pipeline.
+wiki
 Makefile
 CLAUDE.md
 
