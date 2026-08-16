@@ -14,8 +14,8 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 2 | LayrzTooltip on RawTooltip | Todo |
 | 3 | LayrzAlert (inline status callout) | Todo |
 | 4 | LayrzChip and LayrzChipGroup | Todo |
-| 5 | LayrzRow / LayrzCol responsive grid | Todo |
-| 6 | LayrzConstrainedView | Todo |
+| 5 | LayrzRow / LayrzCol responsive grid | Done |
+| 6 | LayrzConstrainedView | Done |
 | 7 | LayrzTextInput | Todo |
 | 8 | LayrzDropdownMenu | Todo |
 | 9 | LayrzGroupedButton (overflow actions menu) | Todo |
@@ -293,6 +293,8 @@ LayrzRow(
 
 Breakpoints use constants from `lib/src/constants/grid.dart` (kExtraSmallGrid, etc.).
 
+**Porting note**: `ResponsiveRow.builder(itemCount:, itemBuilder:)` was deliberately not ported to layrz_ui. Callers use `LayrzRow(children: List.generate(...))` instead, which is simpler and clearer. This resolves the review trigger on decision D9 in `engineering/decisions.md`.
+
 **Dependencies**: M1 (constants, tokens).
 
 **Files affected**:
@@ -300,7 +302,10 @@ Breakpoints use constants from `lib/src/constants/grid.dart` (kExtraSmallGrid, e
 - `lib/src/grid/` (new module directory)
 - `lib/src/grid/row.dart` (new)
 - `lib/src/grid/col.dart` (new)
+- `lib/src/grid/grid_previews.dart` (preview annotations for both widgets)
 - `test/grid/row_test.dart` (tests)
+- `test/grid/col_test.dart` (tests)
+- `test/grid/grid_a11y_test.dart` (accessibility tests)
 
 ---
 
@@ -323,15 +328,13 @@ LayrzConstrainedView(
 
 The component constructs the internal `Column` itself; callers pass `children` directly, not a pre-built `Column`. Nothing is clipped — it constrains and centres, which is why it is not called "cropped". The `maxWidth` parameter is caller-configurable; the example uses 960, but any value is valid.
 
-**Exposed Parameters — Architecture Principle**:
+**Exposed vs. Fixed Parameters — Architecture Decision**:
 
-Because the `Column` is built internally, any property a caller would normally set on it must be deliberately exposed or it becomes inaccessible. For example:
+Because the `Column` is built internally, properties a caller would normally set on it must be deliberately exposed or they become inaccessible. The decision is:
 
-- **`spacing` (double?, optional)** — controls the gap between children, mapping directly to `Column.spacing`. When not provided, defaults to a spacing token (not a hardcoded constant) from the theme, allowing design system control over default spacing. Without exposing this parameter, callers can only create flush-stacked content.
+- **`spacing` (double?, optional)** — **Exposed.** Controls the gap between children. When not provided, defaults to `context.tokens.spacing.base` from the theme, allowing design system control. Callers can pass `0` for flush layouts or any other value.
 
-This principle applies to any `Column` property callers need: `mainAxisAlignment`, `crossAxisAlignment`, and others must either be exposed as parameters or fixed via a design decision. The choice is made intentionally when building, not deferred.
-
-**Implementation open question**: Decide whether the internal `Column`'s `mainAxisAlignment` and `crossAxisAlignment` should be exposed as parameters or fixed (following the same principle: callers cannot access them unless deliberately surfaced). Worth deciding when building rather than now.
+- **`mainAxisAlignment` and `crossAxisAlignment`** — **Fixed (not exposed).** The internal `Column` is fixed to `mainAxisAlignment: MainAxisAlignment.start` and `crossAxisAlignment: CrossAxisAlignment.stretch`. These are deliberately not exposed as parameters because this component is designed for a specific layout pattern (top-to-bottom, full width). Callers needing different alignments pass their own `Column` as a child.
 
 **Dependencies**: M1 (constants, tokens).
 
