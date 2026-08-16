@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/tokens.dart';
 
 /// A responsive column widget that adjusts its span (1–12) based on the viewport width.
 ///
@@ -68,27 +68,34 @@ class LayrzCol extends StatelessWidget {
 
   /// Resolves the column span (1–12) for the given breakpoint width.
   ///
-  /// Uses a cascading fallback mechanism:
-  /// - **xs band** (< 600px): uses [xs]
-  /// - **sm band** (600–959px): uses [sm] if set, else [xs]
-  /// - **md band** (960–1263px): uses [md] if set, else [sm] if set, else [xs]
-  /// - **lg band** (1264–1903px): uses [lg] if set, else [md] if set, else [sm] if set, else [xs]
-  /// - **xl band** (≥ 1904px): uses [xl] if set, else [lg] if set, else [md] if set, else [sm] if set, else [xs]
+  /// Determines which band the [width] falls into using [breakpoints], then applies
+  /// a cascading fallback mechanism:
+  /// - **xs band**: uses [xs]
+  /// - **sm band**: uses [sm] if set, else [xs]
+  /// - **md band**: uses [md] if set, else [sm] if set, else [xs]
+  /// - **lg band**: uses [lg] if set, else [md] if set, else [sm] if set, else [xs]
+  /// - **xl band**: uses [xl] if set, else [lg] if set, else [md] if set, else [sm] if set, else [xs]
   ///
   /// This design ensures that any explicitly set value "sticks" for wider breakpoints
   /// unless overridden by a more specific one. For example, setting only [md] = 6
   /// will make the column span 6 for md, lg, and xl breakpoints.
-  int spanAt(double width) {
-    if (width < kExtraSmallGrid) {
-      return xs;
-    } else if (width < kSmallGrid) {
-      return sm ?? xs;
-    } else if (width < kMediumGrid) {
-      return md ?? sm ?? xs;
-    } else if (width < kLargeGrid) {
-      return lg ?? md ?? sm ?? xs;
-    } else {
-      return xl ?? lg ?? md ?? sm ?? xs;
+  ///
+  /// Parameters:
+  ///   - [width]: The viewport width in logical pixels.
+  ///   - [breakpoints]: The breakpoint token set defining band thresholds.
+  int spanAt(double width, LayrzBreakpointTokens breakpoints) {
+    final band = breakpoints.bandAt(width);
+    switch (band) {
+      case LayrzBreakpoint.xs:
+        return xs;
+      case LayrzBreakpoint.sm:
+        return sm ?? xs;
+      case LayrzBreakpoint.md:
+        return md ?? sm ?? xs;
+      case LayrzBreakpoint.lg:
+        return lg ?? md ?? sm ?? xs;
+      case LayrzBreakpoint.xl:
+        return xl ?? lg ?? md ?? sm ?? xs;
     }
   }
 

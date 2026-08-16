@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/tokens.dart';
 
 import 'col.dart';
 
@@ -95,6 +96,7 @@ class LayrzRow extends StatelessWidget {
     required double layoutWidth,
   }) {
     final resolvedSpacing = spacing ?? context.tokens.spacing.base;
+    final breakpoints = context.tokens.breakpoints;
 
     // Greedy grouping: place columns left-to-right, starting a new row when
     // the sum of spans would exceed 12.
@@ -103,7 +105,7 @@ class LayrzRow extends StatelessWidget {
     var currentSum = 0;
 
     for (final col in children) {
-      final span = col.spanAt(breakpointWidth);
+      final span = col.spanAt(breakpointWidth, breakpoints);
       if (currentSum + span > 12 && currentRow.isNotEmpty) {
         rows.add(currentRow);
         currentRow = [];
@@ -128,6 +130,7 @@ class LayrzRow extends StatelessWidget {
           breakpointWidth: breakpointWidth,
           layoutWidth: layoutWidth,
           resolvedSpacing: resolvedSpacing,
+          breakpoints: breakpoints,
         ),
       );
       if (i < rows.length - 1) {
@@ -155,6 +158,7 @@ class LayrzRow extends StatelessWidget {
     required double breakpointWidth,
     required double layoutWidth,
     required double resolvedSpacing,
+    required LayrzBreakpointTokens breakpoints,
   }) {
     final columnWidgets = <Widget>[];
 
@@ -165,7 +169,7 @@ class LayrzRow extends StatelessWidget {
 
     for (var i = 0; i < row.length; i++) {
       final col = row[i];
-      final span = col.spanAt(breakpointWidth);
+      final span = col.spanAt(breakpointWidth, breakpoints);
 
       final colWidth = availableWidth * span / 12;
 
