@@ -481,7 +481,9 @@ layrz_theme's `ResponsiveRow` and `ResponsiveCol` use a `Sizes` enum (col1 throu
 
 **Before `1.0.0` release**: Verify that the debug assertion catches all practical errors and that call sites read clearly without the enum.
 
-Consider whether `ResponsiveRow.builder` should be carried over. If yes, ensure it integrates cleanly with the integer-based `ResponsiveCol` API.
+**Update (2026-08-16) — ResponsiveRow.builder Review Resolved**
+
+The review trigger about `ResponsiveRow.builder` has been resolved: it was **deliberately not ported** from layrz_theme to layrz_ui. The rationale: a factory that builds children from an `itemCount` and `itemBuilder` callback duplicates the responsibility of `List.generate`, which is simpler and more idiomatic Dart. Callers use `LayrzRow(children: List.generate(...))` instead, achieving the same result with less custom machinery. This decision is documented in the Grid.md wiki page and in the Milestone 2 work item for LayrzRow/LayrzCol.
 
 ---
 
@@ -1172,6 +1174,177 @@ This amendment does not change the decision itself, only clarifies its scope. Th
 **Before per-domain library restructure (D19)**: Verify that no cross-module relative imports remain in `lib/`, `test/`, or `example/lib/`. This check ensures the restructure's refactoring tools can work with consistent import paths.
 
 If code review finds a cross-module relative import, ask the author to rewrite it to `package:layrz_ui/` form before approval. This is a non-negotiable code quality gate.
+
+---
+
+## D21: Grid Breakpoints Are Viewport-Driven, Not Container-Driven
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+During the Milestone 2 grid implementation, a design choice emerged about how breakpoint bands are resolved. Two options existed:
+
+1. **Container-driven** — A grid's column spans would be determined by the grid's own measured width, allowing different grids on the same screen to select different breakpoints based on their local box width.
+2. **Viewport-driven** — All grids on the screen would select breakpoints based on the overall viewport width, following standard CSS Grid and Bootstrap semantics.
+
+The first option offered more flexibility for grids in narrow containers (sidebars, cards, etc.). The second option simplified mental model and aligned with industry convention. During implementation, an escape hatch (`useScreenWidth` parameter) was added to `LayrzCol` to allow switching between modes, creating a design inconsistency: the same column span "md: 4" would mean different pixel widths depending on a hidden parameter, making "md" have multiple meanings across an application.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Container-driven breakpoints | Maximum flexibility per grid; grids in narrow containers can use narrow-screen spans | "md" means different things in different contexts; inconsistent layout behavior; escape hatch (`useScreenWidth`) complicates the mental model |
+| (b) **Chosen** — Viewport-driven breakpoints only | Single source of truth; "md" always means the same thing; aligns with CSS Grid / Bootstrap; simpler mental model | Less flexible for grids in very narrow containers; narrow sidebars must divide a small width by wide-screen spans, resulting in very thin columns |
+| (c) Dual-mode with deprecation | Gradual migration path | Maintenance burden of two code paths; delayed resolution of the inconsistency |
+
+### Decision
+
+**Chose (b): Grid breakpoints are always viewport-driven. The `useScreenWidth` escape hatch is removed.**
+
+Breakpoints are resolved exclusively from `MediaQuery.sizeOf(context).width` (the viewport width), not from the grid's measured box width. This is the standard CSS Grid and Bootstrap behaviour.
+
+### Rationale
+
+- **Consistency**: "md" always means the same breakpoint band (960–1263 logical pixels) regardless of where the grid appears. This is critical for team coordination and reduces mental overhead.
+- **Industry alignment**: CSS Grid, Bootstrap, Tailwind, and other responsive systems all use viewport-driven breakpoints. Following this convention makes layrz_ui familiar to developers trained on those systems.
+- **Implementation simplicity**: Removing the `useScreenWidth` parameter eliminates branching logic in `LayrzCol.spanAt()` and `LayrzRow`, making the code simpler and faster.
+- **Accepted consequence**: The trade-off is that grids in narrow containers (e.g., a 400px sidebar on a 1920px screen) will select the xl band and divide 400px by wide-screen spans, resulting in very narrow columns. This is the correct behaviour per CSS Grid semantics and is expected by developers trained on responsive design.
+
+### Consequences
+
+- **`useScreenWidth` parameter removed** from `LayrzCol` and `LayrzRow` — it no longer exists, and code attempting to use it will fail at compile time.
+- **Pixel widths still respect the row's measured box** — the row's own width (not viewport width) is used for pixel arithmetic when sizing columns. This prevents overflow in narrow containers and is standard responsive grid behaviour.
+- **Design guidance updated** — grid documentation must emphasize that breakpoints come from viewport width and that narrow containers will select wide-screen spans, producing thin columns by design.
+
+### Worked Example (Consequence Illustration)
+
+A grid in a 400px sidebar on a 1920px display:
+
+```dart
+SizedBox(
+  width: 400,
+  child: LayrzRow(
+    children: [
+      LayrzCol(xs: 12, md: 6, lg: 4, child: ...),  // Span 4 at lg band
+      LayrzCol(xs: 12, md: 6, lg: 8, child: ...),  // Span 8 at lg band
+    ],
+  ),
+)
+```
+
+**Result**:
+- Viewport width = 1920 → **xl band** selected (because 1920 ≥ 1904)
+- Neither column sets `xl`, so both cascade to `lg`
+- Row's measured width = 400px
+- Column 1 resolves to span 4; pixel width = 400 × 4/12 ≈ **133px**
+- Column 2 resolves to span 8; pixel width = 400 × 8/12 ≈ **267px**
+
+The grid selects **xl band** (the right choice for a 1920px viewport) but divides **400px** by those wide-screen spans (the right consequence for a narrow container). This is correct per CSS Grid semantics.
+
+### Review Trigger
+
+**Revisit if**: A consuming application reports that grids in narrow containers are unusable because columns are too thin. At that point, re-evaluate whether the design guidance was clear enough, or whether an alternative approach (e.g., a **container-relative** mode for grids within Cards, with explicit opt-in) is needed. Current decision assumes developers will adapt their span definitions for narrow containers (e.g., using larger `lg` spans if they know the grid lives in a sidebar).
+
+---
+
+## D22: Breakpoints Live on the Theme, Not as Constants
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Milestone 1 established `kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, and `kLargeGrid` constants (valued 600, 960, 1264, 1904) exported from `package:layrz_ui/constants.dart`. When Milestone 2's grid components were implemented, the question arose: should these constants remain, or should breakpoint thresholds become themeable tokens?
+
+Options:
+1. **Keep as constants** — Simple, predictable; all apps use the same breakpoints by default.
+2. **Move to theme as tokens** — Apps can customize breakpoints; every consumer automatically follows the custom thresholds.
+3. **Both constants and tokens** — Backward compatibility and customization, but two sources of truth.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep as constants only | Simple; no theme complexity; familiar pattern from layrz_theme | Inflexible; apps cannot customize breakpoints without forking layrz_ui; changes to breakpoints require a new release |
+| (b) **Chosen** — Move to theme tokens; delete constants | Apps can customize via theme; design-system-agnostic; follows token pattern; single source of truth | Breaking change (constants deleted); requires apps to update imports; slightly more verbose access (`context.tokens.breakpoints` instead of constant reference) |
+| (c) Both constants and tokens | Maximum compatibility | Two sources of truth; confusion about which to use; maintenance burden if they diverge |
+
+### Decision
+
+**Chose (b): Breakpoints are `LayrzBreakpointTokens` on the theme. The constants `kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, `kLargeGrid` are deleted.**
+
+Breakpoint thresholds now live in `LayrzBreakpointTokens` (a field on `LayrzTokens` on `LayrzThemeData`). Default values match the former constants (xs: 600, sm: 960, md: 1264, lg: 1904), but apps can override them when creating a custom theme:
+
+```dart
+final customTheme = LayrzThemeData.light().copyWith(
+  tokens: tokens.copyWith(
+    breakpoints: LayrzBreakpointTokens(
+      xs: 500,    // Custom mobile threshold
+      sm: 900,    // Custom tablet threshold
+      md: 1200,   // Custom desktop threshold
+      lg: 1800,   // Custom large-desktop threshold
+    ),
+  ),
+);
+
+LayrzApp(theme: customTheme, ...)
+```
+
+All grid consumers (`LayrzRow`, `LayrzCol`, responsive layouts) automatically follow the custom thresholds from the theme.
+
+### Rationale
+
+- **Design-system principle**: Design systems are customizable. Hardcoded constants violate this principle; tokens on the theme are the right pattern.
+- **No API fragmentation**: Without customizable breakpoints, apps would need to fork layrz_ui to change responsive behaviour. With tokens, no fork is needed.
+- **Consistency with other tokens**: Spacing, colors, typography, shadow, and radius are all themeable; breakpoints should be too. This completes the token story.
+- **Backward compatibility through override**: Apps previously using `kExtraSmallGrid` in their own code can continue to define the constant locally; layrz_ui no longer exports it, but that is a clean breaking change (aligned with D1's stance on clean breaks).
+
+### Consequences
+
+- **`kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, `kLargeGrid` are deleted** from `lib/src/constants/grid.dart` and no longer exported from `package:layrz_ui/constants.dart`.
+- **`lib/src/tokens/breakpoints.dart` is new** — defines `LayrzBreakpoint` enum and `LayrzBreakpointTokens` class.
+- **`LayrzTokens.breakpoints`** (a field of type `LayrzBreakpointTokens`) is the source of truth for all breakpoint thresholds.
+- **`context.tokens.breakpoints.bandAt(width)`** is the method to resolve a viewport width to its breakpoint band.
+- **`context.breakpoint` getter** returns the current breakpoint band based on viewport width and the theme's breakpoint tokens.
+- **Grid documentation updated** to reference `LayrzBreakpointTokens` instead of deleted constants; examples show how to customize via theme.
+
+### Migration Path for Apps
+
+Apps previously using `kExtraSmallGrid` and friends must migrate:
+
+**Before** (using constants):
+```dart
+if (width < kExtraSmallGrid) {
+  // xs band
+} else if (width < kSmallGrid) {
+  // sm band
+}
+```
+
+**After** (using tokens):
+```dart
+final band = context.tokens.breakpoints.bandAt(width);
+if (band == LayrzBreakpoint.xs) {
+  // xs band
+} else if (band == LayrzBreakpoint.sm) {
+  // sm band
+}
+```
+
+Or use the convenience getter:
+```dart
+if (context.breakpoint == LayrzBreakpoint.xs) {
+  // xs band layout
+}
+```
+
+### Review Trigger
+
+**Revisit if**: Multiple apps define their own breakpoint constants after this change, suggesting that the token customization path is too cumbersome or not discoverable. At that point, evaluate whether to provide a simpler customization API or add documentation with best practices for team-wide breakpoint overrides.
 
 ---
 

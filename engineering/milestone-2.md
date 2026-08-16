@@ -11,18 +11,19 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | # | Item | Status |
 |---|---|---|
 | 1 | LayrzButton with twelve styles and six semantic factories | Done |
-| 2 | LayrzTooltip on RawTooltip | Todo |
-| 3 | LayrzAlert (inline status callout) | Todo |
-| 4 | LayrzChip and LayrzChipGroup | Todo |
-| 5 | LayrzRow / LayrzCol responsive grid | Done |
-| 6 | LayrzConstrainedView | Done |
-| 7 | LayrzTextInput | Todo |
-| 8 | LayrzDropdownMenu | Todo |
-| 9 | LayrzGroupedButton (overflow actions menu) | Todo |
-| 10 | LayrzAvatar and LayrzImage | Todo |
-| 11 | LayrzAnimatedCheckbox | Todo |
+| 2 | LayrzCard (elevated surface container) | Done |
+| 3 | LayrzTooltip on RawTooltip | Todo |
+| 4 | LayrzAlert (inline status callout) | Todo |
+| 5 | LayrzChip and LayrzChipGroup | Todo |
+| 6 | LayrzRow / LayrzCol responsive grid | Done |
+| 7 | LayrzConstrainedView | Done |
+| 8 | LayrzTextInput | Todo |
+| 9 | LayrzDropdownMenu | Todo |
+| 10 | LayrzGroupedButton (overflow actions menu) | Todo |
+| 11 | LayrzAvatar and LayrzImage | Todo |
+| 12 | LayrzAnimatedCheckbox | Todo |
 
-**Note**: This table tracks the 11 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit.
+**Note**: This table tracks the 12 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit. Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
 
 ## Definition of Done
 
@@ -208,7 +209,63 @@ This prevents reflow and flicker during state changes.
 
 ---
 
-### 2. LayrzTooltip on RawTooltip
+### 2. LayrzCard (Elevated Surface Container)
+
+**What changes**:
+- Create `lib/src/cards/card.dart` — `LayrzCard` widget
+- Create `lib/cards.dart` barrel with re-exports
+- Support five discrete elevation levels (1–5); no custom elevation
+- Support optional background color override; default to surface token
+- Support optional interactive behavior via `onTap` parameter
+- Material-free construction: Container + FocusableActionDetector + MouseRegion + Listener + GestureDetector + AnimatedContainer
+- Create tests in `test/cards/` mirroring the source structure
+
+**API contract**:
+
+`LayrzCard` constructor:
+- `child` (Widget, required) — the widget displayed inside the card
+- `elevation` (int, default 1) — elevation level from 1–5, asserted at construction
+- `backgroundColor` (Color?, optional) — override the surface token color; null defaults to tokens.colors.surface
+- `onTap` (VoidCallback?, optional) — null disables the card (inert); non-null makes it interactive
+
+**Interaction behavior**:
+- **Non-interactive** (`onTap: null`): inert, fixed shadow, no hover/press feedback, not focusable, not announced as button
+- **Interactive** (`onTap: non-null`): hover steps shadow +1 (clamped at 5), press steps shadow −1 (clamped at 1), keyboard-focusable, activatable by Enter/Space, announced as button
+
+**Styling**:
+- Padding fixed at `tokens.spacing.sp16` (16u) on all sides; not exposed
+- Border radius fixed at `tokens.radius.r12` (12u); not exposed
+- No outer margin (inter-child spacing owned by LayrzRow/LayrzConstrainedView)
+
+**D15 Compliance** (no geometry changes):
+- Hover, press, and focus states vary shadow and colour only
+- Size, padding, border width, and radius remain constant across all states
+- Focus indicator is conveyed via shadow elevation, not outline
+
+**Dependencies**:
+- M1: LayrzTheme, tokens, state resolution (WidgetState, WidgetStatesController)
+
+**Files affected**:
+- `lib/cards.dart` (entrypoint barrel, new)
+- `lib/src/cards/` (new module directory)
+- `lib/src/cards/card.dart` (new, ~200–250 lines)
+- `test/cards/card_test.dart` (tests)
+- `wiki/Widgets/LayrzCard.md` (wiki page)
+
+**Acceptance criteria**:
+- Constructor has every parameter documented (rule #1)
+- Five elevation levels map correctly to shadow tokens
+- Interactive cards respond to hover/press/focus with shadow elevation changes
+- Non-interactive cards are inert
+- D15 verified: no geometry changes during state transitions
+- Keyboard activation (Enter/Space) works identically to tap
+- `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
+- `@Preview` annotations present at bottom of card.dart file
+- Wiki page documents final API, interaction model, and D15 compliance
+
+---
+
+### 3. LayrzTooltip on RawTooltip
 
 **Brief description**:
 
@@ -231,7 +288,7 @@ Replaces the temporary use of RawTooltip in LayrzButton with a proper tooltip co
 
 ---
 
-### 3. LayrzAlert (Inline Status Callout)
+### 4. LayrzAlert (Inline Status Callout)
 
 **Brief description**:
 
@@ -254,7 +311,7 @@ Replaces ThemedAlert from layrz_theme.
 
 ---
 
-### 4. LayrzChip and LayrzChipGroup
+### 5. LayrzChip and LayrzChipGroup
 
 **Brief description**:
 
@@ -273,7 +330,7 @@ Replaces ThemedAlert from layrz_theme.
 
 ---
 
-### 5. LayrzRow / LayrzCol Responsive Grid
+### 6. LayrzRow / LayrzCol Responsive Grid
 
 **Brief description**:
 
@@ -291,11 +348,11 @@ LayrzRow(
 )
 ```
 
-Breakpoints use constants from `lib/src/constants/grid.dart` (kExtraSmallGrid, etc.).
+Breakpoints are themeable via `LayrzBreakpointTokens` on the theme (default thresholds: xs=600, sm=960, md=1264, lg=1904). Apps can customize breakpoints when creating a custom theme without modifying layrz_ui's code.
 
-**Porting note**: `ResponsiveRow.builder(itemCount:, itemBuilder:)` was deliberately not ported to layrz_ui. Callers use `LayrzRow(children: List.generate(...))` instead, which is simpler and clearer. This resolves the review trigger on decision D9 in `engineering/decisions.md`.
+**Porting note**: `ResponsiveRow.builder(itemCount:, itemBuilder:)` was deliberately not ported to layrz_ui. Callers use `LayrzRow(children: List.generate(...))` instead, which is simpler and clearer. This resolves the review trigger on decision D9 in `engineering/decisions.md`. The `useScreenWidth` escape hatch was removed; breakpoints are always viewport-driven per decision D21.
 
-**Dependencies**: M1 (constants, tokens).
+**Dependencies**: M1 (tokens, breakpoint tokens).
 
 **Files affected**:
 - `lib/grid.dart` (entrypoint barrel, new)
@@ -309,7 +366,7 @@ Breakpoints use constants from `lib/src/constants/grid.dart` (kExtraSmallGrid, e
 
 ---
 
-### 6. LayrzConstrainedView
+### 7. LayrzConstrainedView
 
 **Brief description**:
 
@@ -345,7 +402,7 @@ Because the `Column` is built internally, properties a caller would normally set
 
 ---
 
-### 7. LayrzTextInput
+### 8. LayrzTextInput
 
 **Brief description**:
 
@@ -369,7 +426,7 @@ At least 6 M3 components and 14 M4 pickers depend on it. Its chrome — label, p
 
 ---
 
-### 8. LayrzDropdownMenu
+### 9. LayrzDropdownMenu
 
 **Brief description**:
 
@@ -387,7 +444,7 @@ The menu renders as a dropdown popup anchored to a trigger widget, supports sing
 
 ---
 
-### 9. LayrzGroupedButton
+### 10. LayrzGroupedButton
 
 **Brief description**:
 
@@ -406,7 +463,7 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 ---
 
-### 10. LayrzAvatar and LayrzImage
+### 11. LayrzAvatar and LayrzImage
 
 **Brief description**:
 
@@ -425,7 +482,7 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 ---
 
-### 11. LayrzAnimatedCheckbox
+### 12. LayrzAnimatedCheckbox
 
 **Brief description**:
 
