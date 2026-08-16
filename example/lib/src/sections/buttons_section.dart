@@ -305,14 +305,11 @@ class _LoadingDemo extends StatelessWidget {
                 );
               },
             ),
-            SizedBox(
-              width: 200,
-              child: LayrzButton(
-                labelText: 'Processing...',
-                icon: LayrzIcons.solarOutlineDownloadSquare,
-                onTap: () {},
-                controller: controller,
-              ),
+            LayrzButton(
+              labelText: 'Processing...',
+              icon: LayrzIcons.solarOutlineDownloadSquare,
+              onTap: () {},
+              controller: controller,
             ),
           ],
         ),
@@ -372,14 +369,11 @@ class _CooldownDemo extends StatelessWidget {
                 );
               },
             ),
-            SizedBox(
-              width: 200,
-              child: LayrzButton(
-                labelText: 'Try again later',
-                icon: LayrzIcons.solarOutlineClockCircle,
-                onTap: () {},
-                controller: controller,
-              ),
+            LayrzButton(
+              labelText: 'Try again later',
+              icon: LayrzIcons.solarOutlineClockCircle,
+              onTap: () {},
+              controller: controller,
             ),
           ],
         ),
