@@ -23,18 +23,17 @@ layrz_ui uses **one concern per file** and a consistent barrel-export pattern.
 
 ### Standard Structure
 
-Every module under `lib/<module>/` has exactly this layout:
+Every module has exactly this layout:
 
 ```
-lib/<module>/
-  <module>.dart              # Barrel — export only, no logic
-  src/
-    <implementation_1>.dart  # One file per concern
-    <implementation_2>.dart
-    ...
+lib/<module>.dart              # Entrypoint barrel — export only, no logic
+lib/src/<module>/
+  <implementation_1>.dart      # One file per concern
+  <implementation_2>.dart
+  ...
 ```
 
-The barrel file contains **only** `export` statements and is the public API. Implementation files live under `src/` and are never imported directly by consumers.
+The entrypoint barrel at `lib/<module>.dart` contains **only** `export` statements and is the public API. Implementation files live under `lib/src/<module>/` and are never imported directly by consumers.
 
 ### Current Modules (Milestone 1)
 
@@ -320,9 +319,9 @@ Widget previewLayrzButton() {
 
 Previews can be viewed inline in supporting IDEs without launching a device. The `apply()` method reproduces the full theme nesting that `LayrzApp` uses, ensuring previewed widgets see the same design-token context as production code.
 
-### Top-Level Entrypoint Exception
+### Top-Level Entrypoint Pattern
 
-`lib/preview.dart` is a deliberate exception to rule #4 (one concern per file, barrels at module root). See [decision D18](decisions.md) for rationale. This is the only top-level barrel outside `lib/layrz_ui.dart`; all other modules follow the standard `lib/<module>/<module>.dart` pattern.
+Every module has a top-level entrypoint at `lib/<module>.dart`. This design follows the Flutter SDK convention of per-domain imports (e.g., `import 'package:flutter/widgets.dart';`). See [decision D19](decisions.md) for the restructure rationale. The `lib/preview.dart` module uses the same pattern for consistency, though it was originally (D18) designed as an exception to keep preview infrastructure opt-in.
 
 ## How Components Consume Theme
 
@@ -450,71 +449,74 @@ See [flutter-347-audit.md](flutter-347-audit.md) for the complete inventory and 
 
 ```
 lib/
-  layrz_ui.dart                  ← Root barrel
-  preview.dart                   ← Preview system entrypoint [M1 item 8, D18 exception]
+  app.dart                       ← App shell entrypoint
+  theme.dart                     ← Theme system (core) entrypoint
+  tokens.dart                    ← Design token system entrypoint
+  tokenizer.dart                 ← Token lookup façade entrypoint
+  state.dart                     ← Widget state resolution entrypoint
+  fonts.dart                     ← Font loading entrypoint
+  constants.dart                 ← Brand defaults entrypoint
+  extensions.dart                ← Convenience getters entrypoint
+  platform.dart                  ← Platform detection entrypoint
+  preview.dart                   ← Preview system entrypoint [M1 item 8]
   
-  app/                           ← App shell
-    app.dart
-    src/app.dart                 (LayrzApp)
-  
-  theme/                         ← Theme system (core)
-    theme.dart
-    src/theme.dart               (LayrzTheme extends InheritedTheme [M1 item 1])
-    src/theme_data.dart          (LayrzThemeData)
-    src/theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5])
-  
-  preview/                       ← Widget preview theme [M1 item 8]
-    preview.dart
-    src/preview_theme.dart       (LayrzPreviewTheme extends PreviewThemeData)
-  
-  state/                         ← Widget state resolution [M1 item 6]
-    state.dart
-    src/widget_state.dart        (re-exports from package:flutter/widgets.dart)
-  
-  tokens/                        ← Design token system [M1 items 3–4]
-    tokens.dart
-    src/colors.dart
-    src/typography.dart
-    src/spacing.dart
-    src/radius.dart
-    src/shadow.dart
-    src/border.dart
-    src/motion.dart
-    src/tokens.dart
-  
-  tokenizer/                     ← Token lookup façade [M1 items 3–4]
-    tokenizer.dart
-    src/tokenizer.dart           (LayrzTokenizer)
-  
-  fonts/                         ← Font loading [M1 item 7]
-    fonts.dart
-    src/font.dart
-    src/font_handler.dart
-    src/google_fonts_handler.dart
-  
-  constants/                     ← Brand defaults
-    constants.dart
-    src/colors.dart              (Layrz brand colors only)
-    src/durations.dart
-    src/grid.dart
-    src/app.dart
-  
-  extensions/                    ← Convenience getters
-    extensions.dart
-    src/color.dart
-    src/context.dart
-  
-  platform/                      ← Platform detection
-    platform.dart
-    src/platform.dart
-  
-  (M2–M7 components here)
+  src/
+    app/
+      app.dart                   (LayrzApp)
+    
+    theme/                       [M1 item 1]
+      theme.dart                 (LayrzTheme extends InheritedTheme)
+      theme_data.dart            (LayrzThemeData)
+      theme_extension.dart       (LayrzThemeExtension<T> [M1 item 5])
+    
+    preview/                     [M1 item 8]
+      preview_theme.dart         (LayrzPreviewTheme extends PreviewThemeData)
+    
+    state/                       [M1 item 6]
+      widget_state.dart          (re-exports from package:flutter/widgets.dart)
+    
+    tokens/                      [M1 items 3–4]
+      colors.dart
+      typography.dart
+      spacing.dart
+      radius.dart
+      shadow.dart
+      border.dart
+      motion.dart
+      tokens.dart
+    
+    tokenizer/                   [M1 items 3–4]
+      tokenizer.dart             (LayrzTokenizer)
+    
+    fonts/                       [M1 item 7]
+      font.dart
+      font_handler.dart
+      google_fonts_handler.dart
+    
+    constants/
+      colors.dart                (Layrz brand colors only)
+      durations.dart
+      grid.dart
+      app.dart
+    
+    extensions/
+      color.dart
+      context.dart
+    
+    platform/
+      platform.dart
+    
+    buttons/                     ← M2 component category (example)
+      button.dart
+      button_style.dart
+    
+    (M2–M7 other components here)
 ```
 
 Each module depends only on lower layers. Core theme has no dependencies on any component. This keeps the theme system simple and stable while components are added incrementally.
 
-**Note on `lib/preview.dart`**: This is a deliberate exception to the module-barrel rule (rule #4 in CLAUDE.md). It is the only top-level barrel outside `lib/layrz_ui.dart`. See decision D18 for rationale.
+**Note on module entrypoints**: Every module from `lib/` is imported by its top-level entrypoint (e.g., `import 'package:layrz_ui/buttons.dart';`). This design follows the Flutter SDK convention. See decision D19 for the restructure rationale.
 
 ---
 
-**Last updated**: 2026-08-13
+**Last updated**: 2026-08-16 (D19 restructure documentation)

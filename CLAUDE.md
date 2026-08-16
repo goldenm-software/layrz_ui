@@ -14,30 +14,53 @@ The output must always be empty.
 
 ## Project structure
 
-Each module lives directly under `lib/` as `lib/<module>/`. Every module has a barrel
-`<module>.dart` at its root that contains **only** `export` statements, and all
-implementation files live under `<module>/src/`.
+Each module has two parts:
+- A top-level entrypoint barrel at `lib/<module>.dart` containing **only** `export` statements
+- Implementation files under `lib/src/<module>/`, one file per concern
+
+Consumers import each domain directly, e.g., `import 'package:layrz_ui/buttons.dart';`. There is no root barrel combining all modules.
 
 ```
 lib/
-  layrz_ui.dart                  # Root barrel — re-exports all module barrels
-  preview.dart                   # Top-level preview entrypoint (D18 exception)
-  app/
-    app.dart                     # Barrel
-    src/
+  app.dart                       # Entrypoint barrel — re-exports from src/app/
+  buttons.dart                   # Entrypoint barrel — re-exports from src/buttons/
+  constants.dart                 # Entrypoint barrel — re-exports from src/constants/
+  extensions.dart                # Entrypoint barrel — re-exports from src/extensions/
+  fonts.dart                     # Entrypoint barrel — re-exports from src/fonts/
+  platform.dart                  # Entrypoint barrel — re-exports from src/platform/
+  preview.dart                   # Top-level preview entrypoint (deliberate exception; re-exports LayrzPreviewTheme)
+  state.dart                     # Entrypoint barrel — re-exports from src/state/
+  theme.dart                     # Entrypoint barrel — re-exports from src/theme/
+  tokenizer.dart                 # Entrypoint barrel — re-exports from src/tokenizer/
+  tokens.dart                    # Entrypoint barrel — re-exports from src/tokens/
+  src/
+    app/
       app.dart                   # LayrzApp, LayrzApp.router
-  theme/
-    theme.dart                   # Barrel
-    src/
-      theme.dart                 # LayrzTheme (InheritedTheme)
-      theme_data.dart            # LayrzThemeData (holds LayrzTokens + IconThemeData)
-      theme_extension.dart       # LayrzThemeExtension<T> (custom component theme data)
-  preview/
-    src/
+    buttons/
+      layrz_button.dart          # LayrzButton component + factories
+    constants/
+      colors.dart                # kPrimaryColor, kLightBackgroundColor
+      grid.dart                  # kExtraSmallGrid … kLargeGrid breakpoints
+      durations.dart             # kHoverDuration, kPageTransitionDuration
+      app.dart                   # kAppTitle and other app-level defaults
+    extensions/
+      color.dart                 # LayrzColorExtensions on Color
+      context.dart               # LayrzContextExtensions on BuildContext
+    fonts/
+      font.dart                  # LayrzFont, LayrzFontSource
+      font_handler.dart          # LayrzFontHandler interface
+      google_fonts_handler.dart  # LayrzGoogleFontsHandler implementation
+    platform/
+      platform.dart              # LayrzPlatform enum
+    preview/
       preview_theme.dart         # LayrzPreviewTheme (extends PreviewThemeData)
-  tokens/
-    tokens.dart                  # Barrel
-    src/
+    state/
+      widget_state.dart          # Documentation + re-exports from package:flutter/widgets.dart
+    theme/
+      theme.dart                 # LayrzTheme (InheritedTheme)
+      theme_data.dart            # LayrzThemeData (holds LayrzTokens)
+      theme_extension.dart       # LayrzThemeExtension<T> (custom component theme data)
+    tokens/
       tokens.dart                # LayrzTokens aggregate
       colors.dart                # LayrzColorTokens
       typography.dart            # LayrzTextTheme
@@ -46,36 +69,8 @@ lib/
       shadow.dart                # LayrzShadowTokens
       border.dart                # LayrzBorderTokens
       motion.dart                # LayrzMotionTokens
-  tokenizer/
-    tokenizer.dart               # Barrel
-    src/
+    tokenizer/
       tokenizer.dart             # LayrzTokenizer (thin façade over tokens)
-  fonts/
-    fonts.dart                   # Barrel
-    src/
-      font.dart                  # LayrzFont, LayrzFontSource
-      font_handler.dart          # LayrzFontHandler interface
-      google_fonts_handler.dart  # LayrzGoogleFontsHandler implementation
-  state/
-    state.dart                   # Barrel (re-exports WidgetState family)
-    src/
-      widget_state.dart          # Documentation + re-exports from package:flutter/widgets.dart
-  constants/
-    constants.dart               # Barrel
-    src/
-      colors.dart                # kPrimaryColor, kLightBackgroundColor
-      grid.dart                  # kExtraSmallGrid … kLargeGrid breakpoints
-      durations.dart             # kHoverDuration, kPageTransitionDuration
-      app.dart                   # kAppTitle and other app-level defaults
-  platform/
-    platform.dart                # Barrel
-    src/
-      platform.dart              # LayrzPlatform enum
-  extensions/
-    extensions.dart              # Barrel
-    src/
-      color.dart                 # LayrzColorExtensions on Color
-      context.dart               # LayrzContextExtensions on BuildContext
 .github/
   workflows/
     checks.yaml                  # CI gates: analyze, test, Material/Cupertino guard, GoogleFonts guard, coverage (90% floor)
@@ -87,6 +82,11 @@ example/
   Makefile                       # run-linux / run-android / run-ios / run-windows / run-macos
 Makefile                         # Root — delegates to example/ via $(MAKE) -C example <target>
 ```
+
+**To add a new module**, create:
+- `lib/<module>.dart` — entrypoint barrel with only `export` statements
+- `lib/src/<module>/` — directory containing implementation files
+- Export from the root barrel if the module is part of public API
 
 ---
 
@@ -239,19 +239,19 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 
 - Widgets → `testWidgets` in `test/`
 - Pure functions / extensions → `test()` in `test/`
-- Mirror the `lib/<module>/src/` directory structure under `test/<module>/` (export-only barrels are exempt)
+- Mirror the `lib/src/<module>/` directory structure under `test/<module>/` (entrypoint barrels are exempt)
 - Test all named constructors and factories independently
 - Test edge cases: null-safe fields, empty inputs, boundary values
 - Every visual component additionally requires accessibility tests
 
-The convention of mirroring `lib/<module>/src/` structure under `test/<module>/` is now **enforced by code review**, not by CI. It remains a required pattern, but the `tool/check_test_mirror.sh` script that enforced it in CI has been removed. Maintain this structure on every PR.
+The convention of mirroring `lib/src/<module>/` structure under `test/<module>/` is now **enforced by code review**, not by CI. It remains a required pattern, but the `tool/check_test_mirror.sh` script that enforced it in CI has been removed. Maintain this structure on every PR.
 
 **CI enforces a 90% coverage floor** via the shared `goldenm-software/layrz-actions/check-dart` action, which runs:
 1. **flutter analyze** — linting must be clean
 2. **flutter test --coverage** — all tests pass and coverage is reported
 3. **Material/Cupertino guard** (`grep` inline) — no Material or Cupertino imports in lib/
 4. **GoogleFonts TextTheme guard** (`grep` inline) — no Material-coupled font methods
-5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 97.21%, so up to ~7 percentage points of drift are permitted before the floor triggers
+5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 95.7%, so up to ~6 percentage points of drift are permitted before the floor triggers
 
 **Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
@@ -289,23 +289,22 @@ Rules:
 **Never put multiple unrelated things in a single file.** When a domain grows, split it.
 
 Examples of what belongs in separate files:
-- Each widget in its own file under `lib/<domain>/src/`
-- Each category of constants in its own file under `lib/constants/src/`
-- Each extension target (Color, BuildContext, String…) in its own file under `lib/extensions/src/`
+- Each widget in its own file under `lib/src/<domain>/`
+- Each category of constants in its own file under `lib/src/constants/`
+- Each extension target (Color, BuildContext, String…) in its own file under `lib/src/extensions/`
 - Data classes, enums, and helpers each in their own file
 
-A domain folder always has:
+A domain always has:
 ```
-lib/<domain>/
-  <domain>.dart       ← barrel, only re-exports
-  src/
-    <thing_a>.dart
-    <thing_b>.dart
+lib/<domain>.dart              ← entrypoint barrel, only re-exports
+lib/src/<domain>/
+  <thing_a>.dart
+  <thing_b>.dart
 ```
 
 The barrel file must contain **only** `export` statements — no logic, no classes.
 
-**Exception**: `lib/preview.dart` is a deliberately placed top-level barrel (outside the module structure) to keep preview infrastructure opt-in. This is the only permitted top-level barrel besides `lib/layrz_ui.dart`. See decision D18 in `engineering/decisions.md` for rationale.
+**Note**: `lib/preview.dart` is a deliberately placed top-level barrel (outside the module's src/ directory) to keep preview infrastructure opt-in. See decision D18 in `engineering/decisions.md` for the original rationale. D18 was superseded by D19's restructure (2026-08-16), which made every module a top-level entrypoint; the preview exception now blends with the standard pattern.
 
 ---
 
@@ -315,7 +314,7 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **No comments explaining what the code does** — only document *why* when the reason is non-obvious. Arg docs are mandatory (rule #1); inline comments explaining logic are not.
 - **Immutable data classes** — annotate with `@immutable`, implement `==` and `hashCode` via `Object.hash`, provide `copyWith`.
 - **Theming** — always read colors and styles from `LayrzTheme.of(context)` / `context.theme`. Never hardcode design values inside widgets.
-- **Responsive grid** — use the breakpoint constants from `src/constants/grid.dart` (`kExtraSmallGrid`, etc.).
+- **Responsive grid** — use the breakpoint constants from `package:layrz_ui/constants.dart` (`kExtraSmallGrid`, etc.).
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **Interaction states** — hover, press, focus, and disabled states must vary colour, border colour, shadow, opacity, and cursor only; never size, border width, padding, margin, or scale. Geometry changes cause flicker and reflow. See decision D15 in `engineering/decisions.md`.
 - **Cross-module imports use `package:layrz_ui/`** — for any import within `lib/` or from `test/` and `example/lib/` into the package, use the absolute form `import 'package:layrz_ui/constants/constants.dart';` instead of relative paths. Same-module imports within `src/` may remain relative. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.
@@ -358,17 +357,17 @@ flutter test                   # from repo root
 flutter test --coverage        # with coverage report
 ```
 
-Tests live under `test/` and mirror the structure of `lib/`. For example:
-- `lib/tokens/src/colors.dart` → `test/tokens/colors_test.dart`
-- `lib/theme/src/theme.dart` → `test/theme/theme_test.dart`
+Tests live under `test/` and mirror the structure of `lib/src/`. For example:
+- `lib/src/tokens/colors.dart` → `test/tokens/colors_test.dart`
+- `lib/src/theme/theme.dart` → `test/theme/theme_test.dart`
 
 ---
 
 ## Adding a new widget (checklist)
 
-1. Create `lib/<domain>/src/<widget_name>.dart` — one widget per file
-2. Create (or update) the barrel `lib/<domain>/<domain>.dart` with only `export` statements
-3. Export from `lib/layrz_ui.dart`
+1. Create `lib/src/<domain>/<widget_name>.dart` — one widget per file
+2. Create (or update) the barrel `lib/<domain>.dart` with only `export` statements (create this file if the domain is new)
+3. Ensure the barrel exports the new widget
 4. Document every argument (see rule #1)
 5. Write tests in `test/<domain>/<widget_name>_test.dart` (see rule #2)
 6. Add `@Preview` annotations at the bottom of the widget file if applicable (see rule #3)

@@ -38,12 +38,13 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 ## Deferred Structural Work: Per-Domain Library Entrypoints
 
-**See decision D19** in `engineering/decisions.md`. After LayrzButton (#21) ships, a follow-up refactoring will restructure the package to use per-domain import entrypoints (e.g., `import 'package:layrz_ui/buttons.dart';` instead of `import 'package:layrz_ui/layrz_ui.dart';` for all imports). This restructure is intentionally deferred so that both the component and the package structure can be reviewed independently without creating a diff larger than ~5,000 lines.
+**Decision D19 (per-domain library entrypoints) has been implemented** as of 2026-08-16. The package structure is now organized as per-domain libraries:
 
-- **Timing**: Begins after #21 merges; estimated to land in early M2 or mid-M2
-- **Impact**: All imports in lib/, test/, example/, and the wiki will change; CLAUDE.md and engineering/architecture.md will be rewritten to reflect the new layout
-- **Sub-decisions open**: Physical layout strategy (lib/src/<module>/ vs lib/<module>/src/) and whether to keep a convenience root barrel for backward compatibility
-- **Scope**: One new standalone PR; no dependencies on M2 components themselves
+- Consumers write: `import 'package:layrz_ui/buttons.dart';` (not `import 'package:layrz_ui/layrz_ui.dart';`)
+- Physical layout: `lib/<module>.dart` (entrypoint barrel) + `lib/src/<module>/` (implementation files)
+- Root barrel: Deleted entirely; there is no `lib/layrz_ui.dart`
+
+See decision D19 in `engineering/decisions.md` for the complete rationale and consequences.
 
 ---
 
@@ -176,11 +177,10 @@ This prevents reflow and flicker during state changes.
 - `layrz_icons: ^2.0.0` — added to pubspec.yaml (2.0.0 provides bare IconData constants)
 
 **Files affected**:
-- `lib/buttons/` (new module)
-- `lib/buttons/buttons.dart` (barrel, new)
-- `lib/buttons/src/button.dart` (new, ~300–400 lines)
-- `lib/buttons/src/button_style.dart` (new, enums and style definitions)
-- `lib/layrz_ui.dart` (update to export buttons barrel)
+- `lib/buttons.dart` (entrypoint barrel, new)
+- `lib/src/buttons/` (new module directory)
+- `lib/src/buttons/button.dart` (new, ~300–400 lines)
+- `lib/src/buttons/button_style.dart` (new, enums and style definitions)
 - `pubspec.yaml` (add layrz_icons dependency)
 - `test/buttons/button_test.dart` (tests)
 - `wiki/Widgets/LayrzButton.md` (wiki page, update with resolved spec)

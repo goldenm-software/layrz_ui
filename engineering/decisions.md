@@ -994,18 +994,22 @@ This is a **scoped exception to rule #4** (one concern per file, barrels at modu
 - **Exception documented**: D18 permanently records that `lib/preview.dart` is an allowed exception to rule #4. Future architects reviewing the codebase will understand the decision.
 - **Consumer code matches docs**: All code examples in CLAUDE.md rule #3 work exactly as written.
 - **No other top-level barrels**: No other modules may follow this pattern. If future modules need similar treatment, they must argue for an exception explicitly (following D18's precedent).
-- **Module structure remains standard otherwise**: All M2–M7 components and utility modules continue to follow `lib/<module>/<module>.dart` pattern.
+- **Module structure remains standard otherwise**: All M2–M7 components and utility modules follow the standard pattern.
+
+**Update (2026-08-16) — D18 Superseded by D19**
+
+When D19 (per-domain library entrypoints) was implemented, the package structure changed such that every module now has a top-level entrypoint (`lib/<module>.dart`). The preview exception that D18 documented — a top-level barrel outside the standard module structure — is no longer an exception; it is the standard. D18's documented rationale and the `lib/preview.dart` file remain unchanged, but the "exception" framing is now historical. See D19 for the current module structure.
 
 ### Review Trigger
 
-**None — this is a scoped, permanent exception.** If the pattern proves valuable for other modules, each would require its own decision following D18's template.
+**None — D18's decision is permanent. See D19 for current module structure.**
 
 ---
 
-## D19: Per-Domain Library Entrypoints — Deferred Until LayrzButton Ships
+## D19: Per-Domain Library Entrypoints — Implemented
 
-**Date**: 2026-08-15  
-**Status**: Deferred  
+**Date**: 2026-08-15 (deferred)  
+**Status**: Accepted  
 **Category**: Architecture / API Design
 
 ### Context
@@ -1062,9 +1066,22 @@ The reasons the restructure is **still worth doing** are different and real:
   - **Fate of `lib/layrz_ui.dart`**: Delete it entirely (Flutter SDK has no `flutter.dart` that exports everything), or keep it as a convenience barrel re-exporting each entrypoint for callers who want the old pattern. This is a **forward-compatibility decision** that could ease early adoption.
 - **Automation burden**: The `/complete-todo-process` skill and related automation will need no changes; only the import paths in newly-generated files will differ.
 
+**Update (2026-08-16) — D19 Implemented**
+
+The per-domain library restructure has been completed ahead of LayrzButton's merge. The implementation chose the second physical layout option from the original decision:
+
+- **Entrypoint location**: `lib/<module>.dart` (not `lib/src/<module>.dart`)
+- **Implementation location**: `lib/src/<module>/` (implementation files under src/)
+- **Consumer imports**: `import 'package:layrz_ui/buttons.dart';` (matching Flutter SDK convention)
+- **Root barrel fate**: The `lib/layrz_ui.dart` barrel was deleted entirely. There is deliberately no way to import all modules at once. Consumers must write per-domain imports.
+
+**Rationale for the choice**: Absolute imports survive refactors (D20's precondition). The root barrel deletion eliminates a footgun (accidentally importing unrelated modules). Per-domain imports force explicit dependency intent, improving code clarity.
+
+**Consequences of the change**: Every consuming app's import statements break when migrating to this version. The breaking change is explicit and unavoidable; this is acceptable for a ground-up rewrite (consistent with D1's stance on clean breaks).
+
 ### Review Trigger
 
-**Trigger date**: After LayrzButton (#21) is merged. Open a new GitHub Project item (not a Milestone 2 item) for the restructuring, estimate the scope (1–2 weeks), and assign a reviewer. The restructuring PR should reference the deferred work from D19 so the intent is visible in git history.
+None. D19 is now complete. The per-domain library structure is the new standard for layrz_ui.
 
 ---
 
