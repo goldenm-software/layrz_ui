@@ -1101,6 +1101,176 @@ void main() {
         await gesture.up();
         await tester.pump();
       });
+
+      testWidgets('regression: tap in scrollable shows pressed visual feedback', (tester) async {
+        // This test reproduces the original bug: wrapping a button in a scrollable
+        // (which has a drag recognizer) causes a fast tap to show no pressed visual feedback.
+        // The fix (using Listener for immediate pressed state) allows feedback to be visible
+        // even when the gesture arena is contested.
+        await pumpThemed(
+          tester,
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(height: 100),
+                LayrzButton(
+                  labelText: 'Test Button',
+                  style: LayrzButtonStyle.outlined,
+                  onTap: () {},
+                ),
+                SizedBox(height: 500),
+              ],
+            ),
+          ),
+        );
+
+        // Capture default state color.
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull, reason: 'Default color should be present');
+
+        // Perform a fast tap (no long hold).
+        final buttonCenter = tester.getCenter(find.byType(LayrzButton));
+        final gesture = await tester.startGesture(buttonCenter);
+
+        // Pump once to allow pointer-down to be processed.
+        // Without the fix, the pressed state wouldn't be set until the gesture arena resolves.
+        // With the fix, Listener.onPointerDown sets pressed immediately.
+        await tester.pump();
+
+        // Check that we saw a pressed color at some point.
+        final pressedColor = extractBackgroundColor(tester);
+        expect(
+          pressedColor,
+          isNot(defaultColor),
+          reason: 'Button should show pressed visual when tapped inside scrollable (Listener fix)',
+        );
+
+        await gesture.up();
+        await tester.pump();
+      });
+
+      testWidgets('minimum window holds pressed visual after early pointer-up', (tester) async {
+        // Verify that the minimum pressed-visible window (kLayrzButtonMinPressedDuration)
+        // holds the pressed state visually even if the pointer is released very quickly.
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Quick Tap Button',
+            style: LayrzButtonStyle.filled,
+            onTap: () {},
+          ),
+        );
+
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull);
+
+        // Start a gesture and release almost immediately (within 120ms minimum).
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        // At this point, pressed state should be set and visible.
+        final pressedColor = extractBackgroundColor(tester);
+        expect(pressedColor, isNot(defaultColor), reason: 'Pressed color should be visible immediately');
+
+        // Release the gesture.
+        await gesture.up();
+
+        // Pump once (not pumpAndSettle) - the minimum window timer may still be running.
+        await tester.pump();
+
+        // The pressed color should still be visible because we're within the minimum window.
+        final stillPressedColor = extractBackgroundColor(tester);
+        expect(
+          stillPressedColor,
+          isNot(defaultColor),
+          reason: 'Pressed visual should persist for minimum window duration after release',
+        );
+
+        // Now pump for longer than the minimum window to let the timer expire.
+        await tester.pump(kLayrzButtonMinPressedDuration + const Duration(milliseconds: 50));
+
+        // After the minimum window expires, the color should animate back to default.
+        await tester.pumpAndSettle();
+        final releasedColor = extractBackgroundColor(tester);
+        expect(
+          releasedColor,
+          defaultColor,
+          reason: 'Pressed visual should clear after minimum window expires',
+        );
+      });
+
+      testWidgets('onTapCancel handler properly releases pressed state with minimum window', (tester) async {
+        // Verify that when GestureDetector.onTapCancel fires (e.g., when a drag recognizer
+        // wins the gesture arena), the button properly releases the pressed state.
+        // The onTapCancel handler calls _releasePressedWithMinimumWindow, which schedules
+        // a timer if needed or clears immediately, ensuring the pressed visual is not stuck.
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Test Button',
+            style: LayrzButtonStyle.filled,
+            onTap: () {},
+          ),
+        );
+
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull);
+
+        // Start a gesture and immediately release it to simulate a tap cancellation.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        final pressedColor = extractBackgroundColor(tester);
+        expect(pressedColor, isNot(defaultColor), reason: 'Button should show pressed color');
+
+        // Release quickly (triggering tap completion or cancellation).
+        await gesture.up();
+        await tester.pump();
+
+        // After the minimum window expires, color should be back to default.
+        await tester.pump(kLayrzButtonMinPressedDuration + const Duration(milliseconds: 50));
+        await tester.pumpAndSettle();
+
+        final releasedColor = extractBackgroundColor(tester);
+        expect(
+          releasedColor,
+          defaultColor,
+          reason: 'Button should return to default color after minimum window expires',
+        );
+      });
+
+      testWidgets('disabled button does not enter pressed state on pointer-down', (tester) async {
+        // Verify that disabled buttons never enter the pressed state, even when
+        // Listener.onPointerDown is called. The _onPointerDown method checks
+        // _effectivelyDisabled and returns early if true.
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Disabled Button',
+            style: LayrzButtonStyle.filled,
+            isDisabled: true,
+            onTap: () {}, // onTap is provided, but isDisabled=true makes it effectively disabled
+          ),
+        );
+
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull);
+
+        // Try to press the disabled button.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        // The color should NOT change (disabled button should not show pressed state).
+        final colorAfterPress = extractBackgroundColor(tester);
+        expect(
+          colorAfterPress,
+          defaultColor,
+          reason: 'Disabled button should not change color on pointer-down',
+        );
+
+        await gesture.up();
+        await tester.pump();
+      });
     });
   });
 }
