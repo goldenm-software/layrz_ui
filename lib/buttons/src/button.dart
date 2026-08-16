@@ -436,6 +436,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _statesController = WidgetStatesController();
+    _statesController.addListener(_onStatesChanged);
     _cooldownController = AnimationController(vsync: this);
     _subscribe();
   }
@@ -452,6 +453,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _statesController.removeListener(_onStatesChanged);
     _unsubscribe();
     _cooldownController.dispose();
     _statesController.dispose();
@@ -464,6 +466,11 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
   void _unsubscribe() {
     widget.controller?.removeListener(_onControllerChanged);
+  }
+
+  void _onStatesChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _onControllerChanged() {

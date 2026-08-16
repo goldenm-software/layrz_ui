@@ -956,5 +956,151 @@ void main() {
         await tester.pump();
       });
     });
+
+    group('Interaction state visual changes', () {
+      /// Helper to extract the background color from the AnimatedContainer's decoration.
+      Color? extractBackgroundColor(WidgetTester tester) {
+        final container = find.byType(AnimatedContainer);
+        if (container.evaluate().isEmpty) return null;
+
+        final widget = tester.widget<AnimatedContainer>(container);
+        final decoration = widget.decoration as BoxDecoration?;
+        return decoration?.color;
+      }
+
+      testWidgets('outlined style press changes background color', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Outlined Button',
+            style: LayrzButtonStyle.outlined,
+            onTap: () {},
+          ),
+        );
+
+        // Capture default state color.
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull, reason: 'Default color should be present');
+
+        // Simulate press via GestureDetector.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        // Capture pressed state color.
+        final pressedColor = extractBackgroundColor(tester);
+        expect(pressedColor, isNotNull, reason: 'Pressed color should be present');
+        expect(
+          pressedColor,
+          isNot(defaultColor),
+          reason: 'Outlined button should change background on press',
+        );
+
+        await gesture.up();
+        await tester.pump();
+      });
+
+      testWidgets('outlined style release restores default background color', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Outlined Button',
+            style: LayrzButtonStyle.outlined,
+            onTap: () {},
+          ),
+        );
+
+        // Capture default state color.
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull, reason: 'Default color should be present');
+
+        // Simulate press and release.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        final pressedColor = extractBackgroundColor(tester);
+        expect(pressedColor, isNot(defaultColor), reason: 'Color should change on press');
+
+        // Release and wait for the AnimatedContainer to animate back.
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // Verify color returns to default.
+        final releasedColor = extractBackgroundColor(tester);
+        expect(
+          releasedColor,
+          defaultColor,
+          reason: 'Background color should return to default after release',
+        );
+      });
+
+      testWidgets('filled style press changes background color', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Filled Button',
+            style: LayrzButtonStyle.filled,
+            onTap: () {},
+          ),
+        );
+
+        // Capture default state color.
+        final defaultColor = extractBackgroundColor(tester);
+        expect(defaultColor, isNotNull, reason: 'Default color should be present');
+
+        // Simulate press.
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        // Capture pressed state color.
+        final pressedColor = extractBackgroundColor(tester);
+        expect(pressedColor, isNotNull, reason: 'Pressed color should be present');
+        expect(
+          pressedColor,
+          isNot(defaultColor),
+          reason: 'Filled button should shift color on press (lerp towards content color)',
+        );
+
+        await gesture.up();
+        await tester.pump();
+      });
+
+      testWidgets('button visual state rebuilds when widget state changes', (tester) async {
+        // This test verifies that the fix (adding a listener to _statesController)
+        // properly causes rebuilds when interaction states change.
+        // It does this by checking that the AnimatedContainer's decoration changes
+        // in response to state changes triggered by press/release.
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Test Button',
+            style: LayrzButtonStyle.filledTonal,
+            onTap: () {},
+          ),
+        );
+
+        // Get initial state of AnimatedContainer.
+        final containerFinder = find.byType(AnimatedContainer);
+        expect(containerFinder, findsOneWidget, reason: 'Button should render with AnimatedContainer');
+
+        // Verify that pressing causes a widget rebuild (not just state update).
+        var initialDecoration = (tester.widget<AnimatedContainer>(containerFinder).decoration as BoxDecoration).color;
+
+        final gesture = await tester.startGesture(tester.getCenter(find.byType(LayrzButton)));
+        await tester.pump();
+
+        var pressedDecoration = (tester.widget<AnimatedContainer>(containerFinder).decoration as BoxDecoration).color;
+
+        // The key assertion: if the listener wasn't added, pressed == initial.
+        // With the fix, they should differ because a rebuild occurred.
+        expect(
+          pressedDecoration,
+          isNot(initialDecoration),
+          reason: 'AnimatedContainer decoration should change on press (requires listener to trigger rebuild)',
+        );
+
+        await gesture.up();
+        await tester.pump();
+      });
+    });
   });
 }
