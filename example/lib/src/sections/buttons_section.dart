@@ -657,6 +657,8 @@ class _SharedControllerDemo extends StatelessWidget {
               "Elevated": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
               "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
               "FilledTonal": [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab],
+              "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
+              "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
               "Text": [LayrzButtonStyle.text, LayrzButtonStyle.fab],
             }.entries.map((e) {
               return Row(
