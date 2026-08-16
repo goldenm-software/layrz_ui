@@ -9,7 +9,8 @@ tool/
 .github/
 .vscode/
 engineering/
-wiki
+# Wiki submodule excluded from archive (checked out by CI via submodules: true)
+wiki/
 Makefile
 CLAUDE.md
 

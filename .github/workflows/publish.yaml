@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          submodules: true
       - name: Check tag format
         run: |
           if [[ ! "${GITHUB_REF}" =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -38,6 +40,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: true
 
       - uses: flutter-actions/setup-flutter@v4
         with:
@@ -83,7 +87,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
+          submodules: true
 
       - name: Generate changelog
         id: changelog
@@ -119,6 +125,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: true
 
       - name: Set up Flutter
         uses: flutter-actions/setup-flutter@v4

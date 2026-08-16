@@ -1,3 +1,3 @@
 [submodule "wiki"]
 	path = wiki
-	url = git@github.com:goldenm-software/layrz_ui.wiki.git
+	url = https://github.com/goldenm-software/layrz_ui.wiki.git
