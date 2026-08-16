@@ -1,6 +1,33 @@
 /// Height of a standard [LayrzButton] in logical pixels.
 const double kLayrzButtonHeight = 45.0;
 
+/// Height of the progress indicator bar in [LayrzButton] (loading or cooldown state).
+///
+/// Renders as a thin horizontal bar at the bottom of the button. At 3 logical pixels,
+/// the bar remains visible without obscuring the button label or icon. The bar is inset
+/// by the button's border width to stay inside the button's outline.
+const double kLayrzButtonIndicatorHeight = 3.0;
+
+/// Horizontal inset applied to the progress indicator bar in [LayrzButton].
+///
+/// The indicator is positioned inset from the button's left and right edges by this amount
+/// to maintain visual clearance from the button's rounded corners. This inset is applied in addition
+/// to the button's border width.
+///
+/// Set to 8.0 to match the button's base corner radius ([tokens.radius.base]), ensuring the
+/// progress bar's pill-shaped ends remain visually distinct and do not clash with the
+/// button's corner curve.
+const double kLayrzButtonIndicatorInsetHorizontal = 8.0;
+
+/// Bottom inset applied to the progress indicator bar in [LayrzButton].
+///
+/// The indicator is positioned inset from the button's bottom edge by this amount
+/// to maintain visual separation from the very edge. A smaller value than the horizontal inset
+/// keeps the bar close to the bottom inner edge for better visual balance.
+///
+/// Set to 1.0 logical pixel to keep the bar near the bottom edge while avoiding the very edge.
+const double kLayrzButtonIndicatorInsetBottom = 1.0;
+
 /// Size of the icon within a [LayrzButton] in logical pixels.
 const double kLayrzButtonIconSize = 22.0;
 

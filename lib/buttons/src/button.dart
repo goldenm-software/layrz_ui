@@ -586,7 +586,11 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
                     // Indicator overlay (loading or cooldown).
                     if (isLoading || hasCooldown)
-                      Positioned.fill(
+                      Positioned(
+                        left: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
+                        right: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
+                        bottom: spec.borderWidth + kLayrzButtonIndicatorInsetBottom,
+                        height: kLayrzButtonIndicatorHeight,
                         child: ValueListenableBuilder<double>(
                           valueListenable: _CooldownProgressListenable(controller),
                           builder: (context, _, _) {
@@ -594,13 +598,10 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                             final isDeterminateMode = hasCooldown && cooldownProgress < 1.0;
 
                             return LayrzButtonIndicator(
-                              trackColor: spec.contentColor.withOpacityValue(0.2),
+                              trackColor: const Color(0x00000000),
                               indicatorColor: spec.contentColor,
-                              borderRadius: tokens.radius.innerRadiusValue(
-                                outerRadius: tokens.radius.base,
-                                spacer: spec.borderWidth,
-                              ),
-                              height: kLayrzButtonHeight,
+                              borderRadius: kLayrzButtonIndicatorHeight / 2,
+                              height: kLayrzButtonIndicatorHeight,
                               progress: isDeterminateMode ? cooldownProgress : null,
                             );
                           },

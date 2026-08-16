@@ -134,18 +134,20 @@ class _IndicatorPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Draw track background.
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.fill;
+    // Draw track background only if not fully transparent.
+    if (trackColor.a > 0) {
+      final trackPaint = Paint()
+        ..color = trackColor
+        ..style = PaintingStyle.fill;
 
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        Radius.circular(borderRadius),
-      ),
-      trackPaint,
-    );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Radius.circular(borderRadius),
+        ),
+        trackPaint,
+      );
+    }
 
     final indicatorPaint = Paint()
       ..color = indicatorColor
