@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/cards.dart';
 import 'package:layrz_ui/extensions.dart';
 
 /// A reusable shell for each showroom section.
@@ -10,8 +11,8 @@ class ShowroomSection extends StatelessWidget {
   /// Creates a new [ShowroomSection].
   ///
   /// The [title] is rendered with [TextTheme.headlineSmall], the optional [description]
-  /// with [TextTheme.bodyMedium], and the [child] content area is decorated with
-  /// elevation-based shadow and surface color.
+  /// with [TextTheme.bodyMedium], and the [child] content area is displayed inside
+  /// a [LayrzCard] for consistent elevation and surface styling.
   const ShowroomSection({required this.title, required this.child, this.description, super.key});
 
   /// The section title, rendered prominently at the top.
@@ -41,9 +42,12 @@ class ShowroomSection extends StatelessWidget {
             Text(description!, style: tokens.typography.bodyMedium.copyWith(color: tokens.colors.fg3)),
           ],
 
-          // Content area with elevation shadow
+          // Content area with LayrzCard for elevation and surface styling
           SizedBox(height: tokens.spacing.sp16),
-          Container(decoration: tokens.shadow.elevation(elevation: 1), padding: tokens.spacing.padding, child: child),
+          LayrzCard(
+            elevation: 1,
+            child: child,
+          ),
         ],
       ),
     );

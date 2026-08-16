@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 import '../common/showroom_swatch.dart';
@@ -88,10 +89,18 @@ Widget buildColorsSection() {
                 Row(
                   children: [
                     Expanded(
-                      child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
+                      child: LayrzTooltip(
+                        contentText: 'overlay — ${tokens.colors.overlay.toHex()}',
+                        child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
+                      ),
                     ),
                     SizedBox(width: tokens.spacing.sp16),
-                    Expanded(child: _TonalOpacitySwatch(tokens: tokens)),
+                    Expanded(
+                      child: LayrzTooltip(
+                        contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
+                        child: _TonalOpacitySwatch(tokens: tokens),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -130,7 +139,12 @@ class _ColorCategory extends StatelessWidget {
           spacing: tokens.spacing.sp16,
           runSpacing: tokens.spacing.sp16,
           children: colors
-              .map((sample) => ShowroomSwatch(color: sample.color, label: sample.name, value: sample.color.toHex()))
+              .map(
+                (sample) => LayrzTooltip(
+                  contentText: '${sample.name} — ${sample.color.toHex()}',
+                  child: ShowroomSwatch(color: sample.color, label: sample.name, value: sample.color.toHex()),
+                ),
+              )
               .toList(),
         ),
       ],

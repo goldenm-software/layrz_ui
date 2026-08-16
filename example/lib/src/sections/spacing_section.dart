@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 import '../common/unit_display.dart';
@@ -85,22 +86,25 @@ class _SpacingRuler extends StatelessWidget {
 
                   // Track (background strip) with bar on top showing true width
                   Expanded(
-                    child: Container(
-                      height: tokens.spacing.sp24,
-                      decoration: BoxDecoration(
-                        color: tokens.colors.surface2,
-                        borderRadius: BorderRadius.circular(tokens.radius.r8),
-                      ),
-                      alignment: Alignment.centerLeft,
+                    child: LayrzTooltip(
+                      contentText: '${item.$1} = ${item.$2.toStringAsFixed(0)}px',
                       child: Container(
-                        width: item.$2,
                         height: tokens.spacing.sp24,
-                        key: ValueKey('spacing-bar-${item.$1}'),
                         decoration: BoxDecoration(
-                          color: tokens.colors.primary,
-                          borderRadius: BorderRadius.circular(
-                            // Use small radius for very small bars (sp4, sp6), larger for bigger bars
-                            item.$2 <= 8.0 ? 2.0 : min(item.$2 / 4, tokens.radius.r8),
+                          color: tokens.colors.surface2,
+                          borderRadius: BorderRadius.circular(tokens.radius.r8),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          width: item.$2,
+                          height: tokens.spacing.sp24,
+                          key: ValueKey('spacing-bar-${item.$1}'),
+                          decoration: BoxDecoration(
+                            color: tokens.colors.primary,
+                            borderRadius: BorderRadius.circular(
+                              // Use small radius for very small bars (sp4, sp6), larger for bigger bars
+                              item.$2 <= 8.0 ? 2.0 : min(item.$2 / 4, tokens.radius.r8),
+                            ),
                           ),
                         ),
                       ),
@@ -148,18 +152,21 @@ class _SpacingAccessors extends StatelessWidget {
             children: [
               Text('padding', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
-                  borderRadius: BorderRadius.circular(tokens.radius.r8),
-                ),
-                padding: tokens.spacing.padding,
+              LayrzTooltip(
+                contentText: 'padding = ${tokens.spacing.base.toStringAsFixed(0)}px on all sides',
                 child: Container(
                   decoration: BoxDecoration(
-                    color: tokens.colors.primary,
+                    border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
                     borderRadius: BorderRadius.circular(tokens.radius.r8),
                   ),
-                  height: 40,
+                  padding: tokens.spacing.padding,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    ),
+                    height: 40,
+                  ),
                 ),
               ),
               SizedBox(height: tokens.spacing.sp8),
@@ -180,19 +187,22 @@ class _SpacingAccessors extends StatelessWidget {
             children: [
               Text('reducedMargin', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
-                  borderRadius: BorderRadius.circular(tokens.radius.r8),
-                ),
-                margin: tokens.spacing.reducedMargin,
-                padding: tokens.spacing.padding,
+              LayrzTooltip(
+                contentText: 'reducedMargin = ${(tokens.spacing.base / 2).toStringAsFixed(0)}px on all sides',
                 child: Container(
                   decoration: BoxDecoration(
-                    color: tokens.colors.primary,
+                    border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
                     borderRadius: BorderRadius.circular(tokens.radius.r8),
                   ),
-                  height: 40,
+                  margin: tokens.spacing.reducedMargin,
+                  padding: tokens.spacing.padding,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    ),
+                    height: 40,
+                  ),
                 ),
               ),
               SizedBox(height: tokens.spacing.sp8),
@@ -213,13 +223,17 @@ class _SpacingAccessors extends StatelessWidget {
             children: [
               Text('sizedBox', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
-                  borderRadius: BorderRadius.circular(tokens.radius.r8),
+              LayrzTooltip(
+                contentText:
+                    'sizedBox = ${tokens.spacing.base.toStringAsFixed(0)}px × ${tokens.spacing.base.toStringAsFixed(0)}px',
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: tokens.colors.divider, width: tokens.border.stroke2),
+                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                  ),
+                  padding: tokens.spacing.padding,
+                  child: tokens.spacing.sizedBox,
                 ),
-                padding: tokens.spacing.padding,
-                child: tokens.spacing.sizedBox,
               ),
               SizedBox(height: tokens.spacing.sp8),
               Text(
