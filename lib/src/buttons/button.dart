@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
@@ -432,6 +434,20 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   late WidgetStatesController _statesController;
   late AnimationController _cooldownController;
 
+  /// Timestamp when the button was pressed via pointer-down.
+  ///
+  /// Used to enforce the minimum pressed-visible window [kLayrzButtonMinPressedDuration].
+  /// Set when [onPointerDown] fires, cleared when pressed state is finally released.
+  DateTime? _pressStartTime;
+
+  /// Pending Timer that will clear the pressed state after the minimum window expires.
+  ///
+  /// When pointer-up or pointer-cancel fires before [kLayrzButtonMinPressedDuration] has elapsed,
+  /// this timer is scheduled to clear the pressed state at the remainder time.
+  /// If a new press arrives while this timer is pending, it is canceled and a new press cycle begins.
+  /// The timer is always canceled in [dispose] to prevent callbacks after unmount.
+  Timer? _releasePressedTimer;
+
   @override
   void initState() {
     super.initState();
@@ -453,6 +469,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
   @override
   void dispose() {
+    _releasePressedTimer?.cancel();
     _statesController.removeListener(_onStatesChanged);
     _unsubscribe();
     _cooldownController.dispose();
@@ -485,6 +502,58 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   /// Used to suppress taps, set cursor, control semantics.enabled, and render
   /// the disabled visual style (greyed appearance).
   bool get _effectivelyDisabled => widget.onTap == null || widget.isDisabled || (widget.controller?.isBusy ?? false);
+
+  /// Handles pointer-down to set the pressed state immediately.
+  ///
+  /// This is called directly by [Listener.onPointerDown], bypassing the gesture
+  /// arena entirely. The pressed state is set only if the button is not effectively
+  /// disabled.
+  ///
+  /// Records [_pressStartTime] to track whether the minimum pressed-visible window
+  /// [kLayrzButtonMinPressedDuration] has elapsed when the pointer is released.
+  void _onPointerDown(PointerDownEvent event) {
+    if (_effectivelyDisabled) return;
+
+    _pressStartTime = DateTime.now();
+    _statesController.update(WidgetState.pressed, true);
+  }
+
+  /// Handles pointer-up and pointer-cancel to release the pressed state.
+  ///
+  /// If [kLayrzButtonMinPressedDuration] has not yet elapsed since [_onPointerDown],
+  /// schedules a Timer to clear the pressed state after the remainder expires.
+  /// Otherwise clears the pressed state immediately.
+  ///
+  /// If a pending release timer is already active (a new press arrived while one was
+  /// pending), cancels the old timer before starting a fresh press cycle.
+  void _releasePressedWithMinimumWindow() {
+    if (!mounted) return;
+
+    final now = DateTime.now();
+    final startTime = _pressStartTime;
+
+    if (startTime == null) return;
+
+    final elapsed = now.difference(startTime);
+
+    if (elapsed < kLayrzButtonMinPressedDuration) {
+      // Elapsed time is less than minimum; schedule the release.
+      _releasePressedTimer?.cancel();
+      final remaining = kLayrzButtonMinPressedDuration - elapsed;
+      _releasePressedTimer = Timer(remaining, () {
+        if (!mounted) return;
+        _statesController.update(WidgetState.pressed, false);
+        _releasePressedTimer = null;
+        _pressStartTime = null;
+      });
+    } else {
+      // Minimum window has elapsed; clear immediately.
+      _releasePressedTimer?.cancel();
+      _releasePressedTimer = null;
+      _statesController.update(WidgetState.pressed, false);
+      _pressStartTime = null;
+    }
+  }
 
   /// Resolves the accent color from the button's type and optional color override.
   Color _resolveAccent(LayrzTokens tokens) {
@@ -542,72 +611,77 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
           },
           child: MouseRegion(
             cursor: _effectivelyDisabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: _effectivelyDisabled ? null : widget.onTap,
-              onTapDown: (_) {
-                _statesController.update(WidgetState.pressed, true);
+            child: Listener(
+              onPointerDown: (event) {
+                _onPointerDown(event);
               },
-              onTapUp: (_) {
-                _statesController.update(WidgetState.pressed, false);
+              onPointerUp: (event) {
+                _releasePressedWithMinimumWindow();
               },
-              onTapCancel: () {
-                _statesController.update(WidgetState.pressed, false);
+              onPointerCancel: (event) {
+                _releasePressedWithMinimumWindow();
               },
-              child: AnimatedContainer(
-                duration: tokens.motion.dHover,
-                curve: tokens.motion.easing,
-                width: buttonWidth,
-                height: kLayrzButtonHeight,
-                decoration: BoxDecoration(
-                  color: spec.backgroundColor,
-                  border: Border.all(
-                    color: spec.borderColor,
-                    width: spec.borderWidth,
+              child: GestureDetector(
+                onTap: _effectivelyDisabled ? null : widget.onTap,
+                onTapCancel: () {
+                  _releasePressedWithMinimumWindow();
+                },
+                child: AnimatedContainer(
+                  duration: tokens.motion.dHover,
+                  curve: tokens.motion.easing,
+                  width: buttonWidth,
+                  height: kLayrzButtonHeight,
+                  decoration: BoxDecoration(
+                    color: spec.backgroundColor,
+                    border: Border.all(
+                      color: spec.borderColor,
+                      width: spec.borderWidth,
+                    ),
+                    borderRadius: BorderRadius.circular(tokens.radius.base),
+                    boxShadow: spec.shadows,
                   ),
-                  borderRadius: BorderRadius.circular(tokens.radius.base),
-                  boxShadow: spec.shadows,
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Content layer (icon + label or Fab icon).
-                    if (!isFab)
-                      buildButtonContent(
-                        labelText: widget.labelText,
-                        icon: widget.icon,
-                        spec: spec,
-                        tokens: tokens,
-                      )
-                    else
-                      buildFabContent(
-                        icon: widget.icon,
-                        spec: spec,
-                      ),
-
-                    // Indicator overlay (loading or cooldown).
-                    if (isLoading || hasCooldown)
-                      Positioned(
-                        left: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
-                        right: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
-                        bottom: spec.borderWidth + kLayrzButtonIndicatorInsetBottom,
-                        height: kLayrzButtonIndicatorHeight,
-                        child: ValueListenableBuilder<double>(
-                          valueListenable: _CooldownProgressListenable(controller),
-                          builder: (context, _, _) {
-                            final cooldownProgress = controller?.cooldownProgress ?? 0.0;
-                            final isDeterminateMode = hasCooldown && cooldownProgress < 1.0;
-
-                            return LayrzButtonIndicator(
-                              trackColor: const Color(0x00000000),
-                              indicatorColor: spec.contentColor,
-                              borderRadius: kLayrzButtonIndicatorHeight / 2,
-                              height: kLayrzButtonIndicatorHeight,
-                              progress: isDeterminateMode ? cooldownProgress : null,
-                            );
-                          },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Content layer (icon + label or Fab icon).
+                      if (!isFab)
+                        buildButtonContent(
+                          labelText: widget.labelText,
+                          icon: widget.icon,
+                          spec: spec,
+                          tokens: tokens,
+                        )
+                      else
+                        buildFabContent(
+                          icon: widget.icon,
+                          spec: spec,
                         ),
-                      ),
-                  ],
+
+                      // Indicator overlay (loading or cooldown).
+                      if (isLoading || hasCooldown)
+                        Positioned(
+                          left: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
+                          right: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
+                          bottom: spec.borderWidth + kLayrzButtonIndicatorInsetBottom,
+                          height: kLayrzButtonIndicatorHeight,
+                          child: ValueListenableBuilder<double>(
+                            valueListenable: _CooldownProgressListenable(controller),
+                            builder: (context, _, _) {
+                              final cooldownProgress = controller?.cooldownProgress ?? 0.0;
+                              final isDeterminateMode = hasCooldown && cooldownProgress < 1.0;
+
+                              return LayrzButtonIndicator(
+                                trackColor: const Color(0x00000000),
+                                indicatorColor: spec.contentColor,
+                                borderRadius: kLayrzButtonIndicatorHeight / 2,
+                                height: kLayrzButtonIndicatorHeight,
+                                progress: isDeterminateMode ? cooldownProgress : null,
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
