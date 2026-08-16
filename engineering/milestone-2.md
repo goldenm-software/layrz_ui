@@ -11,19 +11,22 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | # | Item | Status |
 |---|---|---|
 | 1 | LayrzButton with twelve styles and six semantic factories | Done |
-| 2 | LayrzActionButton and LayrzActionsButtons | Todo |
-| 3 | LayrzTooltip on RawTooltip | Todo |
+| 2 | LayrzTooltip on RawTooltip | Todo |
+| 3 | LayrzAlert (inline status callout) | Todo |
 | 4 | LayrzChip and LayrzChipGroup | Todo |
-| 5 | LayrzAlert (inline status callout) | Todo |
-| 6 | LayrzAvatar and LayrzImage | Todo |
-| 7 | LayrzResponsiveRow / LayrzResponsiveCol responsive grid | Todo |
-| 8 | LayrzAnimatedCheckbox | Todo |
+| 5 | LayrzRow / LayrzCol responsive grid | Todo |
+| 6 | LayrzConstrainedView | Todo |
+| 7 | LayrzTextInput | Todo |
+| 8 | LayrzDropdownMenu | Todo |
+| 9 | LayrzGroupedButton (overflow actions menu) | Todo |
+| 10 | LayrzAvatar and LayrzImage | Todo |
+| 11 | LayrzAnimatedCheckbox | Todo |
 
-**Note**: This table tracks the 8 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit.
+**Note**: This table tracks the 11 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit.
 
 ## Definition of Done
 
-- All 8 items below complete
+- All 11 items below complete
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass on all M2 tests
 - Coverage floor (90%) not breached
@@ -53,11 +56,11 @@ See decision D19 in `engineering/decisions.md` for the complete rationale and co
 ### 1. LayrzButton with Twelve Styles and Six Semantic Factories
 
 **What changes**:
-- Create `lib/buttons/src/button.dart` — `LayrzButton` widget
+- Create `lib/src/buttons/button.dart` — `LayrzButton` widget
 - Implement twelve style variants via parameter: `filled`, `filledTonal`, `elevated`, `outlined`, `outlinedTonal`, `text`, and their Fab counterparts (`filledFab`, `filledTonalFab`, `elevatedFab`, `outlinedFab`, `outlinedTonalFab`, `fab`)
 - Implement six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`)
 - Material-free construction: RawTooltip → FocusableActionDetector → MouseRegion → GestureDetector → AnimatedContainer
-- Create `lib/buttons/buttons.dart` barrel with re-exports
+- Create `lib/buttons.dart` barrel with re-exports
 
 **API contract**:
 
@@ -205,25 +208,7 @@ This prevents reflow and flicker during state changes.
 
 ---
 
-### 2. LayrzActionButton and LayrzActionsButtons
-
-**Brief description**:
-
-`LayrzActionButton` — icon-only button for toolbar/action contexts. May be implemented as a factory on LayrzButton or a standalone widget; implementation-time decision.
-
-`LayrzActionsButtons` — horizontal group of action buttons (typically 2–4 buttons) with spacing. Wrapper around a Row of LayrzActionButton instances.
-
-**Dependencies**: M1 (LayrzTheme, tokens), M2.1 (LayrzButton).
-
-**Files affected**:
-- `lib/buttons/src/action_button.dart` (new)
-- `lib/buttons/src/actions_buttons.dart` (new)
-- `lib/buttons/buttons.dart` (update barrel)
-- `test/buttons/action_button_test.dart` (tests)
-
----
-
-### 3. LayrzTooltip on RawTooltip
+### 2. LayrzTooltip on RawTooltip
 
 **Brief description**:
 
@@ -231,36 +216,22 @@ This prevents reflow and flicker during state changes.
 
 Replaces the temporary use of RawTooltip in LayrzButton with a proper tooltip component.
 
+**Important notes**:
+- `LayrzTooltip` is built first because `LayrzButton` currently holds `_buildTooltip()` and `layrzButtonTooltipPosition()` helper methods that this component will retire.
+- `LayrzTooltip` is a thin wrapper over `RawTooltip`, not a reimplementation, since `tooltipBuilder` removes the restyling problem that justified `ThemedTooltip`.
+- SDK gotcha: when a `positionDelegate` is supplied to `RawTooltip`, `TooltipPositionContext.verticalOffset` is hardcoded to `0.0`, so the gap between tooltip and anchor must come from your own constant.
+
 **Dependencies**: M1 (LayrzTheme, tokens), Flutter 3.47 (RawTooltip).
 
 **Files affected**:
-- `lib/tooltips/` (new module)
-- `lib/tooltips/tooltips.dart` (barrel, new)
-- `lib/tooltips/src/tooltip.dart` (new)
+- `lib/tooltips.dart` (entrypoint barrel, new)
+- `lib/src/tooltips/` (new module directory)
+- `lib/src/tooltips/tooltip.dart` (new)
 - `test/tooltips/tooltip_test.dart` (tests)
 
 ---
 
-### 4. LayrzChip and LayrzChipGroup
-
-**Brief description**:
-
-`LayrzChip` — compact label widget with optional leading/trailing icon, delete action, or selection state.
-
-`LayrzChipGroup` — container for multiple chips with optional grouping behaviour (none, single select, multi-select).
-
-**Dependencies**: M1 (LayrzTheme, tokens, WidgetState), M2.1 (LayrzButton for delete action).
-
-**Files affected**:
-- `lib/chips/` (new module)
-- `lib/chips/chips.dart` (barrel, new)
-- `lib/chips/src/chip.dart` (new)
-- `lib/chips/src/chip_group.dart` (new)
-- `test/chips/chip_test.dart` (tests)
-
----
-
-### 5. LayrzAlert (Inline Status Callout)
+### 3. LayrzAlert (Inline Status Callout)
 
 **Brief description**:
 
@@ -276,14 +247,163 @@ Replaces ThemedAlert from layrz_theme.
 **Dependencies**: M1 (LayrzTheme, tokens).
 
 **Files affected**:
-- `lib/alerts/` (new module)
-- `lib/alerts/alerts.dart` (barrel, new)
-- `lib/alerts/src/alert.dart` (new)
+- `lib/alerts.dart` (entrypoint barrel, new)
+- `lib/src/alerts/` (new module directory)
+- `lib/src/alerts/alert.dart` (new)
 - `test/alerts/alert_test.dart` (tests)
 
 ---
 
-### 6. LayrzAvatar and LayrzImage
+### 4. LayrzChip and LayrzChipGroup
+
+**Brief description**:
+
+`LayrzChip` — compact label widget with optional leading/trailing icon, delete action, or selection state.
+
+`LayrzChipGroup` — container for multiple chips with optional grouping behaviour (none, single select, multi-select).
+
+**Dependencies**: M1 (LayrzTheme, tokens, WidgetState), M2.1 (LayrzButton for delete action).
+
+**Files affected**:
+- `lib/chips.dart` (entrypoint barrel, new)
+- `lib/src/chips/` (new module directory)
+- `lib/src/chips/chip.dart` (new)
+- `lib/src/chips/chip_group.dart` (new)
+- `test/chips/chip_test.dart` (tests)
+
+---
+
+### 5. LayrzRow / LayrzCol Responsive Grid
+
+**Brief description**:
+
+`LayrzRow` — 12-column responsive grid container (wraps Row internally). Children are `LayrzCol` instances.
+
+`LayrzCol` — column definition within a responsive row. Specifies width at each breakpoint (xs, sm, md, lg, xl).
+
+Example:
+```dart
+LayrzRow(
+  children: [
+    LayrzCol(xs: 12, sm: 6, md: 4, child: ...),
+    LayrzCol(xs: 12, sm: 6, md: 8, child: ...),
+  ],
+)
+```
+
+Breakpoints use constants from `lib/src/constants/grid.dart` (kExtraSmallGrid, etc.).
+
+**Dependencies**: M1 (constants, tokens).
+
+**Files affected**:
+- `lib/grid.dart` (entrypoint barrel, new)
+- `lib/src/grid/` (new module directory)
+- `lib/src/grid/row.dart` (new)
+- `lib/src/grid/col.dart` (new)
+- `test/grid/row_test.dart` (tests)
+
+---
+
+### 6. LayrzConstrainedView
+
+**Brief description**:
+
+`LayrzConstrainedView` — constrains the maximum width of its children, centres them horizontally, and lays them out in a vertical `Column` internally. The Bootstrap `.container` / 960-grid pattern — a centred, constrained column for page layouts.
+
+Example:
+```dart
+LayrzConstrainedView(
+  maxWidth: 960,
+  spacing: 16,
+  children: [
+    // page content
+  ],
+)
+```
+
+The component constructs the internal `Column` itself; callers pass `children` directly, not a pre-built `Column`. Nothing is clipped — it constrains and centres, which is why it is not called "cropped". The `maxWidth` parameter is caller-configurable; the example uses 960, but any value is valid.
+
+**Exposed Parameters — Architecture Principle**:
+
+Because the `Column` is built internally, any property a caller would normally set on it must be deliberately exposed or it becomes inaccessible. For example:
+
+- **`spacing` (double?, optional)** — controls the gap between children, mapping directly to `Column.spacing`. When not provided, defaults to a spacing token (not a hardcoded constant) from the theme, allowing design system control over default spacing. Without exposing this parameter, callers can only create flush-stacked content.
+
+This principle applies to any `Column` property callers need: `mainAxisAlignment`, `crossAxisAlignment`, and others must either be exposed as parameters or fixed via a design decision. The choice is made intentionally when building, not deferred.
+
+**Implementation open question**: Decide whether the internal `Column`'s `mainAxisAlignment` and `crossAxisAlignment` should be exposed as parameters or fixed (following the same principle: callers cannot access them unless deliberately surfaced). Worth deciding when building rather than now.
+
+**Dependencies**: M1 (constants, tokens).
+
+**Files affected**:
+- `lib/grid.dart` (update entrypoint barrel — already exists from item 5)
+- `lib/src/grid/constrained_view.dart` (new)
+- `test/grid/constrained_view_test.dart` (tests)
+
+---
+
+### 7. LayrzTextInput
+
+**Brief description**:
+
+`LayrzTextInput` — foundational text input widget. Base of the entire M3+ input family: every other `Layrz*Input` composes it, and picker-style inputs render as a read-only `LayrzTextInput` that opens their surface on tap.
+
+At least 6 M3 components and 14 M4 pickers depend on it. Its chrome — label, prefix/suffix, help affordance, padding, error display, focus decoration — becomes the chrome of every input in the system, so visual decisions here are not local.
+
+**BLOCKER — IMPORTANT**: The visual design diverges from `ThemedTextInput` per internal meetings and is not captured anywhere. Before implementation starts, a Figma frame, meeting doc, or Notion link must be attached that shows the final design direction. Without this, roughly twenty downstream components (M3–M5 inputs and pickers) will be redone later.
+
+**Hidden scope**: `EditableText` needs concrete selection handles and a selection toolbar. Material supplies those and they cannot be used, so a Material-free `TextSelectionControls` is required and may warrant its own milestone item — note `RawMagnifier` and `SystemContextMenu` as relevant Flutter SDK types.
+
+**Primitive**: `EditableText`.
+
+**Dependencies**: M1 (LayrzTheme, tokens).
+
+**Files affected**:
+- `lib/inputs.dart` (entrypoint barrel, new)
+- `lib/src/inputs/` (new module directory)
+- `lib/src/inputs/text_input.dart` (new)
+- `test/inputs/text_input_test.dart` (tests)
+
+---
+
+### 8. LayrzDropdownMenu
+
+**Brief description**:
+
+`LayrzDropdownMenu` — menu surface anchored to a trigger, built on `RawMenuAnchor` (Flutter 3.47). New scope, absent from `engineering/roadmap.md`. Prerequisite for LayrzGroupedButton (item 9).
+
+The menu renders as a dropdown popup anchored to a trigger widget, supports single-item and multi-item selection, and integrates with the theme system.
+
+**Dependencies**: M1 (LayrzTheme, tokens), Flutter 3.47 (RawMenuAnchor), M2.1 (LayrzButton).
+
+**Files affected**:
+- `lib/menus.dart` (entrypoint barrel, new)
+- `lib/src/menus/` (new module directory)
+- `lib/src/menus/dropdown_menu.dart` (new)
+- `test/menus/dropdown_menu_test.dart` (tests)
+
+---
+
+### 9. LayrzGroupedButton
+
+**Brief description**:
+
+`LayrzGroupedButton` — row of primary actions with an overflow menu for secondary actions. Replaces the old section 2 components (`LayrzActionButton` / `LayrzActionsButtons`), which are superseded by this unified pattern.
+
+This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically 2–4) that overflows into a menu when space is constrained. Depends on LayrzDropdownMenu for the overflow surface and LayrzButton for the individual actions.
+
+**Historical note**: Earlier planning called this `LayrzActionButton` and `LayrzActionsButtons`. That naming is superseded. The wiki Component Catalog still maps the old names and will need reconciling.
+
+**Dependencies**: M1 (LayrzTheme, tokens), M2.8 (LayrzDropdownMenu), M2.1 (LayrzButton).
+
+**Files affected**:
+- `lib/buttons.dart` (update entrypoint barrel — already exists from item 1)
+- `lib/src/buttons/grouped_button.dart` (new)
+- `test/buttons/grouped_button_test.dart` (tests)
+
+---
+
+### 10. LayrzAvatar and LayrzImage
 
 **Brief description**:
 
@@ -294,46 +414,15 @@ Replaces ThemedAlert from layrz_theme.
 **Dependencies**: M1 (LayrzTheme, tokens).
 
 **Files affected**:
-- `lib/avatars/` (new module)
-- `lib/avatars/avatars.dart` (barrel, new)
-- `lib/avatars/src/avatar.dart` (new)
-- `lib/avatars/src/image.dart` (new)
+- `lib/avatars.dart` (entrypoint barrel, new)
+- `lib/src/avatars/` (new module directory)
+- `lib/src/avatars/avatar.dart` (new)
+- `lib/src/avatars/image.dart` (new)
 - `test/avatars/avatar_test.dart` (tests)
 
 ---
 
-### 7. LayrzResponsiveRow / LayrzResponsiveCol Responsive Grid
-
-**Brief description**:
-
-`LayrzResponsiveRow` — 12-column responsive grid container (wraps Row internally). Children are `LayrzResponsiveCol` instances.
-
-`LayrzResponsiveCol` — column definition within a responsive row. Specifies width at each breakpoint (xs, sm, md, lg, xl).
-
-Example:
-```dart
-LayrzResponsiveRow(
-  children: [
-    LayrzResponsiveCol(xs: 12, sm: 6, md: 4, child: ...),
-    LayrzResponsiveCol(xs: 12, sm: 6, md: 8, child: ...),
-  ],
-)
-```
-
-Breakpoints use constants from `lib/constants/src/grid.dart` (kExtraSmallGrid, etc.).
-
-**Dependencies**: M1 (constants, tokens).
-
-**Files affected**:
-- `lib/grid/` (new module)
-- `lib/grid/grid.dart` (barrel, new)
-- `lib/grid/src/responsive_row.dart` (new)
-- `lib/grid/src/responsive_col.dart` (new)
-- `test/grid/responsive_row_test.dart` (tests)
-
----
-
-### 8. LayrzAnimatedCheckbox
+### 11. LayrzAnimatedCheckbox
 
 **Brief description**:
 
@@ -344,9 +433,9 @@ Animation covers state change, unchecked → checked → unchecked transitions.
 **Dependencies**: M1 (LayrzTheme, tokens, WidgetState), Flutter animations (single_tick_provider, transition_builder, etc.).
 
 **Files affected**:
-- `lib/checkboxes/` (new module)
-- `lib/checkboxes/checkboxes.dart` (barrel, new)
-- `lib/checkboxes/src/animated_checkbox.dart` (new)
+- `lib/checkboxes.dart` (entrypoint barrel, new)
+- `lib/src/checkboxes/` (new module directory)
+- `lib/src/checkboxes/animated_checkbox.dart` (new)
 - `test/checkboxes/animated_checkbox_test.dart` (tests)
 
 ---
@@ -355,14 +444,17 @@ Animation covers state change, unchecked → checked → unchecked transitions.
 
 M2 is complete when all the following criteria are satisfied:
 
-- **Item 1 (LayrzButton)**: Constructor documented, ten styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present
-- **Item 2 (LayrzActionButton/ActionsButtons)**: Icon-only rendering, horizontal grouping, spacing consistent with theme tokens
-- **Item 3 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning, animated display, RawTooltip requirement of Overlay ancestor documented
+- **Item 1 (LayrzButton)**: Constructor documented, twelve styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present
+- **Item 2 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning, animated display, RawTooltip requirement of Overlay ancestor documented, SDK gotcha about `verticalOffset` documented, LayrzButton `_buildTooltip()` helpers retired
+- **Item 3 (LayrzAlert)**: Five visual styles, semantic types (info, success, warning, danger, context), icon integration
 - **Item 4 (LayrzChip/ChipGroup)**: Chip styling, delete action, group selection behaviour, state management via WidgetState
-- **Item 5 (LayrzAlert)**: Five visual styles, semantic types (info, success, warning, danger, context), icon integration
-- **Item 6 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
-- **Item 7 (LayrzResponsiveRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
-- **Item 8 (LayrzAnimatedCheckbox)**: Animation on state change, smooth transitions
+- **Item 5 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
+- **Item 6 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens
+- **Item 7 (LayrzTextInput)**: Design blocker resolved (Figma/Notion link attached), EditableText with Material-free selection controls, label/prefix/suffix/help/error chrome, focus decoration, foundation for all M3+ inputs
+- **Item 8 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzGroupedButton
+- **Item 9 (LayrzGroupedButton)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
+- **Item 10 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
+- **Item 11 (LayrzAnimatedCheckbox)**: Animation on state change, smooth transitions
 - **All tests pass**: `flutter test` reports 100% pass
 - **Coverage floor maintained**: `flutter test --coverage` reports >90% coverage (current baseline 97.21%)
 - **Invariant verified**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
