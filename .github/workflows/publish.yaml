@@ -157,7 +157,7 @@ jobs:
         working-directory: example
 
       - name: Build web release (WASM)
-        run: flutter build web --wasm --release
+        run: flutter build web --wasm --release --no-tree-shake-icons
         working-directory: example
 
       - name: Configure AWS credentials
