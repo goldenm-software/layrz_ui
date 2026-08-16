@@ -10,7 +10,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 | # | Item | Status |
 |---|---|---|
-| 1 | LayrzButton with twelve styles and six semantic factories | In Progress |
+| 1 | LayrzButton with twelve styles and six semantic factories | Done |
 | 2 | LayrzActionButton and LayrzActionsButtons | Todo |
 | 3 | LayrzTooltip on RawTooltip | Todo |
 | 4 | LayrzChip and LayrzChipGroup | Todo |
@@ -53,7 +53,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 **What changes**:
 - Create `lib/buttons/src/button.dart` — `LayrzButton` widget
-- Implement twelve style variants via parameter: `filled`, `elevated`, `filledTonal`, `outlined`, `outlinedTonal`, `text`, and their Fab counterparts (`filledFab`, `elevatedFab`, `filledTonalFab`, `outlinedFab`, `outlinedTonalFab`, `fab`)
+- Implement twelve style variants via parameter: `filled`, `filledTonal`, `elevated`, `outlined`, `outlinedTonal`, `text`, and their Fab counterparts (`filledFab`, `filledTonalFab`, `elevatedFab`, `outlinedFab`, `outlinedTonalFab`, `fab`)
 - Implement six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`)
 - Material-free construction: RawTooltip → FocusableActionDetector → MouseRegion → GestureDetector → AnimatedContainer
 - Create `lib/buttons/buttons.dart` barrel with re-exports
@@ -65,16 +65,12 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 - `icon` (IconData?, optional) — from layrz_icons 2.0.0 (bare IconData constants)
 - `onTap` (VoidCallback?, nullable) — null disables the button; also respects `isDisabled` flag
 - `isDisabled` (bool, default false) — explicit disable flag; either `onTap: null` OR `isDisabled: true` disables
-- `color` (Color?, optional) — overrides the accent, defaulting to tokens.colors.primary
+- `color` (Color?, optional) — overrides the accent, defaulting to tokens.colors.primary (only used when `type == LayrzButtonType.custom`)
 - `style` (LayrzButtonStyle, required or with sensible default) — one of the twelve variants
-- `isLoading` (ValueListenable<bool>?, optional) — externally-owned loading state; nullable for callers that don't need it
-- `isCooldown` (ValueListenable<bool>?, optional) — externally-owned cooldown state; nullable for callers that don't need it
-- `height` (double, default 40) — button height in logical pixels
-- `width` (double?, optional) — if null, width is calculated from content
-- `iconSize` (double, default 22) — icon size in logical pixels
-- `iconSeparatorSize` (double, default 8) — spacing between icon and text
-- `fontSize` (double, default 14) — label text font size
+- `controller` (LayrzButtonController?, optional) — An optional controller that drives the busy state (loading or cooldown). Multiple buttons can share a single controller instance. When null, the button has no loading or cooldown states.
 - `hintText` (String?, optional) — tooltip hint text. When non-null, shown via RawTooltip. Fab buttons always show a tooltip; non-Fab buttons show a tooltip only when hintText is non-null. Fab tooltip displays `labelText` alone, or `labelText\nhintText` if hint is provided.
+
+**Button sizing is fixed and standardised** — height, padding, icon size, and spacing all use design system constants. Buttons can be constrained by their parent but the intrinsic sizing is standardised and not caller-configurable.
 
 **Semantic factories**:
 
@@ -83,8 +79,7 @@ Each factory takes:
 - `onTap` (VoidCallback, required) — callback
 - `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant; otherwise the full regular variant. This is a layout choice and applies on any platform.
 - `isElevated` (bool, default depends on factory) — controls whether the button is elevated or flat. For `.save()`, `.info()`, `.show()`, and `.edit()`, defaults to `true` (elevated for plain surfaces). For `.delete()` and `.cancel()`, defaults to `false` (flat for quiet appearance of destructive/cancel actions). When true, buttons use elevated or outlined styles; when false, buttons use filled or outlined styles.
-- `isLoading` (ValueListenable<bool>?, optional)
-- `isCooldown` (ValueListenable<bool>?, optional)
+- `controller` (LayrzButtonController?, optional) — An optional controller that drives loading/cooldown states. Multiple buttons can share a single controller.
 - `isDisabled` (bool, default false)
 
 | Factory | Icon | Semantic Color | isElevated Default | Style (true → false) |
@@ -100,7 +95,7 @@ Each factory takes:
 - **Four factories** (`.save`, `.info`, `.show`, `.edit`) default to `true`, reflecting typical button placement on plain surfaces. Set to `false` when nesting inside cards, dialogs, or other elevated containers.
 - **Two exceptions**: `.delete()` and `.cancel()` both default to `false`, reflecting the design intent to keep destructive/cancellative actions visually quiet by default. Developers explicitly opt into shadow depth with `isElevated: true`.
 
-**Ten style variants**:
+**Twelve style variants**:
 
 | Pair | Regular | FAB | Visual Treatment |
 |---|---|---|---|
@@ -109,6 +104,7 @@ Each factory takes:
 | 3 | `.elevated` | `.elevatedFab` | Solid background with drop shadow |
 | 4 | `.outlined` | `.outlinedFab` | Transparent background with border |
 | 5 | `.outlinedTonal` | `.outlinedTonalFab` | Transparent background with semi-transparent border |
+| 6 | `.text` | `.fab` | Transparent background, content in accent color, no shadow |
 
 **Loading and cooldown states**:
 - Loading indicator: shown as indeterminate progress bar; the button is disabled
@@ -191,13 +187,15 @@ This prevents reflow and flicker during state changes.
 
 **Acceptance criteria**:
 - Constructor has every parameter documented (rule #1)
-- All ten styles render correctly with appropriate visual treatment
+- All twelve styles render correctly with appropriate visual treatment
 - All six semantic factories render with correct icons and colours
-- Loading state shows spinner and disables interaction; no countdown
-- Cooldown state shows spinner with different tint and disables interaction; no countdown
+- `LayrzButtonController` drives loading/cooldown states; one controller can drive many buttons
+- Loading state shows indeterminate progress indicator and disables interaction
+- Cooldown state shows determinate progress indicator depleting over countdown duration and disables interaction; cooldown auto-clears on expiry
+- Anti-flash floor prevents visibility changes < 100ms
 - Hover state varies colour, shadow, opacity, and cursor only — no geometry change (D15)
 - Press state varies colour only (D15)
-- Focus state adds visual indicator (outline or shadow change)
+- Focus state renders identically to hover (WCAG 2.4.7 compliance)
 - Disabled state grays out and shows `not-allowed` cursor
 - FAB variants render icon-only with appropriate sizing
 - RawTooltip shows hintText on hover (with caveat that Overlay ancestor is required)
