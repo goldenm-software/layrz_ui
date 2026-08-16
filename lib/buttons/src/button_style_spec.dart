@@ -6,6 +6,23 @@ import 'package:layrz_ui/tokens/tokens.dart';
 
 import 'button_style.dart';
 
+/// Represents the interaction state rung on the fill ladder.
+///
+/// Each button style starts at a different rung and climbs the same ladder
+/// as the user interacts with it (transparent → tonal → solid). This enum
+/// simplifies the state resolution logic by expressing the ladder once,
+/// with each style declaring its rungs rather than branches in state functions.
+enum _ButtonLadderRung {
+  /// Default, idle state — the starting rung for the style.
+  defaultState,
+
+  /// Hovered or focused state — one step up the ladder.
+  hovered,
+
+  /// Pressed state — the top of the ladder.
+  pressed,
+}
+
 /// Immutable specification of visual properties for a [LayrzButton] in a given state.
 ///
 /// A [LayrzButtonStyleSpec] holds only paint properties: colors, borders, and shadows.
@@ -75,14 +92,26 @@ class LayrzButtonStyleSpec {
 
   /// Resolves a [LayrzButtonStyleSpec] from a style, state set, tokens, and accent color.
   ///
-  /// This method computes the paint specification for a button in the given state:
-  /// - **disabled** wins over all other states: content becomes [fg3], solid backgrounds
-  ///   fade to [fg3] with reduced opacity, tonal backgrounds retain tonal opacity but
-  ///   with [fg3], borders become [fg3], shadows become empty.
-  /// - **pressed**: solid backgrounds lerp toward content color by ~16%; tonal/outlined
-  ///   gain roughly one extra tonal opacity of fill; shadows disappear on elevated.
-  /// - **hovered**: same channels as pressed, roughly half the strength.
-  /// - **default**: unmodified base colors.
+  /// This method computes the paint specification for a button in the given state using
+  /// a four-state model with a fill ladder:
+  /// - **State precedence**: disabled > pressed > hovered/focused > default
+  /// - **Four states**:
+  ///   1. Default (idle)
+  ///   2. Hovered or focused (pointer over, or keyboard focus)
+  ///   3. Pressed (pointer/finger held down)
+  ///   4. Disabled (non-interactive: disabled, loading, or in cooldown)
+  ///
+  /// - **Fill ladder** (style-dependent):
+  ///   - `text` / `fab`: transparent → tonal → tonal (stronger)
+  ///   - `outlined` / `outlinedFab`: transparent + border → tonal + border → solid + border
+  ///   - `outlinedTonal` / `outlinedTonalFab`: tonal + border → stronger tonal + border → solid + border
+  ///   - `filledTonal` / `filledTonalFab`: tonal → stronger tonal → solid
+  ///   - `filled` / `filledFab`: solid → solid (color shift) → solid (stronger shift)
+  ///   - `elevated` / `elevatedFab`: solid + shadow → solid + bigger shadow → solid (no shadow)
+  ///
+  /// - **Border invariant**: Outlined pairs keep `borderColor` **identical** across all states
+  /// - **Shadow invariant**: Only `elevated` changes shadows (grows on hover, disappears on press);
+  ///   `filled` never gains shadows; all others have fixed shadows
   ///
   /// [accent] is the primary color for the button variant (brand color or semantic).
   /// Geometry (height, width, padding, borderWidth) is byte-identical across states
@@ -94,13 +123,11 @@ class LayrzButtonStyleSpec {
     required Color accent,
   }) {
     final isDisabled = states.contains(WidgetState.disabled);
-    final isPressed = states.contains(WidgetState.pressed);
-    final isHovered = states.contains(WidgetState.hovered);
 
     // Base spec computed from style family (unaffected by state).
     final baseSpec = _baseSpec(style: style, accent: accent, tokens: tokens);
 
-    // If disabled, override all colors.
+    // If disabled, override all colors and clear shadows.
     if (isDisabled) {
       return LayrzButtonStyleSpec(
         backgroundColor: _disabledBackground(baseSpec, tokens),
@@ -111,15 +138,27 @@ class LayrzButtonStyleSpec {
       );
     }
 
-    // Apply pressed/hovered state deltas.
-    if (isPressed) {
-      return _applyPressedState(baseSpec, style, tokens, accent);
-    } else if (isHovered) {
-      return _applyHoveredState(baseSpec, style, tokens, accent);
-    }
+    // Determine which rung of the fill ladder to apply based on interaction state.
+    // Precedence: pressed > hovered/focused > default.
+    final rung = _determineRung(states);
 
-    // Default state — return base spec unmodified.
-    return baseSpec;
+    // Apply the rung deltas.
+    return _applyRung(baseSpec, style, tokens, accent, rung);
+  }
+
+  /// Determines which rung of the fill ladder to apply based on interaction state.
+  ///
+  /// **Precedence**: pressed > hovered/focused > default.
+  ///
+  /// Focus is treated identically to hover: both map to the same visual appearance.
+  /// This satisfies WCAG 2.4.7 (Focus Visible, AA) without adding a fifth state.
+  static _ButtonLadderRung _determineRung(Set<WidgetState> states) {
+    if (states.contains(WidgetState.pressed)) {
+      return _ButtonLadderRung.pressed;
+    } else if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+      return _ButtonLadderRung.hovered;
+    }
+    return _ButtonLadderRung.defaultState;
   }
 
   /// Computes the base [LayrzButtonStyleSpec] for a given style (unaffected by state).
@@ -209,115 +248,116 @@ class LayrzButtonStyleSpec {
     return tokens.colors.fg3.withOpacityValue(0.4);
   }
 
-  /// Applies pressed state deltas to the base spec.
-  static LayrzButtonStyleSpec _applyPressedState(
-    LayrzButtonStyleSpec baseSpec,
-    LayrzButtonStyle style,
-    LayrzTokens tokens,
-    Color accent,
-  ) {
-    // Pressed state uses ~16% lerp factor toward content.
-    const lerpFactor = 0.16;
-    const pressedTonalExtraOpacity = 0.2;
-    const plainOutlinedPressedOpacity = 0.16;
-
-    var backgroundColor = baseSpec.backgroundColor;
-    var contentColor = baseSpec.contentColor;
-    var borderColor = baseSpec.borderColor;
-    List<BoxShadow> shadows = baseSpec.shadows;
-
-    if (style.hasShadow) {
-      // Elevated loses shadow on press.
-      shadows = const [];
-    }
-
-    if (baseSpec.backgroundColor.a > 0.0) {
-      // Solid or tonal background — lerp toward content.
-      backgroundColor = Color.lerp(
-        baseSpec.backgroundColor,
-        contentColor,
-        lerpFactor,
-      )!;
-    } else if (style.hasBorder && !style.isTonal) {
-      // Outlined (non-tonal) gets a tonal fill on press.
-      backgroundColor = accent.withOpacityValue(plainOutlinedPressedOpacity);
-    } else if (style == LayrzButtonStyle.text || style == LayrzButtonStyle.fab) {
-      // Text and fab (transparent) get a tonal fill on press.
-      backgroundColor = accent.withOpacityValue(plainOutlinedPressedOpacity);
-    }
-
-    if (style.isTonal && style.hasBorder) {
-      // Outlined tonal gains extra opacity on press.
-      backgroundColor = accent.withOpacityValue(
-        kLayrzButtonOutlinedTonalOpacity + pressedTonalExtraOpacity,
-      );
-    }
-
-    // Border color may change if style uses tonal fill.
-    if (style.hasBorder) {
-      borderColor = baseSpec.borderColor;
-    }
-
-    return LayrzButtonStyleSpec(
-      backgroundColor: backgroundColor,
-      borderColor: borderColor,
-      borderWidth: baseSpec.borderWidth,
-      contentColor: contentColor,
-      shadows: shadows,
-    );
-  }
-
-  /// Applies hovered state deltas to the base spec.
+  /// Applies the given rung of the fill ladder to the base spec.
   ///
-  /// Hovered uses the same channels as pressed but at roughly half strength.
-  static LayrzButtonStyleSpec _applyHoveredState(
+  /// Each style has three rungs on the fill ladder:
+  /// - **defaultState**: the base spec as-is
+  /// - **hovered**: one step up the ladder (more opaque or more colored)
+  /// - **pressed**: the top of the ladder (most opaque or most colored)
+  ///
+  /// The ladder is expressed per-style via switch logic that computes the
+  /// appropriate fill, border, and shadow for each rung. This consolidates
+  /// all state-dependent transformations in one place, ensuring adding a
+  /// new style requires declaring its rungs once, not editing multiple branches.
+  ///
+  /// When a style's background reaches fully opaque (α = 1.0), the content color
+  /// must change to ensure readability. For tonal and outlined styles that reach
+  /// solid at the pressed rung, contentColor becomes [accent.contrastColor].
+  static LayrzButtonStyleSpec _applyRung(
     LayrzButtonStyleSpec baseSpec,
     LayrzButtonStyle style,
     LayrzTokens tokens,
     Color accent,
+    _ButtonLadderRung rung,
   ) {
-    // Hovered state uses ~8% lerp factor (half of pressed's 16%).
-    const lerpFactor = 0.08;
-    const hoveredTonalExtraOpacity = 0.1;
-    const plainOutlinedHoveredOpacity = 0.08;
-
-    var backgroundColor = baseSpec.backgroundColor;
-    var contentColor = baseSpec.contentColor;
-    var borderColor = baseSpec.borderColor;
-
-    if (baseSpec.backgroundColor.a > 0.0) {
-      // Solid or tonal background — lerp toward content (lighter).
-      backgroundColor = Color.lerp(
-        baseSpec.backgroundColor,
-        contentColor,
-        lerpFactor,
-      )!;
-    } else if (style.hasBorder && !style.isTonal) {
-      // Outlined (non-tonal) gets a tonal fill on hover.
-      backgroundColor = accent.withOpacityValue(plainOutlinedHoveredOpacity);
-    } else if (style == LayrzButtonStyle.text || style == LayrzButtonStyle.fab) {
-      // Text and fab (transparent) get a tonal fill on hover.
-      backgroundColor = accent.withOpacityValue(plainOutlinedHoveredOpacity);
+    // Default rung returns the base spec unmodified.
+    if (rung == _ButtonLadderRung.defaultState) {
+      return baseSpec;
     }
 
-    if (style.isTonal && style.hasBorder) {
-      // Outlined tonal gains extra opacity on hover.
-      backgroundColor = accent.withOpacityValue(
-        kLayrzButtonOutlinedTonalOpacity + hoveredTonalExtraOpacity,
-      );
-    }
+    // Hovered/pressed lerp factors for filled/elevated styles.
+    const hoveredLerpFactor = 0.18;
+    const pressedLerpFactor = 0.34;
 
-    // Border color unchanged on hover.
-    if (style.hasBorder) {
-      borderColor = baseSpec.borderColor;
-    }
+    final contentColor = baseSpec.contentColor;
+    final contrastColor = accent.contrastColor;
 
-    return LayrzButtonStyleSpec(
-      backgroundColor: backgroundColor,
-      borderColor: borderColor,
-      borderWidth: baseSpec.borderWidth,
-      contentColor: contentColor,
-      shadows: baseSpec.shadows,
-    );
+    switch (style) {
+      // text / fab: transparent → tonal → tonal (stronger)
+      case LayrzButtonStyle.text || LayrzButtonStyle.fab:
+        final backgroundColor = rung == _ButtonLadderRung.hovered
+            ? accent.withOpacityValue(kLayrzButtonTextHoveredOpacity)
+            : accent.withOpacityValue(kLayrzButtonTextPressedOpacity);
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+        );
+
+      // filled / filledFab: solid → solid (color shift) → solid (stronger shift)
+      case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
+        final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
+        final backgroundColor = Color.lerp(baseSpec.backgroundColor, contentColor, lerpFactor)!;
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+        );
+
+      // elevated / elevatedFab: solid + shadow → solid + bigger shadow → solid (no shadow)
+      case LayrzButtonStyle.elevated || LayrzButtonStyle.elevatedFab:
+        final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
+        final backgroundColor = Color.lerp(baseSpec.backgroundColor, contentColor, lerpFactor)!;
+        final List<BoxShadow> shadows = rung == _ButtonLadderRung.pressed
+            ? const []
+            : rung == _ButtonLadderRung.hovered
+            ? tokens.shadow.compact2
+            : baseSpec.shadows;
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+          shadows: shadows,
+        );
+
+      // filledTonal / filledTonalFab: tonal → tonal (stronger) → solid
+      case LayrzButtonStyle.filledTonal || LayrzButtonStyle.filledTonalFab:
+        final opacity = rung == _ButtonLadderRung.hovered
+            ? tokens.colors.tonalOpacity + kLayrzButtonFilledTonalHoveredDelta
+            : tokens.colors.tonalOpacity + kLayrzButtonFilledTonalPressedDelta;
+        final cappedOpacity = opacity.clamp(0.0, 1.0);
+        final backgroundColor = accent.withOpacityValue(cappedOpacity);
+        // At pressed rung, if we've reached solid, content color becomes contrast.
+        final actualContentColor = rung == _ButtonLadderRung.pressed && cappedOpacity >= 1.0
+            ? contrastColor
+            : contentColor;
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+          contentColor: actualContentColor,
+        );
+
+      // outlined / outlinedFab: transparent + border → tonal + border → solid + border
+      case LayrzButtonStyle.outlined || LayrzButtonStyle.outlinedFab:
+        final opacity = rung == _ButtonLadderRung.hovered
+            ? kLayrzButtonOutlinedHoveredOpacity
+            : 1.0; // Pressed reaches solid
+        final backgroundColor = accent.withOpacityValue(opacity);
+        // At pressed rung, content color becomes contrast (avoid accent-on-accent).
+        final actualContentColor = rung == _ButtonLadderRung.pressed ? contrastColor : contentColor;
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+          contentColor: actualContentColor,
+        );
+
+      // outlinedTonal / outlinedTonalFab: tonal + border → tonal (stronger) + border → solid + border
+      case LayrzButtonStyle.outlinedTonal || LayrzButtonStyle.outlinedTonalFab:
+        final opacity = rung == _ButtonLadderRung.hovered
+            ? kLayrzButtonOutlinedTonalOpacity + kLayrzButtonOutlinedTonalHoveredDelta
+            : kLayrzButtonOutlinedTonalOpacity + kLayrzButtonOutlinedTonalPressedDelta;
+        final cappedOpacity = opacity.clamp(0.0, 1.0);
+        final backgroundColor = accent.withOpacityValue(cappedOpacity);
+        // At pressed rung, content color becomes contrast (avoid accent-on-accent).
+        final actualContentColor = rung == _ButtonLadderRung.pressed && cappedOpacity >= 1.0
+            ? contrastColor
+            : contentColor;
+        return baseSpec.copyWith(
+          backgroundColor: backgroundColor,
+          contentColor: actualContentColor,
+        );
+    }
   }
 }

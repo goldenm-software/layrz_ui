@@ -16,6 +16,47 @@ const double kLayrzButtonFontSize = 14.0;
 /// variants without full solid colors.
 const double kLayrzButtonOutlinedTonalOpacity = 0.15;
 
+/// Hovered rung opacity for text and fab styles on the fill ladder.
+///
+/// Text and fab buttons use a transparent → tonal → stronger tonal ladder.
+/// This is the tonal opacity applied on hover.
+const double kLayrzButtonTextHoveredOpacity = 0.20;
+
+/// Pressed rung opacity for text and fab styles on the fill ladder.
+///
+/// Text and fab buttons reach stronger tonal opacity when pressed.
+const double kLayrzButtonTextPressedOpacity = 0.35;
+
+/// Hovered rung opacity for outlined styles on the fill ladder.
+///
+/// Outlined buttons climb from transparent → tonal → solid.
+/// This is the tonal opacity applied on hover.
+const double kLayrzButtonOutlinedHoveredOpacity = 0.20;
+
+/// Hovered rung opacity for filledTonal styles on the fill ladder.
+///
+/// FilledTonal buttons climb from tonal → stronger → solid.
+/// This is the stronger tonal opacity applied on hover (base + delta).
+const double kLayrzButtonFilledTonalHoveredDelta = 0.18;
+
+/// Pressed rung opacity for filledTonal styles on the fill ladder.
+///
+/// FilledTonal buttons reach solid (1.0) when pressed.
+/// This is the delta added to base opacity to compute the pressed opacity.
+const double kLayrzButtonFilledTonalPressedDelta = 0.80;
+
+/// Hovered rung opacity for outlinedTonal styles on the fill ladder.
+///
+/// OutlinedTonal buttons climb from tonal → stronger → solid.
+/// This is the stronger tonal opacity applied on hover (base + delta).
+const double kLayrzButtonOutlinedTonalHoveredDelta = 0.17;
+
+/// Pressed rung opacity for outlinedTonal styles on the fill ladder.
+///
+/// OutlinedTonal buttons reach solid (1.0) when pressed.
+/// This is the delta added to base opacity to compute the pressed opacity.
+const double kLayrzButtonOutlinedTonalPressedDelta = 0.85;
+
 /// Horizontal padding applied to [LayrzButton] non-Fab variants.
 ///
 /// Controls the spacing between button edges and internal content (icon and label).

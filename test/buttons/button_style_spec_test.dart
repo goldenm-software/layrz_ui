@@ -705,5 +705,773 @@ void main() {
         }
       });
     });
+
+    group('Four-state interaction model', () {
+      test('focus state resolves to same spec as hovered state for all styles', () {
+        for (final style in LayrzButtonStyle.values) {
+          final focusedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.focused},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(
+            focusedSpec.backgroundColor,
+            equals(hoveredSpec.backgroundColor),
+            reason: '$style focused should match hovered background',
+          );
+          expect(
+            focusedSpec.borderColor,
+            equals(hoveredSpec.borderColor),
+            reason: '$style focused should match hovered border',
+          );
+          expect(
+            focusedSpec.contentColor,
+            equals(hoveredSpec.contentColor),
+            reason: '$style focused should match hovered content',
+          );
+          expect(
+            focusedSpec.shadows,
+            equals(hoveredSpec.shadows),
+            reason: '$style focused should match hovered shadows',
+          );
+        }
+      });
+
+      test('all 12 styles respond to hover state', () {
+        for (final style in LayrzButtonStyle.values) {
+          final defaultSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          // Hovered should differ from default for all styles.
+          // Either background, content, or shadow must change.
+          final backgroundColorChanged = hoveredSpec.backgroundColor != defaultSpec.backgroundColor;
+          final borderColorChanged = hoveredSpec.borderColor != defaultSpec.borderColor;
+          final contentColorChanged = hoveredSpec.contentColor != defaultSpec.contentColor;
+          final shadowsChanged = hoveredSpec.shadows != defaultSpec.shadows;
+
+          expect(
+            backgroundColorChanged || borderColorChanged || contentColorChanged || shadowsChanged,
+            isTrue,
+            reason: '$style must not be inert on hover',
+          );
+        }
+      });
+
+      test('all 12 styles respond to pressed state', () {
+        for (final style in LayrzButtonStyle.values) {
+          final defaultSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final pressedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.pressed},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          // Pressed should differ from default for all styles.
+          final backgroundColorChanged = pressedSpec.backgroundColor != defaultSpec.backgroundColor;
+          final borderColorChanged = pressedSpec.borderColor != defaultSpec.borderColor;
+          final contentColorChanged = pressedSpec.contentColor != defaultSpec.contentColor;
+          final shadowsChanged = pressedSpec.shadows != defaultSpec.shadows;
+
+          expect(
+            backgroundColorChanged || borderColorChanged || contentColorChanged || shadowsChanged,
+            isTrue,
+            reason: '$style must not be inert on press',
+          );
+        }
+      });
+
+      test('pressed state differs from hovered state for all styles', () {
+        for (final style in LayrzButtonStyle.values) {
+          final pressedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.pressed},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          // Pressed and hovered should be visually distinct.
+          final backgroundColorChanged = pressedSpec.backgroundColor != hoveredSpec.backgroundColor;
+          final borderColorChanged = pressedSpec.borderColor != hoveredSpec.borderColor;
+          final contentColorChanged = pressedSpec.contentColor != hoveredSpec.contentColor;
+          final shadowsChanged = pressedSpec.shadows != hoveredSpec.shadows;
+
+          expect(
+            backgroundColorChanged || borderColorChanged || contentColorChanged || shadowsChanged,
+            isTrue,
+            reason: '$style pressed must differ visually from hovered',
+          );
+        }
+      });
+
+      test('state precedence: disabled beats pressed', () {
+        for (final style in LayrzButtonStyle.values) {
+          final disabledPressedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.disabled, WidgetState.pressed},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final disabledSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.disabled},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(
+            disabledPressedSpec.contentColor,
+            equals(disabledSpec.contentColor),
+            reason: '$style disabled + pressed should render as disabled',
+          );
+        }
+      });
+
+      test('state precedence: disabled beats hovered', () {
+        for (final style in LayrzButtonStyle.values) {
+          final disabledHoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.disabled, WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final disabledSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.disabled},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(
+            disabledHoveredSpec.contentColor,
+            equals(disabledSpec.contentColor),
+            reason: '$style disabled + hovered should render as disabled',
+          );
+        }
+      });
+
+      test('state precedence: pressed beats hovered', () {
+        for (final style in LayrzButtonStyle.values) {
+          final pressedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.pressed},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          // Pressed should not equal hovered (covered by earlier test,
+          // but included here for clarity of precedence intent).
+          expect(
+            pressedSpec.backgroundColor != hoveredSpec.backgroundColor ||
+                pressedSpec.borderColor != hoveredSpec.borderColor ||
+                pressedSpec.contentColor != hoveredSpec.contentColor ||
+                pressedSpec.shadows != hoveredSpec.shadows,
+            isTrue,
+            reason: '$style pressed should have higher visual weight than hovered',
+          );
+        }
+      });
+    });
+
+    group('Outlined pair border invariant', () {
+      test('outlined: border color identical across default/hover/pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.borderColor, equals(hoveredSpec.borderColor));
+        expect(defaultSpec.borderColor, equals(pressedSpec.borderColor));
+        expect(defaultSpec.borderColor.a, greaterThan(0.0)); // Border must be visible
+      });
+
+      test('outlinedFab: border color identical across default/hover/pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedFab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedFab,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedFab,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.borderColor, equals(hoveredSpec.borderColor));
+        expect(defaultSpec.borderColor, equals(pressedSpec.borderColor));
+        expect(defaultSpec.borderColor.a, greaterThan(0.0)); // Border must be visible
+      });
+
+      test('outlinedTonal: border color identical across default/hover/pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.borderColor, equals(hoveredSpec.borderColor));
+        expect(defaultSpec.borderColor, equals(pressedSpec.borderColor));
+        expect(defaultSpec.borderColor.a, greaterThan(0.0)); // Border must be visible
+      });
+
+      test('outlinedTonalFab: border color identical across default/hover/pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonalFab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonalFab,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonalFab,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.borderColor, equals(hoveredSpec.borderColor));
+        expect(defaultSpec.borderColor, equals(pressedSpec.borderColor));
+        expect(defaultSpec.borderColor.a, greaterThan(0.0)); // Border must be visible
+      });
+    });
+
+    group('Elevated shadow behavior', () {
+      test('elevated: shadow present by default, larger when hovered, empty when pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevated,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevated,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevated,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.shadows, isNotEmpty, reason: 'elevated default should have shadow');
+        expect(hoveredSpec.shadows, isNotEmpty, reason: 'elevated hovered should have shadow');
+        expect(pressedSpec.shadows, isEmpty, reason: 'elevated pressed should have no shadow');
+
+        // Hovered shadow should be larger (more blur/offset) than default.
+        expect(hoveredSpec.shadows.length, equals(defaultSpec.shadows.length));
+        // Compare first shadow's blur radius as a proxy for shadow size.
+        if (defaultSpec.shadows.isNotEmpty && hoveredSpec.shadows.isNotEmpty) {
+          expect(
+            hoveredSpec.shadows[0].blurRadius,
+            greaterThan(defaultSpec.shadows[0].blurRadius),
+            reason: 'elevated hovered shadow should be larger than default',
+          );
+        }
+      });
+
+      test('elevatedFab: shadow present by default, larger when hovered, empty when pressed', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevatedFab,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevatedFab,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.elevatedFab,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(defaultSpec.shadows, isNotEmpty, reason: 'elevatedFab default should have shadow');
+        expect(hoveredSpec.shadows, isNotEmpty, reason: 'elevatedFab hovered should have shadow');
+        expect(pressedSpec.shadows, isEmpty, reason: 'elevatedFab pressed should have no shadow');
+      });
+    });
+
+    group('Filled shadow invariant', () {
+      test('filled: no shadow in any state', () {
+        for (final state in {
+          const <WidgetState>{},
+          {WidgetState.hovered},
+          {WidgetState.focused},
+          {WidgetState.pressed},
+        }) {
+          final spec = LayrzButtonStyleSpec.resolve(
+            style: LayrzButtonStyle.filled,
+            states: state,
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(spec.shadows, isEmpty, reason: 'filled should have no shadow in state $state');
+        }
+      });
+
+      test('filledFab: no shadow in any state', () {
+        for (final state in {
+          const <WidgetState>{},
+          {WidgetState.hovered},
+          {WidgetState.focused},
+          {WidgetState.pressed},
+        }) {
+          final spec = LayrzButtonStyleSpec.resolve(
+            style: LayrzButtonStyle.filledFab,
+            states: state,
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(spec.shadows, isEmpty, reason: 'filledFab should have no shadow in state $state');
+        }
+      });
+    });
+
+    group('Borderless shadow invariant', () {
+      test('text, fab, filledTonal, filledTonalFab have no shadow in any state', () {
+        final borderlessStyles = [
+          LayrzButtonStyle.text,
+          LayrzButtonStyle.fab,
+          LayrzButtonStyle.filledTonal,
+          LayrzButtonStyle.filledTonalFab,
+        ];
+
+        for (final style in borderlessStyles) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.shadows, isEmpty, reason: '$style should have no shadow in state $state');
+          }
+        }
+      });
+
+      test('outlined, outlinedFab have no shadow in any state', () {
+        final borderlessStyles = [
+          LayrzButtonStyle.outlined,
+          LayrzButtonStyle.outlinedFab,
+        ];
+
+        for (final style in borderlessStyles) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.shadows, isEmpty, reason: '$style should have no shadow in state $state');
+          }
+        }
+      });
+
+      test('outlinedTonal, outlinedTonalFab have no shadow in any state', () {
+        final borderlessStyles = [
+          LayrzButtonStyle.outlinedTonal,
+          LayrzButtonStyle.outlinedTonalFab,
+        ];
+
+        for (final style in borderlessStyles) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.shadows, isEmpty, reason: '$style should have no shadow in state $state');
+          }
+        }
+      });
+    });
+
+    group('Fill ladder rung verification', () {
+      test('text/fab hovered reaches opacity 0.20', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, closeTo(0.20, 0.001));
+      });
+
+      test('text/fab pressed reaches opacity 0.35', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.text,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, closeTo(0.35, 0.001));
+      });
+
+      test('outlined hovered reaches opacity 0.20', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, closeTo(0.20, 0.001));
+      });
+
+      test('outlined pressed reaches solid (α = 1.0)', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, equals(1.0));
+      });
+
+      test('outlined pressed content color switches to contrast', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlined,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.contentColor, equals(primaryColor.contrastColor));
+      });
+
+      test('outlinedTonal hovered reaches opacity 0.32 (base 0.15 + delta 0.17)', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        // 0.15 + 0.17 = 0.32
+        expect(spec.backgroundColor.a, closeTo(0.32, 0.001));
+      });
+
+      test('outlinedTonal pressed reaches solid (α = 1.0)', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, equals(1.0));
+      });
+
+      test('outlinedTonal pressed content color switches to contrast', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.outlinedTonal,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.contentColor, equals(primaryColor.contrastColor));
+      });
+
+      test('filledTonal hovered reaches opacity 0.38 (base 0.20 + delta 0.18)', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filledTonal,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        // 0.20 + 0.18 = 0.38
+        expect(spec.backgroundColor.a, closeTo(0.38, 0.001));
+      });
+
+      test('filledTonal pressed reaches solid (α = 1.0)', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filledTonal,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.backgroundColor.a, equals(1.0));
+      });
+
+      test('filledTonal pressed content color switches to contrast', () {
+        final spec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filledTonal,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        expect(spec.contentColor, equals(primaryColor.contrastColor));
+      });
+
+      test('filled hovered uses lerp factor 0.18', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filled,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final hoveredSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filled,
+          states: {WidgetState.hovered},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final expectedColor = Color.lerp(defaultSpec.backgroundColor, defaultSpec.contentColor, 0.18)!;
+        expect(hoveredSpec.backgroundColor.toARGB32(), equals(expectedColor.toARGB32()));
+      });
+
+      test('filled pressed uses lerp factor 0.34', () {
+        final defaultSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filled,
+          states: {},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final pressedSpec = LayrzButtonStyleSpec.resolve(
+          style: LayrzButtonStyle.filled,
+          states: {WidgetState.pressed},
+          tokens: tokens,
+          accent: primaryColor,
+        );
+
+        final expectedColor = Color.lerp(defaultSpec.backgroundColor, defaultSpec.contentColor, 0.34)!;
+        expect(pressedSpec.backgroundColor.toARGB32(), equals(expectedColor.toARGB32()));
+      });
+
+      test('hovered background opacity is always significantly different from default', () {
+        for (final style in LayrzButtonStyle.values) {
+          final defaultSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          // For tonal styles, hovered should increase opacity by at least 0.10
+          if (style == LayrzButtonStyle.text ||
+              style == LayrzButtonStyle.fab ||
+              style == LayrzButtonStyle.outlined ||
+              style == LayrzButtonStyle.outlinedFab) {
+            // These go from 0 to 0.20
+            expect(hoveredSpec.backgroundColor.a - defaultSpec.backgroundColor.a, greaterThanOrEqualTo(0.15));
+          }
+        }
+      });
+
+      test('pressed background opacity is always strictly greater than hovered for tonal/text styles', () {
+        for (final style in [
+          LayrzButtonStyle.text,
+          LayrzButtonStyle.fab,
+          LayrzButtonStyle.outlined,
+          LayrzButtonStyle.outlinedFab,
+          LayrzButtonStyle.outlinedTonal,
+          LayrzButtonStyle.outlinedTonalFab,
+          LayrzButtonStyle.filledTonal,
+          LayrzButtonStyle.filledTonalFab,
+        ]) {
+          final hoveredSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.hovered},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          final pressedSpec = LayrzButtonStyleSpec.resolve(
+            style: style,
+            states: {WidgetState.pressed},
+            tokens: tokens,
+            accent: primaryColor,
+          );
+
+          expect(
+            pressedSpec.backgroundColor.a,
+            greaterThan(hoveredSpec.backgroundColor.a),
+            reason: '$style pressed opacity should exceed hovered',
+          );
+        }
+      });
+    });
+
+    group('Borderless styles have transparent borders in all states', () {
+      test('text, fab have alpha == 0 borders in all states', () {
+        for (final style in [LayrzButtonStyle.text, LayrzButtonStyle.fab]) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.borderColor.a, equals(0.0), reason: '$style should have transparent border in state $state');
+          }
+        }
+      });
+
+      test('filledTonal, filledTonalFab have alpha == 0 borders in all states', () {
+        for (final style in [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab]) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.borderColor.a, equals(0.0), reason: '$style should have transparent border in state $state');
+          }
+        }
+      });
+    });
   });
 }
