@@ -402,7 +402,7 @@ void main() {
         expect(titleWidget.style?.fontWeight, equals(FontWeight.bold));
       });
 
-      testWidgets('description uses bodyMedium style', (tester) async {
+      testWidgets('description uses body style', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -416,7 +416,7 @@ void main() {
         );
 
         final descriptionWidget = tester.widget<Text>(find.text('Body text'));
-        expect(descriptionWidget.style?.fontSize, equals(tokens.typography.bodyMedium.fontSize));
+        expect(descriptionWidget.style?.fontSize, equals(tokens.typography.body.fontSize));
       });
     });
 

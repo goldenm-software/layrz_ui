@@ -21,7 +21,7 @@ import 'tooltip_position.dart';
 /// **Surface styling is fixed** to ensure visual consistency:
 /// - Background color: `tokens.colors.fg1`
 /// - Text color: `tokens.colors.background`
-/// - Text style: `tokens.typography.labelSmall`
+/// - Text style: `tokens.typography.label`
 /// - Padding: horizontal `sp12`, vertical `sp6`
 /// - Border radius: `r8`
 ///
@@ -179,7 +179,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
   Widget _buildTooltipOverlay(BuildContext overlayContext) {
     final tokens = overlayContext.tokens;
-    final baseStyle = tokens.typography.labelSmall.copyWith(
+    final baseStyle = tokens.typography.label.copyWith(
       color: tokens.colors.background,
     );
 

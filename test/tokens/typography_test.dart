@@ -9,70 +9,31 @@ void main() {
       const testColor = Color(0xFF123456);
       final theme = LayrzTextTheme.defaults(textColor: testColor);
 
-      expect(theme.displayLarge.color, equals(testColor));
-      expect(theme.displayMedium.color, equals(testColor));
-      expect(theme.displaySmall.color, equals(testColor));
-      expect(theme.headlineLarge.color, equals(testColor));
-      expect(theme.headlineMedium.color, equals(testColor));
-      expect(theme.headlineSmall.color, equals(testColor));
-      expect(theme.titleLarge.color, equals(testColor));
-      expect(theme.titleMedium.color, equals(testColor));
-      expect(theme.titleSmall.color, equals(testColor));
-      expect(theme.bodyLarge.color, equals(testColor));
-      expect(theme.bodyMedium.color, equals(testColor));
-      expect(theme.bodySmall.color, equals(testColor));
-      expect(theme.labelLarge.color, equals(testColor));
-      expect(theme.labelMedium.color, equals(testColor));
-      expect(theme.labelSmall.color, equals(testColor));
+      expect(theme.display.color, equals(testColor));
+      expect(theme.headline.color, equals(testColor));
+      expect(theme.title.color, equals(testColor));
+      expect(theme.body.color, equals(testColor));
+      expect(theme.label.color, equals(testColor));
     });
 
     test('defaults factory uses correct font sizes', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.displayLarge.fontSize, equals(57));
-      expect(theme.displayMedium.fontSize, equals(45));
-      expect(theme.displaySmall.fontSize, equals(36));
-      expect(theme.headlineLarge.fontSize, equals(32));
-      expect(theme.headlineMedium.fontSize, equals(28));
-      expect(theme.headlineSmall.fontSize, equals(24));
-      expect(theme.titleLarge.fontSize, equals(22));
-      expect(theme.titleMedium.fontSize, equals(16));
-      expect(theme.titleSmall.fontSize, equals(14));
-      expect(theme.bodyLarge.fontSize, equals(16));
-      expect(theme.bodyMedium.fontSize, equals(14));
-      expect(theme.bodySmall.fontSize, equals(12));
-      expect(theme.labelLarge.fontSize, equals(14));
-      expect(theme.labelMedium.fontSize, equals(12));
-      expect(theme.labelSmall.fontSize, equals(11));
+      expect(theme.display.fontSize, equals(45));
+      expect(theme.headline.fontSize, equals(28));
+      expect(theme.title.fontSize, equals(16));
+      expect(theme.body.fontSize, equals(14));
+      expect(theme.label.fontSize, equals(12));
     });
 
     test('defaults factory uses correct font weights', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      // Display styles use w800
-      expect(theme.displayLarge.fontWeight, equals(FontWeight.w800));
-      expect(theme.displayMedium.fontWeight, equals(FontWeight.w800));
-      expect(theme.displaySmall.fontWeight, equals(FontWeight.w800));
-
-      // Headline styles use w700
-      expect(theme.headlineLarge.fontWeight, equals(FontWeight.w700));
-      expect(theme.headlineMedium.fontWeight, equals(FontWeight.w700));
-      expect(theme.headlineSmall.fontWeight, equals(FontWeight.w700));
-
-      // Title styles use w500
-      expect(theme.titleLarge.fontWeight, equals(FontWeight.w500));
-      expect(theme.titleMedium.fontWeight, equals(FontWeight.w500));
-      expect(theme.titleSmall.fontWeight, equals(FontWeight.w500));
-
-      // Body styles use w300
-      expect(theme.bodyLarge.fontWeight, equals(FontWeight.w300));
-      expect(theme.bodyMedium.fontWeight, equals(FontWeight.w300));
-      expect(theme.bodySmall.fontWeight, equals(FontWeight.w300));
-
-      // Label styles use w100
-      expect(theme.labelLarge.fontWeight, equals(FontWeight.w100));
-      expect(theme.labelMedium.fontWeight, equals(FontWeight.w100));
-      expect(theme.labelSmall.fontWeight, equals(FontWeight.w100));
+      expect(theme.display.fontWeight, equals(FontWeight.w800));
+      expect(theme.headline.fontWeight, equals(FontWeight.w700));
+      expect(theme.title.fontWeight, equals(FontWeight.w500));
+      expect(theme.body.fontWeight, equals(FontWeight.w300));
+      expect(theme.label.fontWeight, equals(FontWeight.w100));
     });
 
     test('defaults factory with null fontHandler uses font name directly', () {
@@ -89,37 +50,37 @@ void main() {
         fontHandler: null,
       );
 
-      expect(theme.displayLarge.fontFamily, equals('Open Sans'));
-      expect(theme.bodyMedium.fontFamily, equals('Roboto'));
-      expect(theme.titleLarge.fontFamilyFallback, equals(kLayrzFontFallbacks));
+      expect(theme.display.fontFamily, equals('Open Sans'));
+      expect(theme.body.fontFamily, equals('Roboto'));
+      expect(theme.display.fontFamilyFallback, equals(kLayrzFontFallbacks));
     });
 
     test('all styles have overflow ellipsis', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.displayLarge.overflow, equals(TextOverflow.ellipsis));
-      expect(theme.bodyMedium.overflow, equals(TextOverflow.ellipsis));
-      expect(theme.labelSmall.overflow, equals(TextOverflow.ellipsis));
+      expect(theme.display.overflow, equals(TextOverflow.ellipsis));
+      expect(theme.body.overflow, equals(TextOverflow.ellipsis));
+      expect(theme.label.overflow, equals(TextOverflow.ellipsis));
     });
 
     test('all styles have no text decoration', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.displayLarge.decoration, equals(TextDecoration.none));
-      expect(theme.bodyMedium.decoration, equals(TextDecoration.none));
-      expect(theme.labelSmall.decoration, equals(TextDecoration.none));
+      expect(theme.display.decoration, equals(TextDecoration.none));
+      expect(theme.body.decoration, equals(TextDecoration.none));
+      expect(theme.label.decoration, equals(TextDecoration.none));
     });
 
     test('copyWith creates new instance with replaced styles', () {
       final original = LayrzTextTheme.defaults(
         textColor: const Color(0xFF000000),
       );
-      final newBodyMedium = original.bodyMedium.copyWith(fontSize: 20);
-      final modified = original.copyWith(bodyMedium: newBodyMedium);
+      final newBody = original.body.copyWith(fontSize: 20);
+      final modified = original.copyWith(body: newBody);
 
-      expect(modified.bodyMedium.fontSize, equals(20));
-      expect(modified.displayLarge, equals(original.displayLarge));
-      expect(original.bodyMedium.fontSize, equals(14)); // original unchanged
+      expect(modified.body.fontSize, equals(20));
+      expect(modified.display, equals(original.display));
+      expect(original.body.fontSize, equals(14)); // original unchanged
     });
 
     test('equality works for identical factories', () {

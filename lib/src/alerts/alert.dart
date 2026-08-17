@@ -245,7 +245,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
                   children: [
                     Text(
                       widget.title,
-                      style: tokens.typography.titleMedium.copyWith(
+                      style: tokens.typography.title.copyWith(
                         fontWeight: FontWeight.bold,
                         color: tokens.colors.fg1,
                       ),
@@ -253,7 +253,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
                     SizedBox(height: tokens.spacing.sp4),
                     Text(
                       widget.description,
-                      style: tokens.typography.bodyMedium.copyWith(
+                      style: tokens.typography.body.copyWith(
                         color: tokens.colors.fg2,
                       ),
                       maxLines: widget.maxLines,
@@ -446,7 +446,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
               children: [
                 Text(
                   widget.title,
-                  style: tokens.typography.titleMedium.copyWith(
+                  style: tokens.typography.title.copyWith(
                     fontWeight: FontWeight.bold,
                     color: spec.titleColor,
                   ),
@@ -454,7 +454,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
                 SizedBox(height: tokens.spacing.sp4),
                 Text(
                   widget.description,
-                  style: tokens.typography.bodyMedium.copyWith(
+                  style: tokens.typography.body.copyWith(
                     color: spec.bodyColor,
                   ),
                   maxLines: widget.maxLines,

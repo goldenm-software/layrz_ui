@@ -49,7 +49,7 @@ class _GridSectionContent extends StatelessWidget {
             child: Text(
               'All values are shown in logical units (u). Flutter measures layout in device-independent logical pixels, not physical device pixels. '
               'Hover over any value to see its physical-pixel equivalent on the current display.',
-              style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
           ),
 
@@ -97,11 +97,11 @@ class _BreakpointReadout extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Live Width & Breakpoint Readout', style: tokens.typography.titleMedium),
+            Text('Live Width & Breakpoint Readout', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Text(
               'Resize the window to see breakpoints transition. The grid responds to viewport width.',
-              style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp12),
             Container(
@@ -115,17 +115,17 @@ class _BreakpointReadout extends StatelessWidget {
                     children: [
                       Text(
                         'Viewport Width: ',
-                        style: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg1),
+                        style: tokens.typography.label.copyWith(color: tokens.colors.fg1),
                       ),
                       UnitDisplay(
                         value: width,
-                        textStyle: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg1),
+                        textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg1),
                       ),
                     ],
                   ),
                   Text(
                     'Active Breakpoint: $breakpoint',
-                    style: tokens.typography.labelMedium.copyWith(color: tokens.colors.primary[500]),
+                    style: tokens.typography.label.copyWith(color: tokens.colors.primary[500]),
                   ),
                 ],
               ),
@@ -162,11 +162,11 @@ class _ResponsiveColumnsDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Responsive Columns (Varying Spans Per Breakpoint)', style: tokens.typography.titleMedium),
+        Text('Responsive Columns (Varying Spans Per Breakpoint)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'Each column has different span values (xs, sm, md, lg). Watch them reflow as viewport changes.',
-          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
         LayrzRow(
@@ -223,12 +223,12 @@ class _WrappingDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Wrapping Example (Uneven Spans)', style: tokens.typography.titleMedium),
+        Text('Wrapping Example (Uneven Spans)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'Five columns with spans [6, 5, 4, 4, 4] wrap into two visual rows. '
           'The greedy algorithm starts a new row when sum exceeds 12.',
-          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
         LayrzRow(
@@ -277,12 +277,12 @@ class _ConstrainedViewDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Constrained View (max-width: 600u)', style: tokens.typography.titleMedium),
+        Text('Constrained View (max-width: 600u)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'Content is centered horizontally and constrained to max-width. '
           'Useful for landing pages and article layouts.',
-          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp12),
         Container(
@@ -338,7 +338,7 @@ class _ColumnBox extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         label,
-        style: tokens.typography.labelMedium.copyWith(color: color),
+        style: tokens.typography.label.copyWith(color: color),
         textAlign: TextAlign.center,
       ),
     );

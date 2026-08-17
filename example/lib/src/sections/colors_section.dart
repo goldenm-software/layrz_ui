@@ -84,7 +84,7 @@ Widget buildColorsSection() {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Overlay & Tonal Opacity', style: tokens.typography.titleMedium),
+                Text('Overlay & Tonal Opacity', style: tokens.typography.title),
                 SizedBox(height: tokens.spacing.sp12),
                 Row(
                   children: [
@@ -133,7 +133,7 @@ class _ColorCategory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: tokens.typography.titleMedium),
+        Text(title, style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Wrap(
           spacing: tokens.spacing.sp16,
@@ -189,7 +189,7 @@ class _OverlaySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        Text(label, textAlign: TextAlign.center, style: tokens.typography.labelSmall),
+        Text(label, textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }
@@ -231,7 +231,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     '100%',
-                    style: tokens.typography.labelSmall.copyWith(color: fullOpacity.contrastColor, fontSize: 10),
+                    style: tokens.typography.label.copyWith(color: fullOpacity.contrastColor, fontSize: 10),
                   ),
                 ),
               ),
@@ -247,7 +247,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     '${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
-                    style: tokens.typography.labelSmall.copyWith(color: tonalColor.contrastColor, fontSize: 10),
+                    style: tokens.typography.label.copyWith(color: tonalColor.contrastColor, fontSize: 10),
                   ),
                 ),
               ),
@@ -257,7 +257,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.labelSmall),
+        Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }

@@ -47,7 +47,7 @@ void main() {
         );
         // Verify that the typography was created (indirect verification).
         expect(data.tokens.typography, isNotNull);
-        expect(data.tokens.typography.displayLarge, isNotNull);
+        expect(data.tokens.typography.display, isNotNull);
       });
 
       test('wraps fontName into Google Font when titleFont and bodyFont are null', () {
@@ -56,8 +56,8 @@ void main() {
           fontHandler: const FakeFontHandler(),
         );
         // The fake handler returns font names directly, so both should be 'Roboto'
-        expect(data.tokens.typography.displayLarge.fontFamily, equals('Roboto'));
-        expect(data.tokens.typography.bodyMedium.fontFamily, equals('Roboto'));
+        expect(data.tokens.typography.display.fontFamily, equals('Roboto'));
+        expect(data.tokens.typography.body.fontFamily, equals('Roboto'));
       });
 
       test('titleFont and bodyFont override fontName when provided', () {
@@ -76,8 +76,8 @@ void main() {
           fontHandler: const FakeFontHandler(),
         );
         // Verify that custom fonts are used, not the fontName
-        expect(data.tokens.typography.displayLarge.fontFamily, equals('CustomTitle'));
-        expect(data.tokens.typography.bodyMedium.fontFamily, equals('CustomBody'));
+        expect(data.tokens.typography.display.fontFamily, equals('CustomTitle'));
+        expect(data.tokens.typography.body.fontFamily, equals('CustomBody'));
       });
 
       test('defaults to Open Sans font name', () {
@@ -85,8 +85,8 @@ void main() {
           fontHandler: const FakeFontHandler(),
         );
         // Default font should be Open Sans
-        expect(data.tokens.typography.displayLarge.fontFamily, equals('Open Sans'));
-        expect(data.tokens.typography.bodyMedium.fontFamily, equals('Open Sans'));
+        expect(data.tokens.typography.display.fontFamily, equals('Open Sans'));
+        expect(data.tokens.typography.body.fontFamily, equals('Open Sans'));
       });
     });
 
@@ -137,8 +137,8 @@ void main() {
         expect(data.textTheme, same(data.tokens.typography));
       });
 
-      test('textStyle returns tokens.typography.bodyMedium', () {
-        expect(data.textStyle, equals(data.tokens.typography.bodyMedium));
+      test('textStyle returns tokens.typography.body', () {
+        expect(data.textStyle, equals(data.tokens.typography.body));
       });
 
       test('borderRadius delegates to tokens.radius.base (8.0)', () {
@@ -290,7 +290,7 @@ void main() {
           // here should NOT be the raw name. Offline-safe because the sync
           // constructor completes; only async byte fetch happens later.
           final theme = LayrzThemeData.light();
-          final family = theme.tokens.typography.bodyMedium.fontFamily;
+          final family = theme.tokens.typography.body.fontFamily;
 
           expect(family, isNotNull);
           expect(
@@ -317,7 +317,7 @@ void main() {
 
         // Verify that the handler was used to resolve fonts
         expect(resolveCalled, isTrue);
-        expect(data.tokens.typography.bodyMedium, isNotNull);
+        expect(data.tokens.typography.body, isNotNull);
       });
 
       test(
@@ -330,7 +330,7 @@ void main() {
           );
 
           // When fontHandler is null, font name is used directly
-          expect(data.bodyMedium.fontFamily, equals('Open Sans'));
+          expect(data.body.fontFamily, equals('Open Sans'));
         },
       );
     });

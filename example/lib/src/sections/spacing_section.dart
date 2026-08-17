@@ -25,14 +25,14 @@ Widget buildSpacingSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Spacing ruler
-            Text('Spacing Values (sp4 → sp48)', style: tokens.typography.titleMedium),
+            Text('Spacing Values (sp4 → sp48)', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             _SpacingRuler(tokens: tokens),
 
             SizedBox(height: tokens.spacing.sp24),
 
             // Convenience accessors
-            Text('Convenience Accessors', style: tokens.typography.titleMedium),
+            Text('Convenience Accessors', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             _SpacingAccessors(tokens: tokens),
           ],
@@ -81,7 +81,7 @@ class _SpacingRuler extends StatelessWidget {
                   // Label
                   SizedBox(
                     width: tokens.spacing.sp48,
-                    child: Text(item.$1, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+                    child: Text(item.$1, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
                   ),
 
                   // Track (background strip) with bar on top showing true width
@@ -119,7 +119,7 @@ class _SpacingRuler extends StatelessWidget {
                       alignment: Alignment.centerRight,
                       child: UnitDisplay(
                         value: item.$2,
-                        textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                        textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                       ),
                     ),
                   ),
@@ -150,7 +150,7 @@ class _SpacingAccessors extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('padding', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+              Text('padding', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
               LayrzTooltip(
                 contentText: 'padding = ${tokens.spacing.base.toStringAsFixed(0)}px on all sides',
@@ -172,7 +172,7 @@ class _SpacingAccessors extends StatelessWidget {
               SizedBox(height: tokens.spacing.sp8),
               UnitDisplay(
                 value: tokens.spacing.base,
-                textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
+                textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3, fontSize: 11),
               ),
             ],
           ),
@@ -185,7 +185,7 @@ class _SpacingAccessors extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('reducedMargin', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+              Text('reducedMargin', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
               LayrzTooltip(
                 contentText: 'reducedMargin = ${(tokens.spacing.base / 2).toStringAsFixed(0)}px on all sides',
@@ -208,7 +208,7 @@ class _SpacingAccessors extends StatelessWidget {
               SizedBox(height: tokens.spacing.sp8),
               UnitDisplay(
                 value: tokens.spacing.base / 2,
-                textStyle: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
+                textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3, fontSize: 11),
               ),
             ],
           ),
@@ -221,7 +221,7 @@ class _SpacingAccessors extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('sizedBox', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+              Text('sizedBox', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
               SizedBox(height: tokens.spacing.sp8),
               LayrzTooltip(
                 contentText:
@@ -238,7 +238,7 @@ class _SpacingAccessors extends StatelessWidget {
               SizedBox(height: tokens.spacing.sp8),
               Text(
                 '${tokens.spacing.base} × ${tokens.spacing.base}',
-                style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11),
+                style: tokens.typography.label.copyWith(color: tokens.colors.fg3, fontSize: 11),
               ),
             ],
           ),

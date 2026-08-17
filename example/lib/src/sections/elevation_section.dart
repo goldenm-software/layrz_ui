@@ -20,7 +20,7 @@ Widget buildElevationSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Main elevation ramp
-            Text('Elevation Ramp (0–5)', style: tokens.typography.titleMedium),
+            Text('Elevation Ramp (0–5)', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -41,7 +41,7 @@ Widget buildElevationSection() {
             SizedBox(height: tokens.spacing.sp24),
 
             // Special cases
-            Text('Special Cases', style: tokens.typography.titleMedium),
+            Text('Special Cases', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Row(
               children: [
@@ -51,7 +51,7 @@ Widget buildElevationSection() {
                     children: [
                       Text(
                         'Elevation 0 (outline)',
-                        style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
                       LayrzTooltip(
@@ -68,7 +68,7 @@ Widget buildElevationSection() {
                     children: [
                       Text(
                         'Reversed (flipped shadow)',
-                        style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
                       LayrzTooltip(
@@ -85,7 +85,7 @@ Widget buildElevationSection() {
                     children: [
                       Text(
                         'hideOnElevationZero',
-                        style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
                       LayrzTooltip(
@@ -143,7 +143,7 @@ class _ElevationCard extends StatelessWidget {
         hideOnElevationZero: hideOnElevationZero,
       ),
       alignment: Alignment.center,
-      child: Text(label, textAlign: TextAlign.center, style: tokens.typography.labelSmall),
+      child: Text(label, textAlign: TextAlign.center, style: tokens.typography.label),
     );
   }
 }

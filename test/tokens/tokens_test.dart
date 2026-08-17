@@ -33,9 +33,9 @@ void main() {
       final tokens = LayrzTokens.light();
 
       // All text styles should have fg1 as their color
-      expect(tokens.typography.bodyMedium.color, equals(tokens.colors.fg1));
-      expect(tokens.typography.displayLarge.color, equals(tokens.colors.fg1));
-      expect(tokens.typography.labelSmall.color, equals(tokens.colors.fg1));
+      expect(tokens.typography.body.color, equals(tokens.colors.fg1));
+      expect(tokens.typography.display.color, equals(tokens.colors.fg1));
+      expect(tokens.typography.label.color, equals(tokens.colors.fg1));
     });
 
     test('light factory respects primaryColor parameter', () {
@@ -113,7 +113,7 @@ void main() {
       expect(tokens.shadow.baseRadius, equals(tokens.radius.base));
 
       // Typography should use fg1 for text color
-      final bodyStyle = tokens.typography.bodyMedium;
+      final bodyStyle = tokens.typography.body;
       expect(bodyStyle.color, equals(tokens.colors.fg1));
     });
   });

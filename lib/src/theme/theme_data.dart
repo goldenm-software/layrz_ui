@@ -150,8 +150,8 @@ class LayrzThemeData {
 
   /// Convenience accessor — base body style used as [DefaultTextStyle] at the root.
   ///
-  /// Returns [textTheme.bodyMedium], i.e. [tokens.typography.bodyMedium].
-  TextStyle get textStyle => tokens.typography.bodyMedium;
+  /// Returns [textTheme.body], i.e. [tokens.typography.body].
+  TextStyle get textStyle => tokens.typography.body;
 
   /// Border radius used consistently for rounded corners across all widgets.
   ///

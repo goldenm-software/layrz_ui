@@ -72,7 +72,7 @@ class _UnitDisplayState extends State<UnitDisplay> {
       ),
       child: Text(
         message,
-        style: tokens.typography.labelSmall.copyWith(
+        style: tokens.typography.label.copyWith(
           color: tokens.colors.background,
         ),
       ),
@@ -88,7 +88,7 @@ class _UnitDisplayState extends State<UnitDisplay> {
     final physicalDisplay = _formatPhysicalPixel(physicalPixels);
     final tooltipMessage = '$logicalDisplay = $physicalDisplay @ ${ratio.toStringAsFixed(1)}x';
 
-    final textStyle = widget.textStyle ?? tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3);
+    final textStyle = widget.textStyle ?? tokens.typography.label.copyWith(color: tokens.colors.fg3);
 
     return MouseRegion(
       onEnter: (_) {

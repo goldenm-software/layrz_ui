@@ -26,7 +26,7 @@ Widget buildAccessPathsSection() {
           children: [
             Text(
               'Both access paths must return the same values',
-              style: tokens.typography.bodyMedium.copyWith(color: tokens.colors.fg2),
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
             ),
             SizedBox(height: tokens.spacing.sp16),
 
@@ -139,7 +139,7 @@ class _AccessPathComparison extends StatelessWidget {
             // Token name
             Row(
               children: [
-                Expanded(child: Text(label, style: tokens.typography.titleSmall)),
+                Expanded(child: Text(label, style: tokens.typography.title)),
                 // Match indicator
                 Container(
                   width: tokens.spacing.sp32,
@@ -151,7 +151,7 @@ class _AccessPathComparison extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     match ? '✓' : '✗',
-                    style: tokens.typography.labelLarge.copyWith(
+                    style: tokens.typography.label.copyWith(
                       color: tokens.colors.surface,
                       fontWeight: FontWeight.bold,
                     ),
@@ -200,14 +200,14 @@ class _AccessPathRow extends StatelessWidget {
           Expanded(
             child: Text(
               path,
-              style: tokens.typography.labelSmall.copyWith(fontFamily: 'monospace', fontSize: 10),
+              style: tokens.typography.label.copyWith(fontFamily: 'monospace', fontSize: 10),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           SizedBox(width: tokens.spacing.sp12),
           Text(
             '→ $value',
-            style: tokens.typography.labelSmall.copyWith(
+            style: tokens.typography.label.copyWith(
               color: tokens.colors.fg3,
               fontFamily: 'monospace',
               fontSize: 10,

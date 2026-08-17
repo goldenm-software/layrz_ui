@@ -10,8 +10,8 @@ import 'package:layrz_ui/extensions.dart';
 class ShowroomSection extends StatelessWidget {
   /// Creates a new [ShowroomSection].
   ///
-  /// The [title] is rendered with [TextTheme.headlineSmall], the optional [description]
-  /// with [TextTheme.bodyMedium], and the [child] content area is displayed inside
+  /// The [title] is rendered with [TextTheme.headline], the optional [description]
+  /// with [TextTheme.body], and the [child] content area is displayed inside
   /// a [LayrzCard] for consistent elevation and surface styling.
   const ShowroomSection({required this.title, required this.child, this.description, super.key});
 
@@ -34,12 +34,12 @@ class ShowroomSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
-          Text(title, style: tokens.typography.headlineSmall),
+          Text(title, style: tokens.typography.headline),
 
           // Description (if provided)
           if (description != null) ...[
             SizedBox(height: tokens.spacing.sp8),
-            Text(description!, style: tokens.typography.bodyMedium.copyWith(color: tokens.colors.fg3)),
+            Text(description!, style: tokens.typography.body.copyWith(color: tokens.colors.fg3)),
           ],
 
           // Content area with LayrzCard for elevation and surface styling

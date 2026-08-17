@@ -35,7 +35,7 @@ Widget buildRadiusSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Radius samples
-            Text('Border Radius Values', style: tokens.typography.titleMedium),
+            Text('Border Radius Values', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Wrap(
               spacing: tokens.spacing.sp16,
@@ -135,7 +135,7 @@ Widget buildRadiusSection() {
             SizedBox(height: tokens.spacing.sp24),
 
             // innerRadius demonstration
-            Text('innerRadius() Helper', style: tokens.typography.titleMedium),
+            Text('innerRadius() Helper', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             _InnerRadiusDemonstration(tokens: tokens),
           ],
@@ -161,7 +161,7 @@ class _InnerRadiusDemonstration extends StatelessWidget {
         // Explanation
         Text(
           'For concentric corners, inner_radius = max(outer_radius − gap, 0)',
-          style: tokens.typography.labelMedium,
+          style: tokens.typography.label,
         ),
         SizedBox(height: tokens.spacing.sp16),
 
@@ -235,7 +235,7 @@ class _InnerRadiusDemonstration extends StatelessWidget {
         SizedBox(height: tokens.spacing.sp24),
 
         // Clamp demonstration: when spacer > outerRadius
-        Text('When gap exceeds outer radius, corners clamp to square:', style: tokens.typography.labelMedium),
+        Text('When gap exceeds outer radius, corners clamp to square:', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp12),
         _InnerRadiusCase(
           tokens: tokens,
@@ -297,28 +297,28 @@ class _InnerRadiusCase extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: tokens.typography.titleSmall),
+        Text(title, style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp8),
         // Parameters label
         Text(
           'outer = ${outerRadius.toStringAsFixed(0)}u',
-          style: tokens.typography.labelSmall,
+          style: tokens.typography.label,
         ),
         Text(
           'gap = ${spacer.toStringAsFixed(0)}u',
-          style: tokens.typography.labelSmall,
+          style: tokens.typography.label,
         ),
         SizedBox(height: tokens.spacing.sp4),
         // Computed inner radius label
         if (isCorrect)
           Text(
             'inner = ${computedInnerRadius.toStringAsFixed(0)}u (${outerRadius.toStringAsFixed(0)}u − ${spacer.toStringAsFixed(0)}u)',
-            style: tokens.typography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+            style: tokens.typography.label.copyWith(fontWeight: FontWeight.bold),
           )
         else
           Text(
             'inner = ${computedInnerRadius.toStringAsFixed(0)}u (reusing outer)',
-            style: tokens.typography.labelSmall.copyWith(fontWeight: FontWeight.bold),
+            style: tokens.typography.label.copyWith(fontWeight: FontWeight.bold),
           ),
         SizedBox(height: tokens.spacing.sp12),
         // Visual demonstration: outlined rings (both arcs directly visible)
@@ -350,13 +350,13 @@ class _InnerRadiusCase extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp8),
           Text(
             '✗ Corners bulge; gap looks wider at corners',
-            style: tokens.typography.labelSmall.copyWith(color: tokens.colors.danger),
+            style: tokens.typography.label.copyWith(color: tokens.colors.danger),
           ),
         ] else if (computedInnerRadius == 0.0) ...[
           SizedBox(height: tokens.spacing.sp8),
           Text(
             'Square corners (clamped)',
-            style: tokens.typography.labelSmall,
+            style: tokens.typography.label,
           ),
         ],
       ],
