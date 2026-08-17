@@ -357,12 +357,12 @@ This prevents reflow and flicker during state changes.
 ### 4. LayrzAlert (Inline Status Callout)
 
 **What changes**:
-- Create `lib/src/alerts/alert.dart` — `LayrzAlert` widget
+- Create `lib/src/alerts/alert.dart` — `LayrzAlert` widget with optional interactive behavior
 - Create `lib/src/alerts/alert_type.dart` — semantic type enumeration
 - Create `lib/src/alerts/alert_style.dart` — visual style enumeration
 - Create `lib/src/alerts/alert_style_spec.dart` — immutable style specification resolver
 - Create `lib/src/alerts/alert_icon.dart` — `LayrzAlertIcon` standalone building block
-- Create `lib/src/constants/alert.dart` — sizing constants
+- Create `lib/src/constants/alert.dart` — sizing constants including `kLayrzAlertHoverLift`
 - Create `lib/alerts.dart` barrel with re-exports
 
 **API contract**:
@@ -376,6 +376,7 @@ This prevents reflow and flicker during state changes.
 - `color` (Color?, optional) — override color, only used when `type == LayrzAlertType.custom`
 - `icon` (IconData?, optional) — override icon, only used when `type == LayrzAlertType.custom`
 - `iconSize` (double?, optional) — override icon glyph size; defaults to `kLayrzAlertIconSize` or `kLayrzAlertFilledIconSize` depending on style
+- `onTap` (VoidCallback?, optional, default null) — callback invoked when the alert is tapped; null disables interactivity
 
 **LayrzAlertType enum** — controls semantic color and icon:
 - `info` — `tokens.colors.info` (blue), icon: `solarOutlineInfoSquare`
@@ -408,9 +409,21 @@ This prevents reflow and flicker during state changes.
 - **Layrz/FilledTonal/Filled/Outlined** — single container with icon chip (left), gap (sp12), text column (title + sp4 + description)
 - **FilledIcon** — split-panel layout with accent left panel (icon centred, size sp16 padding), surface right panel (title/description with sp16 padding)
 
+**Interaction behavior**:
+- **Non-interactive** (`onTap: null`, the default): Alert is inert — no cursor change, no hover/press visual feedback, not focusable, announces as a container to assistive technology. Rendering is identical to the pre-interactive design.
+- **Interactive** (`onTap: non-null`): Alert responds to user interaction:
+  - **Hover**: Surface lifts by `kLayrzAlertHoverLift` (4.0 logical pixels); shadow steps up one level. Animated with `tokens.motion.dHover` and `tokens.motion.easingEnter`.
+  - **Focus**: Renders identically to hover (lifted, shadow elevated). Reachable via Tab navigation; activatable by Enter or Space (requires `LayrzApp` ancestor).
+  - **Press**: Surface settles back down; shadow steps down one level.
+  - **Lift mechanism**: Paint-only transform (`Matrix4.translationValues(0, -_currentLift, 0)`), not a layout change. The alert's bounding box and hit-test region remain constant across all states. This prevents hover oscillation (the surface cannot move out from under the pointer).
+
+**D15 Compliance and Lift Amendment**:
+- Interaction states vary only: shadow (via elevation), cursor, and colour. They do **not** vary: size, padding, margin, border width, or radius.
+- The lift is a paint-only transform and is permitted under an amendment to decision D15 (2026-08-16). See [`Decisions (D15)`](https://github.com/goldenm-software/layrz_ui/blob/main/engineering/decisions.md) for the original decision and the amendment for the rationale and controlled conditions.
+
 **Key invariants**:
 - **Both title and description are required** — strict 1:1 port from ThemedAlert; no optional variants
-- **Non-interactive** — no WidgetStatesController, no action slot, no dismissibility in M2 (D15 does not apply)
+- **`onTap` is optional** — null (default) disables interactivity; non-null enables it. Non-interactive alerts are the default and recommended pattern for informational callouts with no required user action.
 - **No custom colour parameter on non-custom types** — color parameter is ignored unless `type == LayrzAlertType.custom`
 - **LayrzAlertIcon is a standalone building block** (per decision D11) — LayrzAlert does not consume it; it is exported separately for reuse
 - **Tonal opacity applied consistently** — via `tokens.colors.tonalOpacity` for tonal fills
@@ -441,6 +454,16 @@ This prevents reflow and flicker during state changes.
 **Acceptance criteria**:
 - Constructor has every parameter documented (rule #1)
 - Both `title` and `description` are required (enforced by constructor signature)
+- `onTap` parameter correctly controls interactivity: null disables, non-null enables
+- Non-interactive alerts (`onTap: null`) render with no state changes and no cursor change
+- Interactive alerts (`onTap: non-null`) respond to hover, press, and focus with visual feedback
+- Hover/focus lift exactly `kLayrzAlertHoverLift` (4.0 logical pixels) via transform
+- Lift is paint-only: bounding box and hit-test region are constant across states (verified via layout tests)
+- Hover oscillation is prevented: alert surface cannot move out from under the pointer (hover detection wraps the transform)
+- Animation timing uses `tokens.motion.dHover` and `tokens.motion.easingEnter`
+- Press state settles surface back to rest position; shadow steps down one level
+- Keyboard activation (Enter or Space) works identically to tap; no explicit shortcut binding needed (provided by LayrzApp)
+- Interactive alerts announce as button with enabled state; non-interactive alert announces as container
 - `LayrzAlertType` enum correctly maps to token colors via `colorToken()` method
 - `LayrzAlertType` enum correctly maps to icons via `icon` property
 - Custom type falls back to `primary` color and `solarOutlineInfoSquare` icon
@@ -452,11 +475,11 @@ This prevents reflow and flicker during state changes.
 - FilledIcon style: split-panel layout, accent left (contrast icon), surface right (fg1 title, fg2 body)
 - `iconSize` parameter overrides default (kLayrzAlertIconSize or kLayrzAlertFilledIconSize)
 - `maxLines` limits description text before ellipsis
-- Non-interactive: no state changes, no D15 application
 - `LayrzAlertIcon` is a standalone public widget exported from `lib/alerts.dart`
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
 - `@Preview` annotations present at bottom of alert.dart file (one per style)
-- Wiki pages document final API, style specs table, icon building block, and layout patterns
+- Wiki pages document final API, interaction model, style specs table, icon building block, and layout patterns
+- Tests verify interactive behavior: hover lift translation, layout neutrality, oscillation safety, keyboard activation
 
 ---
 
