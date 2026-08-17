@@ -15,7 +15,7 @@ void main() {
     });
 
     group('resolve() - layrz style', () {
-      test('layrz inert: surface background, tonal border, tonal icon chip, accent icon, fg1 title, fg2 body', () {
+      test('layrz inert: surface background, solid accent border, tonal left panel, accent icon', () {
         final accent = tokens.colors.info.shade500;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
@@ -24,10 +24,11 @@ void main() {
           isInteractive: false,
         );
 
+        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
         expect(spec.backgroundColor, equals(tokens.colors.surface));
-        expect(spec.borderColor, equals(accent.withOpacityValue(tokens.colors.tonalOpacity)));
+        expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
-        expect(spec.iconChipBackground, equals(accent.withOpacityValue(tokens.colors.tonalOpacity)));
+        expect(spec.leftPanelColor, equals(tonal));
         expect(spec.iconColor, equals(accent));
         expect(spec.titleColor, equals(tokens.colors.fg1));
         expect(spec.bodyColor, equals(tokens.colors.fg2));
@@ -43,6 +44,71 @@ void main() {
         );
 
         expect(spec.backgroundColor.isOpaque, isTrue);
+      });
+
+      test('layrz interactive: left panel is opaque flattened tonal (shadow prevention)', () {
+        final accent = tokens.colors.info.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.layrz,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: true,
+        );
+
+        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
+        final expectedFlattenedPanel = tonal.flattenOn(tokens.colors.surface);
+        expect(spec.leftPanelColor, equals(expectedFlattenedPanel));
+        expect(spec.leftPanelColor.isOpaque, isTrue);
+      });
+
+      test('layrz inert: left panel is translucent tonal (unchanged)', () {
+        final accent = tokens.colors.info.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.layrz,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
+        expect(spec.leftPanelColor, equals(tonal));
+        expect(spec.leftPanelColor.isOpaque, isFalse);
+      });
+
+      test('layrz: tonal left panel, accent border across severities', () {
+        final severities = [
+          (name: 'info', color: tokens.colors.info.shade500),
+          (name: 'success', color: tokens.colors.success.shade500),
+          (name: 'warning', color: tokens.colors.warning.shade500),
+          (name: 'danger', color: tokens.colors.danger.shade500),
+          (name: 'contextual', color: tokens.colors.contextual.shade500),
+        ];
+
+        for (final severity in severities) {
+          final spec = LayrzAlertStyleSpec.resolve(
+            style: LayrzAlertStyle.layrz,
+            accent: severity.color,
+            tokens: tokens,
+            isInteractive: false,
+          );
+
+          final expectedTonal = severity.color.withOpacityValue(tokens.colors.tonalOpacity);
+          expect(
+            spec.leftPanelColor,
+            equals(expectedTonal),
+            reason: 'layrz ${severity.name} should have tonal left panel',
+          );
+          expect(
+            spec.borderColor,
+            equals(severity.color),
+            reason: 'layrz ${severity.name} should have solid accent border',
+          );
+          expect(
+            spec.iconColor,
+            equals(severity.color),
+            reason: 'layrz ${severity.name} should have accent icon',
+          );
+        }
       });
     });
 
@@ -60,6 +126,7 @@ void main() {
         expect(spec.borderColor, equals(const Color(0x00000000)));
         expect(spec.borderWidth, equals(0.0));
         expect(spec.iconChipBackground, equals(const Color(0x00000000)));
+        expect(spec.leftPanelColor, equals(const Color(0x00000000)));
         expect(spec.iconColor, equals(accent));
         expect(spec.titleColor, equals(accent));
         expect(spec.bodyColor, equals(accent));
@@ -95,6 +162,7 @@ void main() {
         expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
         expect(spec.iconChipBackground, equals(const Color(0x00000000)));
+        expect(spec.leftPanelColor, equals(const Color(0x00000000)));
         expect(spec.iconColor, equals(accent.contrastColor));
         expect(spec.titleColor, equals(accent.contrastColor));
         expect(spec.bodyColor, equals(accent.contrastColor));
@@ -127,6 +195,7 @@ void main() {
         expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
         expect(spec.iconChipBackground, equals(const Color(0x00000000)));
+        expect(spec.leftPanelColor, equals(const Color(0x00000000)));
         expect(spec.iconColor, equals(accent));
         expect(spec.titleColor, equals(accent));
         expect(spec.bodyColor, equals(accent));
@@ -147,7 +216,7 @@ void main() {
     });
 
     group('resolve() - filledIcon style', () {
-      test('filledIcon inert: surface background, accent border, accent left panel, contrast icon', () {
+      test('filledIcon inert: surface background, accent border, solid accent left panel, contrast icon', () {
         final accent = tokens.colors.contextual.shade500;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
@@ -159,7 +228,7 @@ void main() {
         expect(spec.backgroundColor, equals(tokens.colors.surface));
         expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
-        expect(spec.iconChipBackground, equals(accent));
+        expect(spec.leftPanelColor, equals(accent));
         expect(spec.iconColor, equals(accent.contrastColor));
         expect(spec.titleColor, equals(tokens.colors.fg1));
         expect(spec.bodyColor, equals(tokens.colors.fg2));
@@ -179,7 +248,7 @@ void main() {
         expect(spec.backgroundColor.isOpaque, isTrue);
       });
 
-      test('filledIcon border tracks accent colour across severity types', () {
+      test('filledIcon border and left panel track accent colour across severity types', () {
         final severities = [
           (name: 'info', color: tokens.colors.info.shade500),
           (name: 'success', color: tokens.colors.success.shade500),
@@ -200,6 +269,16 @@ void main() {
             spec.borderColor,
             equals(severity.color),
             reason: 'filledIcon ${severity.name} should have accent border',
+          );
+          expect(
+            spec.leftPanelColor,
+            equals(severity.color),
+            reason: 'filledIcon ${severity.name} should have solid accent left panel',
+          );
+          expect(
+            spec.iconColor,
+            equals(severity.color.contrastColor),
+            reason: 'filledIcon ${severity.name} should have contrast icon',
           );
         }
       });
@@ -278,10 +357,11 @@ void main() {
       });
     });
 
-    group('interactive alerts invariant', () {
-      test('every interactive style has opaque background', () {
+    group('interactive alerts invariant — all fill colours must be opaque', () {
+      test('every interactive style has opaque fill colours to prevent shadow bleed', () {
         final accent = tokens.colors.primary.shade500;
         final styles = LayrzAlertStyle.values;
+        const transparent = Color(0x00000000);
 
         for (final style in styles) {
           final spec = LayrzAlertStyleSpec.resolve(
@@ -291,17 +371,40 @@ void main() {
             isInteractive: true,
           );
 
+          // All fill colours (any colour that paints a surface area) must be opaque
+          // when interactive to prevent shadows from bleeding through.
+          // Exclude transparent/empty fills and non-fill colours (borders, text, icons).
+
+          // Background is always a fill
           expect(
             spec.backgroundColor.isOpaque,
             isTrue,
             reason: 'Style $style should have opaque background when interactive',
           );
+
+          // Left panel is a fill for split-panel styles
+          if (spec.leftPanelColor != transparent) {
+            expect(
+              spec.leftPanelColor.isOpaque,
+              isTrue,
+              reason: 'Style $style should have opaque left panel when interactive',
+            );
+          }
+
+          // Icon chip background is a fill for single-panel styles
+          if (spec.iconChipBackground != transparent) {
+            expect(
+              spec.iconChipBackground.isOpaque,
+              isTrue,
+              reason: 'Style $style should have opaque icon chip when interactive',
+            );
+          }
         }
       });
     });
 
     group('border assertion — other styles unchanged', () {
-      test('layrz style: tonal border with base width', () {
+      test('layrz style: solid accent border with base width', () {
         final accent = tokens.colors.info.shade500;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
@@ -310,8 +413,7 @@ void main() {
           isInteractive: false,
         );
 
-        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
-        expect(spec.borderColor, equals(tonal));
+        expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
       });
 

@@ -78,7 +78,7 @@ void main() {
         expect(intrinsicHeights, findsOneWidget);
       });
 
-      testWidgets('icon chip has rounded square border radius', (tester) async {
+      testWidgets('icon chip has rounded square border radius (for single-panel styles)', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -87,7 +87,7 @@ void main() {
             child: LayrzAlert(
               title: 'Title',
               description: 'Description',
-              style: LayrzAlertStyle.layrz,
+              style: LayrzAlertStyle.filledTonal,
             ),
           ),
         );
@@ -112,7 +112,7 @@ void main() {
     });
 
     group('Color application', () {
-      testWidgets('layrz style uses surface background with tonal border', (tester) async {
+      testWidgets('layrz style uses split-panel with solid accent border', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -134,13 +134,23 @@ void main() {
           isInteractive: false,
         );
 
-        final container = tester.widget<Container>(
-          find.byType(Container).first,
-        );
-        final decoration = container.decoration! as BoxDecoration;
+        // Find the border container with foregroundDecoration
+        final containers = find.byType(Container);
+        Container? borderContainer;
+        for (final element in containers.evaluate()) {
+          final container = element.widget as Container;
+          if (container.foregroundDecoration is BoxDecoration) {
+            final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+            if (foregroundDecoration.border is Border) {
+              borderContainer = container;
+              break;
+            }
+          }
+        }
 
-        expect(decoration.color, equals(spec.backgroundColor));
-        expect((decoration.border as Border?)?.top.color, equals(spec.borderColor));
+        expect(borderContainer, isNotNull, reason: 'layrz should have split-panel with border');
+        final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+        expect((foregroundDecoration.border as Border?)?.top.color, equals(spec.borderColor));
       });
 
       testWidgets('filledTonal style uses tonal background', (tester) async {
@@ -253,7 +263,7 @@ void main() {
         expect(icon.size, equals(kLayrzAlertFilledIconSize));
       });
 
-      testWidgets('layrz style renders icon at kLayrzAlertIconSize', (tester) async {
+      testWidgets('layrz style renders icon at kLayrzAlertFilledIconSize (same as filledIcon)', (tester) async {
         await pumpThemed(
           tester,
           const SizedBox(
@@ -267,7 +277,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.size, equals(kLayrzAlertIconSize));
+        expect(icon.size, equals(kLayrzAlertFilledIconSize));
       });
 
       testWidgets('explicit iconSize parameter overrides default', (tester) async {
@@ -411,7 +421,7 @@ void main() {
     });
 
     group('filledIcon border rendering', () {
-      testWidgets('inert filledIcon alert renders accent border', (tester) async {
+      testWidgets('inert filledIcon alert renders accent border on foregroundDecoration', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         const accentColor = Color(0xFF2E7D32); // Custom green accent
         await pumpThemed(
@@ -433,23 +443,27 @@ void main() {
         Container? borderContainer;
         for (final element in containers.evaluate()) {
           final container = element.widget as Container;
-          if (container.decoration is BoxDecoration) {
-            final decoration = container.decoration! as BoxDecoration;
-            if (decoration.border is Border) {
+          if (container.foregroundDecoration is BoxDecoration) {
+            final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+            if (foregroundDecoration.border is Border) {
               borderContainer = container;
               break;
             }
           }
         }
 
-        expect(borderContainer, isNotNull, reason: 'Should find Container with border for inert filledIcon');
-        final decoration = borderContainer!.decoration! as BoxDecoration;
-        final border = decoration.border! as Border;
+        expect(
+          borderContainer,
+          isNotNull,
+          reason: 'Should find Container with foregroundDecoration border for inert filledIcon',
+        );
+        final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+        final border = foregroundDecoration.border! as Border;
         expect(border.top.color, equals(accentColor));
         expect(border.top.width, equals(tokens.border.base));
       });
 
-      testWidgets('interactive filledIcon alert renders accent border', (tester) async {
+      testWidgets('interactive filledIcon alert renders accent border on foregroundDecoration', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         const accentColor = Color(0xFFD32F2F); // Custom red accent
         await pumpThemed(
@@ -467,14 +481,14 @@ void main() {
           ),
         );
 
-        // For interactive alerts, find the AnimatedContainer with the border
+        // For interactive alerts, find the AnimatedContainer with the foregroundDecoration border
         final animatedContainers = find.byType(AnimatedContainer);
         AnimatedContainer? borderContainer;
         for (final element in animatedContainers.evaluate()) {
           final container = element.widget as AnimatedContainer;
-          if (container.decoration is BoxDecoration) {
-            final decoration = container.decoration! as BoxDecoration;
-            if (decoration.border is Border) {
+          if (container.foregroundDecoration is BoxDecoration) {
+            final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+            if (foregroundDecoration.border is Border) {
               borderContainer = container;
               break;
             }
@@ -484,10 +498,10 @@ void main() {
         expect(
           borderContainer,
           isNotNull,
-          reason: 'Should find AnimatedContainer with border for interactive filledIcon',
+          reason: 'Should find AnimatedContainer with foregroundDecoration border for interactive filledIcon',
         );
-        final decoration = borderContainer!.decoration! as BoxDecoration;
-        final border = decoration.border! as Border;
+        final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+        final border = foregroundDecoration.border! as Border;
         expect(border.top.color, equals(accentColor));
         expect(border.top.width, equals(tokens.border.base));
       });
@@ -518,23 +532,27 @@ void main() {
             ),
           );
 
-          // Find the border Container
+          // Find the border Container with foregroundDecoration
           final containers = find.byType(Container);
           Container? borderContainer;
           for (final element in containers.evaluate()) {
             final container = element.widget as Container;
-            if (container.decoration is BoxDecoration) {
-              final decoration = container.decoration! as BoxDecoration;
-              if (decoration.border is Border) {
+            if (container.foregroundDecoration is BoxDecoration) {
+              final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+              if (foregroundDecoration.border is Border) {
                 borderContainer = container;
                 break;
               }
             }
           }
 
-          expect(borderContainer, isNotNull, reason: 'Should find border container for ${severity.type}');
-          final decoration = borderContainer!.decoration! as BoxDecoration;
-          final border = decoration.border! as Border;
+          expect(
+            borderContainer,
+            isNotNull,
+            reason: 'Should find foregroundDecoration border container for ${severity.type}',
+          );
+          final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+          final border = foregroundDecoration.border! as Border;
           expect(
             border.top.color,
             equals(severity.color),
@@ -545,7 +563,7 @@ void main() {
         }
       });
 
-      testWidgets('filledIcon inner ClipRRect uses concentric radius', (tester) async {
+      testWidgets('split-panel ClipRRect uses outer r12 radius', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -560,12 +578,9 @@ void main() {
         );
 
         final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
-        final expectedInnerRadius = tokens.radius.innerRadius(
-          outerRadius: tokens.radius.r12,
-          spacer: tokens.border.base,
-        );
+        final expectedOuterRadius = BorderRadius.circular(tokens.radius.r12);
 
-        expect(clipRRect.borderRadius, equals(expectedInnerRadius));
+        expect(clipRRect.borderRadius, equals(expectedOuterRadius));
       });
 
       testWidgets('filledIcon border width matches base border token', (tester) async {
@@ -582,14 +597,14 @@ void main() {
           ),
         );
 
-        // Find border container
+        // Find border container with foregroundDecoration
         final containers = find.byType(Container);
         Container? borderContainer;
         for (final element in containers.evaluate()) {
           final container = element.widget as Container;
-          if (container.decoration is BoxDecoration) {
-            final decoration = container.decoration! as BoxDecoration;
-            if (decoration.border is Border) {
+          if (container.foregroundDecoration is BoxDecoration) {
+            final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+            if (foregroundDecoration.border is Border) {
               borderContainer = container;
               break;
             }
@@ -597,14 +612,14 @@ void main() {
         }
 
         expect(borderContainer, isNotNull);
-        final decoration = borderContainer!.decoration! as BoxDecoration;
-        final border = decoration.border! as Border;
+        final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+        final border = foregroundDecoration.border! as Border;
         expect(border.top.width, equals(tokens.border.base));
       });
     });
 
     group('border styles unchanged assertion', () {
-      testWidgets('layrz style border is unchanged', (tester) async {
+      testWidgets('layrz style renders split-panel with solid accent border', (tester) async {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -626,9 +641,23 @@ void main() {
           isInteractive: false,
         );
 
-        final container = tester.widget<Container>(find.byType(Container).first);
-        final decoration = container.decoration! as BoxDecoration;
-        final border = decoration.border! as Border;
+        // layrz now uses split-panel with foregroundDecoration border
+        final containers = find.byType(Container);
+        Container? borderContainer;
+        for (final element in containers.evaluate()) {
+          final container = element.widget as Container;
+          if (container.foregroundDecoration is BoxDecoration) {
+            final foregroundDecoration = container.foregroundDecoration! as BoxDecoration;
+            if (foregroundDecoration.border is Border) {
+              borderContainer = container;
+              break;
+            }
+          }
+        }
+
+        expect(borderContainer, isNotNull, reason: 'layrz should have split-panel with border on foregroundDecoration');
+        final foregroundDecoration = borderContainer!.foregroundDecoration! as BoxDecoration;
+        final border = foregroundDecoration.border! as Border;
         expect(border.top.color, equals(spec.borderColor));
         expect(border.top.width, equals(spec.borderWidth));
       });

@@ -38,12 +38,12 @@ import 'alert_type.dart';
 ///   - Shadow animates alongside lift with [LayrzTokens.motion.dHover] duration and [LayrzTokens.motion.easingEnter] curve.
 ///
 /// Layout:
-/// - For all styles except [LayrzAlertStyle.filledIcon]:
+/// - For [LayrzAlertStyle.layrz] and [LayrzAlertStyle.filledIcon]:
+///   A split-panel design with an icon on the left and text on the right (neutral
+///   surface background). The left panel is tonal for layrz and solid accent for filledIcon.
+/// - For all other styles:
 ///   A single-row container with an icon chip on the left, gap, and a title/description
 ///   column on the right.
-/// - For [LayrzAlertStyle.filledIcon]:
-///   A split-panel design with an icon on the left (accent background) and text
-///   on the right (neutral surface background).
 ///
 /// Responsive:
 /// - No fixed heights on text-bearing elements (supports WCAG 1.4.4 text scaling).
@@ -203,6 +203,72 @@ class _LayrzAlertState extends State<LayrzAlert> {
     return null;
   }
 
+  /// Builds the split-panel content for layrz and filledIcon styles.
+  ///
+  /// Creates a clipped row with a left panel (icon on colored background)
+  /// and a right panel (title and description on surface background).
+  /// The border is painted via foregroundDecoration to avoid antialiasing seams.
+  Widget _buildSplitPanelContent({
+    required LayrzTokens tokens,
+    required Color leftPanelColor,
+    required IconData icon,
+    required Color iconColor,
+    required double iconSize,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(tokens.radius.r12),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            // Left panel: colored background with icon.
+            ExcludeSemantics(
+              child: Container(
+                color: leftPanelColor,
+                padding: EdgeInsets.all(tokens.spacing.sp16),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: iconSize,
+                  ),
+                ),
+              ),
+            ),
+            // Right panel: surface background with title and description.
+            Expanded(
+              child: Container(
+                color: tokens.colors.surface,
+                padding: EdgeInsets.all(tokens.spacing.sp16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: tokens.typography.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: tokens.colors.fg1,
+                      ),
+                    ),
+                    SizedBox(height: tokens.spacing.sp4),
+                    Text(
+                      widget.description,
+                      style: tokens.typography.bodyMedium.copyWith(
+                        color: tokens.colors.fg2,
+                      ),
+                      maxLines: widget.maxLines,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -223,10 +289,12 @@ class _LayrzAlertState extends State<LayrzAlert> {
       resolvedIcon = widget.type.icon ?? LayrzIcons.solarOutlineInfoSquare;
     }
 
-    // Resolve icon size.
+    // Resolve icon size. Split-panel styles (layrz and filledIcon) use the larger size.
     final effectiveIconSize =
         widget.iconSize ??
-        (widget.style == LayrzAlertStyle.filledIcon ? kLayrzAlertFilledIconSize : kLayrzAlertIconSize);
+        (widget.style == LayrzAlertStyle.layrz || widget.style == LayrzAlertStyle.filledIcon
+            ? kLayrzAlertFilledIconSize
+            : kLayrzAlertIconSize);
 
     // Resolve spec.
     final spec = LayrzAlertStyleSpec.resolve(
@@ -236,65 +304,14 @@ class _LayrzAlertState extends State<LayrzAlert> {
       isInteractive: widget.onTap != null,
     );
 
-    // For filledIcon style, use a split-panel layout.
-    if (widget.style == LayrzAlertStyle.filledIcon) {
-      // Compute the inner radius for the clipped child, accounting for the border.
-      final innerBorderRadius = tokens.radius.innerRadius(
-        outerRadius: tokens.radius.r12,
-        spacer: spec.borderWidth,
-      );
-
-      final content = ClipRRect(
-        borderRadius: innerBorderRadius,
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              // Left panel: accent background with icon.
-              ExcludeSemantics(
-                child: Container(
-                  color: accentColor,
-                  padding: EdgeInsets.all(tokens.spacing.sp16),
-                  child: Center(
-                    child: Icon(
-                      resolvedIcon,
-                      color: spec.iconColor,
-                      size: effectiveIconSize,
-                    ),
-                  ),
-                ),
-              ),
-              // Right panel: neutral surface with title and description.
-              Expanded(
-                child: Container(
-                  color: spec.backgroundColor,
-                  padding: EdgeInsets.all(tokens.spacing.sp16),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: tokens.typography.titleMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: spec.titleColor,
-                        ),
-                      ),
-                      SizedBox(height: tokens.spacing.sp4),
-                      Text(
-                        widget.description,
-                        style: tokens.typography.bodyMedium.copyWith(
-                          color: spec.bodyColor,
-                        ),
-                        maxLines: widget.maxLines,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    // For split-panel styles (layrz and filledIcon), use the split-panel layout.
+    if (widget.style == LayrzAlertStyle.layrz || widget.style == LayrzAlertStyle.filledIcon) {
+      final content = _buildSplitPanelContent(
+        tokens: tokens,
+        leftPanelColor: spec.leftPanelColor,
+        icon: resolvedIcon,
+        iconColor: spec.iconColor,
+        iconSize: effectiveIconSize,
       );
 
       // If not interactive, return the content as-is with container semantics.
@@ -304,6 +321,9 @@ class _LayrzAlertState extends State<LayrzAlert> {
           container: true,
           child: Container(
             decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(tokens.radius.r12),
+            ),
+            foregroundDecoration: BoxDecoration(
               border: Border.all(
                 color: spec.borderColor,
                 width: spec.borderWidth,
@@ -358,11 +378,14 @@ class _LayrzAlertState extends State<LayrzAlert> {
                 curve: tokens.motion.easingEnter,
                 transform: Matrix4.translationValues(0, -_currentLift, 0),
                 decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(tokens.radius.r12),
+                  boxShadow: _resolveShadow(tokens),
+                ),
+                foregroundDecoration: BoxDecoration(
                   border: Border.all(
                     color: spec.borderColor,
                     width: spec.borderWidth,
                   ),
-                  boxShadow: _resolveShadow(tokens),
                   borderRadius: BorderRadius.circular(tokens.radius.r12),
                 ),
                 child: content,

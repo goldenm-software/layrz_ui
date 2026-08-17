@@ -21,11 +21,17 @@ class LayrzAlertStyleSpec {
   /// The width of the alert border in logical pixels.
   final double borderWidth;
 
-  /// The fill color of the icon chip container (for non-filledIcon styles).
+  /// The fill color of the icon chip container (for non-split-panel styles).
   ///
-  /// For [LayrzAlertStyle.filledIcon], the icon chip background is the accent color
-  /// (left panel), not this field.
+  /// For split-panel styles ([LayrzAlertStyle.layrz] and [LayrzAlertStyle.filledIcon]),
+  /// this field is not used; [leftPanelColor] supplies the left panel background instead.
   final Color iconChipBackground;
+
+  /// The background color of the left panel in split-panel layouts.
+  ///
+  /// Used only for [LayrzAlertStyle.layrz] and [LayrzAlertStyle.filledIcon].
+  /// For other styles, this is transparent and unused.
+  final Color leftPanelColor;
 
   /// The color of the icon glyph.
   final Color iconColor;
@@ -42,6 +48,7 @@ class LayrzAlertStyleSpec {
     required this.borderColor,
     required this.borderWidth,
     required this.iconChipBackground,
+    required this.leftPanelColor,
     required this.iconColor,
     required this.titleColor,
     required this.bodyColor,
@@ -53,6 +60,7 @@ class LayrzAlertStyleSpec {
     Color? borderColor,
     double? borderWidth,
     Color? iconChipBackground,
+    Color? leftPanelColor,
     Color? iconColor,
     Color? titleColor,
     Color? bodyColor,
@@ -62,6 +70,7 @@ class LayrzAlertStyleSpec {
       borderColor: borderColor ?? this.borderColor,
       borderWidth: borderWidth ?? this.borderWidth,
       iconChipBackground: iconChipBackground ?? this.iconChipBackground,
+      leftPanelColor: leftPanelColor ?? this.leftPanelColor,
       iconColor: iconColor ?? this.iconColor,
       titleColor: titleColor ?? this.titleColor,
       bodyColor: bodyColor ?? this.bodyColor,
@@ -77,6 +86,7 @@ class LayrzAlertStyleSpec {
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
           iconChipBackground == other.iconChipBackground &&
+          leftPanelColor == other.leftPanelColor &&
           iconColor == other.iconColor &&
           titleColor == other.titleColor &&
           bodyColor == other.bodyColor;
@@ -87,6 +97,7 @@ class LayrzAlertStyleSpec {
     borderColor,
     borderWidth,
     iconChipBackground,
+    leftPanelColor,
     iconColor,
     titleColor,
     bodyColor,
@@ -111,11 +122,17 @@ class LayrzAlertStyleSpec {
 
     switch (style) {
       case LayrzAlertStyle.layrz:
+        // Split-panel layout: tonal left panel (soft background) with solid accent border.
+        // Icon is accent at full strength for severity signal.
+        // For interactive alerts, flatten the tonal left panel to prevent shadows
+        // from bleeding through the translucent fill.
+        final leftPanel = isInteractive ? tonal.flattenOn(tokens.colors.surface) : tonal;
         return LayrzAlertStyleSpec(
           backgroundColor: tokens.colors.surface,
-          borderColor: tonal,
+          borderColor: accent,
           borderWidth: tokens.border.base,
-          iconChipBackground: tonal,
+          iconChipBackground: const Color(0x00000000),
+          leftPanelColor: leftPanel,
           iconColor: accent,
           titleColor: tokens.colors.fg1,
           bodyColor: tokens.colors.fg2,
@@ -130,6 +147,7 @@ class LayrzAlertStyleSpec {
           borderColor: const Color(0x00000000),
           borderWidth: 0.0,
           iconChipBackground: const Color(0x00000000),
+          leftPanelColor: const Color(0x00000000),
           iconColor: accent,
           titleColor: accent,
           bodyColor: accent,
@@ -141,6 +159,7 @@ class LayrzAlertStyleSpec {
           borderColor: accent,
           borderWidth: tokens.border.base,
           iconChipBackground: const Color(0x00000000),
+          leftPanelColor: const Color(0x00000000),
           iconColor: contrast,
           titleColor: contrast,
           bodyColor: contrast,
@@ -155,17 +174,21 @@ class LayrzAlertStyleSpec {
           borderColor: accent,
           borderWidth: tokens.border.base,
           iconChipBackground: const Color(0x00000000),
+          leftPanelColor: const Color(0x00000000),
           iconColor: accent,
           titleColor: accent,
           bodyColor: accent,
         );
 
       case LayrzAlertStyle.filledIcon:
+        // Split-panel layout: solid accent left panel with solid accent border.
+        // Icon uses contrast color for high visibility on the strong background.
         return LayrzAlertStyleSpec(
           backgroundColor: tokens.colors.surface,
           borderColor: accent,
           borderWidth: tokens.border.base,
-          iconChipBackground: accent,
+          iconChipBackground: const Color(0x00000000),
+          leftPanelColor: accent,
           iconColor: contrast,
           titleColor: tokens.colors.fg1,
           bodyColor: tokens.colors.fg2,
