@@ -135,25 +135,34 @@ class _StylesDemo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp12,
       children: [
         Text('All Styles (from LayrzButtonStyle.values)', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
-        Wrap(
-          spacing: tokens.spacing.sp12,
-          runSpacing: tokens.spacing.sp12,
-          children: LayrzButtonStyle.values
-              .map(
-                (style) => LayrzButton(
-                  labelText: style.toString().split('.').last,
-                  icon: LayrzIcons.solarOutlineCheckCircle,
-                  style: style,
+        ...{
+          "Elevated (Default)": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
+          "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
+          "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
+          // "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
+          // "FilledTonal": [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab],
+          // "Text": [LayrzButtonStyle.text, LayrzButtonStyle.fab],
+        }.entries.map((e) {
+          return Row(
+            spacing: tokens.spacing.sp12,
+            children: [
+              Text(e.key),
+              ...e.value.map((e) {
+                return LayrzButton(
+                  labelText: 'Example button',
+                  icon: LayrzIcons.solarBoldHomeN2,
+                  style: e,
                   onTap: () {},
                   color: tokens.colors.primary,
-                  hintText: style.toString().split('.').last,
-                ),
-              )
-              .toList(),
-        ),
+                  hintText: e.toString().split('.').last,
+                );
+              }),
+            ],
+          );
+        }),
       ],
     );
   }
@@ -649,11 +658,11 @@ class _SharedControllerDemo extends StatelessWidget {
             // Shared buttons (all three use the same controller)
             ...{
               "Elevated": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
-              "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
-              "FilledTonal": [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab],
               "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
               "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
-              "Text": [LayrzButtonStyle.text, LayrzButtonStyle.fab],
+              // "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
+              // "FilledTonal": [LayrzButtonStyle.filledTonal, LayrzButtonStyle.filledTonalFab],
+              // "Text": [LayrzButtonStyle.text, LayrzButtonStyle.fab],
             }.entries.map((e) {
               return Row(
                 spacing: tokens.spacing.sp12,

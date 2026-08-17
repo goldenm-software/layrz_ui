@@ -58,7 +58,7 @@ class _StyleRow extends StatelessWidget {
         ),
 
         // Rendered text sample
-        Expanded(child: Text('The quick brown fox', style: sample.style)),
+        Expanded(child: Text('The quick brown fox jumps over the lazy dog', style: sample.style)),
 
         // Font size value
         SizedBox(
