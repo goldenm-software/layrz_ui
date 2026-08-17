@@ -54,11 +54,11 @@ See decision D19 in `engineering/decisions.md` for the complete rationale and co
 
 ## Work Items
 
-### 1. LayrzButton with Twelve Styles and Six Semantic Factories
+### 1. LayrzButton with Six Styles and Six Semantic Factories
 
 **What changes**:
 - Create `lib/src/buttons/button.dart` — `LayrzButton` widget
-- Implement twelve style variants via parameter: `filled`, `filledTonal`, `elevated`, `outlined`, `outlinedTonal`, `text`, and their Fab counterparts (`filledFab`, `filledTonalFab`, `elevatedFab`, `outlinedFab`, `outlinedTonalFab`, `fab`)
+- Implement six style variants via parameter: `elevated`, `outlined`, `outlinedTonal`, and their Fab counterparts (`elevatedFab`, `outlinedFab`, `outlinedTonalFab`)
 - Implement six semantic factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`)
 - Material-free construction: RawTooltip → FocusableActionDetector → MouseRegion → GestureDetector → AnimatedContainer
 - Create `lib/buttons.dart` barrel with re-exports
@@ -82,34 +82,29 @@ See decision D19 in `engineering/decisions.md` for the complete rationale and co
 Each factory takes:
 - `labelText` (String, required) — button label
 - `onTap` (VoidCallback, required) — callback
-- `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant; otherwise the full regular variant. This is a layout choice and applies on any platform.
-- `isElevated` (bool, default depends on factory) — controls whether the button is elevated or flat. For `.save()`, `.info()`, `.show()`, and `.edit()`, defaults to `true` (elevated for plain surfaces). For `.delete()` and `.cancel()`, defaults to `false` (flat for quiet appearance of destructive/cancel actions). When true, buttons use elevated or outlined styles; when false, buttons use filled or outlined styles.
+- `isFab` (bool, default false) — when true, renders the compact icon-only FAB variant (factory automatically maps the given `style` to its Fab twin via `asFab`); otherwise renders the full regular variant.
+- `style` (LayrzButtonStyle, default `elevated`) — the button's visual style. Only non-Fab values are accepted (asserted). All six factories default to `elevated`.
 - `controller` (LayrzButtonController?, optional) — An optional controller that drives loading/cooldown states. Multiple buttons can share a single controller.
 - `isDisabled` (bool, default false)
 
-| Factory | Icon | Semantic Color | isElevated Default | Style (true → false) |
-|---|---|---|---|---|
-| `.save()` | `solarOutlineInboxIn` | `success` (green) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | **`false`** | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.show()` | `solarOutlineEyeScan` | `info` (blue) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `true` | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
-| `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | **`false`** | `elevated` → `filled` (Fab: `elevatedFab` → `filledFab`) |
+| Factory | Icon | Semantic Color | Default `style` |
+|---|---|---|---|
+| `.save()` | `solarOutlineInboxIn` | `success` (green) | `elevated` |
+| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | `elevated` |
+| `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `elevated` |
+| `.show()` | `solarOutlineEyeScan` | `info` (blue) | `elevated` |
+| `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `elevated` |
+| `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | `elevated` |
 
-**Elevation context**: The `isElevated` parameter expresses visual context — whether a button needs drop-shadow depth to stand out from the background, or whether it should flatten to avoid stacked depth-on-depth.
-- **Four factories** (`.save`, `.info`, `.show`, `.edit`) default to `true`, reflecting typical button placement on plain surfaces. Set to `false` when nesting inside cards, dialogs, or other elevated containers.
-- **Two exceptions**: `.delete()` and `.cancel()` both default to `false`, reflecting the design intent to keep destructive/cancellative actions visually quiet by default. Developers explicitly opt into shadow depth with `isElevated: true`.
+**Style context**: All factories default to `elevated`, reflecting typical button placement on plain surfaces where shadow depth helps the button stand out. Callers pass `style: LayrzButtonStyle.outlined` when nesting buttons inside elevated containers (cards, dialogs) or when a quieter appearance is desired for secondary or destructive actions like `.cancel()` or `.delete()`.
 
-**Twelve style variants**:
+**Six style variants**:
 
 | Pair | Regular | FAB | Visual Treatment |
 |---|---|---|---|
-| 1 | `.filled` | `.filledFab` | Solid background, no shadow |
-| 2 | `.filledTonal` | `.filledTonalFab` | Semi-transparent background (20% opacity on semantic color) |
-| 3 | `.elevated` | `.elevatedFab` | Solid background with drop shadow |
-| 4 | `.outlined` | `.outlinedFab` | Transparent background with border |
-| 5 | `.outlinedTonal` | `.outlinedTonalFab` | Transparent background with semi-transparent border |
-| 6 | `.text` | `.fab` | Transparent background, content in accent color, no shadow |
+| 1 | `.elevated` | `.elevatedFab` | Solid background with drop shadow |
+| 2 | `.outlined` | `.outlinedFab` | Transparent background with accent border, no shadow |
+| 3 | `.outlinedTonal` | `.outlinedTonalFab` | Semi-transparent background (tonal) with accent border, no shadow |
 
 **Loading and cooldown states**:
 - Loading indicator: shown as indeterminate progress bar; the button is disabled
@@ -146,18 +141,14 @@ Each style starts on a different rung and climbs the same ladder as interaction 
 
 | Style | Default | Hovered / Focused | Pressed |
 |---|---|---|---|
-| `text` / `fab` | transparent | tonal (light) | tonal (stronger) |
 | `outlined` / `outlinedFab` | transparent + border | tonal + border | solid + border |
 | `outlinedTonal` / `outlinedTonalFab` | tonal + border | tonal (stronger) + border | solid + border |
-| `filledTonal` / `filledTonalFab` | tonal | tonal (stronger) | solid |
-| `filled` / `filledFab` | solid | solid (lightened) | solid (stronger lightened) |
 | `elevated` / `elevatedFab` | solid + shadow | solid + bigger shadow | solid (no shadow) |
 
 **Key Invariants**:
 
 - **Outlined pair border**: The border color remains constant across default, hovered, and pressed states (only the fill changes). This prevents visual "pop" when the border would otherwise vanish or shift.
 - **Elevated shadow**: Only `elevated` and `elevatedFab` change shadows — they grow on hover (from `compact1` to `compact2`) and disappear on press (creating a "pressed down" metaphor). All other styles have fixed or zero shadows.
-- **Filled never gains shadow**: `filled` and `filledFab` use color changes alone; they never acquire shadows even on hover/press.
 - **Focus as hover**: Keyboard focus resolves to the same appearance as mouse hover, satisfying WCAG 2.4.7 (Focus Visible, AA) without adding a fifth visual state.
 
 **D15 Compliance** (Interaction States via Geometry Invariants):
@@ -389,27 +380,22 @@ This prevents reflow and flicker during state changes.
 
 **LayrzAlertStyle enum** — controls visual appearance:
 
-| Style | Layout | Left Panel | Right Panel | Border | Icon/Text Color |
-|---|---|---|---|---|---|
-| `layrz` (default) | split | tonal accent (20% opacity) | surface | solid accent | accent (icon) / fg1 title, fg2 body |
-| `filledTonal` | single | tonal fill | N/A | none | accent color |
-| `filled` | single | solid accent | N/A | solid accent | contrast color (white/black) |
-| `outlined` | single | transparent | N/A | accent | accent color |
-| `filledIcon` | split | solid accent | surface | solid accent | contrast (icon) / fg1 title, fg2 body |
+| Style | Left Panel | Right Panel | Border | Icon/Text Color |
+|---|---|---|---|---|
+| `layrz` (default) | tonal accent (20% opacity) | surface | solid accent | accent (icon) / fg1 title, fg2 body |
+| `filledIcon` | solid accent | surface | solid accent | contrast (icon) / fg1 title, fg2 body |
 
 **LayrzAlertStyleSpec resolver** — immutable specification holding resolved colors:
-- `backgroundColor` — fill color of alert background (or right panel for split layouts)
-- `borderColor` — color of alert border
-- `borderWidth` — width in logical pixels (from tokens.border.base or 0)
-- `leftPanelColor` — fill color of left panel in split-panel layouts; transparent for single-panel styles
-- `iconChipBackground` — fill color of icon chip container (single-panel styles only)
+- `backgroundColor` — fill color of right panel (surface)
+- `borderColor` — color of alert border (solid accent)
+- `borderWidth` — width in logical pixels (from tokens.border.base)
+- `leftPanelColor` — fill color of left panel (tonal or solid accent depending on style)
 - `iconColor` — color of icon glyph
-- `titleColor` — color of title text
-- `bodyColor` — color of description text
+- `titleColor` — color of title text (fg1)
+- `bodyColor` — color of description text (fg2)
 
 **Layout patterns**:
-- **FilledTonal/Filled/Outlined** — single container with icon chip (left), gap (sp12), text column (title + sp4 + description)
-- **Layrz/FilledIcon** — split-panel layout with left panel (colored background, centered icon, sp16 padding) and right panel (surface background, title/description, sp16 padding); border painted via `foregroundDecoration` over both panels
+- **All styles** — split-panel layout with left panel (colored background, centered icon, sp16 padding) and right panel (surface background, title/description, sp16 padding); border painted via `foregroundDecoration` over both panels
 
 **Interaction behavior**:
 - **Non-interactive** (`onTap: null`, the default): Alert is inert — no cursor change, no hover/press visual feedback, not focusable, announces as a container to assistive technology. Rendering is identical to the pre-interactive design.
@@ -692,10 +678,10 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 M2 is complete when all the following criteria are satisfied:
 
-- **Item 1 (LayrzButton)**: Constructor documented, twelve styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present
+- **Item 1 (LayrzButton)**: Constructor documented, six styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present, D27 style trim from 12 to 6 applied
 - **Item 2 (LayrzCard)**: Five elevation levels, optional backgroundColor override, interactive cards respond to hover/press/focus with shadow elevation changes, non-interactive cards are inert, D15 verified (no geometry changes during state transitions), `flutter analyze` clean, tests green, `@Preview` annotations present
 - **Item 3 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning with overflow detection and flipping, content is text-only (contentText XOR contentRichText), pass-through requirement (`ignorePointer: true`), graceful degradation with no Overlay ancestor, animation with motion tokens, RawTooltip Overlay requirement documented, SDK `verticalOffset` gotcha documented, LayrzButton `_buildTooltip()` helpers retired, `flutter analyze` clean, tests green (including passthrough verification), `@Preview` annotations present
-- **Item 4 (LayrzAlert)**: Six semantic types (info, success, warning, danger, context, custom), five visual styles (layrz, filledTonal, filled, outlined, filledIcon) with correct style spec resolution, both title and description required, LayrzAlertIcon standalone building block, non-interactive (no state changes), `flutter analyze` clean, tests green, `@Preview` annotations present for each style
+- **Item 4 (LayrzAlert)**: Six semantic types (info, success, warning, danger, context, custom), two visual styles (layrz, filledIcon) with split-panel layout and correct style spec resolution, both title and description required, LayrzAlertIcon standalone building block, interactive and non-interactive modes with D15 compliance, `flutter analyze` clean, tests green, `@Preview` annotations present for each style, D27 style trim from 5 to 2 applied
 - **Item 5 (LayrzChip/ChipGroup)**: Chip styling, delete action, group selection behaviour, state management via WidgetState
 - **Item 6 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
 - **Item 7 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens

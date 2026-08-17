@@ -49,63 +49,6 @@ void main() {
         expect(find.text('Title at 2x scale'), findsOneWidget);
       });
 
-      testWidgets('filledTonal style survives 2x text scale', (tester) async {
-        await pumpThemed(
-          tester,
-          MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-            child: const SizedBox(
-              width: 300,
-              child: LayrzAlert(
-                title: 'Title at 2x scale',
-                description: 'Description at 2x scale',
-                style: LayrzAlertStyle.filledTonal,
-              ),
-            ),
-          ),
-        );
-
-        expect(tester.takeException(), isNull);
-      });
-
-      testWidgets('filled style survives 2x text scale', (tester) async {
-        await pumpThemed(
-          tester,
-          MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-            child: const SizedBox(
-              width: 300,
-              child: LayrzAlert(
-                title: 'Title at 2x scale',
-                description: 'Description at 2x scale',
-                style: LayrzAlertStyle.filled,
-              ),
-            ),
-          ),
-        );
-
-        expect(tester.takeException(), isNull);
-      });
-
-      testWidgets('outlined style survives 2x text scale', (tester) async {
-        await pumpThemed(
-          tester,
-          MediaQuery(
-            data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-            child: const SizedBox(
-              width: 300,
-              child: LayrzAlert(
-                title: 'Title at 2x scale',
-                description: 'Description at 2x scale',
-                style: LayrzAlertStyle.outlined,
-              ),
-            ),
-          ),
-        );
-
-        expect(tester.takeException(), isNull);
-      });
-
       testWidgets('filledIcon style survives 2x text scale', (tester) async {
         await pumpThemed(
           tester,

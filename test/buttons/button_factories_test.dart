@@ -22,56 +22,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
     });
 
-    testWidgets('isElevated: true (default) uses elevated style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Save'), findsOneWidget);
     });
 
-    testWidgets('isElevated: false uses filled style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Save'), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: true uses elevatedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false uses filledFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.save(
           labelText: 'Save',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
@@ -163,56 +163,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
     });
 
-    testWidgets('isFab: false uses outlined style regardless of isElevated', (tester) async {
+    testWidgets('isFab: false, style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    testWidgets('isFab: false, isElevated: false also uses outlined style', (tester) async {
+    testWidgets('isFab: false, style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    testWidgets('isFab: true uses outlinedFab style regardless of isElevated', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated (default) uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false also uses outlinedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.cancel(
           labelText: 'Cancel',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
@@ -249,56 +249,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
     });
 
-    testWidgets('isElevated: true (default) uses elevated style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Info'), findsOneWidget);
     });
 
-    testWidgets('isElevated: false uses filled style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Info'), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: true uses elevatedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false uses filledFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.info(
           labelText: 'Info',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
@@ -335,56 +335,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
     });
 
-    testWidgets('isElevated: true (default) uses elevated style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Show'), findsOneWidget);
     });
 
-    testWidgets('isElevated: false uses filled style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Show'), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: true uses elevatedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false uses filledFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.show(
           labelText: 'Show',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
@@ -421,56 +421,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
     });
 
-    testWidgets('isElevated: true (default) uses elevated style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Edit'), findsOneWidget);
     });
 
-    testWidgets('isElevated: false uses filled style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Edit'), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: true uses elevatedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false uses filledFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.edit(
           labelText: 'Edit',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
@@ -507,56 +507,56 @@ void main() {
       expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
     });
 
-    testWidgets('isElevated: false (default) uses filled style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
           isFab: false,
-          isElevated: false,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(findButtonLabel('Delete'), findsOneWidget);
     });
 
-    testWidgets('isElevated: true uses elevated style', (tester) async {
+    testWidgets('style: LayrzButtonStyle.outlined uses outlined style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
           isFab: false,
-          isElevated: true,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 
       expect(findButtonLabel('Delete'), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: false (default) uses filledFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.elevated (default) uses elevatedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
           isFab: true,
-          isElevated: false,
+          style: LayrzButtonStyle.elevated,
         ),
       );
 
       expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
     });
 
-    testWidgets('isFab: true, isElevated: true uses elevatedFab style', (tester) async {
+    testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
       await pumpThemed(
         tester,
         LayrzButton.delete(
           labelText: 'Delete',
           onTap: () {},
           isFab: true,
-          isElevated: true,
+          style: LayrzButtonStyle.outlined,
         ),
       );
 

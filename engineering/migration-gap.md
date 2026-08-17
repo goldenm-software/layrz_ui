@@ -128,10 +128,10 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedAlert` → `LayrzAlert` | class | `lib/src/alerts/src/alert.dart` | port | LayrzAlert wiki exists; formal scope confirmed in D11. |
+| `ThemedAlert` → `LayrzAlert` | class | `lib/src/alerts/src/alert.dart` | port | LayrzAlert wiki exists; formal scope confirmed in D11. D27: style trim from 5 to 2 (layrz, filledIcon). |
 | `ThemedAlertIcon` → `LayrzAlertIcon` | class | `lib/src/alerts/src/icon.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
 | `ThemedAlertType` → `LayrzAlertType` | enum (info, success, warning, danger, context, custom) | `lib/src/alerts/src/type.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
-| `ThemedAlertStyle` → `LayrzAlertStyle` | enum (layrz, filledTonal, filled, outlined, filledIcon) | `lib/src/alerts/src/style.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). |
+| `ThemedAlertStyle` → `LayrzAlertStyle` | enum (layrz, filledIcon) | `lib/src/alerts/src/style.dart` | port | Required by LayrzAlert. Part of LayrzAlert family (D11). D27: trim from 5 to 2 values; removed filledTonal, filled, outlined. |
 | `ThemedChip` → `LayrzChip` | class | `lib/src/chips/src/chip.dart` | port | LayrzChip wiki exists; formal scope confirmed in D11. |
 | `ThemedChipGroup` → `LayrzChipGroup` | class | `lib/src/chips/src/group.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |
 | `ThemedChipStyle` → `LayrzChipStyle` | enum (filled, outlined, elevated) | `lib/src/chips/src/chip.dart` | port | Required by LayrzChip. Part of LayrzChip family (D11). |

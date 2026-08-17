@@ -4,15 +4,6 @@
 /// and shadow properties. Variants are paired with Fab (floating action button)
 /// equivalents that differ only in layout (square vs. rectangular).
 enum LayrzButtonStyle {
-  /// Solid fill with primary color, no border or shadow.
-  ///
-  /// Used for primary actions that demand attention. Content color is derived
-  /// from the background color for contrast.
-  filled,
-
-  /// Fab variant of [filled] — identical styling, square layout.
-  filledFab,
-
   /// Solid fill with primary color and elevation shadow, no border.
   ///
   /// Used for actions that feel "raised" or prominent. Shadow depth provides
@@ -21,15 +12,6 @@ enum LayrzButtonStyle {
 
   /// Fab variant of [elevated] — identical styling, square layout.
   elevatedFab,
-
-  /// Subtle tonal fill at [LayrzTokens.colors.tonalOpacity], primary accent color, no border.
-  ///
-  /// The primary action for most contexts. Lower visual weight than [filled]
-  /// while remaining clear and tappable.
-  filledTonal,
-
-  /// Fab variant of [filledTonal] — identical styling, square layout.
-  filledTonalFab,
 
   /// Outlined only, no fill or shadow, primary accent border.
   ///
@@ -46,26 +28,14 @@ enum LayrzButtonStyle {
   outlinedTonal,
 
   /// Fab variant of [outlinedTonal] — identical styling, square layout.
-  outlinedTonalFab,
-
-  /// Fully transparent background and border, content in accent color, no shadow.
-  ///
-  /// The lowest-emphasis button style. Used for tertiary or minimal-weight actions.
-  /// Hover and press states add a subtle tonal fill for feedback.
-  text,
-
-  /// Fab variant of [text] — identical styling, square layout.
-  ///
-  /// Icon-only square button at [kLayrzButtonHeight] × [kLayrzButtonHeight].
-  /// The label supplies the tooltip and accessible name.
-  fab;
+  outlinedTonalFab;
 
   /// Whether this style is a floating action button (Fab) variant.
   ///
   /// Fab variants differ from their base style only in layout—they are always
   /// square and icon-only, rendered at [kLayrzButtonHeight] × [kLayrzButtonHeight].
   bool get isFab => switch (this) {
-    filledFab || elevatedFab || filledTonalFab || outlinedFab || outlinedTonalFab || fab => true,
+    elevatedFab || outlinedFab || outlinedTonalFab => true,
     _ => false,
   };
 
@@ -74,7 +44,7 @@ enum LayrzButtonStyle {
   /// Tonal styles reduce visual weight by applying opacity to the accent color
   /// background rather than using a fully opaque color.
   bool get isTonal => switch (this) {
-    filledTonal || filledTonalFab || outlinedTonal || outlinedTonalFab => true,
+    outlinedTonal || outlinedTonalFab => true,
     _ => false,
   };
 
@@ -93,5 +63,24 @@ enum LayrzButtonStyle {
   bool get hasShadow => switch (this) {
     elevated || elevatedFab => true,
     _ => false,
+  };
+
+  /// Returns the Fab (square, icon-only) variant of this style.
+  ///
+  /// Maps non-Fab styles to their Fab counterparts:
+  /// - [elevated] → [elevatedFab]
+  /// - [outlined] → [outlinedFab]
+  /// - [outlinedTonal] → [outlinedTonalFab]
+  ///
+  /// For an already-Fab style, returns itself unchanged (identity-safe).
+  /// This getter enables semantic factories to honour [isFab] by applying
+  /// this transformation when needed.
+  LayrzButtonStyle get asFab => switch (this) {
+    elevated => elevatedFab,
+    elevatedFab => elevatedFab,
+    outlined => outlinedFab,
+    outlinedFab => outlinedFab,
+    outlinedTonal => outlinedTonalFab,
+    outlinedTonalFab => outlinedTonalFab,
   };
 }

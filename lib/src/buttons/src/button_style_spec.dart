@@ -169,15 +169,6 @@ class LayrzButtonStyleSpec {
     final contrastColor = accent.contrastColor;
 
     switch (style) {
-      case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
-        return LayrzButtonStyleSpec(
-          backgroundColor: accent,
-          borderColor: const Color(0x00000000),
-          borderWidth: tokens.border.base,
-          contentColor: contrastColor,
-          shadows: const [],
-        );
-
       case LayrzButtonStyle.elevated || LayrzButtonStyle.elevatedFab:
         return LayrzButtonStyleSpec(
           backgroundColor: accent,
@@ -189,15 +180,6 @@ class LayrzButtonStyleSpec {
           // provide clear separation at small sizes where elevation's faint offset
           // shadow would dissolve into the surface.
           shadows: tokens.shadow.compact1,
-        );
-
-      case LayrzButtonStyle.filledTonal || LayrzButtonStyle.filledTonalFab:
-        return LayrzButtonStyleSpec(
-          backgroundColor: accent.withOpacityValue(tokens.colors.tonalOpacity),
-          borderColor: const Color(0x00000000),
-          borderWidth: tokens.border.base,
-          contentColor: accent,
-          shadows: const [],
         );
 
       case LayrzButtonStyle.outlined || LayrzButtonStyle.outlinedFab:
@@ -213,15 +195,6 @@ class LayrzButtonStyleSpec {
         return LayrzButtonStyleSpec(
           backgroundColor: accent.withOpacityValue(kLayrzButtonOutlinedTonalOpacity),
           borderColor: accent,
-          borderWidth: tokens.border.base,
-          contentColor: accent,
-          shadows: const [],
-        );
-
-      case LayrzButtonStyle.text || LayrzButtonStyle.fab:
-        return LayrzButtonStyleSpec(
-          backgroundColor: const Color(0x00000000),
-          borderColor: const Color(0x00000000),
           borderWidth: tokens.border.base,
           contentColor: accent,
           shadows: const [],
@@ -282,23 +255,6 @@ class LayrzButtonStyleSpec {
     final contrastColor = accent.contrastColor;
 
     switch (style) {
-      // text / fab: transparent → tonal → tonal (stronger)
-      case LayrzButtonStyle.text || LayrzButtonStyle.fab:
-        final backgroundColor = rung == _ButtonLadderRung.hovered
-            ? accent.withOpacityValue(kLayrzButtonTextHoveredOpacity)
-            : accent.withOpacityValue(kLayrzButtonTextPressedOpacity);
-        return baseSpec.copyWith(
-          backgroundColor: backgroundColor,
-        );
-
-      // filled / filledFab: solid → solid (color shift) → solid (stronger shift)
-      case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
-        final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
-        final backgroundColor = Color.lerp(baseSpec.backgroundColor, contentColor, lerpFactor)!;
-        return baseSpec.copyWith(
-          backgroundColor: backgroundColor,
-        );
-
       // elevated / elevatedFab: solid + shadow → solid + bigger shadow → solid (no shadow)
       case LayrzButtonStyle.elevated || LayrzButtonStyle.elevatedFab:
         final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
@@ -311,22 +267,6 @@ class LayrzButtonStyleSpec {
         return baseSpec.copyWith(
           backgroundColor: backgroundColor,
           shadows: shadows,
-        );
-
-      // filledTonal / filledTonalFab: tonal → tonal (stronger) → solid
-      case LayrzButtonStyle.filledTonal || LayrzButtonStyle.filledTonalFab:
-        final opacity = rung == _ButtonLadderRung.hovered
-            ? tokens.colors.tonalOpacity + kLayrzButtonFilledTonalHoveredDelta
-            : tokens.colors.tonalOpacity + kLayrzButtonFilledTonalPressedDelta;
-        final cappedOpacity = opacity.clamp(0.0, 1.0);
-        final backgroundColor = accent.withOpacityValue(cappedOpacity);
-        // At pressed rung, if we've reached solid, content color becomes contrast.
-        final actualContentColor = rung == _ButtonLadderRung.pressed && cappedOpacity >= 1.0
-            ? contrastColor
-            : contentColor;
-        return baseSpec.copyWith(
-          backgroundColor: backgroundColor,
-          contentColor: actualContentColor,
         );
 
       // outlined / outlinedFab: transparent + border → tonal + border → solid + border

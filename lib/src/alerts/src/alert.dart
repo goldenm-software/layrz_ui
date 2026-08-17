@@ -18,7 +18,7 @@ import 'alert_type.dart';
 /// The widget requires both [title] and [description] — there are no optional variants.
 /// The [type] parameter controls the semantic colour and icon (info, success, warning,
 /// danger, context, or custom). The [style] parameter controls visual appearance
-/// (layrz, filledTonal, filled, outlined, or filledIcon).
+/// (layrz or filledIcon).
 ///
 /// **Interaction behavior:**
 /// - When [onTap] is **null**, the alert is inert: no hover response, no press response,
@@ -36,16 +36,13 @@ import 'alert_type.dart';
 ///   - Shadow animates alongside lift with [LayrzTokens.motion.dHover] duration and [LayrzTokens.motion.easingEnter] curve.
 ///
 /// Layout:
-/// - For [LayrzAlertStyle.layrz] and [LayrzAlertStyle.filledIcon]:
-///   A split-panel design with an icon on the left and text on the right (neutral
-///   surface background). The left panel is tonal for layrz and solid accent for filledIcon.
-/// - For all other styles:
-///   A single-row container with an icon chip on the left, gap, and a title/description
-///   column on the right.
+/// A split-panel design with an icon on the left and text on the right (neutral
+/// surface background). The left panel is tonal for [LayrzAlertStyle.layrz] and solid
+/// accent for [LayrzAlertStyle.filledIcon].
 ///
 /// Responsive:
 /// - No fixed heights on text-bearing elements (supports WCAG 1.4.4 text scaling).
-/// - Only the icon chip and filledIcon left panel have fixed dimensions.
+/// - Only the icon and filledIcon left panel have fixed dimensions.
 class LayrzAlert extends StatefulWidget {
   /// The semantic type of the alert.
   ///
@@ -91,8 +88,7 @@ class LayrzAlert extends StatefulWidget {
 
   /// The size of the icon glyph.
   ///
-  /// If null, defaults to [kLayrzAlertFilledIconSize] for [LayrzAlertStyle.filledIcon],
-  /// or [kLayrzAlertIconSize] for all other styles.
+  /// If null, defaults to [kLayrzAlertFilledIconSize].
   final double? iconSize;
 
   /// Called when the user taps the alert.
@@ -287,12 +283,8 @@ class _LayrzAlertState extends State<LayrzAlert> {
       resolvedIcon = widget.type.icon ?? LayrzIcons.solarOutlineInfoSquare;
     }
 
-    // Resolve icon size. Split-panel styles (layrz and filledIcon) use the larger size.
-    final effectiveIconSize =
-        widget.iconSize ??
-        (widget.style == LayrzAlertStyle.layrz || widget.style == LayrzAlertStyle.filledIcon
-            ? kLayrzAlertFilledIconSize
-            : kLayrzAlertIconSize);
+    // Resolve icon size.
+    final effectiveIconSize = widget.iconSize ?? kLayrzAlertFilledIconSize;
 
     // Resolve spec.
     final spec = LayrzAlertStyleSpec.resolve(
@@ -302,167 +294,13 @@ class _LayrzAlertState extends State<LayrzAlert> {
       isInteractive: widget.onTap != null,
     );
 
-    // For split-panel styles (layrz and filledIcon), use the split-panel layout.
-    if (widget.style == LayrzAlertStyle.layrz || widget.style == LayrzAlertStyle.filledIcon) {
-      final content = _buildSplitPanelContent(
-        tokens: tokens,
-        leftPanelColor: spec.leftPanelColor,
-        icon: resolvedIcon,
-        iconColor: spec.iconColor,
-        iconSize: effectiveIconSize,
-      );
-
-      // If not interactive, return the content as-is with container semantics.
-      if (widget.onTap == null) {
-        return Semantics(
-          label: '${widget.title}. ${widget.description}',
-          container: true,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(tokens.radius.r12),
-            ),
-            foregroundDecoration: BoxDecoration(
-              border: Border.all(
-                color: spec.borderColor,
-                width: spec.borderWidth,
-              ),
-              borderRadius: BorderRadius.circular(tokens.radius.r12),
-            ),
-            child: content,
-          ),
-        );
-      }
-
-      // If interactive, wrap with focus, keyboard, and semantic support.
-      final interactiveAlert = FocusableActionDetector(
-        onShowHoverHighlight: (show) {
-          _statesController.update(WidgetState.hovered, show);
-          _updateLift();
-        },
-        onShowFocusHighlight: (show) {
-          _statesController.update(WidgetState.focused, show);
-          _updateLift();
-        },
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              widget.onTap!();
-              return null;
-            },
-          ),
-        },
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) {
-            _statesController.update(WidgetState.hovered, true);
-            _updateLift();
-          },
-          onExit: (_) {
-            _statesController.update(WidgetState.hovered, false);
-            _updateLift();
-          },
-          child: Listener(
-            onPointerDown: _onPointerDown,
-            onPointerUp: _onPointerUp,
-            onPointerCancel: _onPointerUp,
-            child: GestureDetector(
-              onTap: widget.onTap,
-              onTapCancel: () {
-                _statesController.update(WidgetState.pressed, false);
-                _updateLift();
-              },
-              child: AnimatedContainer(
-                duration: tokens.motion.dHover,
-                curve: tokens.motion.easingEnter,
-                transform: Matrix4.translationValues(0, -_currentLift, 0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(tokens.radius.r12),
-                  boxShadow: _resolveShadow(tokens),
-                ),
-                foregroundDecoration: BoxDecoration(
-                  border: Border.all(
-                    color: spec.borderColor,
-                    width: spec.borderWidth,
-                  ),
-                  borderRadius: BorderRadius.circular(tokens.radius.r12),
-                ),
-                child: content,
-              ),
-            ),
-          ),
-        ),
-      );
-
-      return Semantics(
-        button: true,
-        enabled: true,
-        label: '${widget.title}. ${widget.description}',
-        child: interactiveAlert,
-      );
-    }
-
-    // For all other styles: single container with icon chip, gap, and text column.
-    final content = Container(
-      padding: EdgeInsets.all(tokens.spacing.sp16),
-      decoration: BoxDecoration(
-        color: spec.backgroundColor,
-        border: spec.borderWidth > 0
-            ? Border.all(
-                color: spec.borderColor,
-                width: spec.borderWidth,
-              )
-            : null,
-        borderRadius: BorderRadius.circular(tokens.radius.r12),
-      ),
-      child: Row(
-        children: [
-          // Icon chip.
-          ExcludeSemantics(
-            child: Container(
-              width: kLayrzAlertIconBoxSize,
-              height: kLayrzAlertIconBoxSize,
-              decoration: BoxDecoration(
-                color: spec.iconChipBackground.a > 0.0 ? spec.iconChipBackground : null,
-                borderRadius: BorderRadius.circular(tokens.radius.r10),
-              ),
-              child: Center(
-                child: Icon(
-                  resolvedIcon,
-                  color: spec.iconColor,
-                  size: effectiveIconSize,
-                ),
-              ),
-            ),
-          ),
-          // Gap.
-          SizedBox(width: tokens.spacing.sp12),
-          // Text column.
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  style: tokens.typography.title.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: spec.titleColor,
-                  ),
-                ),
-                SizedBox(height: tokens.spacing.sp4),
-                Text(
-                  widget.description,
-                  style: tokens.typography.body.copyWith(
-                    color: spec.bodyColor,
-                  ),
-                  maxLines: widget.maxLines,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    // Build split-panel content.
+    final content = _buildSplitPanelContent(
+      tokens: tokens,
+      leftPanelColor: spec.leftPanelColor,
+      icon: resolvedIcon,
+      iconColor: spec.iconColor,
+      iconSize: effectiveIconSize,
     );
 
     // If not interactive, return the content as-is with container semantics.
@@ -470,7 +308,19 @@ class _LayrzAlertState extends State<LayrzAlert> {
       return Semantics(
         label: '${widget.title}. ${widget.description}',
         container: true,
-        child: content,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(tokens.radius.r12),
+          ),
+          foregroundDecoration: BoxDecoration(
+            border: Border.all(
+              color: spec.borderColor,
+              width: spec.borderWidth,
+            ),
+            borderRadius: BorderRadius.circular(tokens.radius.r12),
+          ),
+          child: content,
+        ),
       );
     }
 
@@ -517,7 +367,14 @@ class _LayrzAlertState extends State<LayrzAlert> {
               curve: tokens.motion.easingEnter,
               transform: Matrix4.translationValues(0, -_currentLift, 0),
               decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(tokens.radius.r12),
                 boxShadow: _resolveShadow(tokens),
+              ),
+              foregroundDecoration: BoxDecoration(
+                border: Border.all(
+                  color: spec.borderColor,
+                  width: spec.borderWidth,
+                ),
                 borderRadius: BorderRadius.circular(tokens.radius.r12),
               ),
               child: content,

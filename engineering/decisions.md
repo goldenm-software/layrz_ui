@@ -555,7 +555,7 @@ Many components (LayrzAlert, LayrzChip, LayrzSelect, LayrzButton, LayrzCalendar,
 - All other input widgets and controls as listed in wiki pages
 
 **Feedback & Display:**
-- `LayrzAlert`, `LayrzAlertIcon`, `LayrzAlertType`, `LayrzAlertStyle` — port ThemedAlert family with styling variants (layrz, filledTonal, filled, outlined, filledIcon)
+- `LayrzAlert`, `LayrzAlertIcon`, `LayrzAlertType`, `LayrzAlertStyle` — port ThemedAlert family with styling variants (layrz, filledIcon; D27 trim from 5 to 2)
 - `LayrzChip`, `LayrzChipGroup`, `LayrzChipStyle`, `LayrzChipGroupBehavior` — port ThemedChip family with behavior modes (none, single, multi)
 - `LayrzTooltip`, `LayrzTooltipPosition` — port ThemedTooltip family with position control
 
@@ -1659,6 +1659,79 @@ An additive option (keep both the root barrel and per-domain entrypoints, export
 ### Review Trigger
 
 **None.** This decision reverses D19 based on a clear platform-coverage analysis and zero-cost timing. No review trigger is needed; the reversal has been validated and is final.
+
+---
+
+## D27: Component Enum Trims — LayrzButtonStyle and LayrzAlertStyle
+
+**Date**: 2026-08-17  
+**Status**: Accepted  
+**Category**: Feature Scope / Architecture
+
+### Context
+
+Two design votes (DESIGN-20 and DESIGN-22) trimmed unused style enums in core components. `LayrzButtonStyle` shipped with twelve style variants; analysis of consuming patterns showed that four styles were never used in practice or conflicted with the fill ladder principle. `LayrzAlertStyle` shipped with five styles; two were single-panel layouts that fragmented the visual language. The votes removed the unused variants to sharpen the design system's focus.
+
+### Decision
+
+**DESIGN-20: `LayrzButtonStyle` trimmed from 12 to 6 values.**
+
+Removed: `filled`, `filledFab`, `filledTonal`, `filledTonalFab`, `text`, `fab`  
+Remaining: `elevated`, `elevatedFab`, `outlined`, `outlinedFab`, `outlinedTonal`, `outlinedTonalFab`
+
+The semantic button factories (`.save`, `.cancel`, `.info`, `.show`, `.edit`, `.delete`) changed signature: the `isElevated: bool` parameter is **removed** and replaced by an exposed `style: LayrzButtonStyle` parameter. All six factories default to `LayrzButtonStyle.elevated` (a deliberate uniformity, replacing the previous per-factory variation where `isElevated: false` kept `.cancel()` and `.delete()` quiet via the `filled` style). The `isFab: bool` parameter remains, and factories automatically map the given style to its Fab twin via a new `asFab` enum extension getter. Examples:
+- `LayrzButton.save(labelText: 'Save', onTap: _save)` → elevated style by default
+- `LayrzButton.delete(labelText: 'Delete', onTap: _delete, style: LayrzButtonStyle.outlined)` → pass style explicitly for quiet appearance when desired
+- `LayrzButton.save(labelText: 'Save', onTap: _save, isFab: true)` → factory maps to `.elevatedFab` automatically
+
+**DESIGN-22: `LayrzAlertStyle` trimmed from 5 to 2 values.**
+
+Removed: `filledTonal`, `filled`, `outlined`  
+Remaining: `layrz`, `filledIcon`
+
+Consequence: all alerts now render in split-panel layout (the two survivors were the only split-panel options). The single-panel render path (`filledTonal`, `filled`, `outlined`) is deleted.
+
+**Design Rule (Not Enforced in Code):**
+
+Button labels should be concise; do not rely on `TextOverflow.ellipsis` / `maxLines: 1` to truncate long text. This is guidance for button designers and callers, not a runtime constraint. `LayrzButton` continues to render labels with `TextOverflow.ellipsis` / `maxLines: 1`.
+
+### Rationale
+
+- **Simplification**: Fewer style options reduce decision paralysis for consumers. The removed styles were rarely used and created redundant choices (e.g., `filled`, `filledTonal`, `filledFab`, `filledTonalFab` all occupied similar visual space).
+- **Consistency**: Two surviving alert styles both use split-panel layout, unifying the visual language. Single-panel variants fragmented the design.
+- **Cost-benefit**: The package is 0.0.x with minimal real-world consumers at the time of the vote (0.0.5 shipped in August 2026). Removing unused variants is low-cost now; keeping them would add long-term maintenance burden.
+- **Fill ladder alignment**: The six surviving button styles map cleanly to the fill ladder principle (transparent → tonal → solid), without the complexity of managing six variants with overlapping appearances.
+
+### Consequences
+
+- **Breaking change**. Consuming apps using deleted styles will fail at compile time. Examples:
+  - `style: LayrzButtonStyle.filled` → must rewrite to `style: LayrzButtonStyle.elevated` or `style: LayrzButtonStyle.outlined`
+  - `style: LayrzAlertStyle.filledTonal` → must rewrite to `style: LayrzAlertStyle.layrz`
+- **Enum extensions**:
+  - New: `LayrzButtonStyle.asFab` getter maps regular styles to Fab twins
+  - Removed: no extensions changed, but the six-style shape is smaller
+- **Icon size constants** (LayrzAlert only):
+  - Removed: `kLayrzAlertIconBoxSize`, `kLayrzAlertIconSize` (orphaned by single-panel removal)
+  - Remaining: `kLayrzAlertFilledIconSize` (the one icon size for split-panel layouts)
+- **Factory signatures** (LayrzButton only):
+  - Old: `LayrzButton.save(labelText: 'Save', onTap: _save, isElevated: true)`; `.cancel()` and `.delete()` used `isElevated: false` for flat appearance
+  - New: `LayrzButton.save(labelText: 'Save', onTap: _save, style: LayrzButtonStyle.elevated)` — all six factories use the same `elevated` default
+  - Removed: `isElevated` boolean parameter (eliminated the per-factory variation)
+  - Added: `style: LayrzButtonStyle` parameter with uniform `elevated` default across all six factories
+  - Consequence: callers pass `style: LayrzButtonStyle.outlined` explicitly when a quiet appearance is desired for `.cancel()` or `.delete()`
+
+### Versioning
+
+Both trims are shipped in **0.0.6** (released 2026-08-17).
+
+### Related Decisions
+
+- **D15** (Interaction States Never Change Geometry) — the six surviving button styles all conform to D15's no-geometry-change rule and the fill ladder principle, making D15 enforcement simpler.
+- **D11** (Component Scope Confirmations) — both button and alert were confirmed in M2 with these style enums in place; the votes refined the enum contents without changing the components' scoping or milestones.
+
+### Review Trigger
+
+**None.** Both votes have concluded and shipped. If consuming apps report that the surviving styles are insufficient, revisit whether additional styles (e.g., a quieter outline variant for buttons, a filled-solid variant for alerts) should be added in a future release.
 
 ---
 
