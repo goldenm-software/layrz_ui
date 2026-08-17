@@ -7,13 +7,13 @@ import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import 'button_content.dart' show buildButtonContent, buildFabContent, buildButtonContentSpan;
 import 'button_controller.dart';
 import 'button_indicator.dart';
 import 'button_style.dart';
 import 'button_style_spec.dart';
-import 'button_tooltip_position.dart';
 import 'button_type.dart';
 
 /// Resolves the appropriate button style for semantic factories based on elevation context.
@@ -692,17 +692,8 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
     final tooltipMessage = _composeTooltipMessage();
     final wrappedContent = _shouldShowTooltip()
-        ? RawTooltip(
-            semanticsTooltip: tooltipMessage,
-            tooltipBuilder: (context, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: _buildTooltip(context, tokens, tooltipMessage),
-              );
-            },
-            hoverDelay: Duration.zero,
-            triggerMode: TooltipTriggerMode.longPress,
-            positionDelegate: layrzButtonTooltipPosition,
+        ? LayrzTooltip(
+            contentText: tooltipMessage,
             child: buttonContent,
           )
         : buttonContent;
@@ -825,32 +816,6 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
     }
 
     return widget.hintText ?? '';
-  }
-
-  /// Builds the tooltip widget with the given [message].
-  ///
-  /// The tooltip displays text in the foreground color (fg1) with a contrasting
-  /// background, rendered in the small label style from the design system.
-  Widget _buildTooltip(BuildContext context, LayrzTokens tokens, String message) {
-    const tooltipPadding = 12.0;
-    const tooltipRadius = 8.0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: tooltipPadding,
-        vertical: tooltipPadding / 2,
-      ),
-      decoration: BoxDecoration(
-        color: tokens.colors.fg1,
-        borderRadius: BorderRadius.circular(tooltipRadius),
-      ),
-      child: Text(
-        message,
-        style: tokens.typography.labelSmall.copyWith(
-          color: tokens.colors.background,
-        ),
-      ),
-    );
   }
 }
 

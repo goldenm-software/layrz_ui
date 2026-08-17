@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 
@@ -28,7 +29,10 @@ Widget buildElevationSection() {
                   6,
                   (index) => Padding(
                     padding: EdgeInsets.only(right: tokens.spacing.sp12),
-                    child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
+                    child: LayrzTooltip(
+                      contentText: 'elevation$index shadow token',
+                      child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
+                    ),
                   ),
                 ),
               ),
@@ -50,7 +54,10 @@ Widget buildElevationSection() {
                         style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
-                      _ElevationCard(elevation: 0, label: '0u outline'),
+                      LayrzTooltip(
+                        contentText: 'elevation0 with outline border',
+                        child: _ElevationCard(elevation: 0, label: '0u outline'),
+                      ),
                     ],
                   ),
                 ),
@@ -64,7 +71,10 @@ Widget buildElevationSection() {
                         style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
-                      _ElevationCard(elevation: 2, label: 'Reversed', reverse: true),
+                      LayrzTooltip(
+                        contentText: 'elevation2 with shadow flipped downward',
+                        child: _ElevationCard(elevation: 2, label: 'Reversed', reverse: true),
+                      ),
                     ],
                   ),
                 ),
@@ -78,7 +88,10 @@ Widget buildElevationSection() {
                         style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
                       ),
                       SizedBox(height: tokens.spacing.sp8),
-                      _ElevationCard(elevation: 0, label: 'No outline', hideOnElevationZero: true),
+                      LayrzTooltip(
+                        contentText: 'elevation0 with no outline or shadow',
+                        child: _ElevationCard(elevation: 0, label: 'No outline', hideOnElevationZero: true),
+                      ),
                     ],
                   ),
                 ),

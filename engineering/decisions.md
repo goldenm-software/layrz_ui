@@ -796,6 +796,62 @@ Hover, press, focus, and disabled states may vary **colour, border colour, shado
 
 If a component design genuinely needs a geometry change to be usable — an expanding search bar that grows to full width, a growing text field — that is a deliberate **layout behaviour** (expanding to fill space, revealing content) rather than an interaction state. Such cases should be argued on their own terms in the component's decision, not treated as an exception to this rule. The distinction is intent: state changes provide feedback within fixed bounds; layout changes intentionally restructure the view.
 
+**Update (2026-08-16) — Paint-Time Transforms Permitted; Hover Detection Safety Required**
+
+D15's prohibition on geometry changes was originally absolute: nothing layout-affecting in any interaction state. However, **paint-time transforms** (Transform, AnimatedSlide, AnimatedContainer.transform) move pixels without touching the render box's layout, so no reflow occurs and no sibling shifts. This permits a controlled exception: interaction states MAY apply paint-only translations if and only if the hover detection sits outside the moved element.
+
+**The distinction — layout-affecting vs. paint-only:**
+- **Layout-affecting** (forbidden): changes to size, padding, margin, border width, or the `RenderBox.size` rect. Causes reflow and sibling shifting. Example: widening a border from 1px to 2px.
+- **Paint-only** (permitted): `Transform.translate()`, `AnimatedSlide`, or `transform:` property on `AnimatedContainer`. Moves pixels without changing the widget's rect. The hit target stays fixed in layout space while the visual moves. Example: lifting a card on hover via `Transform.translate(offset: Offset(0, -elevation))`.
+
+**Critical safety constraint — Hover detection outside the transform:**
+
+A widget that applies a paint-time transform on hover can move out from under the pointer. If the hover detector (MouseRegion, FocusableActionDetector) is inside the transform, the hit region moves with the visual, and this sequence occurs:
+1. User hovers the element → element lifts via transform
+2. Element visual moves up, taking its hit target with it
+3. Original pointer position is no longer over the hit target → hover exits
+4. Element drops back down → hover re-enters → lifts again → loop
+
+This is a documented precedent in this milestone: **LayrzTooltip** surfaced on top of its anchor widget, causing the anchor to lose hover as the tooltip appeared, which triggered the tooltip to hide, which re-triggered the anchor's hover, indefinitely.
+
+**The rule:** The `MouseRegion` or `FocusableActionDetector` detecting the hover state must NOT be inside the `Transform`. The detector wraps the transform, so the hit region stays fixed in layout space while the child's pixels move.
+
+```dart
+// CORRECT: detector outside transform
+MouseRegion(
+  onEnter: (_) => setState(() => _hovered = true),
+  onExit: (_) => setState(() => _hovered = false),
+  child: Transform.translate(
+    offset: _hovered ? Offset(0, -4) : Offset.zero,
+    child: MyCard(),
+  ),
+)
+
+// WRONG: detector inside transform (hover oscillates)
+Transform.translate(
+  offset: _hovered ? Offset(0, -4) : Offset.zero,
+  child: MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: MyCard(),
+  ),
+)
+```
+
+**Testing requirements:** Components using paint-time transforms on interaction states must include:
+1. A layout-neutrality test asserting the widget's `RenderBox.size` and rect are identical in all interaction states (hovered, pressed, focused, normal, disabled). Example: `expect(findRenderBox(find.byType(MyCard)).size, equals(Offset(200, 100)))` before and after hover.
+2. An oscillation-safety test that hovers at the edge of the moving element and asserts no oscillation occurs (the hover state stabilizes within one frame and remains stable for 100ms+).
+
+### Consequences
+
+- **LayrzAlert (interactive mode)** is the first component to use paint-time transforms, lifting on hover with shadow elevation step-up.
+- **LayrzCard** deliberately retains shadow-only hover for now (no lift). Whether shadow-only components should adopt paint-time lift is an open design question, not an oversight or blocker.
+- **Existing components remain fully compliant** — nothing changes for components already shipped or in progress.
+
+### Review Trigger
+
+After LayrzAlert's interactive mode ships and accumulates user feedback, revisit whether the lift affordance should become standard for all hoverable components (cards, buttons, etc.) or remain opt-in per-component design.
+
 ---
 
 ## D16: Project Items Stay Drafts, Converted to Issues On Demand

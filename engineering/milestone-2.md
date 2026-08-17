@@ -12,8 +12,8 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 |---|---|---|
 | 1 | LayrzButton with twelve styles and six semantic factories | Done |
 | 2 | LayrzCard (elevated surface container) | Done |
-| 3 | LayrzTooltip on RawTooltip | Todo |
-| 4 | LayrzAlert (inline status callout) | Todo |
+| 3 | LayrzTooltip (composed on Overlay) | Done |
+| 4 | LayrzAlert (inline status callout) | Done |
 | 5 | LayrzChip and LayrzChipGroup | Todo |
 | 6 | LayrzRow / LayrzCol responsive grid | Done |
 | 7 | LayrzConstrainedView | Done |
@@ -27,7 +27,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 ## Definition of Done
 
-- All 11 items below complete
+- All 12 items below complete
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass on all M2 tests
 - Coverage floor (90%) not breached
@@ -265,49 +265,226 @@ This prevents reflow and flicker during state changes.
 
 ---
 
-### 3. LayrzTooltip on RawTooltip
+### 3. LayrzTooltip (Composed on Overlay)
 
-**Brief description**:
+**What changes**:
+- Create `lib/src/tooltips/tooltip.dart` — `LayrzTooltip` widget, composed on `Overlay` / `OverlayEntry`
+- Create `lib/src/tooltips/tooltip_position.dart` — position enumeration and delegate function
+- Create `lib/src/constants/tooltip.dart` — sizing constants
+- Create `lib/tooltips.dart` barrel with re-exports
+- Retire temporary RawTooltip use in LayrzButton (`_buildTooltip()` and `layrzButtonTooltipPosition()` helpers removed, `lib/src/buttons/button_tooltip_position.dart` deleted, `kLayrzButtonTooltipVerticalOffset` removed)
 
-`LayrzTooltip` wraps `RawTooltip` from package:flutter/widgets.dart (Flutter 3.47+). Provides a styled tooltip with theme-aware positioning, animation, and text formatting.
+**Implementation note**: The initial design assumption was that `LayrzTooltip` would be a thin wrapper over `RawTooltip`. During implementation, two issues emerged: (1) `RawTooltip` wraps the child in `Listener(HitTestBehavior.opaque)`, making the anchor bounds opaque and breaking hit-test transparency in overlapping layouts, and (2) the `positionDelegate` quirk with hardcoded `verticalOffset: 0.0` required baking gap logic into the delegate. The decision was reversed: `LayrzTooltip` was rebuilt as a composed implementation on `Overlay` / `OverlayEntry`, which fixed both issues and is now the shipped design.
 
-Replaces the temporary use of RawTooltip in LayrzButton with a proper tooltip component.
+**API contract**:
 
-**Important notes**:
-- `LayrzTooltip` is built first because `LayrzButton` currently holds `_buildTooltip()` and `layrzButtonTooltipPosition()` helper methods that this component will retire.
-- `LayrzTooltip` is a thin wrapper over `RawTooltip`, not a reimplementation, since `tooltipBuilder` removes the restyling problem that justified `ThemedTooltip`.
-- SDK gotcha: when a `positionDelegate` is supplied to `RawTooltip`, `TooltipPositionContext.verticalOffset` is hardcoded to `0.0`, so the gap between tooltip and anchor must come from your own constant.
+`LayrzTooltip` constructor:
+- `child` (Widget, required) — the widget being wrapped with the tooltip
+- `contentText` (String?, optional) — plain-text tooltip content (mutually exclusive with `contentRichText`)
+- `contentRichText` (TextSpan?, optional) — rich-text content with per-span styling overrides (mutually exclusive with `contentText`)
+- `position` (LayrzTooltipPosition, default `bottom`) — preferred position relative to the anchor (top, bottom, left, right); automatically flips to opposite side if tooltip would overflow
 
-**Dependencies**: M1 (LayrzTheme, tokens), Flutter 3.47 (RawTooltip).
+**Surface styling is fixed** to ensure visual consistency:
+- Background color: `tokens.colors.fg1`
+- Text color: `tokens.colors.background`
+- Text style: `tokens.typography.labelSmall`
+- Padding: horizontal `sp12`, vertical `sp6`
+- Border radius: `r8`
+- Max width: 80% of viewport width (guarded by `kLayrzTooltipMaxWidthFactor`)
+
+**LayrzTooltipPosition enum** — specifies anchor position:
+- `top` — position above the anchor
+- `bottom` — position below the anchor (default)
+- `left` — position to the left of the anchor
+- `right` — position to the right of the anchor
+
+**Positioning algorithm**:
+1. Compute preferred position on the specified side, offset by `kLayrzTooltipOffset` (10u gap)
+2. Check if the tooltip would overflow the overlay bounds on that side
+3. If it overflows, flip to the opposite side
+4. Clamp the tooltip on the cross axis to stay inside the overlay bounds
+
+**Key invariants**:
+- **Hit-test transparency** — The wrapper layers use `HitTestBehavior.translucent`, ensuring that wrapping a widget in `LayrzTooltip` does not change its hit-testing. Pointers pass through to the child and to layers beneath. The tooltip surface itself uses `ignorePointer: true` and is fully pass-through.
+- **Layout neutrality** — Wrapping a widget in `LayrzTooltip` does not change its size, position, or layout. The tooltip is a separate `Overlay` portal.
+- **Anchor-always-visible guarantee** — The tooltip always renders outside the anchor's bounding box on all four sides. This prevents the anchor from losing hover state and entering a flicker loop.
+- **Graceful degradation**: If no Overlay ancestor exists, the widget returns its child unchanged (no tooltip shown). This allows tooltips to work in test harnesses without full ancestor trees.
+- **Content is text-only**: Either `contentText` XOR `contentRichText`, enforced by constructor assert; no Widget content parameter. Mirrors LayrzButton's `labelText`-only rule
+- **Trigger modes**: Long-press (touch) or hover (desktop); auto-dismiss on pointer-exit
+- **No `color` parameter**: Surface color is standardised on `tokens.colors.fg1`/`tokens.colors.background`; removed from the original `ThemedTooltip` spec
+
+**Dependencies**:
+- M1: LayrzTheme, tokens
+- Flutter 3.47: @Preview API (for widget preview annotations)
+- Flutter SDK: Overlay, OverlayEntry, TextPainter, RenderBox (for measuring and positioning)
 
 **Files affected**:
 - `lib/tooltips.dart` (entrypoint barrel, new)
 - `lib/src/tooltips/` (new module directory)
-- `lib/src/tooltips/tooltip.dart` (new)
-- `test/tooltips/tooltip_test.dart` (tests)
+- `lib/src/tooltips/tooltip.dart` (new, ~150 lines)
+- `lib/src/tooltips/tooltip_position.dart` (new, ~150 lines)
+- `lib/src/constants/tooltip.dart` (new)
+- `lib/src/buttons/button_tooltip_position.dart` (deleted)
+- `test/tooltips/tooltip_test.dart` (new, tests)
+- `test/tooltips/tooltip_passthrough_test.dart` (new, pass-through verification)
+- `wiki/Widgets/LayrzTooltip.md` (new wiki page)
+- `example/lib/src/sections/tooltips_section.dart` (new example usage)
+
+**Acceptance criteria**:
+- Constructor has every parameter documented (rule #1)
+- Exactly one of `contentText` or `contentRichText` is non-null (enforced by assert)
+- Surface styling is fixed and consistent with spec (fg1 background, background text color, labelSmall style, sp12/sp6 padding, r8 radius)
+- `LayrzTooltipPosition` enum correctly positions tooltip on specified side (top, bottom, left, right)
+- Overflow detection flips tooltip to opposite side when needed; tests verify all four positions and all four flips
+- Cross-axis clamping keeps tooltip inside overlay bounds
+- Hit-test transparency verified: wrapping a widget in `LayrzTooltip` does not change its hit-testing; anchor wrapper uses `HitTestBehavior.translucent`
+- Surface pass-through verified: tooltip surface uses `ignorePointer: true`; content painted behind visible tooltip remains interactive
+- Layout neutrality verified: wrapping does not change size, position, or layout of the child
+- Anchor-always-visible verified: tooltip never overlaps the anchor's bounding box across all four positions and various anchor sizes (down to 4×24)
+- Graceful degradation: returns child unchanged when no Overlay ancestor
+- `kLayrzTooltipOffset` gap between tooltip and anchor is consistent (10u)
+- `kLayrzTooltipMaxWidthFactor` constrains tooltip to 80% of viewport width
+- Animation: fade-in/out with tokens.motion.dHover and tokens.motion.dPress timings
+- Dismissal: auto-dismiss on pointer-exit; no tooltip leak across anchors on re-hover
+- Lifecycle safety: no crashes on rapid mount/unmount cycles; no memory leaks
+- `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
+- `@Preview` annotations present at bottom of tooltip.dart file
+- Wiki page documents final API, positioning, hit-test transparency guarantee, layout neutrality, anchor-always-visible invariant, and graceful degradation
+- LayrzButton `_buildTooltip()` and `layrzButtonTooltipPosition()` helpers retired
 
 ---
 
 ### 4. LayrzAlert (Inline Status Callout)
 
-**Brief description**:
+**What changes**:
+- Create `lib/src/alerts/alert.dart` — `LayrzAlert` widget with optional interactive behavior
+- Create `lib/src/alerts/alert_type.dart` — semantic type enumeration
+- Create `lib/src/alerts/alert_style.dart` — visual style enumeration
+- Create `lib/src/alerts/alert_style_spec.dart` — immutable style specification resolver
+- Create `lib/src/alerts/alert_icon.dart` — `LayrzAlertIcon` standalone building block
+- Create `lib/src/constants/alert.dart` — sizing constants including `kLayrzAlertHoverLift`
+- Create `lib/alerts.dart` barrel with re-exports
+- Add `flattenOn` and `isOpaque` extension methods to `LayrzColorExtensions` for flattening translucent colors and checking opacity
 
-`LayrzAlert` — inline status message widget for info, success, warning, danger, context, or custom severity. Five visual styles:
-- `.layrz` — filled background
-- `.filledTonal` — semi-transparent background
-- `.filled` — solid background
-- `.outlined` — border only
-- `.filledIcon` — icon-centric layout
+**API contract**:
 
-Replaces ThemedAlert from layrz_theme.
+`LayrzAlert` constructor:
+- `title` (String, required) — the title text displayed in bold
+- `description` (String, required) — the body text with optional line-limiting
+- `type` (LayrzAlertType, default `info`) — semantic type controlling icon and default color
+- `style` (LayrzAlertStyle, default `layrz`) — visual style determining background, border, and text treatment
+- `maxLines` (int, default 3) — maximum lines for description before ellipsis truncation
+- `color` (Color?, optional) — override color, only used when `type == LayrzAlertType.custom`
+- `icon` (IconData?, optional) — override icon, only used when `type == LayrzAlertType.custom`
+- `iconSize` (double?, optional) — override icon glyph size; defaults to `kLayrzAlertIconSize` or `kLayrzAlertFilledIconSize` depending on style
+- `onTap` (VoidCallback?, optional, default null) — callback invoked when the alert is tapped; null disables interactivity
 
-**Dependencies**: M1 (LayrzTheme, tokens).
+**LayrzAlertType enum** — controls semantic color and icon:
+- `info` — `tokens.colors.info` (blue), icon: `solarOutlineInfoSquare`
+- `success` — `tokens.colors.success` (green), icon: `solarOutlineCheckSquare`
+- `warning` — `tokens.colors.warning` (orange), icon: `solarOutlineDangerSquare`
+- `danger` — `tokens.colors.danger` (red), icon: `solarOutlineCloseSquare`
+- `context` — `tokens.colors.contextual`, icon: `solarOutlineMenuDotsSquare`
+- `custom` — explicit `color` and `icon` parameters required; falls back to `tokens.colors.primary` and `solarOutlineInfoSquare` if not provided
+
+**LayrzAlertStyle enum** — controls visual appearance:
+
+| Style | Layout | Left Panel | Right Panel | Border | Icon/Text Color |
+|---|---|---|---|---|---|
+| `layrz` (default) | split | tonal accent (20% opacity) | surface | solid accent | accent (icon) / fg1 title, fg2 body |
+| `filledTonal` | single | tonal fill | N/A | none | accent color |
+| `filled` | single | solid accent | N/A | solid accent | contrast color (white/black) |
+| `outlined` | single | transparent | N/A | accent | accent color |
+| `filledIcon` | split | solid accent | surface | solid accent | contrast (icon) / fg1 title, fg2 body |
+
+**LayrzAlertStyleSpec resolver** — immutable specification holding resolved colors:
+- `backgroundColor` — fill color of alert background (or right panel for split layouts)
+- `borderColor` — color of alert border
+- `borderWidth` — width in logical pixels (from tokens.border.base or 0)
+- `leftPanelColor` — fill color of left panel in split-panel layouts; transparent for single-panel styles
+- `iconChipBackground` — fill color of icon chip container (single-panel styles only)
+- `iconColor` — color of icon glyph
+- `titleColor` — color of title text
+- `bodyColor` — color of description text
+
+**Layout patterns**:
+- **FilledTonal/Filled/Outlined** — single container with icon chip (left), gap (sp12), text column (title + sp4 + description)
+- **Layrz/FilledIcon** — split-panel layout with left panel (colored background, centered icon, sp16 padding) and right panel (surface background, title/description, sp16 padding); border painted via `foregroundDecoration` over both panels
+
+**Interaction behavior**:
+- **Non-interactive** (`onTap: null`, the default): Alert is inert — no cursor change, no hover/press visual feedback, not focusable, announces as a container to assistive technology. Rendering is identical to the pre-interactive design.
+- **Interactive** (`onTap: non-null`): Alert responds to user interaction:
+  - **Hover**: Surface lifts by `kLayrzAlertHoverLift` (4.0 logical pixels); shadow steps up one level. Animated with `tokens.motion.dHover` and `tokens.motion.easingEnter`.
+  - **Focus**: Renders identically to hover (lifted, shadow elevated). Reachable via Tab navigation; activatable by Enter or Space (requires `LayrzApp` ancestor).
+  - **Press**: Surface settles back down; shadow steps down one level.
+  - **Lift mechanism**: Paint-only transform (`Matrix4.translationValues(0, -_currentLift, 0)`), not a layout change. The alert's bounding box and hit-test region remain constant across all states. This prevents hover oscillation (the surface cannot move out from under the pointer).
+
+**D15 Compliance and Lift Amendment**:
+- Interaction states vary only: shadow (via elevation), cursor, and colour. They do **not** vary: size, padding, margin, border width, or radius.
+- The lift is a paint-only transform and is permitted under an amendment to decision D15 (2026-08-16). See [`Decisions (D15)`](https://github.com/goldenm-software/layrz_ui/blob/main/engineering/decisions.md) for the original decision and the amendment for the rationale and controlled conditions.
+
+**Key invariants**:
+- **Both title and description are required** — strict 1:1 port from ThemedAlert; no optional variants
+- **`onTap` is optional** — null (default) disables interactivity; non-null enables it. Non-interactive alerts are the default and recommended pattern for informational callouts with no required user action.
+- **No custom colour parameter on non-custom types** — color parameter is ignored unless `type == LayrzAlertType.custom`
+- **LayrzAlertIcon is a standalone building block** (per decision D11) — LayrzAlert does not consume it; it is exported separately for reuse
+- **Tonal opacity applied consistently** — via `tokens.colors.tonalOpacity` for tonal fills
+- **Contrast color computed from accent** — via `accent.contrastColor` extension for white-on-dark and black-on-light
+- **No geometry changes during state changes** — responsive, no fixed height on text elements (WCAG 1.4.4 support); only icon chips and filledIcon left panel are fixed-size
+
+**Dependencies**:
+- M1: LayrzTheme, tokens, extensions (contrastColor, withOpacityValue)
+- `layrz_icons: ^2.0.0` — semantic icons
 
 **Files affected**:
 - `lib/alerts.dart` (entrypoint barrel, new)
 - `lib/src/alerts/` (new module directory)
-- `lib/src/alerts/alert.dart` (new)
-- `test/alerts/alert_test.dart` (tests)
+- `lib/src/alerts/alert.dart` (new, ~290 lines)
+- `lib/src/alerts/alert_type.dart` (new, ~85 lines)
+- `lib/src/alerts/alert_style.dart` (new, ~48 lines)
+- `lib/src/alerts/alert_style_spec.dart` (new, ~166 lines)
+- `lib/src/alerts/alert_icon.dart` (new, ~103 lines, standalone building block)
+- `lib/src/constants/alert.dart` (new)
+- `test/alerts/alert_test.dart` (new, comprehensive tests)
+- `test/alerts/alert_type_test.dart` (new, type enum tests)
+- `test/alerts/alert_style_test.dart` (new, style enum tests)
+- `test/alerts/alert_icon_test.dart` (new, icon building block tests)
+- `wiki/Widgets/LayrzAlert.md` (new wiki page)
+- `wiki/Widgets/LayrzAlertIcon.md` (new wiki page for icon building block)
+- `example/lib/src/sections/alerts_section.dart` (new example usage)
+
+**Acceptance criteria**:
+- Constructor has every parameter documented (rule #1)
+- Both `title` and `description` are required (enforced by constructor signature)
+- `onTap` parameter correctly controls interactivity: null disables, non-null enables
+- Non-interactive alerts (`onTap: null`) render with no state changes and no cursor change
+- Interactive alerts (`onTap: non-null`) respond to hover, press, and focus with visual feedback
+- Hover/focus lift exactly `kLayrzAlertHoverLift` (4.0 logical pixels) via transform
+- Lift is paint-only: bounding box and hit-test region are constant across states (verified via layout tests)
+- Hover oscillation is prevented: alert surface cannot move out from under the pointer (hover detection wraps the transform)
+- Animation timing uses `tokens.motion.dHover` and `tokens.motion.easingEnter`
+- Press state settles surface back to rest position; shadow steps down one level
+- Keyboard activation (Enter or Space) works identically to tap; no explicit shortcut binding needed (provided by LayrzApp)
+- Interactive alerts announce as button with enabled state; non-interactive alert announces as container
+- `LayrzAlertType` enum correctly maps to token colors via `colorToken()` method
+- `LayrzAlertType` enum correctly maps to icons via `icon` property
+- Custom type falls back to `primary` color and `solarOutlineInfoSquare` icon
+- `LayrzAlertStyle` enum resolves to correct spec via `LayrzAlertStyleSpec.resolve()`
+- **Layrz style**: split-panel layout with tonal (20% opacity) left panel, surface right panel, solid accent border, accent icon, fg1/fg2 text
+- **FilledTonal style**: single-panel, tonal background, no border, no icon chip, accent text
+- **Filled style**: single-panel, solid accent background, accent border, no icon chip, contrast text
+- **Outlined style**: single-panel, transparent background, accent border, no icon chip, accent text
+- **FilledIcon style**: split-panel layout with solid accent left (contrast icon), surface right (fg1 title, fg2 body), solid accent border
+- Split-panel border painted via `foregroundDecoration` (not surrounding `BoxDecoration`) to avoid antialiasing seams between panels
+- Interactive alerts with translucent fills flatten them to opaque equivalents via `flattenOn` extension to prevent shadows from bleeding through
+- `Color.flattenOn(background)` and `Color.isOpaque` extension methods added to `LayrzColorExtensions`
+- `iconSize` parameter overrides default (kLayrzAlertIconSize or kLayrzAlertFilledIconSize)
+- `maxLines` limits description text before ellipsis
+- `LayrzAlertIcon` is a standalone public widget exported from `lib/alerts.dart`
+- `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
+- `@Preview` annotations present at bottom of alert.dart file (one per style)
+- Wiki pages document final API, interaction model, style specs table (with split-panel column), icon building block, layout patterns, and implementation notes on border painting and fill flattening
+- Tests verify interactive behavior: hover lift translation, layout neutrality, oscillation safety, keyboard activation, and shadow rendering with flattened fills
 
 ---
 
@@ -505,16 +682,17 @@ Animation covers state change, unchecked → checked → unchecked transitions.
 M2 is complete when all the following criteria are satisfied:
 
 - **Item 1 (LayrzButton)**: Constructor documented, twelve styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present
-- **Item 2 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning, animated display, RawTooltip requirement of Overlay ancestor documented, SDK gotcha about `verticalOffset` documented, LayrzButton `_buildTooltip()` helpers retired
-- **Item 3 (LayrzAlert)**: Five visual styles, semantic types (info, success, warning, danger, context), icon integration
-- **Item 4 (LayrzChip/ChipGroup)**: Chip styling, delete action, group selection behaviour, state management via WidgetState
-- **Item 5 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
-- **Item 6 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens
-- **Item 7 (LayrzTextInput)**: Design blocker resolved (Figma/Notion link attached), EditableText with Material-free selection controls, label/prefix/suffix/help/error chrome, focus decoration, foundation for all M3+ inputs
-- **Item 8 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzGroupedButton
-- **Item 9 (LayrzGroupedButton)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
-- **Item 10 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
-- **Item 11 (LayrzAnimatedCheckbox)**: Animation on state change, smooth transitions
+- **Item 2 (LayrzCard)**: Five elevation levels, optional backgroundColor override, interactive cards respond to hover/press/focus with shadow elevation changes, non-interactive cards are inert, D15 verified (no geometry changes during state transitions), `flutter analyze` clean, tests green, `@Preview` annotations present
+- **Item 3 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning with overflow detection and flipping, content is text-only (contentText XOR contentRichText), pass-through requirement (`ignorePointer: true`), graceful degradation with no Overlay ancestor, animation with motion tokens, RawTooltip Overlay requirement documented, SDK `verticalOffset` gotcha documented, LayrzButton `_buildTooltip()` helpers retired, `flutter analyze` clean, tests green (including passthrough verification), `@Preview` annotations present
+- **Item 4 (LayrzAlert)**: Six semantic types (info, success, warning, danger, context, custom), five visual styles (layrz, filledTonal, filled, outlined, filledIcon) with correct style spec resolution, both title and description required, LayrzAlertIcon standalone building block, non-interactive (no state changes), `flutter analyze` clean, tests green, `@Preview` annotations present for each style
+- **Item 5 (LayrzChip/ChipGroup)**: Chip styling, delete action, group selection behaviour, state management via WidgetState
+- **Item 6 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
+- **Item 7 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens
+- **Item 8 (LayrzTextInput)**: Design blocker resolved (Figma/Notion link attached), EditableText with Material-free selection controls, label/prefix/suffix/help/error chrome, focus decoration, foundation for all M3+ inputs
+- **Item 9 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzGroupedButton
+- **Item 10 (LayrzGroupedButton)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
+- **Item 11 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
+- **Item 12 (LayrzAnimatedCheckbox)**: Animation on state change, smooth transitions
 - **All tests pass**: `flutter test` reports 100% pass
 - **Coverage floor maintained**: `flutter test --coverage` reports >90% coverage (current baseline 97.21%)
 - **Invariant verified**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty

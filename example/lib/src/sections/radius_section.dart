@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 import '../common/showroom_swatch.dart';
@@ -40,68 +41,92 @@ Widget buildRadiusSection() {
               spacing: tokens.spacing.sp16,
               runSpacing: tokens.spacing.sp16,
               children: [
-                ShowroomSwatch(
-                  label: 'r8',
-                  value: '8u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                LayrzTooltip(
+                  contentText: 'r8 — 8px',
+                  child: ShowroomSwatch(
+                    label: 'r8',
+                    value: '8u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r10',
-                  value: '10u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r10),
+                LayrzTooltip(
+                  contentText: 'r10 — 10px',
+                  child: ShowroomSwatch(
+                    label: 'r10',
+                    value: '10u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r10),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r12',
-                  value: '12u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r12),
+                LayrzTooltip(
+                  contentText: 'r12 — 12px',
+                  child: ShowroomSwatch(
+                    label: 'r12',
+                    value: '12u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r12),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r14',
-                  value: '14u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r14),
+                LayrzTooltip(
+                  contentText: 'r14 — 14px',
+                  child: ShowroomSwatch(
+                    label: 'r14',
+                    value: '14u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r14),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r16',
-                  value: '16u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r16),
+                LayrzTooltip(
+                  contentText: 'r16 — 16px',
+                  child: ShowroomSwatch(
+                    label: 'r16',
+                    value: '16u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r16),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r20',
-                  value: '20u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r20),
+                LayrzTooltip(
+                  contentText: 'r20 — 20px',
+                  child: ShowroomSwatch(
+                    label: 'r20',
+                    value: '20u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r20),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'r24',
-                  value: '24u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r24),
+                LayrzTooltip(
+                  contentText: 'r24 — 24px',
+                  child: ShowroomSwatch(
+                    label: 'r24',
+                    value: '24u',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.r24),
+                    ),
                   ),
                 ),
-                ShowroomSwatch(
-                  label: 'full',
-                  value: '∞ (pill)',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.full),
+                LayrzTooltip(
+                  contentText: 'full — infinite (pill)',
+                  child: ShowroomSwatch(
+                    label: 'full',
+                    value: '∞ (pill)',
+                    decoration: BoxDecoration(
+                      color: tokens.colors.primary,
+                      borderRadius: BorderRadius.circular(tokens.radius.full),
+                    ),
                   ),
                 ),
               ],

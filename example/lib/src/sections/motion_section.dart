@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 
@@ -98,17 +99,46 @@ class _MotionValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: tokens.spacing.sp48 * 2,
-          child: Text(label, style: tokens.typography.labelSmall),
-        ),
-        Expanded(
-          child: Text(value, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
-        ),
-      ],
+    final tooltip = _getTooltip(label);
+
+    return LayrzTooltip(
+      contentText: tooltip,
+      child: Row(
+        children: [
+          SizedBox(
+            width: tokens.spacing.sp48 * 2,
+            child: Text(label, style: tokens.typography.labelSmall),
+          ),
+          Expanded(
+            child: Text(value, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+          ),
+        ],
+      ),
     );
+  }
+
+  /// Returns a descriptive tooltip for each motion token.
+  String _getTooltip(String label) {
+    switch (label) {
+      case 'dHover':
+        return 'Hover state transition duration';
+      case 'dPress':
+        return 'Press state transition duration';
+      case 'dTransition':
+        return 'General transition animation duration';
+      case 'dPageTransition':
+        return 'Page navigation/route transition duration';
+      case 'dDialog':
+        return 'Dialog open/close animation duration';
+      case 'easing':
+        return 'Standard easing curve (easeInOut)';
+      case 'easingEnter':
+        return 'Entrance animation easing curve (easeOut)';
+      case 'easingExit':
+        return 'Exit animation easing curve (easeIn)';
+      default:
+        return label;
+    }
   }
 }
 
