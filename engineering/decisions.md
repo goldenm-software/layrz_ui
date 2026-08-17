@@ -915,11 +915,22 @@ Specifically:
 
 **Weakness and mitigation**: Issues #2–#13 were never open during the work (no PR closed them), so the commit references in each body are what make them a real record rather than decoration. This is acceptable: the "Delivered by" trail carries the genuine evidence. In future work cycles, contributors should open Issues when work begins so PRs can close them naturally.
 
+**Update (2026-08-16) — GitHub Project Retired; D16 Superseded**
+
+On 2026-08-16, the GitHub Project (number 9) was retired as an internal planning tool. The decision to keep items as drafts and convert on demand is now moot — the project no longer exists.
+
+**New arrangement:**
+- `engineering/milestone-N.md` Status tables are the sole authoritative progress record.
+- GitHub Issues remain enabled only as the inbound bug channel (declared in `pubspec.yaml:6` as `issue_tracker`), not for internal planning.
+- Notion mirrors the milestone documents with a read-only public link.
+
+**Impact on D16**: The draft-to-issue workflow described in D16 is no longer valid. The `/start-todo-process` and `/complete-todo-process` skills (which relied on the GitHub Project workflow) are retired or rewritten to work with the milestone documents directly.
+
+Existing issue references in commit history (#2–#13, and any references to upcoming work) remain valid because closed issues persist on GitHub. External bug reports will continue to use the GitHub Issues interface as documented in `pubspec.yaml`.
+
 ### Review Trigger
 
-**Revisit date**: After Milestone 2 first release (3-5 components shipped).
-
-If hand-moving draft cards becomes a bottleneck — because components are being completed faster than Issues can be created, or because the Project is crowded and filtering issues-only view becomes necessary — reconsider a bulk conversion of M2-phase items. At that point, there will be enough shipped components (M1) and in-flight components (M2 early items) to measure the pain. If none is observed, stay the course.
+None. D16 documented a process (draft-to-issue conversion) that is no longer applicable. The GitHub Project is retired.
 
 ---
 
@@ -1513,6 +1524,69 @@ The current approach is stable, tested, and works. The weight-rendering fix (add
 - A consuming app reports runtime font availability issues (missing weight, network latency on cold start, or conflicting licenses).
 - The WASM showroom (web build) reports measurable performance degradation from font fetches on cold start, and bundled fonts are measured to improve the metric.
 - A team decision is made to self-host fonts on Layrz infrastructure; at that point, implement the CDN handler and close the weight→URI seam.
+
+---
+
+## D25: GitHub Project Retired — Engineering Documentation as Single Source of Truth
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Governance / Process
+
+### Context
+
+The GitHub Project for layrz_ui held 47 items as draft items, requiring manual board management. Progress was tracked in **two places**: the GitHub Project (with a status field and four metadata columns) and the engineering documentation (`engineering/milestone-N.md` Status tables). Keeping both in sync required discipline in every commit message, and the synchronization was a source of friction:
+
+1. **Board automation was unreliable.** The GitHub API does not expose which values automations write, so after merging a PR, the status field had to be verified by hand and corrected if it did not move as expected.
+2. **Duplication invited drift.** The milestone documents held the real specification (work items, acceptance criteria, completion logic); the Project repeated that as metadata. Two sources of truth is no source.
+3. **Previous corruption.** A concurrent draft-to-issue conversion run duplicated an item three times and attached bodies to wrong components, requiring manual cleanup.
+4. **Coordination burden.** Every commit touching status required moving both the Project field and the milestone table row, doubling the editorial effort.
+
+The question: does the GitHub Project earn its keep as an internal planning tool, or is it a redundant duplicate that adds friction?
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep the Project; improve automation | Board is visual; Kanban view is familiar; custom fields provide structure | Automation is unreliable by design (API limitation); drift remains unless discipline is perfect; previous corruption history suggests humans will make mistakes |
+| (b) Keep the Project as a mirror, decouple updates | Visualization remains; drift is acceptable as long as the milestone docs are authoritative | Adds a new failure mode (viewers look at stale board); introduces two "truths" explicitly; Notion could do this cheaper |
+| (c) **Chosen** — Retire the Project entirely; use milestone documents as the single source of truth | Eliminates duplication and synchronization burden; all status lives in one place with one update ceremony; Notion can mirror it for viewers who prefer that interface | Loses the Kanban board visualization; requires team to get comfortable with markdown-based progress tracking; contributors must reference the milestone docs instead of looking at a GUI |
+
+### Decision
+
+**Chose (c): Retire GitHub Project 9 entirely.**
+
+`engineering/milestone-N.md` becomes the authoritative progress record. Each Status table records work items and their current state. When work completes, the milestone table is updated in the commit message.
+
+GitHub Issues remain enabled and publicly declared in `pubspec.yaml:6` as the inbound bug channel (`issue_tracker`), but Issues are no longer created for internal planning.
+
+Notion can mirror the milestone documents with a public read-only link for viewers who find markdown less accessible than a database interface.
+
+### Rationale
+
+- **Single source of truth**: The milestone documents already held the canonical specification. Retiring the Project makes that explicit and eliminates duplication.
+- **Eliminates unreliable automation**: No more waiting for board automations to fire (or not fire). Status moves when documented, period.
+- **Reduces coordination burden**: Developers move on to shipping code instead of managing two trackers. Every commit has one update point, not two.
+- **Markdown is simpler**: Status tables are plain text, reviewable in diffs, mergeable without conflicts, and versionable alongside the code. A database (GitHub Project or Notion) adds a separate coordination surface.
+- **Proven alternative**: Notion mirrors are read-only, so viewers get fresh data without the team managing dual updates.
+
+### Consequences
+
+- **GitHub Project 9 is deleted or archived.** It no longer appears in the org interface. (Archived items may remain in the UI but are not actively managed.)
+- **Skills are retired or rewritten**: The `/start-todo-process` and `/complete-todo-process` skills, which relied on GitHub Project draft-to-issue conversion, are retired. (These may be replaced with scripts that update `engineering/milestone-N.md` Status tables directly, but that is a separate implementation question outside this decision.)
+- **Issue references persist**: Issues #2–#13 (closed Milestone 1 items) remain valid and closed. Any future references to issue numbers in commit history (e.g., `Closes #N`) are still valid and will auto-link in GitHub.
+- **External bug reports continue**: GitHub Issues remain the declared `issue_tracker` in `pubspec.yaml`, so `pub.dev` and external consumers can report bugs via GitHub Issues as usual. No change to the external interface.
+- **CLAUDE.md is rewritten**: The "Progress Tracking" section is condensed to document the new arrangement. The sections on "Project Workflow: Draft-to-Issue Conversion" and "Working an item end to end" are removed, since those workflows no longer exist.
+- **Notion becomes optional**: If a team member sets up a Notion mirror of the milestone documents, viewers without GitHub access can see progress. This is convenience, not authoritative.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app or internal stakeholder reports that markdown-based progress tracking is too opaque for their workflow, and a GUI-based tracker would improve visibility.
+- The team reports that updating milestone documents in commits is too friction-heavy compared to dragging cards on a board, and automation tooling emerges to reduce the friction.
+- Notion mirrors prove inadequate (stale data, poor sync), suggesting that a dedicated internal board (GitHub Project or Jira) is necessary.
+
+**Revisit date**: Six months after the first M2 release (approximately early 2027), when the team has enough experience with the new workflow to evaluate whether it is sustainable.
 
 ---
 
