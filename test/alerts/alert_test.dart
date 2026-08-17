@@ -409,5 +409,305 @@ void main() {
         expect(descriptionWidget.style?.fontSize, equals(tokens.typography.bodyMedium.fontSize));
       });
     });
+
+    group('filledIcon border rendering', () {
+      testWidgets('inert filledIcon alert renders accent border', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        const accentColor = Color(0xFF2E7D32); // Custom green accent
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Success',
+              description: 'Operation completed',
+              type: LayrzAlertType.custom,
+              color: accentColor,
+              style: LayrzAlertStyle.filledIcon,
+            ),
+          ),
+        );
+
+        // Find the outermost Container that wraps the content for inert filledIcon
+        final containers = find.byType(Container);
+        Container? borderContainer;
+        for (final element in containers.evaluate()) {
+          final container = element.widget as Container;
+          if (container.decoration is BoxDecoration) {
+            final decoration = container.decoration! as BoxDecoration;
+            if (decoration.border is Border) {
+              borderContainer = container;
+              break;
+            }
+          }
+        }
+
+        expect(borderContainer, isNotNull, reason: 'Should find Container with border for inert filledIcon');
+        final decoration = borderContainer!.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, equals(accentColor));
+        expect(border.top.width, equals(tokens.border.base));
+      });
+
+      testWidgets('interactive filledIcon alert renders accent border', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        const accentColor = Color(0xFFD32F2F); // Custom red accent
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Error',
+              description: 'An error occurred',
+              type: LayrzAlertType.custom,
+              color: accentColor,
+              style: LayrzAlertStyle.filledIcon,
+              onTap: () {},
+            ),
+          ),
+        );
+
+        // For interactive alerts, find the AnimatedContainer with the border
+        final animatedContainers = find.byType(AnimatedContainer);
+        AnimatedContainer? borderContainer;
+        for (final element in animatedContainers.evaluate()) {
+          final container = element.widget as AnimatedContainer;
+          if (container.decoration is BoxDecoration) {
+            final decoration = container.decoration! as BoxDecoration;
+            if (decoration.border is Border) {
+              borderContainer = container;
+              break;
+            }
+          }
+        }
+
+        expect(
+          borderContainer,
+          isNotNull,
+          reason: 'Should find AnimatedContainer with border for interactive filledIcon',
+        );
+        final decoration = borderContainer!.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, equals(accentColor));
+        expect(border.top.width, equals(tokens.border.base));
+      });
+
+      testWidgets('filledIcon border colour matches accent across severity types', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        const width = 300.0;
+
+        final severities = [
+          (type: LayrzAlertType.info, color: tokens.colors.info.shade500),
+          (type: LayrzAlertType.success, color: tokens.colors.success.shade500),
+          (type: LayrzAlertType.warning, color: tokens.colors.warning.shade500),
+          (type: LayrzAlertType.danger, color: tokens.colors.danger.shade500),
+          (type: LayrzAlertType.context, color: tokens.colors.contextual.shade500),
+        ];
+
+        for (final severity in severities) {
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: width,
+              child: LayrzAlert(
+                title: 'Test',
+                description: 'Test alert',
+                type: severity.type,
+                style: LayrzAlertStyle.filledIcon,
+              ),
+            ),
+          );
+
+          // Find the border Container
+          final containers = find.byType(Container);
+          Container? borderContainer;
+          for (final element in containers.evaluate()) {
+            final container = element.widget as Container;
+            if (container.decoration is BoxDecoration) {
+              final decoration = container.decoration! as BoxDecoration;
+              if (decoration.border is Border) {
+                borderContainer = container;
+                break;
+              }
+            }
+          }
+
+          expect(borderContainer, isNotNull, reason: 'Should find border container for ${severity.type}');
+          final decoration = borderContainer!.decoration! as BoxDecoration;
+          final border = decoration.border! as Border;
+          expect(
+            border.top.color,
+            equals(severity.color),
+            reason: 'filledIcon border should be accent color for ${severity.type}',
+          );
+
+          await tester.pumpWidget(const SizedBox());
+        }
+      });
+
+      testWidgets('filledIcon inner ClipRRect uses concentric radius', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              style: LayrzAlertStyle.filledIcon,
+            ),
+          ),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedInnerRadius = tokens.radius.innerRadius(
+          outerRadius: tokens.radius.r12,
+          spacer: tokens.border.base,
+        );
+
+        expect(clipRRect.borderRadius, equals(expectedInnerRadius));
+      });
+
+      testWidgets('filledIcon border width matches base border token', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              style: LayrzAlertStyle.filledIcon,
+            ),
+          ),
+        );
+
+        // Find border container
+        final containers = find.byType(Container);
+        Container? borderContainer;
+        for (final element in containers.evaluate()) {
+          final container = element.widget as Container;
+          if (container.decoration is BoxDecoration) {
+            final decoration = container.decoration! as BoxDecoration;
+            if (decoration.border is Border) {
+              borderContainer = container;
+              break;
+            }
+          }
+        }
+
+        expect(borderContainer, isNotNull);
+        final decoration = borderContainer!.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.width, equals(tokens.border.base));
+      });
+    });
+
+    group('border styles unchanged assertion', () {
+      testWidgets('layrz style border is unchanged', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              type: LayrzAlertType.info,
+              style: LayrzAlertStyle.layrz,
+            ),
+          ),
+        );
+
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.layrz,
+          accent: tokens.colors.info.shade500,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        final container = tester.widget<Container>(find.byType(Container).first);
+        final decoration = container.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, equals(spec.borderColor));
+        expect(border.top.width, equals(spec.borderWidth));
+      });
+
+      testWidgets('filledTonal style border is unchanged (no border)', (tester) async {
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              style: LayrzAlertStyle.filledTonal,
+            ),
+          ),
+        );
+
+        final container = tester.widget<Container>(find.byType(Container).first);
+        final decoration = container.decoration! as BoxDecoration;
+        expect(decoration.border, isNull);
+      });
+
+      testWidgets('filled style border is unchanged', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              type: LayrzAlertType.danger,
+              style: LayrzAlertStyle.filled,
+            ),
+          ),
+        );
+
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.filled,
+          accent: tokens.colors.danger.shade500,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        final container = tester.widget<Container>(find.byType(Container).first);
+        final decoration = container.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, equals(spec.borderColor));
+        expect(border.top.width, equals(spec.borderWidth));
+      });
+
+      testWidgets('outlined style border is unchanged', (tester) async {
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          const SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              type: LayrzAlertType.warning,
+              style: LayrzAlertStyle.outlined,
+            ),
+          ),
+        );
+
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.outlined,
+          accent: tokens.colors.warning.shade500,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        final container = tester.widget<Container>(find.byType(Container).first);
+        final decoration = container.decoration! as BoxDecoration;
+        final border = decoration.border! as Border;
+        expect(border.top.color, equals(spec.borderColor));
+        expect(border.top.width, equals(spec.borderWidth));
+      });
+    });
   });
 }

@@ -42,7 +42,7 @@ void main() {
           isInteractive: true,
         );
 
-        expect(spec.backgroundColor.a, equals(1.0));
+        expect(spec.backgroundColor.isOpaque, isTrue);
       });
     });
 
@@ -77,7 +77,7 @@ void main() {
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
         final expectedColor = Color.alphaBlend(tonal, tokens.colors.surface);
         expect(spec.backgroundColor, equals(expectedColor));
-        expect(spec.backgroundColor.a, equals(1.0));
+        expect(spec.backgroundColor.isOpaque, isTrue);
       });
     });
 
@@ -109,7 +109,7 @@ void main() {
           isInteractive: true,
         );
 
-        expect(spec.backgroundColor.a, equals(1.0));
+        expect(spec.backgroundColor.isOpaque, isTrue);
       });
     });
 
@@ -142,12 +142,12 @@ void main() {
         );
 
         expect(spec.backgroundColor, equals(tokens.colors.surface));
-        expect(spec.backgroundColor.a, equals(1.0));
+        expect(spec.backgroundColor.isOpaque, isTrue);
       });
     });
 
     group('resolve() - filledIcon style', () {
-      test('filledIcon inert: surface background, accent left panel, transparent border, contrast icon', () {
+      test('filledIcon inert: surface background, accent border, accent left panel, contrast icon', () {
         final accent = tokens.colors.contextual.shade500;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
@@ -157,15 +157,15 @@ void main() {
         );
 
         expect(spec.backgroundColor, equals(tokens.colors.surface));
-        expect(spec.borderColor, equals(const Color(0x00000000)));
-        expect(spec.borderWidth, equals(0.0));
+        expect(spec.borderColor, equals(accent));
+        expect(spec.borderWidth, equals(tokens.border.base));
         expect(spec.iconChipBackground, equals(accent));
         expect(spec.iconColor, equals(accent.contrastColor));
         expect(spec.titleColor, equals(tokens.colors.fg1));
         expect(spec.bodyColor, equals(tokens.colors.fg2));
       });
 
-      test('filledIcon interactive: background is opaque', () {
+      test('filledIcon interactive: border is accent with base width', () {
         final accent = tokens.colors.contextual.shade500;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
@@ -174,7 +174,34 @@ void main() {
           isInteractive: true,
         );
 
-        expect(spec.backgroundColor.a, equals(1.0));
+        expect(spec.borderColor, equals(accent));
+        expect(spec.borderWidth, equals(tokens.border.base));
+        expect(spec.backgroundColor.isOpaque, isTrue);
+      });
+
+      test('filledIcon border tracks accent colour across severity types', () {
+        final severities = [
+          (name: 'info', color: tokens.colors.info.shade500),
+          (name: 'success', color: tokens.colors.success.shade500),
+          (name: 'warning', color: tokens.colors.warning.shade500),
+          (name: 'danger', color: tokens.colors.danger.shade500),
+          (name: 'contextual', color: tokens.colors.contextual.shade500),
+        ];
+
+        for (final severity in severities) {
+          final spec = LayrzAlertStyleSpec.resolve(
+            style: LayrzAlertStyle.filledIcon,
+            accent: severity.color,
+            tokens: tokens,
+            isInteractive: false,
+          );
+
+          expect(
+            spec.borderColor,
+            equals(severity.color),
+            reason: 'filledIcon ${severity.name} should have accent border',
+          );
+        }
       });
     });
 
@@ -265,11 +292,66 @@ void main() {
           );
 
           expect(
-            spec.backgroundColor.a,
-            equals(1.0),
+            spec.backgroundColor.isOpaque,
+            isTrue,
             reason: 'Style $style should have opaque background when interactive',
           );
         }
+      });
+    });
+
+    group('border assertion — other styles unchanged', () {
+      test('layrz style: tonal border with base width', () {
+        final accent = tokens.colors.info.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.layrz,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
+        expect(spec.borderColor, equals(tonal));
+        expect(spec.borderWidth, equals(tokens.border.base));
+      });
+
+      test('filledTonal style: transparent border with zero width', () {
+        final accent = tokens.colors.success.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.filledTonal,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        expect(spec.borderColor, equals(const Color(0x00000000)));
+        expect(spec.borderWidth, equals(0.0));
+      });
+
+      test('filled style: accent border with base width', () {
+        final accent = tokens.colors.danger.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.filled,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        expect(spec.borderColor, equals(accent));
+        expect(spec.borderWidth, equals(tokens.border.base));
+      });
+
+      test('outlined style: accent border with base width', () {
+        final accent = tokens.colors.warning.shade500;
+        final spec = LayrzAlertStyleSpec.resolve(
+          style: LayrzAlertStyle.outlined,
+          accent: accent,
+          tokens: tokens,
+          isInteractive: false,
+        );
+
+        expect(spec.borderColor, equals(accent));
+        expect(spec.borderWidth, equals(tokens.border.base));
       });
     });
   });

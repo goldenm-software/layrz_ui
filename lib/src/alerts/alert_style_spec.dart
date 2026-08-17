@@ -124,7 +124,7 @@ class LayrzAlertStyleSpec {
       case LayrzAlertStyle.filledTonal:
         // For interactive alerts, composite the translucent tint into an opaque colour
         // to prevent shadows from bleeding through. For inert alerts, keep translucency.
-        final backgroundColor = isInteractive ? Color.alphaBlend(tonal, tokens.colors.surface) : tonal;
+        final backgroundColor = isInteractive ? tonal.flattenOn(tokens.colors.surface) : tonal;
         return LayrzAlertStyleSpec(
           backgroundColor: backgroundColor,
           borderColor: const Color(0x00000000),
@@ -163,8 +163,8 @@ class LayrzAlertStyleSpec {
       case LayrzAlertStyle.filledIcon:
         return LayrzAlertStyleSpec(
           backgroundColor: tokens.colors.surface,
-          borderColor: const Color(0x00000000),
-          borderWidth: 0.0,
+          borderColor: accent,
+          borderWidth: tokens.border.base,
           iconChipBackground: accent,
           iconColor: contrast,
           titleColor: tokens.colors.fg1,

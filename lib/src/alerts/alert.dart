@@ -238,8 +238,14 @@ class _LayrzAlertState extends State<LayrzAlert> {
 
     // For filledIcon style, use a split-panel layout.
     if (widget.style == LayrzAlertStyle.filledIcon) {
+      // Compute the inner radius for the clipped child, accounting for the border.
+      final innerBorderRadius = tokens.radius.innerRadius(
+        outerRadius: tokens.radius.r12,
+        spacer: spec.borderWidth,
+      );
+
       final content = ClipRRect(
-        borderRadius: BorderRadius.circular(tokens.radius.r12),
+        borderRadius: innerBorderRadius,
         child: IntrinsicHeight(
           child: Row(
             children: [
@@ -296,7 +302,16 @@ class _LayrzAlertState extends State<LayrzAlert> {
         return Semantics(
           label: '${widget.title}. ${widget.description}',
           container: true,
-          child: content,
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: spec.borderColor,
+                width: spec.borderWidth,
+              ),
+              borderRadius: BorderRadius.circular(tokens.radius.r12),
+            ),
+            child: content,
+          ),
         );
       }
 
@@ -343,6 +358,10 @@ class _LayrzAlertState extends State<LayrzAlert> {
                 curve: tokens.motion.easingEnter,
                 transform: Matrix4.translationValues(0, -_currentLift, 0),
                 decoration: BoxDecoration(
+                  border: Border.all(
+                    color: spec.borderColor,
+                    width: spec.borderWidth,
+                  ),
                   boxShadow: _resolveShadow(tokens),
                   borderRadius: BorderRadius.circular(tokens.radius.r12),
                 ),

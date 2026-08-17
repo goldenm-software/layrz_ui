@@ -41,7 +41,7 @@ enum LayrzAlertStyle {
   ///
   /// - Left panel (icon): solid semantic color background
   /// - Right panel (content): neutral surface background
-  /// - Border: transparent, no border
+  /// - Border: semantic color with base border width
   /// - Icon: contrasting color
   /// - Text: neutral foreground
   filledIcon,
