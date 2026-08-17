@@ -25,14 +25,17 @@ import 'alert_type.dart';
 /// **Interaction behavior:**
 /// - When [onTap] is **null**, the alert is inert: no hover response, no press response,
 ///   default cursor, not focusable, and it does NOT appear as a button to assistive technology.
+///   No shadow is applied.
 /// - When [onTap] is **non-null**, the alert is interactive:
 ///   - Cursor becomes [SystemMouseCursors.click].
-///   - **Hovered**: surface lifts by [kLayrzAlertHoverLift] and shadow steps up one level.
-///   - **Pressed**: surface settles back down and shadow steps down one level.
-///   - **Focused**: surface lifts (same as hover) and shadow steps up one level.
+///   - **At rest**: no shadow.
+///   - **Hovered**: surface lifts by [kLayrzAlertHoverLift] and shadow appears at elevation 2.
+///   - **Pressed**: surface settles back down and shadow steps down to elevation 1.
+///   - **Focused**: surface lifts (same as hover) and shadow appears at elevation 2.
 ///   - Geometry (size, padding, radius) remains constant across states.
 ///   - Focusable by Tab navigation; activatable by Enter or Space keys.
 ///   - Announced to assistive technology as an interactive button.
+///   - Shadow animates alongside lift with [LayrzTokens.motion.dHover] duration and [LayrzTokens.motion.easingEnter] curve.
 ///
 /// Layout:
 /// - For all styles except [LayrzAlertStyle.filledIcon]:
@@ -175,6 +178,31 @@ class _LayrzAlertState extends State<LayrzAlert> {
     }
   }
 
+  /// Resolves the shadow list for the current interactive state.
+  ///
+  /// Returns null for inert alerts (onTap == null) and at-rest interactive alerts.
+  /// Returns [LayrzShadowTokens.elevation2] for hovered or focused states.
+  /// Returns [LayrzShadowTokens.elevation1] for pressed state.
+  List<BoxShadow>? _resolveShadow(LayrzTokens tokens) {
+    // Inert alerts have no shadow.
+    if (widget.onTap == null) return null;
+
+    final states = _statesController.value;
+
+    // Pressed: lower shadow level.
+    if (states.contains(WidgetState.pressed)) {
+      return tokens.shadow.elevation1;
+    }
+
+    // Hovered or Focused: elevated shadow.
+    if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+      return tokens.shadow.elevation2;
+    }
+
+    // At rest: no shadow.
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -205,6 +233,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
       style: widget.style,
       accent: accentColor,
       tokens: tokens,
+      isInteractive: widget.onTap != null,
     );
 
     // For filledIcon style, use a split-panel layout.
@@ -313,6 +342,10 @@ class _LayrzAlertState extends State<LayrzAlert> {
                 duration: tokens.motion.dHover,
                 curve: tokens.motion.easingEnter,
                 transform: Matrix4.translationValues(0, -_currentLift, 0),
+                decoration: BoxDecoration(
+                  boxShadow: _resolveShadow(tokens),
+                  borderRadius: BorderRadius.circular(tokens.radius.r12),
+                ),
                 child: content,
               ),
             ),
@@ -443,6 +476,10 @@ class _LayrzAlertState extends State<LayrzAlert> {
               duration: tokens.motion.dHover,
               curve: tokens.motion.easingEnter,
               transform: Matrix4.translationValues(0, -_currentLift, 0),
+              decoration: BoxDecoration(
+                boxShadow: _resolveShadow(tokens),
+                borderRadius: BorderRadius.circular(tokens.radius.r12),
+              ),
               child: content,
             ),
           ),
