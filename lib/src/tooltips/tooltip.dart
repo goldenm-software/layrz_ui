@@ -166,15 +166,15 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       Overlay.of(context).insert(_overlayEntry!);
     }
 
-    if (_animationController.status == AnimationStatus.dismissed) {
+    if (_animationController.status != AnimationStatus.completed) {
       _animationController.forward();
     }
   }
 
   void _hideTooltip() {
-    if (mounted && _animationController.status == AnimationStatus.forward) {
-      _animationController.reverse();
-    }
+    if (!mounted) return;
+    if (_animationController.status == AnimationStatus.dismissed) return;
+    _animationController.reverse();
   }
 
   Widget _buildTooltipOverlay(BuildContext overlayContext) {
