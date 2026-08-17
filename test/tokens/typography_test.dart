@@ -46,6 +46,35 @@ void main() {
       expect(theme.labelSmall.fontSize, equals(11));
     });
 
+    test('defaults factory uses correct font weights', () {
+      final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+
+      // Display styles use w800
+      expect(theme.displayLarge.fontWeight, equals(FontWeight.w800));
+      expect(theme.displayMedium.fontWeight, equals(FontWeight.w800));
+      expect(theme.displaySmall.fontWeight, equals(FontWeight.w800));
+
+      // Headline styles use w700
+      expect(theme.headlineLarge.fontWeight, equals(FontWeight.w700));
+      expect(theme.headlineMedium.fontWeight, equals(FontWeight.w700));
+      expect(theme.headlineSmall.fontWeight, equals(FontWeight.w700));
+
+      // Title styles use w500
+      expect(theme.titleLarge.fontWeight, equals(FontWeight.w500));
+      expect(theme.titleMedium.fontWeight, equals(FontWeight.w500));
+      expect(theme.titleSmall.fontWeight, equals(FontWeight.w500));
+
+      // Body styles use w300
+      expect(theme.bodyLarge.fontWeight, equals(FontWeight.w300));
+      expect(theme.bodyMedium.fontWeight, equals(FontWeight.w300));
+      expect(theme.bodySmall.fontWeight, equals(FontWeight.w300));
+
+      // Label styles use w100
+      expect(theme.labelLarge.fontWeight, equals(FontWeight.w100));
+      expect(theme.labelMedium.fontWeight, equals(FontWeight.w100));
+      expect(theme.labelSmall.fontWeight, equals(FontWeight.w100));
+    });
+
     test('defaults factory with null fontHandler uses font name directly', () {
       final theme = LayrzTextTheme.defaults(
         textColor: const Color(0xFF000000),

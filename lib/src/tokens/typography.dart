@@ -99,18 +99,20 @@ class LayrzTextTheme {
     final titleFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
     final bodyFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
 
-    TextStyle title(double size) => TextStyle(
+    TextStyle title(double size, {FontWeight fontWeight = FontWeight.w400}) => TextStyle(
       color: textColor,
       fontSize: size,
+      fontWeight: fontWeight,
       fontFamily: titleFamily,
       fontFamilyFallback: titleFallbacks,
       overflow: TextOverflow.ellipsis,
       decoration: TextDecoration.none,
     );
 
-    TextStyle body(double size) => TextStyle(
+    TextStyle body(double size, {FontWeight fontWeight = FontWeight.w400}) => TextStyle(
       color: textColor,
       fontSize: size,
+      fontWeight: fontWeight,
       fontFamily: bodyFamily,
       fontFamilyFallback: bodyFallbacks,
       overflow: TextOverflow.ellipsis,
@@ -118,21 +120,21 @@ class LayrzTextTheme {
     );
 
     return LayrzTextTheme(
-      displayLarge: title(57),
-      displayMedium: title(45),
-      displaySmall: title(36),
-      headlineLarge: title(32),
-      headlineMedium: title(28),
-      headlineSmall: title(24),
-      titleLarge: title(22),
-      titleMedium: title(16),
-      titleSmall: title(14),
-      bodyLarge: body(16),
-      bodyMedium: body(14),
-      bodySmall: body(12),
-      labelLarge: body(14),
-      labelMedium: body(12),
-      labelSmall: body(11),
+      displayLarge: title(57, fontWeight: FontWeight.w800),
+      displayMedium: title(45, fontWeight: FontWeight.w800),
+      displaySmall: title(36, fontWeight: FontWeight.w800),
+      headlineLarge: title(32, fontWeight: FontWeight.w700),
+      headlineMedium: title(28, fontWeight: FontWeight.w700),
+      headlineSmall: title(24, fontWeight: FontWeight.w700),
+      titleLarge: title(22, fontWeight: FontWeight.w500),
+      titleMedium: title(16, fontWeight: FontWeight.w500),
+      titleSmall: title(14, fontWeight: FontWeight.w500),
+      bodyLarge: body(16, fontWeight: FontWeight.w300),
+      bodyMedium: body(14, fontWeight: FontWeight.w300),
+      bodySmall: body(12, fontWeight: FontWeight.w300),
+      labelLarge: body(14, fontWeight: FontWeight.w100),
+      labelMedium: body(12, fontWeight: FontWeight.w100),
+      labelSmall: body(11, fontWeight: FontWeight.w100),
     );
   }
 
