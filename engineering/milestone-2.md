@@ -12,7 +12,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 |---|---|---|
 | 1 | LayrzButton with twelve styles and six semantic factories | Done |
 | 2 | LayrzCard (elevated surface container) | Done |
-| 3 | LayrzTooltip on RawTooltip | Done |
+| 3 | LayrzTooltip (composed on Overlay) | Done |
 | 4 | LayrzAlert (inline status callout) | Done |
 | 5 | LayrzChip and LayrzChipGroup | Todo |
 | 6 | LayrzRow / LayrzCol responsive grid | Done |
@@ -265,14 +265,16 @@ This prevents reflow and flicker during state changes.
 
 ---
 
-### 3. LayrzTooltip on RawTooltip
+### 3. LayrzTooltip (Composed on Overlay)
 
 **What changes**:
-- Create `lib/src/tooltips/tooltip.dart` — `LayrzTooltip` widget
+- Create `lib/src/tooltips/tooltip.dart` — `LayrzTooltip` widget, composed on `Overlay` / `OverlayEntry`
 - Create `lib/src/tooltips/tooltip_position.dart` — position enumeration and delegate function
 - Create `lib/src/constants/tooltip.dart` — sizing constants
 - Create `lib/tooltips.dart` barrel with re-exports
 - Retire temporary RawTooltip use in LayrzButton (`_buildTooltip()` and `layrzButtonTooltipPosition()` helpers removed, `lib/src/buttons/button_tooltip_position.dart` deleted, `kLayrzButtonTooltipVerticalOffset` removed)
+
+**Implementation note**: The initial design assumption was that `LayrzTooltip` would be a thin wrapper over `RawTooltip`. During implementation, two issues emerged: (1) `RawTooltip` wraps the child in `Listener(HitTestBehavior.opaque)`, making the anchor bounds opaque and breaking hit-test transparency in overlapping layouts, and (2) the `positionDelegate` quirk with hardcoded `verticalOffset: 0.0` required baking gap logic into the delegate. The decision was reversed: `LayrzTooltip` was rebuilt as a composed implementation on `Overlay` / `OverlayEntry`, which fixed both issues and is now the shipped design.
 
 **API contract**:
 
@@ -303,17 +305,18 @@ This prevents reflow and flicker during state changes.
 4. Clamp the tooltip on the cross axis to stay inside the overlay bounds
 
 **Key invariants**:
-- **Anchor opacity limitation** — `RawTooltip` wraps its child in `Listener(behavior: HitTestBehavior.opaque)`, making the anchor bounds opaque to hit-testing. This is invisible in normal Column/Row/Wrap layouts where widgets do not overlap, but in overlapping `Stack` layouts it causes the anchor to block taps on content beneath it. The tooltip surface itself uses `ignorePointer: true` and is fully pass-through. A rebuild on `OverlayPortal` to make the anchor transparent is tracked as **issue #39** (https://github.com/goldenm-software/layrz_ui/issues/39).
-- **Graceful degradation**: If no Overlay ancestor exists, the widget returns its child unchanged (no tooltip shown). This allows tooltips to work in test harnesses without full ancestor trees; compare `RawTooltip.debugCheckHasOverlay`
+- **Hit-test transparency** — The wrapper layers use `HitTestBehavior.translucent`, ensuring that wrapping a widget in `LayrzTooltip` does not change its hit-testing. Pointers pass through to the child and to layers beneath. The tooltip surface itself uses `ignorePointer: true` and is fully pass-through.
+- **Layout neutrality** — Wrapping a widget in `LayrzTooltip` does not change its size, position, or layout. The tooltip is a separate `Overlay` portal.
+- **Anchor-always-visible guarantee** — The tooltip always renders outside the anchor's bounding box on all four sides. This prevents the anchor from losing hover state and entering a flicker loop.
+- **Graceful degradation**: If no Overlay ancestor exists, the widget returns its child unchanged (no tooltip shown). This allows tooltips to work in test harnesses without full ancestor trees.
 - **Content is text-only**: Either `contentText` XOR `contentRichText`, enforced by constructor assert; no Widget content parameter. Mirrors LayrzButton's `labelText`-only rule
 - **Trigger modes**: Long-press (touch) or hover (desktop); auto-dismiss on pointer-exit
 - **No `color` parameter**: Surface color is standardised on `tokens.colors.fg1`/`tokens.colors.background`; removed from the original `ThemedTooltip` spec
 
-**SDK gotcha documented**: When a `positionDelegate` is supplied to `RawTooltip`, `TooltipPositionContext.verticalOffset` is hardcoded to `0.0`, so the gap between tooltip and anchor must come from a custom constant (`kLayrzTooltipOffset`), not the SDK.
-
 **Dependencies**:
 - M1: LayrzTheme, tokens
-- Flutter 3.47: RawTooltip, @Preview API
+- Flutter 3.47: @Preview API (for widget preview annotations)
+- Flutter SDK: Overlay, OverlayEntry, TextPainter, RenderBox (for measuring and positioning)
 
 **Files affected**:
 - `lib/tooltips.dart` (entrypoint barrel, new)
@@ -331,17 +334,22 @@ This prevents reflow and flicker during state changes.
 - Constructor has every parameter documented (rule #1)
 - Exactly one of `contentText` or `contentRichText` is non-null (enforced by assert)
 - Surface styling is fixed and consistent with spec (fg1 background, background text color, labelSmall style, sp12/sp6 padding, r8 radius)
-- `LayrzTooltipPosition` enum correctly positions tooltip on specified side
-- Overflow detection flips tooltip to opposite side when needed
+- `LayrzTooltipPosition` enum correctly positions tooltip on specified side (top, bottom, left, right)
+- Overflow detection flips tooltip to opposite side when needed; tests verify all four positions and all four flips
 - Cross-axis clamping keeps tooltip inside overlay bounds
-- `ignorePointer: true` verified by `test/tooltips/tooltip_passthrough_test.dart` (tooltip surface is pass-through; anchor bounds are opaque per RawTooltip's Listener wrapper)
+- Hit-test transparency verified: wrapping a widget in `LayrzTooltip` does not change its hit-testing; anchor wrapper uses `HitTestBehavior.translucent`
+- Surface pass-through verified: tooltip surface uses `ignorePointer: true`; content painted behind visible tooltip remains interactive
+- Layout neutrality verified: wrapping does not change size, position, or layout of the child
+- Anchor-always-visible verified: tooltip never overlaps the anchor's bounding box across all four positions and various anchor sizes (down to 4×24)
 - Graceful degradation: returns child unchanged when no Overlay ancestor
-- `kLayrzTooltipOffset` gap between tooltip and anchor is consistent
+- `kLayrzTooltipOffset` gap between tooltip and anchor is consistent (10u)
 - `kLayrzTooltipMaxWidthFactor` constrains tooltip to 80% of viewport width
 - Animation: fade-in/out with tokens.motion.dHover and tokens.motion.dPress timings
+- Dismissal: auto-dismiss on pointer-exit; no tooltip leak across anchors on re-hover
+- Lifecycle safety: no crashes on rapid mount/unmount cycles; no memory leaks
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
 - `@Preview` annotations present at bottom of tooltip.dart file
-- Wiki page documents final API, positioning, surface pass-through guarantee, anchor opacity limitation (issue #39), and SDK gotcha
+- Wiki page documents final API, positioning, hit-test transparency guarantee, layout neutrality, anchor-always-visible invariant, and graceful degradation
 - LayrzButton `_buildTooltip()` and `layrzButtonTooltipPosition()` helpers retired
 
 ---
