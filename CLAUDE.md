@@ -132,72 +132,18 @@ When you add a new widget, document it in `wiki/Widgets/` (not `engineering/`), 
 
 ## Progress Tracking
 
-Progress is tracked in **both** the GitHub Project and the engineering documentation (`engineering/milestone-N.md`). Both must be kept in step.
+**Progress page:** https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6
 
-- The GitHub Project (number 9 in `goldenm-software` org, linked to `goldenm-software/layrz_ui`) is the authoritative per-module status record
-- Each `engineering/milestone-N.md` contains a `## Status` table near the top that mirrors the project's state at the milestone level
-- When work on a project item completes, update **both** the GitHub Project status field and the corresponding row in the milestone document's Status table in the same commit
-- **Checkboxes are forbidden everywhere.** Status lives in the GitHub Project field and the milestone Status tables only. Work items and acceptance criteria stay as plain-bullet specifications (`-`) without checkboxes.
+**Authoritative record:** Each `engineering/milestone-N.md` contains a `## Status` table recording the current state of work items, milestone by milestone. These tables are the source of truth, kept in step with the code in the same commit. The Notion page above is the shared, publicly linkable view of the same status.
+
+**GitHub Issues remain enabled** — but **only** as the inbound bug channel for package users. `pubspec.yaml:6` declares `issue_tracker: https://github.com/goldenm-software/layrz_ui/issues`, which `pub.dev` surfaces as "View/report issues". External bug reports are welcome there; internal planning is not.
+
+**GitHub Project 9 is retired.** It is no longer used for internal planning.
+
+### Conventions
+
+- **Checkboxes are forbidden everywhere.** Status lives in the milestone Status tables only. Work items and acceptance criteria stay as plain-bullet specifications (`-`) without checkboxes.
 - The **Component Catalog** in the wiki (https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog) holds the mapping from layrz_theme to layrz_ui only — target name, milestone assignment (planning metadata, allowed), which SDK primitive it builds on, and blockers. **Completion status is not tracked in the wiki.**
-
-### Granularity: GitHub Project vs. Milestone Documents
-
-The GitHub Project tracks 17 M1 Foundation **modules** (each component, theme piece, token type, etc.), while `engineering/milestone-1.md` groups them into 12 **work items** by functionality. Both describe the same milestone at different decomposition levels:
-- The milestone Status table is the strategic view; it shows when major feature areas are complete
-- The GitHub Project is the operational view; it tracks individual modules so you know what needs to be done next
-
-### Project Location
-
-**GitHub Projects v2**, number 9 in the `goldenm-software` organization, linked to `goldenm-software/layrz_ui`:  
-https://github.com/orgs/goldenm-software/projects/9  
-Status: Private
-
-Components are tracked as **plain draft items** (not Issues).
-
-### Custom Fields
-
-- **Phase** (single select): `M1 Foundation`, `M2 Core primitives`, `M3 Inputs`, `M4 Pickers`, `M5 Layout & navigation`, `M6 Data display`, `M7 Blocked`
-- **Domain** (single select): Foundation, Theme, Buttons, Inputs, Pickers, Layout, Navigation, Feedback, Data, Grid, Blocked
-- **Primitive** (text): Flutter SDK primitive used (e.g. `RawTooltip`, `RawRadio`, `ToggleableStateMixin`) or `hand-rolled` for custom implementations
-- **Blocker** (text): blocking dependency, if any
-
-### Important: Phase ≠ Milestone
-
-Documentation refers to **milestones M1–M7**; the Project field recording them is **`Phase`**, NOT `Milestone`. GitHub reserves `Milestone` (along with `Labels`, `Repository`, and `Linked pull requests`) as built-in fields derived only from real Issues — they cannot be used on draft items. So `Phase` in the Project is the tracking mechanism; it maps to the M1–M7 references in `engineering/roadmap.md` and the Component Catalog in the wiki.
-
-### Project Workflow: Draft-to-Issue Conversion
-
-Items follow two conversion paths based on work state:
-
-**For upcoming work** (not yet started): Convert one item at a time when you begin work on it.
-1. Convert **that one item** to a real Issue in the project (button in the item's details panel: "Convert to issue")
-2. Create a branch: `feat/<domain>/<component-name>` — e.g., `feat/inputs/text-input`
-3. Reference the newly-created issue number in your PR title or body: `Closes #N` — GitHub will auto-link and close the issue when the PR merges
-4. The issue's Phase, Domain, Primitive, and Blocker fields remain intact after conversion
-
-**For completed work** (already shipped): Bulk conversion and closure happens to make the board legible — showing what the team has finished. Shipped Milestone 1 items (M1 Foundation) were converted to Issues #2–#13 and closed with a "Delivered by" commit trail.
-
-**Do not bulk-convert upcoming work.** Convert individually as work begins. See decision D16 in `engineering/decisions.md` for the rationale and the distinction between the two paths.
-
-### Working an item end to end
-
-An item moves from the board to Done through four stages. Two skills automate the process; this section describes the workflow so it survives the skills and so a human can follow it manually.
-
-**Start** — `/start-todo-process <item-title>`. Converts the named draft item(s) to Issues, sets Status to **In Progress**, and creates the working branch. Multiple items in one invocation are one unit of work sharing one branch; separate branches means separate invocations.
-
-**Build** — Do the work. Tests are mandatory (rule #2). A new widget also needs a wiki page (see D6), not an `engineering/` file.
-
-**Commit** — `/commit`. Split changes into logical, semantic commits in conventional format.
-
-**Complete** — `/complete-todo-process`. Runs `flutter analyze`, `flutter test`, format check, and the Material/Cupertino invariant; opens the PR with `Closes #N` lines for every linked issue; merges; verifies each issue is closed and the project Status moved to Done; updates the corresponding row in `engineering/milestone-N.md` Status table; deletes the branch.
-
-#### Traps — learned the hard way
-
-- **Nothing sets Status to In Progress.** The project's enabled automations cover *item added*, *item closed*, *pull request merged*, *auto-close issue*, *pull request linked to issue*, and *auto-add sub-issues*. None of them sets In Progress. Skip the start step and an item being actively worked still reads as untouched on the board.
-- **You cannot approve your own pull request.** GitHub refuses it and there is no admin override. It is not a blocker here only because neither `main` nor `development` has branch protection — which also means the checks in the **Complete** stage are the only gate on either branch.
-- **Do not trust the board automation.** The API does not expose which value each automation writes, so Status must be verified after merging and set by hand if it did not move.
-- **Both trackers must move together.** Update the GitHub Project status and the milestone Status table in the same commit.
-- **Convert one item at a time.** A previous concurrent run corrupted this project, duplicating an item three times and attaching bodies to the wrong components.
 
 ---
 

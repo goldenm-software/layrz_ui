@@ -15,7 +15,7 @@ This output must always be empty.
 
 ## Progress Tracking
 
-Progress on milestones and individual components is tracked in the repository's **GitHub Project** (`goldenm-software/layrz_ui`). This documentation describes the plan and architecture; for real-time status, see the Project board.
+Progress on milestones and components is tracked in **engineering documentation** (`milestone-N.md` Status tables) and mirrored on **[Notion](https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6)** for shared viewing. The Status tables here and in the Notion page are kept in step. External bug reports use GitHub Issues (declared in `pubspec.yaml`).
 
 ## Documentation Guide
 

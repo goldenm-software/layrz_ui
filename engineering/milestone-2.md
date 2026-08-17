@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build foundational interactive widgets that most other components depend on: buttons, tooltips, chips, alerts, avatars, responsive layout, and checkbox state animations.
+Build foundational interactive widgets that most other components depend on: buttons, tooltips, chips, alerts, avatars, responsive layout, and selectable text.
 
 This is the **first components milestone** after M1 Foundation. All M2 components establish UI patterns and state-management conventions that downstream components (M3–M6) will follow.
 
@@ -21,7 +21,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 9 | LayrzDropdownMenu | Todo |
 | 10 | LayrzGroupedButton (overflow actions menu) | Todo |
 | 11 | LayrzAvatar and LayrzImage | Todo |
-| 12 | LayrzAnimatedCheckbox | Todo |
+| 12 | LayrzText (selectable text) | Todo |
 
 **Note**: This table tracks the 12 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit. Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
 
@@ -589,7 +589,7 @@ At least 6 M3 components and 14 M4 pickers depend on it. Its chrome — label, p
 
 **BLOCKER — IMPORTANT**: The visual design diverges from `ThemedTextInput` per internal meetings and is not captured anywhere. Before implementation starts, a Figma frame, meeting doc, or Notion link must be attached that shows the final design direction. Without this, roughly twenty downstream components (M3–M5 inputs and pickers) will be redone later.
 
-**Hidden scope**: `EditableText` needs concrete selection handles and a selection toolbar. Material supplies those and they cannot be used, so a Material-free `TextSelectionControls` is required and may warrant its own milestone item — note `RawMagnifier` and `SystemContextMenu` as relevant Flutter SDK types.
+**Hidden scope**: `EditableText` needs concrete selection handles and a selection toolbar. Material supplies those and they cannot be used, so a Material-free `TextSelectionControls` is required and may warrant its own milestone item — note `RawMagnifier` and `SystemContextMenu` as relevant Flutter SDK types. Item 12 (`LayrzText`) ships without custom selection controls using `emptyTextSelectionControls` from the SDK; once this item's work lands, `LayrzText` can optionally adopt it for touch affordances. The two are independent, not blocking.
 
 **Primitive**: `EditableText`.
 
@@ -659,21 +659,32 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 ---
 
-### 12. LayrzAnimatedCheckbox
+### 12. LayrzText (Selectable Text)
 
-**Brief description**:
+**What it is**:
 
-Stateful checkbox widget with smooth animation. Integrates with M3 LayrzCheckboxInput (as a separate component or as a factory on the input).
+`LayrzText` makes text selectable and copyable by wrapping `SelectableRegion` from `package:flutter/widgets.dart`. Any `Text` child becomes selectable because `Text` builds a `RichText` which already participates in selection by registering with an inherited `SelectionRegistrar`. Flutter's default is non-selectable text; `LayrzText` bridges the scope gap.
 
-Animation covers state change, unchecked → checked → unchecked transitions.
+`SelectableRegion` implements copy via `CopySelectionTextIntent` and `SelectAllTextIntent`, so keyboard selection (Ctrl+A) and copy (Ctrl+C) work without additional UI.
 
-**Dependencies**: M1 (LayrzTheme, tokens, WidgetState), Flutter animations (single_tick_provider, transition_builder, etc.).
+**Not an input. No editing.** This widget is separate from `LayrzTextInput` (item 8). LayrzText provides read-only selection and copy; LayrzTextInput provides editing. No relationship beyond both touching text.
+
+**Why subclassing Text does not work**: Selection is a scope mechanism, not a build concern. Overriding `Text.build()` provides no way to supply a `SelectionRegistrar` to register the child `RichText`.
+
+**Not blocked.** Ships with `emptyTextSelectionControls` from `package:flutter/widgets.dart` (a no-op implementation satisfying `SelectableRegion`'s required `selectionControls` parameter). Drag handles on touch and a context menu are deferred — not required for initial ship, and will be optional enhancements later. When `LayrzTextInput` (item 8) lands with a Material-free `TextSelectionControls`, `LayrzText` can optionally adopt it for touch affordances.
+
+**Primitive**: `SelectableRegion`.
+
+**Dependencies**: M1 (LayrzTheme, tokens).
 
 **Files affected**:
-- `lib/checkboxes.dart` (entrypoint barrel, new)
-- `lib/src/checkboxes/` (new module directory)
-- `lib/src/checkboxes/animated_checkbox.dart` (new)
-- `test/checkboxes/animated_checkbox_test.dart` (tests)
+- `lib/text.dart` (entrypoint barrel, new)
+- `lib/src/text/` (new module directory)
+- `lib/src/text/text.dart` (new)
+- `test/text/text_test.dart` (tests)
+- `wiki/Widgets/LayrzText.md` (new wiki page)
+
+**Note**: Replaces the `LayrzAnimatedCheckbox` slot, dropped from M2 scope.
 
 ---
 
@@ -692,7 +703,7 @@ M2 is complete when all the following criteria are satisfied:
 - **Item 9 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzGroupedButton
 - **Item 10 (LayrzGroupedButton)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
 - **Item 11 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
-- **Item 12 (LayrzAnimatedCheckbox)**: Animation on state change, smooth transitions
+- **Item 12 (LayrzText)**: Wraps `SelectableRegion` with `emptyTextSelectionControls`, making child `Text` selectable and copyable; keyboard copy (Ctrl+C) works via `SelectableRegion`'s `CopySelectionTextIntent`; drag handles and context menu deferred as optional enhancements
 - **All tests pass**: `flutter test` reports 100% pass
 - **Coverage floor maintained**: `flutter test --coverage` reports >90% coverage (current baseline 97.21%)
 - **Invariant verified**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
