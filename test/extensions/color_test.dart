@@ -2,6 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/tokens.dart';
+
+import '../helpers/fake_font_handler.dart';
 
 void main() {
   group('LayrzColorExtensions', () {
@@ -290,6 +293,90 @@ void main() {
       test('toJson is alias for toHex', () {
         const color = Color(0xFF001E60);
         expect(color.toJson(), equals(color.toHex()));
+      });
+    });
+
+    group('flattenOn', () {
+      test('fully transparent colour flattened onto background returns background', () {
+        const transparent = Color(0x00FF0000); // 0% alpha
+        const background = Color(0xFF001E60);
+        final result = transparent.flattenOn(background);
+        expect(result, equals(background));
+      });
+
+      test('fully opaque colour flattened onto anything returns itself unchanged', () {
+        const opaque = Color(0xFF001E60);
+        const background = Color(0xFFFFFFFF);
+        final result = opaque.flattenOn(background);
+        expect(result, equals(opaque));
+      });
+
+      test('50% black flattened onto white returns expected blended grey', () {
+        const halfBlack = Color(0x80000000);
+        const white = Color(0xFFFFFFFF);
+        final result = halfBlack.flattenOn(white);
+
+        // 50% alpha blend of black onto white produces 50% grey
+        // Formula: result = foreground + background * (1 - alpha)
+        // = 0 + 255 * (1 - 0.5) = 127.5
+        expect((result.r * 255.0).round(), closeTo(127, 1));
+        expect((result.g * 255.0).round(), closeTo(127, 1));
+        expect((result.b * 255.0).round(), closeTo(127, 1));
+        expect((result.a * 255).round(), equals(255)); // always opaque
+      });
+
+      test('result is always opaque regardless of input alpha', () {
+        const translucent = Color(0x40FF5733); // ~25% opacity
+        const background = Color(0xFF001E60);
+        final result = translucent.flattenOn(background);
+        expect((result.a * 255).round(), equals(255));
+      });
+
+      test('alert real case: tonal at 20% flattened onto surface', () {
+        // Simulate the alert case: accent at tonalOpacity onto tokens.colors.surface
+        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final accent = tokens.colors.info.shade500;
+        final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
+
+        // Both methods should produce the same result
+        final viaFlattenOn = tonal.flattenOn(tokens.colors.surface);
+        final viaAlphaBlend = Color.alphaBlend(tonal, tokens.colors.surface);
+
+        expect(viaFlattenOn, equals(viaAlphaBlend));
+      });
+    });
+
+    group('isOpaque', () {
+      test('fully opaque colour returns true', () {
+        const opaque = Color(0xFF001E60);
+        expect(opaque.isOpaque, isTrue);
+      });
+
+      test('fully transparent colour returns false', () {
+        const transparent = Color(0x00001E60);
+        expect(transparent.isOpaque, isFalse);
+      });
+
+      test('partial alpha returns false', () {
+        const partial = Color(0x80001E60);
+        expect(partial.isOpaque, isFalse);
+      });
+
+      test('result of flattenOn is always opaque', () {
+        const translucent = Color(0x40FF5733);
+        const background = Color(0xFF001E60);
+        final flattened = translucent.flattenOn(background);
+        expect(flattened.isOpaque, isTrue);
+      });
+
+      test('white is opaque', () {
+        const white = Color(0xFFFFFFFF);
+        expect(white.isOpaque, isTrue);
+      });
+
+      test('black is opaque', () {
+        const black = Color(0xFF000000);
+        expect(black.isOpaque, isTrue);
       });
     });
   });

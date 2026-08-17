@@ -103,4 +103,33 @@ extension LayrzColorExtensions on Color {
   ///
   /// [opacity] must be between 0.0 and 1.0 inclusive.
   Color withOpacityValue(double opacity) => withValues(alpha: opacity);
+
+  /// Composites this colour over [background] and returns a fully opaque result.
+  ///
+  /// Uses [Color.alphaBlend] from `dart:ui` to blend this colour onto [background],
+  /// returning the visually identical opaque result.
+  ///
+  /// **Why this exists**: A translucent fill lets anything painted behind it show through,
+  /// including a [BoxDecoration]'s shadow. Shadows render as a smudge inside the box
+  /// rather than a shadow beneath it when the fill is translucent. Flattening the colour
+  /// onto the surface it will actually be painted over yields the identical pixel colour
+  /// while being fully opaque — so shadows render correctly.
+  ///
+  /// **Important caveat**: The result is visually identical only when painted directly
+  /// over [background]. If this colour will be painted over a different surface, the
+  /// flattened result will be incorrect.
+  ///
+  /// Example: flatten a 20% accent tint onto the surface token:
+  /// ```dart
+  /// final tonal = accent.withOpacityValue(0.2);
+  /// final opaque = tonal.flattenOn(tokens.colors.surface);
+  /// // opaque is fully opaque and has the same colour as tonal would appear on surface
+  /// ```
+  Color flattenOn(Color background) => Color.alphaBlend(this, background);
+
+  /// Whether this colour is fully opaque.
+  ///
+  /// Returns true if the alpha channel is at maximum (fully opaque),
+  /// false otherwise (including fully transparent and partially transparent).
+  bool get isOpaque => a == 1.0;
 }
