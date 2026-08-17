@@ -28,3 +28,10 @@ const double kLayrzAlertIconWidgetSize = 30.0;
 /// This is the size of the icon asset rendered inside a standalone [LayrzAlertIcon]
 /// when no explicit iconSize is provided.
 const double kLayrzAlertIconWidgetIconSize = 20.0;
+
+/// Vertical lift distance for an interactive [LayrzAlert] on hover or focus.
+///
+/// When an alert is interactive (has an [onTap] callback), hovering or focusing
+/// the surface causes it to lift by this distance (in logical pixels). The lift is
+/// paint-only (via transform) and does not affect layout or hit-testing regions.
+const double kLayrzAlertHoverLift = 4.0;
