@@ -53,7 +53,12 @@ class _AlertsSectionContent extends StatelessWidget {
 
           SizedBox(height: tokens.spacing.sp32),
 
-          // 4. Standalone [LayrzAlertIcon] at different sizes
+          // 4. Interactive alerts with onTap demo
+          _InteractiveAlertsDemo(tokens: tokens),
+
+          SizedBox(height: tokens.spacing.sp32),
+
+          // 5. Standalone [LayrzAlertIcon] at different sizes
           _AlertIconDemo(tokens: tokens),
         ],
       ),
@@ -235,6 +240,155 @@ class _CustomTypeDemo extends StatelessWidget {
           style: LayrzAlertStyle.layrz,
           color: const Color(0xFF9C27B0), // Purple
           icon: LayrzIcons.solarOutlineCheckSquare,
+        ),
+      ],
+    );
+  }
+}
+
+/// Demonstrates [LayrzAlert] with [onTap] callback for interactive behavior.
+///
+/// Shows side-by-side comparison of inert and interactive alerts, with a live
+/// tap counter and examples across all five [LayrzAlertStyle] values.
+/// Illustrates the paint-only lift on hover/focus and keyboard activation.
+class _InteractiveAlertsDemo extends StatefulWidget {
+  /// Creates a new [_InteractiveAlertsDemo].
+  const _InteractiveAlertsDemo({required this.tokens});
+
+  /// The design system tokens.
+  final LayrzTokens tokens;
+
+  @override
+  State<_InteractiveAlertsDemo> createState() => _InteractiveAlertsDemoState();
+}
+
+/// State for [_InteractiveAlertsDemo] managing the tap counter.
+class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
+  /// The number of times an interactive alert has been tapped.
+  int _tapCount = 0;
+
+  /// Increments the tap counter.
+  void _incrementTapCount() {
+    setState(() {
+      _tapCount++;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = widget.tokens;
+    final styles = LayrzAlertStyle.values;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Interactive Alerts (onTap)', style: tokens.typography.titleMedium),
+        SizedBox(height: tokens.spacing.sp12),
+        Text(
+          'When onTap is provided, the alert becomes interactive. Hover or focus to see '
+          'the surface lift by 4.0 logical pixels (paint-only, no layout change). '
+          'Tab to focus; press Enter or Space to activate.',
+          style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg3),
+        ),
+        SizedBox(height: tokens.spacing.sp16),
+
+        // Side-by-side: inert vs interactive comparison
+        Text('Inert vs Interactive Comparison', style: tokens.typography.labelLarge),
+        SizedBox(height: tokens.spacing.sp12),
+        Row(
+          spacing: tokens.spacing.sp12,
+          children: [
+            // Inert (no onTap)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: tokens.spacing.sp8,
+                children: [
+                  Text('Inert (onTap: null)', style: tokens.typography.labelMedium),
+                  LayrzAlert(
+                    type: LayrzAlertType.info,
+                    title: 'Static Alert',
+                    description: 'No onTap callback. Cursor stays default. No hover or focus response.',
+                    style: LayrzAlertStyle.layrz,
+                  ),
+                ],
+              ),
+            ),
+            // Interactive (with onTap)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: tokens.spacing.sp8,
+                children: [
+                  Text('Interactive (onTap: provided)', style: tokens.typography.labelMedium),
+                  LayrzAlert(
+                    type: LayrzAlertType.success,
+                    title: 'Interactive Alert',
+                    description: 'Has onTap callback. Cursor is pointer. Lifts on hover/focus.',
+                    style: LayrzAlertStyle.layrz,
+                    onTap: _incrementTapCount,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        SizedBox(height: tokens.spacing.sp24),
+
+        // Tap counter display
+        Container(
+          padding: EdgeInsets.all(tokens.spacing.sp16),
+          decoration: BoxDecoration(
+            color: tokens.colors.fg4,
+            borderRadius: BorderRadius.circular(tokens.radius.r12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tap Counter: $_tapCount',
+                style: tokens.typography.titleSmall,
+              ),
+              SizedBox(height: tokens.spacing.sp8),
+              Text(
+                'Click or tap the interactive alert above (or any below) to increment this counter. '
+                'You can also focus with Tab and activate with Enter or Space.',
+                style: tokens.typography.bodySmall.copyWith(color: tokens.colors.fg2),
+              ),
+            ],
+          ),
+        ),
+
+        SizedBox(height: tokens.spacing.sp24),
+
+        // Interactive alerts across all styles
+        Text('Interactive Alerts by Style', style: tokens.typography.labelLarge),
+        SizedBox(height: tokens.spacing.sp12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: tokens.spacing.sp16,
+          children: styles.map((style) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: tokens.spacing.sp8,
+              children: [
+                Text(
+                  style.toString().split('.').last,
+                  style: tokens.typography.labelMedium.copyWith(color: tokens.colors.fg2),
+                ),
+                LayrzAlert(
+                  type: LayrzAlertType.warning,
+                  title: 'Clickable Alert',
+                  description:
+                      'This interactive alert uses the ${style.toString().split('.').last} style. '
+                      'Hover to see the lift effect with updated shadow.',
+                  style: style,
+                  onTap: _incrementTapCount,
+                ),
+              ],
+            );
+          }).toList(),
         ),
       ],
     );
