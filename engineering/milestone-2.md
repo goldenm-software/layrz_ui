@@ -364,6 +364,7 @@ This prevents reflow and flicker during state changes.
 - Create `lib/src/alerts/alert_icon.dart` — `LayrzAlertIcon` standalone building block
 - Create `lib/src/constants/alert.dart` — sizing constants including `kLayrzAlertHoverLift`
 - Create `lib/alerts.dart` barrel with re-exports
+- Add `flattenOn` and `isOpaque` extension methods to `LayrzColorExtensions` for flattening translucent colors and checking opacity
 
 **API contract**:
 
@@ -388,26 +389,27 @@ This prevents reflow and flicker during state changes.
 
 **LayrzAlertStyle enum** — controls visual appearance:
 
-| Style | Background | Border | Icon Chip | Icon/Text Color |
-|---|---|---|---|---|
-| `layrz` (default) | `surface` | tonal border | tonal background | accent color / fg1 title, fg2 body |
-| `filledTonal` | tonal fill | none | none | accent color |
-| `filled` | solid accent | accent border | none | contrast color (white/black) |
-| `outlined` | transparent | accent border | none | accent color |
-| `filledIcon` | split panel: accent left (icon), surface right (text) | none | N/A (left panel is accent) | contrast color (icon) / fg1 title, fg2 body (text) |
+| Style | Layout | Left Panel | Right Panel | Border | Icon/Text Color |
+|---|---|---|---|---|---|
+| `layrz` (default) | split | tonal accent (20% opacity) | surface | solid accent | accent (icon) / fg1 title, fg2 body |
+| `filledTonal` | single | tonal fill | N/A | none | accent color |
+| `filled` | single | solid accent | N/A | solid accent | contrast color (white/black) |
+| `outlined` | single | transparent | N/A | accent | accent color |
+| `filledIcon` | split | solid accent | surface | solid accent | contrast (icon) / fg1 title, fg2 body |
 
 **LayrzAlertStyleSpec resolver** — immutable specification holding resolved colors:
-- `backgroundColor` — fill color of alert background
+- `backgroundColor` — fill color of alert background (or right panel for split layouts)
 - `borderColor` — color of alert border
 - `borderWidth` — width in logical pixels (from tokens.border.base or 0)
-- `iconChipBackground` — fill color of icon chip container
+- `leftPanelColor` — fill color of left panel in split-panel layouts; transparent for single-panel styles
+- `iconChipBackground` — fill color of icon chip container (single-panel styles only)
 - `iconColor` — color of icon glyph
 - `titleColor` — color of title text
 - `bodyColor` — color of description text
 
 **Layout patterns**:
-- **Layrz/FilledTonal/Filled/Outlined** — single container with icon chip (left), gap (sp12), text column (title + sp4 + description)
-- **FilledIcon** — split-panel layout with accent left panel (icon centred, size sp16 padding), surface right panel (title/description with sp16 padding)
+- **FilledTonal/Filled/Outlined** — single container with icon chip (left), gap (sp12), text column (title + sp4 + description)
+- **Layrz/FilledIcon** — split-panel layout with left panel (colored background, centered icon, sp16 padding) and right panel (surface background, title/description, sp16 padding); border painted via `foregroundDecoration` over both panels
 
 **Interaction behavior**:
 - **Non-interactive** (`onTap: null`, the default): Alert is inert — no cursor change, no hover/press visual feedback, not focusable, announces as a container to assistive technology. Rendering is identical to the pre-interactive design.
@@ -468,18 +470,21 @@ This prevents reflow and flicker during state changes.
 - `LayrzAlertType` enum correctly maps to icons via `icon` property
 - Custom type falls back to `primary` color and `solarOutlineInfoSquare` icon
 - `LayrzAlertStyle` enum resolves to correct spec via `LayrzAlertStyleSpec.resolve()`
-- Layrz style: surface background, tonal border, tonal icon chip, accent icon/text
-- FilledTonal style: tonal background, no border, no icon chip, accent text
-- Filled style: solid accent background, accent border, no icon chip, contrast text
-- Outlined style: transparent background, accent border, no icon chip, accent text
-- FilledIcon style: split-panel layout, accent left (contrast icon), surface right (fg1 title, fg2 body)
+- **Layrz style**: split-panel layout with tonal (20% opacity) left panel, surface right panel, solid accent border, accent icon, fg1/fg2 text
+- **FilledTonal style**: single-panel, tonal background, no border, no icon chip, accent text
+- **Filled style**: single-panel, solid accent background, accent border, no icon chip, contrast text
+- **Outlined style**: single-panel, transparent background, accent border, no icon chip, accent text
+- **FilledIcon style**: split-panel layout with solid accent left (contrast icon), surface right (fg1 title, fg2 body), solid accent border
+- Split-panel border painted via `foregroundDecoration` (not surrounding `BoxDecoration`) to avoid antialiasing seams between panels
+- Interactive alerts with translucent fills flatten them to opaque equivalents via `flattenOn` extension to prevent shadows from bleeding through
+- `Color.flattenOn(background)` and `Color.isOpaque` extension methods added to `LayrzColorExtensions`
 - `iconSize` parameter overrides default (kLayrzAlertIconSize or kLayrzAlertFilledIconSize)
 - `maxLines` limits description text before ellipsis
 - `LayrzAlertIcon` is a standalone public widget exported from `lib/alerts.dart`
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
 - `@Preview` annotations present at bottom of alert.dart file (one per style)
-- Wiki pages document final API, interaction model, style specs table, icon building block, and layout patterns
-- Tests verify interactive behavior: hover lift translation, layout neutrality, oscillation safety, keyboard activation
+- Wiki pages document final API, interaction model, style specs table (with split-panel column), icon building block, layout patterns, and implementation notes on border painting and fill flattening
+- Tests verify interactive behavior: hover lift translation, layout neutrality, oscillation safety, keyboard activation, and shadow rendering with flattened fills
 
 ---
 
