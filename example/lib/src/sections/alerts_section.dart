@@ -6,7 +6,7 @@ import '../common/showroom_section.dart';
 
 /// Displays all [LayrzAlert] styles, types, configurations, and the [LayrzAlertIcon] standalone chip.
 ///
-/// Demonstrates the matrix of 5 styles × 6 types (30 combinations), variable maxLines
+/// Demonstrates the matrix of 2 styles × 6 types (12 combinations), variable maxLines
 /// truncation, custom type with explicit color and icon, and the reusable [LayrzAlertIcon]
 /// at different sizes.
 Widget buildAlertsSection() {
@@ -31,7 +31,7 @@ class _AlertsSectionContent extends StatelessWidget {
 
     return ShowroomSection(
       title: 'Alerts',
-      description: 'Material-free alert component with five styles, six semantic types, and a standalone icon chip',
+      description: 'Material-free alert component with two styles, six semantic types, and a standalone icon chip',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -63,7 +63,7 @@ class _AlertsSectionContent extends StatelessWidget {
   }
 }
 
-/// Demonstrates all 5 [LayrzAlertStyle] values × 6 [LayrzAlertType] values (30 combinations).
+/// Demonstrates all 2 [LayrzAlertStyle] values × 6 [LayrzAlertType] values (12 combinations).
 ///
 /// Organized with style as the outer grouping and type as the inner grouping,
 /// showing each combination with a short description.
@@ -82,7 +82,7 @@ class _StylesAndTypesDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('All Styles × Types (5 × 6 = 30 Combinations)', style: tokens.typography.title),
+        Text('All Styles × Types (2 × 6 = 12 Combinations)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Text(
           'Organized by style (outer group) and type (inner). The style controls visual appearance; '
