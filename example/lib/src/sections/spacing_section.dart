@@ -1,9 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/extensions.dart';
-import 'package:layrz_ui/tokens.dart';
-import 'package:layrz_ui/tooltips.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 import '../common/unit_display.dart';

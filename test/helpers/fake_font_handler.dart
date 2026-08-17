@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/fonts.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 /// A test fake of [LayrzFontHandler] that returns font names without network calls.
 ///

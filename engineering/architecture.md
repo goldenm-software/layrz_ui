@@ -26,18 +26,21 @@ layrz_ui uses **one concern per file** and a consistent barrel-export pattern.
 Every module has exactly this layout:
 
 ```
-lib/<module>.dart              # Entrypoint barrel — export only, no logic
-lib/src/<module>/
+lib/src/<module>/<module>.dart # Per-module barrel — export only, no logic
+lib/src/<module>/src/
   <implementation_1>.dart      # One file per concern
   <implementation_2>.dart
   ...
 ```
 
-The entrypoint barrel at `lib/<module>.dart` contains **only** `export` statements and is the public API. Implementation files live under `lib/src/<module>/` and are never imported directly by consumers.
+The per-module barrel at `lib/src/<module>/<module>.dart` contains **only** `export` statements. Implementation files live under `lib/src/<module>/src/` and are never imported directly by consumers. All modules are exported from the root barrel `lib/layrz_ui.dart`, which is the blessed consumer import. See [decision D26](decisions.md) for the rationale.
 
-### Current Modules (Milestone 1)
+### Current Modules (Milestone 1 and Beyond)
 
+- **alerts** — `LayrzAlert`, `LayrzAlertIcon`, alert styling and types
 - **app** — `LayrzApp` entry point and app shell
+- **buttons** — `LayrzButton` with semantic factories
+- **cards** — `LayrzCard` component
 - **theme** — `LayrzTheme` (InheritedTheme with wrap()) and `LayrzThemeData`
 - **tokens** — Complete design token system: `LayrzColorTokens`, `LayrzTextTheme`, `LayrzSpacingTokens`, `LayrzRadiusTokens`, `LayrzShadowTokens`, `LayrzBorderTokens`, `LayrzMotionTokens`, aggregated in `LayrzTokens`
 - **tokenizer** — `LayrzTokenizer` façade providing lookup access to tokens
@@ -45,7 +48,10 @@ The entrypoint barrel at `lib/<module>.dart` contains **only** `export` statemen
 - **fonts** — `LayrzFontHandler` interface with `LayrzGoogleFontsHandler` implementation for runtime font loading
 - **constants** — Brand colors, breakpoints, durations, app defaults
 - **extensions** — Convenience getters on `Color` and `BuildContext`
+- **grid** — `LayrzRow` (responsive 12-column grid container) and `LayrzCol` (column with responsive spans)
 - **platform** — `LayrzPlatform` enum for runtime platform detection
+- **preview** — `LayrzPreviewTheme` for Flutter 3.47+ widget preview integration
+- **tooltips** — `LayrzTooltip` and positioning types
 
 ### When to Add a New Module
 
@@ -449,74 +455,94 @@ See [flutter-347-audit.md](flutter-347-audit.md) for the complete inventory and 
 
 ```
 lib/
-  app.dart                       ← App shell entrypoint
-  theme.dart                     ← Theme system (core) entrypoint
-  tokens.dart                    ← Design token system entrypoint
-  tokenizer.dart                 ← Token lookup façade entrypoint
-  state.dart                     ← Widget state resolution entrypoint
-  fonts.dart                     ← Font loading entrypoint
-  constants.dart                 ← Brand defaults entrypoint
-  extensions.dart                ← Convenience getters entrypoint
-  platform.dart                  ← Platform detection entrypoint
-  preview.dart                   ← Preview system entrypoint [M1 item 8]
+  layrz_ui.dart                  ← Root barrel — exports all 14 modules [D26]
+  preview.dart                   ← Preview system (deliberate exception; top-level)
   
   src/
     app/
-      app.dart                   (LayrzApp)
+      app.dart                   ← Per-module barrel
+      src/
+        app.dart                 (LayrzApp)
     
     theme/                       [M1 item 1]
-      theme.dart                 (LayrzTheme extends InheritedTheme)
-      theme_data.dart            (LayrzThemeData)
-      theme_extension.dart       (LayrzThemeExtension<T> [M1 item 5])
+      theme.dart                 ← Per-module barrel
+      src/
+        theme.dart               (LayrzTheme extends InheritedTheme)
+        theme_data.dart          (LayrzThemeData)
+        theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5])
     
     preview/                     [M1 item 8]
-      preview_theme.dart         (LayrzPreviewTheme extends PreviewThemeData)
+      preview.dart               ← Per-module barrel
+      src/
+        preview_theme.dart       (LayrzPreviewTheme extends PreviewThemeData)
     
     state/                       [M1 item 6]
-      widget_state.dart          (re-exports from package:flutter/widgets.dart)
+      state.dart                 ← Per-module barrel
+      src/
+        widget_state.dart        (re-exports from package:flutter/widgets.dart)
     
     tokens/                      [M1 items 3–4]
-      colors.dart
-      typography.dart
-      spacing.dart
-      radius.dart
-      shadow.dart
-      border.dart
-      motion.dart
-      tokens.dart
+      tokens.dart                ← Per-module barrel
+      src/
+        colors.dart
+        typography.dart
+        spacing.dart
+        radius.dart
+        shadow.dart
+        border.dart
+        motion.dart
+        tokens.dart
     
     tokenizer/                   [M1 items 3–4]
-      tokenizer.dart             (LayrzTokenizer)
+      tokenizer.dart             ← Per-module barrel
+      src/
+        tokenizer.dart           (LayrzTokenizer)
     
     fonts/                       [M1 item 7]
-      font.dart
-      font_handler.dart
-      google_fonts_handler.dart
+      fonts.dart                 ← Per-module barrel
+      src/
+        font.dart
+        font_handler.dart
+        google_fonts_handler.dart
     
     constants/
-      colors.dart                (Layrz brand colors only)
-      durations.dart
-      grid.dart
-      app.dart
+      constants.dart             ← Per-module barrel
+      src/
+        colors.dart              (Layrz brand colors only)
+        durations.dart
+        grid.dart
+        app.dart
     
     extensions/
-      color.dart
-      context.dart
+      extensions.dart            ← Per-module barrel
+      src/
+        color.dart
+        context.dart
     
     platform/
-      platform.dart
+      platform.dart              ← Per-module barrel
+      src/
+        platform.dart
     
-    buttons/                     ← M2 component category (example)
-      button.dart
-      button_style.dart
+    grid/                        [M2 grid components]
+      grid.dart                  ← Per-module barrel
+      src/
+        row.dart
+        col.dart
+    
+    buttons/                     [M2 component category example]
+      buttons.dart               ← Per-module barrel
+      src/
+        button.dart
+        button_style.dart
     
     (M2–M7 other components here)
 ```
 
 Each module depends only on lower layers. Core theme has no dependencies on any component. This keeps the theme system simple and stable while components are added incrementally.
 
-**Note on module entrypoints**: Every module from `lib/` is imported by its top-level entrypoint (e.g., `import 'package:layrz_ui/buttons.dart';`). This design follows the Flutter SDK convention. See decision D19 for the restructure rationale.
+**Note on import patterns**: Consumers import the root barrel `import 'package:layrz_ui/layrz_ui.dart';`. Within `lib/`, cross-module imports use the per-module barrel form `import 'package:layrz_ui/src/<module>/<module>.dart';`. See decisions D20 and D26 for rationale.
 
 ---
 
-**Last updated**: 2026-08-16 (D19 restructure documentation)
+**Last updated**: 2026-08-16 (D26 root barrel restoration and module restructure documentation)

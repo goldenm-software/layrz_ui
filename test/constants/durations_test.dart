@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/constants.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 void main() {
   group('Durations', () {

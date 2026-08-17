@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/cards.dart';
-import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 /// A reusable shell for each showroom section.
 ///

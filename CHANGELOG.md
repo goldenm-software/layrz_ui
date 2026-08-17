@@ -1,3 +1,25 @@
+## 0.0.5
+
+**Breaking: every import path changes.** A single barrel replaces the fourteen per-domain entrypoints.
+
+```dart
+// Before (0.0.4)
+import 'package:layrz_ui/buttons.dart';
+import 'package:layrz_ui/theme.dart';
+import 'package:layrz_ui/tokens.dart';
+
+// After (0.0.5)
+import 'package:layrz_ui/layrz_ui.dart';
+```
+
+### Breaking
+- The fourteen per-domain entrypoints (`alerts.dart`, `app.dart`, `buttons.dart`, `cards.dart`, `constants.dart`, `extensions.dart`, `fonts.dart`, `grid.dart`, `platform.dart`, `state.dart`, `theme.dart`, `tokenizer.dart`, `tokens.dart`, `tooltips.dart`) are removed. Import `package:layrz_ui/layrz_ui.dart` instead; it exports all of them.
+- Deferred imports were the one benefit of the per-domain split, and they apply only to web and Android. layrz_ui targets all six Flutter platforms, so the split was not earning its complexity. Recorded as D26; D19 is superseded.
+
+### Changed
+- `package:layrz_ui/preview.dart` is unchanged and remains a separate opt-in import. It is deliberately not exported by the root barrel.
+- Implementation files move to `lib/src/<module>/src/` behind a per-module barrel at `lib/src/<module>/<module>.dart`. This is internal layout only; consumers import the root barrel.
+
 ## 0.0.4
 
 **Documentation-only release.** No API changes, no code changes, no migration required. If you're using 0.0.3, you already have all the features described here.

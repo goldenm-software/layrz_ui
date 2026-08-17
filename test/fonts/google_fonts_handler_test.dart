@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/fonts.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
