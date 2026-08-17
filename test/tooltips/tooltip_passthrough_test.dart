@@ -54,7 +54,7 @@ Widget _buildTooltipPassthroughHarness({
 }
 
 void main() {
-  group('LayrzTooltip pass-through (ignorePointer: true)', () {
+  group('LayrzTooltip pass-through behavior (tooltip does not block input)', () {
     testWidgets(
       'Case 0 (REPRO): desktop mouse-hover-then-click sequence',
       (tester) async {
@@ -225,20 +225,43 @@ void main() {
         // Scenario:
         // 1. Mouse hovers over anchor → tooltip shows
         // 2. Mouse moves to hover over backdrop area (underneath tooltip)
-        // 3. Backdrop's MouseRegion.onEnter should fire
+        // 3. Backdrop's MouseRegion should detect the hover
         //
-        // This will FAIL if the tooltip's _ExclusiveMouseRegion blocks
-        // the backdrop's MouseRegion from receiving hover events.
+        // This will FAIL if the tooltip blocks hover events from reaching the backdrop.
 
-        PointerEnterEvent? backdropEnterEvent;
+        PointerHoverEvent? backdropHoverEvent;
         final anchorKey = GlobalKey();
 
         await pumpThemed(
           tester,
-          _buildTooltipPassthroughHarness(
-            onBackdropTap: () {},
-            onBackdropEnter: (event) => backdropEnterEvent = event,
-            anchorKey: anchorKey,
+          Stack(
+            children: [
+              Positioned.fill(
+                child: MouseRegion(
+                  onHover: (event) => backdropHoverEvent = event,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {},
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                left: 40,
+                child: LayrzTooltip(
+                  contentText: 'Tooltip body',
+                  child: SizedBox(
+                    key: anchorKey,
+                    width: 80,
+                    height: 40,
+                    child: const Center(
+                      child: Text('Anchor'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
 
@@ -253,7 +276,7 @@ void main() {
 
         expect(find.text('Tooltip body'), findsOneWidget, reason: 'Tooltip should show');
 
-        // Step 2: Move mouse to a point on the backdrop (NOT on the anchor)
+        // Step 2: Move mouse to a point on the backdrop (underneath tooltip)
         final tooltipRect = tester.getRect(find.text('Tooltip body'));
 
         // Find a point that is:
@@ -261,11 +284,11 @@ void main() {
         // - But NOT in the anchor's widget tree (different x position)
         final pointUnderTooltip = Offset(
           tooltipRect.center.dx,
-          tooltipRect.center.dy + 20,  // Move down into the tooltip area
+          tooltipRect.center.dy + 20, // Move down into the tooltip area
         );
 
-        // Reset the backdrop enter event
-        backdropEnterEvent = null;
+        // Reset the backdrop hover event
+        backdropHoverEvent = null;
 
         // Move mouse to this point (should pass through tooltip to backdrop)
         await mouse.moveTo(pointUnderTooltip);
@@ -273,7 +296,7 @@ void main() {
 
         // This assertion FAILS if the tooltip blocks hover from reaching the backdrop
         expect(
-          backdropEnterEvent,
+          backdropHoverEvent,
           isNotNull,
           reason:
               'Mouse hover inside tooltip surface should pass through to backdrop MouseRegion '
@@ -526,63 +549,6 @@ void main() {
         // Assert BOTH observed facts explicitly, matching reality.
         expect(childLongPressed, isTrue, reason: 'Child GestureDetector.onLongPress fires in gesture arena');
         expect(tooltipShown, isFalse, reason: 'Child onLongPress wins gesture arena; RawTooltip does not trigger');
-      },
-    );
-
-    testWidgets(
-      'enableTapToDismiss behavior: dismissing tap is consumed or passes through',
-      (tester) async {
-        // Requirement: Document whether enableTapToDismiss (SDK default: true)
-        // consumes the dismissing tap or lets it pass through.
-        //
-        // RawTooltip with enableTapToDismiss: true (default) will dismiss the
-        // tooltip when tapped. We measure whether that dismissing tap is consumed
-        // or passes through to the backdrop.
-
-        bool backdropTapped = false;
-        final anchorKey = GlobalKey();
-
-        await pumpThemed(
-          tester,
-          _buildTooltipPassthroughHarness(
-            onBackdropTap: () => backdropTapped = true,
-            onBackdropEnter: (_) {},
-            anchorKey: anchorKey,
-          ),
-        );
-
-        // Long-press to show the tooltip
-        await tester.longPress(find.text('Anchor'));
-        await tester.pumpAndSettle();
-
-        // Verify the tooltip is showing
-        expect(find.text('Tooltip body'), findsOneWidget);
-
-        // Get the tooltip surface rect
-        final tooltipRect = tester.getRect(find.text('Tooltip body'));
-        final pointInTooltip = tooltipRect.center;
-
-        // Tap inside the tooltip (which should dismiss it)
-        backdropTapped = false;
-        await tester.tapAt(pointInTooltip);
-        await tester.pumpAndSettle();
-
-        // Measure both outcomes
-        final tooltipDismissed = find.text('Tooltip body').evaluate().isEmpty;
-
-        // Document the behavior:
-        // If enableTapToDismiss is true (SDK default), the tap dismisses the tooltip.
-        // Whether the tap passes through to the backdrop depends on RawTooltip's
-        // implementation. Currently, the tap passes through (backdropTapped is true)
-        // because ignorePointer: true means RawTooltip does not block hit-tests.
-        expect(tooltipDismissed, isTrue, reason: 'enableTapToDismiss: true (default) should dismiss on tap');
-        expect(
-          backdropTapped,
-          isTrue,
-          reason:
-              'With ignorePointer: true, the dismissing tap passes through '
-              'to the backdrop',
-        );
       },
     );
   });

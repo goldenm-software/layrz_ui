@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/preview.dart';
+import 'package:layrz_ui/tokens.dart';
 
 import 'tooltip_position.dart';
 
@@ -25,17 +28,14 @@ import 'tooltip_position.dart';
 /// **Graceful degradation:** If the widget tree has no [Overlay] ancestor,
 /// [LayrzTooltip] returns its [child] unchanged (no tooltip is shown).
 /// This allows tooltips to work in test harnesses that do not provide a full
-/// ancestor tree. [RawTooltip] otherwise asserts an [Overlay] via [debugCheckHasOverlay].
+/// ancestor tree.
 ///
 /// **Pass-through:** While the tooltip surface is shown, it is not hit-tested
 /// (`ignorePointer: true`), so the widget painted behind the surface remains
 /// interactive.
 ///
-/// **Known limitation:** [RawTooltip] wraps its child in a [Listener] with
-/// [HitTestBehavior.opaque], so wrapping a transparent, non-interactive widget in a
-/// [LayrzTooltip] makes it absorb hit-tests that would otherwise pass through to
-/// whatever is painted beneath it. This is only observable in overlapping [Stack]
-/// layouts. Tracked for a future rebuild on [OverlayPortal].
+/// **Invariant:** The tooltip ALWAYS renders outside the bounding box of the anchor.
+/// This prevents the anchor from losing hover state and entering a flicker loop.
 ///
 /// **Trigger modes:**
 /// - **Trigger:** long-press (touch) or hover (desktop)
@@ -46,7 +46,7 @@ import 'tooltip_position.dart';
 /// - [contentText]: plain-text tooltip content (mutually exclusive with [contentRichText])
 /// - [contentRichText]: rich-text content with optional per-span styling (mutually exclusive with [contentText])
 /// - [position]: preferred position relative to the anchor (default: [LayrzTooltipPosition.bottom])
-class LayrzTooltip extends StatelessWidget {
+class LayrzTooltip extends StatefulWidget {
   /// The widget to be wrapped with the tooltip.
   final Widget child;
 
@@ -82,20 +82,108 @@ class LayrzTooltip extends StatelessWidget {
        );
 
   @override
-  Widget build(BuildContext context) {
-    // Degrade gracefully with no Overlay ancestor.
-    if (Overlay.maybeOf(context) == null) {
-      return child;
+  State<LayrzTooltip> createState() => _LayrzTooltipState();
+}
+
+class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late CurvedAnimation _curvedAnimation;
+  OverlayEntry? _overlayEntry;
+  Timer? _hideTimer;
+  final GlobalKey _anchorKey = GlobalKey();
+  bool _themedInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use placeholder durations initially; they will be updated in didChangeDependencies.
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _curvedAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _animationController.addStatusListener(_handleAnimationStatusChange);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update animation durations and curves based on tokens once.
+    if (!_themedInitialized) {
+      try {
+        final tokens = context.tokens;
+        _animationController.duration = tokens.motion.dHover;
+        _animationController.reverseDuration = tokens.motion.dPress;
+        // Dispose old animation and create new one with correct curve
+        _curvedAnimation.dispose();
+        _curvedAnimation = CurvedAnimation(
+          parent: _animationController,
+          curve: tokens.motion.easingEnter,
+          reverseCurve: tokens.motion.easingExit,
+        );
+        _themedInitialized = true;
+      } catch (e) {
+        // Theme not available yet, will retry on next didChangeDependencies
+      }
+    }
+  }
+
+  void _handleAnimationStatusChange(AnimationStatus status) {
+    // Remove the overlay entry only when animation completes dismissal.
+    if (status == AnimationStatus.dismissed) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+  }
+
+  void _handleMouseEnter() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
+    _showTooltip();
+  }
+
+  void _handleMouseExit() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 100), _hideTooltip);
+  }
+
+  void _handleLongPress() {
+    _hideTimer?.cancel();
+    _hideTimer = null;
+    _showTooltip();
+  }
+
+  void _showTooltip() {
+    if (!mounted || Overlay.maybeOf(context) == null) return;
+
+    if (_overlayEntry == null) {
+      _overlayEntry = OverlayEntry(
+        builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
+      );
+      Overlay.of(context).insert(_overlayEntry!);
     }
 
-    final tokens = context.tokens;
+    if (_animationController.status == AnimationStatus.dismissed) {
+      _animationController.forward();
+    }
+  }
 
-    final plainText = contentText ?? contentRichText!.toPlainText();
+  void _hideTooltip() {
+    if (mounted && _animationController.status == AnimationStatus.forward) {
+      _animationController.reverse();
+    }
+  }
 
+  Widget _buildTooltipOverlay(BuildContext overlayContext) {
+    final tokens = overlayContext.tokens;
     final baseStyle = tokens.typography.labelSmall.copyWith(
       color: tokens.colors.background,
     );
 
+    // Build the surface widget
     final surface = Container(
       padding: EdgeInsets.symmetric(
         horizontal: tokens.spacing.sp12,
@@ -105,43 +193,142 @@ class LayrzTooltip extends StatelessWidget {
         color: tokens.colors.fg1,
         borderRadius: BorderRadius.circular(tokens.radius.r8),
       ),
-      child: contentText != null
+      child: widget.contentText != null
           ? Text(
-              contentText!,
+              widget.contentText!,
               style: baseStyle,
             )
           : Text.rich(
-              contentRichText!,
+              widget.contentRichText!,
               style: baseStyle,
             ),
     );
 
-    final constrainedSurface = MediaQuery.maybeSizeOf(context) != null
-        ? ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.sizeOf(context).width * kLayrzTooltipMaxWidthFactor,
-            ),
-            child: surface,
-          )
-        : surface;
+    // Predict surface size before placing
+    final surfaceSize = _predictTooltipSize(
+      baseStyle: baseStyle,
+      screenSize: MediaQuery.sizeOf(overlayContext),
+      tokens: tokens,
+    );
 
-    return RawTooltip(
-      semanticsTooltip: plainText,
-      ignorePointer: true,
-      hoverDelay: Duration.zero,
-      triggerMode: TooltipTriggerMode.longPress,
-      positionDelegate: layrzTooltipPositionDelegate(position),
-      animationStyle: AnimationStyle(
-        duration: tokens.motion.dHover,
-        curve: tokens.motion.easingEnter,
-        reverseDuration: tokens.motion.dPress,
-        reverseCurve: tokens.motion.easingExit,
+    // Get anchor geometry
+    final anchorRenderBox = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (anchorRenderBox == null) {
+      return const SizedBox.shrink();
+    }
+
+    final anchorGlobalOffset = anchorRenderBox.localToGlobal(Offset.zero);
+    final anchorRect = anchorGlobalOffset & anchorRenderBox.size;
+
+    // Compute tooltip position using the position delegate
+    final overlaySize = MediaQuery.sizeOf(overlayContext);
+    final delegate = layrzTooltipPositionDelegate(widget.position);
+    final context = TooltipPositionContext(
+      target: Offset(anchorRect.center.dx, anchorRect.center.dy),
+      targetSize: anchorRect.size,
+      tooltipSize: surfaceSize,
+      overlaySize: overlaySize,
+      preferBelow: widget.position == LayrzTooltipPosition.bottom,
+      verticalOffset: 0,
+    );
+
+    final tooltipOffset = delegate(context);
+
+    return Positioned(
+      left: tooltipOffset.dx,
+      top: tooltipOffset.dy,
+      child: IgnorePointer(
+        ignoring: true,
+        child: FadeTransition(
+          opacity: _curvedAnimation,
+          child: surface,
+        ),
       ),
-      tooltipBuilder: (context, animation) => FadeTransition(
-        opacity: animation,
-        child: constrainedSurface,
+    );
+  }
+
+  Size _predictTooltipSize({
+    required TextStyle baseStyle,
+    required Size screenSize,
+    required LayrzTokens tokens,
+  }) {
+    final maxWidth = screenSize.width * kLayrzTooltipMaxWidthFactor;
+    final textSpan = widget.contentText != null
+        ? TextSpan(text: widget.contentText, style: baseStyle)
+        : _mergeTextStyleWithSpan(widget.contentRichText!, baseStyle);
+
+    final painter = TextPainter(
+      text: textSpan,
+      textDirection: TextDirection.ltr,
+    );
+
+    painter.layout(maxWidth: maxWidth);
+
+    return Size(
+      painter.width + tokens.spacing.sp12 * 2,
+      painter.height + tokens.spacing.sp6 * 2,
+    );
+  }
+
+  /// Merge a base text style with a [TextSpan], applying the base style to all children recursively.
+  TextSpan _mergeTextStyleWithSpan(TextSpan span, TextStyle baseStyle) {
+    final mergedStyle = baseStyle.merge(span.style);
+    final mergedChildren = span.children
+        ?.map((child) => child is TextSpan ? _mergeTextStyleWithSpan(child, baseStyle) : child)
+        .toList();
+
+    return TextSpan(
+      text: span.text,
+      style: mergedStyle,
+      children: mergedChildren,
+      recognizer: span.recognizer,
+      mouseCursor: span.mouseCursor,
+      onEnter: span.onEnter,
+      onExit: span.onExit,
+      semanticsLabel: span.semanticsLabel,
+    );
+  }
+
+  @override
+  void dispose() {
+    // Dispose order: cancel timer → remove overlay entry → dispose animations → dispose controller
+    _hideTimer?.cancel();
+    _hideTimer = null;
+
+    if (_overlayEntry != null && _overlayEntry!.mounted) {
+      _overlayEntry!.remove();
+    }
+    _overlayEntry = null;
+
+    _animationController.removeStatusListener(_handleAnimationStatusChange);
+    _curvedAnimation.dispose();
+    _animationController.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Graceful degradation: if no Overlay ancestor, return child unchanged
+    if (Overlay.maybeOf(context) == null) {
+      return widget.child;
+    }
+
+    final plainText = widget.contentText ?? widget.contentRichText!.toPlainText();
+
+    return Semantics(
+      tooltip: plainText,
+      child: MouseRegion(
+        opaque: false,
+        hitTestBehavior: HitTestBehavior.translucent,
+        onEnter: (_) => _handleMouseEnter(),
+        onExit: (_) => _handleMouseExit(),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onLongPress: _handleLongPress,
+          child: KeyedSubtree(key: _anchorKey, child: widget.child),
+        ),
       ),
-      child: child,
     );
   }
 }

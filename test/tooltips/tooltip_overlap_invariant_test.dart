@@ -5,24 +5,23 @@ import 'package:layrz_ui/tooltips.dart';
 
 import '../helpers/pump_themed.dart';
 
-/// Foundation-agnostic acceptance tests for [LayrzTooltip].
+/// Acceptance tests for [LayrzTooltip] overlap and hover-stability invariants.
 ///
-/// These tests validate the critical invariants that any implementation
-/// (current [RawTooltip]-based or future [OverlayPortal]-based) must satisfy:
+/// These tests validate two critical requirements:
 ///
-/// **Test 1: Overlap Invariant**
+/// **Invariant 1: No Overlap**
 /// The tooltip surface must never intersect its own anchor's rect. If it does,
 /// the anchor loses hover state, the tooltip hides, the cursor is over the anchor
-/// again, the tooltip shows → infinite flicker loop. Observed in the Spacing section.
+/// again, the tooltip shows → infinite flicker loop. This was observed in the
+/// Spacing section with narrow anchors (8×24, 4×24, etc.).
 ///
-/// **Test 2: Hover Stability**
+/// **Invariant 2: Hover Stability**
 /// When a mouse pointer hovers over an anchor and the tooltip appears, the tooltip
 /// must remain visible and stable as long as the pointer remains stationary over
 /// the anchor. No flicker or hiding should occur with a stationary pointer.
 ///
-/// Cases that fail against the current [RawTooltip] implementation are marked
-/// `skip:` with a reference to issue #39 (OverlayPortal rebuild). Cases that pass
-/// today are unskipped to guard against regression.
+/// All tests are unskipped except for degenerate anchor cases (0-area widgets)
+/// which have nothing to hover and are excluded for practical reasons.
 void main() {
   group('LayrzTooltip acceptance tests (foundation-agnostic)', () {
     /// Test helper: build a tooltip with a given anchor size, trigger hover, and check overlap.
@@ -114,10 +113,9 @@ void main() {
     testWidgets(
       'Test 1.2: bottom position — narrow 8×24 anchor (from Spacing section)',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // This narrow case reproduces the bug reported in the Spacing section.
         // The Spacing ruler uses height 24 (sp24) and width varying from 4 to 48.
-        // This narrow case triggers the bug in the current RawTooltip implementation.
+        // The composed implementation must correctly position the tooltip to avoid overlap.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
@@ -125,14 +123,13 @@ void main() {
           description: '8×24 narrow anchor (spacing sp8)',
         );
       },
-      skip: true,
     );
 
     testWidgets(
       'Test 1.3: bottom position — very narrow 4×24 anchor (spacing sp4)',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with very narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // The composed implementation must correctly position the tooltip
+        // even with very narrow anchors.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(4, 24),
@@ -140,14 +137,13 @@ void main() {
           description: '4×24 very narrow anchor (spacing sp4)',
         );
       },
-      skip: true,
     );
 
     testWidgets(
       'Test 1.4: bottom position — tall narrow 6×100 anchor',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // The composed implementation must correctly position the tooltip
+        // even with tall narrow anchors.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(6, 100),
@@ -155,7 +151,6 @@ void main() {
           description: '6×100 tall narrow anchor',
         );
       },
-      skip: true,
     );
 
     testWidgets(
@@ -176,8 +171,8 @@ void main() {
     testWidgets(
       'Test 1.6: top position — narrow 8×24 anchor',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // The composed implementation must correctly position the tooltip
+        // above the anchor without overlap.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
@@ -185,14 +180,13 @@ void main() {
           description: '8×24 narrow anchor (top position)',
         );
       },
-      skip: true,
     );
 
     testWidgets(
       'Test 1.7: left position — narrow 8×24 anchor',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // The composed implementation must correctly position the tooltip
+        // to the left of the anchor without overlap.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
@@ -200,14 +194,13 @@ void main() {
           description: '8×24 narrow anchor (left position)',
         );
       },
-      skip: true,
     );
 
     testWidgets(
       'Test 1.8: right position — narrow 8×24 anchor',
       (tester) async {
-        // Known issue: RawTooltip positioning breaks with narrow anchors.
-        // Tracked for OverlayPortal rebuild (issue #39).
+        // The composed implementation must correctly position the tooltip
+        // to the right of the anchor without overlap.
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
@@ -215,7 +208,6 @@ void main() {
           description: '8×24 narrow anchor (right position)',
         );
       },
-      skip: true,
     );
 
     testWidgets(
@@ -253,6 +245,9 @@ void main() {
         // Hover stability test: when the mouse pointer rests on a narrow anchor
         // (8×24 from the Spacing section), the tooltip should remain visible without
         // flickering or hiding while the pointer stays stationary.
+        //
+        // If the tooltip overlaps the anchor, the anchor loses hover, the tooltip hides,
+        // and we get into a flicker loop. The no-overlap invariant prevents this.
         final anchorKey = GlobalKey();
 
         await pumpThemed(
@@ -290,9 +285,7 @@ void main() {
         // Verify tooltip is showing
         expect(find.text('Stable tooltip'), findsOneWidget, reason: 'Tooltip should show initially');
 
-        // Keep the pointer stationary and pump repeatedly
-        // If the tooltip overlaps the anchor, the anchor loses hover, the tooltip hides,
-        // and we get into a flicker loop. By pumping without moving, we expose this bug.
+        // Keep the pointer stationary and pump repeatedly to test stability
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 50));
         }
@@ -304,10 +297,6 @@ void main() {
           reason: 'Tooltip must remain visible while pointer rests on anchor (no flicker)',
         );
       },
-      // Known issue: RawTooltip positioning breaks with narrow anchors,
-      // causing the flicker loop observed in the Spacing section.
-      // Tracked for OverlayPortal rebuild (issue #39).
-      skip: true,
     );
   });
 }
