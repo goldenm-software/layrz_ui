@@ -1404,6 +1404,62 @@ if (context.breakpoint == LayrzBreakpoint.xs) {
 
 ---
 
+## D23: Typography Scale Collapse — Five Styles Instead of Fifteen
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / Feature Scope
+
+### Context
+
+`LayrzTextTheme` inherited a fifteen-style typography scale from Material 3's `TextTheme`: five families (display, headline, title, body, label) × three sizes each (large, medium, small). This required developers to choose between three near-identical sizes on every text call, inviting inconsistent choices across components. The original rationale was familiarity with Material's taxonomy to ease migration from layrz_theme. However, layrz_ui is explicitly Material-free (D7 removed dark mode, D14 removed the undefined accent colour). The typography naming was the last thing tying it to Material's structure even though the weights diverged (commit `d4f8063` set display w800, headline w700, title w500, body w300, label w100, departing from Material's uniform weights).
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep all fifteen styles | Familiar from layrz_theme; granular control over every text size | Forces three-way choice per call site; inconsistent use across components; Material-only taxonomy; scale has already diverged in weight, so naming was the last Material tie |
+| (b) **Chosen** — Collapse to five, taking the Medium of each family | One clear choice per text role; scales with the metric (headline = 28px, body = 14px); components only use `displayMedium`, `headlineMedium`, etc., never the Large/Small variants | Apps migrating from layrz_theme need real edits (`bodyMedium` → `body`); the break is cheap now with only two components (LayrzApp and LayrzCard) consuming the scale, and would be expensive after M3–M6 |
+| (c) Provide both (keep fifteen, add five shortcuts) | Backward compatibility; shortcuts for common case | Two APIs maintain parallel; drift risk if shortcuts diverge from canonical sizes; no real unification |
+
+### Decision
+
+**Chose (b): Collapse `LayrzTextTheme` to five styles — `display`, `headline`, `title`, `body`, `label` — taking exactly the Medium size of each family.**
+
+The fifteen old names are **removed outright** — no deprecated aliases, since the package is 0.0.x and this is an explicit clean break, consistent with D1.
+
+### Mapped Values
+
+| New Name | Replaces | Size | Weight | Usage |
+|----------|----------|------|--------|-------|
+| `display` | `displayMedium` | 45px | 800 | Hero text, splash screens |
+| `headline` | `headlineMedium` | 28px | 700 | Section headings |
+| `title` | `titleMedium` | 16px | 500 | Card titles, dialog headers |
+| `body` | `bodyMedium` | 14px | 300 | Paragraph text, default root |
+| `label` | `labelMedium` | 12px | 100 | Button labels, form labels, badges |
+
+### Rationale
+
+- **Design clarity**: One text style per role removes the decision paralysis of choosing between three sizes. `headline` unambiguously means 28px/w700, not "which headline size did I use elsewhere?"
+- **Align with diverged weights**: Commit `d4f8063` already set weights that depart from Material (label w100 is not Material's w500). The naming was the last Material tie. Removing it completes the decoupling.
+- **Material-free branding**: layrz_ui is not Material. Dropping Material's taxonomy (even the name shape) reinforces this identity.
+- **Lower migration cost now than later**: Only LayrzApp and LayrzCard consume the scale as of 2026-08-16. M2–M7 components have not shipped. Removing fifteen names before 5+ components depend on them costs a search-replace; removing it after costs careful component-by-component rework.
+- **Variant access pattern**: Apps needing a `headline` variant use `copyWith(fontSize:)`, which reads as a deliberate deviation rather than one of three blessed options.
+
+### Consequences
+
+- **`LayrzTextTheme` fields change** — the class loses twelve fields. Consumers must rename: `displayLarge`, `displaySmall`, `headlineLarge`, `headlineSmall`, `titleLarge`, `titleSmall`, `bodyLarge`, `bodySmall`, `labelLarge`, `labelSmall` are all removed. Only `display`, `headline`, `title`, `body`, `label` remain. The old `displayMedium`, `headlineMedium`, etc. are renamed to their base form.
+- **Migration for layrz_theme consumers** — any app currently using the old names must update. This is a deliberate breaking change (D1's stance applies).
+- **Design docs updated** — `engineering/design-tokens.md` and `wiki/Design-Tokens.md` must reflect the five-style scale with sizes and weights.
+- **No deprecated aliases** — apps will see compile-time errors immediately, forcing explicit migration. No gradual deprecation path.
+- **Weight clarity** — the document of weights (w800 → display, w700 → headline, w500 → title, w300 → body, w100 → label) reinforces the semantic scale.
+
+### Review Trigger
+
+If a component design genuinely needs a second size in one family — e.g., a "large headline" (32px) in addition to the standard 28px — that is a signal to revisit whether five is too few. At that point, add a new style (e.g., `headlineCompact` or `headlineExpanded`) with a new weight, document it clearly, and accept that the scale is growing to meet a real need. Current decision assumes five covers the range.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
