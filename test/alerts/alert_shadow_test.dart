@@ -2,9 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/alerts.dart';
-import 'package:layrz_ui/app.dart';
-import 'package:layrz_ui/theme.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';

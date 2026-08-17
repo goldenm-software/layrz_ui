@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/alerts.dart';
+import 'package:layrz_ui/src/alerts/alerts.dart';
 
 import '../helpers/pump_themed.dart';
 

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 /// A labelled tile used to display a color or radius sample.
 ///

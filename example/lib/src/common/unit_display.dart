@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/extensions.dart';
-import 'package:layrz_ui/tooltips.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 /// A widget that displays design values in logical units with a hover tooltip showing physical pixels.
 ///

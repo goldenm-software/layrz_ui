@@ -1,8 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/alerts.dart';
-import 'package:layrz_ui/extensions.dart';
-import 'package:layrz_ui/grid.dart';
-import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 
 import '../common/showroom_section.dart';

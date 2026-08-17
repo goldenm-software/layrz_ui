@@ -1,9 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:layrz_ui/buttons.dart';
-import 'package:layrz_ui/constants.dart';
-import 'package:layrz_ui/src/buttons/button_indicator.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/buttons/src/button_indicator.dart';
 
 import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';
