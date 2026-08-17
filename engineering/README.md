@@ -15,7 +15,7 @@ This output must always be empty.
 
 ## Progress Tracking
 
-Progress on milestones and components is tracked in **engineering documentation** (`milestone-N.md` Status tables) and mirrored on **[Notion](https://app.notion.com/p/goldenm/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6)** for shared viewing. The Status tables here and in the Notion page are synchronized; see your respective preference. External bug reports use GitHub Issues (declared in `pubspec.yaml`).
+Progress on milestones and components is tracked in **engineering documentation** (`milestone-N.md` Status tables) and mirrored on **[Notion](https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6)** for shared viewing. The Status tables here and in the Notion page are kept in step. External bug reports use GitHub Issues (declared in `pubspec.yaml`).
 
 ## Documentation Guide
 

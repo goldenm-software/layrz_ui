@@ -9,35 +9,9 @@ Built exclusively on `package:flutter/widgets.dart`. No Material. No Cupertino.
 
 ---
 
-## Why layrz_ui?
-
-Flutter's Material and Cupertino layers are opinionated and heavyweight. `layrz_ui` decouples the Layrz design system from both, the same way Flutter itself separates `widgets` from `material` and `cupertino`. The result is a leaner dependency graph, full control over every pixel, and no unwanted platform chrome.
-
----
-
-## Features
-
-- `LayrzApp` / `LayrzApp.router` — drop-in replacement for `MaterialApp`, built on `WidgetsApp`
-- `LayrzThemeData` — immutable design tokens (colors, typography, radii, icon theme)
-- `LayrzTextTheme` — full text-style scale (displayLarge → labelSmall), mirrors Material naming for easy migration
-- `LayrzTheme` — `InheritedWidget` for theme propagation, accessible via `context.theme`
-- `LayrzThemeMode` — light / dark / system brightness selector (no Material dependency)
-- `LayrzPlatform` — runtime platform enum with `isWeb`, `isMobile`, `isDesktop` helpers
-- `LayrzColorExtensions` — hex serialization, contrast color, ARGB int conversion
-- `LayrzContextExtensions` — `context.theme`, `context.isDark`, `context.titleStyle`, etc.
-- Brand constants — Layrz colors, responsive grid breakpoints, animation durations
-
----
-
-## Roadmap
-
-- **Parity with `layrz_theme`** — full widget-by-widget port of every component in the latest release
-- **New layout system** — a redesigned responsive layout engine built from scratch on `widgets.dart`
-- **go_router only** — Navigator 1.0 support will be dropped; `go_router` will be the sole routing solution
-
----
-
 ## Installation
+
+Add layrz_ui to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -47,13 +21,7 @@ dependencies:
       ref: main
 ```
 
-> `layrz_ui` will be published to pub.dev once it reaches a stable release.
-
----
-
-## Getting started
-
-Replace `MaterialApp` with `LayrzApp` in your entry point:
+Then create your first app:
 
 ```dart
 import 'package:flutter/widgets.dart';
@@ -69,91 +37,55 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayrzApp(
       title: 'My App',
-      theme: LayrzThemeData.light(primaryColor: const Color(0xFF001E60)),
+      theme: LayrzThemeData.light(),
       home: const HomePage(),
     );
   }
 }
 ```
 
----
-
-## Usage
-
-### Accessing the theme
-
-```dart
-// via extension
-final theme = context.theme;
-
-// or directly
-final theme = LayrzTheme.of(context);
-```
-
-### Reading design tokens
-
-```dart
-ColoredBox(
-  color: theme.backgroundColor,
-  child: Text(
-    'Hello',
-    style: theme.textTheme.titleLarge.copyWith(color: theme.primaryColor),
-  ),
-);
-```
-
-### Dark / light mode
-
-```dart
-if (context.isDark) {
-  // dark branch
-}
-```
-
-### Color utilities
-
-```dart
-final hex = const Color(0xFF001E60).toHex();        // '#001E60'
-final color = LayrzColorExtensions.fromHex('#001E60');
-final readable = brandColor.contrastColor;          // black or white
-```
-
-### Platform detection
-
-```dart
-if (LayrzPlatform.isDesktop) {
-  // show sidebar
-}
-```
-
-### Declarative routing (go_router, auto_route, etc.)
-
-```dart
-LayrzApp.router(
-  routerConfig: myRouter,
-  theme: LayrzThemeData.light(),
-  darkTheme: LayrzThemeData.dark(),
-  themeMode: LayrzThemeMode.system,
-  title: 'My App',
-)
-```
+For detailed setup, fonts, and routing, see [**Getting Started**](https://github.com/goldenm-software/layrz_ui/wiki/Getting-Started) in the wiki.
 
 ---
 
-## Constants
+## Why layrz_ui?
 
-| Constant | Value | Description |
-|---|---|---|
-| `kPrimaryColor` | `#001E60` | Layrz primary brand color |
-| `kAccentColor` | `#FF8200` | Layrz accent brand color |
-| `kLightBackgroundColor` | `#FCFCFC` | Light theme scaffold background |
-| `kDarkBackgroundColor` | `#282828` | Dark theme scaffold background |
-| `kExtraSmallGrid` | `600` | xs breakpoint (logical px) |
-| `kSmallGrid` | `960` | sm breakpoint |
-| `kMediumGrid` | `1264` | md breakpoint |
-| `kLargeGrid` | `1904` | lg breakpoint |
-| `kHoverDuration` | `100ms` | Micro-interaction animation duration |
-| `kPageTransitionDuration` | `250ms` | Page transition animation duration |
+Flutter's Material and Cupertino layers are opinionated and heavyweight. `layrz_ui` decouples the Layrz design system from both, the same way Flutter itself separates `widgets` from `material` and `cupertino`. The result is a leaner dependency graph, full control over every pixel, and no unwanted platform chrome.
+
+---
+
+## Features
+
+- `LayrzApp` / `LayrzApp.router` — drop-in replacement for `MaterialApp`, built on `WidgetsApp`
+- `LayrzThemeData` — immutable design tokens (colors, typography, radii, icon theme)
+- `LayrzTextTheme` — five core text styles: `display`, `headline`, `title`, `body`, `label`
+- `LayrzTheme` — `InheritedWidget` for theme propagation, accessible via `context.theme`
+- `LayrzPlatform` — runtime platform enum with `isWeb`, `isMobile`, `isDesktop` helpers
+- `LayrzColorExtensions` — hex serialization, contrast color, ARGB int conversion, opacity helpers
+- `LayrzContextExtensions` — `context.theme`, `context.tokens`, `context.breakpoint`, `context.titleStyle`, etc.
+- Brand constants — Layrz colors, animation durations
+
+---
+
+## Documentation
+
+Complete guides, API references, and component documentation live in the [**GitHub Wiki**](https://github.com/goldenm-software/layrz_ui/wiki):
+
+- **[Getting Started](https://github.com/goldenm-software/layrz_ui/wiki/Getting-Started)** — Add the dependency, set up `LayrzApp`, preload fonts, and build your first screen
+- **[Theming](https://github.com/goldenm-software/layrz_ui/wiki/Theming)** — How the theme system works and how to access design values in widgets
+- **[Design Tokens](https://github.com/goldenm-software/layrz_ui/wiki/Design-Tokens)** — Complete reference of all colors, typography, spacing, radius, shadows, borders, and motion tokens
+- **[Platform and Extensions](https://github.com/goldenm-software/layrz_ui/wiki/Platform-And-Extensions)** — Platform detection and convenience utilities for colors and BuildContext
+- **[Component Catalog](https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog)** — Mapping of layrz_theme to layrz_ui components
+
+---
+
+## Roadmap
+
+Live progress across milestones M1–M8 is tracked on the [Notion board](https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6).
+
+- **Parity with `layrz_theme`** — full widget-by-widget port of every component in the latest release
+- **New layout system** — a redesigned responsive layout engine built from scratch on `widgets.dart`
+- **go_router only** — Navigator 1.0 support will be dropped; `go_router` will be the sole routing solution
 
 ---
 
@@ -173,7 +105,7 @@ make run-macos
 
 ### Why is this package called `layrz_ui`?
 
-All packages developed by [Golden M / Layrz](https://layrz.com) are prefixed with `layrz_`. Check out our other packages on [pub.dev](https://pub.dev/publishers/goldenm.com/packages).
+All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`. Check out our other packages on [pub.dev](https://pub.dev/publishers/layrz.com/packages).
 
 ### Why does this library exist?
 
@@ -181,7 +113,7 @@ All packages developed by [Golden M / Layrz](https://layrz.com) are prefixed wit
 
 ### Do you have other libraries?
 
-Yes! You can find us on [PyPi](https://pypi.org/user/goldenm/) for Python, [RubyGems](https://rubygems.org/profiles/goldenm) for Ruby, [NPM (Golden M)](https://www.npmjs.com/~goldenm) / [NPM (Layrz)](https://www.npmjs.com/~layrz-software) for Node.js, and [pub.dev](https://pub.dev/publishers/goldenm.com/packages) for Dart/Flutter.
+Yes! You can find us on [PyPi](https://pypi.org/user/goldenm/) for Python, [RubyGems](https://rubygems.org/profiles/goldenm) for Ruby, [NPM (Golden M)](https://www.npmjs.com/~goldenm) / [NPM (Layrz)](https://www.npmjs.com/~layrz-software) for Node.js, and [pub.dev (Golden M)](https://pub.dev/publishers/goldenm.com/packages) / [pub.dev (Layrz)](https://pub.dev/publishers/layrz.com/packages) for Dart/Flutter.
 
 ### Is this package free?
 

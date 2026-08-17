@@ -132,7 +132,7 @@ When you add a new widget, document it in `wiki/Widgets/` (not `engineering/`), 
 
 ## Progress Tracking
 
-**Progress page:** https://app.notion.com/p/goldenm/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6
+**Progress page:** https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6
 
 **Authoritative record:** Each `engineering/milestone-N.md` contains a `## Status` table recording the current state of work items, milestone by milestone. These tables are the source of truth, kept in step with the code in the same commit. The Notion page above is the shared, publicly linkable view of the same status.
 
