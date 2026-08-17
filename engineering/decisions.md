@@ -1075,11 +1075,13 @@ When D19 (per-domain library entrypoints) was implemented, the package structure
 
 ---
 
-## D19: Per-Domain Library Entrypoints — Implemented
+## D19: Per-Domain Library Entrypoints — Superseded
 
 **Date**: 2026-08-15 (deferred)  
-**Status**: Accepted  
+**Status**: Superseded  
 **Category**: Architecture / API Design
+
+**Superseded by**: D26 (2026-08-16) — reversed to single root barrel
 
 ### Context
 
@@ -1193,12 +1195,17 @@ import 'button_style.dart';  // OK — same module, same directory
 
 Cross-module imports must use the absolute form:
 ```dart
-// In lib/buttons/src/layrz_button.dart
-import 'package:layrz_ui/tokens/tokens.dart';  // OK — absolute cross-module
-import 'package:layrz_ui/constants/constants.dart';  // OK — absolute cross-module
+// In lib/src/buttons/src/layrz_button.dart
+import 'package:layrz_ui/src/tokens/tokens.dart';  // OK — absolute cross-module
+import 'package:layrz_ui/src/constants/constants.dart';  // OK — absolute cross-module
 
 // NOT:
 import '../../tokens/tokens.dart';  // WRONG — relative, leaves module
+```
+
+Consumers in `test/` and `example/lib/` import the root barrel:
+```dart
+import 'package:layrz_ui/layrz_ui.dart';  // Consumers use root barrel
 ```
 
 ### Verification
@@ -1587,6 +1594,71 @@ Notion can mirror the milestone documents with a public read-only link for viewe
 - Notion mirrors prove inadequate (stale data, poor sync), suggesting that a dedicated internal board (GitHub Project or Jira) is necessary.
 
 **Revisit date**: Six months after the first M2 release (approximately early 2027), when the team has enough experience with the new workflow to evaluate whether it is sustainable.
+
+---
+
+## D26: Root Barrel Restored — Single lib/layrz_ui.dart for All Consumers
+
+**Date**: 2026-08-16  
+**Status**: Accepted  
+**Category**: Architecture / API Design
+
+### Context
+
+Decision D19 implemented a per-domain library restructure, creating per-domain entrypoints (`lib/buttons.dart`, `lib/tokens.dart`, etc.) and deleting the root barrel `lib/layrz_ui.dart`. The rationale was that per-domain imports offered four benefits: explicit dependency intent, no accidental coupling, smaller analysis surfaces, and familiarity with Flutter SDK patterns.
+
+A later architectural review surfaced a question about Dart's deferred imports (`import 'package:layrz_ui/buttons.dart' deferred as buttons`), which enable code splitting and lazy loading. Deferred imports work with per-domain libraries, but not with a single root barrel. However, deferred loading is only supported on two of Flutter's six platforms: web (dart2js/wasm) and, with significant setup, Android (via Flutter Deferred Components and Play Feature Delivery). iOS, macOS, Windows, and Linux do not support deferred loading; `loadLibrary()` completes immediately and the code is already in the binary. This meant the per-domain split was optimizing for a benefit that 67% of Flutter platforms cannot realize.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep per-domain entrypoints (D19's choice) | Deferred imports possible on web and Android; explicit dependency intent; no accidental coupling; smaller analysis surface; Flutter SDK familiarity | Benefits only 2 of 6 platforms; per-domain structure adds complexity with no runtime gain on most platforms; breaking import change required for adoption |
+| (b) **Chosen** — Revert to single root barrel | Simpler consumer experience; one import path for all code; no platform-conditional benefits; breaking change costs nothing now (package is 0.0.x, no established consumers); addresses "which library to import?" confusion | Loses explicit dependency intent within single files; removes smaller-analysis-surface benefit; defers deferred loading to future (if ever needed) |
+| (c) Keep both barrel and entrypoints | Maximum flexibility; backward compatibility if per-domain entrypoints are later adopted | Two sources of truth; confusion about which to use; maintenance burden if they diverge |
+
+### Decision
+
+**Chose (b): Restore the single root barrel at `lib/layrz_ui.dart`; delete all per-domain entrypoints.**
+
+All 14 modules (alerts, app, buttons, cards, constants, extensions, fonts, grid, platform, state, theme, tokenizer, tokens, tooltips) are exported from the root barrel. This is the sole blessed consumer import:
+
+```dart
+import 'package:layrz_ui/layrz_ui.dart';
+
+// Use LayrzButton, LayrzTextInput, LayrzTokens, etc. directly
+```
+
+### Rationale
+
+- **Platform parity**: layrz_ui targets all six Flutter platforms equally. Optimizing the import structure for benefits that only two platforms can use is not a sound trade-off.
+- **Simplicity for consumers**: One import path (`import 'package:layrz_ui/layrz_ui.dart';`) is simpler than deciding between 14 domain-specific paths. No accidental coupling occurs if all modules are equally visible; the risk of coupling exists regardless of import style.
+- **Cost is negligible now**: The package is 0.0.x with zero established consumers. No apps depend on the per-domain import style. The breaking change is free to execute now; executing it after 3–5 components ship would be much more costly.
+- **Deferred imports are deferred**: If a future initiative decides to invest in code splitting (requiring platform-conditional build logic, feature detection, and performance measurement), the importer can switch back to per-domain entrypoints or use a custom import strategy. The decision is not being made under time pressure.
+- **Architecture stays sound**: Per-domain structure remains inside `lib/src/` (lib/src/buttons/buttons.dart as the per-module barrel), preserving the module-boundary clarity for maintainers. Only the consumer-facing surface changes.
+
+### Counter-Arguments Recorded
+
+D19's four stated benefits survive the deferral question and remain architecturally sound:
+- **Explicit dependency intent**: Per-domain imports make it clear which modules an app uses. The root barrel removes this. Mitigation: code review can note imports; linters can flag unused modules.
+- **No accidental coupling**: Coupling risk is real in large systems. Per-domain imports prevent it. The root barrel accepts this risk as a trade-off for simplicity.
+- **Smaller analysis surface**: Importing one module instead of 14 improves analyzer and IDE responsiveness. The root barrel makes the analysis surface larger. This is accepted.
+- **Flutter SDK familiarity**: The SDK structures imports per domain (`import 'package:flutter/widgets.dart'`, etc.). Following this convention eases mental model transfer. Reverting breaks that familiarity.
+
+An additive option (keep both the root barrel and per-domain entrypoints, exporting the same symbols from each) was proposed and rejected. Maintaining two parallel APIs is a source of truth problem and adds no benefit — if per-domain imports are available, callers will use them inconsistently, creating the same coupling and clarity risks the split was meant to prevent.
+
+### Consequences
+
+- **Consumer imports change**: Every app consuming layrz_ui must update from per-domain imports to the root barrel. Example: `import 'package:layrz_ui/buttons.dart';` becomes `import 'package:layrz_ui/layrz_ui.dart';` This is a breaking change, acceptable for a 0.0.x package.
+- **Per-domain entrypoints deleted**: `lib/buttons.dart`, `lib/tokens.dart`, etc. no longer exist. Import paths that reached them will fail at compile time.
+- **lib/layrz_ui.dart is created**: The root barrel at `lib/layrz_ui.dart` exports all 14 modules in a single statement. This is the public API surface.
+- **Internal structure unchanged**: `lib/src/<module>/<module>.dart` (per-module barrels) and `lib/src/<module>/src/` (implementations) remain; only the consumer-facing entry point changes.
+- **Documentation updates required**: CLAUDE.md, architecture.md, and wiki examples all reference the old per-domain imports and must be rewritten.
+- **D20 imports adjust**: Cross-module imports inside `lib/` use `package:layrz_ui/src/<module>/<module>.dart` form to reach other modules' barrels (unchanged in principle, paths updated in documentation).
+
+### Review Trigger
+
+**None.** This decision reverses D19 based on a clear platform-coverage analysis and zero-cost timing. No review trigger is needed; the reversal has been validated and is final.
 
 ---
 
