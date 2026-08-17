@@ -40,7 +40,7 @@ enum LayrzTooltipPosition {
 /// 4. Clamp the tooltip on the cross axis to stay inside the overlay.
 /// 5. Guard every clamp with `math.max(0.0, overlaySize.dimension - tooltipSize.dimension)`
 ///    to avoid throwing when the tooltip is larger than the overlay on that axis.
-TooltipPositionDelegate layrzTooltipPositionDelegate(LayrzTooltipPosition position) {
+TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
   return (TooltipPositionContext context) {
     final target = context.target; // Anchor centre in global coords.
     final targetSize = context.targetSize;

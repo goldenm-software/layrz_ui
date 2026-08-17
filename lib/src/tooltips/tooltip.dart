@@ -222,7 +222,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     // Compute tooltip position using the position delegate
     final overlaySize = MediaQuery.sizeOf(overlayContext);
-    final delegate = layrzTooltipPositionDelegate(widget.position);
+    final delegate = positionDelegate(widget.position);
     final context = TooltipPositionContext(
       target: Offset(anchorRect.center.dx, anchorRect.center.dy),
       targetSize: anchorRect.size,
