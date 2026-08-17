@@ -131,6 +131,7 @@ void main() {
           style: LayrzAlertStyle.layrz,
           accent: tokens.colors.success.shade500,
           tokens: tokens,
+          isInteractive: false,
         );
 
         final container = tester.widget<Container>(
@@ -161,6 +162,7 @@ void main() {
           style: LayrzAlertStyle.filledTonal,
           accent: tokens.colors.warning.shade500,
           tokens: tokens,
+          isInteractive: false,
         );
 
         final container = tester.widget<Container>(
@@ -190,6 +192,7 @@ void main() {
           style: LayrzAlertStyle.filled,
           accent: tokens.colors.danger.shade500,
           tokens: tokens,
+          isInteractive: false,
         );
 
         final container = tester.widget<Container>(
@@ -219,6 +222,7 @@ void main() {
           style: LayrzAlertStyle.outlined,
           accent: tokens.colors.info.shade500,
           tokens: tokens,
+          isInteractive: false,
         );
 
         final container = tester.widget<Container>(
@@ -325,6 +329,7 @@ void main() {
           style: LayrzAlertStyle.filled,
           accent: tokens.colors.primary.shade500,
           tokens: tokens,
+          isInteractive: false,
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));

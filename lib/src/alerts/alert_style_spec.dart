@@ -92,15 +92,19 @@ class LayrzAlertStyleSpec {
     bodyColor,
   );
 
-  /// Resolves a [LayrzAlertStyleSpec] from a style, accent color, and tokens.
+  /// Resolves a [LayrzAlertStyleSpec] from a style, accent color, tokens, and interaction state.
   ///
   /// [style] determines which visual treatment to apply (e.g., layrz, filledTonal, filled).
   /// [accent] is the primary color for the alert (semantic color or custom).
   /// [tokens] provides design values like surface colors, borders, and opacity rules.
+  /// [isInteractive] indicates whether the alert has an [onTap] callback. When true,
+  ///   opaque backgrounds are applied to prevent shadows from bleeding through
+  ///   translucent or transparent fills. When false, original fills are preserved.
   static LayrzAlertStyleSpec resolve({
     required LayrzAlertStyle style,
     required Color accent,
     required LayrzTokens tokens,
+    required bool isInteractive,
   }) {
     final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
     final contrast = accent.contrastColor;
@@ -118,8 +122,11 @@ class LayrzAlertStyleSpec {
         );
 
       case LayrzAlertStyle.filledTonal:
+        // For interactive alerts, composite the translucent tint into an opaque colour
+        // to prevent shadows from bleeding through. For inert alerts, keep translucency.
+        final backgroundColor = isInteractive ? Color.alphaBlend(tonal, tokens.colors.surface) : tonal;
         return LayrzAlertStyleSpec(
-          backgroundColor: tonal,
+          backgroundColor: backgroundColor,
           borderColor: const Color(0x00000000),
           borderWidth: 0.0,
           iconChipBackground: const Color(0x00000000),
@@ -140,8 +147,11 @@ class LayrzAlertStyleSpec {
         );
 
       case LayrzAlertStyle.outlined:
+        // For interactive alerts, use opaque surface background to prevent shadows
+        // from bleeding through. For inert alerts, keep full transparency.
+        final backgroundColor = isInteractive ? tokens.colors.surface : const Color(0x00000000);
         return LayrzAlertStyleSpec(
-          backgroundColor: const Color(0x00000000),
+          backgroundColor: backgroundColor,
           borderColor: accent,
           borderWidth: tokens.border.base,
           iconChipBackground: const Color(0x00000000),
