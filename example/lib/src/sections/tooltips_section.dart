@@ -385,77 +385,41 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
               SizedBox(height: widget.tokens.spacing.sp8),
               // Stack: anchor at top, targets positioned to overlap with tooltip surface
               SizedBox(
-                height: 120,
-                child: Stack(
-                  children: [
-                    // Anchor: pinned to TOP, centered horizontally
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: LayrzTooltip(
-                          contentText: 'Taps pass through to targets below',
-                          position: LayrzTooltipPosition.bottom,
+                height: 50,
+                child: Row(
+                  spacing: widget.tokens.spacing.sp8,
+                  children: List.generate(
+                    5,
+                    (index) => Expanded(
+                      child: LayrzTooltip(
+                        contentText: 'Taps pass through to targets below',
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _tapCount++;
+                            });
+                          },
                           child: Container(
-                            width: 50,
-                            height: 50,
                             decoration: BoxDecoration(
-                              color: widget.tokens.colors.primary[500],
+                              color: widget.tokens.colors.surface2,
+                              border: Border.all(
+                                color: widget.tokens.colors.divider,
+                                width: 1,
+                              ),
                               borderRadius: BorderRadius.circular(widget.tokens.radius.r8),
                             ),
                             alignment: Alignment.center,
                             child: Text(
-                              'Pass\nThrough',
+                              'Target ${index + 1}',
                               style: widget.tokens.typography.labelSmall.copyWith(
-                                color: widget.tokens.colors.background,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Targets: positioned to overlap with tooltip surface
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: 70,
-                      height: 48,
-                      child: Row(
-                        spacing: widget.tokens.spacing.sp8,
-                        children: List.generate(
-                          5,
-                          (index) => Expanded(
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _tapCount++;
-                                });
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: widget.tokens.colors.surface2,
-                                  border: Border.all(
-                                    color: widget.tokens.colors.divider,
-                                    width: 1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(widget.tokens.radius.r8),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'Target ${index + 1}',
-                                  style: widget.tokens.typography.labelSmall.copyWith(
-                                    color: widget.tokens.colors.fg2,
-                                  ),
-                                ),
+                                color: widget.tokens.colors.fg2,
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ],
