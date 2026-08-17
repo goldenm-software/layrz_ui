@@ -10,13 +10,11 @@ import '../helpers/pump_themed.dart';
 void main() {
   group('LayrzButton Regression Tests', () {
     group('BUG 1: Label truncation — all non-Fab styles have identical width', () {
-      testWidgets('all six non-Fab styles render with identical width for same label', (tester) async {
+      testWidgets('all three non-Fab styles render with identical width for same label', (tester) async {
         final widths = <LayrzButtonStyle, double>{};
 
         for (final style in [
-          LayrzButtonStyle.filled,
           LayrzButtonStyle.elevated,
-          LayrzButtonStyle.filledTonal,
           LayrzButtonStyle.outlined,
           LayrzButtonStyle.outlinedTonal,
         ]) {
@@ -49,8 +47,8 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButton(
-            labelText: 'FilledTonal',
-            style: LayrzButtonStyle.filledTonal,
+            labelText: 'Outlined',
+            style: LayrzButtonStyle.outlined,
             onTap: () {},
           ),
         );
@@ -71,7 +69,7 @@ void main() {
           LayrzButton(
             labelText: 'Save Button',
             icon: LayrzIcons.solarOutlineCheckCircle,
-            style: LayrzButtonStyle.filledTonal,
+            style: LayrzButtonStyle.outlined,
             onTap: () {},
           ),
         );
@@ -82,31 +80,6 @@ void main() {
     });
 
     group('BUG 2: Border opacity — borderless styles never show visible border', () {
-      test('filled does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
-        final accent = tokens.colors.primary;
-
-        for (final state in [
-          <WidgetState>{},
-          {WidgetState.disabled},
-          {WidgetState.hovered},
-          {WidgetState.pressed},
-        ]) {
-          final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.filled,
-            states: state,
-            tokens: tokens,
-            accent: accent,
-          );
-
-          expect(
-            spec.borderColor.a,
-            equals(0.0),
-            reason: 'filled borderColor alpha should always be 0',
-          );
-        }
-      });
-
       test('elevated does not show border in any state', () {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         final accent = tokens.colors.primary;
@@ -132,56 +105,6 @@ void main() {
         }
       });
 
-      test('filledTonal does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
-        final accent = tokens.colors.primary;
-
-        for (final state in [
-          <WidgetState>{},
-          {WidgetState.disabled},
-          {WidgetState.hovered},
-          {WidgetState.pressed},
-        ]) {
-          final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.filledTonal,
-            states: state,
-            tokens: tokens,
-            accent: accent,
-          );
-
-          expect(
-            spec.borderColor.a,
-            equals(0.0),
-            reason: 'filledTonal borderColor alpha should always be 0',
-          );
-        }
-      });
-
-      test('filledFab does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
-        final accent = tokens.colors.primary;
-
-        for (final state in [
-          <WidgetState>{},
-          {WidgetState.disabled},
-          {WidgetState.hovered},
-          {WidgetState.pressed},
-        ]) {
-          final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.filledFab,
-            states: state,
-            tokens: tokens,
-            accent: accent,
-          );
-
-          expect(
-            spec.borderColor.a,
-            equals(0.0),
-            reason: 'filledFab borderColor alpha should always be 0',
-          );
-        }
-      });
-
       test('elevatedFab does not show border in any state', () {
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         final accent = tokens.colors.primary;
@@ -203,31 +126,6 @@ void main() {
             spec.borderColor.a,
             equals(0.0),
             reason: 'elevatedFab borderColor alpha should always be 0',
-          );
-        }
-      });
-
-      test('filledTonalFab does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
-        final accent = tokens.colors.primary;
-
-        for (final state in [
-          <WidgetState>{},
-          {WidgetState.disabled},
-          {WidgetState.hovered},
-          {WidgetState.pressed},
-        ]) {
-          final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.filledTonalFab,
-            states: state,
-            tokens: tokens,
-            accent: accent,
-          );
-
-          expect(
-            spec.borderColor.a,
-            equals(0.0),
-            reason: 'filledTonalFab borderColor alpha should always be 0',
           );
         }
       });
@@ -531,14 +429,14 @@ void main() {
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.filledTonal,
+          style: LayrzButtonStyle.outlinedTonal,
           states: {},
           tokens: tokens,
           accent: accent,
         );
 
         final disabledSpec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.filledTonal,
+          style: LayrzButtonStyle.outlinedTonal,
           states: {WidgetState.disabled},
           tokens: tokens,
           accent: accent,

@@ -48,7 +48,7 @@ void main() {
           LayrzButton(
             labelText: 'Test Fab',
             icon: LayrzIcons.solarOutlineCheckCircle,
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -103,12 +103,12 @@ void main() {
         }
       });
 
-      testWidgets('filled style pumps correctly', (tester) async {
+      testWidgets('elevated style pumps correctly', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Filled',
-            style: LayrzButtonStyle.filled,
+            style: LayrzButtonStyle.elevated,
             onTap: () {},
           ),
         );
@@ -129,12 +129,12 @@ void main() {
         expect(find.byType(LayrzButton), findsOneWidget);
       });
 
-      testWidgets('filledTonal style pumps correctly', (tester) async {
+      testWidgets('outlinedTonal style pumps correctly', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'FilledTonal',
-            style: LayrzButtonStyle.filledTonal,
+            style: LayrzButtonStyle.outlinedTonal,
             onTap: () {},
           ),
         );
@@ -168,12 +168,12 @@ void main() {
         expect(find.byType(LayrzButton), findsOneWidget);
       });
 
-      testWidgets('filledTonalFab style pumps correctly', (tester) async {
+      testWidgets('outlinedTonalFab style pumps correctly', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Fab',
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -523,7 +523,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Fab Button',
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -544,7 +544,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Fab Label',
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -568,7 +568,7 @@ void main() {
           LayrzButton(
             labelText: 'Fab Label',
             hintText: 'Fab Hint',
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -701,7 +701,7 @@ void main() {
             children: [
               LayrzButton(
                 labelText: 'Row Fab',
-                style: LayrzButtonStyle.filledTonalFab,
+                style: LayrzButtonStyle.outlinedTonalFab,
                 onTap: () {},
               ),
             ],
@@ -772,7 +772,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Fab Square',
-            style: LayrzButtonStyle.filledTonalFab,
+            style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
         );
@@ -1012,12 +1012,12 @@ void main() {
         );
       });
 
-      testWidgets('filled style press changes background color', (tester) async {
+      testWidgets('elevated style press changes background color', (tester) async {
         await pumpThemed(
           tester,
           LayrzButton(
             labelText: 'Filled Button',
-            style: LayrzButtonStyle.filled,
+            style: LayrzButtonStyle.elevated,
             onTap: () {},
           ),
         );
@@ -1052,7 +1052,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Test Button',
-            style: LayrzButtonStyle.filledTonal,
+            style: LayrzButtonStyle.outlinedTonal,
             onTap: () {},
           ),
         );
@@ -1135,7 +1135,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Quick Tap Button',
-            style: LayrzButtonStyle.filled,
+            style: LayrzButtonStyle.elevated,
             onTap: () {},
           ),
         );
@@ -1187,7 +1187,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Test Button',
-            style: LayrzButtonStyle.filled,
+            style: LayrzButtonStyle.elevated,
             onTap: () {},
           ),
         );
@@ -1226,7 +1226,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Disabled Button',
-            style: LayrzButtonStyle.filled,
+            style: LayrzButtonStyle.elevated,
             isDisabled: true,
             onTap: () {}, // onTap is provided, but isDisabled=true makes it effectively disabled
           ),
