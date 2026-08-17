@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 /// A widget that displays design values in logical units with a hover tooltip showing physical pixels.
 ///
@@ -33,8 +34,6 @@ class UnitDisplay extends StatefulWidget {
 }
 
 class _UnitDisplayState extends State<UnitDisplay> {
-  bool _isHovering = false;
-
   /// Formats a logical unit value for display, removing trailing `.0`.
   ///
   /// Examples: 16.0 → `16u`, 14.5 → `14.5u`.
@@ -55,30 +54,6 @@ class _UnitDisplayState extends State<UnitDisplay> {
     return '${str}px';
   }
 
-  /// Builds a tooltip showing the physical pixel equivalent of the logical unit value.
-  Widget _buildTooltip(BuildContext context, String message) {
-    final tokens = context.tokens;
-    const tooltipPadding = 12.0;
-    const tooltipRadius = 8.0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: tooltipPadding,
-        vertical: tooltipPadding / 2,
-      ),
-      decoration: BoxDecoration(
-        color: tokens.colors.fg1,
-        borderRadius: BorderRadius.circular(tooltipRadius),
-      ),
-      child: Text(
-        message,
-        style: tokens.typography.label.copyWith(
-          color: tokens.colors.background,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -90,27 +65,12 @@ class _UnitDisplayState extends State<UnitDisplay> {
 
     final textStyle = widget.textStyle ?? tokens.typography.label.copyWith(color: tokens.colors.fg3);
 
-    return MouseRegion(
-      onEnter: (_) {
-        setState(() => _isHovering = true);
-      },
-      onExit: (_) {
-        setState(() => _isHovering = false);
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Text(
-            logicalDisplay,
-            style: textStyle,
-          ),
-          if (_isHovering)
-            Positioned(
-              bottom: 24,
-              left: 0,
-              child: _buildTooltip(context, tooltipMessage),
-            ),
-        ],
+    return LayrzTooltip(
+      contentText: tooltipMessage,
+      position: .left,
+      child: Text(
+        logicalDisplay,
+        style: textStyle,
       ),
     );
   }
