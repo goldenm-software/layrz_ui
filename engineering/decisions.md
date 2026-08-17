@@ -1460,6 +1460,62 @@ If a component design genuinely needs a second size in one family — e.g., a "l
 
 ---
 
+## D24: Font Sourcing Strategy — Google Fonts vs. CDN vs. Bundled
+
+**Date**: 2026-08-16  
+**Status**: Deferred  
+**Category**: Dependency Policy / Architecture
+
+### Context
+
+layrz_ui currently sources fonts through `LayrzGoogleFontsHandler`, which uses `google_fonts: ^8.2.1` to download font files at runtime, verify them by hash, cache them to the device filesystem, and register them via `FontLoader`. This approach is intentional, not a temporary placeholder.
+
+On 2026-08-16, a weight-rendering bug was fixed: `LayrzFontHandler.resolveFamily()` requested fonts with no weight specified, so all text resolved to the family `OpenSans_regular` (a single w400 face), causing all weights to paint as regular weight. The fix added `LayrzFontHandler.resolveFamilyForWeight(font, weight)` with a default implementation delegating to `resolveFamily`, preserving backward compatibility.
+
+This resolution revealed the mechanic: `google_fonts` registers one Flutter font family **per variant** (`OpenSans_400`, `OpenSans_700`, …), so weight is selected by choosing the family name, not by the `fontWeight` property. google_fonts 8.x supplies **13 discrete Open Sans variant files** (w300, w400, w500, w600, w700, w800; no w100) and exposes no variable font.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) google_fonts (chosen for now) | Flexible runtime selection; any Google font by name; familiar pattern | Runtime network latency and caching complexity; new dependency on `path_provider` if caching is needed; conditional `path_provider` coupling complicates testing |
+| (b) **Bundled fonts (enum + static assets)** | Explicit per-face weight mapping; compile-time safety; no network, no fallback flash; WASM showroom avoids cold-start fetches | ~490 KB of font assets in published package (paid by every consumer); loss of "any Google font" flexibility; per-face licensing review required; O(N) maintenance burden if faces are added later |
+| (c) **Layrz CDN (runtime, custom)** | Same caching pattern as google_fonts but pointed at Layrz-controlled infrastructure | The seam for URI substitution exists (`LayrzFontSource.uri`); two implementation gaps: (1) `LayrzFont` holds a single `uri`, but one file per weight is needed; (2) caching injection point exists but adds new responsibility to the app (or revisits the no-dependency stance) |
+
+### Decision
+
+**Chose (a): Stay with google_fonts for now.**
+
+The current approach is stable, tested, and works. The weight-rendering fix (adding `resolveFamilyForWeight`) closes the gap and establishes the **seam** for future font sourcing.
+
+### Rationale
+
+- **Minimum viable** — google_fonts works, avoids 490 KB of bundled assets, and keeps layrz_ui a thin layer atop Flutter primitives.
+- **Deferred complexity** — Both (b) and (c) introduce maintenance and distribution trade-offs; neither is blocking M1–M7 component delivery.
+- **Seams in place** — `LayrzFontSource.uri` + injected `fetcher` (used by `LayrzGoogleFontsHandler`) and the new `resolveFamilyForWeight` method provide the hooks needed to swap implementations later without API churn.
+- **Proven pattern** — google_fonts' download-verify-cache approach is production-tested by millions of apps; re-implementing it (option c) or abandoning it (option b) has hidden costs.
+
+### Consequences
+
+**No change to current API.** `LayrzFontHandler` and consuming apps remain unchanged. Google Fonts remains a dependency.
+
+**Two futures are now documented**:
+
+1. **Future: Serve fonts from Layrz CDN** — Implement a `LayrzCdnFontsHandler` following the same pattern. Implementation gaps to close:
+   - `LayrzFont` currently holds a single `uri`. For CDN hosting, one file per weight is needed. Solution: either add a weight→URI map field, or adopt a convention (e.g., `{uri}/{font-family}_w{weight}.ttf`) and compose URIs in `resolveFamilyForWeight`.
+   - Caching. google_fonts uses `path_provider` for device filesystem caching. layrz_ui deliberately ships no `path_provider` dependency. Future solution: either inject a caching callback (parallel to `fetcher`), or revisit the no-dependency stance and add `path_provider` as a normal dependency.
+
+2. **Future: Bundled fonts with enum-based safety** — Implement a `LayrzBundledFontsHandler` with a `LayrzFontFamily` enum declaring curated faces, their available weights, and which asset file backs each. Benefits: compile-time or assert-time error on missing weights (prevents the silent nearest-match failure that hid today's bug); no network; no showroom cold-start fetch penalty. Trade-offs: ~490 KB of assets in the published package (borne by all consumers whether used or not); loss of runtime flexibility; per-face licensing review (Open Sans is OFL, reauditing required if faces change). **Recommended strategy if pursued**: ship as a bundled **default** handler, keep `LayrzGoogleFontsHandler` as opt-in, and do not replace the `LayrzFontHandler` abstraction — it exists precisely to keep font sourcing pluggable.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports runtime font availability issues (missing weight, network latency on cold start, or conflicting licenses).
+- The WASM showroom (web build) reports measurable performance degradation from font fetches on cold start, and bundled fonts are measured to improve the metric.
+- A team decision is made to self-host fonts on Layrz infrastructure; at that point, implement the CDN handler and close the weight→URI seam.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
