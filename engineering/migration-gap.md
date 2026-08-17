@@ -34,7 +34,7 @@ The inventory was produced by:
 - **Table2**: 11 symbols (ThemedTable2<T>, controller, column config, 5 event types, on-tap behavior)
 - **Widgets**: 6 symbols (ThemedImage, ThemedCalendar + modes and entries)
 - **Helpers**: 9 symbols (parse base64, file → byte array, color validation, swatch generation, theme color resolution, info dialogs, etc.)
-- **Responsive Grid**: 4 symbols (ResponsiveRow, ResponsiveCol, Sizes enum, extension) — *Note: 2 symbols (Sizes, SizesExt) are being dropped per D9*
+- **Responsive Grid**: 4 symbols (LayrzRow, LayrzCol, Sizes enum, extension) — *Note: 2 symbols (Sizes, SizesExt) are being dropped per D9*
 - **Map Subsystem**: 13 symbols (buttons, layers, dialogs, controller, events, helpers, constants)
 - **Subtotal (Data & Display)**: 53 symbols
 

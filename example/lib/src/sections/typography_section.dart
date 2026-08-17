@@ -2,11 +2,12 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 
 import '../common/showroom_section.dart';
+import '../common/unit_display.dart';
 
-/// Displays all 15 typography styles from the design system.
+/// Displays the five core typography styles from the design system.
 ///
-/// Organized by category (display, headline, title, body, label), each style
-/// is rendered in its own style and labelled with name and actual font size.
+/// Each of the five styles (display, headline, title, body, label) is rendered
+/// in its own style and labelled with name and actual font size.
 Widget buildTypographySection() {
   return Builder(
     builder: (context) {
@@ -14,111 +15,24 @@ Widget buildTypographySection() {
 
       return ShowroomSection(
         title: 'Typography',
-        description: 'All text styles with their actual computed font sizes',
+        description: 'Five core text styles with their actual computed font sizes',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Display styles
-            _TypographyCategory(
-              title: 'Display',
-              styles: [
-                _StyleSample('displayLarge', tokens.typography.displayLarge),
-                _StyleSample('displayMedium', tokens.typography.displayMedium),
-                _StyleSample('displaySmall', tokens.typography.displaySmall),
-              ],
-            ),
-
-            SizedBox(height: tokens.spacing.sp24),
-
-            // Headline styles
-            _TypographyCategory(
-              title: 'Headline',
-              styles: [
-                _StyleSample('headlineLarge', tokens.typography.headlineLarge),
-                _StyleSample('headlineMedium', tokens.typography.headlineMedium),
-                _StyleSample('headlineSmall', tokens.typography.headlineSmall),
-              ],
-            ),
-
-            SizedBox(height: tokens.spacing.sp24),
-
-            // Title styles
-            _TypographyCategory(
-              title: 'Title',
-              styles: [
-                _StyleSample('titleLarge', tokens.typography.titleLarge),
-                _StyleSample('titleMedium', tokens.typography.titleMedium),
-                _StyleSample('titleSmall', tokens.typography.titleSmall),
-              ],
-            ),
-
-            SizedBox(height: tokens.spacing.sp24),
-
-            // Body styles
-            _TypographyCategory(
-              title: 'Body',
-              styles: [
-                _StyleSample('bodyLarge', tokens.typography.bodyLarge),
-                _StyleSample('bodyMedium', tokens.typography.bodyMedium),
-                _StyleSample('bodySmall', tokens.typography.bodySmall),
-              ],
-            ),
-
-            SizedBox(height: tokens.spacing.sp24),
-
-            // Label styles
-            _TypographyCategory(
-              title: 'Label',
-              styles: [
-                _StyleSample('labelLarge', tokens.typography.labelLarge),
-                _StyleSample('labelMedium', tokens.typography.labelMedium),
-                _StyleSample('labelSmall', tokens.typography.labelSmall),
-              ],
-            ),
+            _StyleRow(sample: _StyleSample('display', tokens.typography.display)),
+            SizedBox(height: tokens.spacing.sp16),
+            _StyleRow(sample: _StyleSample('headline', tokens.typography.headline)),
+            SizedBox(height: tokens.spacing.sp16),
+            _StyleRow(sample: _StyleSample('title', tokens.typography.title)),
+            SizedBox(height: tokens.spacing.sp16),
+            _StyleRow(sample: _StyleSample('body', tokens.typography.body)),
+            SizedBox(height: tokens.spacing.sp16),
+            _StyleRow(sample: _StyleSample('label', tokens.typography.label)),
           ],
         ),
       );
     },
   );
-}
-
-/// A category of text styles grouped under a heading.
-class _TypographyCategory extends StatelessWidget {
-  /// Creates a new [_TypographyCategory].
-  ///
-  /// The [title] is the category name (e.g., 'Display', 'Body').
-  /// The [styles] list contains samples to render.
-  const _TypographyCategory({required this.title, required this.styles});
-
-  /// The category name.
-  final String title;
-
-  /// The list of style samples to render.
-  final List<_StyleSample> styles;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: tokens.typography.titleMedium),
-        SizedBox(height: tokens.spacing.sp12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: styles
-              .map(
-                (sample) => Padding(
-                  padding: EdgeInsets.only(bottom: tokens.spacing.sp12),
-                  child: _StyleRow(sample: sample),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
 }
 
 /// A single text style sample with its label and font size.
@@ -140,7 +54,7 @@ class _StyleRow extends StatelessWidget {
         // Style name label
         SizedBox(
           width: tokens.spacing.sp48 * 2,
-          child: Text(sample.name, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+          child: Text(sample.name, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
 
         // Rendered text sample
@@ -149,10 +63,12 @@ class _StyleRow extends StatelessWidget {
         // Font size value
         SizedBox(
           width: tokens.spacing.sp48,
-          child: Text(
-            '${sample.style.fontSize?.toStringAsFixed(0)} px',
-            textAlign: TextAlign.right,
-            style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: UnitDisplay(
+              value: sample.style.fontSize ?? 0,
+              textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+            ),
           ),
         ),
       ],

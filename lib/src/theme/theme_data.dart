@@ -150,8 +150,8 @@ class LayrzThemeData {
 
   /// Convenience accessor — base body style used as [DefaultTextStyle] at the root.
   ///
-  /// Returns [textTheme.bodyMedium], i.e. [tokens.typography.bodyMedium].
-  TextStyle get textStyle => tokens.typography.bodyMedium;
+  /// Returns [textTheme.body], i.e. [tokens.typography.body].
+  TextStyle get textStyle => tokens.typography.body;
 
   /// Border radius used consistently for rounded corners across all widgets.
   ///
@@ -182,6 +182,7 @@ class LayrzThemeData {
     LayrzFont? titleFont,
     LayrzFont? bodyFont,
     LayrzFontHandler fontHandler = const LayrzGoogleFontsHandler(),
+    LayrzBreakpointTokens? breakpointTokens,
     Iterable<LayrzThemeExtension<dynamic>> extensions = const [],
   }) {
     // Use provided fonts, or wrap fontName into LayrzFont for Google Fonts
@@ -198,12 +199,18 @@ class LayrzThemeData {
           name: fontName,
         );
 
-    final tokens = LayrzTokens.light(
+    var tokens = LayrzTokens.light(
       primaryColor: primaryColor,
       titleFont: resolvedTitleFont,
       bodyFont: resolvedBodyFont,
       fontHandler: fontHandler,
     );
+
+    // Override breakpoints if custom tokens provided
+    if (breakpointTokens != null) {
+      tokens = tokens.copyWith(breakpoints: breakpointTokens);
+    }
+
     final iconTheme = IconThemeData(color: tokens.colors.fg1, size: 24);
     final extensionsMap = Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
       {for (final ext in extensions) ext.type: ext},

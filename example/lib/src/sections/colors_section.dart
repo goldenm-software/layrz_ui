@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
 import '../common/showroom_swatch.dart';
@@ -83,15 +84,23 @@ Widget buildColorsSection() {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Overlay & Tonal Opacity', style: tokens.typography.titleMedium),
+                Text('Overlay & Tonal Opacity', style: tokens.typography.title),
                 SizedBox(height: tokens.spacing.sp12),
                 Row(
                   children: [
                     Expanded(
-                      child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
+                      child: LayrzTooltip(
+                        contentText: 'overlay — ${tokens.colors.overlay.toHex()}',
+                        child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
+                      ),
                     ),
                     SizedBox(width: tokens.spacing.sp16),
-                    Expanded(child: _TonalOpacitySwatch(tokens: tokens)),
+                    Expanded(
+                      child: LayrzTooltip(
+                        contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
+                        child: _TonalOpacitySwatch(tokens: tokens),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -124,13 +133,18 @@ class _ColorCategory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: tokens.typography.titleMedium),
+        Text(title, style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Wrap(
           spacing: tokens.spacing.sp16,
           runSpacing: tokens.spacing.sp16,
           children: colors
-              .map((sample) => ShowroomSwatch(color: sample.color, label: sample.name, value: sample.color.toHex()))
+              .map(
+                (sample) => LayrzTooltip(
+                  contentText: '${sample.name} — ${sample.color.toHex()}',
+                  child: ShowroomSwatch(color: sample.color, label: sample.name, value: sample.color.toHex()),
+                ),
+              )
               .toList(),
         ),
       ],
@@ -175,7 +189,7 @@ class _OverlaySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        Text(label, textAlign: TextAlign.center, style: tokens.typography.labelSmall),
+        Text(label, textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }
@@ -217,7 +231,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     '100%',
-                    style: tokens.typography.labelSmall.copyWith(color: fullOpacity.contrastColor, fontSize: 10),
+                    style: tokens.typography.label.copyWith(color: fullOpacity.contrastColor, fontSize: 10),
                   ),
                 ),
               ),
@@ -233,7 +247,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(
                     '${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
-                    style: tokens.typography.labelSmall.copyWith(color: tonalColor.contrastColor, fontSize: 10),
+                    style: tokens.typography.label.copyWith(color: tonalColor.contrastColor, fontSize: 10),
                   ),
                 ),
               ),
@@ -243,7 +257,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.labelSmall),
+        Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }

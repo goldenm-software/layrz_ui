@@ -55,7 +55,7 @@ class ShowroomSwatch extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: tokens.typography.labelSmall.copyWith(color: textColor, fontWeight: FontWeight.w600),
+            style: tokens.typography.label.copyWith(color: textColor, fontWeight: FontWeight.w600),
           ),
         ),
 
@@ -64,7 +64,7 @@ class ShowroomSwatch extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
-          style: tokens.typography.labelSmall,
+          style: tokens.typography.label,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -73,7 +73,7 @@ class ShowroomSwatch extends StatelessWidget {
           Text(
             value!,
             textAlign: TextAlign.center,
-            style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+            style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

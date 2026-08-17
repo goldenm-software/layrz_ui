@@ -51,6 +51,23 @@ class LayrzGoogleFontsHandler extends LayrzFontHandler {
   }
 
   @override
+  String resolveFamilyForWeight(LayrzFont font, FontWeight weight) {
+    switch (font.source) {
+      case LayrzFontSource.local:
+      case LayrzFontSource.uri:
+        return font.name;
+      case LayrzFontSource.google:
+        try {
+          final style = GoogleFonts.getFont(font.name, fontWeight: weight);
+          return style.fontFamily ?? font.name;
+        } catch (_) {
+          final fallback = GoogleFonts.openSans(fontWeight: weight);
+          return fallback.fontFamily ?? 'Open Sans';
+        }
+    }
+  }
+
+  @override
   Future<void> preload(LayrzFont font) async {
     switch (font.source) {
       case LayrzFontSource.local:
@@ -70,12 +87,28 @@ class LayrzGoogleFontsHandler extends LayrzFontHandler {
         await loader.load();
 
       case LayrzFontSource.google:
+        // Preload all weights used by the type scale (w300, w400, w600, w700, w800).
+        // This ensures that each style can use its intended weight without flashing
+        // fallback glyphs on first paint. The cost is one-time: five font files are
+        // downloaded and cached per device (or per app session on WASM).
         try {
-          final style = GoogleFonts.getFont(font.name);
-          await GoogleFonts.pendingFonts(<TextStyle?>[style]);
+          final styles = <TextStyle>[
+            GoogleFonts.getFont(font.name, fontWeight: FontWeight.w300),
+            GoogleFonts.getFont(font.name, fontWeight: FontWeight.w400),
+            GoogleFonts.getFont(font.name, fontWeight: FontWeight.w600),
+            GoogleFonts.getFont(font.name, fontWeight: FontWeight.w700),
+            GoogleFonts.getFont(font.name, fontWeight: FontWeight.w800),
+          ];
+          await GoogleFonts.pendingFonts(styles);
         } catch (_) {
-          final fallback = GoogleFonts.openSans();
-          await GoogleFonts.pendingFonts(<TextStyle?>[fallback]);
+          final fallbacks = <TextStyle>[
+            GoogleFonts.openSans(fontWeight: FontWeight.w300),
+            GoogleFonts.openSans(fontWeight: FontWeight.w400),
+            GoogleFonts.openSans(fontWeight: FontWeight.w600),
+            GoogleFonts.openSans(fontWeight: FontWeight.w700),
+            GoogleFonts.openSans(fontWeight: FontWeight.w800),
+          ];
+          await GoogleFonts.pendingFonts(fallbacks);
         }
     }
   }

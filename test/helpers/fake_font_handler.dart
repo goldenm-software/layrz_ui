@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/fonts.dart';
 
 /// A test fake of [LayrzFontHandler] that returns font names without network calls.
@@ -18,6 +19,13 @@ class FakeFontHandler implements LayrzFontHandler {
   @override
   String resolveFamily(LayrzFont font) {
     // Return the font name directly without any resolution
+    return font.name;
+  }
+
+  @override
+  String resolveFamilyForWeight(LayrzFont font, FontWeight weight) {
+    // Return the font name directly without any resolution, ignoring weight.
+    // For tests, weight-specific resolution is not needed.
     return font.name;
   }
 

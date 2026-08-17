@@ -89,12 +89,6 @@ const double kLayrzButtonOutlinedTonalPressedDelta = 0.85;
 /// Controls the spacing between button edges and internal content (icon and label).
 const double kLayrzButtonHorizontalPadding = 16.0;
 
-/// Vertical offset between the bottom of a [LayrzButton] and its tooltip.
-///
-/// Provides visual separation so the tooltip does not visually overlap the button.
-/// Measured in logical pixels below the button's lower edge.
-const double kLayrzButtonTooltipVerticalOffset = 10.0;
-
 /// Minimum duration a busy state (loading or cooldown) remains visible on [LayrzButton].
 ///
 /// When a button enters a busy state, it remains visually and interactively disabled for at least
@@ -108,3 +102,21 @@ const double kLayrzButtonTooltipVerticalOffset = 10.0;
 /// strict truthfulness for visual calm and tactile responsiveness. The button stays disabled
 /// for the entire held window, so a tap cannot land mid-fade.
 const Duration kLayrzButtonMinBusyDuration = Duration(milliseconds: 100);
+
+/// Minimum duration the pressed visual feedback remains visible on [LayrzButton].
+///
+/// When the user taps the button, the pressed state becomes visible for at least this duration,
+/// even if the pointer is released sooner. This floor ensures the user perceives tactile feedback
+/// for all but the fastest taps.
+///
+/// **Purpose:** Prevents the pressed visual from flashing imperceptibly on quick taps. Without
+/// this window, a very fast tap could release before the 100ms AnimatedContainer transition
+/// begins animating, resulting in zero visible feedback. A 120ms floor guarantees at least 20ms
+/// of the transition is visible (120 − 100 = 20ms headroom), providing unmistakable tactile
+/// confirmation that the tap registered.
+///
+/// **How it works:** On pointer-down, the pressed state is set immediately. On pointer-up or
+/// pointer-cancel, if less than 120ms has elapsed since the press, a Timer delays the clear
+/// until the remainder expires. This ensures the visual feedback is always perceptible without
+/// blocking the tap's action callback.
+const Duration kLayrzButtonMinPressedDuration = Duration(milliseconds: 120);

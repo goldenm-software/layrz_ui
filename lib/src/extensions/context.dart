@@ -16,6 +16,16 @@ extension LayrzContextExtensions on BuildContext {
   /// way to access design values in new code.
   LayrzTokens get tokens => LayrzTheme.of(this).tokens;
 
+  /// The active breakpoint band, resolved from the viewport width.
+  ///
+  /// Resolves the breakpoint band using the viewport width (from [MediaQuery.sizeOf]).
+  /// This is always viewport-driven, not container-driven. Breakpoint bands are
+  /// independent of a widget's own box width — they reflect global screen size.
+  ///
+  /// Returns one of [LayrzBreakpoint.xs], [LayrzBreakpoint.sm], [LayrzBreakpoint.md],
+  /// [LayrzBreakpoint.lg], or [LayrzBreakpoint.xl].
+  LayrzBreakpoint get breakpoint => LayrzTheme.of(this).tokens.breakpoints.bandAt(MediaQuery.sizeOf(this).width);
+
   /// The tokenizer for convenient access to design tokens via shortcuts.
   ///
   /// Provides both group getters (e.g., [LayrzTokenizer.colors]) and

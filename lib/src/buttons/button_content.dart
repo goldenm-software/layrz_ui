@@ -23,7 +23,7 @@ InlineSpan buildButtonContentSpan({
   required LayrzButtonStyleSpec spec,
   required LayrzTokens tokens,
 }) {
-  final labelStyle = tokens.typography.labelLarge.copyWith(
+  final labelStyle = tokens.typography.label.copyWith(
     fontSize: kLayrzButtonFontSize,
     color: spec.contentColor,
   );

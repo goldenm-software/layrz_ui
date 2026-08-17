@@ -118,37 +118,29 @@ Typography tokens define text scales for all text in the system. They combine fo
 
 #### Token Structure
 
+`LayrzTextTheme` defines five text styles, one per semantic role:
+
 ```dart
 // Design sketch
-class LayrzTypographyTokens {
-  // Display styles (hero text, splash screens)
-  final TextStyle displayLarge;   // 57px
-  final TextStyle displayMedium;  // 45px
-  final TextStyle displaySmall;   // 36px
+class LayrzTextTheme {
+  // Display: hero text, splash screens
+  final TextStyle display;   // 45px, weight 800
   
-  // Headline styles (section headings)
-  final TextStyle headlineLarge;  // 32px
-  final TextStyle headlineMedium; // 28px
-  final TextStyle headlineSmall;  // 24px
+  // Headline: section headings
+  final TextStyle headline;  // 28px, weight 700
   
-  // Title styles (card titles, dialog titles)
-  final TextStyle titleLarge;     // 22px
-  final TextStyle titleMedium;    // 16px
-  final TextStyle titleSmall;     // 14px
+  // Title: card titles, dialog headers
+  final TextStyle title;     // 16px, weight 500
   
-  // Body styles (paragraph text, descriptions)
-  final TextStyle bodyLarge;      // 16px
-  final TextStyle bodyMedium;     // 14px
-  final TextStyle bodySmall;      // 12px
+  // Body: paragraph text, default root style
+  final TextStyle body;      // 14px, weight 300
   
-  // Label styles (buttons, input labels, badges)
-  final TextStyle labelLarge;     // 14px
-  final TextStyle labelMedium;    // 12px
-  final TextStyle labelSmall;     // 11px
+  // Label: button labels, form labels, badges
+  final TextStyle label;     // 12px, weight 100
 }
 ```
 
-These names mirror Material's TextTheme for familiarity. Font family and color are resolved from theme.
+The five-style scale (collapsed from fifteen in decision D23) provides one clear choice per text role. Variants are accessed via `copyWith(fontSize:)` for deliberate deviations. Font family and color are resolved from theme.
 
 #### Use in Components
 
@@ -165,8 +157,8 @@ class LayrzCard extends StatelessWidget {
       color: theme.colors.surface,
       child: Column(
         children: [
-          Text(title, style: theme.textTheme.titleLarge),
-          Text(description, style: theme.textTheme.bodyMedium),
+          Text(title, style: theme.textTheme.title),
+          Text(description, style: theme.textTheme.body),
         ],
       ),
     );
@@ -600,7 +592,7 @@ Token names follow these rules:
 For Milestone 1, the token system must meet these criteria:
 
 - All color tokens defined for light theme, including `primary`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
-- Typography tokens (`LayrzTextTheme`) cover all 15 text styles: display (3 sizes), headline (3), title (3), body (3), label (3)
+- Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (45px, w800), `headline` (28px, w700), `title` (16px, w500), `body` (14px, w300), `label` (12px, w100) — see decision D23 for the rationale
 - Spacing tokens are defined as `double` and include: `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, plus convenience accessors (`spacingSize`, `sizedBox`, `margin`, `reducedMargin`, `padding`)
 - Radius tokens include: `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `full` (pill shape), plus `borderRadius` getter and `innerRadius()` method
 - Shadow tokens define 5 elevation levels (1–5) using the mathematical algorithm, plus a builder method for custom elevation and radius

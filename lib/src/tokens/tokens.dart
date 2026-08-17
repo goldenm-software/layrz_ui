@@ -4,6 +4,7 @@ import 'package:layrz_ui/constants.dart';
 import 'package:layrz_ui/fonts.dart';
 
 import 'border.dart';
+import 'breakpoints.dart';
 import 'colors.dart';
 import 'motion.dart';
 import 'radius.dart';
@@ -14,7 +15,7 @@ import 'typography.dart';
 /// Immutable aggregate of all design tokens for the layrz_ui design system.
 ///
 /// [LayrzTokens] holds all semantic color, typography, spacing, radius, shadow,
-/// border, and motion tokens. It is the single source of truth for design values
+/// border, motion, and breakpoint tokens. It is the single source of truth for design values
 /// and is typically accessed via [LayrzTheme.of(context).tokens] once the theme
 /// integration is complete.
 ///
@@ -45,6 +46,9 @@ class LayrzTokens {
   /// All motion tokens (durations and easing curves).
   final LayrzMotionTokens motion;
 
+  /// All breakpoint tokens (band thresholds for responsive design).
+  final LayrzBreakpointTokens breakpoints;
+
   /// Creates a new [LayrzTokens] with all token categories explicitly set.
   const LayrzTokens({
     required this.colors,
@@ -54,6 +58,7 @@ class LayrzTokens {
     required this.shadow,
     required this.border,
     required this.motion,
+    required this.breakpoints,
   });
 
   /// Light theme tokens using Layrz brand defaults.
@@ -112,6 +117,9 @@ class LayrzTokens {
     // Motion is independent
     const motionTokens = LayrzMotionTokens();
 
+    // Breakpoints are independent
+    const breakpointTokens = LayrzBreakpointTokens();
+
     return LayrzTokens(
       colors: colorTokens,
       typography: typographyTokens,
@@ -120,6 +128,7 @@ class LayrzTokens {
       shadow: shadowTokens,
       border: borderTokens,
       motion: motionTokens,
+      breakpoints: breakpointTokens,
     );
   }
 
@@ -132,6 +141,7 @@ class LayrzTokens {
     LayrzShadowTokens? shadow,
     LayrzBorderTokens? border,
     LayrzMotionTokens? motion,
+    LayrzBreakpointTokens? breakpoints,
   }) {
     return LayrzTokens(
       colors: colors ?? this.colors,
@@ -141,6 +151,7 @@ class LayrzTokens {
       shadow: shadow ?? this.shadow,
       border: border ?? this.border,
       motion: motion ?? this.motion,
+      breakpoints: breakpoints ?? this.breakpoints,
     );
   }
 
@@ -155,8 +166,9 @@ class LayrzTokens {
           radius == other.radius &&
           shadow == other.shadow &&
           border == other.border &&
-          motion == other.motion;
+          motion == other.motion &&
+          breakpoints == other.breakpoints;
 
   @override
-  int get hashCode => Object.hash(colors, typography, spacing, radius, shadow, border, motion);
+  int get hashCode => Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints);
 }

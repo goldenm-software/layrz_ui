@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/fonts.dart';
 
@@ -54,6 +55,67 @@ void main() {
         );
         final resolved = handler.resolveFamily(font);
         // Should fall back to Ubuntu
+        expect(resolved, isNotEmpty);
+        expect(resolved, isA<String>());
+      });
+    });
+
+    group('resolveFamilyForWeight', () {
+      test('returns name verbatim for local fonts regardless of weight', () {
+        const font = LayrzFont(
+          source: LayrzFontSource.local,
+          name: 'MyLocalFont',
+        );
+        expect(handler.resolveFamilyForWeight(font, FontWeight.w300), 'MyLocalFont');
+        expect(handler.resolveFamilyForWeight(font, FontWeight.w700), 'MyLocalFont');
+      });
+
+      test('returns name verbatim for uri fonts regardless of weight', () {
+        const font = LayrzFont(
+          source: LayrzFontSource.uri,
+          name: 'MyCustomFont',
+          uri: 'https://example.com/font.ttf',
+        );
+        expect(handler.resolveFamilyForWeight(font, FontWeight.w300), 'MyCustomFont');
+        expect(handler.resolveFamilyForWeight(font, FontWeight.w700), 'MyCustomFont');
+      });
+
+      test('returns different families for different weights for google fonts', () {
+        // Open Sans is a real Google Font with multiple weight variants
+        const font = LayrzFont(
+          source: LayrzFontSource.google,
+          name: 'Open Sans',
+        );
+        final w300 = handler.resolveFamilyForWeight(font, FontWeight.w300);
+        final w400 = handler.resolveFamilyForWeight(font, FontWeight.w400);
+        final w600 = handler.resolveFamilyForWeight(font, FontWeight.w600);
+        final w700 = handler.resolveFamilyForWeight(font, FontWeight.w700);
+        final w800 = handler.resolveFamilyForWeight(font, FontWeight.w800);
+
+        // All families should be non-empty strings
+        expect(w300, isNotEmpty);
+        expect(w400, isNotEmpty);
+        expect(w600, isNotEmpty);
+        expect(w700, isNotEmpty);
+        expect(w800, isNotEmpty);
+
+        // At least some weights should return different families for a multi-weight font
+        // (This may not always be true if the variant mapping is limited, but for
+        // Open Sans we expect differences.)
+        final families = <String>{w300, w400, w600, w700, w800};
+        expect(
+          families.length,
+          greaterThan(1),
+          reason: 'Open Sans should have different families for different weights',
+        );
+      });
+
+      test('falls back gracefully for unknown google fonts with weight', () {
+        const font = LayrzFont(
+          source: LayrzFontSource.google,
+          name: 'ThisFontDoesNotExistOnGoogleFonts12345',
+        );
+        final resolved = handler.resolveFamilyForWeight(font, FontWeight.w700);
         expect(resolved, isNotEmpty);
         expect(resolved, isA<String>());
       });

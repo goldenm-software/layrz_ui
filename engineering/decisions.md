@@ -481,7 +481,9 @@ layrz_theme's `ResponsiveRow` and `ResponsiveCol` use a `Sizes` enum (col1 throu
 
 **Before `1.0.0` release**: Verify that the debug assertion catches all practical errors and that call sites read clearly without the enum.
 
-Consider whether `ResponsiveRow.builder` should be carried over. If yes, ensure it integrates cleanly with the integer-based `ResponsiveCol` API.
+**Update (2026-08-16) — ResponsiveRow.builder Review Resolved**
+
+The review trigger about `ResponsiveRow.builder` has been resolved: it was **deliberately not ported** from layrz_theme to layrz_ui. The rationale: a factory that builds children from an `itemCount` and `itemBuilder` callback duplicates the responsibility of `List.generate`, which is simpler and more idiomatic Dart. Callers use `LayrzRow(children: List.generate(...))` instead, achieving the same result with less custom machinery. This decision is documented in the Grid.md wiki page and in the Milestone 2 work item for LayrzRow/LayrzCol.
 
 ---
 
@@ -793,6 +795,62 @@ Hover, press, focus, and disabled states may vary **colour, border colour, shado
 ### Review Trigger
 
 If a component design genuinely needs a geometry change to be usable — an expanding search bar that grows to full width, a growing text field — that is a deliberate **layout behaviour** (expanding to fill space, revealing content) rather than an interaction state. Such cases should be argued on their own terms in the component's decision, not treated as an exception to this rule. The distinction is intent: state changes provide feedback within fixed bounds; layout changes intentionally restructure the view.
+
+**Update (2026-08-16) — Paint-Time Transforms Permitted; Hover Detection Safety Required**
+
+D15's prohibition on geometry changes was originally absolute: nothing layout-affecting in any interaction state. However, **paint-time transforms** (Transform, AnimatedSlide, AnimatedContainer.transform) move pixels without touching the render box's layout, so no reflow occurs and no sibling shifts. This permits a controlled exception: interaction states MAY apply paint-only translations if and only if the hover detection sits outside the moved element.
+
+**The distinction — layout-affecting vs. paint-only:**
+- **Layout-affecting** (forbidden): changes to size, padding, margin, border width, or the `RenderBox.size` rect. Causes reflow and sibling shifting. Example: widening a border from 1px to 2px.
+- **Paint-only** (permitted): `Transform.translate()`, `AnimatedSlide`, or `transform:` property on `AnimatedContainer`. Moves pixels without changing the widget's rect. The hit target stays fixed in layout space while the visual moves. Example: lifting a card on hover via `Transform.translate(offset: Offset(0, -elevation))`.
+
+**Critical safety constraint — Hover detection outside the transform:**
+
+A widget that applies a paint-time transform on hover can move out from under the pointer. If the hover detector (MouseRegion, FocusableActionDetector) is inside the transform, the hit region moves with the visual, and this sequence occurs:
+1. User hovers the element → element lifts via transform
+2. Element visual moves up, taking its hit target with it
+3. Original pointer position is no longer over the hit target → hover exits
+4. Element drops back down → hover re-enters → lifts again → loop
+
+This is a documented precedent in this milestone: **LayrzTooltip** surfaced on top of its anchor widget, causing the anchor to lose hover as the tooltip appeared, which triggered the tooltip to hide, which re-triggered the anchor's hover, indefinitely.
+
+**The rule:** The `MouseRegion` or `FocusableActionDetector` detecting the hover state must NOT be inside the `Transform`. The detector wraps the transform, so the hit region stays fixed in layout space while the child's pixels move.
+
+```dart
+// CORRECT: detector outside transform
+MouseRegion(
+  onEnter: (_) => setState(() => _hovered = true),
+  onExit: (_) => setState(() => _hovered = false),
+  child: Transform.translate(
+    offset: _hovered ? Offset(0, -4) : Offset.zero,
+    child: MyCard(),
+  ),
+)
+
+// WRONG: detector inside transform (hover oscillates)
+Transform.translate(
+  offset: _hovered ? Offset(0, -4) : Offset.zero,
+  child: MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: MyCard(),
+  ),
+)
+```
+
+**Testing requirements:** Components using paint-time transforms on interaction states must include:
+1. A layout-neutrality test asserting the widget's `RenderBox.size` and rect are identical in all interaction states (hovered, pressed, focused, normal, disabled). Example: `expect(findRenderBox(find.byType(MyCard)).size, equals(Offset(200, 100)))` before and after hover.
+2. An oscillation-safety test that hovers at the edge of the moving element and asserts no oscillation occurs (the hover state stabilizes within one frame and remains stable for 100ms+).
+
+### Consequences
+
+- **LayrzAlert (interactive mode)** is the first component to use paint-time transforms, lifting on hover with shadow elevation step-up.
+- **LayrzCard** deliberately retains shadow-only hover for now (no lift). Whether shadow-only components should adopt paint-time lift is an open design question, not an oversight or blocker.
+- **Existing components remain fully compliant** — nothing changes for components already shipped or in progress.
+
+### Review Trigger
+
+After LayrzAlert's interactive mode ships and accumulates user feedback, revisit whether the lift affordance should become standard for all hoverable components (cards, buttons, etc.) or remain opt-in per-component design.
 
 ---
 
@@ -1172,6 +1230,289 @@ This amendment does not change the decision itself, only clarifies its scope. Th
 **Before per-domain library restructure (D19)**: Verify that no cross-module relative imports remain in `lib/`, `test/`, or `example/lib/`. This check ensures the restructure's refactoring tools can work with consistent import paths.
 
 If code review finds a cross-module relative import, ask the author to rewrite it to `package:layrz_ui/` form before approval. This is a non-negotiable code quality gate.
+
+---
+
+## D21: Grid Breakpoints Are Viewport-Driven, Not Container-Driven
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+During the Milestone 2 grid implementation, a design choice emerged about how breakpoint bands are resolved. Two options existed:
+
+1. **Container-driven** — A grid's column spans would be determined by the grid's own measured width, allowing different grids on the same screen to select different breakpoints based on their local box width.
+2. **Viewport-driven** — All grids on the screen would select breakpoints based on the overall viewport width, following standard CSS Grid and Bootstrap semantics.
+
+The first option offered more flexibility for grids in narrow containers (sidebars, cards, etc.). The second option simplified mental model and aligned with industry convention. During implementation, an escape hatch (`useScreenWidth` parameter) was added to `LayrzCol` to allow switching between modes, creating a design inconsistency: the same column span "md: 4" would mean different pixel widths depending on a hidden parameter, making "md" have multiple meanings across an application.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Container-driven breakpoints | Maximum flexibility per grid; grids in narrow containers can use narrow-screen spans | "md" means different things in different contexts; inconsistent layout behavior; escape hatch (`useScreenWidth`) complicates the mental model |
+| (b) **Chosen** — Viewport-driven breakpoints only | Single source of truth; "md" always means the same thing; aligns with CSS Grid / Bootstrap; simpler mental model | Less flexible for grids in very narrow containers; narrow sidebars must divide a small width by wide-screen spans, resulting in very thin columns |
+| (c) Dual-mode with deprecation | Gradual migration path | Maintenance burden of two code paths; delayed resolution of the inconsistency |
+
+### Decision
+
+**Chose (b): Grid breakpoints are always viewport-driven. The `useScreenWidth` escape hatch is removed.**
+
+Breakpoints are resolved exclusively from `MediaQuery.sizeOf(context).width` (the viewport width), not from the grid's measured box width. This is the standard CSS Grid and Bootstrap behaviour.
+
+### Rationale
+
+- **Consistency**: "md" always means the same breakpoint band (960–1263 logical pixels) regardless of where the grid appears. This is critical for team coordination and reduces mental overhead.
+- **Industry alignment**: CSS Grid, Bootstrap, Tailwind, and other responsive systems all use viewport-driven breakpoints. Following this convention makes layrz_ui familiar to developers trained on those systems.
+- **Implementation simplicity**: Removing the `useScreenWidth` parameter eliminates branching logic in `LayrzCol.spanAt()` and `LayrzRow`, making the code simpler and faster.
+- **Accepted consequence**: The trade-off is that grids in narrow containers (e.g., a 400px sidebar on a 1920px screen) will select the xl band and divide 400px by wide-screen spans, resulting in very narrow columns. This is the correct behaviour per CSS Grid semantics and is expected by developers trained on responsive design.
+
+### Consequences
+
+- **`useScreenWidth` parameter removed** from `LayrzCol` and `LayrzRow` — it no longer exists, and code attempting to use it will fail at compile time.
+- **Pixel widths still respect the row's measured box** — the row's own width (not viewport width) is used for pixel arithmetic when sizing columns. This prevents overflow in narrow containers and is standard responsive grid behaviour.
+- **Design guidance updated** — grid documentation must emphasize that breakpoints come from viewport width and that narrow containers will select wide-screen spans, producing thin columns by design.
+
+### Worked Example (Consequence Illustration)
+
+A grid in a 400px sidebar on a 1920px display:
+
+```dart
+SizedBox(
+  width: 400,
+  child: LayrzRow(
+    children: [
+      LayrzCol(xs: 12, md: 6, lg: 4, child: ...),  // Span 4 at lg band
+      LayrzCol(xs: 12, md: 6, lg: 8, child: ...),  // Span 8 at lg band
+    ],
+  ),
+)
+```
+
+**Result**:
+- Viewport width = 1920 → **xl band** selected (because 1920 ≥ 1904)
+- Neither column sets `xl`, so both cascade to `lg`
+- Row's measured width = 400px
+- Column 1 resolves to span 4; pixel width = 400 × 4/12 ≈ **133px**
+- Column 2 resolves to span 8; pixel width = 400 × 8/12 ≈ **267px**
+
+The grid selects **xl band** (the right choice for a 1920px viewport) but divides **400px** by those wide-screen spans (the right consequence for a narrow container). This is correct per CSS Grid semantics.
+
+### Review Trigger
+
+**Revisit if**: A consuming application reports that grids in narrow containers are unusable because columns are too thin. At that point, re-evaluate whether the design guidance was clear enough, or whether an alternative approach (e.g., a **container-relative** mode for grids within Cards, with explicit opt-in) is needed. Current decision assumes developers will adapt their span definitions for narrow containers (e.g., using larger `lg` spans if they know the grid lives in a sidebar).
+
+---
+
+## D22: Breakpoints Live on the Theme, Not as Constants
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Milestone 1 established `kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, and `kLargeGrid` constants (valued 600, 960, 1264, 1904) exported from `package:layrz_ui/constants.dart`. When Milestone 2's grid components were implemented, the question arose: should these constants remain, or should breakpoint thresholds become themeable tokens?
+
+Options:
+1. **Keep as constants** — Simple, predictable; all apps use the same breakpoints by default.
+2. **Move to theme as tokens** — Apps can customize breakpoints; every consumer automatically follows the custom thresholds.
+3. **Both constants and tokens** — Backward compatibility and customization, but two sources of truth.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep as constants only | Simple; no theme complexity; familiar pattern from layrz_theme | Inflexible; apps cannot customize breakpoints without forking layrz_ui; changes to breakpoints require a new release |
+| (b) **Chosen** — Move to theme tokens; delete constants | Apps can customize via theme; design-system-agnostic; follows token pattern; single source of truth | Breaking change (constants deleted); requires apps to update imports; slightly more verbose access (`context.tokens.breakpoints` instead of constant reference) |
+| (c) Both constants and tokens | Maximum compatibility | Two sources of truth; confusion about which to use; maintenance burden if they diverge |
+
+### Decision
+
+**Chose (b): Breakpoints are `LayrzBreakpointTokens` on the theme. The constants `kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, `kLargeGrid` are deleted.**
+
+Breakpoint thresholds now live in `LayrzBreakpointTokens` (a field on `LayrzTokens` on `LayrzThemeData`). Default values match the former constants (xs: 600, sm: 960, md: 1264, lg: 1904), but apps can override them when creating a custom theme:
+
+```dart
+final customTheme = LayrzThemeData.light().copyWith(
+  tokens: tokens.copyWith(
+    breakpoints: LayrzBreakpointTokens(
+      xs: 500,    // Custom mobile threshold
+      sm: 900,    // Custom tablet threshold
+      md: 1200,   // Custom desktop threshold
+      lg: 1800,   // Custom large-desktop threshold
+    ),
+  ),
+);
+
+LayrzApp(theme: customTheme, ...)
+```
+
+All grid consumers (`LayrzRow`, `LayrzCol`, responsive layouts) automatically follow the custom thresholds from the theme.
+
+### Rationale
+
+- **Design-system principle**: Design systems are customizable. Hardcoded constants violate this principle; tokens on the theme are the right pattern.
+- **No API fragmentation**: Without customizable breakpoints, apps would need to fork layrz_ui to change responsive behaviour. With tokens, no fork is needed.
+- **Consistency with other tokens**: Spacing, colors, typography, shadow, and radius are all themeable; breakpoints should be too. This completes the token story.
+- **Backward compatibility through override**: Apps previously using `kExtraSmallGrid` in their own code can continue to define the constant locally; layrz_ui no longer exports it, but that is a clean breaking change (aligned with D1's stance on clean breaks).
+
+### Consequences
+
+- **`kExtraSmallGrid`, `kSmallGrid`, `kMediumGrid`, `kLargeGrid` are deleted** from `lib/src/constants/grid.dart` and no longer exported from `package:layrz_ui/constants.dart`.
+- **`lib/src/tokens/breakpoints.dart` is new** — defines `LayrzBreakpoint` enum and `LayrzBreakpointTokens` class.
+- **`LayrzTokens.breakpoints`** (a field of type `LayrzBreakpointTokens`) is the source of truth for all breakpoint thresholds.
+- **`context.tokens.breakpoints.bandAt(width)`** is the method to resolve a viewport width to its breakpoint band.
+- **`context.breakpoint` getter** returns the current breakpoint band based on viewport width and the theme's breakpoint tokens.
+- **Grid documentation updated** to reference `LayrzBreakpointTokens` instead of deleted constants; examples show how to customize via theme.
+
+### Migration Path for Apps
+
+Apps previously using `kExtraSmallGrid` and friends must migrate:
+
+**Before** (using constants):
+```dart
+if (width < kExtraSmallGrid) {
+  // xs band
+} else if (width < kSmallGrid) {
+  // sm band
+}
+```
+
+**After** (using tokens):
+```dart
+final band = context.tokens.breakpoints.bandAt(width);
+if (band == LayrzBreakpoint.xs) {
+  // xs band
+} else if (band == LayrzBreakpoint.sm) {
+  // sm band
+}
+```
+
+Or use the convenience getter:
+```dart
+if (context.breakpoint == LayrzBreakpoint.xs) {
+  // xs band layout
+}
+```
+
+### Review Trigger
+
+**Revisit if**: Multiple apps define their own breakpoint constants after this change, suggesting that the token customization path is too cumbersome or not discoverable. At that point, evaluate whether to provide a simpler customization API or add documentation with best practices for team-wide breakpoint overrides.
+
+---
+
+## D23: Typography Scale Collapse — Five Styles Instead of Fifteen
+
+**Date**: 2026-08-16  
+**Status**: Decided  
+**Category**: Architecture / Feature Scope
+
+### Context
+
+`LayrzTextTheme` inherited a fifteen-style typography scale from Material 3's `TextTheme`: five families (display, headline, title, body, label) × three sizes each (large, medium, small). This required developers to choose between three near-identical sizes on every text call, inviting inconsistent choices across components. The original rationale was familiarity with Material's taxonomy to ease migration from layrz_theme. However, layrz_ui is explicitly Material-free (D7 removed dark mode, D14 removed the undefined accent colour). The typography naming was the last thing tying it to Material's structure even though the weights diverged (commit `d4f8063` set display w800, headline w700, title w500, body w300, label w100, departing from Material's uniform weights).
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep all fifteen styles | Familiar from layrz_theme; granular control over every text size | Forces three-way choice per call site; inconsistent use across components; Material-only taxonomy; scale has already diverged in weight, so naming was the last Material tie |
+| (b) **Chosen** — Collapse to five, taking the Medium of each family | One clear choice per text role; scales with the metric (headline = 28px, body = 14px); components only use `displayMedium`, `headlineMedium`, etc., never the Large/Small variants | Apps migrating from layrz_theme need real edits (`bodyMedium` → `body`); the break is cheap now with only two components (LayrzApp and LayrzCard) consuming the scale, and would be expensive after M3–M6 |
+| (c) Provide both (keep fifteen, add five shortcuts) | Backward compatibility; shortcuts for common case | Two APIs maintain parallel; drift risk if shortcuts diverge from canonical sizes; no real unification |
+
+### Decision
+
+**Chose (b): Collapse `LayrzTextTheme` to five styles — `display`, `headline`, `title`, `body`, `label` — taking exactly the Medium size of each family.**
+
+The fifteen old names are **removed outright** — no deprecated aliases, since the package is 0.0.x and this is an explicit clean break, consistent with D1.
+
+### Mapped Values
+
+| New Name | Replaces | Size | Weight | Usage |
+|----------|----------|------|--------|-------|
+| `display` | `displayMedium` | 45px | 800 | Hero text, splash screens |
+| `headline` | `headlineMedium` | 28px | 700 | Section headings |
+| `title` | `titleMedium` | 16px | 500 | Card titles, dialog headers |
+| `body` | `bodyMedium` | 14px | 300 | Paragraph text, default root |
+| `label` | `labelMedium` | 12px | 100 | Button labels, form labels, badges |
+
+### Rationale
+
+- **Design clarity**: One text style per role removes the decision paralysis of choosing between three sizes. `headline` unambiguously means 28px/w700, not "which headline size did I use elsewhere?"
+- **Align with diverged weights**: Commit `d4f8063` already set weights that depart from Material (label w100 is not Material's w500). The naming was the last Material tie. Removing it completes the decoupling.
+- **Material-free branding**: layrz_ui is not Material. Dropping Material's taxonomy (even the name shape) reinforces this identity.
+- **Lower migration cost now than later**: Only LayrzApp and LayrzCard consume the scale as of 2026-08-16. M2–M7 components have not shipped. Removing fifteen names before 5+ components depend on them costs a search-replace; removing it after costs careful component-by-component rework.
+- **Variant access pattern**: Apps needing a `headline` variant use `copyWith(fontSize:)`, which reads as a deliberate deviation rather than one of three blessed options.
+
+### Consequences
+
+- **`LayrzTextTheme` fields change** — the class loses twelve fields. Consumers must rename: `displayLarge`, `displaySmall`, `headlineLarge`, `headlineSmall`, `titleLarge`, `titleSmall`, `bodyLarge`, `bodySmall`, `labelLarge`, `labelSmall` are all removed. Only `display`, `headline`, `title`, `body`, `label` remain. The old `displayMedium`, `headlineMedium`, etc. are renamed to their base form.
+- **Migration for layrz_theme consumers** — any app currently using the old names must update. This is a deliberate breaking change (D1's stance applies).
+- **Design docs updated** — `engineering/design-tokens.md` and `wiki/Design-Tokens.md` must reflect the five-style scale with sizes and weights.
+- **No deprecated aliases** — apps will see compile-time errors immediately, forcing explicit migration. No gradual deprecation path.
+- **Weight clarity** — the document of weights (w800 → display, w700 → headline, w500 → title, w300 → body, w100 → label) reinforces the semantic scale.
+
+### Review Trigger
+
+If a component design genuinely needs a second size in one family — e.g., a "large headline" (32px) in addition to the standard 28px — that is a signal to revisit whether five is too few. At that point, add a new style (e.g., `headlineCompact` or `headlineExpanded`) with a new weight, document it clearly, and accept that the scale is growing to meet a real need. Current decision assumes five covers the range.
+
+---
+
+## D24: Font Sourcing Strategy — Google Fonts vs. CDN vs. Bundled
+
+**Date**: 2026-08-16  
+**Status**: Deferred  
+**Category**: Dependency Policy / Architecture
+
+### Context
+
+layrz_ui currently sources fonts through `LayrzGoogleFontsHandler`, which uses `google_fonts: ^8.2.1` to download font files at runtime, verify them by hash, cache them to the device filesystem, and register them via `FontLoader`. This approach is intentional, not a temporary placeholder.
+
+On 2026-08-16, a weight-rendering bug was fixed: `LayrzFontHandler.resolveFamily()` requested fonts with no weight specified, so all text resolved to the family `OpenSans_regular` (a single w400 face), causing all weights to paint as regular weight. The fix added `LayrzFontHandler.resolveFamilyForWeight(font, weight)` with a default implementation delegating to `resolveFamily`, preserving backward compatibility.
+
+This resolution revealed the mechanic: `google_fonts` registers one Flutter font family **per variant** (`OpenSans_400`, `OpenSans_700`, …), so weight is selected by choosing the family name, not by the `fontWeight` property. google_fonts 8.x supplies **13 discrete Open Sans variant files** (w300, w400, w500, w600, w700, w800; no w100) and exposes no variable font.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) google_fonts (chosen for now) | Flexible runtime selection; any Google font by name; familiar pattern | Runtime network latency and caching complexity; new dependency on `path_provider` if caching is needed; conditional `path_provider` coupling complicates testing |
+| (b) **Bundled fonts (enum + static assets)** | Explicit per-face weight mapping; compile-time safety; no network, no fallback flash; WASM showroom avoids cold-start fetches | ~490 KB of font assets in published package (paid by every consumer); loss of "any Google font" flexibility; per-face licensing review required; O(N) maintenance burden if faces are added later |
+| (c) **Layrz CDN (runtime, custom)** | Same caching pattern as google_fonts but pointed at Layrz-controlled infrastructure | The seam for URI substitution exists (`LayrzFontSource.uri`); two implementation gaps: (1) `LayrzFont` holds a single `uri`, but one file per weight is needed; (2) caching injection point exists but adds new responsibility to the app (or revisits the no-dependency stance) |
+
+### Decision
+
+**Chose (a): Stay with google_fonts for now.**
+
+The current approach is stable, tested, and works. The weight-rendering fix (adding `resolveFamilyForWeight`) closes the gap and establishes the **seam** for future font sourcing.
+
+### Rationale
+
+- **Minimum viable** — google_fonts works, avoids 490 KB of bundled assets, and keeps layrz_ui a thin layer atop Flutter primitives.
+- **Deferred complexity** — Both (b) and (c) introduce maintenance and distribution trade-offs; neither is blocking M1–M7 component delivery.
+- **Seams in place** — `LayrzFontSource.uri` + injected `fetcher` (used by `LayrzGoogleFontsHandler`) and the new `resolveFamilyForWeight` method provide the hooks needed to swap implementations later without API churn.
+- **Proven pattern** — google_fonts' download-verify-cache approach is production-tested by millions of apps; re-implementing it (option c) or abandoning it (option b) has hidden costs.
+
+### Consequences
+
+**No change to current API.** `LayrzFontHandler` and consuming apps remain unchanged. Google Fonts remains a dependency.
+
+**Two futures are now documented**:
+
+1. **Future: Serve fonts from Layrz CDN** — Implement a `LayrzCdnFontsHandler` following the same pattern. Implementation gaps to close:
+   - `LayrzFont` currently holds a single `uri`. For CDN hosting, one file per weight is needed. Solution: either add a weight→URI map field, or adopt a convention (e.g., `{uri}/{font-family}_w{weight}.ttf`) and compose URIs in `resolveFamilyForWeight`.
+   - Caching. google_fonts uses `path_provider` for device filesystem caching. layrz_ui deliberately ships no `path_provider` dependency. Future solution: either inject a caching callback (parallel to `fetcher`), or revisit the no-dependency stance and add `path_provider` as a normal dependency.
+
+2. **Future: Bundled fonts with enum-based safety** — Implement a `LayrzBundledFontsHandler` with a `LayrzFontFamily` enum declaring curated faces, their available weights, and which asset file backs each. Benefits: compile-time or assert-time error on missing weights (prevents the silent nearest-match failure that hid today's bug); no network; no showroom cold-start fetch penalty. Trade-offs: ~490 KB of assets in the published package (borne by all consumers whether used or not); loss of runtime flexibility; per-face licensing review (Open Sans is OFL, reauditing required if faces change). **Recommended strategy if pursued**: ship as a bundled **default** handler, keep `LayrzGoogleFontsHandler` as opt-in, and do not replace the `LayrzFontHandler` abstraction — it exists precisely to keep font sourcing pluggable.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports runtime font availability issues (missing weight, network latency on cold start, or conflicting licenses).
+- The WASM showroom (web build) reports measurable performance degradation from font fetches on cold start, and bundled fonts are measured to improve the metric.
+- A team decision is made to self-host fonts on Layrz infrastructure; at that point, implement the CDN handler and close the weight→URI seam.
 
 ---
 

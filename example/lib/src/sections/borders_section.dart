@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/extensions.dart';
 import 'package:layrz_ui/tokens.dart';
+import 'package:layrz_ui/tooltips.dart';
 
 import '../common/showroom_section.dart';
+import '../common/unit_display.dart';
 
 /// Displays all border and stroke width tokens as visually distinct examples.
 ///
@@ -21,20 +23,29 @@ Widget buildBordersSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Pre-built border sides
-            Text('Pre-Built BorderSide Tokens', style: tokens.typography.titleMedium),
+            Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Row(
               children: [
                 Expanded(
-                  child: _BorderSample(label: 'light', side: tokens.border.light),
+                  child: LayrzTooltip(
+                    contentText: 'border.light — ${tokens.border.light.width.toStringAsFixed(1)}px',
+                    child: _BorderSample(label: 'light', side: tokens.border.light),
+                  ),
                 ),
                 SizedBox(width: tokens.spacing.sp16),
                 Expanded(
-                  child: _BorderSample(label: 'normal', side: tokens.border.normal),
+                  child: LayrzTooltip(
+                    contentText: 'border.normal — ${tokens.border.normal.width.toStringAsFixed(1)}px',
+                    child: _BorderSample(label: 'normal', side: tokens.border.normal),
+                  ),
                 ),
                 SizedBox(width: tokens.spacing.sp16),
                 Expanded(
-                  child: _BorderSample(label: 'thick', side: tokens.border.thick),
+                  child: LayrzTooltip(
+                    contentText: 'border.thick — ${tokens.border.thick.width.toStringAsFixed(1)}px',
+                    child: _BorderSample(label: 'thick', side: tokens.border.thick),
+                  ),
                 ),
               ],
             ),
@@ -42,7 +53,7 @@ Widget buildBordersSection() {
             SizedBox(height: tokens.spacing.sp24),
 
             // Stroke width values
-            Text('Stroke Width Values', style: tokens.typography.titleMedium),
+            Text('Stroke Width Values', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Column(
               children: [
@@ -80,7 +91,7 @@ class _BorderSample extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+        Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         SizedBox(height: tokens.spacing.sp8),
         Container(
           height: tokens.spacing.sp48,
@@ -90,7 +101,10 @@ class _BorderSample extends StatelessWidget {
           ),
         ),
         SizedBox(height: tokens.spacing.sp8),
-        Text('${side.width} px', style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3, fontSize: 11)),
+        UnitDisplay(
+          value: side.width,
+          textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3, fontSize: 11),
+        ),
       ],
     );
   }
@@ -117,18 +131,23 @@ class _StrokeValueRow extends StatelessWidget {
       children: [
         SizedBox(
           width: tokens.spacing.sp48,
-          child: Text(label, style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3)),
+          child: Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
         Expanded(
-          child: Container(height: width, color: tokens.colors.divider),
+          child: LayrzTooltip(
+            contentText: '$label = ${width.toStringAsFixed(1)}px',
+            child: Container(height: width, color: tokens.colors.divider),
+          ),
         ),
         SizedBox(width: tokens.spacing.sp8),
         SizedBox(
           width: tokens.spacing.sp48,
-          child: Text(
-            '${width.toStringAsFixed(1)} px',
-            textAlign: TextAlign.right,
-            style: tokens.typography.labelSmall.copyWith(color: tokens.colors.fg3),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: UnitDisplay(
+              value: width,
+              textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+            ),
           ),
         ),
       ],
