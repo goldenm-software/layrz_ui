@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/fonts.dart';
 
@@ -71,6 +72,20 @@ void main() {
       expect(handler.resolveFamily, isNotNull);
       expect(handler.preload, isNotNull);
       expect(handler.fallbacks, isNotNull);
+      expect(handler.resolveFamilyForWeight, isNotNull);
+    });
+
+    test('resolveFamilyForWeight default implementation delegates to resolveFamily', () {
+      const handler = _TestFontHandler();
+      const font = LayrzFont(
+        source: LayrzFontSource.local,
+        name: 'TestFamily',
+      );
+
+      // The default implementation should delegate to resolveFamily,
+      // which in _TestFontHandler returns the font name.
+      final resolved = handler.resolveFamilyForWeight(font, FontWeight.w700);
+      expect(resolved, equals('TestFamily'));
     });
   });
 }

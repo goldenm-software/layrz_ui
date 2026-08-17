@@ -11,9 +11,9 @@ import 'package:layrz_ui/fonts.dart';
 /// The five styles are:
 /// - [display]: 45px, w800 — for hero and splash screens
 /// - [headline]: 28px, w700 — for page-level headings
-/// - [title]: 16px, w500 — for dialog and card titles
-/// - [body]: 14px, w300 — for body text and reading passages
-/// - [label]: 12px, w100 — for labels, buttons, tooltips, and badges
+/// - [title]: 16px, w600 — for dialog and card titles
+/// - [body]: 14px, w400 — for body text and reading passages
+/// - [label]: 12px, w300 — for labels, buttons, tooltips, and badges
 ///
 /// All styles use the font families provided to [LayrzTextTheme.defaults].
 @immutable
@@ -30,17 +30,17 @@ class LayrzTextTheme {
 
   /// Title style for dialog and card titles.
   ///
-  /// Characteristics: 16px, w500, title font family.
+  /// Characteristics: 16px, w600, title font family.
   final TextStyle title;
 
   /// Body style for body text and reading passages.
   ///
-  /// Characteristics: 14px, w300, body font family.
+  /// Characteristics: 14px, w400, body font family.
   final TextStyle body;
 
   /// Label style for button labels, input labels, tooltips, and badges.
   ///
-  /// Characteristics: 12px, w100, body font family.
+  /// Characteristics: 12px, w300, body font family.
   final TextStyle label;
 
   /// Creates a new [LayrzTextTheme] with all text styles explicitly set.
@@ -60,49 +60,62 @@ class LayrzTextTheme {
   /// for body and label styles.
   ///
   /// [fontHandler] resolves font family names and preloads font bytes. When not null,
-  /// it provides [LayrzFontHandler.resolveFamily] for the family and
-  /// [LayrzFontHandler.fallbacks] for the fallback list. When null (e.g., in unit tests),
-  /// uses the font name directly and the layrz fallback constants, avoiding network calls.
-  /// This is useful for tests that need to avoid GoogleFonts network calls.
+  /// it provides [LayrzFontHandler.resolveFamilyForWeight] to select the correct family
+  /// per weight and [LayrzFontHandler.fallbacks] for the fallback list. When null
+  /// (e.g., in unit tests), uses the font name directly and the layrz fallback constants,
+  /// avoiding network calls. This is useful for tests that need to avoid GoogleFonts
+  /// network calls.
   factory LayrzTextTheme.defaults({
     required Color textColor,
     LayrzFont titleFont = kLayrzFont,
     LayrzFont bodyFont = kLayrzFont,
     LayrzFontHandler? fontHandler,
   }) {
-    // Resolve font families based on the handler
-    final titleFamily = fontHandler != null ? fontHandler.resolveFamily(titleFont) : titleFont.name;
-    final bodyFamily = fontHandler != null ? fontHandler.resolveFamily(bodyFont) : bodyFont.name;
-
     final titleFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
     final bodyFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
 
-    TextStyle titleStyle(double size, {FontWeight fontWeight = FontWeight.w400}) => TextStyle(
+    /// Helper to resolve the font family for a given font and weight.
+    String resolveTitleFamily(FontWeight weight) {
+      if (fontHandler != null) {
+        return fontHandler.resolveFamilyForWeight(titleFont, weight);
+      }
+      return titleFont.name;
+    }
+
+    /// Helper to resolve the font family for a given font and weight.
+    String resolveBodyFamily(FontWeight weight) {
+      if (fontHandler != null) {
+        return fontHandler.resolveFamilyForWeight(bodyFont, weight);
+      }
+      return bodyFont.name;
+    }
+
+    TextStyle titleStyle(double size, FontWeight fontWeight) => TextStyle(
       color: textColor,
       fontSize: size,
       fontWeight: fontWeight,
-      fontFamily: titleFamily,
+      fontFamily: resolveTitleFamily(fontWeight),
       fontFamilyFallback: titleFallbacks,
       overflow: TextOverflow.ellipsis,
       decoration: TextDecoration.none,
     );
 
-    TextStyle bodyStyle(double size, {FontWeight fontWeight = FontWeight.w400}) => TextStyle(
+    TextStyle bodyStyle(double size, FontWeight fontWeight) => TextStyle(
       color: textColor,
       fontSize: size,
       fontWeight: fontWeight,
-      fontFamily: bodyFamily,
+      fontFamily: resolveBodyFamily(fontWeight),
       fontFamilyFallback: bodyFallbacks,
       overflow: TextOverflow.ellipsis,
       decoration: TextDecoration.none,
     );
 
     return LayrzTextTheme(
-      display: titleStyle(45, fontWeight: FontWeight.w800),
-      headline: titleStyle(28, fontWeight: FontWeight.w700),
-      title: titleStyle(16, fontWeight: FontWeight.w500),
-      body: bodyStyle(14, fontWeight: FontWeight.w300),
-      label: bodyStyle(12, fontWeight: FontWeight.w100),
+      display: titleStyle(45, FontWeight.w800),
+      headline: titleStyle(28, FontWeight.w700),
+      title: titleStyle(16, FontWeight.w600),
+      body: bodyStyle(14, FontWeight.w400),
+      label: bodyStyle(12, FontWeight.w300),
     );
   }
 

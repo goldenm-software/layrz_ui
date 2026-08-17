@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 import 'font.dart';
 
 /// Resolves [LayrzFont]s into usable font family names and preloads their bytes.
@@ -29,6 +31,26 @@ abstract class LayrzFontHandler {
   /// Returns:
   ///   A font family name that can be used in [TextStyle.fontFamily].
   String resolveFamily(LayrzFont font);
+
+  /// Returns the concrete font family name for a specific font weight.
+  ///
+  /// Resolves a requested font into a font family string that the engine
+  /// recognizes, taking into account the requested weight. Handlers whose
+  /// source registers one family per weight variant (e.g., google_fonts)
+  /// should override this to return weight-specific families.
+  ///
+  /// The default implementation ignores the weight and delegates to
+  /// [resolveFamily], preserving compatibility with handlers that do not
+  /// distinguish families by weight. If the requested family cannot be
+  /// resolved, implementations fall back to [fallbacks].
+  ///
+  /// Parameters:
+  ///   - [font]: The font to resolve.
+  ///   - [weight]: The desired font weight.
+  ///
+  /// Returns:
+  ///   A font family name that can be used in [TextStyle.fontFamily].
+  String resolveFamilyForWeight(LayrzFont font, FontWeight weight) => resolveFamily(font);
 
   /// Font families tried in order when [resolveFamily] cannot be honoured.
   ///

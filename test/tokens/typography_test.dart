@@ -31,9 +31,9 @@ void main() {
 
       expect(theme.display.fontWeight, equals(FontWeight.w800));
       expect(theme.headline.fontWeight, equals(FontWeight.w700));
-      expect(theme.title.fontWeight, equals(FontWeight.w500));
-      expect(theme.body.fontWeight, equals(FontWeight.w300));
-      expect(theme.label.fontWeight, equals(FontWeight.w100));
+      expect(theme.title.fontWeight, equals(FontWeight.w600));
+      expect(theme.body.fontWeight, equals(FontWeight.w400));
+      expect(theme.label.fontWeight, equals(FontWeight.w300));
     });
 
     test('defaults factory with null fontHandler uses font name directly', () {

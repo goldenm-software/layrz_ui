@@ -355,5 +355,10 @@ class _TestFontHandler implements LayrzFontHandler {
   }
 
   @override
+  String resolveFamilyForWeight(LayrzFont font, FontWeight weight) {
+    return onResolveFamily?.call(font) ?? font.name;
+  }
+
+  @override
   List<String> get fallbacks => kLayrzFontFallbacks;
 }
