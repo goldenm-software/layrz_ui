@@ -510,9 +510,11 @@ void main() {
 
         // A non-Fab button with no hintText must not wrap itself in a tooltip.
         // Per engineering/milestone-2.md: "Non-Fab buttons show a tooltip only when hintText is non-null."
-        expect(find.byType(LayrzTooltip), findsNothing,
-            reason:
-                'A non-Fab button with no hintText must not wrap itself in a tooltip');
+        expect(
+          find.byType(LayrzTooltip),
+          findsNothing,
+          reason: 'A non-Fab button with no hintText must not wrap itself in a tooltip',
+        );
       });
 
       testWidgets('Fab always shows tooltip on long-press', (tester) async {
