@@ -18,17 +18,17 @@ class _PreviewButtonStyles extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         LayrzButton(
-          labelText: 'Filled',
+          labelText: 'Elevated',
           icon: LayrzIcons.solarOutlineCheckCircle,
           onTap: () {},
-          style: LayrzButtonStyle.filled,
+          style: LayrzButtonStyle.elevated,
         ),
         const SizedBox(height: 12),
         LayrzButton(
-          labelText: 'Filled Tonal',
+          labelText: 'Outlined Tonal',
           icon: LayrzIcons.solarOutlineCheckCircle,
           onTap: () {},
-          style: LayrzButtonStyle.filledTonal,
+          style: LayrzButtonStyle.outlinedTonal,
         ),
       ],
     );
