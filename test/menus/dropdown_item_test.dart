@@ -51,6 +51,59 @@ void main() {
       expect(textWidget.style?.color, tokens.colors.fg3);
     });
 
+    testWidgets('label with color: null uses neutral surface3 band', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+      await pumpThemed(
+        tester,
+        theme: themeData,
+        LayrzDropdownLabel(labelText: 'Section', color: null),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container).first);
+      expect(container.color, themeData.tokens.colors.surface3);
+    });
+
+    testWidgets('label with color uses flattened tonal fill', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final customColor = const Color(0xFFABCDEF);
+
+      await pumpThemed(
+        tester,
+        theme: themeData,
+        LayrzDropdownLabel(labelText: 'Colored Section', color: customColor),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container).first);
+      final bandColor = container.color as Color;
+
+      // Verify the result is fully opaque (alpha == 1.0)
+      expect(bandColor.a, equals(1.0), reason: 'Band color should be fully opaque');
+
+      // The exact colour is the flattened result of the tonal blend
+      final expectedBand = customColor
+          .withOpacityValue(themeData.tokens.colors.tonalOpacity)
+          .flattenOn(themeData.tokens.colors.surface);
+      expect(bandColor, expectedBand);
+    });
+
+    testWidgets('label with color maintains non-focusable semantics', (tester) async {
+      final customColor = const Color(0xFFABCDEF);
+
+      await pumpThemed(
+        tester,
+        LayrzDropdownLabel(labelText: 'Colored Header', color: customColor),
+      );
+
+      // Verify it is not focusable
+      final label = LayrzDropdownLabel(labelText: 'Test', color: customColor);
+      expect(label.isFocusable, isFalse);
+
+      // Verify header semantics are present
+      final semantics = find.byType(Semantics);
+      expect(semantics, findsWidgets);
+    });
+
     testWidgets('arrow-key traversal skips labels', (tester) async {
       await pumpThemed(
         tester,
@@ -180,18 +233,17 @@ void main() {
       expect(circlesWithColor.length, greaterThan(0));
     });
 
-    testWidgets('color dot uses shade500 of accent color', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+    testWidgets('color dot uses the exact color passed', (tester) async {
+      final customColor = const Color(0xFF123456);
 
       await pumpThemed(
         tester,
-        theme: themeData,
         LayrzDropdownMenu(
           items: [
             LayrzDropdownEntry(
-              labelText: 'Danger Entry',
+              labelText: 'Custom Color Entry',
               onTap: () {},
-              color: themeData.tokens.colors.danger,
+              color: customColor,
             ),
           ],
           builder: (context, controller) => LayrzButton(
@@ -204,7 +256,7 @@ void main() {
       await tester.tap(find.byType(LayrzButton));
       await tester.pumpAndSettle();
 
-      // Find the circle container and verify its color
+      // Find the circle container and verify its color matches exactly
       final circleContainer = tester.widget<Container>(
         find.byWidgetPredicate(
           (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
@@ -212,7 +264,7 @@ void main() {
       );
 
       final decoration = circleContainer.decoration as BoxDecoration;
-      expect(decoration.color, themeData.tokens.colors.danger.shade500);
+      expect(decoration.color, customColor);
     });
 
     testWidgets('dot and icon can coexist in same entry', (tester) async {
@@ -307,8 +359,7 @@ void main() {
       );
 
       final box = find.byType(AnimatedContainer).first;
-      Color? colorOf() =>
-          (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
+      Color? colorOf() => (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
 
       final resting = colorOf();
 
@@ -333,8 +384,7 @@ void main() {
       );
 
       final box = find.byType(AnimatedContainer).first;
-      Color? colorOf() =>
-          (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
+      Color? colorOf() => (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
 
       final resting = colorOf();
 

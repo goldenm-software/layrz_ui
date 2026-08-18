@@ -27,19 +27,30 @@ sealed class LayrzDropdownItem extends StatelessWidget {
 /// A non-interactive section heading in a dropdown menu.
 ///
 /// [LayrzDropdownLabel] renders plain-text labels as a full-width section band with
-/// a [surface3] background. Text uses the [LayrzTokens.typography.body] style in the
-/// subdued foreground color ([fg3]). It is non-focusable and non-interactive.
+/// a [surface3] background (or tinted with an optional accent color). Text uses the
+/// [LayrzTokens.typography.body] style in the subdued foreground color ([fg3]).
+/// It is non-focusable and non-interactive.
 /// Casing is determined by the caller — the widget does not uppercase or transform text.
 final class LayrzDropdownLabel extends LayrzDropdownItem {
   /// The text displayed as the label.
   final String labelText;
 
+  /// Optional colour used to tint the label's band.
+  ///
+  /// When null, the band keeps the neutral [LayrzColorTokens.surface3] fill, so
+  /// menus written before this parameter existed are unchanged. When set, the band
+  /// is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened over
+  /// the panel surface — the same treatment as [LayrzChipStyle.filledTonal].
+  final Color? color;
+
   /// Creates a new [LayrzDropdownLabel].
   ///
   /// The [labelText] parameter is required and contains the section heading text.
   /// Text styling and case transformation are the caller's responsibility.
+  /// The [color] parameter is optional and tints the band background.
   const LayrzDropdownLabel({
     required this.labelText,
+    this.color,
     super.key,
   });
 
@@ -50,11 +61,15 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
+    final band = color == null
+        ? tokens.colors.surface3
+        : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
+
     return Semantics(
       header: true,
       excludeSemantics: true,
       child: Container(
-        color: tokens.colors.surface3,
+        color: band,
         padding: EdgeInsets.symmetric(
           horizontal: tokens.spacing.sp12,
           vertical: tokens.spacing.sp8,
@@ -109,14 +124,15 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// focus, or keyboard input. Defaults to true.
   final bool enabled;
 
-  /// Optional accent color swatch override for the entry.
+  /// Optional colour that paints the leading dot of this entry.
   ///
-  /// When null, uses the tokens.colors.primary swatch. When non-null, replaces
-  /// the accent color — useful for destructive entries that pass tokens.colors.danger.
+  /// When null, no dot is rendered. When non-null, a small circular dot is displayed
+  /// at the left edge of the entry using this exact color. The dot is independent
+  /// from the icon and appears alongside or in place of it.
   ///
-  /// Also drives the color dot displayed at the left of the entry (when non-null).
-  /// The dot uses the [shade500] tint of this swatch.
-  final LayrzColorSwatch? color;
+  /// This is a paint-only property; it does not affect backgrounds, text, or other
+  /// entry styling.
+  final Color? color;
 
   /// Optional keyboard shortcut keys displayed right-aligned in the entry.
   ///
@@ -170,8 +186,8 @@ class _LayrzDropdownEntryWidget extends StatefulWidget {
   /// Whether this entry is interactive.
   final bool enabled;
 
-  /// Optional accent color swatch override for the entry.
-  final LayrzColorSwatch? color;
+  /// Optional colour that paints the leading dot of this entry.
+  final Color? color;
 
   /// Optional keyboard shortcut keys displayed right-aligned.
   final Set<LogicalKeyboardKey>? shortcut;
@@ -291,7 +307,7 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                           width: kLayrzDropdownDotSize,
                           height: kLayrzDropdownDotSize,
                           decoration: BoxDecoration(
-                            color: widget.color!.shade500,
+                            color: widget.color!,
                             shape: BoxShape.circle,
                           ),
                         ),
