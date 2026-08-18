@@ -110,7 +110,7 @@ google_fonts resolves to version 8.2.1 in layrz_theme's pubspec.lock (latest as 
 
 ### Clean (No Material or Cupertino Coupling)
 
-#### layrz_icons 1.1.0
+#### layrz_icons 1.1.1 (downgraded from 2.0.0)
 
 **Verdict**: ✅ **Clean**
 
@@ -122,6 +122,49 @@ google_fonts resolves to version 8.2.1 in layrz_theme's pubspec.lock (latest as 
 - `mapping.dart` — 14,585 lines (enum generation)
 
 **Consequence**: Safe to depend on. Aligns with layrz_ui's design-system-agnostic foundation.
+
+**Breaking Change Note**: `layrz_ui` pinned `layrz_icons` to `^1.1.1` (not `^2.0.0`) to co-resolve with `layrz_sdk ^4.4.3`, which requires `layrz_icons: ^1.1.1`. **This is intentional and verified**:
+- All 20 `LayrzIcons.*` symbols used across `lib/`, `test/`, and `example/lib/` exist in both 1.1.1 and 2.0.0 with identical names and signatures.
+- `LayrzIcon` and `LayrzFamily` class definitions are byte-for-byte identical between the two versions.
+- Both versions import ONLY `package:flutter/widgets.dart` — no Material or Cupertino coupling.
+- 1.1.1 declares `sdk: >=3.12.0 <4.0.0` and `flutter: >=3.44.0`, which are looser constraints than layrz_ui's own `sdk: >=3.13.0 <4.0.0` and `flutter: >=3.47.0`, so it imposes no additional constraint.
+- All tests pass identically; no glyph changes or rendering differences.
+
+**Exit condition**: Raise back to `^2.0.0` once `layrz_sdk` moves to `layrz_icons: ^2.0.0`.
+
+---
+
+#### layrz_sdk 4.4.3
+
+**Verdict**: ✅ **Accepted** — Widgets-only imports; used for `Avatar` model
+
+**Evidence**: The package imports ONLY `package:flutter/widgets.dart` and pure-Dart packages (dio, freezed_annotation, json_annotation, layrz_i18n, layrz_logging, web_socket_channel).
+
+**Transitive Dependencies Added** (18 new packages):
+- **Direct from layrz_sdk**: dio, freezed_annotation, json_annotation, layrz_i18n, layrz_logging, web_socket_channel
+- **From flutter_svg direct dependency** (2.3.0): vector_graphics, vector_graphics_codec, vector_graphics_compiler, path_parsing, petitparser, xml, and platform integrations (jni, objective_c, etc.)
+- **Transitive from the above**: mime, web_socket, path_provider, ffi, and platform-specific packages
+
+Full list of new packages:
+```
+dio 5.11.0, dio_web_adapter 2.2.1, flutter_svg 2.3.0, freezed_annotation 3.1.0, json_annotation 4.12.0,
+layrz_i18n 1.0.1, layrz_logging 1.5.1, mime 2.0.0, path_parsing 1.1.0, petitparser 7.0.2,
+vector_graphics 1.2.3, vector_graphics_codec 1.1.13, vector_graphics_compiler 1.3.0,
+web_socket 1.0.1, web_socket_channel 3.0.3, xml 7.0.1
+```
+(plus platform-specific transitive deps: jni, jni_flutter, jni_util, objective_c, path_provider and its variants, plugin_platform_interface)
+
+**Consequence**: layrz_ui now depends on layrz_sdk for data models (Avatar, etc.) and gains Material-free HTTP (dio), JSON support (freezed_annotation + json_annotation), i18n integration (layrz_i18n), logging (layrz_logging), and WebSocket support (web_socket_channel). The grep invariant remains clean; all new dependencies are widgets-only or pure-Dart.
+
+---
+
+#### flutter_svg 2.3.0
+
+**Verdict**: ✅ **Clean**
+
+**Evidence**: SVG rendering library. No Material or Cupertino imports.
+
+**Consequence**: Safe to depend on. Added to support SVG-based branches of the forthcoming `LayrzImage` component.
 
 ---
 

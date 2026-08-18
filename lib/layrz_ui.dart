@@ -7,6 +7,7 @@ export 'src/constants/constants.dart';
 export 'src/extensions/extensions.dart';
 export 'src/fonts/fonts.dart';
 export 'src/grid/grid.dart';
+export 'src/images/images.dart';
 export 'src/menus/menus.dart';
 export 'src/platform/platform.dart';
 export 'src/state/state.dart';

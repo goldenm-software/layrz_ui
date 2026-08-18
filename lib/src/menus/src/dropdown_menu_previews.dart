@@ -1,12 +1,8 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
-
-import 'dropdown_items.dart';
-import 'dropdown_menu.dart';
-import 'dropdown_menu_types.dart';
+import 'package:layrz_ui/preview.dart';
 
 /// Preview function showing a simple dropdown menu with a closed state.
 ///
@@ -191,6 +187,53 @@ Widget previewDropdownMenuWithDots() {
                 LogicalKeyboardKey.shift,
                 LogicalKeyboardKey.delete,
               },
+            ),
+          ],
+          builder: (context, controller) => LayrzButton(
+            labelText: 'Actions',
+            onTap: controller.open,
+          ),
+        );
+      },
+    ),
+  );
+}
+
+/// Preview function showing menu with colored section labels.
+///
+/// Demonstrates the optional [LayrzDropdownLabel.color] parameter that tints
+/// section headers with a tonal fill over the panel surface.
+@Preview(name: 'Colored Labels', theme: LayrzPreviewTheme.light)
+Widget previewDropdownMenuColoredLabels() {
+  return Center(
+    child: Builder(
+      builder: (context) {
+        final tokens = context.tokens;
+
+        return LayrzDropdownMenu(
+          items: [
+            LayrzDropdownLabel(
+              labelText: 'Primary',
+              color: tokens.colors.primary,
+            ),
+            LayrzDropdownEntry(
+              labelText: 'Create',
+              onTap: () {},
+              icon: LayrzIcons.solarOutlineAddCircle,
+            ),
+            LayrzDropdownEntry(
+              labelText: 'Edit',
+              onTap: () {},
+              icon: LayrzIcons.solarOutlinePenNewSquare,
+            ),
+            LayrzDropdownLabel(
+              labelText: 'Danger',
+              color: tokens.colors.danger,
+            ),
+            LayrzDropdownEntry(
+              labelText: 'Delete',
+              onTap: () {},
+              icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
             ),
           ],
           builder: (context, controller) => LayrzButton(
