@@ -5,12 +5,14 @@ import 'sections/access_paths_section.dart';
 import 'sections/alerts_section.dart';
 import 'sections/borders_section.dart';
 import 'sections/buttons_section.dart';
+import 'sections/chips_section.dart';
 import 'sections/colors_section.dart';
 import 'sections/elevation_section.dart';
 import 'sections/grid_section.dart';
 import 'sections/motion_section.dart';
 import 'sections/radius_section.dart';
 import 'sections/spacing_section.dart';
+import 'sections/text_section.dart';
 import 'sections/tooltips_section.dart';
 import 'sections/typography_section.dart';
 
@@ -38,6 +40,8 @@ class Showroom extends StatelessWidget {
     _SectionWrapper(builder: buildAlertsSection),
     _SectionWrapper(builder: buildTooltipsSection),
     _SectionWrapper(builder: buildGridSection),
+    _SectionWrapper(builder: buildChipsSection),
+    _SectionWrapper(builder: buildTextSection),
     _SectionWrapper(builder: buildColorsSection),
     _SectionWrapper(builder: buildSpacingSection),
     _SectionWrapper(builder: buildRadiusSection),
