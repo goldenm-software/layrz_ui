@@ -17,14 +17,9 @@ Widget previewLayrzAvatarInitials() {
 /// Preview of [LayrzAvatar] with icon display.
 @Preview(name: 'Avatar - Icon', theme: LayrzPreviewTheme.light)
 Widget previewLayrzAvatarIcon() {
-  final icon = LayrzIcon(
-    name: 'home',
-    codePoint: 0xE88A,
-    family: LayrzFamily.materialDesignIcons,
-  );
   return Center(
     child: LayrzAvatar.icon(
-      icon: icon,
+      icon: LayrzIcons.solarOutlineCheckCircle,
       size: 48,
     ),
   );

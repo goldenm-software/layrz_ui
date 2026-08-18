@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_sdk/layrz_sdk.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -78,13 +77,17 @@ class LayrzAvatar extends StatelessWidget {
        _icon = null,
        _emoji = null;
 
-  /// Creates an avatar that displays an icon from layrz_icons.
+  /// Creates an avatar that displays an icon from an [IconData].
   ///
   /// The icon is rendered at 70% of the avatar [size] to maintain visual balance.
   /// [color] defaults to the primary token color.
+  ///
+  /// When receiving an [Avatar] descriptor from layrz_sdk with `type: AvatarType.icon`,
+  /// the SDK's `LayrzIcon` field is converted to [IconData] via its `.iconData` getter
+  /// automatically at the boundary, so callers holding an SDK model do not need to convert.
   const LayrzAvatar.icon({
     super.key,
-    required LayrzIcon icon,
+    required IconData icon,
     this.size = 40,
     this.color,
     // ignore: prefer_initializing_formals
@@ -156,7 +159,7 @@ class LayrzAvatar extends StatelessWidget {
   final String? _imageSource;
 
   /// For named constructors: the icon to render (used by `.icon()` constructor).
-  final LayrzIcon? _icon;
+  final IconData? _icon;
 
   /// For named constructors: the emoji to render (used by `.emoji()` constructor).
   final String? _emoji;
@@ -183,7 +186,7 @@ class LayrzAvatar extends StatelessWidget {
         context: context,
         backgroundColor: defaultColor,
         child: Icon(
-          icon.iconData,
+          icon,
           color: _pickTextColor(defaultColor),
           size: size * 0.7,
         ),
@@ -259,7 +262,7 @@ class LayrzAvatar extends StatelessWidget {
                 ),
               )
             : _buildInitials(context),
-      AvatarType.icon => av.icon != null ? _buildIconContent(context, av.icon!) : _buildInitials(context),
+      AvatarType.icon => av.icon != null ? _buildIconContent(context, av.icon!.iconData) : _buildInitials(context),
       AvatarType.emoji =>
         av.emoji != null
             ? _buildContainer(
@@ -315,14 +318,14 @@ class LayrzAvatar extends StatelessWidget {
     );
   }
 
-  /// Builds an icon avatar using a LayrIcon.
-  Widget _buildIconContent(BuildContext context, LayrzIcon icon) {
+  /// Builds an icon avatar using an [IconData].
+  Widget _buildIconContent(BuildContext context, IconData icon) {
     final defaultColor = color ?? context.tokens.colors.primary;
     return _buildContainer(
       context: context,
       backgroundColor: defaultColor,
       child: Icon(
-        icon.iconData,
+        icon,
         color: _pickTextColor(defaultColor),
         size: size * 0.7,
       ),

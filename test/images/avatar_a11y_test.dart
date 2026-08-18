@@ -39,7 +39,7 @@ void main() {
         LayrzAvatar(avatar: avatar),
       );
 
-      // Icon should render successfully
+      // Icon should render successfully (SDK LayrzIcon is converted to IconData at boundary)
       expect(find.byType(Icon), findsOneWidget);
     });
 

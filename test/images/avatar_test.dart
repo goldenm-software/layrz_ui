@@ -32,7 +32,7 @@ void main() {
         expect(find.byType(LayrzImage), findsOneWidget);
       });
 
-      testWidgets('renders icon from LayrIcon', (tester) async {
+      testWidgets('renders icon from SDK LayrIcon (boundary conversion)', (tester) async {
         final icon = LayrzIcon(
           name: 'home',
           codePoint: 0xE88A,
@@ -166,12 +166,10 @@ void main() {
         expect(find.byType(LayrzImage), findsOneWidget);
       });
 
-      testWidgets('LayrzAvatar.icon renders icon', (tester) async {
-        final icon = LayrzIcon(name: "home", codePoint: 0xE88A, family: LayrzFamily.materialDesignIcons);
-
+      testWidgets('LayrzAvatar.icon renders icon from IconData', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: icon),
+          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
         );
 
         expect(find.byType(Icon), findsOneWidget);
@@ -358,11 +356,9 @@ void main() {
 
     group('Icon size scaling', () {
       testWidgets('renders icon at 70% of avatar size', (tester) async {
-        final icon = LayrzIcon(name: "home", codePoint: 0xE88A, family: LayrzFamily.materialDesignIcons);
-
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: icon, size: 100),
+          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 100),
         );
 
         final iconWidget = tester.widget<Icon>(find.byType(Icon));
@@ -429,11 +425,10 @@ void main() {
 
       testWidgets('applies compact level-1 shadow to icon avatar', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final icon = LayrzIcon(name: 'home', codePoint: 0xE88A, family: LayrzFamily.materialDesignIcons);
 
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: icon),
+          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
           theme: themeData,
         );
 

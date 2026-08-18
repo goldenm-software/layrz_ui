@@ -49,12 +49,6 @@ class _ImagesSectionContent extends StatelessWidget {
 
   /// Displays different avatar types.
   Widget _buildAvatarRow(LayrzTokens tokens) {
-    final icon = LayrzIcon(
-      name: 'home',
-      codePoint: 0xE88A,
-      family: LayrzFamily.materialDesignIcons,
-    );
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -69,7 +63,7 @@ class _ImagesSectionContent extends StatelessWidget {
           SizedBox(width: tokens.spacing.sp24),
           Column(
             children: [
-              LayrzAvatar.icon(icon: icon, size: 48),
+              LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 48),
               SizedBox(height: tokens.spacing.sp8),
               LayrzText('Icon', style: tokens.typography.label),
             ],
