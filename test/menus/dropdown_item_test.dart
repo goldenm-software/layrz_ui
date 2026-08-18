@@ -10,6 +10,271 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzDropdownItem types', () {
+    group('Semantic factories', () {
+      testWidgets('save factory uses correct icon and success color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        var tapped = false;
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Save',
+                onTap: () => tapped = true,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        // Entry should be visible
+        expect(find.text('Save'), findsOneWidget);
+
+        // Entry should have success color dot
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.success);
+
+        // Callback should fire
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('cancel factory uses correct icon and danger color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.cancel(
+                labelText: 'Cancel',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.danger);
+      });
+
+      testWidgets('info factory uses correct icon and info color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.info(
+                labelText: 'Info',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.info);
+      });
+
+      testWidgets('show factory uses correct icon and info color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.show(
+                labelText: 'Show',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.info);
+      });
+
+      testWidgets('edit factory uses correct icon and warning color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.edit(
+                labelText: 'Edit',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.warning);
+      });
+
+      testWidgets('delete factory uses correct icon and danger color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.delete(
+                labelText: 'Delete',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.danger);
+      });
+
+      testWidgets('semantic factory icon can be overridden', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Custom Save',
+                onTap: () {},
+                icon: LayrzIcons.solarOutlineCheckCircle,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Custom Save'), findsOneWidget);
+      });
+
+      testWidgets('semantic factory color can be overridden', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final customColor = const Color(0xFFFF0000);
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Save',
+                onTap: () {},
+                color: customColor,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, customColor);
+      });
+    });
+
     testWidgets('entry isFocusable is true when enabled', (tester) async {
       final entry = LayrzDropdownEntry(
         labelText: 'Test',
@@ -49,6 +314,59 @@ void main() {
       final tokens = tester.element(text).tokens;
 
       expect(textWidget.style?.color, tokens.colors.fg3);
+    });
+
+    testWidgets('label with color: null uses neutral surface3 band', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+      await pumpThemed(
+        tester,
+        theme: themeData,
+        LayrzDropdownLabel(labelText: 'Section', color: null),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container).first);
+      expect(container.color, themeData.tokens.colors.surface3);
+    });
+
+    testWidgets('label with color uses flattened tonal fill', (tester) async {
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final customColor = const Color(0xFFABCDEF);
+
+      await pumpThemed(
+        tester,
+        theme: themeData,
+        LayrzDropdownLabel(labelText: 'Colored Section', color: customColor),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container).first);
+      final bandColor = container.color as Color;
+
+      // Verify the result is fully opaque (alpha == 1.0)
+      expect(bandColor.a, equals(1.0), reason: 'Band color should be fully opaque');
+
+      // The exact colour is the flattened result of the tonal blend
+      final expectedBand = customColor
+          .withOpacityValue(themeData.tokens.colors.tonalOpacity)
+          .flattenOn(themeData.tokens.colors.surface);
+      expect(bandColor, expectedBand);
+    });
+
+    testWidgets('label with color maintains non-focusable semantics', (tester) async {
+      final customColor = const Color(0xFFABCDEF);
+
+      await pumpThemed(
+        tester,
+        LayrzDropdownLabel(labelText: 'Colored Header', color: customColor),
+      );
+
+      // Verify it is not focusable
+      final label = LayrzDropdownLabel(labelText: 'Test', color: customColor);
+      expect(label.isFocusable, isFalse);
+
+      // Verify header semantics are present
+      final semantics = find.byType(Semantics);
+      expect(semantics, findsWidgets);
     });
 
     testWidgets('arrow-key traversal skips labels', (tester) async {
@@ -180,18 +498,17 @@ void main() {
       expect(circlesWithColor.length, greaterThan(0));
     });
 
-    testWidgets('color dot uses shade500 of accent color', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+    testWidgets('color dot uses the exact color passed', (tester) async {
+      final customColor = const Color(0xFF123456);
 
       await pumpThemed(
         tester,
-        theme: themeData,
         LayrzDropdownMenu(
           items: [
             LayrzDropdownEntry(
-              labelText: 'Danger Entry',
+              labelText: 'Custom Color Entry',
               onTap: () {},
-              color: themeData.tokens.colors.danger,
+              color: customColor,
             ),
           ],
           builder: (context, controller) => LayrzButton(
@@ -204,7 +521,7 @@ void main() {
       await tester.tap(find.byType(LayrzButton));
       await tester.pumpAndSettle();
 
-      // Find the circle container and verify its color
+      // Find the circle container and verify its color matches exactly
       final circleContainer = tester.widget<Container>(
         find.byWidgetPredicate(
           (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
@@ -212,7 +529,7 @@ void main() {
       );
 
       final decoration = circleContainer.decoration as BoxDecoration;
-      expect(decoration.color, themeData.tokens.colors.danger.shade500);
+      expect(decoration.color, customColor);
     });
 
     testWidgets('dot and icon can coexist in same entry', (tester) async {
@@ -307,8 +624,7 @@ void main() {
       );
 
       final box = find.byType(AnimatedContainer).first;
-      Color? colorOf() =>
-          (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
+      Color? colorOf() => (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
 
       final resting = colorOf();
 
@@ -333,8 +649,7 @@ void main() {
       );
 
       final box = find.byType(AnimatedContainer).first;
-      Color? colorOf() =>
-          (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
+      Color? colorOf() => (tester.widget<AnimatedContainer>(box).decoration! as BoxDecoration).color;
 
       final resting = colorOf();
 
@@ -375,6 +690,104 @@ void main() {
 
       // Verify the entry still renders
       expect(find.text('With Shortcut'), findsOneWidget);
+    });
+  });
+
+  group('LayrzDropdownEntry.resolveAccent', () {
+    test('returns null when no color and no semantic type', () {
+      final entry = LayrzDropdownEntry(
+        labelText: 'Plain',
+        onTap: () {},
+      );
+
+      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      expect(entry.resolveAccent(tokens), isNull);
+    });
+
+    test('returns explicit color when provided', () {
+      final customColor = const Color(0xFF1234FF);
+      final entry = LayrzDropdownEntry(
+        labelText: 'Custom Color',
+        onTap: () {},
+        color: customColor,
+      );
+
+      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      expect(entry.resolveAccent(tokens), customColor);
+    });
+
+    test('returns success color for save semantic factory', () {
+      final entry = LayrzDropdownEntry.save(
+        labelText: 'Save',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.success);
+    });
+
+    test('returns danger color for cancel semantic factory', () {
+      final entry = LayrzDropdownEntry.cancel(
+        labelText: 'Cancel',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
+    });
+
+    test('returns info color for info semantic factory', () {
+      final entry = LayrzDropdownEntry.info(
+        labelText: 'Info',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
+    });
+
+    test('returns info color for show semantic factory', () {
+      final entry = LayrzDropdownEntry.show(
+        labelText: 'Show',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
+    });
+
+    test('returns warning color for edit semantic factory', () {
+      final entry = LayrzDropdownEntry.edit(
+        labelText: 'Edit',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.warning);
+    });
+
+    test('returns danger color for delete semantic factory', () {
+      final entry = LayrzDropdownEntry.delete(
+        labelText: 'Delete',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
+    });
+
+    test('explicit color takes precedence over semantic type', () {
+      final customColor = const Color(0xFFFF00FF);
+      final entry = LayrzDropdownEntry.save(
+        labelText: 'Save',
+        onTap: () {},
+        color: customColor,
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      // Should return the custom color, not the semantic success color
+      expect(entry.resolveAccent(themeData.tokens), customColor);
+      expect(entry.resolveAccent(themeData.tokens), isNot(themeData.tokens.colors.success));
     });
   });
 

@@ -10,6 +10,16 @@ grep -r "package:flutter/material\|package:flutter/cupertino" lib/
 ```
 The output must always be empty.
 
+### This is a Dart-only project
+
+The only published package in this repository is the Dart package declared in the root `pubspec.yaml`. Version bumps, releases and dependency work concern **that file and no other**.
+
+**`pyproject.toml` at the repo root must be ignored.** It declares `layrz-ui-tools`, an unrelated helper package that exists solely for `tool/deploy_web.py`, and its version is independent of layrz_ui's. Never bump it as part of a layrz_ui release, and never treat this repository as a Python project because that file exists.
+
+Likewise, `example/pubspec.yaml` and `.widget_preview/pubspec.yaml` are not published packages — leave their versions alone. Only `example/pubspec.lock` is ever synced after a release bump, and only when it actually changes.
+
+**The version is self-managed — CI never injects it.** No workflow runs `sed` (or anything equivalent) to write the version into `pubspec.yaml` at deploy time, so a release means editing that `version:` line by hand and committing it. Do not go looking for CI-managed version substitution; there is none.
+
 ---
 
 ## Project structure
@@ -179,9 +189,9 @@ When you add a new widget, document it in `wiki/Widgets/` (not `engineering/`), 
 
 ---
 
-## Branching and parallel agents
+## Branching
 
-### Rule 1 — Always branch from `development`, never from `main`
+### Always branch from `development`, never from `main`
 
 `main` is the **stable / released** branch: it is what gets published to pub.dev, not what gets worked on. `development` is the **working branch** — the base for every `feat`/`fix`/`chore` branch and the target of every PR.
 
@@ -198,22 +208,6 @@ Then create and push your feature branch. The only thing that ever touches `main
 - `chore/alerts/trim-unused-styles`
 
 Notion row IDs follow the format `DESIGN-NN`, e.g. `DESIGN-20`, `DESIGN-30`.
-
-### Rule 2 — Always use worktrees for parallel agents
-
-Any agent launched to run **alongside** another agent gets its own git worktree (`isolation: "worktree"`), giving it a separate working directory and its own `HEAD` over a shared `.git`. This prevents edits, git operations, `dart format` and `flutter test` runs from colliding.
-
-**Mandatory when:**
-- Agents need **different branches** — a shared checkout cannot express that
-- Agents share a branch but any of them touches a common file
-
-Each worktree agent must **commit and `git push -u origin <branch>` before finishing**, so its work survives worktree cleanup.
-
-A single agent running with nothing concurrent may use the normal checkout without a worktree.
-
-**Cautionary example from this repo:** Three agents were once run in a single shared checkout, each scoped to a disjoint directory (`lib/src/text/`, `lib/src/chips/`, `lib/src/menus/`), and instructed not to touch the shared root barrel `lib/layrz_ui.dart`. That was **not enough**. Every module must register itself in the root barrel. Because the barrel was off-limits, the chips tests could not resolve `LayrzChip`, and all four chip test files **failed to compile**. Scoping agents to disjoint directories is not a substitute for real isolation — use worktrees instead.
-
-**Worktree visibility:** `git worktree list` shows agent worktrees under `.claude/worktrees/agent-<id>`, marked `locked` while the agent is in use.
 
 ---
 

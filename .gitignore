@@ -36,5 +36,8 @@ migrate_working_dir/
 # Claude Code agent worktrees and configuration (must never be committed)
 .claude/
 .claude/settings.local.json
+
+# Machine-local Claude Code instructions (CLAUDE.md holds the shared conventions)
+CLAUDE.local.md
 # Widget Preview related
 .widget_preview/
