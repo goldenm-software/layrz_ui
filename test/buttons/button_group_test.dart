@@ -59,8 +59,9 @@ void main() {
       });
 
       testWidgets('wraps buttons on narrow width in row mode', (tester) async {
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-        tester.binding.window.physicalSizeTestValue = const Size(200, 800);
+        tester.view.physicalSize = const Size(200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         await pumpThemed(
           tester,
@@ -139,6 +140,55 @@ void main() {
         expect(find.byType(LayrzButton), findsOneWidget);
         // Verify menu exists
         expect(find.byType(LayrzDropdownMenu), findsOneWidget);
+      });
+
+      testWidgets('default trigger tooltip lists action labels', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              actions: [
+                LayrzButton(labelText: 'Save', onTap: () {}),
+                LayrzButton(labelText: 'Delete', onTap: () {}),
+              ],
+              useDropdown: true,
+            ),
+          );
+
+          // Trigger should have both action labels in its semantic label
+          final triggerSemantics = tester.getSemantics(find.byType(LayrzButton).first);
+          expect(triggerSemantics.label, contains('Save'));
+          expect(triggerSemantics.label, contains('Delete'));
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets('triggerHintText overrides default tooltip without duplication', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              actions: [
+                LayrzButton(labelText: 'Save', onTap: () {}),
+              ],
+              useDropdown: true,
+              triggerHintText: 'Export options',
+            ),
+          );
+
+          // Trigger should have the custom hint text exactly once (no duplication)
+          final triggerSemantics = tester.getSemantics(find.byType(LayrzButton).first);
+          final label = triggerSemantics.label;
+
+          // Count occurrences of "Export options"
+          final count = 'Export options'.allMatches(label).length;
+          expect(count, equals(1), reason: 'Tooltip should show hint text exactly once, not duplicated');
+        } finally {
+          handle.dispose();
+        }
       });
 
       testWidgets('uses custom trigger icon', (tester) async {
@@ -366,8 +416,9 @@ void main() {
     group('Responsive mode', () {
       testWidgets('useDropdown: null at narrow width uses dropdown', (tester) async {
         // Simulate narrow viewport (xs/sm band, below md which starts at 960px)
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         await pumpThemed(
           tester,
@@ -385,8 +436,9 @@ void main() {
       });
 
       testWidgets('useDropdown: false forces row mode on narrow viewport', (tester) async {
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         await pumpThemed(
           tester,
@@ -405,8 +457,9 @@ void main() {
       });
 
       testWidgets('useDropdown: true forces dropdown on wide viewport', (tester) async {
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-        tester.binding.window.physicalSizeTestValue = const Size(1920, 800);
+        tester.view.physicalSize = const Size(1920, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
         await pumpThemed(
           tester,

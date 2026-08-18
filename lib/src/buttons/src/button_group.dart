@@ -52,8 +52,8 @@ class LayrzButtonGroup extends StatelessWidget {
 
   /// Tooltip text for the collapsed trigger.
   ///
-  /// When provided, supplements the trigger button's tooltip.
-  /// When null, only the generic "Actions" label is shown.
+  /// When provided, overrides the trigger button's tooltip.
+  /// When null, the tooltip lists the action labels (one per line).
   /// Only applies in dropdown mode.
   final String? triggerHintText;
 
@@ -103,10 +103,9 @@ class LayrzButtonGroup extends StatelessWidget {
       alignment: alignment,
       items: entries,
       builder: (context, controller) => LayrzButton(
-        labelText: triggerHintText ?? 'Actions',
+        labelText: triggerHintText ?? actions.map((a) => a.labelText).join('\n'),
         icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
         style: LayrzButtonStyle.elevatedFab,
-        hintText: triggerHintText,
         onTap: controller.isOpen ? controller.close : controller.open,
       ),
     );
