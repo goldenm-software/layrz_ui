@@ -11,7 +11,10 @@ void main() {
       testWidgets('renders nothing when actions is empty', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzButtonGroup(actions: []),
+          const LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            actions: [],
+          ),
         );
 
         expect(find.byType(LayrzButton), findsNothing);
@@ -24,6 +27,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Row actions',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
               LayrzButton(labelText: 'Cancel', onTap: () {}),
@@ -43,6 +47,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Button 1', onTap: () {}),
               LayrzButton(labelText: 'Button 2', onTap: () {}),
@@ -66,6 +71,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Button 1', onTap: () {}),
               LayrzButton(labelText: 'Button 2', onTap: () {}),
@@ -86,6 +92,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
               LayrzButton(labelText: 'Cancel', onTap: () {}),
@@ -106,6 +113,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
               LayrzButton(labelText: 'Cancel', onTap: () {}),
@@ -128,11 +136,11 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'More options',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
-            triggerHintText: 'More options',
           ),
         );
 
@@ -142,12 +150,13 @@ void main() {
         expect(find.byType(LayrzDropdownMenu), findsOneWidget);
       });
 
-      testWidgets('default trigger tooltip lists action labels', (tester) async {
+      testWidgets('trigger tooltip is exactly triggerHintText without action labels', (tester) async {
         final handle = tester.ensureSemantics();
         try {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
+              triggerHintText: 'Export options',
               actions: [
                 LayrzButton(labelText: 'Save', onTap: () {}),
                 LayrzButton(labelText: 'Delete', onTap: () {}),
@@ -156,36 +165,17 @@ void main() {
             ),
           );
 
-          // Trigger should have both action labels in its semantic label
-          final triggerSemantics = tester.getSemantics(find.byType(LayrzButton).first);
-          expect(triggerSemantics.label, contains('Save'));
-          expect(triggerSemantics.label, contains('Delete'));
-        } finally {
-          handle.dispose();
-        }
-      });
-
-      testWidgets('triggerHintText overrides default tooltip without duplication', (tester) async {
-        final handle = tester.ensureSemantics();
-        try {
-          await pumpThemed(
-            tester,
-            LayrzButtonGroup(
-              actions: [
-                LayrzButton(labelText: 'Save', onTap: () {}),
-              ],
-              useDropdown: true,
-              triggerHintText: 'Export options',
-            ),
-          );
-
-          // Trigger should have the custom hint text exactly once (no duplication)
+          // Trigger should have the hint text exactly once (no duplication)
           final triggerSemantics = tester.getSemantics(find.byType(LayrzButton).first);
           final label = triggerSemantics.label;
 
-          // Count occurrences of "Export options"
-          final count = 'Export options'.allMatches(label).length;
-          expect(count, equals(1), reason: 'Tooltip should show hint text exactly once, not duplicated');
+          // Verify the hint text appears exactly once
+          final hintCount = 'Export options'.allMatches(label).length;
+          expect(hintCount, equals(1), reason: 'Tooltip should show hint text exactly once');
+
+          // Verify action labels do NOT appear
+          expect(label, isNot(contains('Save')), reason: 'Action label "Save" should not appear in tooltip');
+          expect(label, isNot(contains('Delete')), reason: 'Action label "Delete" should not appear in tooltip');
         } finally {
           handle.dispose();
         }
@@ -195,6 +185,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
             ],
@@ -211,6 +202,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Save', onTap: () {}),
             ],
@@ -228,6 +220,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(
                 labelText: 'Action',
@@ -260,6 +253,7 @@ void main() {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
+              triggerHintText: 'Actions',
               actions: [
                 LayrzButton(
                   labelText: 'Enabled',
@@ -308,6 +302,7 @@ void main() {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
+              triggerHintText: 'Actions',
               actions: [
                 LayrzButton(
                   labelText: 'Action',
@@ -341,6 +336,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton.save(labelText: 'Save', onTap: () {}),
               LayrzButton.delete(labelText: 'Delete', onTap: () {}),
@@ -365,6 +361,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(
                 labelText: 'Save',
@@ -389,6 +386,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Action', onTap: () {}),
             ],
@@ -423,6 +421,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Action', onTap: () {}),
             ],
@@ -443,6 +442,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Action', onTap: () {}),
             ],
@@ -464,6 +464,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(labelText: 'Action', onTap: () {}),
             ],
@@ -482,6 +483,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(
                 labelText: 'Action',
@@ -506,6 +508,7 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
+            triggerHintText: 'Actions',
             actions: [
               LayrzButton(
                 labelText: 'Action',
@@ -535,6 +538,7 @@ void main() {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
+              triggerHintText: 'Actions',
               actions: [
                 LayrzButton(labelText: 'Action', onTap: () {}),
               ],
@@ -560,6 +564,7 @@ void main() {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
+              triggerHintText: 'Actions',
               actions: [
                 LayrzButton(
                   labelText: 'Action',

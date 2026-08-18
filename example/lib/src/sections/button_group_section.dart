@@ -31,6 +31,7 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Row Mode (Forced)', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
+            triggerHintText: 'Table actions',
             actions: [
               LayrzButton(
                 labelText: 'Save',
@@ -57,6 +58,7 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Row Mode with Custom Spacing', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
+            triggerHintText: 'Row actions',
             actions: [
               LayrzButton(
                 labelText: 'Action 1',
@@ -81,6 +83,7 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Dropdown Mode (Default Trigger)', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
+            triggerHintText: 'Table actions',
             actions: [
               LayrzButton(
                 labelText: 'Save',
@@ -145,6 +148,7 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Responsive Mode (Automatic)', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
+            triggerHintText: 'Workflow actions',
             actions: [
               LayrzButton(
                 labelText: 'Approve',

@@ -9,6 +9,7 @@ import 'package:layrz_ui/preview.dart';
 @Preview(name: 'Row', theme: LayrzPreviewTheme.light)
 Widget previewLayrzButtonGroupRow() {
   return LayrzButtonGroup(
+    triggerHintText: 'Row actions',
     actions: [
       LayrzButton(
         labelText: 'Save',

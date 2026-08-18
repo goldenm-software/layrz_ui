@@ -50,12 +50,14 @@ class LayrzButtonGroup extends StatelessWidget {
   /// Only applies in dropdown mode.
   final IconData? triggerIcon;
 
-  /// Tooltip text for the collapsed trigger.
+  /// Accessible name and tooltip for the collapsed trigger button.
   ///
-  /// When provided, overrides the trigger button's tooltip.
-  /// When null, the tooltip lists the action labels (one per line).
-  /// Only applies in dropdown mode.
-  final String? triggerHintText;
+  /// Shown as the trigger's tooltip on hover and announced by screen readers.
+  /// Platform overflow menus render a stable control name rather than enumerating
+  /// their contents, so this is required unconditionally — even though `useDropdown`
+  /// defaults to null and the group may collapse at any viewport width, the caller
+  /// always knows the semantic name to assign.
+  final String triggerHintText;
 
   /// Horizontal alignment of the dropdown panel against the trigger.
   ///
@@ -65,16 +67,14 @@ class LayrzButtonGroup extends StatelessWidget {
 
   /// Creates a new [LayrzButtonGroup].
   ///
-  /// The [actions] parameter is required and provides the list of buttons.
-  /// The [useDropdown], [spacing], [triggerIcon], and [triggerHintText] parameters
-  /// are optional and have sensible defaults.
-  /// The [alignment] parameter defaults to [LayrzDropdownMenuAlignment.start].
+  /// The [actions] and [triggerHintText] parameters are required. All others
+  /// are optional with sensible defaults.
   const LayrzButtonGroup({
     required this.actions,
+    required this.triggerHintText,
     this.useDropdown,
     this.spacing,
     this.triggerIcon,
-    this.triggerHintText,
     this.alignment = LayrzDropdownMenuAlignment.start,
     super.key,
   });
@@ -103,7 +103,7 @@ class LayrzButtonGroup extends StatelessWidget {
       alignment: alignment,
       items: entries,
       builder: (context, controller) => LayrzButton(
-        labelText: triggerHintText ?? actions.map((a) => a.labelText).join('\n'),
+        labelText: triggerHintText,
         icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
         style: LayrzButtonStyle.elevatedFab,
         onTap: controller.isOpen ? controller.close : controller.open,
