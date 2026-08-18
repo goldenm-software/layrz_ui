@@ -137,7 +137,7 @@ class _StylesDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp12,
       children: [
-        Text('All Styles (from LayrzButtonStyle.values)', style: tokens.typography.title),
+        LayrzText('All Styles (from LayrzButtonStyle.values)', style: tokens.typography.title),
         ...{
           "Elevated (Default)": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
           "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
@@ -146,7 +146,7 @@ class _StylesDemo extends StatelessWidget {
           return Row(
             spacing: tokens.spacing.sp12,
             children: [
-              Text(e.key),
+              LayrzText(e.key),
               ...e.value.map((e) {
                 return LayrzButton(
                   labelText: 'Example button',
@@ -216,11 +216,11 @@ class _SemanticFactoriesDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Semantic Factories', style: tokens.typography.title),
+        LayrzText('Semantic Factories', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
 
         // Normal layout, all styles
-        Text('Normal Layout - Elevated (default)', style: tokens.typography.label),
+        LayrzText('Normal Layout - Elevated (default)', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -230,7 +230,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp16),
 
-        Text('Normal Layout - Outlined', style: tokens.typography.label),
+        LayrzText('Normal Layout - Outlined', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -240,7 +240,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp16),
 
-        Text('Normal Layout - OutlinedTonal', style: tokens.typography.label),
+        LayrzText('Normal Layout - OutlinedTonal', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -251,7 +251,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
         SizedBox(height: tokens.spacing.sp16),
 
         // Mobile (Fab) layout, all styles
-        Text('Fab Layout - Elevated (default)', style: tokens.typography.label),
+        LayrzText('Fab Layout - Elevated (default)', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -261,7 +261,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp16),
 
-        Text('Fab Layout - Outlined', style: tokens.typography.label),
+        LayrzText('Fab Layout - Outlined', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -271,7 +271,7 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp16),
 
-        Text('Fab Layout - OutlinedTonal', style: tokens.typography.label),
+        LayrzText('Fab Layout - OutlinedTonal', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp8),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -299,9 +299,9 @@ class _LoadingDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Loading State (Controller)', style: tokens.typography.title),
+        LayrzText('Loading State (Controller)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'The button disables itself and shows an indeterminate progress bar when loading. '
           'The loading state is driven by the controller.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -356,9 +356,9 @@ class _CooldownDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Cooldown State (Controller)', style: tokens.typography.title),
+        LayrzText('Cooldown State (Controller)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Cooldown runs a countdown over a Duration. When the countdown finishes, '
           'it auto-clears and the button re-enables. The controller manages the timing.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -417,9 +417,9 @@ class _DisabledStatesDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Disabled States', style: tokens.typography.title),
+        LayrzText('Disabled States', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Buttons disable via onTap: null or isDisabled: true. Both mechanisms prevent interaction.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -456,7 +456,7 @@ class _IconLabelVariantsDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Icon & Label Variants', style: tokens.typography.title),
+        LayrzText('Icon & Label Variants', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Wrap(
           spacing: tokens.spacing.sp12,
@@ -498,9 +498,9 @@ class _CustomColorDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Custom Color', style: tokens.typography.title),
+        LayrzText('Custom Color', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'The color parameter overrides the default primary or semantic accent.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -544,9 +544,9 @@ class _LongLabelDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Long Label (Constrained Width)', style: tokens.typography.title),
+        LayrzText('Long Label (Constrained Width)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'When constrained, long labels ellipsize gracefully without breaking the button layout.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -576,9 +576,9 @@ class _TooltipDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Tooltip via hintText', style: tokens.typography.title),
+        LayrzText('Tooltip via hintText', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Non-Fab buttons show hintText as a tooltip on hover/long-press. '
           'Fab buttons always show labelText as a tooltip.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -624,9 +624,9 @@ class _SharedControllerDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('One Controller, Three Buttons (Lockstep Busy State)', style: tokens.typography.title),
+        LayrzText('One Controller, Three Buttons (Lockstep Busy State)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'All three buttons share the same controller. When you activate loading or cooldown, '
           'all three respond together—no drift, no flicker. Perfect for form groups where all actions '
           'should disable together.',
@@ -679,7 +679,7 @@ class _SharedControllerDemo extends StatelessWidget {
               return Row(
                 spacing: tokens.spacing.sp12,
                 children: [
-                  Text('${e.key}:', style: tokens.typography.label),
+                  LayrzText('${e.key}:', style: tokens.typography.label),
                   ...e.value.map((style) {
                     return LayrzButton(
                       labelText: style.toString().split('.').last,

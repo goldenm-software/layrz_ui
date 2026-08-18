@@ -1735,6 +1735,81 @@ Both trims are shipped in **0.0.6** (released 2026-08-17).
 
 ---
 
+## D28: M2 Core Primitives — Chips, Text, and Dropdown Design Finalization
+
+**Date**: 2026-08-17  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Three M2 components shipped with design details that merit explicit documentation to prevent future confusion or regressions:
+
+1. **Chips are visual-only**, not selection controls. The original layrz_theme `ThemedChip` and `ThemedChipGroup` supported selection modes (none, single, multi); layrz_ui removes selection entirely. This is a deliberate decoupling of visual representation from interaction state.
+
+2. **LayrzText is a `Text` drop-in, not a scope wrapper.** It mirrors `Text`'s API exactly, including all parameters. One deliberate divergence: null `style` resolves to `tokens.typography.body` instead of inheriting from `DefaultTextStyle`. This is important to document because it surprises developers accustomed to `Text`'s inheritance behavior.
+
+3. **LayrzDropdownMenu uses a builder-based trigger**, not a wrapped child. The menu installs no gesture handling; the trigger owns the interaction. This is non-obvious and cost significant debugging.
+
+4. **LayrzDropdownItem is sealed**, ensuring menu items cannot be arbitrary widgets. All menus across the app have a consistent appearance by construction.
+
+5. **LayrzChipStyle trimmed to three values**, dropping layrz_theme's `elevated` style. Continuing D27's trimming precedent.
+
+### Decision
+
+**Record four API design rules for M2 core primitives:**
+
+1. **Chips are static visual labels.** No selection, no interaction states beyond the optional delete affordance. Chips represent data, not choices. Selection control belongs to an input component (M3+), not to chips themselves.
+
+2. **LayrzText is a drop-in for `Text`.** Its API mirrors `Text` exactly. The single divergence (null `style` → `tokens.typography.body`) must be documented prominently in the API docs, CLAUDE.md, and wiki to prevent user confusion. Pass an explicit `style` to override.
+
+3. **LayrzDropdownMenu trigger is a builder.** The menu controller is passed to the builder; the caller wires it to their trigger's own tap handler. This decouples the menu from gesture handling, avoiding gesture-arena conflicts with disabled buttons (which maintain `onTapCancel` even when disabled).
+
+4. **LayrzDropdownItem is sealed.** Three concrete types are allowed: `LayrzDropdownEntry`, `LayrzDropdownDivider`, `LayrzDropdownLabel`. Custom widgets are impossible by design. This ensures visual consistency across all menus.
+
+5. **LayrzChipStyle is three values**, matching the established button fill ladder: `filled` (solid), `outlined` (border only), `filledTonal` (tonal). The `elevated` style is not used by chips and is not included. Continuing D27's style-reduction precedent.
+
+### Rationale
+
+- **Chips as visual-only:** Separating visual representation from selection state is architecturally cleaner. It allows chips to be used purely for labeling (e.g., in lists, tags, badges) without implying selection semantics. Selection controls are inputs and belong in M3+.
+
+- **LayrzText API parity:** Mirroring `Text`'s API exactly makes adoption frictionless. Consuming code can often swap `Text` for `LayrzText` with a single import change. The one exception (null `style` behavior) is documented to prevent bugs.
+
+- **Builder-based trigger:** Passing the controller to a builder function allows the caller to wire interaction logic directly to their trigger widget (e.g., a button). This avoids the gesture-arena problem where a menu that wraps its trigger in a `GestureDetector` would never fire because the button already consumed the pointer event.
+
+- **Sealed dropdown items:** A sealed class hierarchy ensures that all menus across the system use the same rendering logic and styling. No app can accidentally insert a custom widget that breaks the visual consistency.
+
+- **Chip styles from fill ladder:** Aligning chip styles with the button fill ladder reduces cognitive load. Developers learn one ladder pattern and apply it across buttons, alerts, chips, and other components.
+
+### Consequences
+
+- **Chips never support selection modes** in layrz_ui. Apps needing to select from a list of labels must use an input component (e.g., `LayrzMultiSelectInput` in M3+) or implement selection at the app level.
+
+- **`LayrzText` inherits `SelectableRegion` from `SelectableRegion`, not `Text`'s `DefaultTextStyle`** when style is null. This is documented in the widget's doc comment and CLAUDE.md but is easy to miss. Code review must verify correct documentation.
+
+- **LayrzDropdownMenu builder pattern is mandatory.** Callers cannot pass a child and expect the menu to wrap it; they must implement the builder and wire the controller themselves.
+
+- **Dropdown items are sealed.** Any attempt to pass a custom widget into `items:` will fail at compile time with a sealed class error, guiding developers to use the provided types.
+
+- **LayrzChipStyle has no `.elevated` value.** Apps using the enum from layrz_theme's `ThemedChip` with `.elevated` must rewrite to `.filled` or `.outlined`.
+
+### Related Decisions
+
+- **D27** (Component Enum Trims) — D27 trimmed button and alert styles. D28 extends the principle to chips.
+- **D15** (Interaction States Never Change Geometry) — Chips, menus, and text selections all comply with D15's no-geometry-change rule for interaction states.
+
+### Shipping Status (Updated 2026-08-17)
+
+**Chips and Text are shipped as of this release.** Both decisions are implemented and tested. LayrzChip and LayrzChipGroup are available in `lib/src/chips/` and exported from the root barrel. LayrzText is available in `lib/src/text/` and exported from the root barrel.
+
+**Dropdown decisions are decided but not yet shipped.** The sealed `LayrzDropdownItem` hierarchy, builder-based trigger pattern, and no-exit-animation design are all finalized and correct. Implementation is in progress on branch `feat/navigation/dropdown-menu`, currently at 28 of 34 tests passing (Escape-to-close and outside-tap-to-close outstanding). The decisions stand unchanged and will guide completion on the follow-up branch. The gesture-arena explanation remains significant: `LayrzButton` retains a non-null `onTapCancel` even when disabled, creating a gesture recognizer that wins the arena — which is precisely why the trigger must wire itself through the controller rather than being wrapped.
+
+### Review Trigger
+
+**None.** These decisions document final API details of shipped (chips, text) and decided-but-not-yet-shipped (dropdown) M2 components. If consuming apps report that chips need selection support, or that the dropdown builder pattern is too verbose, consider an M4+ component that wraps `LayrzDropdownMenu` with selection semantics added, rather than reopening this decision.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

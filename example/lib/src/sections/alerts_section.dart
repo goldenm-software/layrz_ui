@@ -82,9 +82,9 @@ class _StylesAndTypesDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('All Styles × Types (2 × 6 = 12 Combinations)', style: tokens.typography.title),
+        LayrzText('All Styles × Types (2 × 6 = 12 Combinations)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Organized by style (outer group) and type (inner). The style controls visual appearance; '
           'the type controls semantic color and icon.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -99,7 +99,7 @@ class _StylesAndTypesDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp12,
               children: [
-                Text(
+                LayrzText(
                   'Style: ${style.toString().split('.').last}',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg1),
                 ),
@@ -155,9 +155,9 @@ class _MaxLinesDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('maxLines Truncation', style: tokens.typography.title),
+        LayrzText('maxLines Truncation', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Left: maxLines = 1 (single line, ellipsis). Right: maxLines = 3 (default).',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -171,7 +171,7 @@ class _MaxLinesDemo extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp8,
                 children: [
-                  Text('maxLines: 1', style: tokens.typography.label),
+                  LayrzText('maxLines: 1', style: tokens.typography.label),
                   LayrzAlert(
                     type: LayrzAlertType.info,
                     title: 'Single Line',
@@ -188,7 +188,7 @@ class _MaxLinesDemo extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp8,
                 children: [
-                  Text('maxLines: 3', style: tokens.typography.label),
+                  LayrzText('maxLines: 3', style: tokens.typography.label),
                   LayrzAlert(
                     type: LayrzAlertType.info,
                     title: 'Multi-Line',
@@ -222,9 +222,9 @@ class _CustomTypeDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Custom Type', style: tokens.typography.title),
+        LayrzText('Custom Type', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'When type is custom, the color and icon parameters are honored. '
           'This example shows a custom alert with a purple accent and a star icon.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -279,9 +279,9 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Interactive Alerts (onTap)', style: tokens.typography.title),
+        LayrzText('Interactive Alerts (onTap)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'When onTap is provided, the alert becomes interactive. Hover or focus to see '
           'the surface lift by 4.0 logical pixels (paint-only, no layout change). '
           'Tab to focus; press Enter or Space to activate.',
@@ -290,7 +290,7 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
         SizedBox(height: tokens.spacing.sp16),
 
         // Side-by-side: inert vs interactive comparison
-        Text('Inert vs Interactive Comparison', style: tokens.typography.label),
+        LayrzText('Inert vs Interactive Comparison', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp12),
         Row(
           spacing: tokens.spacing.sp12,
@@ -301,7 +301,7 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp8,
                 children: [
-                  Text('Inert (onTap: null)', style: tokens.typography.label),
+                  LayrzText('Inert (onTap: null)', style: tokens.typography.label),
                   LayrzAlert(
                     type: LayrzAlertType.info,
                     title: 'Static Alert',
@@ -317,7 +317,7 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp8,
                 children: [
-                  Text('Interactive (onTap: provided)', style: tokens.typography.label),
+                  LayrzText('Interactive (onTap: provided)', style: tokens.typography.label),
                   LayrzAlert(
                     type: LayrzAlertType.success,
                     title: 'Interactive Alert',
@@ -343,12 +343,12 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              LayrzText(
                 'Tap Counter: $_tapCount',
                 style: tokens.typography.title,
               ),
               SizedBox(height: tokens.spacing.sp8),
-              Text(
+              LayrzText(
                 'Click or tap the interactive alert above (or any below) to increment this counter. '
                 'You can also focus with Tab and activate with Enter or Space.',
                 style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
@@ -360,7 +360,7 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
         SizedBox(height: tokens.spacing.sp24),
 
         // Interactive alerts across all styles
-        Text('Interactive Alerts by Style', style: tokens.typography.label),
+        LayrzText('Interactive Alerts by Style', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,7 +370,7 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                Text(
+                LayrzText(
                   style.toString().split('.').last,
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
                 ),
@@ -408,9 +408,9 @@ class _AlertIconDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Standalone Alert Icon', style: tokens.typography.title),
+        LayrzText('Standalone Alert Icon', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'The [LayrzAlertIcon] widget is a reusable circular icon chip that can be '
           'placed independently. Shown here at three different sizes.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -425,7 +425,7 @@ class _AlertIconDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                Text('Small (24)', style: tokens.typography.label),
+                LayrzText('Small (24)', style: tokens.typography.label),
                 Row(
                   spacing: tokens.spacing.sp8,
                   children: [
@@ -458,7 +458,7 @@ class _AlertIconDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                Text('Medium (40)', style: tokens.typography.label),
+                LayrzText('Medium (40)', style: tokens.typography.label),
                 Row(
                   spacing: tokens.spacing.sp8,
                   children: [
@@ -491,7 +491,7 @@ class _AlertIconDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                Text('Large (56)', style: tokens.typography.label),
+                LayrzText('Large (56)', style: tokens.typography.label),
                 Row(
                   spacing: tokens.spacing.sp8,
                   children: [

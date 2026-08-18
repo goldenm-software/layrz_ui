@@ -5,12 +5,15 @@ import 'sections/access_paths_section.dart';
 import 'sections/alerts_section.dart';
 import 'sections/borders_section.dart';
 import 'sections/buttons_section.dart';
+import 'sections/chips_section.dart';
 import 'sections/colors_section.dart';
 import 'sections/elevation_section.dart';
 import 'sections/grid_section.dart';
+import 'sections/menus_section.dart';
 import 'sections/motion_section.dart';
 import 'sections/radius_section.dart';
 import 'sections/spacing_section.dart';
+import 'sections/text_section.dart';
 import 'sections/tooltips_section.dart';
 import 'sections/typography_section.dart';
 
@@ -38,6 +41,9 @@ class Showroom extends StatelessWidget {
     _SectionWrapper(builder: buildAlertsSection),
     _SectionWrapper(builder: buildTooltipsSection),
     _SectionWrapper(builder: buildGridSection),
+    _SectionWrapper(builder: buildMenusSection),
+    _SectionWrapper(builder: buildChipsSection),
+    _SectionWrapper(builder: buildTextSection),
     _SectionWrapper(builder: buildColorsSection),
     _SectionWrapper(builder: buildSpacingSection),
     _SectionWrapper(builder: buildRadiusSection),
@@ -63,14 +69,14 @@ class Showroom extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(kAppTitle, style: tokens.typography.display.copyWith(color: tokens.colors.primary)),
+                    LayrzText(kAppTitle, style: tokens.typography.display.copyWith(color: tokens.colors.primary)),
                     SizedBox(height: tokens.spacing.sp8),
-                    Text(
+                    LayrzText(
                       'Design System Showroom',
                       style: tokens.typography.title.copyWith(color: tokens.colors.fg2),
                     ),
                     SizedBox(height: tokens.spacing.sp4),
-                    Text(
+                    LayrzText(
                       'All design tokens in one place — explore the foundation',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                     ),
@@ -106,7 +112,7 @@ class Showroom extends StatelessWidget {
                   children: [
                     Container(height: 1, color: tokens.colors.divider),
                     SizedBox(height: tokens.spacing.sp16),
-                    Text(
+                    LayrzText(
                       'Built with layrz_ui — a Material-free Flutter design system',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                     ),
