@@ -80,6 +80,8 @@ The following design-agnostic primitives are available in the widgets library fo
 | Icon, IconTheme, IconThemeData, IconData, ImageIcon | Exported from `widgets.dart` | Icon rendering and theming |
 | InheritedTheme (abstract) | `/packages/flutter/lib/src/widgets/inherited_theme.dart:36` | Base for custom theme inheritance; subclassed by Material's Theme and Cupertino's CupertinoTheme; provides the `wrap()` mechanism |
 | WidgetState | `/packages/flutter/lib/src/widgets/widget_state.dart:142` | State class for custom stateful widgets |
+| SelectableRegion | `/packages/flutter/lib/src/widgets/selection_container.dart:37` | Enables text selection and copy within a child tree; wraps RichText children to make them selectable by drag or keyboard (Ctrl+A, Ctrl+C) |
+| emptyTextSelectionControls | `/packages/flutter/lib/src/widgets/text_selection.dart` | No-op implementation of `TextSelectionControls`; satisfies `SelectableRegion`'s required `selectionControls` parameter when drag handles and context menus are not needed. Used by LayrzText. |
 
 ---
 

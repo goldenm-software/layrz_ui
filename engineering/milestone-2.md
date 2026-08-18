@@ -14,16 +14,16 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 2 | LayrzCard (elevated surface container) | Done |
 | 3 | LayrzTooltip (composed on Overlay) | Done |
 | 4 | LayrzAlert (inline status callout) | Done |
-| 5 | LayrzChip and LayrzChipGroup | Todo |
+| 5 | LayrzChip and LayrzChipGroup | Done |
 | 6 | LayrzRow / LayrzCol responsive grid | Done |
 | 7 | LayrzConstrainedView | Done |
 | 8 | LayrzTextInput | Todo |
-| 9 | LayrzDropdownMenu | Todo |
+| 9 | LayrzDropdownMenu | Done |
 | 10 | LayrzGroupedButton (overflow actions menu) | Todo |
 | 11 | LayrzAvatar and LayrzImage | Todo |
-| 12 | LayrzText (selectable text) | Todo |
+| 12 | LayrzText (selectable text) | Done |
 
-**Note**: This table tracks the 12 work items in M2 at the strategic level. GitHub Project 9 tracks individual components and supporting types at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together in the same commit. Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
+**Note**: This table is the authoritative record of M2 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
 
 ## Definition of Done
 
@@ -36,19 +36,8 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 - Every widget has `@Preview` annotations (rule #3)
 - All M2 components integrated with theme system (LayrzTheme, tokens, state resolution)
 - Wiki pages created/updated for all M2 components
-- GitHub Project issue #21 (LayrzButton) closed with merged PR
 
 ---
-
-## Deferred Structural Work: Per-Domain Library Entrypoints
-
-**Decision D19 (per-domain library entrypoints) has been implemented** as of 2026-08-16. The package structure is now organized as per-domain libraries:
-
-- Consumers write: `import 'package:layrz_ui/buttons.dart';` (not `import 'package:layrz_ui/layrz_ui.dart';`)
-- Physical layout: `lib/<module>.dart` (entrypoint barrel) + `lib/src/<module>/` (implementation files)
-- Root barrel: Deleted entirely; there is no `lib/layrz_ui.dart`
-
-See decision D19 in `engineering/decisions.md` for the complete rationale and consequences.
 
 ---
 
@@ -476,20 +465,44 @@ This prevents reflow and flicker during state changes.
 
 ### 5. LayrzChip and LayrzChipGroup
 
-**Brief description**:
+**What it is**:
 
-`LayrzChip` — compact label widget with optional leading/trailing icon, delete action, or selection state.
+`LayrzChip` — static, visual-only compact label widget with optional leading icon and delete affordance. **Not a selection control.** The chip itself has no tap, hover, focus, or selected state — only the optional delete icon is interactive.
 
-`LayrzChipGroup` — container for multiple chips with optional grouping behaviour (none, single select, multi-select).
+`LayrzChipGroup` — horizontal layout of multiple chips with two overflow behaviors: `.none` (single scrollable row) or `.compact` (clamp to available width with `+N` overflow indicator).
 
-**Dependencies**: M1 (LayrzTheme, tokens, WidgetState), M2.1 (LayrzButton for delete action).
+Chips render at fixed height with pill-shaped border radius (`tokens.radius.full`). The `computeWidth()` method measures chip width for the group's compact layout.
+
+**Key design rule**: Chips are visual-only. Selection state, toggling, and checkbox-style affordances are **out of scope**. These are labels, not controls.
+
+**LayrzChipStyle** enumeration (three values):
+- `filled` — solid accent background, no border
+- `outlined` — transparent background with accent border
+- `filledTonal` — semi-transparent (tonal) background, no border
+
+**LayrzChipType** enumeration (six values for semantic color):
+- `info`, `success`, `warning`, `danger`, `context` — resolve to token colors
+- `custom` — use explicit `color` parameter
+
+**LayrzChipGroupBehavior** enumeration (two values):
+- `none` (default) — single horizontal row that scrolls on overflow
+- `compact` — clamp to available width; remainder collapses into a `+N` chip whose tooltip lists hidden labels. **Caveat**: Requires finite `maxWidth` constraint (asserts otherwise). Measures each chip individually, so the `+N` indicator may appear one chip early or late depending on rounding. Costs one text layout per chip per build.
+
+**Dependencies**: M1 (LayrzTheme, tokens, WidgetState, extensions), M2.3 (LayrzTooltip for compact overflow tooltip).
 
 **Files affected**:
-- `lib/chips.dart` (entrypoint barrel, new)
-- `lib/src/chips/` (new module directory)
-- `lib/src/chips/chip.dart` (new)
-- `lib/src/chips/chip_group.dart` (new)
+- `lib/src/chips/chips.dart` (per-module barrel, new)
+- `lib/src/chips/src/chip.dart` (new, LayrzChip widget)
+- `lib/src/chips/src/chip_group.dart` (new, LayrzChipGroup widget)
+- `lib/src/chips/src/chip_style.dart` (new, enum)
+- `lib/src/chips/src/chip_type.dart` (new, enum)
+- `lib/src/chips/src/chip_group_behavior.dart` (new, enum)
+- `lib/src/chips/src/chip_style_spec.dart` (new, style resolution)
+- `lib/layrz_ui.dart` (update to export chips module)
 - `test/chips/chip_test.dart` (tests)
+- `test/chips/chip_group_test.dart` (tests)
+- `wiki/Widgets/LayrzChip.md` (new wiki page)
+- `wiki/Widgets/LayrzChipGroup.md` (new wiki page)
 
 ---
 
@@ -591,19 +604,35 @@ At least 6 M3 components and 14 M4 pickers depend on it. Its chrome — label, p
 
 ### 9. LayrzDropdownMenu
 
-**Brief description**:
+**What it is**:
 
-`LayrzDropdownMenu` — menu surface anchored to a trigger, built on `RawMenuAnchor` (Flutter 3.47). New scope, absent from `engineering/roadmap.md`. Prerequisite for LayrzGroupedButton (item 9).
+`LayrzDropdownMenu` — a popup menu anchored to a trigger widget, built on `RawMenuAnchor` (Flutter 3.47). Menu items are a **sealed hierarchy** — arbitrary widgets cannot be inserted. This ensures all menus across the app have a consistent look and behavior.
 
-The menu renders as a dropdown popup anchored to a trigger widget, supports single-item and multi-item selection, and integrates with the theme system.
+The trigger is a builder function that receives the `MenuController`, allowing the caller to wire their own tap handler directly to the controller. This is **not a wrapped child** — the menu installs no gesture handling; the trigger owns the gesture. Reason: `LayrzButton` (a common trigger) keeps a non-null `onTapCancel` even when disabled, creating a gesture recognizer that wins the arena. A menu wrapping its trigger in a `GestureDetector` would never open.
 
-**Dependencies**: M1 (LayrzTheme, tokens), Flutter 3.47 (RawMenuAnchor), M2.1 (LayrzButton).
+**Menu items** (sealed class `LayrzDropdownItem`):
+- `LayrzDropdownEntry` — interactive row with label, optional icon, optional color override (for destructive actions), and an `onTap` callback. Automatically closes the menu after tapping. Only focusable entries can be traversed with arrow keys.
+- `LayrzDropdownDivider` — non-focusable visual separator line
+- `LayrzDropdownLabel` — non-focusable section heading
+
+**Animation**: Menu enters with fade + 4px translate from the anchor's side. **There is no exit animation** — `RawMenuAnchor` tears the overlay down synchronously on close. Documented so nobody files it as a bug.
+
+**Keyboard interaction**: Escape closes, arrow keys traverse focusable entries (dividers and labels are skipped), outside-tap dismissal is automatic.
+
+**Positioning**: Panel is positioned below the anchor by default. If insufficient space, it flips above. Horizontal alignment is configurable via `LayrzDropdownMenuAlignment` enum (`start`, `center`, `end`), with bounds clamping.
+
+**Dependencies**: M1 (LayrzTheme, tokens, extensions), Flutter 3.47 (RawMenuAnchor), M2.1 (LayrzButton recommended for triggers).
 
 **Files affected**:
-- `lib/menus.dart` (entrypoint barrel, new)
-- `lib/src/menus/` (new module directory)
-- `lib/src/menus/dropdown_menu.dart` (new)
+- `lib/src/menus/menus.dart` (per-module barrel, new)
+- `lib/src/menus/src/dropdown_menu.dart` (new, LayrzDropdownMenu widget)
+- `lib/src/menus/src/dropdown_items.dart` (new, sealed item hierarchy)
+- `lib/src/menus/src/dropdown_menu_types.dart` (new, LayrzDropdownMenuAlignment enum)
+- `lib/src/menus/src/dropdown_entry_style_spec.dart` (new, style resolution)
+- `lib/layrz_ui.dart` (update to export menus module)
 - `test/menus/dropdown_menu_test.dart` (tests)
+- `test/menus/dropdown_items_test.dart` (tests)
+- `wiki/Widgets/LayrzDropdownMenu.md` (new wiki page)
 
 ---
 
@@ -649,28 +678,37 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 **What it is**:
 
-`LayrzText` makes text selectable and copyable by wrapping `SelectableRegion` from `package:flutter/widgets.dart`. Any `Text` child becomes selectable because `Text` builds a `RichText` which already participates in selection by registering with an inherited `SelectionRegistrar`. Flutter's default is non-selectable text; `LayrzText` bridges the scope gap.
+`LayrzText` is a **Material-free, text-only drop-in replacement for Flutter's `Text`** that makes text selectable and copyable by wrapping `SelectableRegion` from `package:flutter/widgets.dart`. Any `Text` child becomes selectable because `Text` builds a `RichText` which already participates in selection by registering with an inherited `SelectionRegistrar`. Flutter's default is non-selectable text; `LayrzText` bridges the scope gap.
 
 `SelectableRegion` implements copy via `CopySelectionTextIntent` and `SelectAllTextIntent`, so keyboard selection (Ctrl+A) and copy (Ctrl+C) work without additional UI.
 
+**API mirrors `Text` exactly**, including both constructors:
+- `LayrzText(String data, {...})` — single-line text
+- `LayrzText.rich(InlineSpan textSpan, {...})` — styled rich text
+
+All `Text` parameters are supported: `style`, `strutStyle`, `textAlign`, `textDirection`, `locale`, `softWrap`, `overflow`, `textScaler`, `maxLines`, `semanticsLabel`, `semanticsIdentifier`, `textWidthBasis`, `textHeightBehavior`, `selectionColor`.
+
+**Four additions beyond `Text`**:
+- `selectable` (bool, default true) — when false, renders as a plain `Text` (no `SelectableRegion`) for performance in hot lists
+- `focusNode` (FocusNode?) — caller-owned when supplied; created and disposed internally when null
+- `onSelectionChanged` (ValueChanged<SelectedContent?>?) — receives `SelectedContent.plainText` when selection changes, or null when cleared
+- **One deliberate divergence**: null `style` resolves to `tokens.typography.body` (not the inherited `DefaultTextStyle`). Call this out prominently.
+
+Ships with `emptyTextSelectionControls` from `package:flutter/widgets.dart` (a no-op implementation satisfying `SelectableRegion`'s required `selectionControls` parameter). Drag handles on touch and a context menu are deferred — not required for initial ship. When `LayrzTextInput` (item 8) lands with a Material-free `TextSelectionControls`, `LayrzText` can optionally adopt it for touch affordances.
+
 **Not an input. No editing.** This widget is separate from `LayrzTextInput` (item 8). LayrzText provides read-only selection and copy; LayrzTextInput provides editing. No relationship beyond both touching text.
 
-**Why subclassing Text does not work**: Selection is a scope mechanism, not a build concern. Overriding `Text.build()` provides no way to supply a `SelectionRegistrar` to register the child `RichText`.
+**Primitive**: `SelectableRegion` (Flutter 3.47), `emptyTextSelectionControls` (Flutter).
 
-**Not blocked.** Ships with `emptyTextSelectionControls` from `package:flutter/widgets.dart` (a no-op implementation satisfying `SelectableRegion`'s required `selectionControls` parameter). Drag handles on touch and a context menu are deferred — not required for initial ship, and will be optional enhancements later. When `LayrzTextInput` (item 8) lands with a Material-free `TextSelectionControls`, `LayrzText` can optionally adopt it for touch affordances.
-
-**Primitive**: `SelectableRegion`.
-
-**Dependencies**: M1 (LayrzTheme, tokens).
+**Dependencies**: M1 (LayrzTheme, tokens, extensions).
 
 **Files affected**:
-- `lib/text.dart` (entrypoint barrel, new)
-- `lib/src/text/` (new module directory)
-- `lib/src/text/text.dart` (new)
+- `lib/src/text/text.dart` (per-module barrel, new)
+- `lib/src/text/src/text.dart` (new, LayrzText widget)
+- `lib/src/text/src/text_previews.dart` (new, @Preview annotations)
+- `lib/layrz_ui.dart` (update to export text module)
 - `test/text/text_test.dart` (tests)
 - `wiki/Widgets/LayrzText.md` (new wiki page)
-
-**Note**: Replaces the `LayrzAnimatedCheckbox` slot, dropped from M2 scope.
 
 ---
 
@@ -696,8 +734,7 @@ M2 is complete when all the following criteria are satisfied:
 - **All code documented**: Every public member has doc comments per rule #1
 - **All visual components have @Preview**: Annotations at bottom of widget files
 - **Wiki updated**: Pages created for all M2 components with API, examples, and design rationale
-- **GitHub Project updated**: All items moved to Done
-- **engineering/milestone-2.md Status table updated**: All items marked Done
+- **engineering/milestone-2.md Status table updated**: All items marked Done (authoritative record kept in sync with code)
 
 ---
 
