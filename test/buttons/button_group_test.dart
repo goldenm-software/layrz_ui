@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -233,6 +234,32 @@ void main() {
 
           // Plain entry should render as button with no accent
           expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('semantic entry dot and row button use the same resolved color',
+            (tester) async {
+          final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+          await pumpThemed(
+            tester,
+            theme: themeData,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          // Get the button's color from its type: custom color
+          final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+          // The button should have a custom color (the danger color from semantic type)
+          expect(button.color, isNotNull);
+
+          // Verify the button's color matches the semantic factory's expected color
+          final entry = LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {});
+          expect(button.color, entry.resolveAccent(themeData.tokens));
+          expect(button.color, themeData.tokens.colors.danger);
         });
       });
     });

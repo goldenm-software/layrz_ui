@@ -43,6 +43,18 @@ extension _SemanticTypeResolver on _SemanticType {
   };
 }
 
+/// Single source of truth for an entry's accent colour resolution.
+///
+/// Explicit [color] wins; otherwise the semantic type resolves against tokens;
+/// null when neither applies. This function is called by both the entry's own
+/// dot rendering and the button conversion, ensuring they never disagree.
+Color? _resolveEntryAccent(
+  Color? color,
+  _SemanticType semanticType,
+  LayrzTokens tokens,
+) =>
+    color ?? semanticType.resolveColor(tokens);
+
 /// Base class for items that a [LayrzDropdownMenu] can render.
 ///
 /// Only two concrete types are allowed: [LayrzDropdownEntry] and [LayrzDropdownLabel].
@@ -414,7 +426,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The precedence is: explicit [color] takes priority over semantic type.
   /// This method is used both by the entry's own dot rendering and by the
   /// row-mode button conversion, ensuring they never disagree.
-  Color? resolveAccent(LayrzTokens tokens) => color ?? _semanticType.resolveColor(tokens);
+  Color? resolveAccent(LayrzTokens tokens) => _resolveEntryAccent(color, _semanticType, tokens);
 
   @override
   Widget build(BuildContext context) => _LayrzDropdownEntryWidget(
@@ -520,8 +532,8 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
       tokens: tokens,
     );
 
-    // Resolve the color dot: explicit color takes precedence, then semantic type
-    final dotColor = widget.color ?? widget.semanticType.resolveColor(tokens);
+    // Resolve the color dot through the same logic as resolveAccent()
+    final dotColor = _resolveEntryAccent(widget.color, widget.semanticType, tokens);
 
     return FocusableActionDetector(
       enabled: widget.enabled,
