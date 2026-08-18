@@ -44,7 +44,7 @@ class _GridSectionContent extends StatelessWidget {
             ),
             padding: EdgeInsets.all(tokens.spacing.sp12),
             margin: EdgeInsets.only(bottom: tokens.spacing.sp16),
-            child: Text(
+            child: LayrzText(
               'All values are shown in logical units (u). Flutter measures layout in device-independent logical pixels, not physical device pixels. '
               'Hover over any value to see its physical-pixel equivalent on the current display.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -95,9 +95,9 @@ class _BreakpointReadout extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Live Width & Breakpoint Readout', style: tokens.typography.title),
+            LayrzText('Live Width & Breakpoint Readout', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
-            Text(
+            LayrzText(
               'Resize the window to see breakpoints transition. The grid responds to viewport width.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
@@ -111,7 +111,7 @@ class _BreakpointReadout extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text(
+                      LayrzText(
                         'Viewport Width: ',
                         style: tokens.typography.label.copyWith(color: tokens.colors.fg1),
                       ),
@@ -121,7 +121,7 @@ class _BreakpointReadout extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
+                  LayrzText(
                     'Active Breakpoint: $breakpoint',
                     style: tokens.typography.label.copyWith(color: tokens.colors.primary[500]),
                   ),
@@ -160,9 +160,9 @@ class _ResponsiveColumnsDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Responsive Columns (Varying Spans Per Breakpoint)', style: tokens.typography.title),
+        LayrzText('Responsive Columns (Varying Spans Per Breakpoint)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Each column has different span values (xs, sm, md, lg). Watch them reflow as viewport changes.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -221,9 +221,9 @@ class _WrappingDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Wrapping Example (Uneven Spans)', style: tokens.typography.title),
+        LayrzText('Wrapping Example (Uneven Spans)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Five columns with spans [6, 5, 4, 4, 4] wrap into two visual rows. '
           'The greedy algorithm starts a new row when sum exceeds 12.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -275,9 +275,9 @@ class _ConstrainedViewDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Constrained View (max-width: 600u)', style: tokens.typography.title),
+        LayrzText('Constrained View (max-width: 600u)', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        Text(
+        LayrzText(
           'Content is centered horizontally and constrained to max-width. '
           'Useful for landing pages and article layouts.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -334,7 +334,7 @@ class _ColumnBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(tokens.radius.r8),
       ),
       alignment: Alignment.center,
-      child: Text(
+      child: LayrzText(
         label,
         style: tokens.typography.label.copyWith(color: color),
         textAlign: TextAlign.center,

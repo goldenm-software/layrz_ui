@@ -20,14 +20,14 @@ Widget buildMotionSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Motion values reference
-            Text('Motion Token Values', style: tokens.typography.title),
+            LayrzText('Motion Token Values', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             _MotionValuesTable(tokens: tokens),
 
             SizedBox(height: tokens.spacing.sp24),
 
             // Interactive demonstrations
-            Text('Interactive Demonstrations', style: tokens.typography.title),
+            LayrzText('Interactive Demonstrations', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Row(
               children: [
@@ -105,10 +105,10 @@ class _MotionValueRow extends StatelessWidget {
         children: [
           SizedBox(
             width: tokens.spacing.sp48 * 2,
-            child: Text(label, style: tokens.typography.label),
+            child: LayrzText(label, style: tokens.typography.label),
           ),
           Expanded(
-            child: Text(value, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+            child: LayrzText(value, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
           ),
         ],
       ),
@@ -163,7 +163,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Hover Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+        LayrzText('Hover Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         SizedBox(height: tokens.spacing.sp8),
         MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
@@ -187,7 +187,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
               style: tokens.typography.label.copyWith(
                 color: _isHovered ? tokens.colors.surface : tokens.colors.fg1,
               ),
-              child: Text('Hover me (${tokens.motion.dHover.inMilliseconds}ms)'),
+              child: LayrzText('Hover me (${tokens.motion.dHover.inMilliseconds}ms)'),
             ),
           ),
         ),
@@ -219,7 +219,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Press Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+        LayrzText('Press Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         SizedBox(height: tokens.spacing.sp8),
         GestureDetector(
           onTapDown: (_) => setState(() => _isPressed = true),
@@ -244,7 +244,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
               style: tokens.typography.label.copyWith(
                 color: _isPressed ? tokens.colors.surface : tokens.colors.fg1,
               ),
-              child: Text('Press me (${tokens.motion.dPress.inMilliseconds}ms)'),
+              child: LayrzText('Press me (${tokens.motion.dPress.inMilliseconds}ms)'),
             ),
           ),
         ),

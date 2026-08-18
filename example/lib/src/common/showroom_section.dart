@@ -33,12 +33,12 @@ class ShowroomSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Title
-          Text(title, style: tokens.typography.headline),
+          LayrzText(title, style: tokens.typography.headline),
 
           // Description (if provided)
           if (description != null) ...[
             SizedBox(height: tokens.spacing.sp8),
-            Text(description!, style: tokens.typography.body.copyWith(color: tokens.colors.fg3)),
+            LayrzText(description!, style: tokens.typography.body.copyWith(color: tokens.colors.fg3)),
           ],
 
           // Content area with LayrzCard for elevation and surface styling
