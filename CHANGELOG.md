@@ -11,14 +11,12 @@
 ### Added
 
 - **`LayrzDropdownLabel.color`** — Optional `Color?` parameter that fills the label's tonal band. Null keeps the neutral `surface3` fill, so existing menus are visually unchanged. Paired with D29's dropdown entry colour simplification.
-
-
 - **`LayrzDropdownEntry` semantic factories** — Six convenience factories preset icon and semantic colour to match action semantics: `.save()` (icon `solarOutlineInboxIn`, colour `tokens.colors.success`), `.cancel()` (icon `solarOutlineCloseSquare`, colour `tokens.colors.danger`), `.info()` (icon `solarOutlineInfoSquare`, colour `tokens.colors.info`), `.show()` (icon `solarOutlineEyeScan`, colour `tokens.colors.info`), `.edit()` (icon `solarOutlinePenNewSquare`, colour `tokens.colors.warning`), `.delete()` (icon `solarOutlineTrashBinMinimalisticN2`, colour `tokens.colors.danger`). All factories accept optional `icon` and `color` overrides. Semantic type is resolved to token colour at build time via a private enum, never exposed as public API.
 - **`LayrzButtonGroup`** — Responsive group of dropdown items rendering as a row of buttons or collapsed into a single dropdown trigger. Takes `items: List<LayrzDropdownItem>` (entries and labels). In row mode (above `md` breakpoint), `LayrzDropdownEntry` items convert to labelled `LayrzButton` instances; `LayrzDropdownLabel` items are silently skipped. In dropdown mode, all items pass through to `LayrzDropdownMenu` unchanged. Mode driven by a nullable `bool useDropdown` parameter. The `triggerHintText` parameter is required and serves as the trigger's stable accessible name. Reference DESIGN-31 and the model inversion: items are the source of truth, not derived from buttons.
 
 - **`LayrzButtonGroup.builder`** — Variant constructor allowing a custom trigger widget. Identical to the default constructor except the trigger is built via `builder: (context, controller)` instead of the hardcoded `triggerHintText` / `triggerIcon`. Row mode is identical for both constructors. Gesture-arena warning: wire the controller directly to the trigger's `onTap`, do not wrap in `GestureDetector`.
 
-- **`LayrzAvatar`** — Static display component rendering a layrz_sdk `Avatar` by type (photo, initials, icon), with optional initials fallback. Always a rounded box using the `r12` radius token, consistent with `LayrzCard` and `LayrzAlert`, and carries a fixed `tokens.shadow.compact1` drop shadow in all render modes. No interaction affordances; callers wrap if needed. Initials algorithm is deterministic but not locale-aware (no Unicode segmentation). Reference decision D31.
+- **`LayrzAvatar`** — Static display component rendering a layrz_sdk `Avatar` by type (URL, base64, icon, emoji), with initials as the fallback when the avatar is null or missing. Always a rounded box using the `r12` radius token, consistent with `LayrzCard` and `LayrzAlert`, and carries a fixed `tokens.shadow.compact1` drop shadow in all render modes. No interaction affordances; callers wrap if needed. Initials algorithm is deterministic but not locale-aware (no Unicode segmentation). Reference decision D31.
 
 - **`LayrzImage`** — Image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes. Uses `ImageSource` to detect and parse the source type automatically.
 
@@ -34,7 +32,7 @@
 
 - **D30** records the dependency trade-off: layrz_sdk brings 18 transitive dependencies (including `dio`, `layrz_i18n`, `layrz_logging`, `web_socket_channel`), and flutter_svg adds the vector graphics chain. All verified Material-free. Exit condition explicit: revert to `^2.0.0` once layrz_sdk advances.
 
-- **D31** documents that `LayrzAvatar` is static display-only, following the same pattern as `LayrzChip` per decision D28. No interaction affordances, no elevation — callers own interaction logic.
+- **D31** documents that `LayrzAvatar` is static display-only, following the same pattern as `LayrzChip` per decision D28. No interaction affordances, no elevation parameter — but the avatar always carries a fixed `tokens.shadow.compact1` drop shadow. Callers own interaction logic.
 
 ---
 
