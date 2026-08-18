@@ -69,3 +69,47 @@ Widget previewLayrzButtonGroupDropdown() {
     triggerIcon: LayrzIcons.solarOutlineMenuDots,
   );
 }
+
+/// Preview of [LayrzButtonGroup.builder] with a custom-styled trigger.
+///
+/// Demonstrates how the builder pattern allows full control over the trigger's
+/// appearance and behavior. This example uses an outlined FAB style instead of
+/// the default elevated FAB.
+@Preview(name: 'Builder (Custom Trigger)', theme: LayrzPreviewTheme.light)
+Widget previewLayrzButtonGroupBuilder() {
+  return LayrzButtonGroup.builder(
+    actions: [
+      LayrzButton(
+        labelText: 'Create',
+        icon: LayrzIcons.solarOutlineAddCircle,
+        type: LayrzButtonType.success,
+        onTap: () {},
+      ),
+      LayrzButton(
+        labelText: 'Duplicate',
+        icon: LayrzIcons.solarOutlineClipboardList,
+        type: LayrzButtonType.info,
+        onTap: () {},
+      ),
+      LayrzButton(
+        labelText: 'Archive',
+        icon: LayrzIcons.solarOutlineCheckCircle,
+        type: LayrzButtonType.warning,
+        onTap: () {},
+      ),
+      LayrzButton(
+        labelText: 'Delete',
+        icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+        type: LayrzButtonType.danger,
+        onTap: () {},
+      ),
+    ],
+    useDropdown: true,
+    builder: (context, controller) => LayrzButton(
+      labelText: 'Options',
+      icon: LayrzIcons.solarOutlineSettings,
+      style: LayrzButtonStyle.outlinedFab,
+      onTap: controller.isOpen ? controller.close : controller.open,
+    ),
+  );
+}

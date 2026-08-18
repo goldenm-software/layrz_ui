@@ -174,6 +174,48 @@ class _ButtonGroupSectionContent extends StatelessWidget {
             'Resize the viewport to see automatic switching between row mode (at md breakpoint and above) and dropdown mode (below md).',
             style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
           ),
+
+          SizedBox(height: tokens.spacing.sp32),
+
+          // 6. Builder mode with custom-styled trigger
+          _SectionHeader(label: 'Builder Mode (Custom Trigger)', tokens: tokens),
+          SizedBox(height: tokens.spacing.sp12),
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(
+                labelText: 'Create',
+                icon: LayrzIcons.solarOutlineAddCircle,
+                type: LayrzButtonType.success,
+                onTap: () {},
+              ),
+              LayrzButton(
+                labelText: 'Duplicate',
+                icon: LayrzIcons.solarOutlineClipboardList,
+                type: LayrzButtonType.info,
+                onTap: () {},
+              ),
+              LayrzButton(
+                labelText: 'Delete',
+                icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+                type: LayrzButtonType.danger,
+                onTap: () {},
+              ),
+            ],
+            useDropdown: true,
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Options',
+              icon: LayrzIcons.solarOutlineSettings,
+              style: LayrzButtonStyle.outlinedFab,
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+            alignment: LayrzDropdownMenuAlignment.end,
+          ),
+
+          SizedBox(height: tokens.spacing.sp12),
+          Text(
+            'The builder pattern allows full control over the trigger widget\'s style and behavior. Here, the trigger uses an outlined style instead of the default elevated FAB.',
+            style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+          ),
         ],
       ),
     );

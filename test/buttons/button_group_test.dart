@@ -592,6 +592,193 @@ void main() {
         }
       });
     });
+
+    group('LayrzButtonGroup.builder', () {
+      testWidgets('builder renders custom trigger widget', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Save', onTap: () {}),
+              LayrzButton(labelText: 'Cancel', onTap: () {}),
+            ],
+            useDropdown: true,
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Custom Trigger',
+              style: LayrzButtonStyle.outlinedFab,
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // Verify the custom trigger is rendered (verify button exists)
+        expect(find.byType(LayrzButton), findsOneWidget);
+        expect(find.byType(LayrzDropdownMenu), findsOneWidget);
+      });
+
+      testWidgets('builder trigger opens and closes menu', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Action 1', onTap: () {}),
+              LayrzButton(labelText: 'Action 2', onTap: () {}),
+            ],
+            useDropdown: true,
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Menu',
+              style: LayrzButtonStyle.outlinedFab,
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // Tap trigger to open
+        final trigger = find.byType(LayrzButton).first;
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+
+        // Actions should be visible
+        expect(find.text('Action 1'), findsOneWidget);
+        expect(find.text('Action 2'), findsOneWidget);
+
+        // Tap trigger again to close
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+
+        // Actions should be gone
+        expect(find.text('Action 1'), findsNothing);
+        expect(find.text('Action 2'), findsNothing);
+      });
+
+      testWidgets('builder actions work end-to-end', (tester) async {
+        var action1Tapped = false;
+        var action2Tapped = false;
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Action 1', onTap: () => action1Tapped = true),
+              LayrzButton(labelText: 'Action 2', onTap: () => action2Tapped = true),
+            ],
+            useDropdown: true,
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Menu',
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // Open menu
+        final trigger = find.byType(LayrzButton).first;
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+
+        // Tap first action
+        await tester.tap(find.text('Action 1'));
+        await tester.pumpAndSettle();
+        expect(action1Tapped, isTrue);
+        expect(action2Tapped, isFalse);
+
+        // Re-open and tap second action
+        await tester.tap(trigger);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Action 2'));
+        await tester.pumpAndSettle();
+        expect(action2Tapped, isTrue);
+      });
+
+      testWidgets('builder with useDropdown: false renders row and does not call builder', (tester) async {
+        var builderCalled = false;
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Action 1', onTap: () {}),
+              LayrzButton(labelText: 'Action 2', onTap: () {}),
+            ],
+            useDropdown: false,
+            builder: (context, controller) {
+              builderCalled = true;
+              return const SizedBox.shrink();
+            },
+          ),
+        );
+
+        // Should render row (Wrap) with actions
+        expect(find.byType(Wrap), findsOneWidget);
+        expect(find.byType(LayrzDropdownMenu), findsNothing);
+        expect(find.byType(LayrzButton), findsNWidgets(2));
+
+        // Builder should not be called in row mode
+        expect(builderCalled, isFalse);
+      });
+
+      testWidgets('builder with useDropdown: null responds to breakpoint', (tester) async {
+        // Narrow viewport (below md, should use dropdown)
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Action', onTap: () {}),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Menu',
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // At narrow width, should use dropdown
+        expect(find.byType(LayrzDropdownMenu), findsOneWidget);
+        expect(find.byType(Wrap), findsNothing);
+      });
+
+      testWidgets('builder with empty actions renders nothing', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Menu',
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // Should render nothing
+        expect(find.byType(LayrzButton), findsNothing);
+        expect(find.byType(LayrzDropdownMenu), findsNothing);
+      });
+
+      testWidgets('builder can style trigger differently from default', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup.builder(
+            actions: [
+              LayrzButton(labelText: 'Save', onTap: () {}),
+            ],
+            useDropdown: true,
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Options',
+              style: LayrzButtonStyle.outlinedFab,
+              icon: LayrzIcons.solarOutlineSettings,
+              onTap: controller.isOpen ? controller.close : controller.open,
+            ),
+          ),
+        );
+
+        // Verify trigger button was created
+        expect(find.byType(LayrzButton), findsOneWidget);
+        expect(find.byType(LayrzDropdownMenu), findsOneWidget);
+      });
+    });
   });
 
   group('LayrzButtonTypeColor extension', () {

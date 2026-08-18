@@ -47,7 +47,7 @@ class LayrzButtonGroup extends StatelessWidget {
 
   /// Icon shown on the collapsed trigger. Defaults to the overflow-dots icon.
   ///
-  /// Only applies in dropdown mode.
+  /// Only applies in dropdown mode. Mutually exclusive with [builder].
   final IconData? triggerIcon;
 
   /// Accessible name and tooltip for the collapsed trigger button.
@@ -57,7 +57,38 @@ class LayrzButtonGroup extends StatelessWidget {
   /// their contents, so this is required unconditionally — even though `useDropdown`
   /// defaults to null and the group may collapse at any viewport width, the caller
   /// always knows the semantic name to assign.
-  final String triggerHintText;
+  ///
+  /// Mutually exclusive with [builder].
+  final String? triggerHintText;
+
+  /// Builds the trigger widget for dropdown mode.
+  ///
+  /// The builder receives the menu [MenuController], which should be wired to the
+  /// trigger's own tap handler for toggle behavior. The caller owns the entire
+  /// trigger widget and its styling.
+  ///
+  /// **Critical: gesture-arena warning.** [LayrzButton] keeps a non-null
+  /// `onTapCancel` even when disabled, which wins the gesture arena. If you wrap
+  /// your trigger in a `GestureDetector`, it will silently never open the menu.
+  /// Correct usage:
+  /// ```dart
+  /// builder: (context, controller) => MyCustomButton(
+  ///   onTap: controller.isOpen ? controller.close : controller.open,
+  /// )
+  /// ```
+  ///
+  /// Not this:
+  /// ```dart
+  /// // WRONG: menu will never open because GestureDetector loses the gesture arena
+  /// builder: (context, controller) => GestureDetector(
+  ///   onTap: controller.isOpen ? controller.close : controller.open,
+  ///   child: MyCustomButton(),
+  /// )
+  /// ```
+  ///
+  /// Only applies in dropdown mode. Mutually exclusive with [triggerIcon]
+  /// and [triggerHintText].
+  final LayrzDropdownMenuBuilder? builder;
 
   /// Horizontal alignment of the dropdown panel against the trigger.
   ///
@@ -77,7 +108,28 @@ class LayrzButtonGroup extends StatelessWidget {
     this.triggerIcon,
     this.alignment = LayrzDropdownMenuAlignment.start,
     super.key,
-  });
+  }) : builder = null;
+
+  /// Creates a [LayrzButtonGroup] with a caller-supplied trigger widget.
+  ///
+  /// The [builder] receives the menu [MenuController] and must wire it to the
+  /// trigger's own tap handler. This allows the caller to supply any trigger
+  /// widget and style it freely, unlike the default constructor which uses a
+  /// hardcoded [LayrzButtonStyle.elevatedFab] trigger.
+  ///
+  /// In row mode, the builder is never called and the group renders its actions
+  /// as usual. Set `useDropdown: false` to see only the row and skip the builder.
+  /// At the md breakpoint (automatic mode, `useDropdown: null`), the group switches
+  /// to dropdown mode and calls the builder.
+  const LayrzButtonGroup.builder({
+    required this.actions,
+    required this.builder,
+    this.useDropdown,
+    this.spacing,
+    this.alignment = LayrzDropdownMenuAlignment.start,
+    super.key,
+  }) : triggerHintText = null,
+       triggerIcon = null;
 
   @override
   Widget build(BuildContext context) {
@@ -99,15 +151,20 @@ class LayrzButtonGroup extends StatelessWidget {
     // Dropdown mode: convert buttons to entries
     final entries = actions.map((button) => _buttonToEntry(button, tokens)).toList();
 
+    // If builder is provided, use it; otherwise use the default FAB trigger.
+    // If builder is null, triggerHintText must be non-null (enforced by default constructor).
+    final triggerBuilder = builder ??
+        (context, controller) => LayrzButton(
+          labelText: triggerHintText!,
+          icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
+          style: LayrzButtonStyle.elevatedFab,
+          onTap: controller.isOpen ? controller.close : controller.open,
+        );
+
     return LayrzDropdownMenu(
       alignment: alignment,
       items: entries,
-      builder: (context, controller) => LayrzButton(
-        labelText: triggerHintText,
-        icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
-        style: LayrzButtonStyle.elevatedFab,
-        onTap: controller.isOpen ? controller.close : controller.open,
-      ),
+      builder: triggerBuilder,
     );
   }
 
