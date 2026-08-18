@@ -105,6 +105,136 @@ void main() {
         expect(find.byType(LayrzButton), findsNWidgets(2));
         expect(find.byType(Wrap), findsOneWidget);
       });
+
+      group('Semantic entry colors in row mode', () {
+        testWidgets('save semantic entry carries success color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.save(labelText: 'Save', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          // Save entry should be converted to a button with success color
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('cancel semantic entry carries danger color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.cancel(labelText: 'Cancel', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('info semantic entry carries info color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.info(labelText: 'Info', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('show semantic entry carries info color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.show(labelText: 'Show', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('edit semantic entry carries warning color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.edit(labelText: 'Edit', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('delete semantic entry carries danger color to row button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('explicit color overrides semantic factory color', (tester) async {
+          final customColor = const Color(0xFF1234FF);
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry.save(
+                  labelText: 'Save',
+                  onTap: () {},
+                  color: customColor,
+                ),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          // Entry with explicit color should render as button
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+
+        testWidgets('entry with no color and no semantic renders button', (tester) async {
+          await pumpThemed(
+            tester,
+            LayrzButtonGroup(
+              triggerHintText: 'Actions',
+              items: [
+                LayrzDropdownEntry(labelText: 'Plain', onTap: () {}),
+              ],
+              useDropdown: false,
+            ),
+          );
+
+          // Plain entry should render as button with no accent
+          expect(find.byType(LayrzButton), findsOneWidget);
+        });
+      });
     });
 
     group('Dropdown mode', () {

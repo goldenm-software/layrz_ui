@@ -147,7 +147,7 @@ class LayrzButtonGroup extends StatelessWidget {
       final buttons = <Widget>[];
       for (final item in items) {
         if (item is LayrzDropdownEntry) {
-          buttons.add(_entryToButton(item));
+          buttons.add(_entryToButton(item, tokens));
         }
         // Labels are silently skipped in row mode
       }
@@ -181,11 +181,12 @@ class LayrzButtonGroup extends StatelessWidget {
 
   /// Converts a [LayrzDropdownEntry] to a [LayrzButton] for row mode.
   ///
-  /// The entry's label, icon, enabled state, and colour dot are converted to button properties.
+  /// The entry's label, icon, enabled state, and accent colour are converted to button properties.
   /// Shortcuts are dropped (LayrzButton has no shortcut field).
   /// The resulting button is labelled (non-Fab) and uses [LayrzButtonType.custom] with
-  /// the entry's colour (if present) as the button colour.
-  static LayrzButton _entryToButton(LayrzDropdownEntry entry) {
+  /// the entry's resolved accent colour (if present) as the button colour.
+  /// For semantic factories, the semantic colour from [tokens] is resolved and passed through.
+  static LayrzButton _entryToButton(LayrzDropdownEntry entry, LayrzTokens tokens) {
     final isDisabled = !entry.enabled;
 
     return LayrzButton(
@@ -194,7 +195,7 @@ class LayrzButtonGroup extends StatelessWidget {
       onTap: isDisabled ? null : entry.onTap,
       isDisabled: isDisabled,
       type: LayrzButtonType.custom,
-      color: entry.color,
+      color: entry.resolveAccent(tokens),
       style: LayrzButtonStyle.elevated,
     );
   }

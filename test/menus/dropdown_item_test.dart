@@ -693,6 +693,104 @@ void main() {
     });
   });
 
+  group('LayrzDropdownEntry.resolveAccent', () {
+    test('returns null when no color and no semantic type', () {
+      final entry = LayrzDropdownEntry(
+        labelText: 'Plain',
+        onTap: () {},
+      );
+
+      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      expect(entry.resolveAccent(tokens), isNull);
+    });
+
+    test('returns explicit color when provided', () {
+      final customColor = const Color(0xFF1234FF);
+      final entry = LayrzDropdownEntry(
+        labelText: 'Custom Color',
+        onTap: () {},
+        color: customColor,
+      );
+
+      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      expect(entry.resolveAccent(tokens), customColor);
+    });
+
+    test('returns success color for save semantic factory', () {
+      final entry = LayrzDropdownEntry.save(
+        labelText: 'Save',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.success);
+    });
+
+    test('returns danger color for cancel semantic factory', () {
+      final entry = LayrzDropdownEntry.cancel(
+        labelText: 'Cancel',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
+    });
+
+    test('returns info color for info semantic factory', () {
+      final entry = LayrzDropdownEntry.info(
+        labelText: 'Info',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
+    });
+
+    test('returns info color for show semantic factory', () {
+      final entry = LayrzDropdownEntry.show(
+        labelText: 'Show',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
+    });
+
+    test('returns warning color for edit semantic factory', () {
+      final entry = LayrzDropdownEntry.edit(
+        labelText: 'Edit',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.warning);
+    });
+
+    test('returns danger color for delete semantic factory', () {
+      final entry = LayrzDropdownEntry.delete(
+        labelText: 'Delete',
+        onTap: () {},
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
+    });
+
+    test('explicit color takes precedence over semantic type', () {
+      final customColor = const Color(0xFFFF00FF);
+      final entry = LayrzDropdownEntry.save(
+        labelText: 'Save',
+        onTap: () {},
+        color: customColor,
+      );
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      // Should return the custom color, not the semantic success color
+      expect(entry.resolveAccent(themeData.tokens), customColor);
+      expect(entry.resolveAccent(themeData.tokens), isNot(themeData.tokens.colors.success));
+    });
+  });
+
   group('formatLayrzShortcut', () {
     test('formats control + shift on macOS correctly', () {
       final shortcut = {LogicalKeyboardKey.control, LogicalKeyboardKey.shift, LogicalKeyboardKey.keyS};

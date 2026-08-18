@@ -405,6 +405,17 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   @override
   bool get isFocusable => enabled;
 
+  /// Resolves this entry's accent colour against [tokens].
+  ///
+  /// Returns the semantic token colour when the entry came from a semantic
+  /// factory (`.save()`, `.cancel()`, etc.), the explicit [color] when one
+  /// was supplied, or null when the entry carries no colour at all.
+  ///
+  /// The precedence is: explicit [color] takes priority over semantic type.
+  /// This method is used both by the entry's own dot rendering and by the
+  /// row-mode button conversion, ensuring they never disagree.
+  Color? resolveAccent(LayrzTokens tokens) => color ?? _semanticType.resolveColor(tokens);
+
   @override
   Widget build(BuildContext context) => _LayrzDropdownEntryWidget(
     labelText: labelText,
