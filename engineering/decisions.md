@@ -1864,7 +1864,7 @@ All 20 `LayrzIcons.*` symbol references in layrz_ui exist identically in both 1.
 
 Verification: Compared symbol binaries across both versions and confirmed byte-for-byte identity for all used symbols. Both versions import only `package:flutter/widgets.dart` (Material-free). The upgrade from 1.x to 2.x was purely a file reorganization plus an SDK-floor bump; no API changes affected icons themselves.
 
-**Cost:** layrz_sdk brings 18 new transitive dependencies, including:
+**The tradeoff was examined and accepted deliberately.** layrz_sdk brings 18 new transitive dependencies, including:
 - HTTP client: `dio`
 - JSON support: `freezed_annotation`, `json_annotation`
 - i18n: `layrz_i18n`
@@ -1873,7 +1873,15 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 `flutter_svg` adds the vector graphics chain: `vector_graphics`, `xml`, `petitparser`.
 
-This represents a significant increase in layrz_ui's transitive dependency count and bundle size, accepted as the cost of adding the avatar component. The dependencies were verified Material-free via grep before shipping.
+**Why binary size is not the cost**: Dart tree-shakes unreachable code; layrz_ui never calls `dio` or `web_socket_channel`, so none of that code reaches a consumer's compiled application. The cost is a few MB of `pub get` download and CI cache, and nothing at runtime.
+
+**The real cost is version-constraint coupling.** Declared dependencies bind consumers regardless of whether the code is ever imported — which is exactly why `layrz_sdk`'s `layrz_icons ^1.1.1` forced layrz_ui backwards from `^2.0.0` despite layrz_ui never touching layrz_sdk's icon code. Every layrz_ui consumer now inherits dio's and web_socket_channel's version ranges, and release cadences are coupled: a dio major version bump forces layrz_sdk, which forces layrz_ui.
+
+**No native or platform cost was added.** `jni`, `objective_c`, `ffi` and `path_provider` appear in the resolved graph but arrive via `google_fonts` → `path_provider`, and predate this change. `dio` and `web_socket_channel` support all six platform targets, so nothing was narrowed.
+
+**Why the coupling was accepted — the precedent.** This coupling is consistent with the rest of the Layrz stack rather than novel: `layrz_theme`, the package layrz_ui replaces, declares **32 direct dependencies**, including `dio`, `layrz_models`, `flutter_svg`, `permission_handler`, `file_picker`, `flutter_map` and `shared_preferences`. `layrz_models` itself depends on `layrz_sdk`. layrz_ui with `layrz_sdk` and `flutter_svg` has **5 direct dependencies** — an order of magnitude leaner than its predecessor. `layrz_theme` also pins `layrz_icons: ^1.1.0`. The 1.x pin therefore **aligns** layrz_ui with the rest of the stack; layrz_ui's `^2.0.0` was the outlier, not the norm.
+
+**The road not taken.** Dart has **no optional dependencies, features, or extras**. There is no flag that disables layrz_sdk's API half for consumers who only want models. Splitting layrz_sdk's barrel into a separate library entrypoint would **not** help either: pub resolves from pubspec declarations, not imports. Only a genuinely separate package with its own pubspec removes a constraint. The cut would be unusually clean if ever wanted: `dio` and `web_socket_channel` are each imported in exactly **one** file of layrz_sdk (`lib/src/api/api.dart`). `Avatar` reaches into that barrel only for `GqlFragment` and `GqlField`, which are pure data classes of roughly 155 lines with no networking. A models-only package covering the pure modules plus the GraphQL builders would be about **1,250 of layrz_sdk's 3,954 non-generated lines**, depending only on `freezed_annotation`, `collection` and `layrz_icons`. Only `employee` and `token` are genuinely welded to networking, via static methods calling `LayrzConnector`. Incidental finding worth keeping: layrz_sdk declares `json_annotation` but imports it in zero files.
 
 ### Consequences
 
