@@ -15,18 +15,14 @@ Add layrz_ui to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  layrz_ui:
-    git:
-      url: https://github.com/goldenm-software/layrz_ui.git
-      ref: main
+  layrz_ui: ^0.0.7
 ```
 
 Then create your first app:
 
 ```dart
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/app.dart';
-import 'package:layrz_ui/theme.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 void main() => runApp(const MyApp());
 
