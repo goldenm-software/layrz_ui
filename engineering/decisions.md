@@ -1914,7 +1914,7 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 - **Separation of concerns**: The avatar's job is to render an avatar image or initials. Interaction logic is orthogonal and belongs in the caller's domain.
 - **Same stance as `LayrzChip`**: `LayrzChip` is visual-only per decision D28. Consistency across the system suggests that display components should not own interaction logic.
-- **No elevation**: Elevation requires Material's shadow system or a custom implementation. Callers can wrap the avatar in `LayrzCard` or render it on top of a colored background if visual hierarchy is needed.
+- **Fixed compact1 shadow, not configurable elevation**: Avatars carry `tokens.shadow.compact1` as a fixed drop shadow in all render modes (initials, icon, emoji, URL, base64). This is the small-component shadow ramp used by `LayrzButton`, chosen because a soft low-offset shadow disappears at 40px width; compact shadows provide clear separation even at avatar sizes. This shadow is intentionally not configurable—it is part of the avatar's baseline visual treatment, not a parameter. No elevation parameter exposed.
 
 ### Consequences
 

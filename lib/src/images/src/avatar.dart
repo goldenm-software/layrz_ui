@@ -19,6 +19,13 @@ import 'package:layrz_ui/src/images/src/image.dart';
 /// with [LayrzCard], [LayrzAlert], and the dropdown panel. **Background color** defaults
 /// to the primary token color and is ignored behind images.
 ///
+/// **Fixed drop shadow**: Every avatar carries `tokens.shadow.compact1` — the same ramp
+/// used by small components like [LayrzButton]. This is intentionally not configurable.
+/// The compact shadow ramp was chosen over the elevation ramp because a soft low-offset
+/// shadow disappears at avatar sizes; compact shadows provide clear separation even at
+/// 40px width. This fixed shadow is applied in all render modes: URL, base64, icon, emoji,
+/// and initials.
+///
 /// **Static display only**: This widget has no interaction callbacks ([onTap], [onLongPress],
 /// etc.). Callers who need interactivity should wrap the avatar in a [GestureDetector]
 /// or similar widget themselves. This keeps the API minimal and separation of concerns clear.
@@ -269,6 +276,10 @@ class LayrzAvatar extends StatelessWidget {
   }
 
   /// Builds the container (surface, clipping, shape).
+  ///
+  /// The outer container applies the fixed compact-level-1 shadow, ensuring it is
+  /// not clipped by the inner [ClipRRect]. The inner container clips to [r12] radius
+  /// and applies the background color.
   Widget _buildContainer({
     required BuildContext context,
     required Color backgroundColor,
@@ -276,18 +287,26 @@ class LayrzAvatar extends StatelessWidget {
   }) {
     final radius = BorderRadius.circular(context.tokens.radius.r12);
 
-    return ClipRRect(
-      borderRadius: radius,
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: radius,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: context.tokens.shadow.compact1,
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: radius,
+          ),
+          alignment: Alignment.center,
+          child: child,
         ),
-        alignment: Alignment.center,
-        child: child,
       ),
     );
   }

@@ -347,15 +347,121 @@ void main() {
         expect(textWidget.style?.fontSize, equals(40.0)); // 100 * 0.4
       });
     });
+
+    group('Fixed drop shadow', () {
+      testWidgets('applies compact level-1 shadow to initials avatar', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test'),
+          theme: themeData,
+        );
+
+        // Find the outer Container (the one with the shadow decoration)
+        final outerContainer = _findOuterContainer(tester);
+        expect(outerContainer.decoration, isA<BoxDecoration>());
+
+        final decoration = outerContainer.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNotNull);
+        expect(decoration.boxShadow, equals(themeData.tokens.shadow.compact1));
+      });
+
+      testWidgets('applies compact level-1 shadow to image avatar', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.image(source: 'https://example.com/avatar.png'),
+          theme: themeData,
+        );
+
+        // Find the outer Container (the one with the shadow decoration)
+        final outerContainer = _findOuterContainer(tester);
+        expect(outerContainer.decoration, isA<BoxDecoration>());
+
+        final decoration = outerContainer.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNotNull);
+        expect(decoration.boxShadow, equals(themeData.tokens.shadow.compact1));
+      });
+
+      testWidgets('applies compact level-1 shadow to icon avatar', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final icon = LayrzIcon(name: 'home', codePoint: 0xE88A, family: LayrzFamily.materialDesignIcons);
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar.icon(icon: icon),
+          theme: themeData,
+        );
+
+        // Find the outer Container (the one with the shadow decoration)
+        final outerContainer = _findOuterContainer(tester);
+        expect(outerContainer.decoration, isA<BoxDecoration>());
+
+        final decoration = outerContainer.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNotNull);
+        expect(decoration.boxShadow, equals(themeData.tokens.shadow.compact1));
+      });
+
+      testWidgets('applies compact level-1 shadow to emoji avatar', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.emoji(emoji: '😀'),
+          theme: themeData,
+        );
+
+        // Find the outer Container (the one with the shadow decoration)
+        final outerContainer = _findOuterContainer(tester);
+        expect(outerContainer.decoration, isA<BoxDecoration>());
+
+        final decoration = outerContainer.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNotNull);
+        expect(decoration.boxShadow, equals(themeData.tokens.shadow.compact1));
+      });
+    });
   });
 }
 
-/// Helper to find a Container with color decoration.
+/// Helper to find a Container with color decoration (the inner colored container).
+///
+/// Since the avatar now has both an outer container (with shadow) and an inner
+/// container (with color), this helper finds the inner one by checking for a
+/// non-null, non-transparent color in the decoration.
 Container _findColoredContainer(WidgetTester tester) {
   return tester.widget<Container>(
     find
         .byWidgetPredicate(
-          (widget) => widget is Container && widget.decoration is BoxDecoration,
+          (widget) {
+            if (widget is! Container) return false;
+            if (widget.decoration is! BoxDecoration) return false;
+            final decoration = widget.decoration as BoxDecoration;
+            // The inner container has a color (not transparent)
+            return decoration.color != null && decoration.color != const Color(0x00000000);
+          },
+          skipOffstage: false,
+        )
+        .first,
+  );
+}
+
+/// Helper to find the outer Container (the one with the shadow decoration).
+///
+/// The outer container has width and height set to the avatar size and carries
+/// the boxShadow decoration in its BoxDecoration.
+Container _findOuterContainer(WidgetTester tester) {
+  return tester.widget<Container>(
+    find
+        .byWidgetPredicate(
+          (widget) {
+            if (widget is! Container) return false;
+            if (widget.decoration is! BoxDecoration) return false;
+            final decoration = widget.decoration as BoxDecoration;
+            // The outer container has boxShadow
+            return decoration.boxShadow != null && decoration.boxShadow!.isNotEmpty;
+          },
           skipOffstage: false,
         )
         .first,
