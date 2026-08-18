@@ -33,6 +33,8 @@ migrate_working_dir/
 # Python/uv related
 .venv/
 
+# Claude Code agent worktrees and configuration (must never be committed)
+.claude/
 .claude/settings.local.json
 # Widget Preview related
 .widget_preview/
