@@ -5,6 +5,9 @@ import 'package:layrz_sdk/layrz_sdk.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/src/image.dart';
 
+/// Private: opaque white background for images and emojis.
+const Color _kWhiteBackground = Color(0xFFFFFFFF);
+
 /// A static avatar display widget for the layrz_ui design system.
 ///
 /// [LayrzAvatar] renders a user avatar in one of five forms, determined by the
@@ -145,7 +148,8 @@ class LayrzAvatar extends StatelessWidget {
   /// Background fill color of the avatar.
   ///
   /// Defaults to the primary token color when null. Ignored when rendering an
-  /// image (images have transparent backgrounds).
+  /// image (images render on a white background to ensure visibility when the
+  /// source has transparency).
   final Color? color;
 
   /// For named constructors: the image source (used by `.image()` constructor).
@@ -163,7 +167,7 @@ class LayrzAvatar extends StatelessWidget {
     if (_imageSource case final source?) {
       return _buildContainer(
         context: context,
-        backgroundColor: const Color(0x00000000), // Transparent
+        backgroundColor: _kWhiteBackground,
         child: LayrzImage(
           source: source,
           width: size,
@@ -189,7 +193,7 @@ class LayrzAvatar extends StatelessWidget {
     if (_emoji case final emoji?) {
       return _buildContainer(
         context: context,
-        backgroundColor: const Color(0xFFFFFFFF), // White
+        backgroundColor: _kWhiteBackground,
         child: Text(
           emoji,
           textAlign: TextAlign.center,
@@ -233,7 +237,7 @@ class LayrzAvatar extends StatelessWidget {
         av.url != null
             ? _buildContainer(
                 context: context,
-                backgroundColor: const Color(0x00000000), // Transparent
+                backgroundColor: _kWhiteBackground,
                 child: LayrzImage(
                   source: av.url!,
                   width: size,
@@ -246,7 +250,7 @@ class LayrzAvatar extends StatelessWidget {
         av.base64 != null
             ? _buildContainer(
                 context: context,
-                backgroundColor: const Color(0x00000000), // Transparent
+                backgroundColor: _kWhiteBackground,
                 child: LayrzImage(
                   source: av.base64!,
                   width: size,
@@ -260,7 +264,7 @@ class LayrzAvatar extends StatelessWidget {
         av.emoji != null
             ? _buildContainer(
                 context: context,
-                backgroundColor: const Color(0xFFFFFFFF), // White
+                backgroundColor: _kWhiteBackground,
                 child: Text(
                   av.emoji!,
                   textAlign: TextAlign.center,

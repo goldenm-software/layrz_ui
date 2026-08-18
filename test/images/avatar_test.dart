@@ -292,6 +292,48 @@ void main() {
       });
     });
 
+    group('Image background color', () {
+      testWidgets('renders image from .image() constructor on white background', (tester) async {
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.image(source: 'https://example.com/avatar.png'),
+        );
+
+        final container = _findColoredContainer(tester);
+        final decoration = container.decoration as BoxDecoration;
+        // Image background must be opaque white, not transparent
+        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+      });
+
+      testWidgets('renders image from Avatar with url on white background', (tester) async {
+        final avatar = Avatar(type: AvatarType.url, url: 'https://example.com/avatar.png');
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar(avatar: avatar),
+        );
+
+        final container = _findColoredContainer(tester);
+        final decoration = container.decoration as BoxDecoration;
+        // Image background must be opaque white, not transparent
+        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+      });
+
+      testWidgets('renders image from Avatar with base64 on white background', (tester) async {
+        final avatar = Avatar(type: AvatarType.base64, base64: 'iVBORw0KGgo=');
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar(avatar: avatar),
+        );
+
+        final container = _findColoredContainer(tester);
+        final decoration = container.decoration as BoxDecoration;
+        // Image background must be opaque white, not transparent
+        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+      });
+    });
+
     group('Accessibility', () {
       testWidgets('includes text content for semantics', (tester) async {
         await pumpThemed(
@@ -432,18 +474,16 @@ void main() {
 /// non-null, non-transparent color in the decoration.
 Container _findColoredContainer(WidgetTester tester) {
   return tester.widget<Container>(
-    find
-        .byWidgetPredicate(
-          (widget) {
-            if (widget is! Container) return false;
-            if (widget.decoration is! BoxDecoration) return false;
-            final decoration = widget.decoration as BoxDecoration;
-            // The inner container has a color (not transparent)
-            return decoration.color != null && decoration.color != const Color(0x00000000);
-          },
-          skipOffstage: false,
-        )
-        .first,
+    find.byWidgetPredicate(
+      (widget) {
+        if (widget is! Container) return false;
+        if (widget.decoration is! BoxDecoration) return false;
+        final decoration = widget.decoration as BoxDecoration;
+        // The inner container has a color (not transparent)
+        return decoration.color != null && decoration.color != const Color(0x00000000);
+      },
+      skipOffstage: false,
+    ).first,
   );
 }
 
@@ -453,17 +493,15 @@ Container _findColoredContainer(WidgetTester tester) {
 /// the boxShadow decoration in its BoxDecoration.
 Container _findOuterContainer(WidgetTester tester) {
   return tester.widget<Container>(
-    find
-        .byWidgetPredicate(
-          (widget) {
-            if (widget is! Container) return false;
-            if (widget.decoration is! BoxDecoration) return false;
-            final decoration = widget.decoration as BoxDecoration;
-            // The outer container has boxShadow
-            return decoration.boxShadow != null && decoration.boxShadow!.isNotEmpty;
-          },
-          skipOffstage: false,
-        )
-        .first,
+    find.byWidgetPredicate(
+      (widget) {
+        if (widget is! Container) return false;
+        if (widget.decoration is! BoxDecoration) return false;
+        final decoration = widget.decoration as BoxDecoration;
+        // The outer container has boxShadow
+        return decoration.boxShadow != null && decoration.boxShadow!.isNotEmpty;
+      },
+      skipOffstage: false,
+    ).first,
   );
 }
