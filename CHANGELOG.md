@@ -1,3 +1,5 @@
+# Changelog
+
 ## 0.0.7
 
 **First components from Milestone 2.** Adds four M2 primitives: selectable text, visual chips, chip grouping, and dropdown menu.
