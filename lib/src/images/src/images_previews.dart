@@ -41,26 +41,13 @@ Widget previewLayrzAvatarEmoji() {
   );
 }
 
-/// Preview of [LayrzAvatar] with circle shape.
-@Preview(name: 'Avatar - Circle Shape', theme: LayrzPreviewTheme.light)
-Widget previewLayrzAvatarCircle() {
+/// Preview of [LayrzAvatar] with image source.
+@Preview(name: 'Avatar - Image', theme: LayrzPreviewTheme.light)
+Widget previewLayrzAvatarImage() {
   return const Center(
-    child: LayrzAvatar(
-      nameText: 'Jane Smith',
+    child: LayrzAvatar.image(
+      source: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
       size: 48,
-      shape: LayrzAvatarShape.circle,
-    ),
-  );
-}
-
-/// Preview of [LayrzAvatar] with rounded shape.
-@Preview(name: 'Avatar - Rounded Shape', theme: LayrzPreviewTheme.light)
-Widget previewLayrzAvatarRounded() {
-  return const Center(
-    child: LayrzAvatar(
-      nameText: 'Jane Smith',
-      size: 48,
-      shape: LayrzAvatarShape.rounded,
     ),
   );
 }

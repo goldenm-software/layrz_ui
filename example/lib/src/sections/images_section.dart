@@ -38,13 +38,6 @@ class _ImagesSectionContent extends StatelessWidget {
 
           SizedBox(height: tokens.spacing.sp24),
 
-          // Avatar shapes
-          LayrzText('Avatar Shapes', style: tokens.typography.headline.copyWith(fontSize: 16)),
-          SizedBox(height: tokens.spacing.sp16),
-          _buildShapesRow(tokens),
-
-          SizedBox(height: tokens.spacing.sp24),
-
           // Image component
           LayrzText('Image Component', style: tokens.typography.headline.copyWith(fontSize: 16)),
           SizedBox(height: tokens.spacing.sp16),
@@ -93,11 +86,11 @@ class _ImagesSectionContent extends StatelessWidget {
           Column(
             children: [
               const LayrzAvatar.image(
-                source: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                source: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
                 size: 48,
               ),
               SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Base64', style: tokens.typography.label),
+              LayrzText('Network Image', style: tokens.typography.label),
             ],
           ),
         ],
@@ -105,57 +98,21 @@ class _ImagesSectionContent extends StatelessWidget {
     );
   }
 
-  /// Displays avatar with different shapes.
-  Widget _buildShapesRow(LayrzTokens tokens) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          Column(
-            children: [
-              const LayrzAvatar(
-                nameText: 'Circle',
-                size: 48,
-                shape: LayrzAvatarShape.circle,
-              ),
-              SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Circle', style: tokens.typography.label),
-            ],
-          ),
-          SizedBox(width: tokens.spacing.sp24),
-          Column(
-            children: [
-              const LayrzAvatar(
-                nameText: 'Rounded',
-                size: 48,
-                shape: LayrzAvatarShape.rounded,
-              ),
-              SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Rounded', style: tokens.typography.label),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Displays the image component with a data-URI.
+  /// Displays the image component with a network URL.
   Widget _buildImageDemo(LayrzTokens tokens) {
-    // A simple 1x1 PNG pixel image in a data-URI
-    const dataUri =
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const networkUrl = 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png';
 
     return Center(
       child: Column(
         children: [
           const LayrzImage(
-            source: dataUri,
+            source: networkUrl,
             width: 64,
             height: 64,
             fit: BoxFit.cover,
           ),
           SizedBox(height: tokens.spacing.sp8),
-          LayrzText('Data-URI Image', style: tokens.typography.label),
+          LayrzText('Network Image', style: tokens.typography.label),
         ],
       ),
     );

@@ -16,7 +16,7 @@
 
 - **`LayrzButtonType.semanticColor`** — New extension getter on `LayrzButtonType` enum allowing button → entry conversion to use one unified type-to-token mapping.
 
-- **`LayrzAvatar`** — Static display component rendering a layrz_sdk `Avatar` by type (photo, initials, icon), with optional initials fallback. Circular or rounded-square shape via `LayrzAvatarShape` enum. No interaction affordances; callers wrap if needed. Initials algorithm is deterministic but not locale-aware (no Unicode segmentation). Reference decision D31.
+- **`LayrzAvatar`** — Static display component rendering a layrz_sdk `Avatar` by type (photo, initials, icon), with optional initials fallback. Always a rounded box using the `r12` radius token, consistent with `LayrzCard` and `LayrzAlert`. No interaction affordances; callers wrap if needed. Initials algorithm is deterministic but not locale-aware (no Unicode segmentation). Reference decision D31.
 
 - **`LayrzImage`** — Image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes. Uses `ImageSource` to detect and parse the source type automatically.
 

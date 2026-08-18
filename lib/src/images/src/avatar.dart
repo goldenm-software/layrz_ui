@@ -3,7 +3,6 @@ import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_sdk/layrz_sdk.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/images/src/avatar_shape.dart';
 import 'package:layrz_ui/src/images/src/image.dart';
 
 /// A static avatar display widget for the layrz_ui design system.
@@ -16,8 +15,9 @@ import 'package:layrz_ui/src/images/src/image.dart';
 /// - **Emoji** (`AvatarType.emoji`): displays a Unicode emoji glyph centered
 /// - **None** or **missing field** for the type: displays generated initials from [nameText]
 ///
-/// **Container shape** is controlled by [shape] (default: [LayrzAvatarShape.circle]).
-/// **Background color** defaults to the primary token color and is ignored behind images.
+/// **Container shape** is always a rounded box using the `r12` radius token, consistent
+/// with [LayrzCard], [LayrzAlert], and the dropdown panel. **Background color** defaults
+/// to the primary token color and is ignored behind images.
 ///
 /// **Static display only**: This widget has no interaction callbacks ([onTap], [onLongPress],
 /// etc.). Callers who need interactivity should wrap the avatar in a [GestureDetector]
@@ -43,7 +43,6 @@ class LayrzAvatar extends StatelessWidget {
     this.avatar,
     this.nameText,
     this.size = 40,
-    this.shape = LayrzAvatarShape.circle,
     this.color,
   }) : _imageSource = null,
        _icon = null,
@@ -61,7 +60,6 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required String source,
     this.size = 40,
-    this.shape = LayrzAvatarShape.circle,
     // ignore: prefer_initializing_formals
   }) : avatar = null,
        nameText = null,
@@ -78,7 +76,6 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required LayrzIcon icon,
     this.size = 40,
-    this.shape = LayrzAvatarShape.circle,
     this.color,
     // ignore: prefer_initializing_formals
   }) : avatar = null,
@@ -96,7 +93,6 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required String emoji,
     this.size = 40,
-    this.shape = LayrzAvatarShape.circle,
     // ignore: prefer_initializing_formals
   }) : avatar = null,
        nameText = null,
@@ -114,7 +110,6 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required this.nameText,
     this.size = 40,
-    this.shape = LayrzAvatarShape.circle,
     this.color,
   }) : avatar = null,
        _imageSource = null,
@@ -136,15 +131,9 @@ class LayrzAvatar extends StatelessWidget {
 
   /// Width and height of the avatar in logical pixels.
   ///
-  /// Defaults to 40. The avatar is always square (or circular), so this single
-  /// value defines both dimensions.
+  /// Defaults to 40. The avatar is always square with rounded corners, so this
+  /// single value defines both dimensions.
   final double size;
-
-  /// Shape of the avatar's container: circle or rounded square.
-  ///
-  /// Defaults to [LayrzAvatarShape.circle]. The rounded variant uses the base
-  /// radius token from the design system.
-  final LayrzAvatarShape shape;
 
   /// Background fill color of the avatar.
   ///
@@ -285,7 +274,7 @@ class LayrzAvatar extends StatelessWidget {
     required Color backgroundColor,
     required Widget child,
   }) {
-    final radius = shape.getRadius(context, size);
+    final radius = BorderRadius.circular(context.tokens.radius.r12);
 
     return ClipRRect(
       borderRadius: radius,

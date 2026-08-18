@@ -196,42 +196,20 @@ void main() {
       });
     });
 
-    group('Shape variants', () {
-      testWidgets('renders circle shape by default', (tester) async {
+    group('Shape and radius', () {
+      testWidgets('renders with r12 corner radius from tokens', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
         await pumpThemed(
           tester,
           const LayrzAvatar(nameText: 'Test User'),
+          theme: themeData,
         );
 
         final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
-        // Circle has borderRadius where all corners equal size/2
-        expect(clipRRect.borderRadius, isNotNull);
-      });
-
-      testWidgets('renders circle shape explicitly', (tester) async {
-        await pumpThemed(
-          tester,
-          const LayrzAvatar(
-            nameText: 'Test User',
-            shape: LayrzAvatarShape.circle,
-          ),
-        );
-
-        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
-        expect(clipRRect.borderRadius, isNotNull);
-      });
-
-      testWidgets('renders rounded shape', (tester) async {
-        await pumpThemed(
-          tester,
-          const LayrzAvatar(
-            nameText: 'Test User',
-            shape: LayrzAvatarShape.rounded,
-          ),
-        );
-
-        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
-        expect(clipRRect.borderRadius, isNotNull);
+        // Avatar should use r12 radius, which is a circular BorderRadius
+        final expectedRadius = BorderRadius.circular(themeData.tokens.radius.r12);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
       });
     });
 

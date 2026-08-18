@@ -661,7 +661,7 @@ A horizontal group of buttons (typically 2–4) that renders in a row on large v
 
 **Brief description**:
 
-`LayrzAvatar` — static display component rendering a layrz_sdk `Avatar` by type, with fallback to generated initials. Circular or rounded-square shape. No interaction affordances (callers wrap if needed). Per decision D31, avatars are display-only.
+`LayrzAvatar` — static display component rendering a layrz_sdk `Avatar` by type, with fallback to generated initials. Always a rounded box using the `r12` radius token, consistent with `LayrzCard` and `LayrzAlert`. No interaction affordances (callers wrap if needed). Per decision D31, avatars are display-only.
 
 `LayrzImage` — image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes.
 
@@ -670,7 +670,6 @@ A horizontal group of buttons (typically 2–4) that renders in a row on large v
 **Files affected**:
 - `lib/src/images/images.dart` (per-module barrel, new)
 - `lib/src/images/src/avatar.dart` (new, LayrzAvatar)
-- `lib/src/images/src/avatar_shape.dart` (new, enum)
 - `lib/src/images/src/image.dart` (new, LayrzImage)
 - `lib/src/images/src/image_source.dart` (new, source resolution logic)
 - `lib/src/images/src/images_previews.dart` (new, preview annotations)
