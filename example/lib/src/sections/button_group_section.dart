@@ -32,20 +32,17 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
             triggerHintText: 'Table actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry.save(
                 labelText: 'Save',
-                type: LayrzButtonType.success,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry.edit(
                 labelText: 'Edit',
-                type: LayrzButtonType.warning,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry.delete(
                 labelText: 'Delete',
-                type: LayrzButtonType.danger,
                 onTap: () {},
               ),
             ],
@@ -59,16 +56,16 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
             triggerHintText: 'Row actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry(
                 labelText: 'Action 1',
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Action 2',
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Action 3',
                 onTap: () {},
               ),
@@ -84,20 +81,17 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
             triggerHintText: 'Table actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry.save(
                 labelText: 'Save',
-                type: LayrzButtonType.success,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry.edit(
                 labelText: 'Edit',
-                type: LayrzButtonType.warning,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry.delete(
                 labelText: 'Delete',
-                type: LayrzButtonType.danger,
                 onTap: () {},
               ),
             ],
@@ -110,29 +104,25 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Dropdown Mode (Custom Trigger)', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry(
                 labelText: 'Create',
                 icon: LayrzIcons.solarOutlineAddCircle,
-                type: LayrzButtonType.success,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Duplicate',
                 icon: LayrzIcons.solarOutlineClipboardList,
-                type: LayrzButtonType.info,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Archive',
                 icon: LayrzIcons.solarOutlineCheckCircle,
-                type: LayrzButtonType.warning,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Remove',
                 icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
-                type: LayrzButtonType.danger,
                 onTap: () {},
               ),
             ],
@@ -149,20 +139,17 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup(
             triggerHintText: 'Workflow actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry.save(
                 labelText: 'Approve',
-                type: LayrzButtonType.success,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Review',
-                type: LayrzButtonType.info,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry.delete(
                 labelText: 'Reject',
-                type: LayrzButtonType.danger,
                 onTap: () {},
               ),
             ],
@@ -181,23 +168,20 @@ class _ButtonGroupSectionContent extends StatelessWidget {
           _SectionHeader(label: 'Builder Mode (Custom Trigger)', tokens: tokens),
           SizedBox(height: tokens.spacing.sp12),
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry(
                 labelText: 'Create',
                 icon: LayrzIcons.solarOutlineAddCircle,
-                type: LayrzButtonType.success,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Duplicate',
                 icon: LayrzIcons.solarOutlineClipboardList,
-                type: LayrzButtonType.info,
                 onTap: () {},
               ),
-              LayrzButton(
+              LayrzDropdownEntry(
                 labelText: 'Delete',
                 icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
-                type: LayrzButtonType.danger,
                 onTap: () {},
               ),
             ],

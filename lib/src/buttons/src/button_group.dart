@@ -12,25 +12,27 @@ import 'button_type.dart';
 /// as a single trigger button opening a dropdown menu.
 ///
 /// [LayrzButtonGroup] manages responsive layout switching based on viewport width:
-/// - **Row mode** (at or above md breakpoint): renders all [actions] as a horizontal row
-/// - **Dropdown mode** (below md breakpoint): renders a single trigger opening a menu
+/// - **Row mode** (at or above md breakpoint): renders [LayrzDropdownEntry] items as a horizontal row of labelled buttons
+/// - **Dropdown mode** (below md breakpoint): renders a single trigger opening a menu with all items
 ///
 /// The mode is driven by the nullable [useDropdown] parameter:
 /// - `null` (default): switches automatically based on viewport
 /// - `true`: always show dropdown mode
 /// - `false`: always show row mode
 ///
-/// Actions are expected to be [LayrzButton] instances whose semantic type,
-/// color, icon, and enabled state are preserved when converted to dropdown entries.
-/// A button's [LayrzButton.onTap] is called both in row and dropdown modes.
-/// Dropdown entries close the menu automatically after tapping.
+/// Items are expected to be [LayrzDropdownItem] instances. In dropdown mode, all items
+/// (both entries and labels) pass through to [LayrzDropdownMenu] unchanged. In row mode,
+/// only [LayrzDropdownEntry] items are rendered as labelled [LayrzButton] instances;
+/// [LayrzDropdownLabel] items are silently skipped. An entry's [LayrzDropdownEntry.onTap]
+/// is called both in row and dropdown modes. Dropdown entries close the menu automatically after tapping.
 class LayrzButtonGroup extends StatelessWidget {
-  /// The actions rendered by this group, in order.
+  /// The items rendered by this group, in order.
   ///
-  /// Must be a list of [LayrzButton] instances. The buttons are rendered directly
-  /// in row mode and converted to dropdown entries in dropdown mode.
-  /// An empty list renders nothing in both modes.
-  final List<LayrzButton> actions;
+  /// Must be a list of [LayrzDropdownItem] instances (either [LayrzDropdownEntry]
+  /// or [LayrzDropdownLabel]). The items are rendered directly in dropdown mode
+  /// and in row mode, [LayrzDropdownEntry] items are converted to labelled buttons
+  /// while [LayrzDropdownLabel] items are skipped. An empty list renders nothing in both modes.
+  final List<LayrzDropdownItem> items;
 
   /// Forces the render mode. When null, the mode follows the responsive breakpoint,
   /// collapsing to the dropdown below `md`.
@@ -98,10 +100,10 @@ class LayrzButtonGroup extends StatelessWidget {
 
   /// Creates a new [LayrzButtonGroup].
   ///
-  /// The [actions] and [triggerHintText] parameters are required. All others
+  /// The [items] and [triggerHintText] parameters are required. All others
   /// are optional with sensible defaults.
   const LayrzButtonGroup({
-    required this.actions,
+    required this.items,
     required this.triggerHintText,
     this.useDropdown,
     this.spacing,
@@ -117,12 +119,12 @@ class LayrzButtonGroup extends StatelessWidget {
   /// widget and style it freely, unlike the default constructor which uses a
   /// hardcoded [LayrzButtonStyle.elevatedFab] trigger.
   ///
-  /// In row mode, the builder is never called and the group renders its actions
+  /// In row mode, the builder is never called and the group renders its items
   /// as usual. Set `useDropdown: false` to see only the row and skip the builder.
   /// At the md breakpoint (automatic mode, `useDropdown: null`), the group switches
   /// to dropdown mode and calls the builder.
   const LayrzButtonGroup.builder({
-    required this.actions,
+    required this.items,
     required this.builder,
     this.useDropdown,
     this.spacing,
@@ -133,7 +135,7 @@ class LayrzButtonGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (actions.isEmpty) {
+    if (items.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -141,19 +143,28 @@ class LayrzButtonGroup extends StatelessWidget {
     final collapse = useDropdown ?? context.breakpoint.index < LayrzBreakpoint.md.index;
 
     if (!collapse) {
-      // Row mode: render all buttons in a wrap for responsive overflow
+      // Row mode: convert entries to buttons, skip labels
+      final buttons = <Widget>[];
+      for (final item in items) {
+        if (item is LayrzDropdownEntry) {
+          buttons.add(_entryToButton(item));
+        }
+        // Labels are silently skipped in row mode
+      }
+
+      if (buttons.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
       return Wrap(
         spacing: spacing ?? tokens.spacing.base,
-        children: actions,
+        children: buttons,
       );
     }
 
-    // Dropdown mode: convert buttons to entries
-    final entries = actions.map((button) => _buttonToEntry(button, tokens)).toList();
-
-    // If builder is provided, use it; otherwise use the default FAB trigger.
-    // If builder is null, triggerHintText must be non-null (enforced by default constructor).
-    final triggerBuilder = builder ??
+    // Dropdown mode: pass items through unchanged
+    final triggerBuilder =
+        builder ??
         (context, controller) => LayrzButton(
           labelText: triggerHintText!,
           icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
@@ -163,26 +174,28 @@ class LayrzButtonGroup extends StatelessWidget {
 
     return LayrzDropdownMenu(
       alignment: alignment,
-      items: entries,
+      items: items,
       builder: triggerBuilder,
     );
   }
 
-  /// Converts a [LayrzButton] to a [LayrzDropdownEntry] for the dropdown menu.
+  /// Converts a [LayrzDropdownEntry] to a [LayrzButton] for row mode.
   ///
-  /// The button's label, icon, semantic type, and enabled state are preserved.
-  /// Semantic type colors are resolved via [LayrzButtonType.semanticColor];
-  /// custom buttons without an explicit color render with no color dot.
-  static LayrzDropdownEntry _buttonToEntry(LayrzButton button, LayrzTokens tokens) {
-    final isDisabled = button.isDisabled || button.onTap == null;
-    final entryColor = button.type.semanticColor(tokens) ?? button.color;
+  /// The entry's label, icon, enabled state, and colour dot are converted to button properties.
+  /// Shortcuts are dropped (LayrzButton has no shortcut field).
+  /// The resulting button is labelled (non-Fab) and uses [LayrzButtonType.custom] with
+  /// the entry's colour (if present) as the button colour.
+  static LayrzButton _entryToButton(LayrzDropdownEntry entry) {
+    final isDisabled = !entry.enabled;
 
-    return LayrzDropdownEntry(
-      labelText: button.labelText,
-      icon: button.icon,
-      onTap: button.onTap ?? () {},
-      enabled: !isDisabled,
-      color: entryColor,
+    return LayrzButton(
+      labelText: entry.labelText,
+      icon: entry.icon,
+      onTap: isDisabled ? null : entry.onTap,
+      isDisabled: isDisabled,
+      type: LayrzButtonType.custom,
+      color: entry.color,
+      style: LayrzButtonStyle.elevated,
     );
   }
 }

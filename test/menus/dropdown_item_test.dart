@@ -10,6 +10,271 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzDropdownItem types', () {
+    group('Semantic factories', () {
+      testWidgets('save factory uses correct icon and success color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        var tapped = false;
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Save',
+                onTap: () => tapped = true,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        // Entry should be visible
+        expect(find.text('Save'), findsOneWidget);
+
+        // Entry should have success color dot
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.success);
+
+        // Callback should fire
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('cancel factory uses correct icon and danger color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.cancel(
+                labelText: 'Cancel',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.danger);
+      });
+
+      testWidgets('info factory uses correct icon and info color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.info(
+                labelText: 'Info',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.info);
+      });
+
+      testWidgets('show factory uses correct icon and info color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.show(
+                labelText: 'Show',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.info);
+      });
+
+      testWidgets('edit factory uses correct icon and warning color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.edit(
+                labelText: 'Edit',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.warning);
+      });
+
+      testWidgets('delete factory uses correct icon and danger color', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.delete(
+                labelText: 'Delete',
+                onTap: () {},
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, themeData.tokens.colors.danger);
+      });
+
+      testWidgets('semantic factory icon can be overridden', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Custom Save',
+                onTap: () {},
+                icon: LayrzIcons.solarOutlineCheckCircle,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Custom Save'), findsOneWidget);
+      });
+
+      testWidgets('semantic factory color can be overridden', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final customColor = const Color(0xFFFF0000);
+
+        await pumpThemed(
+          tester,
+          theme: themeData,
+          LayrzDropdownMenu(
+            items: [
+              LayrzDropdownEntry.save(
+                labelText: 'Save',
+                onTap: () {},
+                color: customColor,
+              ),
+            ],
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Open',
+              onTap: controller.open,
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final circleContainer = tester.widget<Container>(
+          find.byWidgetPredicate(
+            (w) => w is Container && (w.decoration as BoxDecoration?)?.shape == BoxShape.circle,
+          ),
+        );
+        final decoration = circleContainer.decoration as BoxDecoration;
+        expect(decoration.color, customColor);
+      });
+    });
+
     testWidgets('entry isFocusable is true when enabled', (tester) async {
       final entry = LayrzDropdownEntry(
         labelText: 'Test',

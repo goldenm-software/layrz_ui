@@ -17,3 +17,7 @@ analyzer:
 linter:
   rules:
     - public_member_api_docs
+  disabledRules:
+    # prefer_initializing_formals is too strict with private fields,
+    # which cannot be exposed as public initializing formals
+    - prefer_initializing_formals

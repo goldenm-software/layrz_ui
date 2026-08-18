@@ -7,13 +7,13 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzButtonGroup', () {
-    group('Empty actions', () {
-      testWidgets('renders nothing when actions is empty', (tester) async {
+    group('Empty items', () {
+      testWidgets('renders nothing when items is empty', (tester) async {
         await pumpThemed(
           tester,
           const LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [],
+            items: [],
           ),
         );
 
@@ -23,21 +23,21 @@ void main() {
     });
 
     group('Row mode', () {
-      testWidgets('renders all buttons in row mode', (tester) async {
+      testWidgets('renders entries as labelled buttons in row mode', (tester) async {
         await pumpThemed(
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Row actions',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
-              LayrzButton(labelText: 'Cancel', onTap: () {}),
-              LayrzButton(labelText: 'Delete', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Cancel', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Delete', onTap: () {}),
             ],
             useDropdown: false,
           ),
         );
 
-        // All buttons should render
+        // All entries should render as buttons
         expect(find.byType(LayrzButton), findsNWidgets(3));
         expect(find.byType(LayrzDropdownMenu), findsNothing);
         expect(find.byType(Wrap), findsOneWidget);
@@ -48,9 +48,9 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Button 1', onTap: () {}),
-              LayrzButton(labelText: 'Button 2', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Button 1', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Button 2', onTap: () {}),
             ],
             useDropdown: false,
             spacing: 24,
@@ -72,10 +72,10 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Button 1', onTap: () {}),
-              LayrzButton(labelText: 'Button 2', onTap: () {}),
-              LayrzButton(labelText: 'Button 3', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Button 1', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Button 2', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Button 3', onTap: () {}),
             ],
             useDropdown: false,
           ),
@@ -83,6 +83,26 @@ void main() {
 
         // All buttons should still render (Wrap allows them to wrap to next line)
         expect(find.byType(LayrzButton), findsNWidgets(3));
+        expect(find.byType(Wrap), findsOneWidget);
+      });
+
+      testWidgets('skips labels in row mode', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+              LayrzDropdownLabel(labelText: 'Section'),
+              LayrzDropdownEntry(labelText: 'Delete', onTap: () {}),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        // Only entries should render as buttons (not the label)
+        // Two entries + one label, but label is skipped, so 2 buttons
+        expect(find.byType(LayrzButton), findsNWidgets(2));
         expect(find.byType(Wrap), findsOneWidget);
       });
     });
@@ -93,9 +113,9 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
-              LayrzButton(labelText: 'Cancel', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Cancel', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -114,9 +134,9 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
-              LayrzButton(labelText: 'Cancel', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Cancel', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -137,8 +157,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'More options',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -157,9 +177,9 @@ void main() {
             tester,
             LayrzButtonGroup(
               triggerHintText: 'Export options',
-              actions: [
-                LayrzButton(labelText: 'Save', onTap: () {}),
-                LayrzButton(labelText: 'Delete', onTap: () {}),
+              items: [
+                LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+                LayrzDropdownEntry(labelText: 'Delete', onTap: () {}),
               ],
               useDropdown: true,
             ),
@@ -186,8 +206,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
             triggerIcon: LayrzIcons.solarOutlineCheckCircle,
@@ -203,8 +223,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
             alignment: LayrzDropdownMenuAlignment.end,
@@ -221,8 +241,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry(
                 labelText: 'Action',
                 onTap: () => callCount++,
               ),
@@ -254,14 +274,14 @@ void main() {
             tester,
             LayrzButtonGroup(
               triggerHintText: 'Actions',
-              actions: [
-                LayrzButton(
+              items: [
+                LayrzDropdownEntry(
                   labelText: 'Enabled',
                   onTap: () => enabledTapped = true,
                 ),
-                LayrzButton(
+                LayrzDropdownEntry(
                   labelText: 'Disabled',
-                  isDisabled: true,
+                  enabled: false,
                   onTap: () => disabledTapped = true,
                 ),
               ],
@@ -296,17 +316,18 @@ void main() {
         }
       });
 
-      testWidgets('button with null onTap converts to disabled entry', (tester) async {
+      testWidgets('disabled entry cannot be tapped in dropdown mode', (tester) async {
         final handle = tester.ensureSemantics();
         try {
           await pumpThemed(
             tester,
             LayrzButtonGroup(
               triggerHintText: 'Actions',
-              actions: [
-                LayrzButton(
+              items: [
+                LayrzDropdownEntry(
                   labelText: 'Action',
-                  onTap: null,
+                  onTap: () {},
+                  enabled: false,
                 ),
               ],
               useDropdown: true,
@@ -321,11 +342,11 @@ void main() {
           // Entry should be visible
           expect(find.text('Action'), findsOneWidget);
 
-          // Tap entry - should not work since onTap is null
+          // Tap disabled entry - should not work
           await tester.tap(find.text('Action'), warnIfMissed: false);
           await tester.pumpAndSettle();
 
-          // If it's disabled, tapping it should not close the menu
+          // Menu should still be open since tapping disabled entry doesn't close it
           expect(find.text('Action'), findsOneWidget);
         } finally {
           handle.dispose();
@@ -337,10 +358,10 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton.save(labelText: 'Save', onTap: () {}),
-              LayrzButton.delete(labelText: 'Delete', onTap: () {}),
-              LayrzButton(labelText: 'Custom', onTap: () {}),
+            items: [
+              LayrzDropdownEntry.save(labelText: 'Save', onTap: () {}),
+              LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Custom', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -362,8 +383,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(
+            items: [
+              LayrzDropdownEntry(
                 labelText: 'Save',
                 icon: LayrzIcons.solarOutlineCheckCircle,
                 onTap: () {},
@@ -387,8 +408,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Action', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -422,8 +443,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Action', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
             ],
             // useDropdown is null, so responsive mode applies
           ),
@@ -443,8 +464,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Action', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
             ],
             useDropdown: false,
           ),
@@ -465,8 +486,8 @@ void main() {
           tester,
           LayrzButtonGroup(
             triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(labelText: 'Action', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
             ],
             useDropdown: true,
           ),
@@ -478,59 +499,6 @@ void main() {
       });
     });
 
-    group('Button to entry conversion', () {
-      testWidgets('custom button without color yields no color dot', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButtonGroup(
-            triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(
-                labelText: 'Action',
-                onTap: () {},
-                // type defaults to custom, color defaults to null
-              ),
-            ],
-            useDropdown: true,
-          ),
-        );
-
-        // Open menu
-        final triggerButton = find.byType(LayrzButton).first;
-        await tester.tap(triggerButton);
-        await tester.pumpAndSettle();
-
-        // Entry should be visible
-        expect(find.text('Action'), findsOneWidget);
-      });
-
-      testWidgets('custom button with explicit color uses that color', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzButtonGroup(
-            triggerHintText: 'Actions',
-            actions: [
-              LayrzButton(
-                labelText: 'Action',
-                onTap: () {},
-                type: LayrzButtonType.custom,
-                color: const Color(0xFFFF5500),
-              ),
-            ],
-            useDropdown: true,
-          ),
-        );
-
-        // Open menu
-        final triggerButton = find.byType(LayrzButton).first;
-        await tester.tap(triggerButton);
-        await tester.pumpAndSettle();
-
-        // Entry should be visible
-        expect(find.text('Action'), findsOneWidget);
-      });
-    });
-
     group('Accessibility', () {
       testWidgets('trigger button is accessible', (tester) async {
         final handle = tester.ensureSemantics();
@@ -539,8 +507,8 @@ void main() {
             tester,
             LayrzButtonGroup(
               triggerHintText: 'Actions',
-              actions: [
-                LayrzButton(labelText: 'Action', onTap: () {}),
+              items: [
+                LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
               ],
               useDropdown: true,
             ),
@@ -565,8 +533,8 @@ void main() {
             tester,
             LayrzButtonGroup(
               triggerHintText: 'Actions',
-              actions: [
-                LayrzButton(
+              items: [
+                LayrzDropdownEntry(
                   labelText: 'Action',
                   onTap: () => tapped = true,
                 ),
@@ -598,9 +566,9 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
-              LayrzButton(labelText: 'Cancel', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Cancel', onTap: () {}),
             ],
             useDropdown: true,
             builder: (context, controller) => LayrzButton(
@@ -620,9 +588,9 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Action 1', onTap: () {}),
-              LayrzButton(labelText: 'Action 2', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action 1', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Action 2', onTap: () {}),
             ],
             useDropdown: true,
             builder: (context, controller) => LayrzButton(
@@ -658,9 +626,9 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Action 1', onTap: () => action1Tapped = true),
-              LayrzButton(labelText: 'Action 2', onTap: () => action2Tapped = true),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action 1', onTap: () => action1Tapped = true),
+              LayrzDropdownEntry(labelText: 'Action 2', onTap: () => action2Tapped = true),
             ],
             useDropdown: true,
             builder: (context, controller) => LayrzButton(
@@ -695,9 +663,9 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Action 1', onTap: () {}),
-              LayrzButton(labelText: 'Action 2', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action 1', onTap: () {}),
+              LayrzDropdownEntry(labelText: 'Action 2', onTap: () {}),
             ],
             useDropdown: false,
             builder: (context, controller) {
@@ -725,8 +693,8 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Action', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Action', onTap: () {}),
             ],
             builder: (context, controller) => LayrzButton(
               labelText: 'Menu',
@@ -740,11 +708,11 @@ void main() {
         expect(find.byType(Wrap), findsNothing);
       });
 
-      testWidgets('builder with empty actions renders nothing', (tester) async {
+      testWidgets('builder with empty items renders nothing', (tester) async {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [],
+            items: [],
             builder: (context, controller) => LayrzButton(
               labelText: 'Menu',
               onTap: controller.isOpen ? controller.close : controller.open,
@@ -761,8 +729,8 @@ void main() {
         await pumpThemed(
           tester,
           LayrzButtonGroup.builder(
-            actions: [
-              LayrzButton(labelText: 'Save', onTap: () {}),
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
             builder: (context, controller) => LayrzButton(

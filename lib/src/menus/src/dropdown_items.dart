@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/src/menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
@@ -7,6 +8,40 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'dropdown_entry_style_spec.dart';
 import 'dropdown_shortcut_format.dart';
+
+/// Private enumeration for tracking semantic button types in dropdown entries.
+///
+/// This is intentionally private to avoid exposing a public API enum, as requested.
+/// It is used internally to resolve semantic types to their corresponding token colors
+/// at build time.
+enum _SemanticType {
+  /// Success semantic — use tokens.colors.success
+  success,
+
+  /// Danger semantic — use tokens.colors.danger
+  danger,
+
+  /// Info semantic — use tokens.colors.info
+  info,
+
+  /// Warning semantic — use tokens.colors.warning
+  warning,
+
+  /// No semantic type applied (custom or no color)
+  none,
+}
+
+/// Extension on [_SemanticType] to resolve the semantic token color.
+extension _SemanticTypeResolver on _SemanticType {
+  /// Returns the token color for this semantic type, or null if none is applied.
+  Color? resolveColor(LayrzTokens tokens) => switch (this) {
+    _SemanticType.success => tokens.colors.success,
+    _SemanticType.danger => tokens.colors.danger,
+    _SemanticType.info => tokens.colors.info,
+    _SemanticType.warning => tokens.colors.warning,
+    _SemanticType.none => null,
+  };
+}
 
 /// Base class for items that a [LayrzDropdownMenu] can render.
 ///
@@ -105,6 +140,11 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
 /// The shortcut is display-only and never binds keys. It is formatted for the current
 /// platform and renders right-aligned as muted text. On mobile platforms (iOS/Android),
 /// the shortcut is hidden entirely (no reserved space).
+///
+/// Semantic factories (`.save()`, `.cancel()`, `.info()`, `.show()`, `.edit()`, `.delete()`)
+/// provide convenience constructors that preset the icon and semantic color to match
+/// [LayrzButton]'s semantic factories. These factories do not expose an enum; the semantic
+/// type is resolved to a token color at build time.
 final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The text displayed on the entry.
   final String labelText;
@@ -144,6 +184,14 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// When [LayrzPlatform.isMobile] is true, the shortcut is hidden entirely (no reserved space).
   final Set<LogicalKeyboardKey>? shortcut;
 
+  /// Private field tracking the semantic type, used to resolve token colors at build time.
+  ///
+  /// When a semantic factory is used (e.g., `.save()`, `.delete()`), this field is set
+  /// to indicate which semantic type the entry represents. At build time, this is resolved
+  /// to the corresponding token color. This field is intentionally private to avoid
+  /// exposing the internal semantic type enum in the public API.
+  final _SemanticType _semanticType;
+
   /// Creates a new [LayrzDropdownEntry].
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -156,7 +204,203 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     this.color,
     this.shortcut,
     super.key,
-  });
+  }) : _semanticType = _SemanticType.none;
+
+  /// Private named constructor for semantic factories.
+  ///
+  /// Used internally by the semantic factory constructors to set the [_semanticType]
+  /// field, which is resolved to a token color at build time.
+  const LayrzDropdownEntry._semantic({
+    required this.labelText,
+    required this.onTap,
+    this.icon,
+    required this.enabled,
+    this.color,
+    this.shortcut,
+    required _SemanticType semanticType,
+    super.key,
+    // ignore: prefer_initializing_formals
+  }) : _semanticType = semanticType;
+
+  /// Creates a save entry with success accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlineInboxIn]
+  /// - Color: [LayrzTokens.colors.success]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.save({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlineInboxIn,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.success,
+    );
+  }
+
+  /// Creates a cancel entry with danger accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlineCloseSquare]
+  /// - Color: [LayrzTokens.colors.danger]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.cancel({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlineCloseSquare,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.danger,
+    );
+  }
+
+  /// Creates an info entry with info accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlineInfoSquare]
+  /// - Color: [LayrzTokens.colors.info]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.info({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlineInfoSquare,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.info,
+    );
+  }
+
+  /// Creates a show entry with info accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlineEyeScan]
+  /// - Color: [LayrzTokens.colors.info]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.show({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlineEyeScan,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.info,
+    );
+  }
+
+  /// Creates an edit entry with warning accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlinePenNewSquare]
+  /// - Color: [LayrzTokens.colors.warning]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.edit({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlinePenNewSquare,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.warning,
+    );
+  }
+
+  /// Creates a delete entry with danger accent and icon.
+  ///
+  /// The entry is preset with:
+  /// - Icon: [LayrzIcons.solarOutlineTrashBinMinimalisticN2]
+  /// - Color: [LayrzTokens.colors.danger]
+  ///
+  /// The [labelText], [onTap], and [key] parameters are required.
+  /// All other parameters are optional and behave the same as the main constructor.
+  /// The [icon] and [color] parameters can override the preset values if desired.
+  factory LayrzDropdownEntry.delete({
+    required String labelText,
+    required VoidCallback onTap,
+    IconData? icon,
+    bool enabled = true,
+    Color? color,
+    Set<LogicalKeyboardKey>? shortcut,
+    Key? key,
+  }) {
+    return LayrzDropdownEntry._semantic(
+      key: key,
+      labelText: labelText,
+      icon: icon ?? LayrzIcons.solarOutlineTrashBinMinimalisticN2,
+      onTap: onTap,
+      enabled: enabled,
+      color: color,
+      shortcut: shortcut,
+      semanticType: _SemanticType.danger,
+    );
+  }
 
   @override
   bool get isFocusable => enabled;
@@ -169,6 +413,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     enabled: enabled,
     color: color,
     shortcut: shortcut,
+    semanticType: _semanticType,
   );
 }
 
@@ -192,6 +437,9 @@ class _LayrzDropdownEntryWidget extends StatefulWidget {
   /// Optional keyboard shortcut keys displayed right-aligned.
   final Set<LogicalKeyboardKey>? shortcut;
 
+  /// Private field tracking the semantic type.
+  final _SemanticType semanticType;
+
   /// Creates a new [_LayrzDropdownEntryWidget].
   const _LayrzDropdownEntryWidget({
     required this.labelText,
@@ -200,6 +448,7 @@ class _LayrzDropdownEntryWidget extends StatefulWidget {
     required this.enabled,
     this.color,
     this.shortcut,
+    required this.semanticType,
   });
 
   @override
@@ -260,6 +509,9 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
       tokens: tokens,
     );
 
+    // Resolve the color dot: explicit color takes precedence, then semantic type
+    final dotColor = widget.color ?? widget.semanticType.resolveColor(tokens);
+
     return FocusableActionDetector(
       enabled: widget.enabled,
       onShowHoverHighlight: (show) {
@@ -302,12 +554,12 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Color dot (left-aligned, when color is set)
-                      if (widget.color != null) ...[
+                      if (dotColor != null) ...[
                         Container(
                           width: kLayrzDropdownDotSize,
                           height: kLayrzDropdownDotSize,
                           decoration: BoxDecoration(
-                            color: widget.color!,
+                            color: dotColor,
                             shape: BoxShape.circle,
                           ),
                         ),

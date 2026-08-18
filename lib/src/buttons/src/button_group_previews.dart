@@ -5,30 +5,27 @@ import 'package:layrz_ui/preview.dart';
 
 /// Preview of [LayrzButtonGroup] in row mode.
 ///
-/// Displays multiple buttons horizontally with default spacing.
+/// Displays multiple semantic buttons horizontally with default spacing.
+/// Semantic factories preset the icon and colour dot to match the action's meaning.
 @Preview(name: 'Row', theme: LayrzPreviewTheme.light)
 Widget previewLayrzButtonGroupRow() {
   return LayrzButtonGroup(
     triggerHintText: 'Row actions',
-    actions: [
-      LayrzButton(
+    items: [
+      LayrzDropdownEntry.save(
         labelText: 'Save',
-        type: LayrzButtonType.success,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.edit(
         labelText: 'Edit',
-        type: LayrzButtonType.warning,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.delete(
         labelText: 'Delete',
-        type: LayrzButtonType.danger,
         onTap: () {},
       ),
-      LayrzButton(
-        labelText: 'Cancel',
-        type: LayrzButtonType.info,
+      LayrzDropdownEntry.info(
+        labelText: 'Info',
         onTap: () {},
       ),
     ],
@@ -38,29 +35,29 @@ Widget previewLayrzButtonGroupRow() {
 
 /// Preview of [LayrzButtonGroup] in dropdown mode.
 ///
-/// Displays a single trigger button that opens a menu with action entries.
+/// Displays a single trigger button that opens a menu with semantic entry items.
+/// Labels can organize entries into logical sections; they render in dropdown mode
+/// but are silently skipped in row mode.
 @Preview(name: 'Dropdown', theme: LayrzPreviewTheme.light)
 Widget previewLayrzButtonGroupDropdown() {
   return LayrzButtonGroup(
-    actions: [
-      LayrzButton(
+    items: [
+      LayrzDropdownEntry.save(
         labelText: 'Save',
-        type: LayrzButtonType.success,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownLabel(labelText: 'Modify'),
+      LayrzDropdownEntry.edit(
         labelText: 'Edit',
-        type: LayrzButtonType.warning,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownLabel(labelText: 'Manage'),
+      LayrzDropdownEntry.delete(
         labelText: 'Delete',
-        type: LayrzButtonType.danger,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.info(
         labelText: 'More info',
-        type: LayrzButtonType.info,
         onTap: () {},
       ),
     ],
@@ -78,29 +75,25 @@ Widget previewLayrzButtonGroupDropdown() {
 @Preview(name: 'Builder (Custom Trigger)', theme: LayrzPreviewTheme.light)
 Widget previewLayrzButtonGroupBuilder() {
   return LayrzButtonGroup.builder(
-    actions: [
-      LayrzButton(
+    items: [
+      LayrzDropdownEntry.save(
         labelText: 'Create',
         icon: LayrzIcons.solarOutlineAddCircle,
-        type: LayrzButtonType.success,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.info(
         labelText: 'Duplicate',
         icon: LayrzIcons.solarOutlineClipboardList,
-        type: LayrzButtonType.info,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.edit(
         labelText: 'Archive',
         icon: LayrzIcons.solarOutlineCheckCircle,
-        type: LayrzButtonType.warning,
         onTap: () {},
       ),
-      LayrzButton(
+      LayrzDropdownEntry.delete(
         labelText: 'Delete',
         icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
-        type: LayrzButtonType.danger,
         onTap: () {},
       ),
     ],
