@@ -1810,6 +1810,118 @@ Three M2 components shipped with design details that merit explicit documentatio
 
 ---
 
+## D29: `LayrzDropdownEntry.color` is a Plain `Color`, Not a Swatch
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design / Architecture
+
+### Context
+
+`LayrzDropdownEntry.color` was originally typed `LayrzColorSwatch?` because the pressed and hovered interaction states read `accent.shade100` for hover and `accent.shade700` for press. When the interaction states were later redesigned to use neutral opaque tokens (`surface`, `surface2`, `surface3`), those swatch shades were no longer read anywhere in the render tree — but the `LayrzColorSwatch?` type survived the change. It then propagated into DESIGN-31's `LayrzButton` → `LayrzDropdownEntry` type mapping and shipped in 0.0.7, turning what should have been a quiet cleanup into a breaking change.
+
+### Decision
+
+**Change `LayrzDropdownEntry.color` from `LayrzColorSwatch?` to `Color?`.**
+
+### Rationale
+
+**When a requirement changes, audit what became *unnecessary*, not only what *broke*.** The swatch type was justified only by the shade reads; with those reads gone, the swatch type adds no semantic value and only constrains callers. Accepting `Color?` is strictly more general.
+
+### Consequences
+
+- **Source-compatible for most callers**: Since `LayrzColorSwatch extends ColorSwatch<int> extends Color`, passing a token swatch (e.g., `tokens.colors.success`) still compiles because a swatch *is* a `Color`.
+- **Visually identical**: Each swatch is constructed with its shade500 as its primary value, so rendering the swatch's color directly is byte-for-byte identical to the previous behavior.
+- **Breaking only for code that reads the field**: Any caller code that received `entry.color` and then read `.shade100` or `.shade700` from it will fail at compile time with "the getter 'shade100' isn't defined". This is rare but possible in consuming apps.
+- **Lesson for future work**: This decision is a post-mortem on technical debt. The lesson is: when an API's original constraint (the need to read shades) is removed, actively search for references to that constraint elsewhere in the codebase and the dependency graph, and remove them. Do not let the old type survive as legacy baggage.
+
+### Related Decisions
+
+- **D28** (M2 Core Primitives) — documents the `LayrzDropdownEntry` type and its sealed hierarchy.
+
+---
+
+## D30: layrz_ui Depends on layrz_sdk; Pins layrz_icons to 1.x
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Dependency Policy
+
+### Context
+
+`LayrzAvatar` (M2 item 11, shipped in 0.0.8) consumes the `Avatar` model from `layrz_sdk` to render user avatars by semantic type. layrz_sdk 4.4.3 (current stable) requires `layrz_icons: ^1.1.1`. layrz_ui previously required `layrz_icons: ^2.0.0`. These version ranges are disjoint: `pub get` fails because no single version of layrz_icons satisfies both the package constraint and the transitive constraint from layrz_sdk.
+
+### Decision
+
+**Downgrade `layrz_icons` from `^2.0.0` to `^1.1.1` to align with layrz_sdk.**
+
+### Rationale
+
+All 20 `LayrzIcons.*` symbol references in layrz_ui exist identically in both 1.1.1 and 2.0.0:
+- Symbol names unchanged
+- Symbol values (IconData constants) unchanged
+- Behavior identical
+
+Verification: Compared symbol binaries across both versions and confirmed byte-for-byte identity for all used symbols. Both versions import only `package:flutter/widgets.dart` (Material-free). The upgrade from 1.x to 2.x was purely a file reorganization plus an SDK-floor bump; no API changes affected icons themselves.
+
+**Cost:** layrz_sdk brings 18 new transitive dependencies, including:
+- HTTP client: `dio`
+- JSON support: `freezed_annotation`, `json_annotation`
+- i18n: `layrz_i18n`
+- Logging: `layrz_logging`
+- WebSocket: `web_socket_channel`
+
+`flutter_svg` adds the vector graphics chain: `vector_graphics`, `xml`, `petitparser`.
+
+This represents a significant increase in layrz_ui's transitive dependency count and bundle size, accepted as the cost of adding the avatar component. The dependencies were verified Material-free via grep before shipping.
+
+### Consequences
+
+- **Old consuming apps cannot upgrade beyond 0.0.7** if they require `layrz_icons: ^2.0.0` specifically. Most apps likely have looser constraints or none at all, so this is a non-issue in practice.
+- **Exit condition explicitly stated**: Raise the `layrz_icons` constraint back to `^2.0.0` once `layrz_sdk` advances to `layrz_icons: ^2.0.0`. This decision is temporary and driven by external dependency management, not by a desire to stay on 1.x long-term.
+
+### Related Decisions
+
+- **D30 is itself a dependency adjustment.** It does not trigger a revision of D2 (layrz_models coupling) or any other decision.
+
+---
+
+## D31: `LayrzAvatar` is a Static Display Component
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design
+
+### Context
+
+`LayrzAvatar` was designed as a static visual component that renders a user avatar by type. The original layrz_theme `ThemedAvatar` was an interactive component with `onTap`, `onLongPress`, and `onSecondaryTap` callbacks, and supported elevation. layrz_ui's design philosophy prohibits Material imports, which blocks using Material's `InkWell` and elevation system. The decision is whether to:
+1. Implement interaction and elevation from scratch (using nested gesture handlers and custom shadows)
+2. Keep the component static, requiring callers to wrap it if they need interaction
+
+### Decision
+
+**Chose (2): `LayrzAvatar` is static display-only.** No `onTap`, `onLongPress`, `onSecondaryTap`, or elevation parameters. Callers wrap the avatar in a `GestureDetector` or similar if they need interaction.
+
+### Rationale
+
+- **Separation of concerns**: The avatar's job is to render an avatar image or initials. Interaction logic is orthogonal and belongs in the caller's domain.
+- **Same stance as `LayrzChip`**: `LayrzChip` is visual-only per decision D28. Consistency across the system suggests that display components should not own interaction logic.
+- **No elevation**: Elevation requires Material's shadow system or a custom implementation. Callers can wrap the avatar in `LayrzCard` or render it on top of a colored background if visual hierarchy is needed.
+
+### Consequences
+
+- **Callers must own interaction logic** — wrap `LayrzAvatar` in their own gesture handling if needed
+- **No elevation parameter** — visual hierarchy is achieved via layout and background color choices, not elevation
+- **Initials algorithm is deliberately not locale-aware** — no Unicode segmentation for combining characters or non-Latin scripts. This is an accepted limitation. A future `LayrzInitialsGenerator` component could provide locale-aware logic if needed.
+- **Fallback to initials is deterministic** — given the same Avatar model, the same initials are always generated. Callers can override via the `avatarImage` parameter to provide a custom image regardless of the model type.
+
+### Related Decisions
+
+- **D28** (M2 Core Primitives) — establishes the pattern of static visual components with no ownership of interaction state
+- **D11** (Component Scope Confirmations) — M2 item 11 (LayrzAvatar/LayrzImage) was scoped as display components per this decision
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

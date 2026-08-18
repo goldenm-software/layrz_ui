@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.0.8
+
+**Final M2 core primitives.** Adds three remaining M2 components and amends the dropdown menu implementation.
+
+### Breaking
+
+- **`LayrzDropdownEntry.color` is now `Color?` instead of `LayrzColorSwatch?`** — The swatch type was originally justified because pressed and hovered states read `accent.shade100` and `accent.shade700`. Those states are now neutral opaque tokens, so no shades are read anywhere. Passing token swatches still compiles and renders identically (each swatch is constructed with shade500 as its primary value), so most callers need no change. Only code that *reads* the field back expecting a swatch (e.g., `entry.color.shade700`) will break at compile time. Reference decision D29.
+
+### Added
+
+- **`LayrzDropdownLabel.color`** — Optional `Color?` parameter that fills the label's tonal band. Null keeps the neutral `surface3` fill, so existing menus are visually unchanged. Paired with D29's dropdown entry colour simplification.
+
+- **`LayrzButtonGroup`** — Horizontal row of `LayrzButton` actions that collapses below the `md` breakpoint into a single fab trigger opening a `LayrzDropdownMenu`. Mode driven by a nullable `bool useDropdown` parameter; no enum exposed. Replaces the old `ThemedActionsButtons` from layrz_theme. Renamed from `LayrzGroupedButton` for uniformity with `LayrzChipGroup` (group components follow `Layrz<Thing>Group` naming). Includes 28 tests covering row mode, dropdown mode, responsive switching, semantic type preservation, disabled states, and accessibility. Reference DESIGN-31.
+
+- **`LayrzButtonType.semanticColor`** — New extension getter on `LayrzButtonType` enum allowing button → entry conversion to use one unified type-to-token mapping.
+
+- **`LayrzAvatar`** — Static display component rendering a layrz_sdk `Avatar` by type (photo, initials, icon), with optional initials fallback. Circular or rounded-square shape via `LayrzAvatarShape` enum. No interaction affordances; callers wrap if needed. Initials algorithm is deterministic but not locale-aware (no Unicode segmentation). Reference decision D31.
+
+- **`LayrzImage`** — Image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes. Uses `ImageSource` to detect and parse the source type automatically.
+
+- **Dependencies: layrz_sdk and flutter_svg** — New dependencies to support avatar models and SVG rendering. layrz_sdk requires `layrz_icons: ^1.1.1`, so the package constraint is downgraded from `^2.0.0` to `^1.1.1`. All 20 used IconData symbols are identical in both versions, verified byte-for-byte. Reference decision D30.
+
+### Changed
+
+- **`layrz_icons` constraint lowered from `^2.0.0` to `^1.1.1`** — Required by layrz_sdk 4.4.3. All used symbols are identical across versions. Exit condition: raise constraint back to `^2.0.0` once layrz_sdk upgrades.
+
+### Design Notes
+
+- **D29** documents the post-mortem on `LayrzDropdownEntry.color`. The lesson: when an API's original constraint is removed, actively audit the dependency graph for surviving references to that constraint and remove them. The swatch type should not have survived the interaction-state redesign.
+
+- **D30** records the dependency trade-off: layrz_sdk brings 18 transitive dependencies (including `dio`, `layrz_i18n`, `layrz_logging`, `web_socket_channel`), and flutter_svg adds the vector graphics chain. All verified Material-free. Exit condition explicit: revert to `^2.0.0` once layrz_sdk advances.
+
+- **D31** documents that `LayrzAvatar` is static display-only, following the same pattern as `LayrzChip` per decision D28. No interaction affordances, no elevation — callers own interaction logic.
+
+---
+
 ## 0.0.7
 
 **First components from Milestone 2.** Adds four M2 primitives: selectable text, visual chips, chip grouping, and dropdown menu.

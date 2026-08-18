@@ -18,9 +18,9 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 6 | LayrzRow / LayrzCol responsive grid | Done |
 | 7 | LayrzConstrainedView | Done |
 | 8 | LayrzTextInput | Todo |
-| 9 | LayrzDropdownMenu | Todo |
-| 10 | LayrzGroupedButton (overflow actions menu) | Todo |
-| 11 | LayrzAvatar and LayrzImage | Todo |
+| 9 | LayrzDropdownMenu | Done |
+| 10 | LayrzButtonGroup (overflow actions menu) | Done |
+| 11 | LayrzAvatar and LayrzImage | Done |
 | 12 | LayrzText (selectable text) | Done |
 
 **Note**: This table is the authoritative record of M2 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
@@ -604,7 +604,7 @@ At least 6 M3 components and 14 M4 pickers depend on it. Its chrome — label, p
 
 ### 9. LayrzDropdownMenu
 
-**Status**: In progress on branch `feat/navigation/dropdown-menu`. Current implementation: 28 of 34 tests passing. Escape-to-close and outside-tap-to-close are not yet working. Four dependent accessibility tests are pending. Implementation details and design are settled per decision D28.
+**Status**: Shipped in 0.0.7 and amended in 0.0.8. All tests passing. Implementation complete per decision D28. In 0.0.8, entry colour simplified from `LayrzColorSwatch?` to `Color?` (decision D29), and dropdown labels gained an optional colour parameter for tonal band styling.
 
 **What it is**:
 
@@ -614,8 +614,7 @@ The trigger is a builder function that receives the `MenuController`, allowing t
 
 **Menu items** (sealed class `LayrzDropdownItem`):
 - `LayrzDropdownEntry` — interactive row with label, optional icon, optional color override (for destructive actions), and an `onTap` callback. Automatically closes the menu after tapping. Only focusable entries can be traversed with arrow keys.
-- `LayrzDropdownDivider` — non-focusable visual separator line
-- `LayrzDropdownLabel` — non-focusable section heading
+- `LayrzDropdownLabel` — non-focusable section heading with optional tonal colour band
 
 **Animation**: Menu enters with fade + 4px translate from the anchor's side. **There is no exit animation** — `RawMenuAnchor` tears the overlay down synchronously on close. Documented so nobody files it as a bug.
 
@@ -638,22 +637,23 @@ The trigger is a builder function that receives the `MenuController`, allowing t
 
 ---
 
-### 10. LayrzGroupedButton
+### 10. LayrzButtonGroup
 
 **Brief description**:
 
-`LayrzGroupedButton` — row of primary actions with an overflow menu for secondary actions. Replaces the old section 2 components (`LayrzActionButton` / `LayrzActionsButtons`), which are superseded by this unified pattern.
+`LayrzButtonGroup` — row of primary actions with an overflow menu for secondary actions. Replaces the old section 2 components (`LayrzActionButton` / `LayrzActionsButtons`), which are superseded by this unified pattern. Renamed from `LayrzGroupedButton` for uniformity with the shipped `LayrzChipGroup`; group components follow the `Layrz<Thing>Group` naming convention.
 
-This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically 2–4) that overflows into a menu when space is constrained. Depends on LayrzDropdownMenu for the overflow surface and LayrzButton for the individual actions.
+A horizontal group of buttons (typically 2–4) that renders in a row on large viewports, collapsing to a single fab trigger opening a `LayrzDropdownMenu` below the `md` breakpoint. Mode is controlled by a nullable `bool useDropdown` parameter; no enum is exposed. Depends on LayrzDropdownMenu for the overflow surface and LayrzButton for the individual actions.
 
-**Historical note**: Earlier planning called this `LayrzActionButton` and `LayrzActionsButtons`. That naming is superseded. The wiki Component Catalog still maps the old names and will need reconciling.
-
-**Dependencies**: M1 (LayrzTheme, tokens), M2.8 (LayrzDropdownMenu), M2.1 (LayrzButton).
+**Dependencies**: M1 (LayrzTheme, tokens), M2.9 (LayrzDropdownMenu), M2.1 (LayrzButton).
 
 **Files affected**:
-- `lib/buttons.dart` (update entrypoint barrel — already exists from item 1)
-- `lib/src/buttons/grouped_button.dart` (new)
-- `test/buttons/grouped_button_test.dart` (tests)
+- `lib/src/buttons/src/button_group.dart` (new)
+- `lib/src/buttons/src/button_group_previews.dart` (new, preview annotations)
+- `lib/src/buttons/src/button_type.dart` (new, LayrzButtonType.semanticColor extension)
+- `lib/src/buttons/buttons.dart` (update barrel)
+- `test/buttons/button_group_test.dart` (new, 28 comprehensive tests)
+- `example/lib/src/sections/button_group_section.dart` (new showroom section)
 
 ---
 
@@ -661,18 +661,25 @@ This is `ThemedActionsButtons` renamed: a horizontal group of buttons (typically
 
 **Brief description**:
 
-`LayrzAvatar` — circular or rounded-square user avatar from image URL, base64-encoded image, or initials fallback.
+`LayrzAvatar` — static display component rendering a layrz_sdk `Avatar` by type, with fallback to generated initials. Circular or rounded-square shape. No interaction affordances (callers wrap if needed). Per decision D31, avatars are display-only.
 
-`LayrzImage` — optimized image widget with fallback, placeholder, and error states. Used as a building block by LayrzAvatar and M4 inputs.
+`LayrzImage` — image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes.
 
-**Dependencies**: M1 (LayrzTheme, tokens).
+**Dependencies**: M1 (LayrzTheme, tokens), layrz_sdk (Avatar model), flutter_svg (SVG rendering).
 
 **Files affected**:
-- `lib/avatars.dart` (entrypoint barrel, new)
-- `lib/src/avatars/` (new module directory)
-- `lib/src/avatars/avatar.dart` (new)
-- `lib/src/avatars/image.dart` (new)
-- `test/avatars/avatar_test.dart` (tests)
+- `lib/src/images/images.dart` (per-module barrel, new)
+- `lib/src/images/src/avatar.dart` (new, LayrzAvatar)
+- `lib/src/images/src/avatar_shape.dart` (new, enum)
+- `lib/src/images/src/image.dart` (new, LayrzImage)
+- `lib/src/images/src/image_source.dart` (new, source resolution logic)
+- `lib/src/images/src/images_previews.dart` (new, preview annotations)
+- `lib/layrz_ui.dart` (update to export images module)
+- `test/images/avatar_test.dart` (tests, includes accessibility suite)
+- `test/images/avatar_a11y_test.dart` (accessibility tests)
+- `test/images/image_test.dart` (tests)
+- `test/images/image_source_test.dart` (source detection tests)
+- `example/lib/src/sections/images_section.dart` (new showroom section)
 
 ---
 
@@ -726,8 +733,8 @@ M2 is complete when all the following criteria are satisfied:
 - **Item 6 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
 - **Item 7 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens
 - **Item 8 (LayrzTextInput)**: Design blocker resolved (Figma/Notion link attached), EditableText with Material-free selection controls, label/prefix/suffix/help/error chrome, focus decoration, foundation for all M3+ inputs
-- **Item 9 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzGroupedButton
-- **Item 10 (LayrzGroupedButton)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
+- **Item 9 (LayrzDropdownMenu)**: Menu surface anchored to trigger, RawMenuAnchor integration, single/multi-item selection, theme integration, prerequisite for LayrzButtonGroup
+- **Item 10 (LayrzButtonGroup)**: Horizontal action buttons with overflow menu, LayrzDropdownMenu integration, semantically replaces old LayrzActionButton/ActionsButtons
 - **Item 11 (LayrzAvatar/LayrzImage)**: Avatar from URL/base64/initials, image fallback, placeholder rendering
 - **Item 12 (LayrzText)**: Wraps `SelectableRegion` with `emptyTextSelectionControls`, making child `Text` selectable and copyable; keyboard copy (Ctrl+C) works via `SelectableRegion`'s `CopySelectionTextIntent`; drag handles and context menu deferred as optional enhancements
 - **All tests pass**: `flutter test` reports 100% pass
