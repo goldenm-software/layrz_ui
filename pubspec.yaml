@@ -27,7 +27,9 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^8.2.1
-  layrz_icons: ^2.0.0
+  layrz_icons: ^1.1.1
+  layrz_sdk: ^4.4.3
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
