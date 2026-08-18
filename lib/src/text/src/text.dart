@@ -23,13 +23,12 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// styling across the design system. Pass an explicit style to override.
 ///
 /// **Focus management:**
-/// - When [focusNode] is **null**, this widget creates an internal [FocusNode]
-///   in [initState] and disposes it in [dispose]. The internal node is owned
-///   by this widget.
+/// - When [focusNode] is **null**, [SelectableRegion] creates and manages its own
+///   [FocusNode] internally. This node is owned by [SelectableRegion], not by [LayrzText].
 /// - When [focusNode] is **non-null**, the caller retains ownership and is
-///   responsible for disposal. This widget does not dispose the supplied node.
-///   If the caller swaps between null and non-null via [didUpdateWidget], the
-///   internal node (if one was created) is properly managed.
+///   responsible for disposal. [LayrzText] and [SelectableRegion] do not dispose
+///   the supplied node. The supplied node remains usable after the widget is removed
+///   from the tree.
 ///
 /// **Text content:**
 /// Exactly one of [data] or [textSpan] must be non-null at construction time,
@@ -41,7 +40,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// [data], [style], [strutStyle], [textAlign], [textDirection], [locale],
 /// [softWrap], [overflow], [textScaler], [maxLines], [semanticsLabel],
 /// [semanticsIdentifier], [textWidthBasis], and [textHeightBehavior].
-class LayrzText extends StatefulWidget {
+class LayrzText extends StatelessWidget {
   /// Creates a [LayrzText] widget to display a single line of text.
   ///
   /// The [data] must be non-null; use [LayrzText.rich] instead when you need
@@ -210,13 +209,13 @@ class LayrzText extends StatefulWidget {
 
   /// The focus node for the text selection region.
   ///
-  /// When null (default), this widget creates an internal [FocusNode] in [initState]
-  /// and disposes it in [dispose]. The internal node is owned by this widget.
+  /// When null (default), [SelectableRegion] creates and manages an internal [FocusNode].
+  /// This node is owned by [SelectableRegion], not by [LayrzText].
   ///
   /// When non-null, the caller is responsible for creating, managing, and disposing
-  /// the supplied [FocusNode]. This widget does not dispose a supplied node.
-  /// If [didUpdateWidget] detects a swap between null and non-null, the internal
-  /// node (if one exists) is properly managed.
+  /// the supplied [FocusNode]. [LayrzText] and [SelectableRegion] do not dispose
+  /// a supplied node. The supplied node remains usable after the widget is removed
+  /// from the tree.
   final FocusNode? focusNode;
 
   /// Called when the user's text selection changes.
@@ -227,74 +226,10 @@ class LayrzText extends StatefulWidget {
   /// and has no effect when [selectable] is `false`.
   final ValueChanged<SelectedContent?>? onSelectionChanged;
 
-  @override
-  State<LayrzText> createState() => _LayrzTextState();
-}
-
-class _LayrzTextState extends State<LayrzText> {
-  /// The focus node for the selectable region.
-  ///
-  /// This is created only when [widget.focusNode] is null (caller does not supply one).
-  /// When the widget is disposed, this node is disposed. When [widget.focusNode] is
-  /// non-null, it is used directly and NOT disposed by this state.
-  late FocusNode _internalFocusNode;
-
-  /// Whether the focus node is internal to this state.
-  ///
-  /// True when [widget.focusNode] was null at construction time.
-  /// Used in [dispose] to know whether to dispose the focus node.
-  late bool _focusNodeIsInternal;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupFocusNode();
-  }
-
-  @override
-  void didUpdateWidget(LayrzText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // If the caller switched from non-null to null focusNode, we must create
-    // a new internal node and manage it from now on.
-    if (oldWidget.focusNode != null && widget.focusNode == null) {
-      _internalFocusNode = FocusNode();
-      _focusNodeIsInternal = true;
-    }
-    // If the caller switched from null to non-null, dispose the old internal
-    // node and switch to using the supplied node.
-    else if (oldWidget.focusNode == null && widget.focusNode != null) {
-      if (_focusNodeIsInternal) {
-        _internalFocusNode.dispose();
-      }
-      _focusNodeIsInternal = false;
-    }
-  }
-
-  @override
-  void dispose() {
-    // Only dispose the focus node if it's internal (caller didn't supply it).
-    if (_focusNodeIsInternal) {
-      _internalFocusNode.dispose();
-    }
-    super.dispose();
-  }
-
-  /// Sets up the focus node, either internal or supplied by the caller.
-  void _setupFocusNode() {
-    if (widget.focusNode == null) {
-      _internalFocusNode = FocusNode();
-      _focusNodeIsInternal = true;
-    } else {
-      _internalFocusNode = widget.focusNode!;
-      _focusNodeIsInternal = false;
-    }
-  }
-
   /// Resolves the text style, defaulting to [LayrzTokens.typography.body] when null.
   TextStyle _resolveStyle(BuildContext context) {
-    if (widget.style != null) {
-      return widget.style!;
+    if (style != null) {
+      return style!;
     }
     return context.tokens.typography.body;
   }
@@ -304,47 +239,47 @@ class _LayrzTextState extends State<LayrzText> {
     final resolvedStyle = _resolveStyle(context);
 
     // Build the inner Text widget, either from data or textSpan.
-    final innerText = widget.data != null
+    final innerText = data != null
         ? Text(
-            widget.data!,
+            data!,
             style: resolvedStyle,
-            strutStyle: widget.strutStyle,
-            textAlign: widget.textAlign,
-            textDirection: widget.textDirection,
-            locale: widget.locale,
-            softWrap: widget.softWrap,
-            overflow: widget.overflow,
-            textScaler: widget.textScaler,
-            maxLines: widget.maxLines,
-            semanticsLabel: widget.semanticsLabel,
-            textWidthBasis: widget.textWidthBasis,
-            textHeightBehavior: widget.textHeightBehavior,
+            strutStyle: strutStyle,
+            textAlign: textAlign,
+            textDirection: textDirection,
+            locale: locale,
+            softWrap: softWrap,
+            overflow: overflow,
+            textScaler: textScaler,
+            maxLines: maxLines,
+            semanticsLabel: semanticsLabel,
+            textWidthBasis: textWidthBasis,
+            textHeightBehavior: textHeightBehavior,
           )
         : Text.rich(
-            widget.textSpan!,
+            textSpan!,
             style: resolvedStyle,
-            strutStyle: widget.strutStyle,
-            textAlign: widget.textAlign,
-            textDirection: widget.textDirection,
-            locale: widget.locale,
-            softWrap: widget.softWrap,
-            overflow: widget.overflow,
-            textScaler: widget.textScaler,
-            maxLines: widget.maxLines,
-            semanticsLabel: widget.semanticsLabel,
-            textWidthBasis: widget.textWidthBasis,
-            textHeightBehavior: widget.textHeightBehavior,
+            strutStyle: strutStyle,
+            textAlign: textAlign,
+            textDirection: textDirection,
+            locale: locale,
+            softWrap: softWrap,
+            overflow: overflow,
+            textScaler: textScaler,
+            maxLines: maxLines,
+            semanticsLabel: semanticsLabel,
+            textWidthBasis: textWidthBasis,
+            textHeightBehavior: textHeightBehavior,
           );
 
     // When not selectable, return the plain Text widget without SelectableRegion.
-    if (!widget.selectable) {
+    if (!selectable) {
       return innerText;
     }
 
     // When selectable, wrap in SelectableRegion with empty controls and focus node.
     return SelectableRegion(
-      focusNode: _internalFocusNode,
-      onSelectionChanged: widget.onSelectionChanged,
+      focusNode: focusNode,
+      onSelectionChanged: onSelectionChanged,
       selectionControls: emptyTextSelectionControls,
       child: innerText,
     );

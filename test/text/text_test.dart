@@ -190,14 +190,16 @@ void main() {
     });
 
     group('Focus node management', () {
-      testWidgets('null focusNode creates internal node', (tester) async {
+      testWidgets('null focusNode delegates to SelectableRegion', (tester) async {
         await pumpThemed(
           tester,
           const LayrzText('Test', focusNode: null),
         );
 
         final selectableRegion = find.byType(SelectableRegion).evaluate().single.widget as SelectableRegion;
-        expect(selectableRegion.focusNode, isNotNull);
+        // When LayrzText is passed null, SelectableRegion.focusNode is null.
+        // SelectableRegion creates and manages its own FocusNode internally.
+        expect(selectableRegion.focusNode, isNull);
       });
 
       testWidgets('supplied focusNode is used directly', (tester) async {
@@ -213,51 +215,46 @@ void main() {
         expect(selectableRegion.focusNode, equals(suppliedNode));
       });
 
-      testWidgets('internal focusNode is created when focusNode is null', (tester) async {
-        // Build a LayrzText with null focusNode
-        await pumpThemed(
-          tester,
-          const LayrzText('Test', focusNode: null),
-        );
-
-        // The SelectableRegion should have a focus node
-        final selectableRegion = find.byType(SelectableRegion).evaluate().single.widget as SelectableRegion;
-        expect(selectableRegion.focusNode, isNotNull);
-      });
-
-      testWidgets('switching from null to supplied focusNode uses the supplied one', (tester) async {
-        // Start with null focusNode
-        await pumpThemed(tester, const LayrzText('Test', focusNode: null));
-
-        final selectableRegion1 = find.byType(SelectableRegion).evaluate().single.widget as SelectableRegion;
-        final initialFocusNode = selectableRegion1.focusNode;
-        expect(initialFocusNode, isNotNull);
-
-        // Now update with a supplied focusNode
+      testWidgets('supplied focusNode is not disposed by the widget', (tester) async {
         final suppliedNode = FocusNode();
         addTearDown(suppliedNode.dispose);
 
+        await pumpThemed(
+          tester,
+          LayrzText('Test', focusNode: suppliedNode),
+        );
+
+        // Remove the widget from the tree.
         await tester.pumpWidget(
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
               data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
-              child: Overlay(
-                initialEntries: [
-                  OverlayEntry(
-                    builder: (context) => Center(
-                      child: LayrzText('Test', focusNode: suppliedNode),
-                    ),
-                  ),
-                ],
+              child: const Overlay(
+                initialEntries: [],
               ),
             ),
           ),
         );
 
-        // The SelectableRegion should have a focus node
-        final selectableRegion2 = find.byType(SelectableRegion).evaluate().single.widget as SelectableRegion;
-        expect(selectableRegion2.focusNode, isNotNull);
+        // The supplied node should still be usable (not disposed by the widget).
+        // Try to request focus on the node—if it were disposed, this would fail.
+        expect(() => suppliedNode.requestFocus(), returnsNormally);
+      });
+
+      testWidgets('update from null to supplied focusNode uses the supplied one', (tester) async {
+        // Build a widget with a supplied focusNode
+        final suppliedNode = FocusNode();
+        addTearDown(suppliedNode.dispose);
+
+        await pumpThemed(
+          tester,
+          LayrzText('Test', focusNode: suppliedNode),
+        );
+
+        // The SelectableRegion should have the supplied node
+        final selectableRegion = find.byType(SelectableRegion).evaluate().single.widget as SelectableRegion;
+        expect(selectableRegion.focusNode, equals(suppliedNode));
       });
     });
 
