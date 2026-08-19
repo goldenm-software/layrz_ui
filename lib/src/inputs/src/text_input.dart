@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
@@ -380,32 +379,3 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       _focusNode.requestFocus();
     }
   }
-}
-
-/// Displays the default [LayrzTextInput] state with label and placeholder.
-  labelText: 'Enter your name',
-  placeholder: 'John Doe',
-);
-
-/// Displays the [LayrzTextInput] in error state with error message.
-  labelText: 'Email',
-  errors: ['Invalid email format'],
-);
-
-/// Displays the disabled [LayrzTextInput] state.
-  labelText: 'Disabled Field',
-  placeholder: 'Cannot type',
-  disabled: true,
-);
-
-/// Displays the read-only [LayrzTextInput] state.
-  labelText: 'Read-only',
-  controller: TextEditingController(text: 'Read-only text'),
-  readOnly: true,
-);
-
-/// Displays the [LayrzTextInput] with required field indicator.
-  labelText: 'Username',
-  placeholder: 'Your username',
-  isRequired: true,
-);
