@@ -41,7 +41,7 @@ Widget previewLayrzAvatarEmoji() {
 Widget previewLayrzAvatarImage() {
   return const Center(
     child: LayrzAvatar.image(
-      source: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
+      imageSource: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
       size: 48,
     ),
   );
