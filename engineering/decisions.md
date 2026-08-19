@@ -1844,7 +1844,7 @@ Three M2 components shipped with design details that merit explicit documentatio
 ## D30: layrz_ui Depends on layrz_sdk; Pins layrz_icons to 1.x
 
 **Date**: 2026-08-18  
-**Status**: Decided  
+**Status**: Partially superseded by D36 (SDK dependency only; icons 1.x pin remains in force)  
 **Category**: Dependency Policy
 
 ### Context
@@ -1927,6 +1927,208 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 - **D28** (M2 Core Primitives) — establishes the pattern of static visual components with no ownership of interaction state
 - **D11** (Component Scope Confirmations) — M2 item 11 (LayrzAvatar/LayrzImage) was scoped as display components per this decision
+
+---
+
+## D32: Filled Visual Language and Six-State Matrix for the Input Family
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+`LayrzTextInput` establishes the visual language for the entire M3+ input family. Since every other input composes `LayrzTextInput` and inherits its chrome (label, prefix/suffix, error display, help affordance, padding), the interaction state matrix must be finalized early and propagated to all downstream inputs.
+
+### Decision
+
+**Adopt a filled style with a six-state interaction matrix as the sole visual language for the input family.**
+
+### Matrix
+
+| State | Fill | Border (1.5px) | Text |
+|---|---|---|---|
+| Rest | `surface2` | transparent | `fg1`, hint `fg3` |
+| Hover | `surface3` | transparent | `fg1` |
+| Focus | `surface2` | `colors.primary` | `fg1` |
+| Error | `colors.danger.shade50` | `colors.danger` | `fg1` |
+| Disabled | `surface2` | transparent | `fg4` |
+| Read-only | `surface2` | transparent | `fg1` + lock icon |
+
+### Key Features
+
+- **Focus preserves fill**: Focus only changes the border to primary; the fill stays `surface2` (does not elevate to a lighter shade).
+- **Read-only is rest + lock**: Read-only uses the rest state's fill and transparent border, with a lock icon in the suffix signalling non-editability. Text remains full-contrast `fg1`.
+- **Disabled darkens text to fg4**: Disabled state uses muted text (`fg4`, darkest of the fg tones) and transparent border to signal permanent non-editability.
+- **All borders are solid**: All six states use solid borders. Transparency creates the invisible border effect where needed (rest, hover, disabled, read-only).
+- **Single border width**: 1.5px throughout, matching `border.base` token.
+- **Six-state precedence**: disabled > read-only > error > pressed > hover/focused > default.
+- **Light mode only**: Dark theme is out of scope (D7).
+
+### Rationale
+
+- **Filled style consistency**: All inputs use filled backgrounds (never outlined or tonal-only). This creates immediate visual unity across the input family.
+- **Focus-on-rest prevents elevation flicker**: Keeping focus fill identical to rest prevents a "pop-up" visual as the user navigates with Tab. Only the border signals focus.
+- **Read-only as visual rest**: Read-only shares fill and transparent border with rest, making it visually calm and clearly not an error state. The lock icon is the only distinction.
+- **Disabled uses text contrast only**: Disabled is visually distinct via muted text (`fg4`), reducing contrast. The lock icon (in read-only) and text colour (in disabled) are the primary signals.
+- **Solid borders throughout**: All borders are solid with the same width, preserving D15's geometry invariant. Transparency (not dashing) renders invisible borders where needed.
+
+### Consequences
+
+- All M3+ inputs inherit this matrix
+- New inputs added later must conform to this matrix
+- Focus interactions no longer cause fill changes, reducing visual motion
+- All states maintain byte-identical geometry; only colour and transparency vary
+
+### Related Decisions
+
+- **D7** (Light Mode Only) — input family defaults to light; dark mode is out of scope
+- **D15** (Interaction States via Geometry Invariants) — all states preserve identical geometry; interaction states vary only colour and transparency
+
+---
+
+## D33: Read-Only as Rest State Plus Lock Icon
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design / Interaction Semantics
+
+### Context
+
+`LayrzTextInput` distinguishes `disabled` (not editable, not tappable) from `readOnly` (not editable, but tappable). The visual treatment for read-only must signal that the field is locked against keyboard input but remains interactive (tappable, for picker access).
+
+### Decision
+
+**Read-only uses the rest state's visual treatment (surface2 background, transparent border, fg1 text) plus a lock icon in the suffix.**
+
+### Rationale
+
+- **Read-only is calm**: Read-only shares the visual treatment with rest (not error, not disabled), making it visually serene and clearly not an error state or a permanently locked field.
+- **Lock icon is the only distinction**: The lock icon in the suffix is the sole visual difference between rest and read-only, making it immediately recognizable that the field can be accessed (via tap, for pickers) but not edited (via keyboard).
+- **Transparent border (not dashed)**: Read-only uses a transparent border (solid, but invisible) because it is a transient state from the user's perspective: they can tap to open a picker and change the value. All states now use transparent or coloured solid borders; dashing is not used.
+- **Full-contrast text (fg1, not fg4)**: Text in read-only mode is full-contrast `fg1`, reinforcing that the field is readable and accessible, not grayed out or locked down.
+
+### Consequences
+
+- Callers can instantly recognize read-only fields by the lock icon in the suffix
+- Read-only is visually distinct from disabled (transparent vs. transparent border, fg1 vs. fg4 text — the text colour difference is the primary signal)
+- Picker inputs render as read-only and display a lock, signalling to users that the field is interactive but not editable
+- All states use solid borders with constant width and radius; only colour and transparency vary
+
+### Related Decisions
+
+- **D32** (Input Family Visual Language) — read-only uses the rest row of the matrix plus a lock icon in the suffix
+- **D15** (Interaction States via Geometry Invariants) — all states preserve geometry; only colour and transparency vary
+
+---
+
+## D34: Caller-Owned Errors, Joined into Single Line
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design
+
+### Context
+
+layrz_theme's `ThemedTextInput` included a `validator` callback and a separate `FieldError` component for error display, coupling validation logic with the field.
+
+layrz_ui simplifies: callers provide error messages directly via a `List<String>`, and the field renders them as a single comma-separated line (matching layrz_theme's default `errors.join(", ")` behavior).
+
+### Decision
+
+**Remove the `validator` callback entirely. Callers provide a `List<String> errors` directly. `LayrzTextInput` joins multiple errors with `", "` into a single line and displays them below the field.**
+
+### Rationale
+
+- **Separation of concerns**: Validation is the caller's responsibility. Error display is `LayrzTextInput`'s responsibility.
+- **Single-line errors are concise**: Joining with `", "` keeps error text compact and scannable (e.g., `'required, too short, no capitals'`).
+- **Simpler for pickers**: Picker-style inputs have no keyboard validation; they set errors only when the dialog closes. Direct `List<String>` errors are ergonomic.
+- **Matches Form patterns**: Form validation is centralized, then sets errors on each field. Direct errors are the natural fit.
+- **No `FieldError` coupling**: Error rendering is integral to the field; no separate component needed.
+
+### Consequences
+
+- Callers own validation logic. `LayrzTextInput` does not call a validator.
+- Multiple errors are joined with `", "` into a single line for display.
+- Error styling on the field (danger-coloured border, light danger background) is automatic when `errors.isNotEmpty`.
+- Callers hide errors with `hideDetails: true` if they want to display error messages elsewhere.
+
+### Related Decisions
+
+- **D32** (Input Family Visual Language) — the error state row of the matrix applies when `errors.isNotEmpty`
+
+---
+
+## D35: D15 Amendment — Dashed Borders for Modal States (RETRACTED)
+
+**Date**: 2026-08-18  
+**Status**: Retracted  
+**Category**: Architecture / Visual Consistency
+
+### Context
+
+Decision D15 governs interaction state changes: they must vary only colour, border colour, shadow, opacity, and cursor — never geometry (height, width, padding, border width, radius). This prevents reflow and flicker as users interact.
+
+`LayrzTextInput`'s `disabled` state uses a **dashed border**, while other states use solid borders. Dashing is a paint-style change (how the border is drawn), not a geometry change. But D15 does not explicitly permit paint-style changes.
+
+### Original Decision (Retracted)
+
+**Amend D15 to permit border paint-style changes (solid vs. dashed) for the `disabled` state only. All other states must use solid borders. Transient interaction states (hover, press, focus) must never change paint style.**
+
+### Retraction Rationale
+
+D35 was superseded in August 2026 when the dashed border feature for the disabled state was removed from `LayrzTextInput`. The dashed border never rendered correctly (a CustomPaint was layered beneath a solid Container, so the fill always obscured the dashes). Rather than fix the rendering, the feature was removed entirely. As a consequence, D35 defends nothing: all states now use solid borders consistently, and **D15 stands unamended**.
+
+### Final State (per August 2026)
+
+All six input field states (rest, hover, focus, error, disabled, read-only) use solid borders. Border width (1.5px) and radius (r10) are identical across all states; only colour changes vary (and transparency for invisible borders). D15's geometry invariant is fully satisfied without paint-style modifications.
+
+### Related Decisions
+
+- **D15** (Interaction States via Geometry Invariants) — stands unamended; this decision retracted
+- **D32** (Input Family Visual Language) — updated matrix shows solid borders only
+- **D33** (Read-Only as Rest Plus Lock Icon) — read-only uses solid transparent border
+
+---
+
+## D36: layrz_ui Has No Layrz Data-Model Dependencies
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Dependency Policy
+
+### Context
+
+D30 (2026-08-18) recorded a temporary coupling to `layrz_sdk` via `LayrzAvatar`. The Avatar model was imported directly into layrz_ui, forcing a downgrade of `layrz_icons` from `^2.0.0` to `^1.1.1` to resolve layrz_sdk's constraints. This broke the design principle that layrz_ui has **no dependencies on any Layrz data-model package** — it depends only on `google_fonts`, `layrz_icons`, and `flutter_svg`.
+
+### Decision
+
+**Remove `layrz_sdk` as a dependency.** Replace the `Avatar` model with a native sealed hierarchy `LayrzAvatarSource` with four concrete types: `LayrzAvatarUrl`, `LayrzAvatarBase64`, `LayrzAvatarIcon`, and `LayrzAvatarEmoji`. Each type holds its data directly (URL string, base64 string, `IconData`, emoji string), with no SDK imports. Raise `layrz_icons` back to `^2.0.0`, satisfying D30's exit condition.
+
+### Rationale
+
+- **layrz_ui is a design system, not a data-integration layer.** It should never know about domain models, API schemas, or authentication objects. A sealed hierarchy of plain Dart classes perfectly expresses "pick an avatar source" without coupling to layrz_sdk.
+- **The sealed hierarchy enforces exhaustiveness.** When a new avatar source type is added (e.g., `LayrzAvatarGradient`), every `switch` statement on `LayrzAvatarSource` becomes a compile error at every uncovered case. This is stronger than optional parameters or string enums.
+- **API boundary is cleaner.** Callers holding an SDK `Avatar` model still need avatars; now they convert at the boundary — in a consumer-facing adapter package like `layrz_ui_extensions` — rather than inside layrz_ui's core. The conversion is: `Avatar.type` → match to `LayrzAvatarSource` concrete type, extract fields, construct the sealed type.
+- **Restores the design principle.** layrz_ui now has zero dependencies on `layrz_sdk`, `layrz_models`, or any other Layrz data package. It is a pure design system.
+
+### Changes
+
+- New file: `lib/src/images/src/avatar_source.dart` — sealed hierarchy with `@immutable`, `==`/`hashCode`, and `copyWith()` on each variant.
+- `LayrzAvatar` parameter: `avatar: Avatar?` → `source: LayrzAvatarSource?`.
+- `_buildFromAvatarType()` → exhaustive `switch` on `LayrzAvatarSource` variants.
+- `pubspec.yaml`: Remove `layrz_sdk: ^4.4.3`. `layrz_icons` remains at `^1.1.1` (see note below).
+- Tests ported to use `LayrzAvatarUrl('...')`, `LayrzAvatarBase64('...')`, etc. instead of SDK `Avatar` objects.
+
+### Consequences
+
+- **Breaking change for consumers passing SDK `Avatar` directly.** Migration is straightforward: callers convert SDK models at the boundary in their own adapter. This is deliberate and improves separation of concerns.
+- **`layrz_icons` remains at `^1.1.1` pending layrz_sdk's upgrade.** Although layrz_ui itself no longer depends on layrz_sdk, the `layrz_ui_extensions` package must depend on both layrz_ui and layrz_sdk to provide the `Avatar` → `LayrzAvatarSource` conversion. layrz_sdk 4.4.3 (current stable) pins `layrz_icons: ^1.1.1`, which would make layrz_ui_extensions unresolvable if layrz_ui raised to `^2.0.0`. The icons constraint will be raised back to `^2.0.0` once layrz_sdk advances (decision D30's exit condition owned by layrz_sdk, not layrz_ui).
+
+### Related Decisions
+
+- **Supersedes D30:** That decision is now expired. Mark D30 as superseded in place (do not renumber or delete). D36 records the resolution of the temporary coupling.
+- **Related to D2 (layrz_models coupling).** Like that decision, D36 establishes that layrz_ui will **never** import data-model packages. The boundary is at the application layer, not in the design system.
 
 ---
 

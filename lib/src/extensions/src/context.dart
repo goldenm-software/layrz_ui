@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 import 'package:layrz_ui/src/tokenizer/tokenizer.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -30,6 +31,17 @@ extension LayrzContextExtensions on BuildContext {
   /// Provides both group getters (e.g., [LayrzTokenizer.colors]) and
   /// flat shortcuts (e.g., [LayrzTokenizer.primary]).
   LayrzTokenizer get tokenizer => LayrzTokenizer(tokens);
+
+  /// The resolved [LayrzUiL10n] from the nearest [LayrzUiL10n] delegate.
+  ///
+  /// Provides access to all user-visible strings throughout layrz_ui.
+  /// This is the preferred way to access localized strings in components.
+  ///
+  /// Example:
+  /// ```dart
+  /// final cancelText = context.l10n.actionCancel;
+  /// ```
+  LayrzUiL10n get l10n => LayrzUiL10n.of(this);
 
   /// Primary brand color from the active theme.
   Color get primaryColor => LayrzTheme.of(this).primaryColor;

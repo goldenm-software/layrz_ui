@@ -41,12 +41,20 @@ import 'tooltip_position.dart';
 ///
 /// Parameters:
 /// - [child]: the widget to be wrapped (mandatory)
+/// - [titleText]: optional title text rendered above the content in a heavier weight
 /// - [contentText]: plain-text tooltip content (mutually exclusive with [contentRichText])
 /// - [contentRichText]: rich-text content with optional per-span styling (mutually exclusive with [contentText])
 /// - [position]: preferred position relative to the anchor (default: [LayrzTooltipPosition.bottom])
 class LayrzTooltip extends StatefulWidget {
   /// The widget to be wrapped with the tooltip.
   final Widget child;
+
+  /// Optional title text rendered above the tooltip content.
+  ///
+  /// When non-null, the title is rendered above the content in `tokens.typography.body`
+  /// (heavier than the content's `label` style) with the same color scheme.
+  /// When null, only the content is rendered.
+  final String? titleText;
 
   /// Plain-text content for the tooltip.
   ///
@@ -71,6 +79,7 @@ class LayrzTooltip extends StatefulWidget {
   const LayrzTooltip({
     super.key,
     required this.child,
+    this.titleText,
     this.contentText,
     this.contentRichText,
     this.position = LayrzTooltipPosition.bottom,
@@ -180,6 +189,20 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     final baseStyle = tokens.typography.label.copyWith(
       color: tokens.colors.background,
     );
+    final titleStyle = tokens.typography.body.copyWith(
+      color: tokens.colors.background,
+    );
+
+    // Build content widget
+    final contentWidget = widget.contentText != null
+        ? Text(
+            widget.contentText!,
+            style: baseStyle,
+          )
+        : Text.rich(
+            widget.contentRichText!,
+            style: baseStyle,
+          );
 
     // Build the surface widget
     final surface = Container(
@@ -191,15 +214,20 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         color: tokens.colors.fg1,
         borderRadius: BorderRadius.circular(tokens.radius.r8),
       ),
-      child: widget.contentText != null
-          ? Text(
-              widget.contentText!,
-              style: baseStyle,
+      child: widget.titleText != null
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.titleText!,
+                  style: titleStyle,
+                ),
+                SizedBox(height: tokens.spacing.sp4),
+                contentWidget,
+              ],
             )
-          : Text.rich(
-              widget.contentRichText!,
-              style: baseStyle,
-            ),
+          : contentWidget,
     );
 
     // Predict surface size before placing
@@ -262,9 +290,27 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     painter.layout(maxWidth: maxWidth);
 
+    double contentHeight = painter.height;
+    double contentWidth = painter.width;
+
+    // If there's a title, add its height and the separator gap
+    if (widget.titleText != null) {
+      final titleStyle = tokens.typography.body.copyWith(
+        color: tokens.colors.background,
+      );
+      final titlePainter = TextPainter(
+        text: TextSpan(text: widget.titleText, style: titleStyle),
+        textDirection: TextDirection.ltr,
+      );
+      titlePainter.layout(maxWidth: maxWidth);
+
+      contentHeight = titlePainter.height + tokens.spacing.sp4 + painter.height;
+      contentWidth = [titlePainter.width, painter.width].reduce((a, b) => a > b ? a : b);
+    }
+
     return Size(
-      painter.width + tokens.spacing.sp12 * 2,
-      painter.height + tokens.spacing.sp6 * 2,
+      contentWidth + tokens.spacing.sp12 * 2,
+      contentHeight + tokens.spacing.sp6 * 2,
     );
   }
 

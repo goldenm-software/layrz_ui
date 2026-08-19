@@ -193,8 +193,8 @@ class LayrzText extends StatelessWidget {
   /// The color to apply to selected text.
   ///
   /// When non-null, overrides the default selection highlight color in the
-  /// [SelectableRegion]. When null, the platform default selection color is used.
-  /// Passed to the [SelectableRegion] and has no effect when [selectable] is `false`.
+  /// [SelectableRegion]. When null, the [SelectableRegion] uses the design system
+  /// default (primary color at tonal opacity). Has no effect when [selectable] is `false`.
   final Color? selectionColor;
 
   /// Whether the text should be selectable by the user.
@@ -234,9 +234,21 @@ class LayrzText extends StatelessWidget {
     return context.tokens.typography.body;
   }
 
+  /// Resolves the selection color, defaulting to primary at tonal opacity when null.
+  Color _resolveSelectionColor(BuildContext context) {
+    if (selectionColor != null) {
+      return selectionColor!;
+    }
+    final tokens = context.tokens;
+    return tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
+  }
+
   @override
   Widget build(BuildContext context) {
     final resolvedStyle = _resolveStyle(context);
+
+    // Resolve selection color for the Text widget
+    final resolvedSelectionColor = _resolveSelectionColor(context);
 
     // Build the inner Text widget, either from data or textSpan.
     final innerText = data != null
@@ -254,6 +266,7 @@ class LayrzText extends StatelessWidget {
             semanticsLabel: semanticsLabel,
             textWidthBasis: textWidthBasis,
             textHeightBehavior: textHeightBehavior,
+            selectionColor: resolvedSelectionColor,
           )
         : Text.rich(
             textSpan!,
@@ -269,6 +282,7 @@ class LayrzText extends StatelessWidget {
             semanticsLabel: semanticsLabel,
             textWidthBasis: textWidthBasis,
             textHeightBehavior: textHeightBehavior,
+            selectionColor: resolvedSelectionColor,
           );
 
     // When not selectable, return the plain Text widget without SelectableRegion.

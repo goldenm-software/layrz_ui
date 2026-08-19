@@ -485,6 +485,66 @@ void main() {
         expect(find.byType(LayrzText), findsOneWidget);
         expect(find.byType(SelectableRegion), findsOneWidget);
       });
+
+      testWidgets('passes selectionColor to Text by default', (tester) async {
+        await pumpThemed(
+          tester,
+          const LayrzText('Test'),
+        );
+
+        final selectableRegion = find.byType(SelectableRegion);
+        expect(selectableRegion, findsOneWidget);
+
+        final text = find.byType(Text);
+        final widget = tester.widget<Text>(text);
+        // Should have a non-null selection color (primary at tonal opacity)
+        expect(widget.selectionColor, isNotNull);
+      });
+
+      testWidgets('selectionColor defaults to primary at tonalOpacity when null', (tester) async {
+        await pumpThemed(
+          tester,
+          const LayrzText('Test'),
+        );
+
+        final text = find.byType(Text);
+        final textWidget = tester.widget<Text>(text);
+        final context = tester.element(text);
+        final tokens = context.tokens;
+
+        final expectedColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
+        expect(textWidget.selectionColor, expectedColor);
+      });
+
+      testWidgets('caller-supplied selectionColor overrides default', (tester) async {
+        const customColor = Color(0xFFFF0000);
+        await pumpThemed(
+          tester,
+          const LayrzText(
+            'Test',
+            selectionColor: customColor,
+          ),
+        );
+
+        final text = find.byType(Text);
+        final widget = tester.widget<Text>(text);
+
+        expect(widget.selectionColor, customColor);
+      });
+
+      testWidgets('selectionColor has no effect when selectable=false', (tester) async {
+        await pumpThemed(
+          tester,
+          const LayrzText(
+            'Test',
+            selectable: false,
+          ),
+        );
+
+        // When not selectable, SelectableRegion should not be in the tree
+        expect(find.byType(SelectableRegion), findsNothing);
+        expect(find.byType(Text), findsOneWidget);
+      });
     });
   });
 }

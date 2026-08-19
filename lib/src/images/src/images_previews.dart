@@ -1,7 +1,8 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/preview.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzAvatar] with initials display.
 @Preview(name: 'Avatar - Initials', theme: LayrzPreviewTheme.light)
@@ -41,7 +42,7 @@ Widget previewLayrzAvatarEmoji() {
 Widget previewLayrzAvatarImage() {
   return const Center(
     child: LayrzAvatar.image(
-      source: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
+      imageSource: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
       size: 48,
     ),
   );

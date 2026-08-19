@@ -236,8 +236,7 @@ void main() {
           expect(find.byType(LayrzButton), findsOneWidget);
         });
 
-        testWidgets('semantic entry dot and row button use the same resolved color',
-            (tester) async {
+        testWidgets('semantic entry dot and row button use the same resolved color', (tester) async {
           final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
           await pumpThemed(
             tester,

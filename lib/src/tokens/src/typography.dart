@@ -111,11 +111,11 @@ class LayrzTextTheme {
     );
 
     return LayrzTextTheme(
-      display: titleStyle(45, FontWeight.w800),
-      headline: titleStyle(28, FontWeight.w700),
+      display: titleStyle(40, FontWeight.w700),
+      headline: titleStyle(28, FontWeight.w600),
       title: titleStyle(16, FontWeight.w600),
       body: bodyStyle(14, FontWeight.w400),
-      label: bodyStyle(12, FontWeight.w300),
+      label: bodyStyle(12, FontWeight.w400),
     );
   }
 

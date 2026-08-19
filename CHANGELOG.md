@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.0.9
+
+**The input family's foundation, plus localization.** Adds `LayrzTextInput` — the component every other `Layrz*Input` will compose — and the `LayrzUiL10n` localization contract it depends on.
+
+### Breaking
+
+- **`LayrzAvatar` no longer depends on `layrz_sdk`.** The `avatar` parameter is removed and replaced with `source: LayrzAvatarSource?`. The sealed hierarchy `LayrzAvatarSource` contains four concrete types: `LayrzAvatarUrl`, `LayrzAvatarBase64`, `LayrzAvatarIcon`, and `LayrzAvatarEmoji`. All four variants hold their data directly (URL string, base64 string, `IconData`, emoji string) rather than wrapping SDK types. Migration: replace `Avatar(type: AvatarType.url, url: '...')` with `LayrzAvatarUrl('...')`, `Avatar(type: AvatarType.base64, base64: '...')` with `LayrzAvatarBase64('...')`, `Avatar(type: AvatarType.icon, icon: icon)` with `LayrzAvatarIcon(icon.iconData)` (convert SDK `LayrzIcon` to `IconData`), and `Avatar(type: AvatarType.emoji, emoji: '...')` with `LayrzAvatarEmoji('...')`. The `.image()`, `.icon()`, `.emoji()`, and `.initials()` named constructors are unchanged.
+
+- **`layrz_icons` remains at `^1.1.1`.** Although layrz_ui no longer depends on layrz_sdk directly, the `layrz_ui_extensions` package must depend on both layrz_ui and layrz_sdk to provide the `Avatar` → `LayrzAvatarSource` conversion — and layrz_sdk 4.4.3 pins `layrz_icons: ^1.1.1`. Decision D30's exit condition (raise to 2.x once layrz_sdk upgrades) therefore remains unmet.
+
+### Added
+
+- **`LayrzTextInput`** — Material-free single-line text field built directly on `EditableText`, and the base of the entire input family. Every future `Layrz*Input` composes it rather than reimplementing field chrome, so its label, slots, help affordance, error display and focus decoration are the chrome of every input in the system. Reference DESIGN-33 and decision D32.
+
+  Key API notes: **at least one of `labelText` or `hintText` is required** (a debug assertion enforces it) — a search field wants only a hint, a form field only a label, and both together is valid. Each of the prefix and suffix slots accepts **at most one** of `prefixIcon` / `prefix` / `prefixText` (and the suffix equivalents), asserted in debug. `errors` is a caller-owned `List<String>` rendered joined with `", "` on a single line in bold `w700` — there is no `validator` and the widget never self-validates. `maxLength` renders a `"12/50"` counter right-aligned opposite the error message, which stays neutral `fg3` even when errors are present. `disabled` blocks all interaction; `readOnly` still fires `onTap`, which is what picker-style inputs depend on. `shortcut` renders a `⌘K`-style badge but binds nothing (see DESIGN-71) and is hidden entirely on mobile.
+
+- **`LayrzUiL10n`** — The localization contract for the design system: 133 keys across 17 namespace mixins, each supplying an English default. Ships with `LayrzUiL10nDefault`, `LayrzUiL10nDelegate` and a `context.l10n` accessor, wired automatically by `LayrzApp` so the package works with zero configuration. Consumers extend `LayrzUiL10n` and override only the keys they need; keys added in later versions inherit their English default rather than breaking the subclass. Reference DESIGN-73.
+
+  Integration note: a consumer's own delegate must be declared `LocalizationsDelegate<LayrzUiL10n>`, **never** over a subclass. `LocalizationsDelegate.type` is the key `Localizations.of` looks up, so a subclass-typed delegate is never found and every string silently falls back to English with no error.
+
+- **`LayrzTooltip.titleText`** — Optional title rendered above the tooltip content in a heavier weight. Purely additive; existing tooltips are unchanged.
+
+- **Showroom section for inputs** — The example app gains a `LayrzTextInput` section covering field states, label and hint variants, all three slot forms including arbitrary widgets, error display, the help affordance, `dense`, the shortcut badge and a numeric field.
+
+### Changed
+
+- **Type scale adjusted** — `display` is now 40px at `w700` (was 45px at `w800`), `headline` is `w600` (was `w700`), and `label` is `w400` (was `w300`). `title` (16px `w600`) and `body` (14px `w400`) are unchanged. This is a visual change to every component reading `tokens.typography`, not an API change.
+
+- **`formatLayrzShortcut` moved to a new `keyboard` module** — Relocated from `lib/src/menus/src/` now that it has a second consumer, and given its first test suite. Non-breaking for consumers, who reach it through the root barrel.
+
+### Design Notes
+
+- **Text selection is deliberately deferred.** `LayrzTextInput` passes `null` for both `selectionControls` and `contextMenuBuilder`, which makes `EditableText` skip the selection overlay entirely while caret placement, drag-selection and keyboard selection continue to work. Selection handles, the copy/paste toolbar and the mobile magnifier are tracked separately as DESIGN-74. Material supplies these normally and its implementation cannot be used.
+
+- **Field geometry is deterministic.** Height resolves from the icon size, so a field with icons is exactly as tall as one without, and every interaction state renders at identical height and border width per decision D15. Caller-supplied slot widgets are constrained to that height so a picker passing a colour swatch or avatar cannot stretch the field.
+
+- **Decision D35 was retracted.** It amended D15 to permit dashed borders on modal states. The dashed border was removed before release — it never rendered, because the painter drew beneath an opaque fill — so the amendment defends nothing and D15 stands unamended. References D32, D33 and D34.
+
+- **The i18n binding lives in a separate package.** `layrz_ui_i18n` (`goldenm-software/layrz_ui_i18n`) adapts `LayrzUiL10n` to the `layrz_i18n` engine. It is not published from this repository, and `layrz_ui` deliberately carries no dependency on any translation engine.
+
+---
+
 ## 0.0.8
 
 **Final M2 core primitives.** Adds three remaining M2 components and amends the dropdown menu implementation.

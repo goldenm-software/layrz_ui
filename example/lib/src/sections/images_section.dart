@@ -80,7 +80,7 @@ class _ImagesSectionContent extends StatelessWidget {
           Column(
             children: [
               const LayrzAvatar.image(
-                source: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
+                imageSource: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
                 size: 48,
               ),
               SizedBox(height: tokens.spacing.sp8),

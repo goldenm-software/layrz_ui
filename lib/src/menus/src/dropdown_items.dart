@@ -3,11 +3,11 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/src/menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'dropdown_entry_style_spec.dart';
-import 'dropdown_shortcut_format.dart';
 
 /// Private enumeration for tracking semantic button types in dropdown entries.
 ///
@@ -52,8 +52,7 @@ Color? _resolveEntryAccent(
   Color? color,
   _SemanticType semanticType,
   LayrzTokens tokens,
-) =>
-    color ?? semanticType.resolveColor(tokens);
+) => color ?? semanticType.resolveColor(tokens);
 
 /// Base class for items that a [LayrzDropdownMenu] can render.
 ///

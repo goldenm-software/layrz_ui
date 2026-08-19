@@ -1,8 +1,8 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-
-import 'package:layrz_ui/preview.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzButton] with different style variants.
 @Preview(name: 'Styles', theme: LayrzPreviewTheme.light)

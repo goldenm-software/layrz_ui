@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_sdk/layrz_sdk.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
@@ -19,11 +18,11 @@ void main() {
     });
 
     testWidgets('provides semantic label for emoji', (tester) async {
-      final avatar = Avatar(type: AvatarType.emoji, emoji: '😀');
+      final source = LayrzAvatarEmoji('😀');
 
       await pumpThemed(
         tester,
-        LayrzAvatar(avatar: avatar),
+        LayrzAvatar(source: source),
       );
 
       // Emoji should be rendered as text for screen readers
@@ -31,15 +30,14 @@ void main() {
     });
 
     testWidgets('provides semantic label for icon', (tester) async {
-      final icon = LayrzIcon(name: 'home', codePoint: 0xE88A, family: LayrzFamily.materialDesignIcons);
-      final avatar = Avatar(type: AvatarType.icon, icon: icon);
+      final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
 
       await pumpThemed(
         tester,
-        LayrzAvatar(avatar: avatar),
+        LayrzAvatar(source: source),
       );
 
-      // Icon should render successfully (SDK LayrzIcon is converted to IconData at boundary)
+      // Icon should render successfully
       expect(find.byType(Icon), findsOneWidget);
     });
 
@@ -74,11 +72,11 @@ void main() {
     });
 
     testWidgets('provides content for image avatars via alt text expectation', (tester) async {
-      final avatar = Avatar(type: AvatarType.url, url: 'https://example.com/user.png');
+      final source = LayrzAvatarUrl('https://example.com/user.png');
 
       await pumpThemed(
         tester,
-        LayrzAvatar(avatar: avatar, nameText: 'Jane Smith'),
+        LayrzAvatar(source: source, nameText: 'Jane Smith'),
       );
 
       // Image should render; the nameText provides fallback context
