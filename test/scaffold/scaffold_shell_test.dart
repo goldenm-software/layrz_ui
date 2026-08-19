@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/pump_themed.dart';
-
 void main() {
   group('LayrzScaffoldShell', () {
     test('constructor accepts required parameters', () {
@@ -255,7 +253,70 @@ void main() {
 
       expect(shell, isNotNull);
       expect(shell.items.length, equals(3));
+      expect(tappedItem, isEmpty);
+      expect(searchQuery, isEmpty);
       controller.dispose();
+    });
+
+    test('_PlainItem without custom equality comparison', () {
+      final item1 = _PlainItem('test');
+      final item2 = _PlainItem('test');
+
+      expect(item1 == item2, isFalse);
+      expect(identical(item1, item2), isFalse);
+    });
+
+    test('_TestItem with custom equality comparison', () {
+      final item1 = _TestItem(id: '1', name: 'test');
+      final item2 = _TestItem(id: '1', name: 'test');
+
+      expect(item1 == item2, isTrue);
+      expect(item1.hashCode == item2.hashCode, isTrue);
+    });
+  });
+
+  group('LayrzScaffoldValueTile', () {
+    test('equality and copyWith', () {
+      final tile1 = LayrzScaffoldValueTile(
+        titleRichText: const TextSpan(text: 'Title'),
+        subtitleRichText: const TextSpan(text: 'Subtitle'),
+      );
+
+      final tile2 = tile1.copyWith(
+        titleRichText: const TextSpan(text: 'Title'),
+      );
+
+      expect(tile1, equals(tile2));
+
+      final tile3 = tile1.copyWith(
+        titleRichText: const TextSpan(text: 'Different'),
+      );
+
+      expect(tile1 == tile3, isFalse);
+    });
+
+    test('copyWith with actions', () {
+      final tile = LayrzScaffoldValueTile(
+        titleRichText: const TextSpan(text: 'Title'),
+        actions: const [],
+      );
+
+      expect(tile.actions, isEmpty);
+
+      final updated = tile.copyWith();
+      expect(updated.titleRichText.toPlainText(), 'Title');
+    });
+
+    test('hashCode consistency', () {
+      final tile1 = LayrzScaffoldValueTile(
+        titleRichText: const TextSpan(text: 'Same'),
+      );
+
+      final tile2 = LayrzScaffoldValueTile(
+        titleRichText: const TextSpan(text: 'Same'),
+      );
+
+      expect(tile1.hashCode, tile2.hashCode);
     });
   });
 }

@@ -110,7 +110,7 @@ void main() {
     test("listener can be removed", () async {
       final controller = LayrzScaffoldController<String>();
       int callCount = 0;
-      final listener = () => callCount++;
+      void listener() => callCount++;
 
       controller.addListener(listener);
       controller.open("item1");
