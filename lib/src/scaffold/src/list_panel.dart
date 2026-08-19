@@ -52,7 +52,7 @@ class ListPanel<T> extends StatefulWidget {
   });
 
   @override
-  State<ListPanel> createState() => _ListPanelState();
+  State<ListPanel<T>> createState() => _ListPanelState<T>();
 }
 
 class _ListPanelState<T> extends State<ListPanel<T>> {
