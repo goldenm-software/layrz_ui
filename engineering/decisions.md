@@ -1841,51 +1841,10 @@ Three M2 components shipped with design details that merit explicit documentatio
 
 ---
 
-## D32: layrz_ui Has No Layrz Data-Model Dependencies; Pins layrz_icons to 2.x
-
-**Date**: 2026-08-18  
-**Status**: Decided  
-**Category**: Dependency Policy
-
-### Context
-
-D30 (2026-08-18) recorded a temporary coupling to `layrz_sdk` via `LayrzAvatar`. The Avatar model was imported directly into layrz_ui, forcing a downgrade of `layrz_icons` from `^2.0.0` to `^1.1.1` to resolve layrz_sdk's constraints. This broke the design principle that layrz_ui has **no dependencies on any Layrz data-model package** — it depends only on `google_fonts`, `layrz_icons`, and `flutter_svg`.
-
-### Decision
-
-**Remove `layrz_sdk` as a dependency.** Replace the `Avatar` model with a native sealed hierarchy `LayrzAvatarSource` with four concrete types: `LayrzAvatarUrl`, `LayrzAvatarBase64`, `LayrzAvatarIcon`, and `LayrzAvatarEmoji`. Each type holds its data directly (URL string, base64 string, `IconData`, emoji string), with no SDK imports. Raise `layrz_icons` back to `^2.0.0`, satisfying D30's exit condition.
-
-### Rationale
-
-- **layrz_ui is a design system, not a data-integration layer.** It should never know about domain models, API schemas, or authentication objects. A sealed hierarchy of plain Dart classes perfectly expresses "pick an avatar source" without coupling to layrz_sdk.
-- **The sealed hierarchy enforces exhaustiveness.** When a new avatar source type is added (e.g., `LayrzAvatarGradient`), every `switch` statement on `LayrzAvatarSource` becomes a compile error at every uncovered case. This is stronger than optional parameters or string enums.
-- **API boundary is cleaner.** Callers holding an SDK `Avatar` model still need avatars; now they convert at the boundary — in a consumer-facing adapter package like `layrz_ui_extensions` — rather than inside layrz_ui's core. The conversion is: `Avatar.type` → match to `LayrzAvatarSource` concrete type, extract fields, construct the sealed type.
-- **Restores the design principle.** layrz_ui now has zero dependencies on `layrz_sdk`, `layrz_models`, or any other Layrz data package. It is a pure design system.
-
-### Changes
-
-- New file: `lib/src/images/src/avatar_source.dart` — sealed hierarchy with `@immutable`, `==`/`hashCode`, and `copyWith()` on each variant.
-- `LayrzAvatar` parameter: `avatar: Avatar?` → `source: LayrzAvatarSource?`.
-- `_buildFromAvatarType()` → exhaustive `switch` on `LayrzAvatarSource` variants.
-- `pubspec.yaml`: Remove `layrz_sdk: ^4.4.3`, upgrade `layrz_icons: ^1.1.1` → `^2.0.0`.
-- Tests ported to use `LayrzAvatarUrl('...')`, `LayrzAvatarBase64('...')`, etc. instead of SDK `Avatar` objects.
-
-### Consequences
-
-- **Breaking change for consumers passing SDK `Avatar` directly.** Migration is straightforward: callers convert SDK models at the boundary in their own adapter. This is deliberate and improves separation of concerns.
-- **`layrz_icons` can now upgrade independently.** No transitive constraint from layrz_sdk locks it to 1.x.
-
-### Related Decisions
-
-- **Supersedes D30:** That decision is now expired. Mark D30 as superseded in place (do not renumber or delete). D32 records the resolution of the temporary coupling.
-- **Related to D2 (layrz_models coupling).** Like that decision, D32 establishes that layrz_ui will **never** import data-model packages. The boundary is at the application layer, not in the design system.
-
----
-
 ## D30: layrz_ui Depends on layrz_sdk; Pins layrz_icons to 1.x
 
 **Date**: 2026-08-18  
-**Status**: Superseded by D32  
+**Status**: Superseded by D36  
 **Category**: Dependency Policy
 
 ### Context
@@ -2129,6 +2088,47 @@ All six input field states (rest, hover, focus, error, disabled, read-only) use 
 - **D15** (Interaction States via Geometry Invariants) — stands unamended; this decision retracted
 - **D32** (Input Family Visual Language) — updated matrix shows solid borders only
 - **D33** (Read-Only as Rest Plus Lock Icon) — read-only uses solid transparent border
+
+---
+
+## D36: layrz_ui Has No Layrz Data-Model Dependencies; Pins layrz_icons to 2.x
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Dependency Policy
+
+### Context
+
+D30 (2026-08-18) recorded a temporary coupling to `layrz_sdk` via `LayrzAvatar`. The Avatar model was imported directly into layrz_ui, forcing a downgrade of `layrz_icons` from `^2.0.0` to `^1.1.1` to resolve layrz_sdk's constraints. This broke the design principle that layrz_ui has **no dependencies on any Layrz data-model package** — it depends only on `google_fonts`, `layrz_icons`, and `flutter_svg`.
+
+### Decision
+
+**Remove `layrz_sdk` as a dependency.** Replace the `Avatar` model with a native sealed hierarchy `LayrzAvatarSource` with four concrete types: `LayrzAvatarUrl`, `LayrzAvatarBase64`, `LayrzAvatarIcon`, and `LayrzAvatarEmoji`. Each type holds its data directly (URL string, base64 string, `IconData`, emoji string), with no SDK imports. Raise `layrz_icons` back to `^2.0.0`, satisfying D30's exit condition.
+
+### Rationale
+
+- **layrz_ui is a design system, not a data-integration layer.** It should never know about domain models, API schemas, or authentication objects. A sealed hierarchy of plain Dart classes perfectly expresses "pick an avatar source" without coupling to layrz_sdk.
+- **The sealed hierarchy enforces exhaustiveness.** When a new avatar source type is added (e.g., `LayrzAvatarGradient`), every `switch` statement on `LayrzAvatarSource` becomes a compile error at every uncovered case. This is stronger than optional parameters or string enums.
+- **API boundary is cleaner.** Callers holding an SDK `Avatar` model still need avatars; now they convert at the boundary — in a consumer-facing adapter package like `layrz_ui_extensions` — rather than inside layrz_ui's core. The conversion is: `Avatar.type` → match to `LayrzAvatarSource` concrete type, extract fields, construct the sealed type.
+- **Restores the design principle.** layrz_ui now has zero dependencies on `layrz_sdk`, `layrz_models`, or any other Layrz data package. It is a pure design system.
+
+### Changes
+
+- New file: `lib/src/images/src/avatar_source.dart` — sealed hierarchy with `@immutable`, `==`/`hashCode`, and `copyWith()` on each variant.
+- `LayrzAvatar` parameter: `avatar: Avatar?` → `source: LayrzAvatarSource?`.
+- `_buildFromAvatarType()` → exhaustive `switch` on `LayrzAvatarSource` variants.
+- `pubspec.yaml`: Remove `layrz_sdk: ^4.4.3`, upgrade `layrz_icons: ^1.1.1` → `^2.0.0`.
+- Tests ported to use `LayrzAvatarUrl('...')`, `LayrzAvatarBase64('...')`, etc. instead of SDK `Avatar` objects.
+
+### Consequences
+
+- **Breaking change for consumers passing SDK `Avatar` directly.** Migration is straightforward: callers convert SDK models at the boundary in their own adapter. This is deliberate and improves separation of concerns.
+- **`layrz_icons` can now upgrade independently.** No transitive constraint from layrz_sdk locks it to 1.x.
+
+### Related Decisions
+
+- **Supersedes D30:** That decision is now expired. Mark D30 as superseded in place (do not renumber or delete). D36 records the resolution of the temporary coupling.
+- **Related to D2 (layrz_models coupling).** Like that decision, D36 establishes that layrz_ui will **never** import data-model packages. The boundary is at the application layer, not in the design system.
 
 ---
 
