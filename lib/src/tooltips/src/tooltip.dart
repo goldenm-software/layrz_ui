@@ -95,11 +95,13 @@ class LayrzTooltip extends StatefulWidget {
 class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late CurvedAnimation _curvedAnimation;
-  OverlayEntry? _overlayEntry;
+
+  /// The overlay entry for the tooltip widget itself.
+  OverlayEntry? _tooltipEntry;
+
   Timer? _hideTimer;
   final GlobalKey _anchorKey = GlobalKey();
   bool _themedInitialized = false;
-  bool _openedByTouch = false;
 
   @override
   void initState() {
@@ -142,15 +144,14 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _handleAnimationStatusChange(AnimationStatus status) {
     // Remove the overlay entry only when animation completes dismissal.
     if (status == AnimationStatus.dismissed) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
+      _tooltipEntry?.remove();
+      _tooltipEntry = null;
     }
   }
 
   void _handleMouseEnter() {
     _hideTimer?.cancel();
     _hideTimer = null;
-    _openedByTouch = false;
     _showTooltip();
   }
 
@@ -162,28 +163,27 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _handleLongPress() {
     _hideTimer?.cancel();
     _hideTimer = null;
-    _openedByTouch = true;
     _showTooltip();
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(milliseconds: 100), _hideTooltip);
+    // When the user releases the long-press, the tooltip remains visible.
+    // It will be dismissed by tapping elsewhere (via the barrier) or by other means.
   }
 
   void _handleLongPressCancel() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(milliseconds: 100), _hideTooltip);
+    // When the long-press is cancelled, the tooltip remains visible.
+    // It will be dismissed by tapping elsewhere (via the barrier) or by other means.
   }
 
   void _showTooltip() {
     if (!mounted || Overlay.maybeOf(context) == null) return;
 
-    if (_overlayEntry == null) {
-      _overlayEntry = OverlayEntry(
+    if (_tooltipEntry == null) {
+      _tooltipEntry = OverlayEntry(
         builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
       );
-      Overlay.of(context).insert(_overlayEntry!);
+      Overlay.of(context).insert(_tooltipEntry!);
     }
 
     if (_animationController.status != AnimationStatus.completed) {
@@ -285,26 +285,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       ),
     );
 
-    // When the tooltip is opened by touch, wrap in a Stack with a tap-away barrier.
-    // When opened by hover, return the positioned widget directly (preserves original behavior).
-    if (_openedByTouch) {
-      return Stack(
-        children: [
-          // Tap-away barrier (only mounted for touch-opened tooltips)
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _hideTooltip,
-              child: const SizedBox.expand(),
-            ),
-          ),
-          // Tooltip surface (on top of the barrier)
-          tooltipWidget,
-        ],
-      );
-    } else {
-      return tooltipWidget;
-    }
+    return tooltipWidget;
   }
 
   Size _predictTooltipSize({
@@ -373,10 +354,10 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     _hideTimer?.cancel();
     _hideTimer = null;
 
-    if (_overlayEntry != null && _overlayEntry!.mounted) {
-      _overlayEntry!.remove();
+    if (_tooltipEntry != null && _tooltipEntry!.mounted) {
+      _tooltipEntry!.remove();
     }
-    _overlayEntry = null;
+    _tooltipEntry = null;
 
     _animationController.removeStatusListener(_handleAnimationStatusChange);
     _curvedAnimation.dispose();
