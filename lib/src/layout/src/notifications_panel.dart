@@ -128,6 +128,7 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
   ) {
     return GestureDetector(
       onTap: () {
+        notification.onTap?.call();
         widget.onNotificationTap?.call(notification);
         // Keep panel open unless callback closes it
       },

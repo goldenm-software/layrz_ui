@@ -55,7 +55,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
           horizontal: kLayrzLayoutUserChromePaddingHorizontal,
         ),
         decoration: BoxDecoration(
-          color: tokens.colors.surface,
+          color: tokens.colors.surface3,
           borderRadius: BorderRadius.circular(kLayrzLayoutUserChromeRadius),
         ),
         child: Row(

@@ -29,7 +29,19 @@ const double kLayrzLayoutLogoTileRadius = 8.0;
 const double kLayrzLayoutLogoGap = 9.0;
 
 /// The bottom padding of the logo block, in logical pixels.
-const double kLayrzLayoutLogoBottomPadding = 14.0;
+const double kLayrzLayoutLogoBottomPadding = 8.0;
+
+/// The width factor applied to logo width to constrain it within its container.
+///
+/// The logo width is constrained to 80% of the rail/drawer width so it does not
+/// overflow. It is applied in both rail (178px) and drawer (260px) presentations.
+const double kLayrzLayoutLogoWidthFactor = 0.8;
+
+/// The height of the logo in its container, in logical pixels.
+///
+/// The logo is constrained to this fixed height and scaled to fit within
+/// the box while maintaining aspect ratio.
+const double kLayrzLayoutLogoHeight = 40.0;
 
 /// The left padding of the logo block, in logical pixels.
 const double kLayrzLayoutLogoLeftPadding = 6.0;
@@ -168,3 +180,44 @@ const double kLayrzLayoutDrawerScrimOpacity = 1.0;
 /// pixels and centered within the available space. This prevents excessively wide
 /// content on ultra-wide displays.
 const double kLayrzLayoutBodyMaxWidth = 1440.0;
+
+/// The width of the active indicator bar on selected navigation items, in logical pixels.
+///
+/// The indicator is a small vertical rectangle rendered at the leading edge of
+/// selected items, fully rounded.
+const double kLayrzLayoutActiveIndicatorWidth = 3.0;
+
+/// The height of the active indicator bar on selected navigation items, in logical pixels.
+///
+/// The indicator is a small vertical rectangle rendered at the leading edge of
+/// selected items, fully rounded.
+const double kLayrzLayoutActiveIndicatorHeight = 16.0;
+
+/// The height of the search field above navigation items, in logical pixels.
+const double kLayrzLayoutSearchFieldHeight = 30.0;
+
+/// The horizontal padding of the search field, in logical pixels.
+const double kLayrzLayoutSearchFieldPaddingHorizontal = 10.0;
+
+/// The horizontal padding inside the search field text input, in logical pixels.
+const double kLayrzLayoutSearchFieldInternalPaddingHorizontal = 10.0;
+
+/// The font size of the search field text, in logical pixels.
+const double kLayrzLayoutSearchFieldFontSize = 13.0;
+
+/// The size of the leading search icon in the search field, in logical pixels.
+const double kLayrzLayoutSearchFieldIconSize = 12.0;
+
+/// The height of the notifications row in the footer, in logical pixels.
+const double kLayrzLayoutNotificationsRowHeight = 32.0;
+
+/// The font size of the notifications label text, in logical pixels.
+const double kLayrzLayoutNotificationsLabelFontSize = 12.0;
+
+/// The font weight of the notifications label text.
+///
+/// Notifications label uses [FontWeight.w600] (semi-bold).
+const FontWeight kLayrzLayoutNotificationsLabelFontWeight = FontWeight.w600;
+
+/// The font size of the notifications count badge, in logical pixels.
+const double kLayrzLayoutNotificationsCountFontSize = 10.0;

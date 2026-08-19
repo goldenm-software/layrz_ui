@@ -24,10 +24,10 @@ class LayrzLayoutTopBar extends StatelessWidget {
     /// The user's avatar source.
     required this.userAvatar,
 
-    /// The list of notifications to display.
+    /// The list of notifications to display (for backwards compatibility).
     required this.notifications,
 
-    /// Callback fired when a notification is tapped.
+    /// Callback fired when a notification is tapped (for backwards compatibility).
     required this.onNotificationTap,
 
     /// Callback fired when the drawer trigger is tapped.
@@ -66,7 +66,10 @@ class LayrzLayoutTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: kLayrzLayoutTopBarHeight,
-      color: tokens.colors.surface,
+      decoration: BoxDecoration(
+        color: tokens.colors.surface,
+        boxShadow: tokens.shadow.elevation2,
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: kLayrzLayoutTopBarPaddingHorizontal),
         child: Row(
@@ -90,23 +93,6 @@ class LayrzLayoutTopBar extends StatelessWidget {
                   child: SizedBox(
                     height: kLayrzLayoutTopBarHeight - 16,
                     child: logo!,
-                  ),
-                ),
-              ),
-
-            // Spacer
-            if (notifications.isNotEmpty || onNotificationTap != null) const Spacer(),
-
-            // Notifications bell
-            if (notifications.isNotEmpty || onNotificationTap != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: GestureDetector(
-                  onTap: () {},
-                  child: Icon(
-                    LayrzIcons.solarOutlineBell,
-                    size: kLayrzLayoutNotificationsBellIconSize,
-                    color: tokens.colors.fg2,
                   ),
                 ),
               ),
