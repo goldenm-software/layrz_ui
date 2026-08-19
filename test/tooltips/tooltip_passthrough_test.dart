@@ -308,11 +308,13 @@ void main() {
     testWidgets(
       'Case 1: tap passes through a SHOWING tooltip to backdrop GestureDetector',
       (tester) async {
-        // Requirement: ignorePointer: true on RawTooltip ensures that when
-        // the tooltip surface is visible, taps inside that surface reach the
-        // widget painted BEHIND it (the backdrop).
+        // DESIGN-77 UPDATE: Touch-opened tooltips have a barrier that blocks taps.
+        // Hover-opened tooltips remain pass-through (no barrier).
         //
-        // This test WILL FAIL if ignorePointer is set to false.
+        // This test uses longPress (touch), so it tests the NEW touch-barrier behavior:
+        // The tap is absorbed by the barrier and does NOT pass through to the backdrop.
+        //
+        // The old "pass through" behavior only applied to hover tooltips.
 
         bool backdropTapped = false;
         final anchorKey = GlobalKey();
@@ -329,7 +331,7 @@ void main() {
         // Verify the anchor is in the tree
         expect(find.text('Anchor'), findsOneWidget);
 
-        // Long-press the anchor to show the tooltip
+        // Long-press the anchor to show the tooltip via TOUCH
         await tester.longPress(find.text('Anchor'));
         await tester.pumpAndSettle();
 
@@ -357,15 +359,20 @@ void main() {
         await tester.tapAt(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop GestureDetector.onTap FIRED, proving the tap
-        // passed through the tooltip surface.
-        // This assertion FAILS if ignorePointer is false (tooltip blocks hit-test).
+        // Assert: The backdrop DID NOT receive the tap (barrier absorbed it)
         expect(
           backdropTapped,
-          isTrue,
+          isFalse,
           reason:
-              'Tap inside tooltip should pass through to backdrop '
-              '(ignorePointer: true allows this)',
+              'Tap inside TOUCH-OPENED tooltip must be absorbed by barrier '
+              'and NOT pass through to backdrop (DESIGN-77)',
+        );
+
+        // Assert: The tooltip is now dismissed
+        expect(
+          find.text('Tooltip body'),
+          findsNothing,
+          reason: 'Tap inside touch-opened tooltip should dismiss it',
         );
       },
     );
@@ -373,11 +380,14 @@ void main() {
     testWidgets(
       'Case 2: hover passes through a SHOWING tooltip to backdrop MouseRegion',
       (tester) async {
-        // Requirement: ignorePointer: true means the tooltip surface does not
-        // block mouse hover either. A mouse movement inside the tooltip surface
-        // should reach the MouseRegion on the backdrop.
+        // DESIGN-77 UPDATE: Touch-opened tooltips have a barrier with opaque HitTestBehavior
+        // that blocks BOTH taps AND hovers. Hover-opened tooltips have no barrier and
+        // remain pass-through.
         //
-        // This test WILL FAIL if ignorePointer is set to false.
+        // This test uses longPress (touch), so it tests the NEW touch-barrier behavior:
+        // Mouse hover is blocked by the barrier and does NOT pass through to the backdrop.
+        //
+        // To test true hover pass-through, use mouse hover to open the tooltip (not longPress).
 
         PointerEnterEvent? backdropEnterEvent;
         final anchorKey = GlobalKey();
@@ -391,7 +401,7 @@ void main() {
           ),
         );
 
-        // Long-press the anchor to show the tooltip
+        // Long-press the anchor to show the tooltip via TOUCH
         await tester.longPress(find.text('Anchor'));
         await tester.pumpAndSettle();
 
@@ -414,14 +424,14 @@ void main() {
         await gesture.moveTo(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop MouseRegion.onEnter FIRED.
-        // This assertion FAILS if ignorePointer is false (tooltip blocks hover).
+        // Assert: The backdrop MouseRegion.onEnter did NOT fire.
+        // The barrier's opaque HitTestBehavior blocks mouse hover from reaching the backdrop.
         expect(
           backdropEnterEvent,
-          isNotNull,
+          isNull,
           reason:
-              'Hover inside tooltip should pass through to backdrop '
-              '(ignorePointer: true allows this)',
+              'Hover inside TOUCH-OPENED tooltip is blocked by barrier '
+              '(opaque HitTestBehavior prevents passthrough for touch-opened tooltips, DESIGN-77)',
         );
       },
     );

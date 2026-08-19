@@ -95,7 +95,22 @@ class LayrzTooltip extends StatefulWidget {
 class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late CurvedAnimation _curvedAnimation;
-  OverlayEntry? _overlayEntry;
+
+  /// The overlay entry for the tooltip widget itself.
+  OverlayEntry? _tooltipEntry;
+
+  /// The barrier entry that intercepts tap-away when the tooltip is opened by touch.
+  ///
+  /// Only created when [_openedByTouch] is true. Sits BELOW the tooltip entry
+  /// in the overlay stack. Hover-opened tooltips do not create a barrier.
+  OverlayEntry? _barrierEntry;
+
+  /// Whether the tooltip was opened by a long-press (touch) gesture.
+  ///
+  /// True when opened via [_handleLongPress], false when opened via [_handleMouseEnter].
+  /// Used to determine whether to create a tap-away barrier.
+  bool _openedByTouch = false;
+
   Timer? _hideTimer;
   final GlobalKey _anchorKey = GlobalKey();
   bool _themedInitialized = false;
@@ -139,16 +154,24 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   }
 
   void _handleAnimationStatusChange(AnimationStatus status) {
-    // Remove the overlay entry only when animation completes dismissal.
+    // Remove both overlay entries when animation completes dismissal.
     if (status == AnimationStatus.dismissed) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
+      if (_tooltipEntry != null && _tooltipEntry!.mounted) {
+        _tooltipEntry!.remove();
+      }
+      _tooltipEntry = null;
+
+      if (_barrierEntry != null && _barrierEntry!.mounted) {
+        _barrierEntry!.remove();
+      }
+      _barrierEntry = null;
     }
   }
 
   void _handleMouseEnter() {
     _hideTimer?.cancel();
     _hideTimer = null;
+    _openedByTouch = false;
     _showTooltip();
   }
 
@@ -160,17 +183,42 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _handleLongPress() {
     _hideTimer?.cancel();
     _hideTimer = null;
+    _openedByTouch = true;
     _showTooltip();
+  }
+
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    // When the user releases the long-press, the tooltip remains visible.
+    // It is dismissed only by tapping elsewhere (barrier tap) or by other explicit dismissal.
+  }
+
+  void _handleLongPressCancel() {
+    // When the long-press is cancelled, the tooltip remains visible.
+    // It is dismissed only by tapping elsewhere (barrier tap) or by other explicit dismissal.
   }
 
   void _showTooltip() {
     if (!mounted || Overlay.maybeOf(context) == null) return;
 
-    if (_overlayEntry == null) {
-      _overlayEntry = OverlayEntry(
+    if (_tooltipEntry == null) {
+      // If opened by touch, create a barrier to dismiss on tap-away.
+      // Insert the barrier FIRST so the tooltip sits on top of it in the overlay stack.
+      if (_openedByTouch) {
+        _barrierEntry = OverlayEntry(
+          builder: (context) => Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _hideTooltip,
+            ),
+          ),
+        );
+        Overlay.of(context).insert(_barrierEntry!);
+      }
+
+      _tooltipEntry = OverlayEntry(
         builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
       );
-      Overlay.of(context).insert(_overlayEntry!);
+      Overlay.of(context).insert(_tooltipEntry!);
     }
 
     if (_animationController.status != AnimationStatus.completed) {
@@ -260,7 +308,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     final tooltipOffset = delegate(context);
 
-    return Positioned(
+    final tooltipWidget = Positioned(
       left: tooltipOffset.dx,
       top: tooltipOffset.dy,
       child: IgnorePointer(
@@ -271,6 +319,8 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         ),
       ),
     );
+
+    return tooltipWidget;
   }
 
   Size _predictTooltipSize({
@@ -335,14 +385,19 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    // Dispose order: cancel timer → remove overlay entry → dispose animations → dispose controller
+    // Dispose order: cancel timer → remove overlay entries → dispose animations → dispose controller
     _hideTimer?.cancel();
     _hideTimer = null;
 
-    if (_overlayEntry != null && _overlayEntry!.mounted) {
-      _overlayEntry!.remove();
+    if (_tooltipEntry != null && _tooltipEntry!.mounted) {
+      _tooltipEntry!.remove();
     }
-    _overlayEntry = null;
+    _tooltipEntry = null;
+
+    if (_barrierEntry != null && _barrierEntry!.mounted) {
+      _barrierEntry!.remove();
+    }
+    _barrierEntry = null;
 
     _animationController.removeStatusListener(_handleAnimationStatusChange);
     _curvedAnimation.dispose();
@@ -370,6 +425,8 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onLongPress: _handleLongPress,
+          onLongPressEnd: _handleLongPressEnd,
+          onLongPressCancel: _handleLongPressCancel,
           child: KeyedSubtree(key: _anchorKey, child: widget.child),
         ),
       ),
