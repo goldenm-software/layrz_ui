@@ -67,7 +67,7 @@ class _UnitDisplayState extends State<UnitDisplay> {
     return LayrzTooltip(
       contentText: tooltipMessage,
       position: .left,
-      child: LayrzText(
+      child: Text(
         logicalDisplay,
         style: textStyle,
       ),

@@ -44,14 +44,14 @@ class _PrimaryColorSwatch extends StatelessWidget {
             ),
           ),
           SizedBox(height: tokens.spacing.sp12),
-          LayrzText(
+          Text(
             'Primary',
             style: tokens.typography.label.copyWith(
               color: tokens.colors.fg2,
             ),
           ),
           SizedBox(height: tokens.spacing.sp4),
-          LayrzText(
+          Text(
             hexValue,
             style: tokens.typography.label.copyWith(
               color: tokens.colors.fg3,

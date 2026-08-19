@@ -122,15 +122,14 @@ See [**milestone-1.md**](milestone-1.md) for the detailed 12-item plan, executio
 **Goal**: Structural and feedback widgets for app shells, routing, and user notifications.
 
 **Deliverables**:
-- `LayrzAppBar` (top navigation)
-- Navigation variants: side nav, bottom nav, mini nav, dual nav
-- `LayrzNavigatorItem` types (page, action, widget, separator, label)
-- `LayrzScaffoldShell` (adaptive list-detail shell with internal pane/sheet swap)
+- `LayrzLayout` (application shell with sidebar navigation, drawer on mobile, user menu, notifications footer) — **Done**
+- `LayrzScaffoldShell<T>` (adaptive list-detail shell, single-pane on mobile with back affordance, two-pane on desktop) — **Done**
+- `LayrzScrollbar` (Material-free scrollbar on `RawScrollbar`, visible on vertical scrollables, installed by default in LayrzApp) — **Done**
 - `LayrzTabView` and `LayrzTab` (horizontal tabs)
 - `LayrzSnackbar` and `LayrzSnackbarMessenger` (transient feedback)
 - Dialogs on `RawDialogRoute` (general, alert, confirmation)
 - `LayrzAboutDialog`
-- Page transitions on `PageTransitionsBuilder`
+- Page transitions via `PageRouteBuilder.transitionsBuilder` (Material-free: FadeTransition, ScaleTransition)
 - `LayrzNotificationItem`
 
 **Unblocks**: M6 (tables live in scaffolds), M7 ecosystem features.

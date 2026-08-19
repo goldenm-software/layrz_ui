@@ -431,6 +431,15 @@ LayrzLayout must choose whether to:
 - **Consuming apps using multi-mode presentations cannot upgrade to layrz_ui without a layout redesign.** This is a breaking change, but acceptable for a ground-up rewrite.
 - LayrzLayout's first release will be smaller in scope but faster to ship and higher in quality.
 
+**Update (2026-08-19) — D8 Questions Resolved in D37**
+
+D8's two parked sub-questions ("which single design" and "which navigator items") have been answered and documented in D37:
+- **Desktop presentation**: Sidebar (labelled, 178px, not mini or dual)
+- **Mobile presentation**: Drawer (off-canvas on a top bar, not bottom bar)
+- **Navigator item types**: LayrzNavigatorPage and LayrzNavigatorLabel only (Action, Widget, Separator dropped)
+
+D37 also clarifies container-driven breakpoints (not viewport-driven) and LayrzApp's default scrollbar behaviour. See D37 for the full DESIGN-61/62 rulings and specification.
+
 ### Review Trigger
 
 When LayrzLayout's single design is selected and scoped, revisit whether to:
@@ -2129,6 +2138,77 @@ D30 (2026-08-18) recorded a temporary coupling to `layrz_sdk` via `LayrzAvatar`.
 
 - **Supersedes D30:** That decision is now expired. Mark D30 as superseded in place (do not renumber or delete). D36 records the resolution of the temporary coupling.
 - **Related to D2 (layrz_models coupling).** Like that decision, D36 establishes that layrz_ui will **never** import data-model packages. The boundary is at the application layer, not in the design system.
+
+---
+
+## D37: LayrzLayout and LayrzScaffoldShell Scope — Desktop Sidebar, Mobile Drawer, Flat Navigation
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Decision D8 (LayrzLayout ships exactly one layout design) deferred the selection of which single design. On 2026-08-19, the product and design team confirmed two components and their exact scope: `LayrzLayout` (application shell) and `LayrzScaffoldShell` (list-detail shell). Both are container-driven (responsive via `LayoutBuilder` + `bandAt`, not viewport-driven). Their scope answers D8's parked questions and resolves the navigator item and interaction model.
+
+### Decisions (DESIGN-61 and DESIGN-62)
+
+#### DESIGN-61: LayrzLayout Scope
+
+| Question | Ruling |
+| --- | --- |
+| Which desktop presentation survives | **Sidebar (labelled, 178px width).** Mini-bar (icon-only, collapsed) and dual-bar (toolbar + app-bar) are dropped |
+| Which mobile presentation | **Drawer.** A collapsible 260px off-canvas drawer on a 56px top bar. No bottom-bar variant |
+| Which navigator item types | **LayrzNavigatorPage** (page with icon + label + active flag) and **LayrzNavigatorLabel** (full-bleed band for section grouping) only. `Action`, `Widget`, `Separator` dropped entirely |
+| User profile / settings affordances | **In scope.** User block with avatar + name, dropdown from `userMenuItems` (List<LayrzDropdownItem>) |
+| Persistent vs transient item distinction | **Dropped entirely.** Single flat list; no two-tier structure |
+| Notifications | **In scope.** Labelled "Notifications" footer row + `RawMenuAnchor` dropdown panel, never a route |
+| Breadcrumbs and route integration | **Dropped entirely.** No automatic breadcrumb rendering, no route-to-label binding |
+
+#### DESIGN-62: LayrzScaffoldShell Scope
+
+| Question | Ruling |
+| --- | --- |
+| Generics | **Required.** `onDetailsBuild(T)` needs the item type as a generic parameter |
+| List-header controls | **Search only.** No grouping, no sorting controls in the shell; consumer-owned filtering |
+| Detail tabs, docked inspector, breadcrumb | **Out of scope.** Detail area is opaque to the shell; consumer owns the header |
+| Filtering | **Consumer-owned via `onSearch` callback.** Shell does not filter; consumer receives search text and returns filtered list |
+| Mobile bottom sheet | **Deferred.** Narrow fallback is a single-pane layout with a back affordance; no bottom-sheet modal presentation |
+
+#### Secondary Scope
+
+- **Breakpoints are container-driven**, resolved via `LayoutBuilder` constraints + `bandAt()`, not viewport-driven. This differs from `LayrzRow`/`LayrzCol` which remain viewport-driven.
+- **LayrzApp installs LayrzScrollBehavior by default** when `scrollBehavior` is null, making scrollbars visible on all vertical scrollables (Material-free via `RawScrollbar`). This is a visible behaviour change for consuming apps that had no scrollbars before. Horizontal scrollables and touch platforms are exempt. Consumers can opt out by passing an explicit `scrollBehavior`.
+
+### Decision
+
+**Implement `LayrzLayout` and `LayrzScaffoldShell` as specified above.** Complete the specifications and amend D8 to record this resolution.
+
+### Rationale
+
+- **Single design reduces decision paralysis.** Trying to support five presentation modes (mini, sidebar, dual, appBar, bottomBar) is a critical-path blocker for Milestone 2. A single, focused design can be shipped and validated fast.
+- **Container-driven breakpoints** decouple layout presentation from viewport dimensions, enabling components to adapt to their own constraints rather than global screen size. This is more reusable and testable.
+- **Flat navigation is simpler.** Persistent vs. transient distinction added complexity without clear benefit. A single list, with optional visual grouping via `LayrzNavigatorLabel`, serves the same purpose.
+- **User chrome via dropdown** is cleaner than dedicated UI. A `RawMenuAnchor` is Material-free and keeps the layout's top bar compact.
+- **Notifications as a footer row** keeps them discoverable without competing for screen real estate with the main navigation.
+- **Search-only list header** moves filtering responsibility to the consumer, where the domain knowledge lives. The shell's job is display and selection, not data semantics.
+
+### Consequences
+
+- **NavBar variants dropped.** Consuming apps using ThemedLayout's mini-bar, dual-bar, or bottom-bar presentations must migrate to the sidebar (desktop) or drawer (mobile) or implement their own custom layout using LayrzApp + routing.
+- **Navigator item types reduced to two.** `ThemedNavigatorAction`, `ThemedNavigatorWidget`, `ThemedNavigatorSeparator` are dropped. Apps needing these must use custom UI or defer to M5+ releases if additional types are added later.
+- **No automatic breadcrumbs.** Apps using route-based breadcrumbs must implement their own integration or use the detail area's consumer-owned header.
+- **Mobile deep-linking and restoration.** Single-pane mobile layout does not automatically preserve detail-pane state across app suspension. Consumers must own state restoration via a `StateNotifier`, `ChangeNotifier`, or equivalent, or accept transient loss on app backgrounding.
+- **Scrollbar visibility change.** Apps get scrollbars on vertical scrollables where they had none; this is intentional and part of M5's accessibility baseline. Consumers can opt out with a custom `scrollBehavior`.
+
+### Review Trigger
+
+After the first consuming app ships using `LayrzLayout` and `LayrzScaffoldShell`:
+- Is the single layout design sufficient for the product's UX needs?
+- Do any customers request the dropped presentations? If so, prioritize a future M5+ release adding optional variants.
+- Is the search-only filtering contract limiting, or do most tables need custom filters anyway?
+
+If feedback indicates a second presentation is essential, revisit in M5.x (post-release patch work).
 
 ---
 

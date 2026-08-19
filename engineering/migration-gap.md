@@ -96,31 +96,31 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedLayout` | class | `lib/src/layout/layout.dart` | needs decision | LayrzLayout is a placeholder in Milestone 1. Scope unconfirmed on single layout design selection and navigator item types. See D8 in [decisions.md](decisions.md). |
+| `ThemedLayout` | class | `lib/src/layout/layout.dart` | port | Scope confirmed by D37 (2026-08-19). LayrzLayout implements sidebar (desktop) + drawer (mobile) presentations with flat navigator items. See D37 in [decisions.md](decisions.md). |
 | `ThemedLayoutStyle` | enum (dual, sidebar, mini) | `lib/src/layout/layout.dart` | **drop** | Dropped by D8 (LayrzLayout ships exactly one layout design). Multiple desktop presentations are out of scope for Milestone 1. |
 | `ThemedMobileLayoutStyle` | enum (appBar, bottomBar) | `lib/src/layout/layout.dart` | **drop** | Dropped by D8 (LayrzLayout ships exactly one layout design). Multiple mobile presentations are out of scope for Milestone 1. |
 | `ThemedDualBar` | class | `lib/src/layout/src/bars/dual.dart` | **drop** | Dropped by D8. Dual bar presentation not carried over in single-design approach. |
 | `ThemedSidebar` | class | `lib/src/layout/src/bars/side.dart` | **drop** | Dropped by D8. Sidebar presentation not carried over in single-design approach. |
 | `ThemedMiniBar` | class | `lib/src/layout/src/bars/mini.dart` | **drop** | Dropped by D8. Mini bar presentation not carried over in single-design approach. |
 | `ThemedBottomBar` | class | `lib/src/layout/src/bars/bottom.dart` | **drop** | Dropped by D8. Bottom bar presentation not carried over in single-design approach. |
-| `ThemedAppBar` | class | `lib/src/layout/src/appbar/desktop.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedMobileAppBar` | class | `lib/src/layout/src/appbar/mobile.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedAppBarAvatar` | class | `lib/src/layout/src/parts/avatar.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNotificationIcon` | class | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNotificationLocation` | enum (appBar, miniBar, bottomBar, sideBar, custom) | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedCustomNotificationLocation` | class | `lib/src/layout/src/parts/notification.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| abstract `ThemedNavigatorItem` | abstract class | `lib/src/layout/src/models.dart` | needs decision | Navigator item types to be confirmed per D11. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedNavigatorPage` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorAction` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorWidget` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorSeparator` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNavigatorLabel` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | needs decision | Depends on ThemedNavigatorItem scope. Subject to D8. |
-| `ThemedNotificationItem` | class | `lib/src/layout/src/models.dart` | needs decision | Scope pending. Subject to LayrzLayout's single-design scope decision (D8). |
-| `ThemedSeparatorType` | enum | `lib/src/layout/src/models.dart` | needs decision | Depends on navigator item scope. Subject to D8. |
-| typedef `ThemedNavigatorPushFunction` | typedef | `lib/src/layout/layout.dart` | needs decision | Depends on layout scope. Subject to D8. |
-| typedef `ThemedNavigatorPopFunction` | typedef | `lib/src/layout/layout.dart` | **needs decision — typo opportunity** | IMPORTANT: This symbol is misspelled in layrz_theme as `ThemdNavigatorPopFunction` (missing the "e"). D8 offers an opportunity to correct it to `LayrzNavigatorPopFunction` in layrz_ui. Scope depends on navigator types decision. |
+| `ThemedAppBar` | class | `lib/src/layout/src/appbar/desktop.dart` | drop | Dropped by D37. LayrzLayout uses a simple 56px top bar (mobile) or 178px sidebar (desktop); no separate app bar component. |
+| `ThemedMobileAppBar` | class | `lib/src/layout/src/appbar/mobile.dart` | drop | Dropped by D37. LayrzLayout's mobile presentation integrates the top bar; no separate component. |
+| `ThemedAppBarAvatar` | class | `lib/src/layout/src/parts/avatar.dart` | drop | Dropped by D37 (no separate app bar component). User avatar integrated into LayrzLayout top bar / sidebar. |
+| `ThemedNotificationIcon` | class | `lib/src/layout/src/parts/notification.dart` | drop | Dropped by D37. Notifications render in footer row, not scattered across app bar variants. |
+| `ThemedNotificationLocation` | enum (appBar, miniBar, bottomBar, sideBar, custom) | `lib/src/layout/src/parts/notification.dart` | drop | Dropped by D37. Single notification location (footer); no location enum. |
+| `ThemedCustomNotificationLocation` | class | `lib/src/layout/src/parts/notification.dart` | drop | Dropped by D37 (single notification location). Remove on migration. |
+| abstract `ThemedNavigatorItem` | abstract class | `lib/src/layout/src/models.dart` | drop | Navigator item types scope confirmed by D37. LayrzLayout supports only LayrzNavigatorPage and LayrzNavigatorLabel; Action, Widget, Separator dropped entirely. |
+| `ThemedNavigatorPage` → `LayrzNavigatorPage` | class | `lib/src/layout/src/models.dart` | port | Ported as LayrzNavigatorPage (icon, label, path, isSelected flag). Scope confirmed by D37. |
+| `ThemedNavigatorAction` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | **drop** | Dropped by D37. LayrzLayout has no action items; consumers use LayrzButton in detail area or footer. |
+| `ThemedNavigatorWidget` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | **drop** | Dropped by D37. No custom widget slots in LayrzLayout; detail area is consumer-owned. |
+| `ThemedNavigatorSeparator` | class extends ThemedNavigatorItem | `lib/src/layout/src/models.dart` | **drop** | Dropped by D37. No separators; consumers group pages with LayrzNavigatorLabel bands. |
+| `ThemedNavigatorLabel` → `LayrzNavigatorLabel` | class | `lib/src/layout/src/models.dart` | port | Ported as LayrzNavigatorLabel (full-bleed section band). Scope confirmed by D37. |
+| `ThemedNotificationItem` → `LayrzNotificationItem` | class | `lib/src/layout/src/models.dart` | port | Ported as LayrzNotificationItem. Notifications render in LayrzLayout footer with RawMenuAnchor dropdown. Scope confirmed by D37. |
+| `ThemedSeparatorType` | enum | `lib/src/layout/src/models.dart` | **drop** | Dropped by D37 (no separator navigator items). Remove on migration. |
+| typedef `ThemedNavigatorPushFunction` | typedef | `lib/src/layout/layout.dart` | drop | Dropped by D37. LayrzLayout does not push routes; navigation is consumer-owned. |
+| typedef `ThemedNavigatorPopFunction` | typedef | `lib/src/layout/layout.dart` | drop | Dropped by D37. LayrzLayout does not pop routes. (layrz_theme has typo: `ThemdNavigatorPopFunction`; not corrected on migration since symbol is dropped.) |
 
-**Layout decision note (D8)**: Decision D8 clarifies that LayrzLayout ships exactly ONE layout design in Milestone 1. The multiple presentations (dual, sidebar, mini desktop; appBar, bottomBar mobile) are **dropped** from scope. Future design variants can be added in later releases. The single design's specific form and navigator item types remain to be scoped.
+**Layout decision note (D37)**: Decision D37 confirms LayrzLayout scope (2026-08-19) and resolves D8's parked questions. LayrzLayout ships **exactly one design** — sidebar on desktop (178px, labelled), drawer on mobile (260px, off-canvas on 56px top bar). Navigator items are reduced to two: LayrzNavigatorPage (page + icon + label + active flag) and LayrzNavigatorLabel (section band). Action, Widget, Separator, and all app-bar variants are **dropped entirely**. Notifications render in footer (not scattered across bars). No breadcrumbs, no automatic route-to-label binding. Full spec in D37.
 
 ---
 
@@ -146,8 +146,8 @@ Organized by domain. For each entry: layrz_theme symbol, kind (class/enum/extens
 
 | Symbol | Kind | Source | Classification | Reason |
 |--------|------|--------|-----------------|--------|
-| `ThemedScaffoldView` → `LayrzScaffoldShell` | class | `lib/src/scaffolds/src/sidebar.dart` | port | Scope confirmed in D11; merged into single adaptive component. ThemedScaffoldView and ThemedScaffoldCell retired (not ported one-to-one). |
-| `ThemedScaffoldCell` → `LayrzScaffoldShell` | (retired) | `lib/src/scaffolds/src/cell.dart` | (merged) | Folded into LayrzScaffoldShell; not separate public API. |
+| `ThemedScaffoldView` → `LayrzScaffoldShell<T>` | class | `lib/src/scaffolds/src/sidebar.dart` | port | Scope confirmed in D37; merged into single adaptive generic component. ThemedScaffoldView and ThemedScaffoldCell retired (not ported one-to-one). LayrzScaffoldShell<T> is container-driven (not viewport-driven), with single-pane mobile + two-pane desktop. |
+| `ThemedScaffoldCell` | (retired) | `lib/src/scaffolds/src/cell.dart` | drop | Folded into LayrzScaffoldShell; not separate public API. Remove on migration. |
 | `ThemedLicense` → `LayrzLicense` | class | `lib/src/views/views.dart` | needs decision | Scope unconfirmed. Separate component from layout infrastructure; scope still open. |
 | `ThemedTab` → `LayrzTab` | class | `lib/src/tabs/src/tab.dart` | port | LayrzTab wiki exists; formal scope confirmed in D11. |
 | `ThemedTabView` → `LayrzTabView` | class | `lib/src/tabs/src/view.dart` | port | Required by LayrzTab. Part of LayrzTab subsystem (D11). |

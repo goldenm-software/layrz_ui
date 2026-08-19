@@ -4,6 +4,7 @@ import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'input_chrome.dart';
+import 'input_density.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
 
@@ -370,10 +371,14 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
             child: EditableText(
               controller: _controller,
               focusNode: _focusNode,
-              style: tokens.typography.body.copyWith(
-                fontSize: tokens.typography.title.fontSize,
-                color: spec.textColor,
-              ),
+              style:
+                  InputDensitySpec(
+                    dense: widget.dense,
+                    tokens: tokens,
+                    iconTheme: context.theme.iconTheme,
+                  ).editableTextStyle.copyWith(
+                    color: spec.textColor,
+                  ),
               cursorColor: tokens.colors.primary,
               backgroundCursorColor: tokens.colors.fg3,
               selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),

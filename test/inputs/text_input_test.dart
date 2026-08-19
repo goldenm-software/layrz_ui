@@ -775,5 +775,77 @@ void main() {
       final container = find.byType(Container).first;
       expect(container, findsOneWidget);
     });
+
+    group('Dense vertical centering', () {
+      testWidgets('hint and editable share vertical centre in dense mode', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzTextInput(
+            labelText: 'Dense field',
+            dense: true,
+            hintText: 'Enter text',
+          ),
+        );
+
+        // Find the hint text and editable text
+        final hintFinder = find.text('Enter text');
+        final editableFinder = find.byType(EditableText);
+
+        expect(hintFinder, findsWidgets);
+        expect(editableFinder, findsOneWidget);
+
+        // Get their rendered vertical centers
+        final hintRect = tester.getRect(hintFinder.first);
+        final editableRect = tester.getRect(editableFinder.first);
+
+        // Verify their vertical centers are aligned (within 1 pixel for rounding)
+        expect((hintRect.center.dy - editableRect.center.dy).abs(), lessThan(1.5));
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('hint and editable share vertical centre in comfortable mode', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzTextInput(
+            labelText: 'Comfortable field',
+            dense: false,
+            hintText: 'Enter text',
+          ),
+        );
+
+        // Find the hint text and editable text
+        final hintFinder = find.text('Enter text');
+        final editableFinder = find.byType(EditableText);
+
+        expect(hintFinder, findsWidgets);
+        expect(editableFinder, findsOneWidget);
+
+        // Get their rendered vertical centers
+        final hintRect = tester.getRect(hintFinder.first);
+        final editableRect = tester.getRect(editableFinder.first);
+
+        // Verify their vertical centers are aligned (within 1 pixel for rounding)
+        expect((hintRect.center.dy - editableRect.center.dy).abs(), lessThan(1.5));
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('dense mode maintains centered text despite reduced height', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzTextInput(
+            labelText: 'Dense field',
+            dense: true,
+            hintText: 'Type here',
+          ),
+        );
+
+        // Verify dense field renders without errors
+        final editableFinder = find.byType(EditableText);
+        expect(editableFinder, findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    });
   });
 }

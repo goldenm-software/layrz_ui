@@ -125,7 +125,7 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
           child: Text(
             labelText,
             style: tokens.typography.body.copyWith(
-              color: tokens.colors.fg3,
+              color: color != null ? color! : tokens.colors.fg3,
             ),
           ),
         ),

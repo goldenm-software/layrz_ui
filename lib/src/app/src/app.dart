@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
 /// Root application widget for layrz_ui.
@@ -121,6 +122,13 @@ class LayrzApp extends StatefulWidget {
   // ── Scroll behavior ─────────────────────────────────────────────────
 
   /// Overrides the default scroll behavior for the entire app.
+  ///
+  /// When null (the default), [LayrzScrollBehavior] is used, which installs
+  /// [LayrzScrollbar] globally on all vertical scrollables on pointer platforms
+  /// (desktop/web). This is a visible behavior change for existing consumers —
+  /// scroll views that previously had no scrollbar will now display one.
+  ///
+  /// Set this to a custom [ScrollBehavior] to opt out of the default behavior.
   final ScrollBehavior? scrollBehavior;
 
   // ── Shortcuts / actions ─────────────────────────────────────────────
@@ -254,14 +262,13 @@ class _LayrzAppState extends State<LayrzApp> {
       ),
     );
 
-    if (widget.scrollBehavior != null) {
-      return ScrollConfiguration(
-        behavior: widget.scrollBehavior!,
-        child: innerChild,
-      );
-    }
+    // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
+    final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
 
-    return innerChild;
+    return ScrollConfiguration(
+      behavior: scrollBehavior,
+      child: innerChild,
+    );
   }
 
   bool get _isRouter => widget.routerConfig != null || widget.routerDelegate != null;

@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
+import 'input_density.dart';
 import 'input_error_block.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
@@ -120,22 +121,25 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
+    // Centralized density specification — all dimensions that change with dense mode
+    final density = InputDensitySpec(
+      dense: dense,
+      tokens: tokens,
+      iconTheme: context.theme.iconTheme,
+    );
+
     // Compute padding: explicit caller value wins over dense mode
-    final verticalPadding = dense ? tokens.spacing.sp6 : tokens.spacing.sp10;
     final resolvedPadding =
         padding ??
         EdgeInsets.symmetric(
           horizontal: tokens.spacing.sp10,
-          vertical: verticalPadding,
+          vertical: density.verticalPadding,
         );
 
-    // Compute icon size once — used for slot icons, trailing icons, and content height.
-    // Falls back to icon theme size from context, or a token-derived default.
-    final iconSize = context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
-
     // Fixed content height to ensure field geometry is constant across states,
-    // regardless of whether slots have icons. Icons fit inside this height.
-    final contentHeight = iconSize;
+    // regardless of whether slots have icons. The height accommodates both
+    // icons and the text line without clipping.
+    final contentHeight = density.contentHeight;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -189,7 +193,8 @@ class LayrzInputChrome extends StatelessWidget {
                     tokens: tokens,
                     spec: spec,
                     contentHeight: contentHeight,
-                    iconSize: iconSize,
+                    iconSize: density.iconSize,
+                    density: density,
                   ),
                   SizedBox(width: tokens.spacing.sp8),
                 ],
@@ -197,8 +202,7 @@ class LayrzInputChrome extends StatelessWidget {
                 // Child (the actual input field) with optional hint text overlay
                 Expanded(
                   child: DefaultTextStyle(
-                    style: tokens.typography.body.copyWith(
-                      fontSize: tokens.typography.title.fontSize,
+                    style: density.textStyle.copyWith(
                       color: spec.textColor,
                     ),
                     child: Stack(
@@ -211,8 +215,7 @@ class LayrzInputChrome extends StatelessWidget {
                                     alignment: Alignment.centerLeft,
                                     child: Text(
                                       hintText!,
-                                      style: tokens.typography.body.copyWith(
-                                        fontSize: tokens.typography.title.fontSize,
+                                      style: density.textStyle.copyWith(
                                         color: tokens.colors.fg3,
                                       ),
                                       maxLines: 1,
@@ -226,15 +229,17 @@ class LayrzInputChrome extends StatelessWidget {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               hintText!,
-                              style: tokens.typography.body.copyWith(
-                                fontSize: tokens.typography.title.fontSize,
+                              style: density.textStyle.copyWith(
                                 color: tokens.colors.fg3,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        child,
+                        Align(
+                          alignment: Alignment.center,
+                          child: child,
+                        ),
                       ],
                     ),
                   ),
@@ -246,7 +251,8 @@ class LayrzInputChrome extends StatelessWidget {
                   tokens: tokens,
                   spec: spec,
                   contentHeight: contentHeight,
-                  iconSize: iconSize,
+                  iconSize: density.iconSize,
+                  density: density,
                 ),
               ],
             ),
@@ -285,6 +291,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
+    required InputDensitySpec density,
   }) {
     final trailing = <Widget>[];
 
@@ -313,6 +320,7 @@ class LayrzInputChrome extends StatelessWidget {
           spec: spec,
           contentHeight: contentHeight,
           iconSize: iconSize,
+          density: density,
         ),
       );
     }
@@ -383,6 +391,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
+    required InputDensitySpec density,
   }) {
     final hasCallback = slot.onTap != null;
 
@@ -402,8 +411,7 @@ class LayrzInputChrome extends StatelessWidget {
     } else if (slot.text != null) {
       content = Text(
         slot.text!,
-        style: tokens.typography.body.copyWith(
-          fontSize: tokens.typography.title.fontSize,
+        style: density.textStyle.copyWith(
           color: spec.textColor,
         ),
       );
