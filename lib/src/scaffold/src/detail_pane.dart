@@ -1,87 +1,102 @@
-import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
+import "package:flutter/widgets.dart";
+import "package:layrz_icons/layrz_icons.dart";
+import "package:layrz_ui/src/extensions/extensions.dart";
+import "package:layrz_ui/src/tokens/tokens.dart";
 
-import 'detail_header.dart';
-import 'scaffold_item.dart';
+/// The right detail pane of the scaffold shell.
+///
+/// Shows the detail content built by [contentBuilder] when [opened] is non-null,
+/// or an empty state otherwise.
+class DetailPane<T> extends StatelessWidget {
+  /// The currently opened item, or null.
+  final T? opened;
 
-/// Private detail pane widget.
-class DetailPane extends StatelessWidget {
-  /// The currently selected item, or null if no selection.
-  final LayrzScaffoldItem? selectedItem;
+  /// Callback to build the detail content.
+  final Widget Function(BuildContext, T)? contentBuilder;
 
-  /// Builder function to create the detail widget for the selected item.
-  /// When null, an empty state is displayed.
-  final Widget Function(BuildContext)? contentBuilder;
+  /// Callback to close the detail pane.
+  final VoidCallback? onClose;
 
-  /// Callback fired when the back button is pressed.
-  final VoidCallback onBack;
-
-  /// Optional title to override the selected item's title in the detail header.
-  final String? detailTitle;
-
-  /// Optional subtitle to display in the detail header.
-  final String? detailSubtitle;
-
-  /// List of action widgets to display in the detail header.
-  final List<Widget> detailActions;
-
-  /// Whether to display the back button.
+  /// Whether the detail pane should show a back button.
   final bool showBack;
 
   /// Creates a new [DetailPane].
+  ///
+  /// - [opened]: The currently opened item, or null. Defaults to null.
+  /// - [contentBuilder]: Callback to build the detail content, or null. Defaults to null.
+  /// - [onClose]: Callback to close the detail pane, or null. Defaults to null.
+  /// - [showBack]: Whether to show a back button. Defaults to false.
   const DetailPane({
     super.key,
-    required this.selectedItem,
-    required this.contentBuilder,
-    required this.onBack,
-    required this.detailTitle,
-    required this.detailSubtitle,
-    required this.detailActions,
-    required this.showBack,
+    this.opened,
+    this.contentBuilder,
+    this.onClose,
+    this.showBack = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final t = context.tokens;
-
-    if (selectedItem == null || contentBuilder == null) {
-      return Container(
-        color: t.colors.surface,
-        child: const Center(
-          child: Text('No item selected'),
-        ),
-      );
-    }
+    final tokens = context.tokens;
 
     return Container(
-      color: t.colors.surface,
-      child: Flex(
-        direction: Axis.vertical,
+      color: tokens.colors.surface,
+      child: Column(
         children: [
-          DetailHeader(
-            title: detailTitle,
-            subtitle: detailSubtitle,
-            actions: detailActions,
-            onBack: showBack ? onBack : null,
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(kLayrzScaffoldDetailBodyPadding),
-              child: SizedBox(
-                width: double.infinity,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      maxWidth: kLayrzScaffoldDetailMaxWidth,
-                    ),
-                    child: contentBuilder!(context),
+          if (showBack)
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 26),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: tokens.colors.divider,
+                    width: 1,
                   ),
                 ),
               ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: onClose,
+                    child: Icon(
+                      LayrzIcons.solarOutlineArrowLeft,
+                      size: 20,
+                      color: tokens.colors.fg1,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Back",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: tokens.colors.fg1,
+                    ),
+                  ),
+                ],
+              ),
             ),
+          Expanded(
+            child: opened == null
+                ? _buildEmptyState(tokens)
+                : SingleChildScrollView(
+                    child: Container(
+                      padding: const EdgeInsets.all(26),
+                      constraints: const BoxConstraints(maxWidth: 1080),
+                      child: contentBuilder?.call(context, opened as T),
+                    ),
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(LayrzTokens tokens) {
+    return Center(
+      child: Text(
+        "No item selected",
+        style: TextStyle(fontSize: 13, color: tokens.colors.fg3),
       ),
     );
   }
