@@ -17,6 +17,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 5 | LayrzChip and LayrzChipGroup | Done |
 | 6 | LayrzRow / LayrzCol responsive grid | Done |
 | 7 | LayrzConstrainedView | Done |
+| 7a | LayrzLocalizations (133-key contract with English defaults) | Done |
 | 8 | LayrzTextInput | Todo |
 | 9 | LayrzDropdownMenu | Done |
 | 10 | LayrzButtonGroup (overflow actions menu) | Done |

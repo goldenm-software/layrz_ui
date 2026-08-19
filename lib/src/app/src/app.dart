@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/localization/localization.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
 /// Root application widget for layrz_ui.
@@ -202,6 +203,23 @@ class LayrzApp extends StatefulWidget {
 }
 
 class _LayrzAppState extends State<LayrzApp> {
+  /// Combines user-supplied localizations delegates with the default [LayrzLocalizationsDelegate].
+  ///
+  /// Preserves the order of user delegates (which take precedence), then appends
+  /// the default [LayrzLocalizationsDelegate] if not already present.
+  List<LocalizationsDelegate<dynamic>> _buildLocalizationsDelegates() {
+    final userDelegates = widget.localizationsDelegates?.toList() ?? [];
+
+    // Check if a LayrzLocalizations delegate is already provided
+    final hasLayrzDelegate = userDelegates.any((d) => d is LayrzLocalizationsDelegate);
+
+    if (!hasLayrzDelegate) {
+      userDelegates.add(const LayrzLocalizationsDelegate());
+    }
+
+    return userDelegates;
+  }
+
   Widget _wrapWithTheme({
     required BuildContext context,
     required LayrzThemeData themeData,
@@ -236,6 +254,7 @@ class _LayrzAppState extends State<LayrzApp> {
   Widget build(BuildContext context) {
     final themeData = widget.theme ?? LayrzThemeData.light();
     final appColor = widget.color ?? themeData.primaryColor;
+    final localizationsDelegates = _buildLocalizationsDelegates();
 
     if (_isRouter) {
       return WidgetsApp.router(
@@ -247,7 +266,7 @@ class _LayrzAppState extends State<LayrzApp> {
         showSemanticsDebugger: widget.showSemanticsDebugger,
         debugShowWidgetInspector: widget.debugShowWidgetInspector,
         locale: widget.locale,
-        localizationsDelegates: widget.localizationsDelegates,
+        localizationsDelegates: localizationsDelegates,
         supportedLocales: widget.supportedLocales,
         localeListResolutionCallback: widget.localeListResolutionCallback,
         localeResolutionCallback: widget.localeResolutionCallback,
@@ -272,7 +291,7 @@ class _LayrzAppState extends State<LayrzApp> {
       showSemanticsDebugger: widget.showSemanticsDebugger,
       debugShowWidgetInspector: widget.debugShowWidgetInspector,
       locale: widget.locale,
-      localizationsDelegates: widget.localizationsDelegates,
+      localizationsDelegates: localizationsDelegates,
       supportedLocales: widget.supportedLocales,
       localeListResolutionCallback: widget.localeListResolutionCallback,
       localeResolutionCallback: widget.localeResolutionCallback,
