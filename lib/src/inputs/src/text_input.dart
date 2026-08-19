@@ -379,3 +379,4 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       _focusNode.requestFocus();
     }
   }
+}
