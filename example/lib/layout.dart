@@ -33,8 +33,8 @@ class ShowroomLayout extends StatelessWidget {
           ),
         ),
       ),
-      logo: const Placeholder(
-        fallbackHeight: 40,
+      logo: LayrzImage(
+        source: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
       ),
       userName: 'John Doe',
       userMenuItems: [
@@ -77,6 +77,63 @@ class ShowroomLayout extends StatelessWidget {
 
   List<LayrzNavigatorItem> _buildNavigationItems(BuildContext context, String currentRoute) {
     return [
+      LayrzNavigatorLabel('FOUNDATION'),
+      LayrzNavigatorPage(
+        id: '/typography',
+        labelText: 'Typography',
+        icon: LayrzIcons.solarOutlineText,
+        isSelected: currentRoute == '/typography',
+        onTap: () => _navigateTo(context, '/typography'),
+      ),
+      LayrzNavigatorPage(
+        id: '/colors',
+        labelText: 'Colors',
+        icon: LayrzIcons.solarOutlinePalette,
+        isSelected: currentRoute == '/colors',
+        onTap: () => _navigateTo(context, '/colors'),
+      ),
+      LayrzNavigatorPage(
+        id: '/spacing',
+        labelText: 'Spacing',
+        icon: LayrzIcons.solarOutlineSquareArrowDown,
+        isSelected: currentRoute == '/spacing',
+        onTap: () => _navigateTo(context, '/spacing'),
+      ),
+      LayrzNavigatorPage(
+        id: '/radius',
+        labelText: 'Radius',
+        icon: LayrzIcons.solarOutlineRefreshCircle,
+        isSelected: currentRoute == '/radius',
+        onTap: () => _navigateTo(context, '/radius'),
+      ),
+      LayrzNavigatorPage(
+        id: '/elevation',
+        labelText: 'Elevation',
+        icon: LayrzIcons.solarOutlineAltArrowUp,
+        isSelected: currentRoute == '/elevation',
+        onTap: () => _navigateTo(context, '/elevation'),
+      ),
+      LayrzNavigatorPage(
+        id: '/borders',
+        labelText: 'Borders',
+        icon: LayrzIcons.solarOutlineBoltCircle,
+        isSelected: currentRoute == '/borders',
+        onTap: () => _navigateTo(context, '/borders'),
+      ),
+      LayrzNavigatorPage(
+        id: '/motion',
+        labelText: 'Motion',
+        icon: LayrzIcons.solarOutlinePlay,
+        isSelected: currentRoute == '/motion',
+        onTap: () => _navigateTo(context, '/motion'),
+      ),
+      LayrzNavigatorPage(
+        id: '/access-paths',
+        labelText: 'Access Paths',
+        icon: LayrzIcons.solarOutlineServerPath,
+        isSelected: currentRoute == '/access-paths',
+        onTap: () => _navigateTo(context, '/access-paths'),
+      ),
       LayrzNavigatorLabel('COMPONENTS'),
       LayrzNavigatorPage(
         id: '/buttons',
@@ -148,63 +205,16 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/grid',
         onTap: () => _navigateTo(context, '/grid'),
       ),
-      LayrzNavigatorLabel('FOUNDATION'),
-      LayrzNavigatorPage(
-        id: '/typography',
-        labelText: 'Typography',
-        icon: LayrzIcons.solarOutlineText,
-        isSelected: currentRoute == '/typography',
-        onTap: () => _navigateTo(context, '/typography'),
-      ),
-      LayrzNavigatorPage(
-        id: '/colors',
-        labelText: 'Colors',
-        icon: LayrzIcons.solarOutlinePalette,
-        isSelected: currentRoute == '/colors',
-        onTap: () => _navigateTo(context, '/colors'),
-      ),
-      LayrzNavigatorPage(
-        id: '/spacing',
-        labelText: 'Spacing',
-        icon: LayrzIcons.solarOutlineSquareArrowDown,
-        isSelected: currentRoute == '/spacing',
-        onTap: () => _navigateTo(context, '/spacing'),
-      ),
-      LayrzNavigatorPage(
-        id: '/radius',
-        labelText: 'Radius',
-        icon: LayrzIcons.solarOutlineRefreshCircle,
-        isSelected: currentRoute == '/radius',
-        onTap: () => _navigateTo(context, '/radius'),
-      ),
-      LayrzNavigatorPage(
-        id: '/elevation',
-        labelText: 'Elevation',
-        icon: LayrzIcons.solarOutlineAltArrowUp,
-        isSelected: currentRoute == '/elevation',
-        onTap: () => _navigateTo(context, '/elevation'),
-      ),
-      LayrzNavigatorPage(
-        id: '/borders',
-        labelText: 'Borders',
-        icon: LayrzIcons.solarOutlineBoltCircle,
-        isSelected: currentRoute == '/borders',
-        onTap: () => _navigateTo(context, '/borders'),
-      ),
-      LayrzNavigatorPage(
-        id: '/motion',
-        labelText: 'Motion',
-        icon: LayrzIcons.solarOutlinePlay,
-        isSelected: currentRoute == '/motion',
-        onTap: () => _navigateTo(context, '/motion'),
-      ),
-      LayrzNavigatorPage(
-        id: '/access-paths',
-        labelText: 'Access Paths',
-        icon: LayrzIcons.solarOutlineServerPath,
-        isSelected: currentRoute == '/access-paths',
-        onTap: () => _navigateTo(context, '/access-paths'),
-      ),
+      LayrzNavigatorLabel("SIMULATION"),
+      ...List<LayrzNavigatorPage>.generate(12, (index) {
+        return LayrzNavigatorPage(
+          id: '/inputs',
+          labelText: 'Inputs $index',
+          icon: LayrzIcons.solarOutlinePasswordMinimalisticInput,
+          isSelected: currentRoute == '/inputs',
+          onTap: () => _navigateTo(context, '/inputs'),
+        );
+      }),
     ];
   }
 
