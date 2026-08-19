@@ -1844,7 +1844,7 @@ Three M2 components shipped with design details that merit explicit documentatio
 ## D30: layrz_ui Depends on layrz_sdk; Pins layrz_icons to 1.x
 
 **Date**: 2026-08-18  
-**Status**: Superseded by D36  
+**Status**: Partially superseded by D36 (SDK dependency only; icons 1.x pin remains in force)  
 **Category**: Dependency Policy
 
 ### Context
@@ -2091,7 +2091,7 @@ All six input field states (rest, hover, focus, error, disabled, read-only) use 
 
 ---
 
-## D36: layrz_ui Has No Layrz Data-Model Dependencies; Pins layrz_icons to 2.x
+## D36: layrz_ui Has No Layrz Data-Model Dependencies
 
 **Date**: 2026-08-18  
 **Status**: Decided  
@@ -2117,13 +2117,13 @@ D30 (2026-08-18) recorded a temporary coupling to `layrz_sdk` via `LayrzAvatar`.
 - New file: `lib/src/images/src/avatar_source.dart` — sealed hierarchy with `@immutable`, `==`/`hashCode`, and `copyWith()` on each variant.
 - `LayrzAvatar` parameter: `avatar: Avatar?` → `source: LayrzAvatarSource?`.
 - `_buildFromAvatarType()` → exhaustive `switch` on `LayrzAvatarSource` variants.
-- `pubspec.yaml`: Remove `layrz_sdk: ^4.4.3`, upgrade `layrz_icons: ^1.1.1` → `^2.0.0`.
+- `pubspec.yaml`: Remove `layrz_sdk: ^4.4.3`. `layrz_icons` remains at `^1.1.1` (see note below).
 - Tests ported to use `LayrzAvatarUrl('...')`, `LayrzAvatarBase64('...')`, etc. instead of SDK `Avatar` objects.
 
 ### Consequences
 
 - **Breaking change for consumers passing SDK `Avatar` directly.** Migration is straightforward: callers convert SDK models at the boundary in their own adapter. This is deliberate and improves separation of concerns.
-- **`layrz_icons` can now upgrade independently.** No transitive constraint from layrz_sdk locks it to 1.x.
+- **`layrz_icons` remains at `^1.1.1` pending layrz_sdk's upgrade.** Although layrz_ui itself no longer depends on layrz_sdk, the `layrz_ui_extensions` package must depend on both layrz_ui and layrz_sdk to provide the `Avatar` → `LayrzAvatarSource` conversion. layrz_sdk 4.4.3 (current stable) pins `layrz_icons: ^1.1.1`, which would make layrz_ui_extensions unresolvable if layrz_ui raised to `^2.0.0`. The icons constraint will be raised back to `^2.0.0` once layrz_sdk advances (decision D30's exit condition owned by layrz_sdk, not layrz_ui).
 
 ### Related Decisions
 
