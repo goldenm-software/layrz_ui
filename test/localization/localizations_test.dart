@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/pump_themed_app.dart';
-
 void main() {
   group('LayrzLocalizations', () {
     group('LayrzDefaultLocalizations', () {
@@ -338,32 +336,62 @@ void main() {
       });
     });
 
-    group('Localization delegates integration', () {
-      testWidgets('unsupported locale with narrowing isSupported still yields English', (tester) async {
-        await pumpThemedApp(
-          tester,
-          Builder(
-            builder: (context) => Text(context.localizations.actionCancel),
-          ),
-          theme: LayrzThemeData.light(),
-        );
-
-        expect(find.text('Cancel'), findsOneWidget);
+    group('buildLayrzLocalizationsDelegates', () {
+      test('passing null yields exactly one delegate (the default)', () {
+        final result = buildLayrzLocalizationsDelegates(null);
+        expect(result.length, 1);
+        expect(result[0], isA<LayrzLocalizationsDelegate>());
       });
 
-      testWidgets('custom locale subclass overrides default', (tester) async {
-        await pumpThemedApp(
-          tester,
-          Builder(
-            builder: (context) => Text(context.localizations.actionCancel),
-          ),
-          theme: LayrzThemeData.light(),
-        );
+      test('passing empty list yields exactly one delegate (the default)', () {
+        final result = buildLayrzLocalizationsDelegates(const []);
+        expect(result.length, 1);
+        expect(result[0], isA<LayrzLocalizationsDelegate>());
+      });
 
-        // First verify default is 'Cancel'
-        expect(find.text('Cancel'), findsOneWidget);
+      test('caller delegates come first, default appended last', () {
+        final caller = _CustomDelegate();
+        final result = buildLayrzLocalizationsDelegates([caller]);
+        expect(result.length, 2);
+        expect(result[0], same(caller));
+        expect(result[1], isA<LayrzLocalizationsDelegate>());
+      });
 
-        // Now test with custom delegate
+      test('existing LayrzLocalizationsDelegate is not duplicated', () {
+        final caller = _CustomDelegate();
+        final existing = LayrzLocalizationsDelegate();
+        final result = buildLayrzLocalizationsDelegates([caller, existing]);
+        expect(result.length, 2);
+        expect(result.whereType<LayrzLocalizationsDelegate>().length, 1);
+        expect(result[0], same(caller));
+        expect(result[1], same(existing));
+      });
+
+      test('sole LayrzLocalizationsDelegate is preserved (not duplicated)', () {
+        final existing = LayrzLocalizationsDelegate();
+        final result = buildLayrzLocalizationsDelegates([existing]);
+        expect(result.length, 1);
+        expect(result[0], same(existing));
+      });
+
+      test('does not mutate the caller-supplied iterable', () {
+        final original = <LocalizationsDelegate<dynamic>>[_CustomDelegate()];
+        final originalLength = original.length;
+        buildLayrzLocalizationsDelegates(original);
+        expect(original.length, originalLength);
+      });
+
+      test('unrelated delegate types are preserved', () {
+        final marker = _MarkerDelegate();
+        final result = buildLayrzLocalizationsDelegates([marker]);
+        expect(result.length, 2);
+        expect(result[0], same(marker));
+        expect(result[1], isA<LayrzLocalizationsDelegate>());
+      });
+    });
+
+    group('Localization delegates widget integration', () {
+      testWidgets('custom LayrzLocalizations subclass overrides default', (tester) async {
         await tester.pumpWidget(
           LayrzApp(
             localizationsDelegates: const [_CustomDelegate()],
@@ -380,7 +408,7 @@ void main() {
         expect(find.text('Cancel'), findsNothing);
       });
 
-      testWidgets('caller-supplied delegates are preserved and take precedence', (tester) async {
+      testWidgets('caller-supplied delegates take precedence over appended default', (tester) async {
         await tester.pumpWidget(
           LayrzApp(
             localizationsDelegates: const [
@@ -390,11 +418,9 @@ void main() {
             home: Builder(
               builder: (context) => Column(
                 children: [
-                  // Test that marker is still present
                   Text(
                     Localizations.of<_Marker>(context, _Marker)?.value ?? 'MISSING',
                   ),
-                  // Test that custom localizations take precedence
                   Text(context.localizations.actionCancel),
                 ],
               ),
@@ -405,41 +431,9 @@ void main() {
         );
         await tester.pump();
 
-        // Verify marker is present (custom delegate was preserved)
         expect(find.text('present'), findsOneWidget);
-
-        // Verify custom localizations override the default
         expect(find.text('CUSTOM_CANCEL'), findsOneWidget);
         expect(find.text('Cancel'), findsNothing);
-      });
-
-      testWidgets('explicit LayrzLocalizationsDelegate is not duplicated', (tester) async {
-        await tester.pumpWidget(
-          LayrzApp(
-            localizationsDelegates: const [
-              _CustomDelegate(),
-              LayrzLocalizationsDelegate(),
-            ],
-            home: Builder(
-              builder: (context) => Text(context.localizations.actionCancel),
-            ),
-            theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
-          ),
-        );
-        await tester.pump();
-
-        // Verify that the custom delegate takes precedence
-        expect(find.text('CUSTOM_CANCEL'), findsOneWidget);
-        expect(find.text('Cancel'), findsNothing);
-      });
-    });
-
-    group('No Material/Cupertino imports', () {
-      test('localization module does not import Material', () {
-        // This is a compile-time check, but we verify the imports are clean
-        final loc = LayrzDefaultLocalizations();
-        expect(loc, isNotNull);
       });
     });
   });
@@ -458,7 +452,11 @@ class _CustomLocalizations extends LayrzDefaultLocalizations {
 }
 
 /// Delegate for loading [_CustomLocalizations].
+///
+/// Used to test that custom [LayrzLocalizations] subclasses override the default,
+/// and that caller-supplied delegates take precedence in the delegation chain.
 class _CustomDelegate extends LocalizationsDelegate<LayrzLocalizations> {
+  /// Creates a delegate for custom localizations.
   const _CustomDelegate();
 
   @override
@@ -472,7 +470,11 @@ class _CustomDelegate extends LocalizationsDelegate<LayrzLocalizations> {
 }
 
 /// Marker class for testing unrelated delegate types.
+///
+/// Used to verify that non-[LayrzLocalizations] delegates are preserved
+/// in the delegate list alongside the [LayrzLocalizations] delegate.
 class _Marker {
+  /// Creates a marker instance.
   const _Marker(this.value);
 
   /// A test value to verify the marker delegate was loaded.
@@ -485,6 +487,7 @@ class _Marker {
 /// that caller-supplied delegates of other types are preserved alongside
 /// the [LayrzLocalizations] delegate.
 class _MarkerDelegate extends LocalizationsDelegate<_Marker> {
+  /// Creates a delegate for marker test objects.
   const _MarkerDelegate();
 
   @override
@@ -495,33 +498,4 @@ class _MarkerDelegate extends LocalizationsDelegate<_Marker> {
 
   @override
   bool shouldReload(covariant LocalizationsDelegate<_Marker> old) => false;
-}
-
-/// Test delegate for verifying custom delegates are preserved.
-class _TestLocalizationsDelegate extends LocalizationsDelegate<LayrzLocalizations> {
-  @override
-  bool isSupported(Locale locale) => true;
-
-  @override
-  Future<LayrzLocalizations> load(Locale locale) async => LayrzDefaultLocalizations();
-
-  @override
-  bool shouldReload(covariant LocalizationsDelegate<LayrzLocalizations> old) => false;
-}
-
-/// Test delegate that counts load calls.
-class _CountingDelegate extends LocalizationsDelegate<LayrzLocalizations> {
-  int loadCallCount = 0;
-
-  @override
-  bool isSupported(Locale locale) => true;
-
-  @override
-  Future<LayrzLocalizations> load(Locale locale) async {
-    loadCallCount++;
-    return LayrzDefaultLocalizations();
-  }
-
-  @override
-  bool shouldReload(covariant LocalizationsDelegate<LayrzLocalizations> old) => false;
 }
