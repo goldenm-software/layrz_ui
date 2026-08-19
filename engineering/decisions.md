@@ -1930,6 +1930,170 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 ---
 
+## D32: Filled Visual Language and Six-State Matrix for the Input Family
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+`LayrzTextInput` establishes the visual language for the entire M3+ input family. Since every other input composes `LayrzTextInput` and inherits its chrome (label, prefix/suffix, error display, help affordance, padding), the interaction state matrix must be finalized early and propagated to all downstream inputs.
+
+### Decision
+
+**Adopt a filled style with a six-state interaction matrix as the sole visual language for the input family.**
+
+### Matrix
+
+| State | Fill | Border (1.5px) | Text | Dashed |
+|---|---|---|---|---|
+| Rest | `surface2` | transparent | `fg1`, hint `fg3` | false |
+| Hover | `surface3` | transparent | `fg1` | false |
+| Focus | `surface2` | `colors.primary` | `fg1` | false |
+| Error | `colors.danger.shade50` | `colors.danger` | `fg1` | false |
+| Disabled | `surface2` | `divider` | `fg4` | true |
+| Read-only | `surface2` | `divider` | `fg1` + lock icon | false |
+
+### Key Features
+
+- **Focus preserves fill**: Focus only changes the border to primary; the fill stays `surface2` (does not elevate to a lighter shade).
+- **Read-only is rest + lock**: Read-only uses the rest state's fill and solid border, with a lock icon in the suffix signalling non-editability. Text remains full-contrast `fg1`.
+- **Disabled darkens text to fg4**: Disabled state uses muted text (`fg4`, darkest of the fg tones) plus a dashed border to signal permanent non-editability.
+- **Dashed border only on disabled**: Read-only uses solid borders; dashed is reserved for disabled (see D15 amendment below).
+- **Single border width**: 1.5px throughout, matching `border.base` token.
+- **Six-state precedence**: disabled > read-only > error > pressed > hover/focused > default.
+- **Light mode only**: Dark theme is out of scope (D7).
+
+### Rationale
+
+- **Filled style consistency**: All inputs use filled backgrounds (never outlined or tonal-only). This creates immediate visual unity across the input family.
+- **Focus-on-rest prevents elevation flicker**: Keeping focus fill identical to rest prevents a "pop-up" visual as the user navigates with Tab. Only the border signals focus.
+- **Read-only as visual rest**: Read-only shares fill and border style with rest, making it visually calm and clearly not an error state. The lock icon is the only distinction.
+- **Disabled is visually distinct**: Disabled darkens to `fg4` and uses dashed borders, creating clear visual separation from all other states.
+
+### Consequences
+
+- All M3+ inputs inherit this matrix
+- New inputs added later must conform to this matrix
+- Focus interactions no longer cause fill changes, reducing visual motion
+- The distinction between read-only (solid) and disabled (dashed) borders is immediate and recognizable
+
+### Related Decisions
+
+- **D7** (Light Mode Only) — input family defaults to light; dark mode is out of scope
+- **D15 amendment** (D35 below) — interaction states vary paint properties only, not geometry
+
+---
+
+## D33: Read-Only as Rest State Plus Lock Icon
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design / Interaction Semantics
+
+### Context
+
+`LayrzTextInput` distinguishes `disabled` (not editable, not tappable) from `readOnly` (not editable, but tappable). The visual treatment for read-only must signal that the field is locked against keyboard input but remains interactive (tappable, for picker access).
+
+### Decision
+
+**Read-only uses the rest state's visual treatment (surface2 background, solid divider border, fg1 text) plus a lock icon in the suffix.**
+
+### Rationale
+
+- **Read-only is calm**: Read-only shares the visual treatment with rest (not error, not disabled), making it visually serene and clearly not an error state or a permanently locked field.
+- **Lock icon is the only distinction**: The lock icon in the suffix is the sole visual difference between rest and read-only, making it immediately recognizable that the field can be accessed (via tap, for pickers) but not edited (via keyboard).
+- **Solid border (not dashed)**: Read-only uses a solid border because it is a transient state from the user's perspective: they can tap to open a picker and change the value. It is not a permanent modal state like disabled.
+- **Full-contrast text (fg1, not fg4)**: Text in read-only mode is full-contrast `fg1`, reinforcing that the field is readable and accessible, not grayed out or locked down.
+
+### Consequences
+
+- Callers can instantly recognize read-only fields by the lock icon in the suffix
+- Read-only is visually distinct from disabled (solid vs. dashed border, fg1 vs. fg4 text)
+- Picker inputs render as read-only and display a lock, signalling to users that the field is interactive but not editable
+
+### Related Decisions
+
+- **D32** (Input Family Visual Language) — read-only uses the rest row of the matrix plus a lock icon in the suffix
+- **D35** (D15 Amendment) — dashed borders are reserved for disabled (modal state); read-only uses solid
+
+---
+
+## D34: Caller-Owned Errors, Joined into Single Line
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: API Design
+
+### Context
+
+layrz_theme's `ThemedTextInput` included a `validator` callback and a separate `FieldError` component for error display, coupling validation logic with the field.
+
+layrz_ui simplifies: callers provide error messages directly via a `List<String>`, and the field renders them as a single comma-separated line (matching layrz_theme's default `errors.join(", ")` behavior).
+
+### Decision
+
+**Remove the `validator` callback entirely. Callers provide a `List<String> errors` directly. `LayrzTextInput` joins multiple errors with `", "` into a single line and displays them below the field.**
+
+### Rationale
+
+- **Separation of concerns**: Validation is the caller's responsibility. Error display is `LayrzTextInput`'s responsibility.
+- **Single-line errors are concise**: Joining with `", "` keeps error text compact and scannable (e.g., `'required, too short, no capitals'`).
+- **Simpler for pickers**: Picker-style inputs have no keyboard validation; they set errors only when the dialog closes. Direct `List<String>` errors are ergonomic.
+- **Matches Form patterns**: Form validation is centralized, then sets errors on each field. Direct errors are the natural fit.
+- **No `FieldError` coupling**: Error rendering is integral to the field; no separate component needed.
+
+### Consequences
+
+- Callers own validation logic. `LayrzTextInput` does not call a validator.
+- Multiple errors are joined with `", "` into a single line for display.
+- Error styling on the field (danger-coloured border, light danger background) is automatic when `errors.isNotEmpty`.
+- Callers hide errors with `hideDetails: true` if they want to display error messages elsewhere.
+
+### Related Decisions
+
+- **D32** (Input Family Visual Language) — the error state row of the matrix applies when `errors.isNotEmpty`
+
+---
+
+## D35: D15 Amendment — Dashed Borders for Modal States
+
+**Date**: 2026-08-18  
+**Status**: Decided  
+**Category**: Architecture / Visual Consistency
+
+### Context
+
+Decision D15 governs interaction state changes: they must vary only colour, border colour, shadow, opacity, and cursor — never geometry (height, width, padding, border width, radius). This prevents reflow and flicker as users interact.
+
+`LayrzTextInput`'s `disabled` state uses a **dashed border**, while other states use solid borders. Dashing is a paint-style change (how the border is drawn), not a geometry change. But D15 does not explicitly permit paint-style changes.
+
+### Decision
+
+**Amend D15 to permit border paint-style changes (solid vs. dashed) for the `disabled` state only. All other states must use solid borders. Transient interaction states (hover, press, focus) must never change paint style.**
+
+### Rationale
+
+- **Modal state signalling**: `disabled` is a permanent field condition (not a transition a user passes through). A dashed border clearly signals non-editability without flicker, because the user does not interact with a disabled field.
+- **Read-only uses solid borders**: Read-only is a transient state from the user's perspective (they can tap to access a picker). It uses solid borders to appear visually calm and interactive.
+- **Transient states must not dash**: Hover, press, and focus are fleeting interactions. Changing border paint (solid → dashed → solid) would flicker and distract. D15's prohibition stands for these states.
+- **Geometry invariant is preserved**: Border width (1.5px) and radius (r10) are identical across all states; only the disabled state's paint style differs.
+
+### Consequences
+
+- D15 now explicitly permits border paint-style changes (solid/dashed) for the `disabled` state only
+- Only `disabled` uses dashed borders; all other states use solid
+- This amendment enables clear disabled-state signalling without violating D15's spirit (geometry invariance and flicker prevention)
+
+### Related Decisions
+
+- **D15** (Interaction States via Geometry Invariants) — original decision; this is an amendment
+- **D32** (Input Family Visual Language) — the matrix shows dashed borders for disabled only
+- **D33** (Read-Only as Rest Plus Lock Icon) — read-only uses solid borders (not dashed)
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
