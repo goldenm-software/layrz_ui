@@ -80,6 +80,11 @@ class LayrzInputChrome extends StatelessWidget {
   /// Ignored when [padding] is non-null.
   final bool dense;
 
+  /// Maximum length of the input text.
+  ///
+  /// If provided, a character counter is displayed below the field.
+  final int? maxLength;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -101,6 +106,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.controller,
     this.padding,
     this.dense = false,
+    this.maxLength,
   });
 
   @override
@@ -123,11 +129,13 @@ class LayrzInputChrome extends StatelessWidget {
           vertical: verticalPadding,
         );
 
+    // Compute icon size once — used for slot icons, trailing icons, and content height.
+    // Falls back to icon theme size from context, or a token-derived default.
+    final iconSize = context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. Icons fit inside this height.
-    // Falls back to icon theme size from context, or a token-derived default.
-    final contentHeight =
-        context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+    final contentHeight = iconSize;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -181,6 +189,7 @@ class LayrzInputChrome extends StatelessWidget {
                     tokens: tokens,
                     spec: spec,
                     contentHeight: contentHeight,
+                    iconSize: iconSize,
                   ),
                   SizedBox(width: tokens.spacing.sp8),
                 ],
@@ -237,16 +246,19 @@ class LayrzInputChrome extends StatelessWidget {
                   tokens: tokens,
                   spec: spec,
                   contentHeight: contentHeight,
+                  iconSize: iconSize,
                 ),
               ],
             ),
           ),
         ),
 
-        // Error block
+        // Error block and character counter
         LayrzInputErrorBlock(
           errors: errors,
           hideDetails: hideDetails,
+          maxLength: maxLength,
+          controller: controller,
         ),
       ],
     );
@@ -262,7 +274,7 @@ class LayrzInputChrome extends StatelessWidget {
   /// unconditionally last so the user's eye always finds it in the same place.
   ///
   /// All elements are conditional; this method appends in this exact sequence. Every icon in the
-  /// cluster uses the single [contentHeight]-derived size for visual consistency.
+  /// cluster uses the provided [iconSize] for visual consistency.
   ///
   /// Returns a list that is empty if no trailing elements are present, or a list containing
   /// an inner gap spacer followed by a Row that collects all trailing widgets with
@@ -272,9 +284,9 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
     required double contentHeight,
+    required double iconSize,
   }) {
     final trailing = <Widget>[];
-    final iconSize = context.theme.iconTheme.size ?? 20.0;
 
     // Canonical order: shortcut → suffix → lock → help → error (error always last)
 
@@ -300,6 +312,7 @@ class LayrzInputChrome extends StatelessWidget {
           tokens: tokens,
           spec: spec,
           contentHeight: contentHeight,
+          iconSize: iconSize,
         ),
       );
     }
@@ -369,8 +382,8 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
     required double contentHeight,
+    required double iconSize,
   }) {
-    final iconSize = context.theme.iconTheme.size ?? 20.0;
     final hasCallback = slot.onTap != null;
 
     Widget content;
