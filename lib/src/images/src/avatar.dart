@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_sdk/layrz_sdk.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/images/src/avatar_source.dart';
 import 'package:layrz_ui/src/images/src/image.dart';
 
 /// Private: opaque white background for images and emojis.
@@ -9,13 +9,15 @@ const Color _kWhiteBackground = Color(0xFFFFFFFF);
 
 /// A static avatar display widget for the layrz_ui design system.
 ///
-/// [LayrzAvatar] renders a user avatar in one of five forms, determined by the
-/// [Avatar] type from layrz_sdk:
-/// - **URL** (`AvatarType.url`): fetches and displays an image from a network URL
-/// - **Base64** (`AvatarType.base64`): displays an image from a base64-encoded string
-/// - **Icon** (`AvatarType.icon`): renders an icon from layrz_icons at 70% of avatar size
-/// - **Emoji** (`AvatarType.emoji`): displays a Unicode emoji glyph centered
-/// - **None** or **missing field** for the type: displays generated initials from [nameText]
+/// [LayrzAvatar] renders a user avatar in one of five forms:
+/// - **URL** ([LayrzAvatarUrl]): fetches and displays an image from a network URL
+/// - **Base64** ([LayrzAvatarBase64]): displays an image from a base64-encoded string
+/// - **Icon** ([LayrzAvatarIcon]): renders an icon from [IconData] at 70% of avatar size
+/// - **Emoji** ([LayrzAvatarEmoji]): displays a Unicode emoji glyph centered
+/// - **Null source** (no [source] provided): displays generated initials from [nameText]
+///
+/// The avatar is created using either the default constructor (which accepts a [LayrzAvatarSource])
+/// or one of the semantic named constructors: `.image()`, `.icon()`, `.emoji()`, or `.initials()`.
 ///
 /// **Container shape** is always a rounded box using the `r12` radius token, consistent
 /// with [LayrzCard], [LayrzAlert], and the dropdown panel. **Background color** defaults
@@ -44,12 +46,12 @@ const Color _kWhiteBackground = Color(0xFFFFFFFF);
 class LayrzAvatar extends StatelessWidget {
   /// Creates a new [LayrzAvatar].
   ///
-  /// Renders the avatar described by the [Avatar] object from layrz_sdk.
-  /// Falls back to initials from [nameText] when the avatar is null or missing.
-  /// At least one of [avatar] or [nameText] should be provided for useful output.
+  /// Renders the avatar described by the [LayrzAvatarSource] object.
+  /// Falls back to initials from [nameText] when the source is null.
+  /// At least one of [source] or [nameText] should be provided for useful output.
   const LayrzAvatar({
     super.key,
-    this.avatar,
+    this.source,
     this.nameText,
     this.size = 40,
     this.color,
@@ -59,7 +61,7 @@ class LayrzAvatar extends StatelessWidget {
 
   /// Creates an avatar that displays an image from a URL or base64 source.
   ///
-  /// The [source] can be:
+  /// The [imageSource] can be:
   /// - An http(s) URL
   /// - A data-URI with base64 encoding
   /// - A bare base64 string
@@ -67,13 +69,13 @@ class LayrzAvatar extends StatelessWidget {
   /// See [LayrzImage] for detailed source handling.
   const LayrzAvatar.image({
     super.key,
-    required String source,
+    required String imageSource,
     this.size = 40,
-    // ignore: prefer_initializing_formals
-  }) : avatar = null,
+  }) : source = null,
        nameText = null,
        color = null,
-       _imageSource = source,
+       // ignore: prefer_initializing_formals
+       _imageSource = imageSource,
        _icon = null,
        _emoji = null;
 
@@ -81,17 +83,13 @@ class LayrzAvatar extends StatelessWidget {
   ///
   /// The icon is rendered at 70% of the avatar [size] to maintain visual balance.
   /// [color] defaults to the primary token color.
-  ///
-  /// When receiving an [Avatar] descriptor from layrz_sdk with `type: AvatarType.icon`,
-  /// the SDK's `LayrzIcon` field is converted to [IconData] via its `.iconData` getter
-  /// automatically at the boundary, so callers holding an SDK model do not need to convert.
   const LayrzAvatar.icon({
     super.key,
     required IconData icon,
     this.size = 40,
     this.color,
     // ignore: prefer_initializing_formals
-  }) : avatar = null,
+  }) : source = null,
        nameText = null,
        _imageSource = null,
        // ignore: prefer_initializing_formals
@@ -107,7 +105,7 @@ class LayrzAvatar extends StatelessWidget {
     required String emoji,
     this.size = 40,
     // ignore: prefer_initializing_formals
-  }) : avatar = null,
+  }) : source = null,
        nameText = null,
        color = null,
        _imageSource = null,
@@ -124,22 +122,19 @@ class LayrzAvatar extends StatelessWidget {
     required this.nameText,
     this.size = 40,
     this.color,
-  }) : avatar = null,
+  }) : source = null,
        _imageSource = null,
        _icon = null,
        _emoji = null;
 
-  /// Avatar descriptor from layrz_sdk; its `type` selects what is rendered.
+  /// Avatar source describing what to render.
   ///
-  /// When null, falls back to initials from [nameText]. When the type's required
-  /// field is missing (e.g., [AvatarType.url] but `url` is null), also falls back
-  /// to initials.
-  final Avatar? avatar;
+  /// When null, falls back to initials from [nameText].
+  final LayrzAvatarSource? source;
 
-  /// Name text from which initials are generated when [avatar] is null, has type
-  /// [AvatarType.none], or is missing the field its type requires.
+  /// Name text from which initials are generated when [source] is null.
   ///
-  /// If null and no usable avatar is available, displays `"NA"` as a placeholder.
+  /// If null and no usable source is available, displays `"NA"` as a placeholder.
   final String? nameText;
 
   /// Width and height of the avatar in logical pixels.
@@ -208,9 +203,9 @@ class LayrzAvatar extends StatelessWidget {
       );
     }
 
-    // Resolve from the avatar descriptor
-    if (avatar != null) {
-      return _buildFromAvatarType(context);
+    // Resolve from the avatar source
+    if (source != null) {
+      return _buildFromSource(context);
     }
 
     // Fall back to initials
@@ -231,54 +226,44 @@ class LayrzAvatar extends StatelessWidget {
     );
   }
 
-  /// Builds the avatar from the [avatar] descriptor's type.
-  Widget _buildFromAvatarType(BuildContext context) {
-    final av = avatar!;
+  /// Builds the avatar from the [source] descriptor.
+  Widget _buildFromSource(BuildContext context) {
+    final src = source!;
 
-    return switch (av.type) {
-      AvatarType.url =>
-        av.url != null
-            ? _buildContainer(
-                context: context,
-                backgroundColor: _kWhiteBackground,
-                child: LayrzImage(
-                  source: av.url!,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : _buildInitials(context),
-      AvatarType.base64 =>
-        av.base64 != null
-            ? _buildContainer(
-                context: context,
-                backgroundColor: _kWhiteBackground,
-                child: LayrzImage(
-                  source: av.base64!,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.cover,
-                ),
-              )
-            : _buildInitials(context),
-      AvatarType.icon => av.icon != null ? _buildIconContent(context, av.icon!.iconData) : _buildInitials(context),
-      AvatarType.emoji =>
-        av.emoji != null
-            ? _buildContainer(
-                context: context,
-                backgroundColor: _kWhiteBackground,
-                child: Text(
-                  av.emoji!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: size * 0.6,
-                    height: 1.0,
-                  ),
-                ),
-              )
-            : _buildInitials(context),
-      AvatarType.none => _buildInitials(context),
+    return switch (src) {
+      LayrzAvatarUrl(:final url) => _buildContainer(
+        context: context,
+        backgroundColor: _kWhiteBackground,
+        child: LayrzImage(
+          source: url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      ),
+      LayrzAvatarBase64(:final base64) => _buildContainer(
+        context: context,
+        backgroundColor: _kWhiteBackground,
+        child: LayrzImage(
+          source: base64,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+        ),
+      ),
+      LayrzAvatarIcon(:final icon) => _buildIconContent(context, icon),
+      LayrzAvatarEmoji(:final emoji) => _buildContainer(
+        context: context,
+        backgroundColor: _kWhiteBackground,
+        child: Text(
+          emoji,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: size * 0.6,
+            height: 1.0,
+          ),
+        ),
+      ),
     };
   }
 
@@ -328,25 +313,6 @@ class LayrzAvatar extends StatelessWidget {
         icon,
         color: _pickTextColor(defaultColor),
         size: size * 0.7,
-      ),
-    );
-  }
-
-  /// Builds an initials avatar (fallback).
-  Widget _buildInitials(BuildContext context) {
-    final initials = _generateInitials(nameText);
-    final defaultColor = color ?? context.tokens.colors.primary;
-    return _buildContainer(
-      context: context,
-      backgroundColor: defaultColor,
-      child: Text(
-        initials,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: size * 0.4,
-          fontWeight: FontWeight.w600,
-          color: _pickTextColor(defaultColor),
-        ),
       ),
     );
   }
