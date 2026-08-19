@@ -50,10 +50,14 @@ void main() {
         );
 
         // Trigger the tooltip by long-press
-        await tester.longPress(find.text('Anchor'));
-        await tester.pumpAndSettle();
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+        final gesture = await tester.startGesture(anchorCenter);
+        await tester.pump(const Duration(milliseconds: 500)); // Hold for long-press
+        expect(find.text('Test tooltip'), findsOneWidget, reason: 'Tooltip should be showing during long-press');
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 50)); // Small pump after release but before timer fires
 
-        // Verify tooltip is showing
+        // Verify tooltip is still showing (100ms hide delay hasn't elapsed yet)
         expect(find.text('Test tooltip'), findsOneWidget);
 
         // Remove the entire widget while tooltip is visible - should not crash
@@ -279,6 +283,253 @@ void main() {
           remainingTooltips,
           0,
           reason: 'All tooltips must be dismissed when pointer is away from all anchors',
+        );
+      },
+    );
+
+    testWidgets(
+      'Tooltip dismisses on long-press release (DESIGN-77)',
+      (tester) async {
+        /// Regression test for touch-device tooltip dismissal.
+        ///
+        /// On touch devices, a long-press shows the tooltip, but the tooltip would never
+        /// dismiss because there was no onLongPressEnd handler. The tooltip stayed visible
+        /// forever until the widget tree was dismantled.
+        ///
+        /// This test:
+        /// 1. Long-presses the anchor to show the tooltip
+        /// 2. Releases the press (fires onLongPressEnd)
+        /// 3. Waits for the 100ms hide delay + reverse animation
+        /// 4. Asserts the tooltip is completely dismissed
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => Center(
+                  child: LayrzTooltip(
+                    contentText: 'Touch tooltip',
+                    child: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: const Center(child: Text('Anchor')),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+
+        // Step 1: Long-press to show
+        final gesture = await tester.startGesture(anchorCenter);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Touch tooltip'), findsOneWidget, reason: 'Tooltip should show on long-press');
+
+        // Step 2: Release the gesture (fires onLongPressEnd)
+        await gesture.up();
+        // Wait for 100ms hide delay + 80ms reverse animation + buffer
+        await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+        // Step 3: Tooltip should be completely gone
+        expect(
+          find.text('Touch tooltip'),
+          findsNothing,
+          reason: 'Tooltip must be dismissed after long-press release',
+        );
+      },
+    );
+
+    testWidgets(
+      'Tooltip dismisses on long-press cancel (DESIGN-77)',
+      (tester) async {
+        /// Regression test for long-press cancellation.
+        ///
+        /// If the gesture is cancelled (e.g., pointer leaves the target),
+        /// the tooltip must dismiss cleanly via onLongPressCancel.
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => Center(
+                  child: LayrzTooltip(
+                    contentText: 'Cancellable tooltip',
+                    child: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: const Center(child: Text('Anchor')),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+
+        // Step 1: Start a long-press gesture
+        final gesture = await tester.startGesture(anchorCenter);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Cancellable tooltip'), findsOneWidget);
+
+        // Step 2: Move far away to cancel the gesture
+        await gesture.moveTo(const Offset(-200, -200));
+        // The gesture is now cancelled, triggering onLongPressCancel
+        await tester.pump();
+        await gesture.up();
+        // Wait for hide delay + animation
+        await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+        // Step 3: Tooltip should be gone
+        expect(
+          find.text('Cancellable tooltip'),
+          findsNothing,
+          reason: 'Tooltip must be dismissed after long-press cancel',
+        );
+      },
+    );
+
+    testWidgets(
+      'Tapping away from a touch-opened tooltip dismisses it (DESIGN-77)',
+      (tester) async {
+        /// Regression test for tap-away dismissal of touch-opened tooltips.
+        ///
+        /// When a tooltip is opened via long-press, a tap-away barrier is mounted
+        /// so the user can tap anywhere on screen to dismiss it. Tapping outside
+        /// the tooltip should trigger the tap-away handler and dismiss the tooltip.
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => SizedBox.expand(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      LayrzTooltip(
+                        contentText: 'Tap-away tooltip',
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: const Center(child: Text('Anchor')),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          color: const Color(0xFFFF0000),
+                          child: const Center(child: Text('TapZone')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+
+        // Step 1: Long-press to show tooltip
+        final gesture = await tester.startGesture(anchorCenter);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Tap-away tooltip'), findsOneWidget, reason: 'Tooltip should show');
+
+        // Step 2: Release the gesture (normally it would stay open, but this is just setup)
+        await gesture.up();
+        await tester.pump();
+        // The tooltip is still visible at this point (100ms hide delay hasn't elapsed)
+        expect(find.text('Tap-away tooltip'), findsOneWidget);
+
+        // Step 3: Tap on the red tap zone (fires tap on barrier)
+        final tapZoneCenter = tester.getCenter(find.text('TapZone'));
+        await tester.tapAt(tapZoneCenter);
+        await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+        // Step 4: Tooltip should be dismissed
+        expect(
+          find.text('Tap-away tooltip'),
+          findsNothing,
+          reason: 'Tap-away should dismiss the touch-opened tooltip',
+        );
+      },
+    );
+
+    testWidgets(
+      'Hover-opened tooltip passes pointer events through (passthrough regression)',
+      (tester) async {
+        /// Regression test to ensure the tap-away barrier does NOT affect hover tooltips.
+        ///
+        /// The tap-away barrier is ONLY mounted when the tooltip was opened by touch.
+        /// When opened via hover, there is NO barrier, so the widget tree beneath the
+        /// tooltip remains interactive.
+
+        final interactionLog = <String>[];
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => SizedBox.expand(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      LayrzTooltip(
+                        contentText: 'Hover tooltip',
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: const Center(child: Text('Anchor')),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => interactionLog.add('tapped'),
+                        child: Container(
+                          width: 50,
+                          height: 50,
+                          color: const Color(0xFF0000FF),
+                          child: const Center(child: Text('ClickZone')),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        addTearDown(mouse.removePointer);
+
+        // Step 1: Hover to show tooltip
+        await mouse.moveTo(anchorCenter);
+        await tester.pumpAndSettle();
+        expect(find.text('Hover tooltip'), findsOneWidget, reason: 'Tooltip should show on hover');
+
+        // Step 2: Click on the ClickZone while tooltip is visible
+        // The tap should NOT be blocked by a barrier (because hover tooltips have no barrier)
+        final clickZoneCenter = tester.getCenter(find.text('ClickZone'));
+        await tester.tapAt(clickZoneCenter);
+        await tester.pumpAndSettle();
+
+        // Step 3: Verify the click went through (no barrier intercepted it)
+        expect(
+          interactionLog,
+          ['tapped'],
+          reason: 'Hover-opened tooltip should not block pointer events to widgets beneath',
         );
       },
     );

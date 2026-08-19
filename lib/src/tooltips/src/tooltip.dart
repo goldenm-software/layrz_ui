@@ -99,6 +99,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   Timer? _hideTimer;
   final GlobalKey _anchorKey = GlobalKey();
   bool _themedInitialized = false;
+  bool _openedByTouch = false;
 
   @override
   void initState() {
@@ -149,6 +150,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _handleMouseEnter() {
     _hideTimer?.cancel();
     _hideTimer = null;
+    _openedByTouch = false;
     _showTooltip();
   }
 
@@ -160,7 +162,18 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _handleLongPress() {
     _hideTimer?.cancel();
     _hideTimer = null;
+    _openedByTouch = true;
     _showTooltip();
+  }
+
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 100), _hideTooltip);
+  }
+
+  void _handleLongPressCancel() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(milliseconds: 100), _hideTooltip);
   }
 
   void _showTooltip() {
@@ -260,7 +273,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     final tooltipOffset = delegate(context);
 
-    return Positioned(
+    final tooltipWidget = Positioned(
       left: tooltipOffset.dx,
       top: tooltipOffset.dy,
       child: IgnorePointer(
@@ -271,6 +284,27 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         ),
       ),
     );
+
+    // When the tooltip is opened by touch, wrap in a Stack with a tap-away barrier.
+    // When opened by hover, return the positioned widget directly (preserves original behavior).
+    if (_openedByTouch) {
+      return Stack(
+        children: [
+          // Tap-away barrier (only mounted for touch-opened tooltips)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _hideTooltip,
+              child: const SizedBox.expand(),
+            ),
+          ),
+          // Tooltip surface (on top of the barrier)
+          tooltipWidget,
+        ],
+      );
+    } else {
+      return tooltipWidget;
+    }
   }
 
   Size _predictTooltipSize({
@@ -370,6 +404,8 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onLongPress: _handleLongPress,
+          onLongPressEnd: _handleLongPressEnd,
+          onLongPressCancel: _handleLongPressCancel,
           child: KeyedSubtree(key: _anchorKey, child: widget.child),
         ),
       ),
