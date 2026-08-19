@@ -266,5 +266,66 @@ void main() {
       // The rich text should render.
       expect(find.byType(Text), findsWidgets);
     });
+
+    testWidgets('titleText is rendered when provided', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTooltip(
+          titleText: 'Title',
+          contentText: 'Content',
+          child: SizedBox(width: 50, height: 50),
+        ),
+      );
+
+      await tester.longPress(find.byType(SizedBox));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Title'), findsWidgets);
+      expect(find.text('Content'), findsWidgets);
+    });
+
+    testWidgets('titleText is not rendered when null', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTooltip(
+          contentText: 'Content only',
+          child: SizedBox(width: 50, height: 50),
+        ),
+      );
+
+      await tester.longPress(find.byType(SizedBox));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Content only'), findsWidgets);
+    });
+
+    testWidgets('contentText XOR contentRichText assertion still enforced', (tester) async {
+      expect(
+        () => LayrzTooltip(
+          titleText: 'Title',
+          contentText: 'Text',
+          contentRichText: TextSpan(text: 'Rich'),
+          child: SizedBox(),
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('titleText works with contentRichText', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTooltip(
+          titleText: 'Title',
+          contentRichText: TextSpan(text: 'Rich content'),
+          child: SizedBox(width: 50, height: 50),
+        ),
+      );
+
+      await tester.longPress(find.byType(SizedBox));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Title'), findsWidgets);
+      expect(find.text('Rich content'), findsWidgets);
+    });
   });
 }
