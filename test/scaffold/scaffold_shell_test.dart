@@ -32,8 +32,12 @@ void main() {
     ];
 
     testWidgets('renders with items list', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -49,8 +53,12 @@ void main() {
     });
 
     testWidgets('renders empty list with empty items', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -66,8 +74,12 @@ void main() {
     });
 
     testWidgets('renders list title when provided', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -84,8 +96,12 @@ void main() {
     });
 
     testWidgets('renders item count in list header', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -102,8 +118,12 @@ void main() {
     });
 
     testWidgets('hides filter field when searchable is false', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -120,8 +140,12 @@ void main() {
     });
 
     testWidgets('renders detail actions', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -143,8 +167,12 @@ void main() {
     });
 
     testWidgets('uses provided detailTitle instead of item title', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -161,8 +189,12 @@ void main() {
     });
 
     testWidgets('renders detail subtitle when provided', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -179,8 +211,12 @@ void main() {
     });
 
     testWidgets('renders footer when provided', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -197,8 +233,12 @@ void main() {
     });
 
     testWidgets('shows empty state with null selectedId', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -214,8 +254,12 @@ void main() {
     });
 
     testWidgets('shows empty state when selectedId matches no item', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -231,8 +275,12 @@ void main() {
     });
 
     testWidgets('renders grouped mode by default', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -248,8 +296,12 @@ void main() {
     });
 
     testWidgets('renders with flat mode when specified', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -266,8 +318,12 @@ void main() {
     });
 
     testWidgets('builds content with selected item', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       await pumpThemedApp(
         tester,
@@ -283,8 +339,12 @@ void main() {
     });
 
     testWidgets('item with null subtitle renders without subtitle', (tester) async {
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
 
       final itemWithoutSubtitle = LayrzScaffoldItem(
         id: 'item-x',
@@ -302,6 +362,49 @@ void main() {
       );
 
       expect(find.byType(LayrzScaffoldShell), findsOneWidget);
+    });
+
+    testWidgets('renders single-pane layout on narrow width with no selection', (tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(500, 800);
+
+      await pumpThemedApp(
+        tester,
+        LayrzScaffoldShell(
+          items: items,
+          selectedId: null,
+          onSelected: (_) {},
+          contentBuilder: (context, item) => Text('Detail: ${item.title}'),
+        ),
+      );
+
+      expect(find.text('First Item'), findsOneWidget);
+      expect(find.text('No item selected'), findsNothing);
+    });
+
+    testWidgets('shows detail on narrow width when item is pre-selected (deep link)', (tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(500, 800);
+
+      await pumpThemedApp(
+        tester,
+        LayrzScaffoldShell(
+          items: items,
+          selectedId: 'item-1',
+          onSelected: (_) {},
+          contentBuilder: (context, item) => Text('Detail: ${item.title}'),
+        ),
+      );
+
+      expect(find.text('Detail: First Item'), findsOneWidget);
     });
   });
 }
