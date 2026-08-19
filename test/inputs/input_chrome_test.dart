@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
@@ -149,25 +150,58 @@ void main() {
       expect(find.text('%'), findsOneWidget);
     });
 
-    testWidgets('renders shortcut text when provided', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzInputChrome(
-          labelText: 'Field',
-          isRequired: false,
-          prefixSlot: LayrzInputPrefixSlot(),
-          suffixSlot: LayrzInputSuffixSlot(),
-          disabled: false,
-          readOnly: false,
-          errors: [],
-          hideDetails: false,
-          states: {},
-          shortcutText: 'Ctrl+S',
-          child: Container(),
-        ),
-      );
+    testWidgets('renders shortcut text when provided (desktop)', (tester) async {
+      try {
+        debugDefaultTargetPlatformOverride = TargetPlatform.linux;
 
-      expect(find.text('Ctrl+S'), findsOneWidget);
+        await pumpThemed(
+          tester,
+          LayrzInputChrome(
+            labelText: 'Field',
+            isRequired: false,
+            prefixSlot: LayrzInputPrefixSlot(),
+            suffixSlot: LayrzInputSuffixSlot(),
+            disabled: false,
+            readOnly: false,
+            errors: [],
+            hideDetails: false,
+            states: {},
+            shortcutText: 'Ctrl+S',
+            child: Container(),
+          ),
+        );
+
+        expect(find.text('Ctrl+S'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+
+    testWidgets('hides shortcut text on mobile without reserving space', (tester) async {
+      try {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+
+        await pumpThemed(
+          tester,
+          LayrzInputChrome(
+            labelText: 'Field',
+            isRequired: false,
+            prefixSlot: LayrzInputPrefixSlot(),
+            suffixSlot: LayrzInputSuffixSlot(),
+            disabled: false,
+            readOnly: false,
+            errors: [],
+            hideDetails: false,
+            states: {},
+            shortcutText: 'Ctrl+S',
+            child: Container(),
+          ),
+        );
+
+        expect(find.text('Ctrl+S'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
     });
   });
 }
