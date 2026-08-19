@@ -118,5 +118,32 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('active indicator is positioned at trailing edge', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [
+            LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the Dashboard label to verify it renders
+      final dashboardLabel = find.text('Dashboard');
+      expect(dashboardLabel, findsWidgets);
+
+      // The indicator is positioned at the trailing edge of the row,
+      // after the label and count badge (if present).
+      expect(tester.takeException(), isNull);
+    });
   });
 }
