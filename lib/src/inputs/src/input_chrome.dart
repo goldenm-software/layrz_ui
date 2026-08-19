@@ -3,6 +3,7 @@ import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
+import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 import 'dashed_border_painter.dart';
 import 'input_error_block.dart';
@@ -50,6 +51,12 @@ class LayrzInputChrome extends StatelessWidget {
   /// Whether to hide the shortcut on mobile platforms.
   final bool hideShortcutOnMobile;
 
+  /// The title text for the help affordance tooltip.
+  final String? helpTitleText;
+
+  /// The content text for the help affordance tooltip.
+  final String? helpContentText;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -65,6 +72,8 @@ class LayrzInputChrome extends StatelessWidget {
     required this.states,
     this.shortcutText,
     this.hideShortcutOnMobile = true,
+    this.helpTitleText,
+    this.helpContentText,
   });
 
   @override
@@ -199,6 +208,21 @@ class LayrzInputChrome extends StatelessWidget {
                       LayrzIcons.solarOutlineLockKeyhole,
                       size: 20,
                       color: tokens.colors.fg3,
+                    ),
+                    SizedBox(width: tokens.spacing.sp8),
+                  ],
+
+                  // Help affordance (if helpContentText is provided)
+                  if (helpContentText != null && helpContentText!.isNotEmpty) ...[
+                    SizedBox(width: tokens.spacing.sp8),
+                    LayrzTooltip(
+                      titleText: helpTitleText,
+                      contentText: helpContentText,
+                      child: Icon(
+                        LayrzIcons.solarOutlineHelp,
+                        size: 20,
+                        color: tokens.colors.fg3,
+                      ),
                     ),
                     SizedBox(width: tokens.spacing.sp8),
                   ],

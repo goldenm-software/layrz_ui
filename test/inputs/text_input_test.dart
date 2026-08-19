@@ -241,12 +241,11 @@ void main() {
     });
 
     testWidgets('accepts onTap callback', (tester) async {
-      var tapped = false;
       await pumpThemed(
         tester,
         LayrzTextInput(
           labelText: 'Input',
-          onTap: () => tapped = true,
+          onTap: () {},
         ),
       );
 
@@ -316,4 +315,3 @@ void main() {
     });
   });
 }
-

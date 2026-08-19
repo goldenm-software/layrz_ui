@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/preview.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'input_chrome.dart';
 import 'input_slot.dart';
@@ -331,6 +331,8 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       hideDetails: widget.hideDetails,
       states: _states,
       shortcutText: shortcutText,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
       child: Listener(
         onPointerDown: widget.disabled ? null : _updateStates,
         onPointerUp: widget.disabled ? null : _updateStates,
@@ -381,6 +383,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
   }
 }
 
+/// Displays the default [LayrzTextInput] state with label and placeholder.
 @Preview(
   name: 'Default',
   theme: LayrzPreviewTheme.light,
@@ -390,6 +393,7 @@ Widget previewLayrzTextInputDefault() => LayrzTextInput(
   placeholder: 'John Doe',
 );
 
+/// Displays the [LayrzTextInput] in error state with error message.
 @Preview(
   name: 'With Error',
   theme: LayrzPreviewTheme.light,
@@ -399,6 +403,7 @@ Widget previewLayrzTextInputError() => LayrzTextInput(
   errors: ['Invalid email format'],
 );
 
+/// Displays the disabled [LayrzTextInput] state.
 @Preview(
   name: 'Disabled',
   theme: LayrzPreviewTheme.light,
@@ -409,6 +414,7 @@ Widget previewLayrzTextInputDisabled() => LayrzTextInput(
   disabled: true,
 );
 
+/// Displays the read-only [LayrzTextInput] state.
 @Preview(
   name: 'Read-only',
   theme: LayrzPreviewTheme.light,
@@ -419,6 +425,7 @@ Widget previewLayrzTextInputReadOnly() => LayrzTextInput(
   readOnly: true,
 );
 
+/// Displays the [LayrzTextInput] with required field indicator.
 @Preview(
   name: 'Required',
   theme: LayrzPreviewTheme.light,

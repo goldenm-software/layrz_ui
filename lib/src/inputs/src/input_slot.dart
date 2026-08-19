@@ -78,10 +78,10 @@ class LayrzInputSuffixSlot {
     this.widget,
     this.text,
     this.onTap,
-  })  : assert(
-          (icon != null ? 1 : 0) + (widget != null ? 1 : 0) + (text != null ? 1 : 0) <= 1,
-          'At most one of icon, widget, or text may be non-null.',
-        );
+  }) : assert(
+         (icon != null ? 1 : 0) + (widget != null ? 1 : 0) + (text != null ? 1 : 0) <= 1,
+         'At most one of icon, widget, or text may be non-null.',
+       );
 
   /// Returns true if this slot has any content.
   bool get hasContent => icon != null || widget != null || text != null;
