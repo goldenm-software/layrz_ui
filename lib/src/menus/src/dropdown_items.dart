@@ -52,8 +52,7 @@ Color? _resolveEntryAccent(
   Color? color,
   _SemanticType semanticType,
   LayrzTokens tokens,
-) =>
-    color ?? semanticType.resolveColor(tokens);
+) => color ?? semanticType.resolveColor(tokens);
 
 /// Base class for items that a [LayrzDropdownMenu] can render.
 ///

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/localization/localization.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
 /// Root application widget for layrz_ui.
@@ -201,7 +202,40 @@ class LayrzApp extends StatefulWidget {
   State<LayrzApp> createState() => _LayrzAppState();
 }
 
+/// Combines caller-supplied localizations delegates with the default [LayrzLocalizationsDelegate].
+///
+/// Appends [LayrzLocalizationsDelegate] last so caller-supplied delegates take precedence
+/// via Flutter's delegate resolution order. If a [LayrzLocalizationsDelegate] is already
+/// present in [userDelegates], it is not duplicated.
+///
+/// Parameters:
+/// - [userDelegates]: an iterable of caller-supplied [LocalizationsDelegate] instances,
+///   or null if no caller delegates were provided. This iterable is copied (not mutated).
+///
+/// Returns a list containing all caller delegates (in order) followed by the default
+/// [LayrzLocalizationsDelegate] (if not already present).
+@visibleForTesting
+List<LocalizationsDelegate<dynamic>> buildLayrzLocalizationsDelegates(
+  Iterable<LocalizationsDelegate<dynamic>>? userDelegates,
+) {
+  final delegates = userDelegates?.toList() ?? <LocalizationsDelegate<dynamic>>[];
+
+  if (!delegates.any((d) => d is LayrzLocalizationsDelegate)) {
+    delegates.add(const LayrzLocalizationsDelegate());
+  }
+
+  return delegates;
+}
+
 class _LayrzAppState extends State<LayrzApp> {
+  /// Combines user-supplied localizations delegates with the default [LayrzLocalizationsDelegate].
+  ///
+  /// Preserves the order of user delegates (which take precedence), then appends
+  /// the default [LayrzLocalizationsDelegate] if not already present.
+  List<LocalizationsDelegate<dynamic>> _buildLocalizationsDelegates() {
+    return buildLayrzLocalizationsDelegates(widget.localizationsDelegates);
+  }
+
   Widget _wrapWithTheme({
     required BuildContext context,
     required LayrzThemeData themeData,
@@ -236,6 +270,7 @@ class _LayrzAppState extends State<LayrzApp> {
   Widget build(BuildContext context) {
     final themeData = widget.theme ?? LayrzThemeData.light();
     final appColor = widget.color ?? themeData.primaryColor;
+    final localizationsDelegates = _buildLocalizationsDelegates();
 
     if (_isRouter) {
       return WidgetsApp.router(
@@ -247,7 +282,7 @@ class _LayrzAppState extends State<LayrzApp> {
         showSemanticsDebugger: widget.showSemanticsDebugger,
         debugShowWidgetInspector: widget.debugShowWidgetInspector,
         locale: widget.locale,
-        localizationsDelegates: widget.localizationsDelegates,
+        localizationsDelegates: localizationsDelegates,
         supportedLocales: widget.supportedLocales,
         localeListResolutionCallback: widget.localeListResolutionCallback,
         localeResolutionCallback: widget.localeResolutionCallback,
@@ -272,7 +307,7 @@ class _LayrzAppState extends State<LayrzApp> {
       showSemanticsDebugger: widget.showSemanticsDebugger,
       debugShowWidgetInspector: widget.debugShowWidgetInspector,
       locale: widget.locale,
-      localizationsDelegates: widget.localizationsDelegates,
+      localizationsDelegates: localizationsDelegates,
       supportedLocales: widget.supportedLocales,
       localeListResolutionCallback: widget.localeListResolutionCallback,
       localeResolutionCallback: widget.localeResolutionCallback,
