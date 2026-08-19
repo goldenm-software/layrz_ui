@@ -1,5 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/preview.dart';
 
 /// Preview of a color swatch showing the primary brand colour.
