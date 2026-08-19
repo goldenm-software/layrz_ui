@@ -217,6 +217,7 @@ class LayrzInputChrome extends StatelessWidget {
                   Expanded(
                     child: DefaultTextStyle(
                       style: tokens.typography.body.copyWith(
+                        fontSize: tokens.typography.title.fontSize,
                         color: spec.textColor,
                       ),
                       child: Stack(
@@ -230,6 +231,7 @@ class LayrzInputChrome extends StatelessWidget {
                                       child: Text(
                                         hintText!,
                                         style: tokens.typography.body.copyWith(
+                                          fontSize: tokens.typography.title.fontSize,
                                           color: tokens.colors.fg3,
                                         ),
                                         maxLines: 1,
@@ -244,6 +246,7 @@ class LayrzInputChrome extends StatelessWidget {
                               child: Text(
                                 hintText!,
                                 style: tokens.typography.body.copyWith(
+                                  fontSize: tokens.typography.title.fontSize,
                                   color: tokens.colors.fg3,
                                 ),
                                 maxLines: 1,
@@ -356,6 +359,7 @@ class LayrzInputChrome extends StatelessWidget {
       content = Text(
         slot.text!,
         style: tokens.typography.body.copyWith(
+          fontSize: tokens.typography.title.fontSize,
           color: spec.textColor,
         ),
       );

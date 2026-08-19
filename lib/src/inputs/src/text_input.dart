@@ -364,6 +364,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
               controller: _controller,
               focusNode: _focusNode,
               style: tokens.typography.body.copyWith(
+                fontSize: tokens.typography.title.fontSize,
                 color: tokens.colors.fg1,
               ),
               cursorColor: tokens.colors.primary,
