@@ -261,7 +261,7 @@ The convention of mirroring `lib/src/<module>/` structure under `test/<module>/`
 2. **flutter test --coverage** — all tests pass and coverage is reported
 3. **Material/Cupertino guard** (`grep` inline) — no Material or Cupertino imports in lib/
 4. **GoogleFonts TextTheme guard** (`grep` inline) — no Material-coupled font methods
-5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 95.7%, so up to ~6 percentage points of drift are permitted before the floor triggers
+5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 94.2%, so up to ~4 percentage points of drift are permitted before the floor triggers
 
 **Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
