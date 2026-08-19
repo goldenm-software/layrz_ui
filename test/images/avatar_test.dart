@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_sdk/layrz_sdk.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -11,74 +10,100 @@ void main() {
   group('LayrzAvatar', () {
     group('Avatar type resolution', () {
       testWidgets('renders image from URL', (tester) async {
-        final avatar = Avatar(type: AvatarType.url, url: 'https://example.com/avatar.png');
+        final source = LayrzAvatarUrl('https://example.com/avatar.png');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
       });
 
       testWidgets('renders image from base64', (tester) async {
-        final avatar = Avatar(type: AvatarType.base64, base64: 'iVBORw0KGgo=');
+        final source = LayrzAvatarBase64('iVBORw0KGgo=');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
       });
 
-      testWidgets('renders icon from SDK LayrIcon (boundary conversion)', (tester) async {
-        final icon = LayrzIcon(
-          name: 'home',
-          codePoint: 0xE88A,
-          family: LayrzFamily.materialDesignIcons,
-        );
-        final avatar = Avatar(type: AvatarType.icon, icon: icon);
+      testWidgets('renders icon from IconData', (tester) async {
+        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         expect(find.byType(Icon), findsOneWidget);
       });
 
       testWidgets('renders emoji', (tester) async {
-        final avatar = Avatar(type: AvatarType.emoji, emoji: '😀');
+        final source = LayrzAvatarEmoji('😀');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         expect(find.text('😀'), findsOneWidget);
       });
 
-      testWidgets('falls back to initials when type is none', (tester) async {
-        final avatar = Avatar(type: AvatarType.none);
-
+      testWidgets('falls back to initials when source is null', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar, nameText: 'John Doe'),
+          const LayrzAvatar(source: null, nameText: 'John Doe'),
         );
 
         expect(find.text('JO'), findsOneWidget);
       });
 
-      testWidgets('falls back to initials when required field is null', (tester) async {
-        final avatar = Avatar(type: AvatarType.url, url: null);
+      testWidgets('LayrzAvatarUrl renders image', (tester) async {
+        final source = LayrzAvatarUrl('https://example.com/avatar.png');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar, nameText: 'Jane Smith'),
+          LayrzAvatar(source: source),
         );
 
-        expect(find.text('JA'), findsOneWidget);
+        expect(find.byType(LayrzImage), findsOneWidget);
+      });
+
+      testWidgets('LayrzAvatarBase64 renders image', (tester) async {
+        final source = LayrzAvatarBase64('iVBORw0KGgo=');
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar(source: source),
+        );
+
+        expect(find.byType(LayrzImage), findsOneWidget);
+      });
+
+      testWidgets('LayrzAvatarIcon renders icon', (tester) async {
+        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar(source: source),
+        );
+
+        expect(find.byType(Icon), findsOneWidget);
+      });
+
+      testWidgets('LayrzAvatarEmoji renders emoji', (tester) async {
+        const source = LayrzAvatarEmoji('🎉');
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar(source: source),
+        );
+
+        expect(find.text('🎉'), findsOneWidget);
       });
     });
 
@@ -160,7 +185,7 @@ void main() {
       testWidgets('LayrzAvatar.image renders image', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(source: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -264,13 +289,13 @@ void main() {
         expect(decoration.color, equals(customColor));
       });
 
-      testWidgets('ignores background color behind images', (tester) async {
+      testWidgets('ignores background color behind URL images', (tester) async {
         const customColor = Color(0xFFFF0000);
-        final avatar = Avatar(type: AvatarType.url, url: 'https://example.com/avatar.png');
+        final source = LayrzAvatarUrl('https://example.com/avatar.png');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar, color: customColor),
+          LayrzAvatar(source: source, color: customColor),
         );
 
         // The image should render, but the color should not be applied
@@ -279,11 +304,11 @@ void main() {
 
       testWidgets('ignores background color behind base64 images', (tester) async {
         const customColor = Color(0xFFFF0000);
-        final avatar = Avatar(type: AvatarType.base64, base64: 'iVBORw0KGgo=');
+        final source = LayrzAvatarBase64('iVBORw0KGgo=');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar, color: customColor),
+          LayrzAvatar(source: source, color: customColor),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -294,7 +319,7 @@ void main() {
       testWidgets('renders image from .image() constructor on white background', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(source: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
         );
 
         final container = _findColoredContainer(tester);
@@ -303,12 +328,12 @@ void main() {
         expect(decoration.color, equals(const Color(0xFFFFFFFF)));
       });
 
-      testWidgets('renders image from Avatar with url on white background', (tester) async {
-        final avatar = Avatar(type: AvatarType.url, url: 'https://example.com/avatar.png');
+      testWidgets('renders LayrzAvatarUrl on white background', (tester) async {
+        final source = LayrzAvatarUrl('https://example.com/avatar.png');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         final container = _findColoredContainer(tester);
@@ -317,12 +342,12 @@ void main() {
         expect(decoration.color, equals(const Color(0xFFFFFFFF)));
       });
 
-      testWidgets('renders image from Avatar with base64 on white background', (tester) async {
-        final avatar = Avatar(type: AvatarType.base64, base64: 'iVBORw0KGgo=');
+      testWidgets('renders LayrzAvatarBase64 on white background', (tester) async {
+        final source = LayrzAvatarBase64('iVBORw0KGgo=');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         final container = _findColoredContainer(tester);
@@ -343,11 +368,11 @@ void main() {
       });
 
       testWidgets('renders emoji text for semantics', (tester) async {
-        final avatar = Avatar(type: AvatarType.emoji, emoji: '😀');
+        final source = LayrzAvatarEmoji('😀');
 
         await pumpThemed(
           tester,
-          LayrzAvatar(avatar: avatar),
+          LayrzAvatar(source: source),
         );
 
         expect(find.text('😀'), findsOneWidget);
@@ -410,7 +435,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(source: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
           theme: themeData,
         );
 
