@@ -17,12 +17,6 @@ class LayrzInputChrome extends StatelessWidget {
   /// The label text displayed above the input field.
   final String? labelText;
 
-  /// Optional icon displayed before the label text.
-  ///
-  /// Rendered via [RichText] and inherits the label's colour and typography sizing.
-  /// Ignored if [labelText] is null.
-  final IconData? labelIcon;
-
   /// Hint text displayed as placeholder when the field is empty.
   final String? hintText;
 
@@ -90,7 +84,6 @@ class LayrzInputChrome extends StatelessWidget {
   const LayrzInputChrome({
     super.key,
     required this.labelText,
-    this.labelIcon,
     this.hintText,
     required this.isRequired,
     required this.prefixSlot,
@@ -134,8 +127,7 @@ class LayrzInputChrome extends StatelessWidget {
     // regardless of whether slots have icons. Icons fit inside this height.
     // Falls back to icon theme size from context, or a token-derived default.
     final contentHeight =
-        context.theme.iconTheme.size ??
-        (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+        context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -148,18 +140,6 @@ class LayrzInputChrome extends StatelessWidget {
             child: RichText(
               text: TextSpan(
                 children: [
-                  if (labelIcon != null)
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: EdgeInsets.only(right: tokens.spacing.sp6),
-                        child: Icon(
-                          labelIcon,
-                          size: tokens.typography.label.fontSize,
-                          color: tokens.colors.fg2,
-                        ),
-                      ),
-                    ),
                   TextSpan(
                     text: labelText,
                     style: tokens.typography.label.copyWith(
@@ -193,75 +173,75 @@ class LayrzInputChrome extends StatelessWidget {
             height: contentHeight,
             child: Row(
               children: [
-                  // Prefix slot
-                  if (prefixSlot.hasContent) ...[
-                    _buildSlotContent(
-                      context: context,
-                      slot: prefixSlot,
-                      tokens: tokens,
-                      spec: spec,
-                      contentHeight: contentHeight,
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
-
-                  // Child (the actual input field) with optional hint text overlay
-                  Expanded(
-                    child: DefaultTextStyle(
-                      style: tokens.typography.body.copyWith(
-                        fontSize: tokens.typography.title.fontSize,
-                        color: spec.textColor,
-                      ),
-                      child: Stack(
-                        children: [
-                          if (hintText != null && hintText!.isNotEmpty && controller != null)
-                            ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: controller!,
-                              builder: (context, value, _) => value.text.isEmpty
-                                  ? Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        hintText!,
-                                        style: tokens.typography.body.copyWith(
-                                          fontSize: tokens.typography.title.fontSize,
-                                          color: tokens.colors.fg3,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    )
-                                  : const SizedBox.shrink(),
-                            )
-                          else if (hintText != null && hintText!.isNotEmpty && controller == null)
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                hintText!,
-                                style: tokens.typography.body.copyWith(
-                                  fontSize: tokens.typography.title.fontSize,
-                                  color: tokens.colors.fg3,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          child,
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Trailing elements: error icon, shortcut, suffix, lock icon, help icon
-                  ..._buildTrailingElements(
+                // Prefix slot
+                if (prefixSlot.hasContent) ...[
+                  _buildSlotContent(
                     context: context,
+                    slot: prefixSlot,
                     tokens: tokens,
                     spec: spec,
                     contentHeight: contentHeight,
                   ),
+                  SizedBox(width: tokens.spacing.sp8),
+                ],
+
+                // Child (the actual input field) with optional hint text overlay
+                Expanded(
+                  child: DefaultTextStyle(
+                    style: tokens.typography.body.copyWith(
+                      fontSize: tokens.typography.title.fontSize,
+                      color: spec.textColor,
+                    ),
+                    child: Stack(
+                      children: [
+                        if (hintText != null && hintText!.isNotEmpty && controller != null)
+                          ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: controller!,
+                            builder: (context, value, _) => value.text.isEmpty
+                                ? Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      hintText!,
+                                      style: tokens.typography.body.copyWith(
+                                        fontSize: tokens.typography.title.fontSize,
+                                        color: tokens.colors.fg3,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          )
+                        else if (hintText != null && hintText!.isNotEmpty && controller == null)
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              hintText!,
+                              style: tokens.typography.body.copyWith(
+                                fontSize: tokens.typography.title.fontSize,
+                                color: tokens.colors.fg3,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        child,
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Canonical order: shortcut → suffix → lock → help → error (error always last)
+                ..._buildTrailingElements(
+                  context: context,
+                  tokens: tokens,
+                  spec: spec,
+                  contentHeight: contentHeight,
+                ),
               ],
             ),
-            ),
           ),
+        ),
 
         // Error block
         LayrzInputErrorBlock(

@@ -30,12 +30,6 @@ class LayrzTextInput extends StatefulWidget {
   /// At least one of [labelText] or [hintText] must be non-null.
   final String? labelText;
 
-  /// Optional icon displayed before the label text.
-  ///
-  /// Rendered via [RichText] and inherits the label's colour (`tokens.colors.fg2`)
-  /// and typography sizing. Ignored if [labelText] is null.
-  final IconData? labelIcon;
-
   /// Hint text displayed as placeholder when the field is empty.
   ///
   /// At least one of [labelText] or [hintText] must be non-null.
@@ -177,7 +171,6 @@ class LayrzTextInput extends StatefulWidget {
   const LayrzTextInput({
     super.key,
     this.labelText,
-    this.labelIcon,
     this.hintText,
     this.isRequired = false,
     this.prefixIcon,
@@ -339,7 +332,6 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
 
     return LayrzInputChrome(
       labelText: widget.labelText,
-      labelIcon: widget.labelIcon,
       hintText: widget.hintText,
       isRequired: widget.isRequired,
       prefixSlot: prefixSlot,
