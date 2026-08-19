@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/input_slot.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -25,7 +26,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Test Label'), findsOneWidget);
+      expect(findButtonLabel('Test Label'), findsOneWidget);
     });
 
     testWidgets('renders required asterisk', (tester) async {
@@ -45,7 +46,7 @@ void main() {
         ),
       );
 
-      expect(find.text('*'), findsOneWidget);
+      expect(findButtonLabel('*'), findsOneWidget);
     });
 
     testWidgets('renders error messages', (tester) async {

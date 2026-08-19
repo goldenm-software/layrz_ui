@@ -1,10 +1,11 @@
-import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
 import 'package:layrz_ui/src/inputs/src/text_input.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -14,11 +15,11 @@ void main() {
         tester,
         LayrzTextInput(
           labelText: 'Name',
-          placeholder: 'Enter your name',
+          hintText: 'Enter your name',
         ),
       );
 
-      expect(find.text('Name'), findsOneWidget);
+      expect(findButtonLabel('Name'), findsOneWidget);
       expect(find.byType(LayrzTextInput), findsOneWidget);
     });
 
@@ -69,8 +70,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Username'), findsOneWidget);
-      expect(find.text('*'), findsOneWidget);
+      expect(findButtonLabel('Username'), findsOneWidget);
+      expect(findButtonLabel('*'), findsOneWidget);
     });
 
     testWidgets('calls onChanged when text changes', (tester) async {
@@ -207,7 +208,7 @@ void main() {
         () {
           LayrzTextInput(
             labelText: 'Invalid',
-            prefixIcon: material.Icons.search,
+            prefixIcon: LayrzIcons.solarOutlineCheckCircle,
             prefixText: r'$',
           );
         },
@@ -220,7 +221,7 @@ void main() {
         () {
           LayrzTextInput(
             labelText: 'Invalid',
-            suffixIcon: material.Icons.clear,
+            suffixIcon: LayrzIcons.solarOutlineEyeScan,
             suffixText: '%',
           );
         },
@@ -402,9 +403,7 @@ void main() {
         ),
       );
 
-      expect(find.text('First error'), findsOneWidget);
-      expect(find.text('Second error'), findsOneWidget);
-      expect(find.text('Third error'), findsOneWidget);
+      expect(find.text('First error, Second error, Third error'), findsOneWidget);
     });
 
     testWidgets('hideDetails hides error block', (tester) async {
@@ -479,7 +478,7 @@ void main() {
         ),
       );
 
-      expect(find.text('*'), findsOneWidget);
+      expect(findButtonLabel('*'), findsOneWidget);
     });
 
     testWidgets('provides error state via semantics', (tester) async {

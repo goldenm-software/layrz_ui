@@ -18,6 +18,15 @@ class LayrzInputChrome extends StatelessWidget {
   /// The label text displayed above the input field.
   final String? labelText;
 
+  /// Optional icon displayed before the label text.
+  ///
+  /// Rendered via [RichText] and inherits the label's colour and typography sizing.
+  /// Ignored if [labelText] is null.
+  final IconData? labelIcon;
+
+  /// Hint text displayed as placeholder when the field is empty.
+  final String? hintText;
+
   /// Whether the field is marked as required.
   final bool isRequired;
 
@@ -57,10 +66,15 @@ class LayrzInputChrome extends StatelessWidget {
   /// The content text for the help affordance tooltip.
   final String? helpContentText;
 
+  /// Whether the input field uses a compact (dense) layout.
+  final bool dense;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
     required this.labelText,
+    this.labelIcon,
+    this.hintText,
     required this.isRequired,
     required this.prefixSlot,
     required this.suffixSlot,
@@ -74,6 +88,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.hideShortcutOnMobile = true,
     this.helpTitleText,
     this.helpContentText,
+    this.dense = false,
   });
 
   @override
@@ -87,6 +102,13 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
+    // Compute padding: dense mode tightens vertical padding only
+    final verticalPadding = dense ? tokens.spacing.sp6 : tokens.spacing.sp10;
+    final padding = EdgeInsets.symmetric(
+      horizontal: tokens.spacing.sp12,
+      vertical: verticalPadding,
+    );
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,22 +117,36 @@ class LayrzInputChrome extends StatelessWidget {
         if (labelText != null)
           Padding(
             padding: EdgeInsets.only(bottom: tokens.spacing.sp8),
-            child: Row(
-              children: [
-                Text(
-                  labelText!,
-                  style: tokens.typography.label.copyWith(
-                    color: tokens.colors.fg2,
-                  ),
-                ),
-                if (isRequired)
-                  Text(
-                    '*',
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  if (labelIcon != null)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: EdgeInsets.only(right: tokens.spacing.sp6),
+                        child: Icon(
+                          labelIcon,
+                          size: tokens.typography.label.fontSize,
+                          color: tokens.colors.fg2,
+                        ),
+                      ),
+                    ),
+                  TextSpan(
+                    text: labelText,
                     style: tokens.typography.label.copyWith(
-                      color: tokens.colors.danger,
+                      color: tokens.colors.fg2,
                     ),
                   ),
-              ],
+                  if (isRequired)
+                    TextSpan(
+                      text: '*',
+                      style: tokens.typography.label.copyWith(
+                        color: tokens.colors.danger,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
 
@@ -141,6 +177,7 @@ class LayrzInputChrome extends StatelessWidget {
                       ),
                 borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
               ),
+              padding: padding,
               child: Row(
                 children: [
                   // Prefix slot
@@ -154,13 +191,29 @@ class LayrzInputChrome extends StatelessWidget {
                     SizedBox(width: tokens.spacing.sp8),
                   ],
 
-                  // Child (the actual input field)
+                  // Child (the actual input field) with optional hint text overlay
                   Expanded(
                     child: DefaultTextStyle(
                       style: tokens.typography.body.copyWith(
                         color: spec.textColor,
                       ),
-                      child: child,
+                      child: Stack(
+                        children: [
+                          if (hintText != null && hintText!.isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                hintText!,
+                                style: tokens.typography.body.copyWith(
+                                  color: tokens.colors.fg3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          child,
+                        ],
+                      ),
                     ),
                   ),
 
@@ -207,7 +260,7 @@ class LayrzInputChrome extends StatelessWidget {
                     Icon(
                       LayrzIcons.solarOutlineLockKeyhole,
                       size: 20,
-                      color: tokens.colors.fg3,
+                      color: spec.textColor,
                     ),
                     SizedBox(width: tokens.spacing.sp8),
                   ],
