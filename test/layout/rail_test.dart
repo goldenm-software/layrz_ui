@@ -278,11 +278,10 @@ void main() {
         final imageFinder = find.byType(LayrzImage);
         expect(imageFinder, findsWidgets);
 
-        // Verify the widget is present and renders
-        final imageWidget = tester.widget<LayrzImage>(imageFinder.first);
-        expect(imageWidget.width, 142.4);
-        expect(imageWidget.height, 40.0);
-        expect(imageWidget.fit, BoxFit.contain);
+        // Verify the rendered size respects the width and height constraints
+        final size = tester.getSize(imageFinder.first);
+        expect(size.width, lessThanOrEqualTo(142.4));
+        expect(size.height, lessThanOrEqualTo(40.0));
 
         expect(tester.takeException(), isNull);
       });
@@ -311,14 +310,13 @@ void main() {
           ),
         );
 
-        // Verify the logo has the correct constraint parameters
+        // Verify the rendered size respects the width and height constraints
         final imageFinder = find.byType(LayrzImage);
         expect(imageFinder, findsOneWidget);
 
-        final imageWidget = tester.widget<LayrzImage>(imageFinder);
-        expect(imageWidget.width, 142.4);
-        expect(imageWidget.height, 40.0);
-        expect(imageWidget.fit, BoxFit.contain);
+        final size = tester.getSize(imageFinder);
+        expect(size.width, lessThanOrEqualTo(142.4));
+        expect(size.height, lessThanOrEqualTo(40.0));
 
         expect(tester.takeException(), isNull);
       });

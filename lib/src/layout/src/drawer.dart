@@ -139,11 +139,14 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                     top: kLayrzLayoutRailPaddingVertical,
                     bottom: kLayrzLayoutLogoBottomPadding,
                   ),
-                  child: LayrzImage(
-                    source: widget.logo,
-                    width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
-                    height: kLayrzLayoutLogoHeight,
-                    fit: BoxFit.contain,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: LayrzImage(
+                      source: widget.logo,
+                      width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
+                      height: kLayrzLayoutLogoHeight,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
 

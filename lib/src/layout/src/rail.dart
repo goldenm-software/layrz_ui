@@ -121,11 +121,14 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
                 top: kLayrzLayoutRailPaddingVertical,
                 bottom: kLayrzLayoutLogoBottomPadding,
               ),
-              child: LayrzImage(
-                source: widget.logo,
-                width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
-                height: kLayrzLayoutLogoHeight,
-                fit: BoxFit.contain,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: LayrzImage(
+                  source: widget.logo,
+                  width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
+                  height: kLayrzLayoutLogoHeight,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
 

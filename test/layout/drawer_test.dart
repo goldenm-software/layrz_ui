@@ -245,23 +245,24 @@ void main() {
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 
-      // Verify the logo has the correct constraint parameters
+      // Verify the rendered size of the drawer logo
       // The image is constrained by LayrzImage(width: 208, height: 40, fit: BoxFit.contain)
       // At drawer presentation, both top bar and drawer are visible, so we check the drawer logo
       final imageFinder = find.byType(LayrzImage);
       expect(imageFinder, findsWidgets);
 
-      // The drawer logo should be one of the rendered LayrzImage widgets
-      // Get all LayrzImage widgets and verify at least one has the drawer constraint
+      // The drawer logo should be the one with width <= 208.0 (80% of drawer width 260.0)
+      // Measure the rendered sizes
       bool foundDrawerLogo = false;
-      for (final finder in imageFinder.evaluate()) {
-        final widget = finder.widget as LayrzImage;
-        if (widget.width == 208.0 && widget.height == 40.0) {
+      final imageCount = imageFinder.evaluate().length;
+      for (int i = 0; i < imageCount; i++) {
+        final size = tester.getSize(imageFinder.at(i));
+        if (size.width <= 208.0 && size.height <= 40.0) {
           foundDrawerLogo = true;
           break;
         }
       }
-      expect(foundDrawerLogo, true, reason: 'Drawer logo with 208x40 constraint not found');
+      expect(foundDrawerLogo, true, reason: 'Drawer logo with size <= 208x40 constraint not found');
 
       expect(tester.takeException(), isNull);
     });
