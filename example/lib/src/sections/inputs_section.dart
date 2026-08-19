@@ -8,7 +8,7 @@ import '../common/showroom_section.dart';
 /// Builds a comprehensive showroom section demonstrating all LayrzTextInput features.
 ///
 /// This section displays:
-/// - All six interaction states (rest, hover, focus, error, disabled, read-only)
+/// - Field states (rest, error, disabled, read-only) with live hover and focus effects
 /// - Label and placeholder variations (with/without, isRequired)
 /// - Slot forms (prefix/suffix icon, widget, and text variants)
 /// - Error display (single, multiple, hidden details)
@@ -30,14 +30,10 @@ class _InputsSectionWidget extends StatefulWidget {
 
 class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
   late TextEditingController _restController;
-  late TextEditingController _hoverController;
-  late TextEditingController _focusController;
   late TextEditingController _errorController;
   late TextEditingController _disabledController;
   late TextEditingController _readOnlyController;
   late FocusNode _restFocusNode;
-  late FocusNode _hoverFocusNode;
-  late FocusNode _focusFocusNode;
   late FocusNode _errorFocusNode;
   late FocusNode _disabledFocusNode;
   late FocusNode _readOnlyFocusNode;
@@ -51,14 +47,10 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
   void initState() {
     super.initState();
     _restController = TextEditingController(text: 'Rest state');
-    _hoverController = TextEditingController(text: 'Hover state');
-    _focusController = TextEditingController(text: '');
     _errorController = TextEditingController(text: 'Invalid input');
     _disabledController = TextEditingController(text: 'Disabled text');
     _readOnlyController = TextEditingController(text: 'Read-only text');
     _restFocusNode = FocusNode();
-    _hoverFocusNode = FocusNode();
-    _focusFocusNode = FocusNode();
     _errorFocusNode = FocusNode();
     _disabledFocusNode = FocusNode();
     _readOnlyFocusNode = FocusNode();
@@ -67,14 +59,10 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
   @override
   void dispose() {
     _restController.dispose();
-    _hoverController.dispose();
-    _focusController.dispose();
     _errorController.dispose();
     _disabledController.dispose();
     _readOnlyController.dispose();
     _restFocusNode.dispose();
-    _hoverFocusNode.dispose();
-    _focusFocusNode.dispose();
     _errorFocusNode.dispose();
     _disabledFocusNode.dispose();
     _readOnlyFocusNode.dispose();
@@ -92,15 +80,11 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: tokens.spacing.sp32,
         children: [
-          // 1. Six-state matrix
-          _SixStateMatrixShowcase(
+          // 1. Field states
+          _FieldStatesShowcase(
             tokens: tokens,
             restController: _restController,
             restFocusNode: _restFocusNode,
-            hoverController: _hoverController,
-            hoverFocusNode: _hoverFocusNode,
-            focusController: _focusController,
-            focusFocusNode: _focusFocusNode,
             errorController: _errorController,
             errorFocusNode: _errorFocusNode,
             disabledController: _disabledController,
@@ -169,18 +153,14 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
   }
 }
 
-/// Demonstrates all six interaction states side by side.
+/// Demonstrates field states side by side.
 ///
-/// Shows: rest, hover, focus, error, disabled, and read-only states
-/// with all colors read from design tokens and state labels for clarity.
-class _SixStateMatrixShowcase extends StatelessWidget {
+/// Shows: rest, error, disabled, and read-only states.
+/// Hover and focus effects are live — hover or tab into any field to see them.
+class _FieldStatesShowcase extends StatelessWidget {
   final LayrzTokens tokens;
   final TextEditingController restController;
   final FocusNode restFocusNode;
-  final TextEditingController hoverController;
-  final FocusNode hoverFocusNode;
-  final TextEditingController focusController;
-  final FocusNode focusFocusNode;
   final TextEditingController errorController;
   final FocusNode errorFocusNode;
   final TextEditingController disabledController;
@@ -188,14 +168,10 @@ class _SixStateMatrixShowcase extends StatelessWidget {
   final TextEditingController readOnlyController;
   final FocusNode readOnlyFocusNode;
 
-  const _SixStateMatrixShowcase({
+  const _FieldStatesShowcase({
     required this.tokens,
     required this.restController,
     required this.restFocusNode,
-    required this.hoverController,
-    required this.hoverFocusNode,
-    required this.focusController,
-    required this.focusFocusNode,
     required this.errorController,
     required this.errorFocusNode,
     required this.disabledController,
@@ -210,15 +186,15 @@ class _SixStateMatrixShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp16,
       children: [
-        LayrzText('Six Interaction States', style: tokens.typography.title),
+        LayrzText('Field States', style: tokens.typography.title),
         LayrzText(
-          'Rest, Hover, Focus, Error, Disabled, and Read-only. Focus with autofocus; Hover requires pointer interaction.',
+          'Rest, error, disabled and read-only. Hover and focus are live — hover or tab into any field to see them.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Column(
           spacing: tokens.spacing.sp16,
           children: [
-            // Row 1: Rest, Hover, Focus
+            // Row 1: Rest and Error
             Row(
               spacing: tokens.spacing.sp16,
               children: [
@@ -238,31 +214,18 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                   child: Column(
                     spacing: tokens.spacing.sp8,
                     children: [
-                      LayrzText('Hover', style: tokens.typography.label),
+                      LayrzText('Error', style: tokens.typography.label),
                       LayrzTextInput(
-                        controller: hoverController,
-                        hintText: 'Hover (move pointer over)',
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp8,
-                    children: [
-                      LayrzText('Focus', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: focusController,
-                        focusNode: focusFocusNode,
-                        autofocus: true,
-                        hintText: 'Focus (autofocus)',
+                        controller: errorController,
+                        labelText: 'Error state',
+                        errors: ['This is an error'],
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-            // Row 2: Error, Disabled, Read-only
+            // Row 2: Disabled and Read-only
             Row(
               spacing: tokens.spacing.sp16,
               children: [
@@ -270,23 +233,10 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                   child: Column(
                     spacing: tokens.spacing.sp8,
                     children: [
-                      LayrzText('Error', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: errorController,
-                        hintText: 'Error state',
-                        errors: ['This is an error'],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp8,
-                    children: [
                       LayrzText('Disabled', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: disabledController,
-                        hintText: 'Disabled state',
+                        labelText: 'Disabled state',
                         disabled: true,
                       ),
                     ],
@@ -299,7 +249,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Read-only', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: readOnlyController,
-                        hintText: 'Read-only state',
+                        labelText: 'Read-only state',
                         readOnly: true,
                       ),
                     ],
