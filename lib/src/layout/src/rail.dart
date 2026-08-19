@@ -148,11 +148,11 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
 
           // Navigation items
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: kLayrzLayoutRailPaddingHorizontal,
-              ),
-              child: SingleChildScrollView(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: kLayrzLayoutRailPaddingHorizontal,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _buildFilteredItems(tokens),
