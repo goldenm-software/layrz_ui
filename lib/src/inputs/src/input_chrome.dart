@@ -259,68 +259,12 @@ class LayrzInputChrome extends StatelessWidget {
                     ),
                   ),
 
-                  // Error icon (appears if there are errors)
-                  if (hasErrors) ...[
-                    SizedBox(width: tokens.spacing.sp8),
-                    Icon(
-                      LayrzIcons.solarOutlineDangerTriangle,
-                      size: 20,
-                      color: tokens.colors.danger,
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
-
-                  // Shortcut badge (if provided and not hidden on mobile)
-                  if (shortcutText != null &&
-                      shortcutText!.isNotEmpty &&
-                      !(hideShortcutOnMobile && _isMobile(context))) ...[
-                    if (!hasErrors) SizedBox(width: tokens.spacing.sp8),
-                    Text(
-                      shortcutText!,
-                      style: tokens.typography.label.copyWith(
-                        color: tokens.colors.fg3,
-                      ),
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
-
-                  // Suffix slot (coexists with error icon if present)
-                  if (suffixSlot.hasContent) ...[
-                    if (!hasErrors) SizedBox(width: tokens.spacing.sp8),
-                    _buildSlotContent(
-                      context: context,
-                      slot: suffixSlot,
-                      tokens: tokens,
-                      spec: spec,
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
-
-                  // Lock icon (only for read-only, never for disabled)
-                  if (readOnly && !disabled) ...[
-                    SizedBox(width: tokens.spacing.sp8),
-                    Icon(
-                      LayrzIcons.solarOutlineLockKeyhole,
-                      size: 20,
-                      color: spec.textColor,
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
-
-                  // Help affordance (if helpContentText is provided)
-                  if (helpContentText != null && helpContentText!.isNotEmpty) ...[
-                    SizedBox(width: tokens.spacing.sp8),
-                    LayrzTooltip(
-                      titleText: helpTitleText,
-                      contentText: helpContentText,
-                      child: Icon(
-                        LayrzIcons.solarOutlineHelp,
-                        size: 20,
-                        color: tokens.colors.fg3,
-                      ),
-                    ),
-                    SizedBox(width: tokens.spacing.sp8),
-                  ],
+                  // Trailing elements: error icon, shortcut, suffix, lock icon, help icon
+                  ..._buildTrailingElements(
+                    context: context,
+                    tokens: tokens,
+                    spec: spec,
+                  ),
                 ],
               ),
             ),
@@ -334,6 +278,96 @@ class LayrzInputChrome extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Builds the trailing elements (error icon, shortcut, suffix, lock, help) with symmetric spacing.
+  ///
+  /// Returns a list that is empty if no trailing elements are present, or a list containing
+  /// an inner gap spacer followed by a Row that collects all trailing widgets with
+  /// inter-element spacing (but no outer spacers).
+  List<Widget> _buildTrailingElements({
+    required BuildContext context,
+    required LayrzTokens tokens,
+    required LayrzInputStyleSpec spec,
+  }) {
+    final trailing = <Widget>[];
+    final iconSize = context.theme.iconTheme.size ?? 20.0;
+
+    // Error icon
+    if (errors.isNotEmpty) {
+      trailing.add(
+        Icon(
+          LayrzIcons.solarOutlineDangerTriangle,
+          size: iconSize,
+          color: tokens.colors.danger,
+        ),
+      );
+    }
+
+    // Shortcut badge
+    if (shortcutText != null && shortcutText!.isNotEmpty && !(hideShortcutOnMobile && _isMobile(context))) {
+      trailing.add(
+        Text(
+          shortcutText!,
+          style: tokens.typography.label.copyWith(
+            color: tokens.colors.fg3,
+          ),
+        ),
+      );
+    }
+
+    // Suffix slot
+    if (suffixSlot.hasContent) {
+      trailing.add(
+        _buildSlotContent(
+          context: context,
+          slot: suffixSlot,
+          tokens: tokens,
+          spec: spec,
+        ),
+      );
+    }
+
+    // Lock icon
+    if (readOnly && !disabled) {
+      trailing.add(
+        Icon(
+          LayrzIcons.solarOutlineLockKeyhole,
+          size: iconSize,
+          color: spec.textColor,
+        ),
+      );
+    }
+
+    // Help affordance
+    if (helpContentText != null && helpContentText!.isNotEmpty) {
+      trailing.add(
+        LayrzTooltip(
+          titleText: helpTitleText,
+          contentText: helpContentText,
+          child: Icon(
+            LayrzIcons.solarOutlineHelp,
+            size: iconSize,
+            color: tokens.colors.fg3,
+          ),
+        ),
+      );
+    }
+
+    // If no trailing elements, return empty list
+    if (trailing.isEmpty) {
+      return [];
+    }
+
+    // Return inner gap + row of trailing elements with inter-element spacing
+    return [
+      SizedBox(width: tokens.spacing.sp8),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        spacing: tokens.spacing.sp8,
+        children: trailing,
+      ),
+    ];
   }
 
   /// Builds the content of a slot (icon, widget, or text).

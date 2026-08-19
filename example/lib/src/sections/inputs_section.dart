@@ -196,6 +196,7 @@ class _FieldStatesShowcase extends StatelessWidget {
           children: [
             // Row 1: Rest and Error
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -227,6 +228,7 @@ class _FieldStatesShowcase extends StatelessWidget {
             ),
             // Row 2: Disabled and Read-only
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -283,6 +285,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
           spacing: tokens.spacing.sp16,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -311,6 +314,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
               ],
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -386,6 +390,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
               children: [
                 LayrzText('Prefix Variants', style: tokens.typography.label),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: tokens.spacing.sp16,
                   children: [
                     Expanded(
@@ -415,6 +420,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
               children: [
                 LayrzText('Suffix Variants', style: tokens.typography.label),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: tokens.spacing.sp16,
                   children: [
                     Expanded(
@@ -464,6 +470,7 @@ class _ErrorsShowcase extends StatelessWidget {
           spacing: tokens.spacing.sp16,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -497,6 +504,7 @@ class _ErrorsShowcase extends StatelessWidget {
               ],
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -628,6 +636,7 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
           style: widget.tokens.typography.body.copyWith(color: widget.tokens.colors.fg3),
         ),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           spacing: widget.tokens.spacing.sp16,
           children: [
             Expanded(
@@ -683,6 +692,7 @@ class _DenseModeShowcase extends StatelessWidget {
       children: [
         LayrzText('Dense Mode', style: tokens.typography.title),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
             Expanded(
@@ -737,6 +747,7 @@ class _LabelIconShowcase extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
             Expanded(
@@ -791,6 +802,7 @@ class _ShortcutBadgeShowcase extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp16,
           children: [
             Expanded(
@@ -833,6 +845,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
           spacing: tokens.spacing.sp16,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
@@ -864,6 +877,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
               ],
             ),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp16,
               children: [
                 Expanded(
