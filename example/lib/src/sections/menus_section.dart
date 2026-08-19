@@ -51,7 +51,7 @@ Widget buildMenusSection() {
           child: Center(
             child: LayrzDropdownMenu(
               items: [
-                LayrzDropdownLabel(labelText: 'Management'),
+                LayrzDropdownLabel(labelText: 'Management', color: Color(0xffff0000)),
                 LayrzDropdownEntry(
                   labelText: 'Create',
                   onTap: () {},

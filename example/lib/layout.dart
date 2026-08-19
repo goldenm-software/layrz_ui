@@ -205,16 +205,6 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/grid',
         onTap: () => _navigateTo(context, '/grid'),
       ),
-      LayrzNavigatorLabel("SIMULATION"),
-      ...List<LayrzNavigatorPage>.generate(12, (index) {
-        return LayrzNavigatorPage(
-          id: '/inputs',
-          labelText: 'Inputs $index',
-          icon: LayrzIcons.solarOutlinePasswordMinimalisticInput,
-          isSelected: currentRoute == '/inputs',
-          onTap: () => _navigateTo(context, '/inputs'),
-        );
-      }),
     ];
   }
 
