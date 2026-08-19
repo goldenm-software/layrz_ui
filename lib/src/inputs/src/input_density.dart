@@ -4,9 +4,10 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Centralized specification of all dimensions that change with dense mode.
 ///
-/// Dense and comfortable modes differ in four dimensions: vertical padding,
-/// icon size, text style (for hints and slot text), and the editable's own text style.
-/// This class ensures all four are always in sync, and makes it impossible to miss
+/// Dense and comfortable modes differ in five dimensions: vertical padding,
+/// icon size, text style (for hints and slot text), the editable's own text style,
+/// and the content height that accommodates both icon and text.
+/// This class ensures all five are always in sync, and makes it impossible to miss
 /// adding a new dimension — there is exactly one place to do it.
 abstract class InputDensitySpec {
   /// The vertical padding inside the input field (top and bottom).
@@ -20,6 +21,11 @@ abstract class InputDensitySpec {
 
   /// The text style for the editable value itself (EditableText.style).
   TextStyle get editableTextStyle;
+
+  /// The minimum content height to accommodate both icons and text without clipping.
+  ///
+  /// This is the maximum of [iconSize] and the text line height computed from [editableTextStyle].
+  double get contentHeight;
 
   /// Creates the appropriate density spec for the given parameters.
   factory InputDensitySpec({
@@ -51,6 +57,14 @@ class _ComfortableSpec implements InputDensitySpec {
   TextStyle get editableTextStyle => tokens.typography.body.copyWith(
     fontSize: tokens.typography.title.fontSize,
   );
+
+  @override
+  double get contentHeight {
+    final fontSize = editableTextStyle.fontSize ?? 16.0;
+    final lineHeightMultiplier = editableTextStyle.height ?? 1.0;
+    final textLineHeight = fontSize * lineHeightMultiplier;
+    return textLineHeight > iconSize ? textLineHeight : iconSize;
+  }
 }
 
 /// Dense (compact) density specification.
@@ -70,4 +84,12 @@ class _DenseSpec implements InputDensitySpec {
 
   @override
   TextStyle get editableTextStyle => tokens.typography.label;
+
+  @override
+  double get contentHeight {
+    final fontSize = editableTextStyle.fontSize ?? 12.0;
+    final lineHeightMultiplier = editableTextStyle.height ?? 1.0;
+    final textLineHeight = fontSize * lineHeightMultiplier;
+    return textLineHeight > iconSize ? textLineHeight : iconSize;
+  }
 }

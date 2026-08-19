@@ -44,8 +44,7 @@ class LayrzLayout extends StatefulWidget {
   const LayrzLayout({
     required this.body,
     required this.items,
-    this.logo,
-    this.mark,
+    required this.logo,
     this.userName,
     this.userAvatar,
     this.userMenuItems = const [],
@@ -70,16 +69,10 @@ class LayrzLayout extends StatefulWidget {
   /// on each page item.
   final List<LayrzNavigatorItem> items;
 
-  /// A widget displayed in the rail header (expanded) or top bar (drawer).
+  /// A string source for the layout's logo image, displayed in the rail (expanded) or top bar (drawer).
   ///
-  /// Typically an app logo or icon. If null, no logo is displayed.
-  final Widget? logo;
-
-  /// A widget displayed in the top bar (drawer presentation only).
-  ///
-  /// Falls back to [logo] if null. This allows different visuals in each
-  /// presentation.
-  final Widget? mark;
+  /// This source is passed to [LayrzImage] and can be a network URL, asset path, or base64 string.
+  final String logo;
 
   /// The user's display name.
   ///
@@ -191,7 +184,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             children: [
               LayrzLayoutTopBar(
                 tokens: tokens,
-                logo: widget.mark ?? widget.logo,
+                logo: widget.logo,
                 userName: widget.userName,
                 userAvatar: widget.userAvatar,
                 notifications: widget.notifications,
@@ -246,6 +239,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   theme: LayrzPreviewTheme.light,
 )
 Widget previewLayrzLayout() => LayrzLayout(
+  logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
   items: [
     LayrzNavigatorPage(
       id: 'dashboard',

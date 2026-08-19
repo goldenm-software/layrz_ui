@@ -63,6 +63,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorLabel('SECTION'),
             LayrzNavigatorPage(id: '1', labelText: 'Page'),
@@ -91,6 +92,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorLabel('SECTION'),
             LayrzNavigatorPage(id: '1', labelText: 'Page'),
@@ -114,6 +116,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorLabel('SECTION', color: accentColor),
             LayrzNavigatorPage(id: '1', labelText: 'Page'),
@@ -136,6 +139,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorLabel('SECTION'),
             LayrzNavigatorPage(id: '1', labelText: 'First Item'),

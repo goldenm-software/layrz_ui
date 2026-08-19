@@ -17,6 +17,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -39,6 +40,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorLabel('PRIMARY'),
             LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
@@ -67,6 +69,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -92,6 +95,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           userName: 'Margaret Ross',
@@ -112,6 +116,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -135,6 +140,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -158,6 +164,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           notifications: const [],
@@ -179,6 +186,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -200,6 +208,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -219,15 +228,15 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(520, 900);
 
+      // Valid 1x1 PNG as data URL for testing
+      const String testLogoDataUrl =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
       await pumpThemedApp(
         tester,
         LayrzLayout(
           items: [],
-          logo: Container(
-            width: 300,
-            height: 200,
-            color: const Color(0xFFFF0000),
-          ),
+          logo: testLogoDataUrl,
           body: const SizedBox(child: Text('Body')),
         ),
       );
@@ -235,6 +244,24 @@ void main() {
       final menuButton = find.byType(GestureDetector).first;
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
+
+      // Verify the logo has the correct constraint parameters
+      // The image is constrained by LayrzImage(width: 208, height: 40, fit: BoxFit.contain)
+      // At drawer presentation, both top bar and drawer are visible, so we check the drawer logo
+      final imageFinder = find.byType(LayrzImage);
+      expect(imageFinder, findsWidgets);
+
+      // The drawer logo should be one of the rendered LayrzImage widgets
+      // Get all LayrzImage widgets and verify at least one has the drawer constraint
+      bool foundDrawerLogo = false;
+      for (final finder in imageFinder.evaluate()) {
+        final widget = finder.widget as LayrzImage;
+        if (widget.width == 208.0 && widget.height == 40.0) {
+          foundDrawerLogo = true;
+          break;
+        }
+      }
+      expect(foundDrawerLogo, true, reason: 'Drawer logo with 208x40 constraint not found');
 
       expect(tester.takeException(), isNull);
     });

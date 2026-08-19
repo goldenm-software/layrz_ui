@@ -10,6 +10,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
           ],
@@ -24,6 +25,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: false),
           ],
@@ -38,6 +40,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', count: 42),
           ],
@@ -52,6 +55,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', count: null),
           ],
@@ -75,6 +79,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
             LayrzNavigatorPage(id: '2', labelText: 'Devices'),
@@ -97,6 +102,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
             LayrzNavigatorPage(id: '2', labelText: 'Devices', isSelected: false),
@@ -130,6 +136,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
           ],

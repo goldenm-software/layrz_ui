@@ -33,9 +33,7 @@ class ShowroomLayout extends StatelessWidget {
           ),
         ),
       ),
-      logo: LayrzImage(
-        source: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
-      ),
+      logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
       userName: 'John Doe',
       userMenuItems: [
         LayrzDropdownEntry(

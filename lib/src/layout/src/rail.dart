@@ -56,8 +56,8 @@ class LayrzLayoutRail extends StatefulWidget {
   /// The navigation items to display.
   final List<LayrzNavigatorItem> items;
 
-  /// A widget displayed in the rail header.
-  final Widget? logo;
+  /// A source image for the layout's logo, displayed in the rail header.
+  final String logo;
 
   /// The user's display name.
   final String? userName;
@@ -114,25 +114,18 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Logo block (constrained to 80% width, 40px height)
-          if (widget.logo != null)
+          if (widget.logo.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(
                 left: kLayrzLayoutLogoLeftPadding,
                 top: kLayrzLayoutRailPaddingVertical,
                 bottom: kLayrzLayoutLogoBottomPadding,
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.zero,
-                clipBehavior: Clip.hardEdge,
-                child: SizedBox(
-                  width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
-                  height: kLayrzLayoutLogoHeight,
-                  child: FittedBox(
-                    fit: BoxFit.contain,
-                    alignment: Alignment.center,
-                    child: widget.logo!,
-                  ),
-                ),
+              child: LayrzImage(
+                source: widget.logo,
+                width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
+                height: kLayrzLayoutLogoHeight,
+                fit: BoxFit.contain,
               ),
             ),
 

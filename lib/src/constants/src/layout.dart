@@ -172,6 +172,18 @@ const double kLayrzLayoutNotificationsBellIconSize = 20.0;
 /// The size of the user avatar in the top bar, in logical pixels.
 const double kLayrzLayoutTopBarUserAvatarSize = 28.0;
 
+/// The width of the logo in the top bar, in logical pixels.
+///
+/// The logo image is constrained to this fixed width in the top bar presentation.
+const double kLayrzLayoutTopBarLogoWidth = 200.0;
+
+/// The height of the logo in the top bar, in logical pixels.
+///
+/// The logo is constrained to this fixed height and scaled to fit within
+/// the box while maintaining aspect ratio. Replaces the previous inline calculation
+/// of `kLayrzLayoutTopBarHeight - 16` (56 - 16 = 40).
+const double kLayrzLayoutTopBarLogoHeight = 40.0;
+
 /// The width of the off-canvas drawer in drawer presentation, in logical pixels.
 const double kLayrzLayoutDrawerWidth = 260.0;
 

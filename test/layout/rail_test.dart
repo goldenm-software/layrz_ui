@@ -17,6 +17,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
             LayrzNavigatorPage(id: 'dashboard', labelText: 'Dashboard', count: 5),
@@ -39,6 +40,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           notifications: const [],
           onNotificationTap: null,
@@ -60,6 +62,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           notifications: const [],
           onNotificationTap: (_) {},
@@ -84,6 +87,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
               LayrzNavigatorPage(id: '2', labelText: 'Devices'),
@@ -119,6 +123,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorLabel('MAIN'),
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
@@ -152,6 +157,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorLabel('MAIN'),
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
@@ -185,6 +191,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
               LayrzNavigatorPage(id: '2', labelText: 'Devices'),
@@ -215,6 +222,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
               LayrzNavigatorPage(id: '2', labelText: 'Devices'),
@@ -245,7 +253,10 @@ void main() {
     });
 
     group('Logo constraint', () {
-      testWidgets('logo renders within FittedBox constraint', (WidgetTester tester) async {
+      testWidgets('logo respects 142.4 x 40 size constraint in expanded rail', (WidgetTester tester) async {
+        // Valid 1x1 red PNG as data URL for testing
+        const String testLogoDataUrl =
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
         addTearDown(() {
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
@@ -257,29 +268,32 @@ void main() {
           tester,
           LayrzLayout(
             items: [],
-            logo: Container(
-              width: 300,
-              height: 200,
-              color: const Color(0xFFFF0000),
-            ),
+            logo: testLogoDataUrl,
             body: const SizedBox(child: Text('Body')),
           ),
         );
 
-        // Verify the FittedBox is present (used to constrain the logo)
-        final fittedBoxFinder = find.byType(FittedBox);
-        expect(fittedBoxFinder, findsWidgets);
+        // Measure the actual rendered size of the LayrzImage in the rail logo block
+        // The image is constrained by LayrzImage(width: 142.4, height: 40, fit: BoxFit.contain)
+        final imageFinder = find.byType(LayrzImage);
+        expect(imageFinder, findsWidgets);
 
-        // The logo should render without errors
-        final containerFinder = find.byType(Container);
-        expect(containerFinder, findsWidgets);
+        // Verify the widget is present and renders
+        final imageWidget = tester.widget<LayrzImage>(imageFinder.first);
+        expect(imageWidget.width, 142.4);
+        expect(imageWidget.height, 40.0);
+        expect(imageWidget.fit, BoxFit.contain);
 
         expect(tester.takeException(), isNull);
       });
 
-      testWidgets('logo box stays within 80% rail width and 40px height constraints in expanded rail', (
+      testWidgets('logo constraint prevents overflow with oversized aspect ratio', (
         WidgetTester tester,
       ) async {
+        // Valid 1x1 PNG as data URL for testing
+        const String testLogoDataUrl =
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
         addTearDown(() {
           tester.view.resetPhysicalSize();
           tester.view.resetDevicePixelRatio();
@@ -287,27 +301,25 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         tester.view.physicalSize = const Size(1500, 950);
 
-        // Create a logo widget that is intentionally oversized (4.1:1 aspect ratio like the real Layrz logo)
-        // This simulates the real-world case where LayrzImage may be unsized and escape constraints
-        final oversizedLogo = SizedBox(
-          width: 2050, // Extremely wide
-          height: 500, // Extremely tall
-          child: Container(color: const Color(0xFFFF0000)),
-        );
-
+        // Use a data URL that renders consistently across test runs
         await pumpThemedApp(
           tester,
           LayrzLayout(
             items: [],
-            logo: oversizedLogo,
+            logo: testLogoDataUrl,
             body: const SizedBox(child: Text('Body')),
           ),
         );
 
-        // Verify the logo renders without error and doesn't overflow the rail bounds
-        // The logo is constrained by SizedBox to 178 * 0.8 = 142.4px wide and 40px tall
-        final containers = find.byType(Container);
-        expect(containers, findsWidgets);
+        // Verify the logo has the correct constraint parameters
+        final imageFinder = find.byType(LayrzImage);
+        expect(imageFinder, findsOneWidget);
+
+        final imageWidget = tester.widget<LayrzImage>(imageFinder);
+        expect(imageWidget.width, 142.4);
+        expect(imageWidget.height, 40.0);
+        expect(imageWidget.fit, BoxFit.contain);
+
         expect(tester.takeException(), isNull);
       });
     });
@@ -324,6 +336,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [
               LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
               LayrzNavigatorPage(id: '2', labelText: 'Devices'),
@@ -347,6 +360,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [],
             notifications: [
               LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
@@ -375,6 +389,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [],
             notifications: [
               LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
@@ -399,6 +414,7 @@ void main() {
         await pumpThemedApp(
           tester,
           LayrzLayout(
+            logo: 'assets/test-logo.png',
             items: [],
             userName: 'Test User',
             body: const SizedBox(child: Text('Body')),

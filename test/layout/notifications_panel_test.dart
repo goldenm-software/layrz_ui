@@ -17,6 +17,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [
             LayrzNotificationItem(
@@ -44,6 +45,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [
             LayrzNotificationItem(id: '1', title: 'A', content: 'a'),
@@ -69,6 +71,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [],
           onNotificationTap: null,
@@ -91,6 +94,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [
             LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
@@ -124,6 +128,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [notification],
           onNotificationTap: (item) {},

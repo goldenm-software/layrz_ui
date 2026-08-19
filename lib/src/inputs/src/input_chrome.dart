@@ -137,8 +137,9 @@ class LayrzInputChrome extends StatelessWidget {
         );
 
     // Fixed content height to ensure field geometry is constant across states,
-    // regardless of whether slots have icons. Icons fit inside this height.
-    final contentHeight = density.iconSize;
+    // regardless of whether slots have icons. The height accommodates both
+    // icons and the text line without clipping.
+    final contentHeight = density.contentHeight;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -235,7 +236,10 @@ class LayrzInputChrome extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                        child,
+                        Align(
+                          alignment: Alignment.center,
+                          child: child,
+                        ),
                       ],
                     ),
                   ),

@@ -6,7 +6,7 @@ import '../helpers/pump_themed_app.dart';
 
 void main() {
   group('LayrzTopBar - Top Bar Rendering', () {
-    testWidgets('top bar renders with mark and navigation', (WidgetTester tester) async {
+    testWidgets('top bar renders with logo and navigation', (WidgetTester tester) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -21,18 +21,14 @@ void main() {
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          mark: const SizedBox(
-            width: 40,
-            height: 40,
-            child: Text('APP'),
-          ),
+          logo: 'assets/test-logo.png',
         ),
       );
 
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('top bar falls back to logo when mark is null', (WidgetTester tester) async {
+    testWidgets('top bar renders with logo string', (WidgetTester tester) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -47,12 +43,7 @@ void main() {
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          logo: const SizedBox(
-            width: 40,
-            height: 40,
-            child: Text('LOGO'),
-          ),
-          mark: null,
+          logo: 'assets/test-logo.png',
         ),
       );
 
@@ -70,6 +61,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           userName: 'Frank',
@@ -93,6 +85,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           notifications: [
@@ -120,7 +113,7 @@ void main() {
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          mark: const SizedBox(width: 40, height: 40, child: Text('M')),
+          logo: 'assets/test-logo.png',
           userName: 'Grace',
           userMenuItems: [
             LayrzDropdownEntry(labelText: 'Profile', onTap: () {}),
@@ -135,7 +128,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('top bar without mark or logo', (WidgetTester tester) async {
+    testWidgets('top bar with logo', (WidgetTester tester) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -150,8 +143,7 @@ void main() {
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          logo: null,
-          mark: null,
+          logo: 'assets/test-logo.png',
         ),
       );
 
@@ -169,6 +161,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           userName: 'Henry',
@@ -192,6 +185,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -215,6 +209,7 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [],
           notifications: [
             LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
@@ -225,6 +220,42 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
+    });
+
+    group('Logo constraint', () {
+      testWidgets('top bar logo respects width and height constraints', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(500, 900);
+
+        // Valid 1x1 PNG as data URL for testing
+        const String testLogoDataUrl =
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: const [],
+            body: const SizedBox(child: Text('Body')),
+            logo: testLogoDataUrl,
+          ),
+        );
+
+        // Verify the logo has the correct constraint parameters
+        // The image is constrained by LayrzImage(width: 200, height: 40, fit: BoxFit.contain)
+        final imageFinder = find.byType(LayrzImage);
+        expect(imageFinder, findsWidgets);
+
+        final imageWidget = tester.widget<LayrzImage>(imageFinder.first);
+        expect(imageWidget.width, 200.0);
+        expect(imageWidget.height, 40.0);
+        expect(imageWidget.fit, BoxFit.contain);
+
+        expect(tester.takeException(), isNull);
+      });
     });
   });
 }

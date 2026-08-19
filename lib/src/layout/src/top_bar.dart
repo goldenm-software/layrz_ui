@@ -42,7 +42,7 @@ class LayrzLayoutTopBar extends StatelessWidget {
   final LayrzTokens tokens;
 
   /// A widget displayed in the top bar center.
-  final Widget? logo;
+  final String logo;
 
   /// The user's display name.
   final String? userName;
@@ -87,15 +87,16 @@ class LayrzLayoutTopBar extends StatelessWidget {
             SizedBox(width: kLayrzLayoutTopBarGap),
 
             // Logo/mark
-            if (logo != null)
-              Expanded(
-                child: Center(
-                  child: SizedBox(
-                    height: kLayrzLayoutTopBarHeight - 16,
-                    child: logo!,
-                  ),
+            Expanded(
+              child: Center(
+                child: LayrzImage(
+                  source: logo,
+                  width: kLayrzLayoutTopBarLogoWidth,
+                  height: kLayrzLayoutTopBarLogoHeight,
+                  fit: BoxFit.contain,
                 ),
               ),
+            ),
 
             SizedBox(width: kLayrzLayoutTopBarGap),
 

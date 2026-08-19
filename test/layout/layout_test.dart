@@ -27,6 +27,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
             LayrzNavigatorPage(id: 'dashboard', labelText: 'Dashboard', count: 5),
@@ -47,6 +48,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -74,11 +76,7 @@ void main() {
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          logo: const SizedBox(
-            width: 40,
-            height: 40,
-            child: Text('LGO'),
-          ),
+          logo: 'assets/test-logo.png',
         ),
         size: const Size(1400, 900),
         devicePixelRatio: 1.0,
@@ -91,6 +89,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Body')),
           notifications: [
@@ -118,6 +117,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -137,6 +137,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
             LayrzNavigatorPage(id: 'dashboard', labelText: 'Dashboard', count: 3),
@@ -157,6 +158,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -177,6 +179,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -193,19 +196,15 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders drawer presentation with mark instead of logo', (WidgetTester tester) async {
+    testWidgets('renders drawer presentation with logo', (WidgetTester tester) async {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
           body: const SizedBox(child: Text('Body')),
-          mark: const SizedBox(
-            width: 40,
-            height: 40,
-            child: Text('MRK'),
-          ),
         ),
         size: const Size(500, 900),
         devicePixelRatio: 1.0,
@@ -224,8 +223,7 @@ void main() {
             LayrzNavigatorPage(id: 'settings', labelText: 'Settings'),
           ],
           body: const SizedBox(child: Text('Body Content')),
-          logo: const SizedBox(width: 32, height: 32, child: Text('APP')),
-          mark: const SizedBox(width: 32, height: 32, child: Text('A')),
+          logo: 'assets/test-logo.png',
           userName: 'Charlie Brown',
           userAvatar: const LayrzAvatarEmoji('👤'),
           userMenuItems: [
@@ -253,6 +251,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -270,6 +269,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -287,6 +287,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: [
             LayrzNavigatorPage(id: 'home', labelText: 'Home'),
           ],
@@ -309,6 +310,7 @@ void main() {
       await _pumpThemedLayout(
         tester,
         LayrzLayout(
+          logo: 'assets/test-logo.png',
           items: const [],
           body: const SizedBox(child: Text('Empty')),
         ),

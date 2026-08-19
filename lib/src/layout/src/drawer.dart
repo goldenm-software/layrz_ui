@@ -60,7 +60,7 @@ class LayrzLayoutDrawer extends StatefulWidget {
   final List<LayrzNavigatorItem> items;
 
   /// A widget displayed in the drawer header.
-  final Widget? logo;
+  final String logo;
 
   /// The user's display name.
   final String? userName;
@@ -133,27 +133,19 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Logo block (constrained to 80% width, 40px height)
-                if (widget.logo != null)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: kLayrzLayoutLogoLeftPadding,
-                      top: kLayrzLayoutRailPaddingVertical,
-                      bottom: kLayrzLayoutLogoBottomPadding,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.zero,
-                      clipBehavior: Clip.hardEdge,
-                      child: SizedBox(
-                        width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
-                        height: kLayrzLayoutLogoHeight,
-                        child: FittedBox(
-                          fit: BoxFit.contain,
-                          alignment: Alignment.center,
-                          child: widget.logo!,
-                        ),
-                      ),
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: kLayrzLayoutLogoLeftPadding,
+                    top: kLayrzLayoutRailPaddingVertical,
+                    bottom: kLayrzLayoutLogoBottomPadding,
                   ),
+                  child: LayrzImage(
+                    source: widget.logo,
+                    width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
+                    height: kLayrzLayoutLogoHeight,
+                    fit: BoxFit.contain,
+                  ),
+                ),
 
                 // Search field
                 Padding(
