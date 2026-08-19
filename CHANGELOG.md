@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.0.10
+
+**The application shell.** Adds `LayrzLayout` and `LayrzScaffoldShell` — the two components that turn the primitives into an application — plus a Material-free scrollbar the package installs for you.
+
+### Added
+
+- **`LayrzLayout`** — the application shell, and the resolution of decision D8's long-open question of which single layout design ships. Two presentations, resolved from `LayoutBuilder` constraints via `tokens.breakpoints.bandAt(...)` rather than the viewport, so the layout reacts to its own box: `expanded` at md/lg/xl renders a 178px labelled rail beside the body slot, capping and centring body content at 1440 on xl; `drawer` at sm/xs replaces the rail with a 56px top bar and moves navigation into a 260px off-canvas drawer.
+
+  It holds **no application state** — `LayrzNavigatorPage.isSelected` carries the active flag, so the consumer declares which entry is current rather than passing a selected id down. The navigator hierarchy is deliberately trimmed to two subtypes: `LayrzNavigatorPage` and `LayrzNavigatorLabel`. layrz_theme's `Action`, `Widget` and `Separator` items are dropped, as are breadcrumbs, the user role line and the org switcher. `LayrzNavigatorLabel` renders as a full-bleed band with an optional `color` that tints it at `tonalOpacity` flattened over the surface. The user block opens a dropdown supplied via `userMenuItems`, so no tap callback is routed through the layout, and notifications appear as a labelled footer row. `logo` is a required `String` — a `LayrzImage` source rather than a widget, so the layout can guarantee the image's width, height and fit. A search field filters navigator pages by `labelText` while preserving the section label of any section that still matches. Nothing in the component pushes a `Navigator` route. Reference DESIGN-61 and decision D37.
+
+- **`LayrzScaffoldShell<T>`** — adaptive list-detail shell, driven by two builders: `onBuild` returns a `LayrzScaffoldTile` describing one row, and `onDetailsBuild` renders the entire detail area including its own header. A `LayrzScaffoldController<T>` is **required** and owns which item is open, so the detail view can be driven from outside the widget; the consumer owns its lifecycle and the shell never disposes it. Two panes at md/lg/xl, a single pane with a back affordance at sm/xs, swapped by internal state rather than a `Navigator` push.
+
+  `LayrzScaffoldTile` is an `abstract base class` exposing `titleRichText`, `subtitleRichText` and `actions`, so consumers can subclass it around their own domain object and override `==`/`hashCode` for precise change detection; `LayrzScaffoldValueTile` is a concrete value-equality implementation for simple lists. Search reports through `onSearch` and the shell does **not** filter — a shell generic over `T` cannot know which fields are searchable. There is no grouping. Reference DESIGN-62 and decision D37.
+
+- **`LayrzScrollbar`** and **`LayrzScrollBehavior`** — a Material-free scrollbar built on `RawScrollbar`, since `Scaffold`-era `Scrollbar` is Material and `CupertinoScrollbar` is Cupertino. The thumb is always visible and rounded; the track appears only on hover. Vertical scrollables only, and only on pointer platforms — a permanently visible thumb on a touch device reads as broken.
+
+- **`LayrzDropdownLabel.color`** — optional tint for a menu section's label band. When null the band keeps its neutral `surface3` fill, so existing menus are unchanged.
+
+### Changed
+
+- **`LayrzApp` now installs `LayrzScrollBehavior` when `scrollBehavior` is null.** This is a visible behaviour change: scroll views that previously had no scrollbar will now show one. Pass an explicit `scrollBehavior` to opt out.
+
+- **`LayrzTextInput.dense` now scales the icon size, the text style and the content height, not only the padding.** Previously `dense` reduced vertical padding while the icon stayed at the global `IconTheme` size of 24 and the text stayed at body size, so a dense field was not meaningfully compact and its text could clip. Density is now resolved in one place (`InputDensitySpec`) covering padding, icon size, hint style, editable style and content height together. Existing dense fields will render visibly more compact; non-dense fields are unchanged.
+
 ## 0.0.9
 
 **The input family's foundation, plus localization.** Adds `LayrzTextInput` — the component every other `Layrz*Input` will compose — and the `LayrzUiL10n` localization contract it depends on.
