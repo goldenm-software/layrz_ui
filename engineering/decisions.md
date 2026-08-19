@@ -1946,21 +1946,21 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 ### Matrix
 
-| State | Fill | Border (1.5px) | Text | Dashed |
-|---|---|---|---|---|
-| Rest | `surface2` | transparent | `fg1`, hint `fg3` | false |
-| Hover | `surface3` | transparent | `fg1` | false |
-| Focus | `surface2` | `colors.primary` | `fg1` | false |
-| Error | `colors.danger.shade50` | `colors.danger` | `fg1` | false |
-| Disabled | `surface2` | `divider` | `fg4` | true |
-| Read-only | `surface2` | `divider` | `fg1` + lock icon | false |
+| State | Fill | Border (1.5px) | Text |
+|---|---|---|---|
+| Rest | `surface2` | transparent | `fg1`, hint `fg3` |
+| Hover | `surface3` | transparent | `fg1` |
+| Focus | `surface2` | `colors.primary` | `fg1` |
+| Error | `colors.danger.shade50` | `colors.danger` | `fg1` |
+| Disabled | `surface2` | transparent | `fg4` |
+| Read-only | `surface2` | transparent | `fg1` + lock icon |
 
 ### Key Features
 
 - **Focus preserves fill**: Focus only changes the border to primary; the fill stays `surface2` (does not elevate to a lighter shade).
-- **Read-only is rest + lock**: Read-only uses the rest state's fill and solid border, with a lock icon in the suffix signalling non-editability. Text remains full-contrast `fg1`.
-- **Disabled darkens text to fg4**: Disabled state uses muted text (`fg4`, darkest of the fg tones) plus a dashed border to signal permanent non-editability.
-- **Dashed border only on disabled**: Read-only uses solid borders; dashed is reserved for disabled (see D15 amendment below).
+- **Read-only is rest + lock**: Read-only uses the rest state's fill and transparent border, with a lock icon in the suffix signalling non-editability. Text remains full-contrast `fg1`.
+- **Disabled darkens text to fg4**: Disabled state uses muted text (`fg4`, darkest of the fg tones) and transparent border to signal permanent non-editability.
+- **All borders are solid**: All six states use solid borders. Transparency creates the invisible border effect where needed (rest, hover, disabled, read-only).
 - **Single border width**: 1.5px throughout, matching `border.base` token.
 - **Six-state precedence**: disabled > read-only > error > pressed > hover/focused > default.
 - **Light mode only**: Dark theme is out of scope (D7).
@@ -1969,20 +1969,21 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 - **Filled style consistency**: All inputs use filled backgrounds (never outlined or tonal-only). This creates immediate visual unity across the input family.
 - **Focus-on-rest prevents elevation flicker**: Keeping focus fill identical to rest prevents a "pop-up" visual as the user navigates with Tab. Only the border signals focus.
-- **Read-only as visual rest**: Read-only shares fill and border style with rest, making it visually calm and clearly not an error state. The lock icon is the only distinction.
-- **Disabled is visually distinct**: Disabled darkens to `fg4` and uses dashed borders, creating clear visual separation from all other states.
+- **Read-only as visual rest**: Read-only shares fill and transparent border with rest, making it visually calm and clearly not an error state. The lock icon is the only distinction.
+- **Disabled uses text contrast only**: Disabled is visually distinct via muted text (`fg4`), reducing contrast. The lock icon (in read-only) and text colour (in disabled) are the primary signals.
+- **Solid borders throughout**: All borders are solid with the same width, preserving D15's geometry invariant. Transparency (not dashing) renders invisible borders where needed.
 
 ### Consequences
 
 - All M3+ inputs inherit this matrix
 - New inputs added later must conform to this matrix
 - Focus interactions no longer cause fill changes, reducing visual motion
-- The distinction between read-only (solid) and disabled (dashed) borders is immediate and recognizable
+- All states maintain byte-identical geometry; only colour and transparency vary
 
 ### Related Decisions
 
 - **D7** (Light Mode Only) — input family defaults to light; dark mode is out of scope
-- **D15 amendment** (D35 below) — interaction states vary paint properties only, not geometry
+- **D15** (Interaction States via Geometry Invariants) — all states preserve identical geometry; interaction states vary only colour and transparency
 
 ---
 
@@ -1998,25 +1999,26 @@ Verification: Compared symbol binaries across both versions and confirmed byte-f
 
 ### Decision
 
-**Read-only uses the rest state's visual treatment (surface2 background, solid divider border, fg1 text) plus a lock icon in the suffix.**
+**Read-only uses the rest state's visual treatment (surface2 background, transparent border, fg1 text) plus a lock icon in the suffix.**
 
 ### Rationale
 
 - **Read-only is calm**: Read-only shares the visual treatment with rest (not error, not disabled), making it visually serene and clearly not an error state or a permanently locked field.
 - **Lock icon is the only distinction**: The lock icon in the suffix is the sole visual difference between rest and read-only, making it immediately recognizable that the field can be accessed (via tap, for pickers) but not edited (via keyboard).
-- **Solid border (not dashed)**: Read-only uses a solid border because it is a transient state from the user's perspective: they can tap to open a picker and change the value. It is not a permanent modal state like disabled.
+- **Transparent border (not dashed)**: Read-only uses a transparent border (solid, but invisible) because it is a transient state from the user's perspective: they can tap to open a picker and change the value. All states now use transparent or coloured solid borders; dashing is not used.
 - **Full-contrast text (fg1, not fg4)**: Text in read-only mode is full-contrast `fg1`, reinforcing that the field is readable and accessible, not grayed out or locked down.
 
 ### Consequences
 
 - Callers can instantly recognize read-only fields by the lock icon in the suffix
-- Read-only is visually distinct from disabled (solid vs. dashed border, fg1 vs. fg4 text)
+- Read-only is visually distinct from disabled (transparent vs. transparent border, fg1 vs. fg4 text — the text colour difference is the primary signal)
 - Picker inputs render as read-only and display a lock, signalling to users that the field is interactive but not editable
+- All states use solid borders with constant width and radius; only colour and transparency vary
 
 ### Related Decisions
 
 - **D32** (Input Family Visual Language) — read-only uses the rest row of the matrix plus a lock icon in the suffix
-- **D35** (D15 Amendment) — dashed borders are reserved for disabled (modal state); read-only uses solid
+- **D15** (Interaction States via Geometry Invariants) — all states preserve geometry; only colour and transparency vary
 
 ---
 
@@ -2057,10 +2059,10 @@ layrz_ui simplifies: callers provide error messages directly via a `List<String>
 
 ---
 
-## D35: D15 Amendment — Dashed Borders for Modal States
+## D35: D15 Amendment — Dashed Borders for Modal States (RETRACTED)
 
 **Date**: 2026-08-18  
-**Status**: Decided  
+**Status**: Retracted  
 **Category**: Architecture / Visual Consistency
 
 ### Context
@@ -2069,28 +2071,23 @@ Decision D15 governs interaction state changes: they must vary only colour, bord
 
 `LayrzTextInput`'s `disabled` state uses a **dashed border**, while other states use solid borders. Dashing is a paint-style change (how the border is drawn), not a geometry change. But D15 does not explicitly permit paint-style changes.
 
-### Decision
+### Original Decision (Retracted)
 
 **Amend D15 to permit border paint-style changes (solid vs. dashed) for the `disabled` state only. All other states must use solid borders. Transient interaction states (hover, press, focus) must never change paint style.**
 
-### Rationale
+### Retraction Rationale
 
-- **Modal state signalling**: `disabled` is a permanent field condition (not a transition a user passes through). A dashed border clearly signals non-editability without flicker, because the user does not interact with a disabled field.
-- **Read-only uses solid borders**: Read-only is a transient state from the user's perspective (they can tap to access a picker). It uses solid borders to appear visually calm and interactive.
-- **Transient states must not dash**: Hover, press, and focus are fleeting interactions. Changing border paint (solid → dashed → solid) would flicker and distract. D15's prohibition stands for these states.
-- **Geometry invariant is preserved**: Border width (1.5px) and radius (r10) are identical across all states; only the disabled state's paint style differs.
+D35 was superseded in August 2026 when the dashed border feature for the disabled state was removed from `LayrzTextInput`. The dashed border never rendered correctly (a CustomPaint was layered beneath a solid Container, so the fill always obscured the dashes). Rather than fix the rendering, the feature was removed entirely. As a consequence, D35 defends nothing: all states now use solid borders consistently, and **D15 stands unamended**.
 
-### Consequences
+### Final State (per August 2026)
 
-- D15 now explicitly permits border paint-style changes (solid/dashed) for the `disabled` state only
-- Only `disabled` uses dashed borders; all other states use solid
-- This amendment enables clear disabled-state signalling without violating D15's spirit (geometry invariance and flicker prevention)
+All six input field states (rest, hover, focus, error, disabled, read-only) use solid borders. Border width (1.5px) and radius (r10) are identical across all states; only colour changes vary (and transparency for invisible borders). D15's geometry invariant is fully satisfied without paint-style modifications.
 
 ### Related Decisions
 
-- **D15** (Interaction States via Geometry Invariants) — original decision; this is an amendment
-- **D32** (Input Family Visual Language) — the matrix shows dashed borders for disabled only
-- **D33** (Read-Only as Rest Plus Lock Icon) — read-only uses solid borders (not dashed)
+- **D15** (Interaction States via Geometry Invariants) — stands unamended; this decision retracted
+- **D32** (Input Family Visual Language) — updated matrix shows solid borders only
+- **D33** (Read-Only as Rest Plus Lock Icon) — read-only uses solid transparent border
 
 ---
 
