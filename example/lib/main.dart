@@ -58,6 +58,10 @@ Future<void> main() async {
 final _router = GoRouter(
   initialLocation: '/buttons',
   routes: [
+    GoRoute(
+      path: '/',
+      redirect: (context, state) => '/buttons',
+    ),
     ShellRoute(
       builder: (context, state, child) => ShowroomLayout(child: child),
       routes: [
