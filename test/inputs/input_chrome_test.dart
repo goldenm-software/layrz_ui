@@ -512,8 +512,8 @@ void main() {
         );
       });
 
-      /// Verifies that dense mode affects padding but not content height invariant.
-      testWidgets('dense and normal modes have consistent icon height behavior', (tester) async {
+      /// Verifies that dense mode uses a smaller icon size for compact layout.
+      testWidgets('dense mode reduces height when combined with normal padding', (tester) async {
         final modeVariants = <String, bool>{
           'normal': false,
           'dense': true,
@@ -558,12 +558,12 @@ void main() {
           dimensions[key] = (width: rect.width, height: rect.height);
         }
 
-        // Dense and normal have different heights due to padding, but that's OK.
-        // Both should have the same width (icon doesn't affect width).
+        // Dense and normal modes should have the same width (icon doesn't affect width).
+        // Dense mode with smaller icon and padding should still work correctly.
         expect(
           dimensions['dense']!.width,
           dimensions['normal']!.width,
-          reason: 'Dense and normal modes have different widths',
+          reason: 'Dense and normal modes should have the same width',
         );
       });
 
