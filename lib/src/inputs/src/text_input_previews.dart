@@ -2,8 +2,6 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/preview.dart';
 
-import 'text_input.dart';
-
 /// Displays the default [LayrzTextInput] state with label and placeholder.
 @Preview(
   name: 'Default',
