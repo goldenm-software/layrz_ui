@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:layrz_ui/src/inputs/src/text_input.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_icons/layrz_icons.dart';
@@ -618,6 +617,39 @@ void main() {
       // After widget is disposed, controller should still be usable
       controller.text = 'Modified';
       expect(controller.text, 'Modified');
+    });
+
+    testWidgets('passes selectionColor to EditableText by default', (tester) async {
+      await pumpThemed(
+        tester,
+        const LayrzTextInput(
+          labelText: 'Test',
+        ),
+      );
+
+      final editableText = find.byType(EditableText);
+      expect(editableText, findsOneWidget);
+
+      final widget = tester.widget<EditableText>(editableText);
+      // Should have a non-null selection color (primary at tonal opacity)
+      expect(widget.selectionColor, isNotNull);
+    });
+
+    testWidgets('selectionColor defaults to primary at tonalOpacity', (tester) async {
+      await pumpThemed(
+        tester,
+        const LayrzTextInput(
+          labelText: 'Test',
+        ),
+      );
+
+      final editableText = find.byType(EditableText);
+      final widget = tester.widget<EditableText>(editableText);
+      final context = tester.element(editableText);
+      final tokens = context.tokens;
+
+      final expectedColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
+      expect(widget.selectionColor, expectedColor);
     });
   });
 }

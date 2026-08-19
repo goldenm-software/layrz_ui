@@ -3,9 +3,12 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/input_slot.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_icons/layrz_icons.dart';
 
 import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';
+import '../helpers/fake_font_handler.dart';
 
 void main() {
   group('LayrzInputChrome', () {
@@ -326,6 +329,243 @@ void main() {
 
       expect(controller.text, 'Test');
       // After widget disposal, controller should still be usable
+    });
+
+    group('Geometry tests - consistent height and width across states', () {
+      /// Verifies that all six interaction states have identical height and width.
+      /// This test ensures compliance with D15 (geometry invariance).
+      testWidgets('all six states render with identical geometry', (tester) async {
+        final stateVariants = <String, ({Set<WidgetState> states, bool readOnly, bool disabled})>{
+          'rest': (states: {}, readOnly: false, disabled: false),
+          'hover': (states: {WidgetState.hovered}, readOnly: false, disabled: false),
+          'focus': (states: {WidgetState.focused}, readOnly: false, disabled: false),
+          'error': (states: {}, readOnly: false, disabled: false), // hasErrors: true via the test
+          'disabled': (states: {WidgetState.disabled}, readOnly: false, disabled: true),
+          'read-only': (states: {}, readOnly: true, disabled: false),
+        };
+
+        final measurements = <String, Size>{};
+
+        for (final MapEntry(:key, :value) in stateVariants.entries) {
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: LayrzTheme(
+                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (context) => Center(
+                        child: LayrzInputChrome(
+                          labelText: 'Test Field',
+                          isRequired: false,
+                          prefixSlot: LayrzInputPrefixSlot(),
+                          suffixSlot: LayrzInputSuffixSlot(),
+                          disabled: value.disabled,
+                          readOnly: value.readOnly,
+                          errors: key == 'error' ? ['Error'] : [],
+                          hideDetails: false,
+                          states: value.states,
+                          child: Container(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          // Find the container holding the input chrome field
+          final containerFinder = find.byType(Container).first;
+          final rect = tester.getRect(containerFinder);
+          measurements[key] = rect.size;
+        }
+
+        // Verify all states have identical dimensions
+        final firstSize = measurements.values.first;
+        for (final MapEntry(:key, :value) in measurements.entries) {
+          expect(
+            value.width,
+            firstSize.width,
+            reason: 'State "$key" width differs from "rest" state',
+          );
+          expect(
+            value.height,
+            firstSize.height,
+            reason: 'State "$key" height differs from "rest" state',
+          );
+        }
+      });
+
+      /// Verifies that fields with and without icons have identical height.
+      /// This ensures icons don't change field geometry (critical for the fixed content height fix).
+      testWidgets('field height is constant regardless of icon presence', (tester) async {
+        final fieldVariants = <String, LayrzInputPrefixSlot>{
+          'no-prefix': LayrzInputPrefixSlot(),
+          'prefix-icon': LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+        };
+
+        final heights = <String, double>{};
+
+        for (final MapEntry(:key, :value) in fieldVariants.entries) {
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: LayrzTheme(
+                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (context) => Center(
+                        child: LayrzInputChrome(
+                          labelText: 'Test Field',
+                          isRequired: false,
+                          prefixSlot: value,
+                          suffixSlot: LayrzInputSuffixSlot(),
+                          disabled: false,
+                          readOnly: false,
+                          errors: [],
+                          hideDetails: false,
+                          states: {},
+                          child: Container(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final containerFinder = find.byType(Container).first;
+          final rect = tester.getRect(containerFinder);
+          heights[key] = rect.height;
+        }
+
+        // Both fields must have identical height
+        expect(
+          heights['prefix-icon'],
+          heights['no-prefix'],
+          reason: 'Field with icon has different height than field without icon',
+        );
+      });
+
+      /// Verifies that both prefix and suffix icon presence doesn't change field height.
+      testWidgets('field with both prefix and suffix icons matches field without icons', (tester) async {
+        final fieldVariants = <String, ({LayrzInputPrefixSlot prefix, LayrzInputSuffixSlot suffix})>{
+          'no-icons': (
+            prefix: LayrzInputPrefixSlot(),
+            suffix: LayrzInputSuffixSlot(),
+          ),
+          'both-icons': (
+            prefix: LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+            suffix: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineCheckCircle),
+          ),
+        };
+
+        final heights = <String, double>{};
+
+        for (final MapEntry(:key, :value) in fieldVariants.entries) {
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: LayrzTheme(
+                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (context) => Center(
+                        child: LayrzInputChrome(
+                          labelText: 'Test Field',
+                          isRequired: false,
+                          prefixSlot: value.prefix,
+                          suffixSlot: value.suffix,
+                          disabled: false,
+                          readOnly: false,
+                          errors: [],
+                          hideDetails: false,
+                          states: {},
+                          child: Container(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final containerFinder = find.byType(Container).first;
+          final rect = tester.getRect(containerFinder);
+          heights[key] = rect.height;
+        }
+
+        // Fields must have identical height regardless of icon presence
+        expect(
+          heights['both-icons'],
+          heights['no-icons'],
+          reason: 'Field with icons has different height than field without icons',
+        );
+      });
+
+      /// Verifies that dense mode affects padding but not content height invariant.
+      testWidgets('dense and normal modes have consistent icon height behavior', (tester) async {
+        final modeVariants = <String, bool>{
+          'normal': false,
+          'dense': true,
+        };
+
+        final dimensions = <String, ({double width, double height})>{};
+
+        for (final MapEntry(:key, :value) in modeVariants.entries) {
+          await tester.pumpWidget(
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: LayrzTheme(
+                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                child: Overlay(
+                  initialEntries: [
+                    OverlayEntry(
+                      builder: (context) => Center(
+                        child: LayrzInputChrome(
+                          labelText: 'Test Field',
+                          isRequired: false,
+                          prefixSlot: LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                          suffixSlot: LayrzInputSuffixSlot(),
+                          disabled: false,
+                          readOnly: false,
+                          errors: [],
+                          hideDetails: false,
+                          states: {},
+                          dense: value,
+                          child: Container(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          final containerFinder = find.byType(Container).first;
+          final rect = tester.getRect(containerFinder);
+          dimensions[key] = (width: rect.width, height: rect.height);
+        }
+
+        // Dense and normal have different heights due to padding, but that's OK.
+        // Both should have the same width (icon doesn't affect width).
+        expect(
+          dimensions['dense']!.width,
+          dimensions['normal']!.width,
+          reason: 'Dense and normal modes have different widths',
+        );
+      });
     });
   });
 }

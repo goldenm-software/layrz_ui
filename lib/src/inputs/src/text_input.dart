@@ -127,6 +127,10 @@ class LayrzTextInput extends StatefulWidget {
   final FocusNode? focusNode;
 
   /// The padding applied inside the input field.
+  ///
+  /// If provided, this padding is used as-is and [dense] is ignored.
+  /// If null, padding is derived from tokens: sp10 horizontal and sp10 vertical when normal,
+  /// or sp10 horizontal with sp6 vertical when [dense] is true.
   final EdgeInsets? padding;
 
   /// Whether the input field uses a compact (dense) layout.
@@ -368,7 +372,8 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
                 color: tokens.colors.fg1,
               ),
               cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.surface,
+              backgroundCursorColor: tokens.colors.fg3,
+              selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
               keyboardType: widget.keyboardType,
               textInputAction: widget.textInputAction,
               inputFormatters: formatters,

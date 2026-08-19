@@ -5,7 +5,6 @@ import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
-import 'dashed_border_painter.dart';
 import 'input_error_block.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
@@ -75,8 +74,8 @@ class LayrzInputChrome extends StatelessWidget {
   /// The padding applied inside the input field.
   ///
   /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp16 horizontal and sp16 vertical when normal,
-  /// or sp16 horizontal with sp8 vertical when [dense] is true.
+  /// If null, padding is derived from tokens: sp10 horizontal and sp10 vertical when normal,
+  /// or sp10 horizontal with sp6 vertical when [dense] is true.
   ///
   /// Explicit padding takes precedence over [dense] to prevent silent geometry
   /// mutations when a caller provides an exact layout requirement.
@@ -123,13 +122,20 @@ class LayrzInputChrome extends StatelessWidget {
     );
 
     // Compute padding: explicit caller value wins over dense mode
-    final verticalPadding = dense ? tokens.spacing.sp8 : tokens.spacing.sp16;
+    final verticalPadding = dense ? tokens.spacing.sp6 : tokens.spacing.sp10;
     final resolvedPadding =
         padding ??
         EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp16,
+          horizontal: tokens.spacing.sp10,
           vertical: verticalPadding,
         );
+
+    // Fixed content height to ensure field geometry is constant across states,
+    // regardless of whether slots have icons. Icons fit inside this height.
+    // Falls back to icon theme size from context, or a token-derived default.
+    final contentHeight =
+        context.theme.iconTheme.size ??
+        (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -173,35 +179,20 @@ class LayrzInputChrome extends StatelessWidget {
           ),
 
         // Input container with border
-        Stack(
-          children: [
-            // Dashed border (only when isDashed is true)
-            if (spec.isDashed)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: DashedBorderPainter(
-                    color: spec.borderColor,
-                    strokeWidth: spec.borderWidth,
-                    borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
-                  ),
-                ),
-              ),
-
-            // Main input container
-            Container(
-              decoration: BoxDecoration(
-                color: spec.backgroundColor,
-                border: spec.isDashed
-                    ? null
-                    : Border.all(
-                        color: spec.borderColor,
-                        width: spec.borderWidth,
-                      ),
-                borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
-              ),
-              padding: resolvedPadding,
-              child: Row(
-                children: [
+        Container(
+          decoration: BoxDecoration(
+            color: spec.backgroundColor,
+            border: Border.all(
+              color: spec.borderColor,
+              width: spec.borderWidth,
+            ),
+            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
+          ),
+          padding: resolvedPadding,
+          child: SizedBox(
+            height: contentHeight,
+            child: Row(
+              children: [
                   // Prefix slot
                   if (prefixSlot.hasContent) ...[
                     _buildSlotContent(
@@ -209,6 +200,7 @@ class LayrzInputChrome extends StatelessWidget {
                       slot: prefixSlot,
                       tokens: tokens,
                       spec: spec,
+                      contentHeight: contentHeight,
                     ),
                     SizedBox(width: tokens.spacing.sp8),
                   ],
@@ -264,12 +256,12 @@ class LayrzInputChrome extends StatelessWidget {
                     context: context,
                     tokens: tokens,
                     spec: spec,
+                    contentHeight: contentHeight,
                   ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+            ),
+          ),
 
         // Error block
         LayrzInputErrorBlock(
@@ -289,6 +281,7 @@ class LayrzInputChrome extends StatelessWidget {
     required BuildContext context,
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
+    required double contentHeight,
   }) {
     final trailing = <Widget>[];
     final iconSize = context.theme.iconTheme.size ?? 20.0;
@@ -324,6 +317,7 @@ class LayrzInputChrome extends StatelessWidget {
           slot: suffixSlot,
           tokens: tokens,
           spec: spec,
+          contentHeight: contentHeight,
         ),
       );
     }
@@ -371,11 +365,15 @@ class LayrzInputChrome extends StatelessWidget {
   }
 
   /// Builds the content of a slot (icon, widget, or text).
+  ///
+  /// Caller-supplied widgets are constrained to [contentHeight] to prevent them
+  /// from changing field geometry. This ensures consistent height across all states.
   Widget _buildSlotContent({
     required BuildContext context,
     required dynamic slot,
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
+    required double contentHeight,
   }) {
     final isPrefix = slot is LayrzInputPrefixSlot;
     final hasCallback = isPrefix ? slot.onTap != null : slot.onTap != null;
@@ -388,7 +386,11 @@ class LayrzInputChrome extends StatelessWidget {
         color: spec.textColor,
       );
     } else if (slot.widget != null) {
-      content = slot.widget!;
+      // Constrain caller-supplied widget to content height to prevent layout changes
+      content = SizedBox(
+        height: contentHeight,
+        child: slot.widget,
+      );
     } else if (slot.text != null) {
       content = Text(
         slot.text!,

@@ -17,16 +17,13 @@ void main() {
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
 
       final updated = original.copyWith(
         backgroundColor: tokens.colors.surface,
-        isDashed: true,
       );
 
       expect(updated.backgroundColor, tokens.colors.surface);
-      expect(updated.isDashed, true);
       expect(updated.borderColor, original.borderColor);
       expect(updated.borderWidth, original.borderWidth);
       expect(updated.textColor, original.textColor);
@@ -38,7 +35,6 @@ void main() {
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
 
       final spec2 = LayrzInputStyleSpec(
@@ -46,7 +42,6 @@ void main() {
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
 
       expect(spec1, spec2);
@@ -59,7 +54,6 @@ void main() {
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
 
       final spec2 = LayrzInputStyleSpec(
@@ -67,7 +61,6 @@ void main() {
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
 
       expect(spec1, isNot(spec2));
@@ -84,7 +77,6 @@ void main() {
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.borderWidth, tokens.border.base);
       expect(spec.textColor, tokens.colors.fg1);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: hovered state', () {
@@ -97,7 +89,6 @@ void main() {
       expect(spec.backgroundColor, tokens.colors.surface3);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: focused state', () {
@@ -110,7 +101,6 @@ void main() {
       expect(spec.backgroundColor, tokens.colors.surface2);
       expect(spec.borderColor, tokens.colors.primary);
       expect(spec.textColor, tokens.colors.fg1);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: pressed state', () {
@@ -121,7 +111,6 @@ void main() {
       );
 
       expect(spec.backgroundColor, tokens.colors.surface3);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: error state', () {
@@ -134,7 +123,6 @@ void main() {
       expect(spec.backgroundColor, tokens.colors.danger.shade50);
       expect(spec.borderColor, tokens.colors.danger);
       expect(spec.textColor, tokens.colors.fg1);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: disabled state', () {
@@ -145,9 +133,8 @@ void main() {
       );
 
       expect(spec.backgroundColor, tokens.colors.surface2);
-      expect(spec.borderColor, tokens.colors.divider);
+      expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg4);
-      expect(spec.isDashed, true);
     });
 
     test('resolve: read-only state', () {
@@ -159,9 +146,8 @@ void main() {
       );
 
       expect(spec.backgroundColor, tokens.colors.surface2);
-      expect(spec.borderColor, tokens.colors.divider);
+      expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: precedence - disabled > readOnly', () {
@@ -172,7 +158,6 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.isDashed, true);
       expect(spec.textColor, tokens.colors.fg4);
     });
 
@@ -185,7 +170,6 @@ void main() {
       );
 
       expect(spec.backgroundColor, tokens.colors.surface2);
-      expect(spec.isDashed, false);
     });
 
     test('resolve: precedence - error > pressed', () {

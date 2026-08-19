@@ -4,8 +4,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// Immutable specification of visual properties for a [LayrzTextInput] in a given interaction state.
 ///
 /// A [LayrzInputStyleSpec] holds only paint properties: fill color, border color, border width,
-/// text color, and whether to use a dashed border. It is computed by [resolve] from interaction
-/// states and tokens.
+/// and text color. It is computed by [resolve] from interaction states and tokens.
 @immutable
 class LayrzInputStyleSpec {
   /// The fill color of the input background.
@@ -20,16 +19,12 @@ class LayrzInputStyleSpec {
   /// The color of the input text.
   final Color textColor;
 
-  /// Whether the border should be rendered as dashed (true) or solid (false).
-  final bool isDashed;
-
   /// Creates a new [LayrzInputStyleSpec].
   const LayrzInputStyleSpec({
     required this.backgroundColor,
     required this.borderColor,
     required this.borderWidth,
     required this.textColor,
-    required this.isDashed,
   });
 
   /// Returns a copy of this spec with the given fields replaced.
@@ -38,14 +33,12 @@ class LayrzInputStyleSpec {
     Color? borderColor,
     double? borderWidth,
     Color? textColor,
-    bool? isDashed,
   }) {
     return LayrzInputStyleSpec(
       backgroundColor: backgroundColor ?? this.backgroundColor,
       borderColor: borderColor ?? this.borderColor,
       borderWidth: borderWidth ?? this.borderWidth,
       textColor: textColor ?? this.textColor,
-      isDashed: isDashed ?? this.isDashed,
     );
   }
 
@@ -57,8 +50,7 @@ class LayrzInputStyleSpec {
           backgroundColor == other.backgroundColor &&
           borderColor == other.borderColor &&
           borderWidth == other.borderWidth &&
-          textColor == other.textColor &&
-          isDashed == other.isDashed;
+          textColor == other.textColor;
 
   @override
   int get hashCode => Object.hash(
@@ -66,21 +58,20 @@ class LayrzInputStyleSpec {
     borderColor,
     borderWidth,
     textColor,
-    isDashed,
   );
 
   /// Resolves a [LayrzInputStyleSpec] from interaction states and tokens.
   ///
   /// **State precedence:** disabled > readOnly > error > pressed > hover/focused > default
   ///
-  /// | State | Fill | Border (always 1.5) | Text | Dashed |
-  /// |---|---|---|---|---|
-  /// | rest | `surface2` | transparent | `fg1` | false |
-  /// | hover | `surface3` | transparent | `fg1` | false |
-  /// | focus | `surface2` | `colors.primary` | `fg1` | false |
-  /// | error | `colors.danger.shade50` | `colors.danger` | `fg1` | false |
-  /// | disabled | `surface2` | `divider` | `fg4` | true |
-  /// | read-only | `surface2` | `divider` | `fg1` | false |
+  /// | State | Fill | Border (always 1.5) | Text |
+  /// |---|---|---|---|
+  /// | rest | `surface2` | transparent | `fg1` |
+  /// | hover | `surface3` | transparent | `fg1` |
+  /// | focus | `surface2` | `colors.primary` | `fg1` |
+  /// | error | `colors.danger.shade50` | `colors.danger` | `fg1` |
+  /// | disabled | `surface2` | transparent | `fg4` |
+  /// | read-only | `surface2` | transparent | `fg1` |
   ///
   /// Geometry (height, padding, border width) is byte-identical across states and must not
   /// be affected by this method (per decision D15).
@@ -96,20 +87,18 @@ class LayrzInputStyleSpec {
     if (isDisabled) {
       return LayrzInputStyleSpec(
         backgroundColor: tokens.colors.surface2,
-        borderColor: tokens.colors.divider,
+        borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg4,
-        isDashed: true,
       );
     }
 
     if (readOnly) {
       return LayrzInputStyleSpec(
         backgroundColor: tokens.colors.surface2,
-        borderColor: tokens.colors.divider,
+        borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
     }
 
@@ -119,7 +108,6 @@ class LayrzInputStyleSpec {
         borderColor: tokens.colors.danger,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
     }
 
@@ -133,7 +121,6 @@ class LayrzInputStyleSpec {
         borderColor: tokens.colors.primary,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
     }
 
@@ -143,7 +130,6 @@ class LayrzInputStyleSpec {
         borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
-        isDashed: false,
       );
     }
 
@@ -153,7 +139,6 @@ class LayrzInputStyleSpec {
       borderColor: const Color(0x00000000),
       borderWidth: tokens.border.base,
       textColor: tokens.colors.fg1,
-      isDashed: false,
     );
   }
 }
