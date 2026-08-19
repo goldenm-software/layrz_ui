@@ -10,7 +10,7 @@ export 'src/grid/grid.dart';
 export 'src/images/images.dart';
 export 'src/inputs/inputs.dart';
 export 'src/keyboard/keyboard.dart';
-export 'src/localization/localization.dart';
+export 'src/l10n/l10n.dart';
 export 'src/menus/menus.dart';
 export 'src/platform/platform.dart';
 export 'src/state/state.dart';
