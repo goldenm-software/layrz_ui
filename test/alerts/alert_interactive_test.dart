@@ -571,5 +571,133 @@ void main() {
         expect(taps, equals(2), reason: 'Space must activate an interactive alert');
       });
     });
+
+    group('Touch press feedback (DESIGN-79)', () {
+      testWidgets('touch press without hover lifts surface (touchscreen device)', (tester) async {
+        // Touchscreen: press with no prior hover possible — gets hover treatment.
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Body',
+              onTap: () {},
+            ),
+          ),
+          theme: themeData,
+        );
+
+        Matrix4? transformOf() => tester
+            .widget<AnimatedContainer>(
+              find
+                  .descendant(
+                    of: find.byType(LayrzAlert),
+                    matching: find.byType(AnimatedContainer),
+                  )
+                  .first,
+            )
+            .transform;
+
+        await tester.pumpAndSettle();
+
+        // At rest: no lift
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(0.0),
+          reason: 'At rest the surface must not be lifted',
+        );
+
+        // Touch press without hovering (PointerDeviceKind.touch, which cannot hover)
+        final center = tester.getCenter(find.byType(LayrzAlert));
+        final gesture = await tester.startGesture(center, kind: PointerDeviceKind.touch);
+        await tester.pumpAndSettle();
+
+        // Touch press without prior hover: should lift (hover treatment for visibility)
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(-kLayrzAlertHoverLift),
+          reason: 'Touch press without prior hover must lift the surface by kLayrzAlertHoverLift',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // After release: back to rest
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(0.0),
+          reason: 'After release, surface must return to rest',
+        );
+      });
+
+      testWidgets('mouse press after hover settles surface (desktop mouse)', (tester) async {
+        // Desktop mouse: hover first, then button-down on same pointer — settles.
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Body',
+              onTap: () {},
+            ),
+          ),
+          theme: themeData,
+        );
+
+        Matrix4? transformOf() => tester
+            .widget<AnimatedContainer>(
+              find
+                  .descendant(
+                    of: find.byType(LayrzAlert),
+                    matching: find.byType(AnimatedContainer),
+                  )
+                  .first,
+            )
+            .transform;
+
+        await tester.pumpAndSettle();
+
+        // Move mouse over to hover (PointerDeviceKind.mouse)
+        final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await gesture.addPointer(location: Offset.zero);
+        addTearDown(gesture.removePointer);
+        await gesture.moveTo(tester.getCenter(find.byType(LayrzAlert)));
+        await tester.pumpAndSettle();
+
+        // Verify lifted by hover
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(-kLayrzAlertHoverLift),
+          reason: 'Hovering must lift the surface',
+        );
+
+        // Press with the same mouse pointer (button-down on hovered location)
+        await gesture.down(tester.getCenter(find.byType(LayrzAlert)));
+        await tester.pumpAndSettle();
+
+        // Desktop case: pressing while already hovered settles back down
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(0.0),
+          reason: 'Mouse press while already hovered must settle the surface (desktop behavior)',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // After release but still hovered: surface lifts again
+        expect(
+          transformOf()!.getTranslation().y,
+          equals(-kLayrzAlertHoverLift),
+          reason: 'After release while still hovered, surface must lift again',
+        );
+      });
+    });
   });
 }
