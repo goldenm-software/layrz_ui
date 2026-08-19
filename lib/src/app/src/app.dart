@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/localization/localization.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
 /// Root application widget for layrz_ui.
@@ -202,10 +202,10 @@ class LayrzApp extends StatefulWidget {
   State<LayrzApp> createState() => _LayrzAppState();
 }
 
-/// Combines caller-supplied localizations delegates with the default [LayrzLocalizationsDelegate].
+/// Combines caller-supplied localizations delegates with the default [LayrzUiL10nDelegate].
 ///
-/// Appends [LayrzLocalizationsDelegate] last so caller-supplied delegates take precedence
-/// via Flutter's delegate resolution order. If a [LayrzLocalizationsDelegate] is already
+/// Appends [LayrzUiL10nDelegate] last so caller-supplied delegates take precedence
+/// via Flutter's delegate resolution order. If a [LayrzUiL10nDelegate] is already
 /// present in [userDelegates], it is not duplicated.
 ///
 /// Parameters:
@@ -213,27 +213,27 @@ class LayrzApp extends StatefulWidget {
 ///   or null if no caller delegates were provided. This iterable is copied (not mutated).
 ///
 /// Returns a list containing all caller delegates (in order) followed by the default
-/// [LayrzLocalizationsDelegate] (if not already present).
+/// [LayrzUiL10nDelegate] (if not already present).
 @visibleForTesting
-List<LocalizationsDelegate<dynamic>> buildLayrzLocalizationsDelegates(
+List<LocalizationsDelegate<dynamic>> buildLayrzUiL10nDelegates(
   Iterable<LocalizationsDelegate<dynamic>>? userDelegates,
 ) {
   final delegates = userDelegates?.toList() ?? <LocalizationsDelegate<dynamic>>[];
 
-  if (!delegates.any((d) => d is LayrzLocalizationsDelegate)) {
-    delegates.add(const LayrzLocalizationsDelegate());
+  if (!delegates.any((d) => d is LayrzUiL10nDelegate)) {
+    delegates.add(const LayrzUiL10nDelegate());
   }
 
   return delegates;
 }
 
 class _LayrzAppState extends State<LayrzApp> {
-  /// Combines user-supplied localizations delegates with the default [LayrzLocalizationsDelegate].
+  /// Combines user-supplied localizations delegates with the default [LayrzUiL10nDelegate].
   ///
   /// Preserves the order of user delegates (which take precedence), then appends
-  /// the default [LayrzLocalizationsDelegate] if not already present.
+  /// the default [LayrzUiL10nDelegate] if not already present.
   List<LocalizationsDelegate<dynamic>> _buildLocalizationsDelegates() {
-    return buildLayrzLocalizationsDelegates(widget.localizationsDelegates);
+    return buildLayrzUiL10nDelegates(widget.localizationsDelegates);
   }
 
   Widget _wrapWithTheme({
