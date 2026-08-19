@@ -788,21 +788,25 @@ class _WidgetSlotsShowcase extends StatelessWidget {
               child: Column(
                 spacing: tokens.spacing.sp8,
                 children: [
-                  LayrzText('Suffix Widget (Tall Demo)', style: tokens.typography.label),
+                  LayrzText('Suffix Widget (Height Constraint)', style: tokens.typography.label),
                   LayrzTextInput(
                     labelText: 'Field with Tall Suffix',
-                    hintText: 'Suffix height is constrained',
+                    hintText: 'Type or observe the suffix',
                     suffix: Container(
-                      width: 16,
+                      width: 64,
                       height: 100,
-                      color: tokens.colors.surface2,
+                      decoration: BoxDecoration(
+                        color: tokens.colors.surface2,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                       child: Center(
                         child: LayrzText(
-                          'Constrained',
+                          '100px tall\nfield ≈24px',
                           style: tokens.typography.body.copyWith(
                             fontSize: 10,
                             color: tokens.colors.fg3,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
