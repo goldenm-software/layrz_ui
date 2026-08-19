@@ -566,6 +566,122 @@ void main() {
           reason: 'Dense and normal modes have different widths',
         );
       });
+
+      /// Verifies that trailing elements appear in the correct left-to-right order:
+      /// shortcut → suffix → lock → help → error (error always last).
+      testWidgets('trailing elements are positioned in canonical order', (tester) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: LayrzTheme(
+              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              child: Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (context) => Center(
+                      child: LayrzInputChrome(
+                        labelText: 'Test Field',
+                        isRequired: false,
+                        prefixSlot: LayrzInputPrefixSlot(),
+                        suffixSlot: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                        disabled: false,
+                        readOnly: true,
+                        errors: ['Error message'],
+                        hideDetails: false,
+                        states: {},
+                        shortcutText: 'Cmd+S',
+                        helpContentText: 'Help text',
+                        child: Container(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Find all Icons in the trailing area (shortcut, suffix, lock, help, error icons)
+        final allIcons = find.byType(Icon);
+        expect(allIcons, findsWidgets, reason: 'Should have trailing icons');
+
+        // Find specific elements: suffix icon, lock icon, help icon, error icon
+        final suffixIconFinder = find.byIcon(LayrzIcons.solarOutlineAddCircle);
+        final lockIconFinder = find.byIcon(LayrzIcons.solarOutlineLockKeyhole);
+        final helpIconFinder = find.byIcon(LayrzIcons.solarOutlineHelp);
+        final errorIconFinder = find.byIcon(LayrzIcons.solarOutlineDangerTriangle);
+
+        // Get the x-coordinates (left positions) of each element
+        final suffixRect = tester.getRect(suffixIconFinder);
+        final lockRect = tester.getRect(lockIconFinder);
+        final helpRect = tester.getRect(helpIconFinder);
+        final errorRect = tester.getRect(errorIconFinder);
+
+        // Verify the strict left-to-right ordering
+        // suffix.left < lock.left < help.left < error.left
+        expect(
+          suffixRect.left,
+          lessThan(lockRect.left),
+          reason: 'Suffix should appear before lock icon',
+        );
+        expect(
+          lockRect.left,
+          lessThan(helpRect.left),
+          reason: 'Lock should appear before help icon',
+        );
+        expect(
+          helpRect.left,
+          lessThan(errorRect.left),
+          reason: 'Help should appear before error icon (error always last)',
+        );
+      });
+
+      /// Verifies that with suffix icon and errors, the suffix icon appears before error icon.
+      testWidgets('suffix icon appears before error icon', (tester) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: LayrzTheme(
+              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              child: Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (context) => Center(
+                      child: LayrzInputChrome(
+                        labelText: 'Test Field',
+                        isRequired: false,
+                        prefixSlot: LayrzInputPrefixSlot(),
+                        suffixSlot: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                        disabled: false,
+                        readOnly: false,
+                        errors: ['Error message'],
+                        hideDetails: false,
+                        states: {},
+                        child: Container(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final suffixIconFinder = find.byIcon(LayrzIcons.solarOutlineAddCircle);
+        final errorIconFinder = find.byIcon(LayrzIcons.solarOutlineDangerTriangle);
+
+        final suffixRect = tester.getRect(suffixIconFinder);
+        final errorRect = tester.getRect(errorIconFinder);
+
+        // Suffix icon's left edge must be strictly less than error icon's left edge
+        expect(
+          suffixRect.left,
+          lessThan(errorRect.left),
+          reason: 'Suffix icon should appear before error icon',
+        );
+      });
     });
   });
 }
