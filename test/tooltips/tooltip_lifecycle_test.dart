@@ -288,12 +288,13 @@ void main() {
     );
 
     testWidgets(
-      'Long-press cancel does not crash and tooltip handles cleanup (DESIGN-77)',
+      'Long-press tooltip remains visible after release until tapped away (DESIGN-77)',
       (tester) async {
-        /// Regression test for long-press cancellation cleanup.
+        /// Critical test: long-press release must NOT dismiss the tooltip.
         ///
-        /// When a long-press gesture is cancelled (e.g., pointer leaves the target),
-        /// the tooltip should handle cleanup without crashing.
+        /// When a user long-presses to open a tooltip and then releases, the tooltip
+        /// should REMAIN VISIBLE. It is dismissed only when the user taps elsewhere
+        /// (which triggers the barrier's onTap).
 
         await pumpThemed(
           tester,
@@ -302,55 +303,7 @@ void main() {
               OverlayEntry(
                 builder: (context) => Center(
                   child: LayrzTooltip(
-                    contentText: 'Cancellable tooltip',
-                    child: SizedBox(
-                      width: 50,
-                      height: 50,
-                      child: const Center(child: Text('Anchor')),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-
-        final anchorCenter = tester.getCenter(find.text('Anchor'));
-
-        // Step 1: Start a long-press gesture
-        final gesture = await tester.startGesture(anchorCenter);
-        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
-        expect(find.text('Cancellable tooltip'), findsOneWidget);
-
-        // Step 2: Move far away to cancel the gesture
-        await gesture.moveTo(const Offset(-200, -200));
-        // The gesture is now cancelled, triggering onLongPressCancel
-        await tester.pump();
-        await gesture.up();
-        await tester.pump();
-
-        // Step 3: No exception should be thrown, and the widget tree should be stable
-        expect(tester.takeException(), isNull, reason: 'Long-press cancel should not crash');
-      },
-    );
-
-    testWidgets(
-      'Touch-opened tooltip can be dismissed by mouse exit (DESIGN-77)',
-      (tester) async {
-        /// Regression test for touch-opened tooltips.
-        ///
-        /// When a tooltip is opened via long-press, it should remain visible
-        /// until the user moves the pointer away (for desktop) or takes another action.
-        /// This test verifies that the tooltip stays visible after release.
-
-        await pumpThemed(
-          tester,
-          Overlay(
-            initialEntries: [
-              OverlayEntry(
-                builder: (context) => Center(
-                  child: LayrzTooltip(
-                    contentText: 'Touch tooltip',
+                    contentText: 'Release-remains tooltip',
                     child: SizedBox(
                       width: 50,
                       height: 50,
@@ -366,28 +319,142 @@ void main() {
         final anchorCenter = tester.getCenter(find.text('Anchor'));
 
         // Step 1: Long-press to show tooltip
-        final gesture = await tester.startGesture(anchorCenter);
+        final gesture = await tester.startGesture(anchorCenter, kind: PointerDeviceKind.touch);
         await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
-        expect(find.text('Touch tooltip'), findsOneWidget, reason: 'Tooltip should show on long-press');
+        expect(find.text('Release-remains tooltip'), findsOneWidget, reason: 'Tooltip should show on long-press');
 
         // Step 2: Release the gesture
         await gesture.up();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150)); // Wait past any former exit delay (100ms)
 
-        // Step 3: Tooltip remains visible after release
+        // Step 3: Tooltip should STILL be visible after release (not dismissed by release handler)
         expect(
-          find.text('Touch tooltip'),
+          find.text('Release-remains tooltip'),
           findsOneWidget,
-          reason: 'Tooltip should remain visible after long-press release',
+          reason: 'Tooltip must remain visible after long-press release, dismissed only by tap-away',
+        );
+      },
+    );
+
+    testWidgets(
+      'Long-press tooltip remains visible after cancel until tapped away (DESIGN-77)',
+      (tester) async {
+        /// Critical test: long-press cancel must NOT dismiss the tooltip.
+        ///
+        /// When a user long-presses to open a tooltip but then moves the pointer away
+        /// (cancelling the gesture), the tooltip should REMAIN VISIBLE. It is dismissed
+        /// only when the user taps elsewhere (which triggers the barrier's onTap).
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => Center(
+                  child: LayrzTooltip(
+                    contentText: 'Cancel-remains tooltip',
+                    child: SizedBox(
+                      width: 50,
+                      height: 50,
+                      child: const Center(child: Text('Anchor')),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
 
-        // Step 4: Moving mouse away (if applicable) or just waiting should keep it visible
-        // The tooltip is managed by its own visibility state
-        await tester.pump(const Duration(milliseconds: 100));
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+
+        // Step 1: Start a long-press gesture
+        final gesture = await tester.startGesture(anchorCenter, kind: PointerDeviceKind.touch);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Cancel-remains tooltip'), findsOneWidget, reason: 'Tooltip should show on long-press');
+
+        // Step 2: Move far away to cancel the gesture
+        await gesture.moveTo(const Offset(-200, -200));
+        await tester.pump();
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 150)); // Wait past any former exit delay
+
+        // Step 3: Tooltip should STILL be visible after cancel (not dismissed by cancel handler)
         expect(
-          find.text('Touch tooltip'),
+          find.text('Cancel-remains tooltip'),
           findsOneWidget,
-          reason: 'Tooltip should remain visible a short time after release',
+          reason: 'Tooltip must remain visible after long-press cancel, dismissed only by tap-away',
+        );
+      },
+    );
+
+    testWidgets(
+      'Tapping away from a touch-opened tooltip dismisses it (DESIGN-77)',
+      (tester) async {
+        /// Critical test: tap-away via barrier must dismiss touch-opened tooltips.
+        ///
+        /// When a tooltip is opened via long-press (touch), a full-screen barrier is
+        /// created beneath the tooltip. Tapping anywhere else on screen should trigger
+        /// the barrier's onTap, which calls _hideTooltip and starts dismissal.
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => SizedBox.expand(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      LayrzTooltip(
+                        contentText: 'Tap-dismissible tooltip',
+                        child: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: const Center(child: Text('Anchor')),
+                        ),
+                      ),
+                      Container(
+                        width: 50,
+                        height: 50,
+                        color: const Color(0xFF0000FF),
+                        child: const Center(child: Text('TapZone')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorCenter = tester.getCenter(find.text('Anchor'));
+
+        // Step 1: Long-press to show tooltip
+        final gesture = await tester.startGesture(anchorCenter, kind: PointerDeviceKind.touch);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Tap-dismissible tooltip'), findsOneWidget, reason: 'Tooltip should show on long-press');
+
+        // Step 2: Release the gesture
+        await gesture.up();
+        await tester.pump(const Duration(milliseconds: 50)); // Small pump, but BEFORE exit delay fires
+
+        // Tooltip should still be visible (exit delay not fired yet)
+        expect(
+          find.text('Tap-dismissible tooltip'),
+          findsOneWidget,
+          reason: 'Tooltip should still be visible after release, before exit delay',
+        );
+
+        // Step 3: Tap on TapZone (anywhere away from the anchor)
+        final tapZoneCenter = tester.getCenter(find.text('TapZone'));
+        await tester.tapAt(tapZoneCenter);
+        await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+        // Step 4: Tooltip should be completely gone after barrier tap + reverse animation
+        expect(
+          find.text('Tap-dismissible tooltip'),
+          findsNothing,
+          reason: 'Tooltip must be dismissed after tapping away (barrier onTap)',
         );
       },
     );
