@@ -221,3 +221,14 @@ const FontWeight kLayrzLayoutNotificationsLabelFontWeight = FontWeight.w600;
 
 /// The font size of the notifications count badge, in logical pixels.
 const double kLayrzLayoutNotificationsCountFontSize = 10.0;
+
+/// The gap between the search field and the first navigation item, in logical pixels.
+///
+/// Tight spacing after search to maintain compact layout rhythm.
+const double kLayrzLayoutSearchToItemsGap = 8.0;
+
+/// The width reserved for the active indicator on selected rail items (leading and trailing reserved space), in logical pixels.
+///
+/// Both the leading indicator bar and the trailing reserved space total this width,
+/// allowing geometry to be identical between selected and unselected items.
+const double kLayrzLayoutActiveIndicatorReservedWidth = kLayrzLayoutActiveIndicatorWidth + 6.0;
