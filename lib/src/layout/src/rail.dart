@@ -1,7 +1,9 @@
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
+import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -119,13 +121,17 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
                 top: kLayrzLayoutRailPaddingVertical,
                 bottom: kLayrzLayoutLogoBottomPadding,
               ),
-              child: SizedBox(
-                width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
-                height: kLayrzLayoutLogoHeight,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  alignment: Alignment.center,
-                  child: widget.logo!,
+              child: ClipRRect(
+                borderRadius: BorderRadius.zero,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
+                  height: kLayrzLayoutLogoHeight,
+                  child: FittedBox(
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    child: widget.logo!,
+                  ),
                 ),
               ),
             ),
@@ -179,8 +185,10 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
 
                 // User chrome
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: kLayrzLayoutRailPaddingHorizontal,
+                  padding: const EdgeInsets.only(
+                    left: kLayrzLayoutRailPaddingHorizontal,
+                    right: kLayrzLayoutRailPaddingHorizontal,
+                    bottom: kLayrzLayoutUserChromePaddingBottom,
                   ),
                   child: LayrzLayoutUserChrome(
                     tokens: tokens,
@@ -199,45 +207,18 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
   }
 
   Widget _buildSearchField(LayrzTokens tokens) {
+    final context = this.context;
     return SizedBox(
       height: kLayrzLayoutSearchFieldHeight,
-      child: Container(
-        decoration: BoxDecoration(
-          color: tokens.colors.surface2,
-          borderRadius: BorderRadius.circular(8.0),
-          border: Border.all(
-            color: tokens.colors.divider,
-            width: 1.0,
-          ),
-        ),
-        child: Row(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 8.0),
-              child: Icon(
-                LayrzIcons.solarOutlineMagnifer,
-                size: kLayrzLayoutSearchFieldIconSize,
-                color: tokens.colors.fg3,
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: kLayrzLayoutSearchFieldInternalPaddingHorizontal,
-                ),
-                child: EditableText(
-                  controller: _searchController,
-                  focusNode: FocusNode(),
-                  style: TextStyle(
-                    fontSize: kLayrzLayoutSearchFieldFontSize,
-                    color: tokens.colors.fg1,
-                  ),
-                  cursorColor: tokens.colors.primary,
-                  backgroundCursorColor: tokens.colors.surface2,
-                ),
-              ),
-            ),
-          ],
+      child: LayrzTextInput(
+        hintText: context.l10n.actionSearch,
+        hideDetails: true,
+        controller: _searchController,
+        onChanged: (_) {},
+        prefixIcon: LayrzIcons.solarOutlineMagnifer,
+        padding: const EdgeInsets.symmetric(
+          horizontal: kLayrzLayoutSearchFieldPaddingHorizontal,
+          vertical: 0,
         ),
       ),
     );
