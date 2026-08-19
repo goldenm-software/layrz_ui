@@ -107,7 +107,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface);
+      expect(spec.backgroundColor, tokens.colors.surface2);
       expect(spec.borderColor, tokens.colors.primary);
       expect(spec.textColor, tokens.colors.fg1);
       expect(spec.isDashed, false);
@@ -146,7 +146,7 @@ void main() {
 
       expect(spec.backgroundColor, tokens.colors.surface2);
       expect(spec.borderColor, tokens.colors.divider);
-      expect(spec.textColor, tokens.colors.fg3);
+      expect(spec.textColor, tokens.colors.fg4);
       expect(spec.isDashed, true);
     });
 
@@ -160,8 +160,8 @@ void main() {
 
       expect(spec.backgroundColor, tokens.colors.surface2);
       expect(spec.borderColor, tokens.colors.divider);
-      expect(spec.textColor, tokens.colors.fg3);
-      expect(spec.isDashed, true);
+      expect(spec.textColor, tokens.colors.fg1);
+      expect(spec.isDashed, false);
     });
 
     test('resolve: precedence - disabled > readOnly', () {
@@ -173,7 +173,7 @@ void main() {
       );
 
       expect(spec.isDashed, true);
-      expect(spec.textColor, tokens.colors.fg3);
+      expect(spec.textColor, tokens.colors.fg4);
     });
 
     test('resolve: precedence - readOnly > error', () {
@@ -185,7 +185,7 @@ void main() {
       );
 
       expect(spec.backgroundColor, tokens.colors.surface2);
-      expect(spec.isDashed, true);
+      expect(spec.isDashed, false);
     });
 
     test('resolve: precedence - error > pressed', () {

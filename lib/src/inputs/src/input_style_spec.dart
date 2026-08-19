@@ -77,10 +77,10 @@ class LayrzInputStyleSpec {
   /// |---|---|---|---|---|
   /// | rest | `surface2` | transparent | `fg1` | false |
   /// | hover | `surface3` | transparent | `fg1` | false |
-  /// | focus | `surface` | `colors.primary` | `fg1` | false |
+  /// | focus | `surface2` | `colors.primary` | `fg1` | false |
   /// | error | `colors.danger.shade50` | `colors.danger` | `fg1` | false |
-  /// | disabled | `surface2` | `divider` | `fg3` | true |
-  /// | read-only | `surface2` | `divider` | `fg3` | true |
+  /// | disabled | `surface2` | `divider` | `fg4` | true |
+  /// | read-only | `surface2` | `divider` | `fg1` | false |
   ///
   /// Geometry (height, padding, border width) is byte-identical across states and must not
   /// be affected by this method (per decision D15).
@@ -98,7 +98,7 @@ class LayrzInputStyleSpec {
         backgroundColor: tokens.colors.surface2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
-        textColor: tokens.colors.fg3,
+        textColor: tokens.colors.fg4,
         isDashed: true,
       );
     }
@@ -108,8 +108,8 @@ class LayrzInputStyleSpec {
         backgroundColor: tokens.colors.surface2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
-        textColor: tokens.colors.fg3,
-        isDashed: true,
+        textColor: tokens.colors.fg1,
+        isDashed: false,
       );
     }
 
@@ -129,7 +129,7 @@ class LayrzInputStyleSpec {
 
     if (isFocused) {
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface,
+        backgroundColor: tokens.colors.surface2,
         borderColor: tokens.colors.primary,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,

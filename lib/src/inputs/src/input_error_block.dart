@@ -35,11 +35,9 @@ class LayrzInputErrorBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(height: tokens.spacing.sp6),
-        ...errors.map(
-          (error) => Text(
-            error,
-            style: errorStyle,
-          ),
+        Text(
+          errors.join(', '),
+          style: errorStyle,
         ),
       ],
     );

@@ -9,7 +9,7 @@ import 'package:layrz_ui/preview.dart';
 )
 Widget previewLayrzTextInputDefault() => LayrzTextInput(
   labelText: 'Enter your name',
-  placeholder: 'John Doe',
+  hintText: 'John Doe',
 );
 
 /// Displays the [LayrzTextInput] in error state with error message.
@@ -29,7 +29,7 @@ Widget previewLayrzTextInputError() => LayrzTextInput(
 )
 Widget previewLayrzTextInputDisabled() => LayrzTextInput(
   labelText: 'Disabled Field',
-  placeholder: 'Cannot type',
+  hintText: 'Cannot type',
   disabled: true,
 );
 
@@ -51,6 +51,6 @@ Widget previewLayrzTextInputReadOnly() => LayrzTextInput(
 )
 Widget previewLayrzTextInputRequired() => LayrzTextInput(
   labelText: 'Username',
-  placeholder: 'Your username',
+  hintText: 'Your username',
   isRequired: true,
 );

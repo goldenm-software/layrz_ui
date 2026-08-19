@@ -155,10 +155,13 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
           // 7. Dense mode
           _DenseModeShowcase(tokens: tokens),
 
-          // 8. Shortcut badge
+          // 8. Label icon
+          _LabelIconShowcase(tokens: tokens),
+
+          // 9. Shortcut badge
           _ShortcutBadgeShowcase(tokens: tokens),
 
-          // 9. Additional features
+          // 10. Additional features
           _AdditionalFeaturesShowcase(tokens: tokens),
         ],
       ),
@@ -226,7 +229,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Rest', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: restController,
-                        placeholder: 'Rest state',
+                        labelText: 'Rest state',
                       ),
                     ],
                   ),
@@ -238,7 +241,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Hover', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: hoverController,
-                        placeholder: 'Hover (move pointer over)',
+                        hintText: 'Hover (move pointer over)',
                       ),
                     ],
                   ),
@@ -252,7 +255,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                         controller: focusController,
                         focusNode: focusFocusNode,
                         autofocus: true,
-                        placeholder: 'Focus (autofocus)',
+                        hintText: 'Focus (autofocus)',
                       ),
                     ],
                   ),
@@ -270,7 +273,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Error', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: errorController,
-                        placeholder: 'Error state',
+                        hintText: 'Error state',
                         errors: ['This is an error'],
                       ),
                     ],
@@ -283,7 +286,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Disabled', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: disabledController,
-                        placeholder: 'Disabled state',
+                        hintText: 'Disabled state',
                         disabled: true,
                       ),
                     ],
@@ -296,7 +299,7 @@ class _SixStateMatrixShowcase extends StatelessWidget {
                       LayrzText('Read-only', style: tokens.typography.label),
                       LayrzTextInput(
                         controller: readOnlyController,
-                        placeholder: 'Read-only state',
+                        hintText: 'Read-only state',
                         readOnly: true,
                       ),
                     ],
@@ -339,7 +342,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                       LayrzText('With Label', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Username',
-                        placeholder: 'Enter your username',
+                        hintText: 'Enter your username',
                       ),
                     ],
                   ),
@@ -350,7 +353,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                     children: [
                       LayrzText('Without Label', style: tokens.typography.label),
                       const LayrzTextInput(
-                        placeholder: 'No label here',
+                        hintText: 'No label here',
                       ),
                     ],
                   ),
@@ -368,7 +371,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                       const LayrzTextInput(
                         labelText: 'Email',
                         isRequired: true,
-                        placeholder: 'your@email.com',
+                        hintText: 'your@email.com',
                       ),
                     ],
                   ),
@@ -440,7 +443,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
                         labelText: 'prefixIcon',
                         prefixIcon: LayrzIcons.solarOutlineCheckCircle,
                         onPrefixTap: onPrefixTap,
-                        placeholder: 'Taps: $prefixTapCount',
+                        hintText: 'Taps: $prefixTapCount',
                       ),
                     ),
                     Expanded(
@@ -448,7 +451,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
                         labelText: 'prefixText',
                         prefixText: '@',
                         onPrefixTap: onPrefixTap,
-                        placeholder: 'Taps: $prefixTapCount',
+                        hintText: 'Taps: $prefixTapCount',
                       ),
                     ),
                   ],
@@ -469,7 +472,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
                         labelText: 'suffixIcon',
                         suffixIcon: LayrzIcons.solarOutlineEyeScan,
                         onSuffixTap: onSuffixTap,
-                        placeholder: 'Taps: $suffixTapCount',
+                        hintText: 'Taps: $suffixTapCount',
                       ),
                     ),
                     Expanded(
@@ -477,7 +480,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
                         labelText: 'suffixText',
                         suffixText: '.com',
                         onSuffixTap: onSuffixTap,
-                        placeholder: 'Taps: $suffixTapCount',
+                        hintText: 'Taps: $suffixTapCount',
                       ),
                     ),
                   ],
@@ -520,7 +523,7 @@ class _ErrorsShowcase extends StatelessWidget {
                       LayrzText('Single Error', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Email',
-                        placeholder: 'your@email.com',
+                        hintText: 'your@email.com',
                         errors: ['Invalid email format'],
                       ),
                     ],
@@ -553,7 +556,7 @@ class _ErrorsShowcase extends StatelessWidget {
                       LayrzText('hideDetails: true', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Field',
-                        placeholder: 'Error hidden',
+                        hintText: 'Error hidden',
                         errors: ['Error message is suppressed'],
                         hideDetails: true,
                       ),
@@ -603,7 +606,7 @@ class _HelpAffordanceShowcase extends StatelessWidget {
         ),
         const LayrzTextInput(
           labelText: 'API Key',
-          placeholder: 'Enter your API key',
+          hintText: 'Enter your API key',
           helpTitleText: 'What is an API Key?',
           helpContentText: 'An API key is a unique identifier used to authenticate requests to the API. Keep it secret and never share it publicly.',
         ),
@@ -687,7 +690,7 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
                     controller: _readOnlyController,
                     readOnly: true,
                     onTap: widget.onReadOnlyTap,
-                    placeholder: 'Taps: ${widget.readOnlyTapCount}',
+                    hintText: 'Taps: ${widget.readOnlyTapCount}',
                   ),
                 ],
               ),
@@ -702,7 +705,7 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
                     controller: _disabledController,
                     disabled: true,
                     onTap: widget.onDisabledTap,
-                    placeholder: 'Taps: ${widget.disabledTapCount}',
+                    hintText: 'Taps: ${widget.disabledTapCount}',
                   ),
                 ],
               ),
@@ -739,7 +742,7 @@ class _DenseModeShowcase extends StatelessWidget {
                   LayrzText('Default', style: tokens.typography.label),
                   const LayrzTextInput(
                     labelText: 'Regular size',
-                    placeholder: 'Normal padding',
+                    hintText: 'Normal padding',
                   ),
                 ],
               ),
@@ -751,8 +754,62 @@ class _DenseModeShowcase extends StatelessWidget {
                   LayrzText('Dense: true', style: tokens.typography.label),
                   const LayrzTextInput(
                     labelText: 'Compact size',
-                    placeholder: 'Reduced padding',
+                    hintText: 'Reduced padding',
                     dense: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Demonstrates the label icon feature.
+///
+/// Shows: optional icon rendered before label text, inheriting the label's color and size.
+class _LabelIconShowcase extends StatelessWidget {
+  final LayrzTokens tokens;
+
+  const _LabelIconShowcase({required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp16,
+      children: [
+        LayrzText('Label Icon', style: tokens.typography.title),
+        LayrzText(
+          'Optional icon rendered before label text. Icon inherits label color and typography sizing.',
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+        ),
+        Row(
+          spacing: tokens.spacing.sp16,
+          children: [
+            Expanded(
+              child: Column(
+                spacing: tokens.spacing.sp8,
+                children: [
+                  LayrzText('With Label Icon', style: tokens.typography.label),
+                  LayrzTextInput(
+                    labelText: 'Username',
+                    labelIcon: LayrzIcons.solarOutlineUser,
+                    hintText: 'Enter your username',
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Column(
+                spacing: tokens.spacing.sp8,
+                children: [
+                  LayrzText('Without Icon', style: tokens.typography.label),
+                  const LayrzTextInput(
+                    labelText: 'Password',
+                    hintText: 'Enter your password',
                   ),
                 ],
               ),
@@ -789,14 +846,14 @@ class _ShortcutBadgeShowcase extends StatelessWidget {
             Expanded(
               child: LayrzTextInput(
                 labelText: 'Search',
-                placeholder: 'Try Cmd+K',
+                hintText: 'Try Cmd+K',
                 shortcut: {LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK},
               ),
             ),
             Expanded(
               child: LayrzTextInput(
                 labelText: 'Command',
-                placeholder: 'Try Ctrl+Shift+P',
+                hintText: 'Try Ctrl+Shift+P',
                 shortcut: {LogicalKeyboardKey.control, LogicalKeyboardKey.shift, LogicalKeyboardKey.keyP},
               ),
             ),
@@ -835,7 +892,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                       LayrzText('Password (obscureText)', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Password',
-                        placeholder: '••••••••',
+                        hintText: '••••••••',
                         obscureText: true,
                       ),
                     ],
@@ -848,7 +905,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                       LayrzText('Email Keyboard', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Email',
-                        placeholder: 'user@example.com',
+                        hintText: 'user@example.com',
                         keyboardType: TextInputType.emailAddress,
                       ),
                     ],
@@ -866,7 +923,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                       LayrzText('Phone Keyboard', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Phone Number',
-                        placeholder: '+1 (555) 123-4567',
+                        hintText: '+1 (555) 123-4567',
                         keyboardType: TextInputType.phone,
                       ),
                     ],
@@ -879,7 +936,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                       LayrzText('Max Length (20 chars)', style: tokens.typography.label),
                       const LayrzTextInput(
                         labelText: 'Limited',
-                        placeholder: 'Type to see counter',
+                        hintText: 'Type to see counter',
                         maxLength: 20,
                       ),
                     ],

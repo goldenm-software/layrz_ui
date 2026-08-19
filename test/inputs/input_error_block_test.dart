@@ -14,8 +14,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Error 1'), findsOneWidget);
-      expect(find.text('Error 2'), findsOneWidget);
+      expect(find.text('Error 1, Error 2'), findsOneWidget);
     });
 
     testWidgets('renders nothing when hideDetails is true', (tester) async {
@@ -42,7 +41,7 @@ void main() {
       expect(find.byType(LayrzInputErrorBlock), findsOneWidget);
     });
 
-    testWidgets('renders multiple error lines', (tester) async {
+    testWidgets('renders multiple errors joined with comma separator', (tester) async {
       await pumpThemed(
         tester,
         LayrzInputErrorBlock(
@@ -51,9 +50,7 @@ void main() {
         ),
       );
 
-      expect(find.text('First'), findsOneWidget);
-      expect(find.text('Second'), findsOneWidget);
-      expect(find.text('Third'), findsOneWidget);
+      expect(find.text('First, Second, Third'), findsOneWidget);
     });
   });
 }
