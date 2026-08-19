@@ -21,7 +21,7 @@ Widget buildBordersSection() {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Pre-built border sides
-            LayrzText('Pre-Built BorderSide Tokens', style: tokens.typography.title),
+            Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Row(
               children: [
@@ -51,7 +51,7 @@ Widget buildBordersSection() {
             SizedBox(height: tokens.spacing.sp24),
 
             // Stroke width values
-            LayrzText('Stroke Width Values', style: tokens.typography.title),
+            Text('Stroke Width Values', style: tokens.typography.title),
             SizedBox(height: tokens.spacing.sp12),
             Column(
               children: [
@@ -89,7 +89,7 @@ class _BorderSample extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+        Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         SizedBox(height: tokens.spacing.sp8),
         Container(
           height: tokens.spacing.sp48,
@@ -129,7 +129,7 @@ class _StrokeValueRow extends StatelessWidget {
       children: [
         SizedBox(
           width: tokens.spacing.sp48,
-          child: LayrzText(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+          child: Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
         Expanded(
           child: LayrzTooltip(

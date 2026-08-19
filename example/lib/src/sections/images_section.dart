@@ -32,14 +32,14 @@ class _ImagesSectionContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar variants
-          LayrzText('Avatar Variants', style: tokens.typography.headline.copyWith(fontSize: 16)),
+          Text('Avatar Variants', style: tokens.typography.headline.copyWith(fontSize: 16)),
           SizedBox(height: tokens.spacing.sp16),
           _buildAvatarRow(tokens),
 
           SizedBox(height: tokens.spacing.sp24),
 
           // Image component
-          LayrzText('Image Component', style: tokens.typography.headline.copyWith(fontSize: 16)),
+          Text('Image Component', style: tokens.typography.headline.copyWith(fontSize: 16)),
           SizedBox(height: tokens.spacing.sp16),
           _buildImageDemo(tokens),
         ],
@@ -57,7 +57,7 @@ class _ImagesSectionContent extends StatelessWidget {
             children: [
               const LayrzAvatar(nameText: 'John Doe', size: 48),
               SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Initials', style: tokens.typography.label),
+              Text('Initials', style: tokens.typography.label),
             ],
           ),
           SizedBox(width: tokens.spacing.sp24),
@@ -65,7 +65,7 @@ class _ImagesSectionContent extends StatelessWidget {
             children: [
               LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 48),
               SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Icon', style: tokens.typography.label),
+              Text('Icon', style: tokens.typography.label),
             ],
           ),
           SizedBox(width: tokens.spacing.sp24),
@@ -73,7 +73,7 @@ class _ImagesSectionContent extends StatelessWidget {
             children: [
               const LayrzAvatar.emoji(emoji: '🎉', size: 48),
               SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Emoji', style: tokens.typography.label),
+              Text('Emoji', style: tokens.typography.label),
             ],
           ),
           SizedBox(width: tokens.spacing.sp24),
@@ -84,7 +84,7 @@ class _ImagesSectionContent extends StatelessWidget {
                 size: 48,
               ),
               SizedBox(height: tokens.spacing.sp8),
-              LayrzText('Network Image', style: tokens.typography.label),
+              Text('Network Image', style: tokens.typography.label),
             ],
           ),
         ],
@@ -106,7 +106,7 @@ class _ImagesSectionContent extends StatelessWidget {
             fit: BoxFit.cover,
           ),
           SizedBox(height: tokens.spacing.sp8),
-          LayrzText('Network Image', style: tokens.typography.label),
+          Text('Network Image', style: tokens.typography.label),
         ],
       ),
     );

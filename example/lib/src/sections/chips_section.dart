@@ -89,7 +89,7 @@ class _ChipsStylesShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Style Variants',
           style: tokens.typography.title,
         ),
@@ -130,7 +130,7 @@ class _ChipsTypesShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Semantic Types',
           style: tokens.typography.title,
         ),
@@ -163,7 +163,7 @@ class _ChipsFeatureShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Features: Leading Icon & Delete',
           style: tokens.typography.title,
         ),
@@ -212,7 +212,7 @@ class _ChipsDeleteShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Interactive Delete (Click to Remove)',
           style: tokens.typography.title,
         ),
@@ -246,7 +246,7 @@ class _ChipsScrollableGroupShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Scrollable Group (.none behavior)',
           style: tokens.typography.title,
         ),
@@ -278,7 +278,7 @@ class _ChipsCompactGroupShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp8,
       children: [
-        LayrzText(
+        Text(
           'Compact Group (.compact behavior - Resize to see +N)',
           style: tokens.typography.title,
         ),
@@ -303,7 +303,7 @@ class _ChipsCompactGroupShowcase extends StatelessWidget {
             ),
           ),
         ),
-        LayrzText(
+        Text(
           'This group is constrained to 300px width. Resize the window to see the +N chip appear.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),

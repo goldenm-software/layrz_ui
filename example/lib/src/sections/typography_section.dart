@@ -54,11 +54,11 @@ class _StyleRow extends StatelessWidget {
         // Style name label
         SizedBox(
           width: tokens.spacing.sp48 * 2,
-          child: LayrzText(sample.name, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
+          child: Text(sample.name, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
 
         // Rendered text sample
-        Expanded(child: LayrzText('The quick brown fox jumps over the lazy dog', style: sample.style)),
+        Expanded(child: Text('The quick brown fox jumps over the lazy dog', style: sample.style)),
 
         // Font size value
         SizedBox(

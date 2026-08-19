@@ -22,7 +22,7 @@ Widget buildAccessPathsSection() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LayrzText(
+            Text(
               'Both access paths must return the same values',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
             ),
@@ -137,7 +137,7 @@ class _AccessPathComparison extends StatelessWidget {
             // Token name
             Row(
               children: [
-                Expanded(child: LayrzText(label, style: tokens.typography.title)),
+                Expanded(child: Text(label, style: tokens.typography.title)),
                 // Match indicator
                 Container(
                   width: tokens.spacing.sp32,
@@ -147,7 +147,7 @@ class _AccessPathComparison extends StatelessWidget {
                     borderRadius: BorderRadius.circular(tokens.radius.full),
                   ),
                   alignment: Alignment.center,
-                  child: LayrzText(
+                  child: Text(
                     match ? '✓' : '✗',
                     style: tokens.typography.label.copyWith(
                       color: tokens.colors.surface,
@@ -196,14 +196,14 @@ class _AccessPathRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: LayrzText(
+            child: Text(
               path,
               style: tokens.typography.label.copyWith(fontFamily: 'monospace', fontSize: 10),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           SizedBox(width: tokens.spacing.sp12),
-          LayrzText(
+          Text(
             '→ $value',
             style: tokens.typography.label.copyWith(
               color: tokens.colors.fg3,

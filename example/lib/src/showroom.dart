@@ -75,14 +75,14 @@ class Showroom extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    LayrzText(kAppTitle, style: tokens.typography.display.copyWith(color: tokens.colors.primary)),
+                    Text(kAppTitle, style: tokens.typography.display.copyWith(color: tokens.colors.primary)),
                     SizedBox(height: tokens.spacing.sp8),
-                    LayrzText(
+                    Text(
                       'Design System Showroom',
                       style: tokens.typography.title.copyWith(color: tokens.colors.fg2),
                     ),
                     SizedBox(height: tokens.spacing.sp4),
-                    LayrzText(
+                    Text(
                       'All design tokens in one place — explore the foundation',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                     ),
@@ -118,7 +118,7 @@ class Showroom extends StatelessWidget {
                   children: [
                     Container(height: 1, color: tokens.colors.divider),
                     SizedBox(height: tokens.spacing.sp16),
-                    LayrzText(
+                    Text(
                       'Built with layrz_ui — a Material-free Flutter design system',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                     ),

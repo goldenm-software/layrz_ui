@@ -73,9 +73,9 @@ class _PositionsDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText('All Four Positions', style: tokens.typography.title),
+        Text('All Four Positions', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        LayrzText(
+        Text(
           'Hover or long-press each anchor to see the tooltip appear in its position.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -89,7 +89,7 @@ class _PositionsDemo extends StatelessWidget {
             Column(
               spacing: tokens.spacing.sp12,
               children: [
-                LayrzText('Top', style: tokens.typography.label),
+                Text('Top', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'T',
                   tokens: tokens,
@@ -109,7 +109,7 @@ class _PositionsDemo extends StatelessWidget {
             Column(
               spacing: tokens.spacing.sp12,
               children: [
-                LayrzText('Bottom', style: tokens.typography.label),
+                Text('Bottom', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'B',
                   tokens: tokens,
@@ -129,7 +129,7 @@ class _PositionsDemo extends StatelessWidget {
             Column(
               spacing: tokens.spacing.sp12,
               children: [
-                LayrzText('Left', style: tokens.typography.label),
+                Text('Left', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'L',
                   tokens: tokens,
@@ -149,7 +149,7 @@ class _PositionsDemo extends StatelessWidget {
             Column(
               spacing: tokens.spacing.sp12,
               children: [
-                LayrzText('Right', style: tokens.typography.label),
+                Text('Right', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'R',
                   tokens: tokens,
@@ -188,9 +188,9 @@ class _TextVariantsDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText('Text Variants', style: tokens.typography.title),
+        Text('Text Variants', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        LayrzText(
+        Text(
           'Left: plain text. Right: rich text with bold and colored spans.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -203,7 +203,7 @@ class _TextVariantsDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                LayrzText('contentText', style: tokens.typography.label),
+                Text('contentText', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'Plain',
                   tokens: tokens,
@@ -223,7 +223,7 @@ class _TextVariantsDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp8,
               children: [
-                LayrzText('contentRichText', style: tokens.typography.label),
+                Text('contentRichText', style: tokens.typography.label),
                 _AnchorBox(
                   label: 'Rich',
                   tokens: tokens,
@@ -275,9 +275,9 @@ class _EdgeFlipDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText('Edge Flip Behavior', style: tokens.typography.title),
+        Text('Edge Flip Behavior', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
-        LayrzText(
+        Text(
           'Anchors at the viewport edges flip the tooltip to the opposite side when overflow is detected.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -355,9 +355,9 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText('Pass-Through Interactivity', style: widget.tokens.typography.title),
+        Text('Pass-Through Interactivity', style: widget.tokens.typography.title),
         SizedBox(height: widget.tokens.spacing.sp12),
-        LayrzText(
+        Text(
           'The tooltip surface does not block pointer events. Hover or long-press the anchor '
           'at the top to show the tooltip, then tap the targets beneath it. Taps pass through '
           'the tooltip to the targets and increment the counter.',
@@ -374,7 +374,7 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: widget.tokens.spacing.sp12,
             children: [
-              LayrzText(
+              Text(
                 'Tap count: $_tapCount',
                 style: widget.tokens.typography.label.copyWith(
                   color: widget.tokens.colors.success[500],
@@ -407,7 +407,7 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
                               borderRadius: BorderRadius.circular(widget.tokens.radius.r8),
                             ),
                             alignment: Alignment.center,
-                            child: LayrzText(
+                            child: Text(
                               'Target ${index + 1}',
                               style: widget.tokens.typography.label.copyWith(
                                 color: widget.tokens.colors.fg2,
@@ -476,7 +476,7 @@ class _AnchorContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: LayrzText(
+      child: Text(
         label,
         style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
         textAlign: TextAlign.center,

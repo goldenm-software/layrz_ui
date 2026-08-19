@@ -122,7 +122,7 @@ Widget buildMenusSection() {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const LayrzText('Start', style: TextStyle(fontSize: 12)),
+                  const Text('Start', style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 8),
                   LayrzDropdownMenu(
                     alignment: LayrzDropdownMenuAlignment.start,
@@ -146,7 +146,7 @@ Widget buildMenusSection() {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const LayrzText('Center', style: TextStyle(fontSize: 12)),
+                  const Text('Center', style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 8),
                   LayrzDropdownMenu(
                     alignment: LayrzDropdownMenuAlignment.center,
@@ -170,7 +170,7 @@ Widget buildMenusSection() {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const LayrzText('End', style: TextStyle(fontSize: 12)),
+                  const Text('End', style: TextStyle(fontSize: 12)),
                   const SizedBox(height: 8),
                   LayrzDropdownMenu(
                     alignment: LayrzDropdownMenuAlignment.end,
@@ -270,7 +270,7 @@ class _MenuShowcaseCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayrzText(title, style: tokens.typography.label),
+          Text(title, style: tokens.typography.label),
           SizedBox(height: tokens.spacing.sp12),
           Container(
             padding: EdgeInsets.all(tokens.spacing.sp16),

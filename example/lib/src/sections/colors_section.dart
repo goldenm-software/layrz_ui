@@ -82,7 +82,7 @@ Widget buildColorsSection() {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                LayrzText('Overlay & Tonal Opacity', style: tokens.typography.title),
+                Text('Overlay & Tonal Opacity', style: tokens.typography.title),
                 SizedBox(height: tokens.spacing.sp12),
                 Row(
                   children: [
@@ -131,7 +131,7 @@ class _ColorCategory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(title, style: tokens.typography.title),
+        Text(title, style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp12),
         Wrap(
           spacing: tokens.spacing.sp16,
@@ -187,7 +187,7 @@ class _OverlaySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        LayrzText(label, textAlign: TextAlign.center, style: tokens.typography.label),
+        Text(label, textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }
@@ -227,7 +227,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: LayrzText(
+                  child: Text(
                     '100%',
                     style: tokens.typography.label.copyWith(color: fullOpacity.contrastColor, fontSize: 10),
                   ),
@@ -243,7 +243,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: LayrzText(
+                  child: Text(
                     '${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
                     style: tokens.typography.label.copyWith(color: tonalColor.contrastColor, fontSize: 10),
                   ),
@@ -255,7 +255,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
 
         // Label
         SizedBox(height: tokens.spacing.sp8),
-        LayrzText('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.label),
+        Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
   }
