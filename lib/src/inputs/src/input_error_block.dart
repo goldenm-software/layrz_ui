@@ -3,8 +3,9 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 
 /// Renders the error message block below a [LayrzTextInput].
 ///
-/// Displays one line per error in the provided list, using `typography.label`
-/// text style and `colors.danger` text color.
+/// Displays joined error messages using `typography.label` text style with danger color
+/// and bold weight. Bold rendering serves as a deliberate visual signal to direct the user's
+/// attention to what went wrong.
 class LayrzInputErrorBlock extends StatelessWidget {
   /// The list of error messages to display.
   final List<String> errors;
@@ -26,7 +27,9 @@ class LayrzInputErrorBlock extends StatelessWidget {
     }
 
     final tokens = context.tokens;
+    // Bold error text is a deliberate signal: tells the user "this is what went wrong"
     final errorStyle = tokens.typography.label.copyWith(
+      fontWeight: FontWeight.w700,
       color: tokens.colors.danger,
     );
 

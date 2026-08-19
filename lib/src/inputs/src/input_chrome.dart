@@ -272,7 +272,17 @@ class LayrzInputChrome extends StatelessWidget {
     );
   }
 
-  /// Builds the trailing elements (error icon, shortcut, suffix, lock, help) with symmetric spacing.
+  /// Builds the trailing elements in a fixed, canonical order.
+  ///
+  /// **Trailing cluster order (left to right)**:
+  /// `[ shortcut badge ] [ suffix{icon|widget|text} ] [ lock icon ] [ help icon ] [ error icon ]`
+  ///
+  /// Rationale: the shortcut badge is a passive affordance so it sits furthest left; the caller's
+  /// suffix comes next; then the state and meta icons group at the right, with the error icon
+  /// unconditionally last so the user's eye always finds it in the same place.
+  ///
+  /// All elements are conditional; this method appends in this exact sequence. Every icon in the
+  /// cluster uses the single [contentHeight]-derived size for visual consistency.
   ///
   /// Returns a list that is empty if no trailing elements are present, or a list containing
   /// an inner gap spacer followed by a Row that collects all trailing widgets with
@@ -286,19 +296,11 @@ class LayrzInputChrome extends StatelessWidget {
     final trailing = <Widget>[];
     final iconSize = context.theme.iconTheme.size ?? 20.0;
 
-    // Error icon
-    if (errors.isNotEmpty) {
-      trailing.add(
-        Icon(
-          LayrzIcons.solarOutlineDangerTriangle,
-          size: iconSize,
-          color: tokens.colors.danger,
-        ),
-      );
-    }
+    // Canonical order: shortcut → suffix → lock → help → error (error always last)
 
-    // Shortcut badge
-    if (shortcutText != null && shortcutText!.isNotEmpty && !(hideShortcutOnMobile && _isMobile(context))) {
+    // Shortcut badge (leftmost, passive affordance)
+    // Hidden on mobile platforms if hideShortcutOnMobile is true
+    if (shortcutText != null && shortcutText!.isNotEmpty && !(hideShortcutOnMobile && LayrzPlatform.isMobile)) {
       trailing.add(
         Text(
           shortcutText!,
@@ -309,7 +311,7 @@ class LayrzInputChrome extends StatelessWidget {
       );
     }
 
-    // Suffix slot
+    // Suffix slot (after shortcut)
     if (suffixSlot.hasContent) {
       trailing.add(
         _buildSlotContent(
@@ -322,7 +324,7 @@ class LayrzInputChrome extends StatelessWidget {
       );
     }
 
-    // Lock icon
+    // Lock icon (read-only state icon)
     if (readOnly && !disabled) {
       trailing.add(
         Icon(
@@ -333,7 +335,7 @@ class LayrzInputChrome extends StatelessWidget {
       );
     }
 
-    // Help affordance
+    // Help affordance (meta icon)
     if (helpContentText != null && helpContentText!.isNotEmpty) {
       trailing.add(
         LayrzTooltip(
@@ -344,6 +346,17 @@ class LayrzInputChrome extends StatelessWidget {
             size: iconSize,
             color: tokens.colors.fg3,
           ),
+        ),
+      );
+    }
+
+    // Error icon (always last/rightmost — error state is critical)
+    if (errors.isNotEmpty) {
+      trailing.add(
+        Icon(
+          LayrzIcons.solarOutlineDangerTriangle,
+          size: iconSize,
+          color: tokens.colors.danger,
         ),
       );
     }
@@ -411,10 +424,5 @@ class LayrzInputChrome extends StatelessWidget {
       onTap: disabled ? null : slot.onTap,
       child: content,
     );
-  }
-
-  /// Checks if the platform is mobile.
-  bool _isMobile(BuildContext context) {
-    return LayrzPlatform.isMobile;
   }
 }
