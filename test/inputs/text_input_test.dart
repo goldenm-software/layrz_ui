@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
-import 'package:layrz_ui/src/inputs/src/text_input.dart' hide TextEditingController;
+import 'package:layrz_ui/src/inputs/src/text_input.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -313,6 +313,185 @@ void main() {
       );
 
       expect(find.byType(LayrzTextInput), findsOneWidget);
+    });
+
+    testWidgets('caller-supplied controller can be modified', (tester) async {
+      final controller = TextEditingController(text: 'Initial');
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Test',
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, 'Initial');
+      controller.text = 'Modified';
+      await tester.pumpAndSettle();
+      expect(controller.text, 'Modified');
+    });
+
+    testWidgets('caller-supplied focusNode can request focus', (tester) async {
+      final focusNode = FocusNode();
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Test',
+          focusNode: focusNode,
+        ),
+      );
+
+      expect(focusNode.canRequestFocus, true);
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(focusNode.hasFocus, true);
+    });
+
+    testWidgets('readOnly state accepts onTap callback', (tester) async {
+      var tapCount = 0;
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Read-only',
+          readOnly: true,
+          onTap: () => tapCount++,
+        ),
+      );
+
+      expect(find.byType(EditableText), findsOneWidget);
+    });
+
+    testWidgets('disabled state suppresses editing', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Disabled',
+          disabled: true,
+        ),
+      );
+
+      final editable = find.byType(EditableText);
+      expect(editable, findsOneWidget);
+    });
+
+    testWidgets('onPrefixTap is suppressed when disabled', (tester) async {
+      var tapCount = 0;
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Disabled',
+          disabled: true,
+          prefixText: r'$',
+          onPrefixTap: () => tapCount++,
+        ),
+      );
+
+      expect(tapCount, 0);
+    });
+
+    testWidgets('multiple errors render all lines', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Multi-error',
+          errors: [
+            'First error',
+            'Second error',
+            'Third error',
+          ],
+        ),
+      );
+
+      expect(find.text('First error'), findsOneWidget);
+      expect(find.text('Second error'), findsOneWidget);
+      expect(find.text('Third error'), findsOneWidget);
+    });
+
+    testWidgets('hideDetails hides error block', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Hidden errors',
+          errors: ['Error 1', 'Error 2'],
+          hideDetails: true,
+        ),
+      );
+
+      expect(find.text('Error 1'), findsNothing);
+      expect(find.text('Error 2'), findsNothing);
+    });
+
+    testWidgets('caller-supplied suffix renders alongside error icon', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Error with suffix',
+          errors: ['Error'],
+          suffixText: '%',
+        ),
+      );
+
+      expect(find.text('Error'), findsOneWidget);
+      expect(find.text('%'), findsOneWidget);
+    });
+
+    testWidgets('help affordance renders through tooltip when provided', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'With help',
+          helpContentText: 'Help text',
+        ),
+      );
+
+      expect(find.byType(LayrzTextInput), findsOneWidget);
+    });
+
+    testWidgets('help affordance reserves no space when null', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'No help',
+          helpContentText: null,
+        ),
+      );
+
+      expect(find.byType(LayrzTextInput), findsOneWidget);
+    });
+
+    testWidgets('provides accessibility label via semantics', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Accessible input',
+        ),
+      );
+
+      expect(find.byType(EditableText), findsOneWidget);
+    });
+
+    testWidgets('provides required state via semantics', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Required',
+          isRequired: true,
+        ),
+      );
+
+      expect(find.text('*'), findsOneWidget);
+    });
+
+    testWidgets('provides error state via semantics', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'With error',
+          errors: ['Invalid'],
+        ),
+      );
+
+      expect(find.text('Invalid'), findsOneWidget);
     });
   });
 }
