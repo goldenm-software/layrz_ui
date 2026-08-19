@@ -33,6 +33,7 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
   late TextEditingController _errorController;
   late TextEditingController _disabledController;
   late TextEditingController _readOnlyController;
+  late TextEditingController _numericController;
   late FocusNode _restFocusNode;
   late FocusNode _errorFocusNode;
   late FocusNode _disabledFocusNode;
@@ -50,6 +51,7 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
     _errorController = TextEditingController(text: 'Invalid input');
     _disabledController = TextEditingController(text: 'Disabled text');
     _readOnlyController = TextEditingController(text: 'Read-only text');
+    _numericController = TextEditingController();
     _restFocusNode = FocusNode();
     _errorFocusNode = FocusNode();
     _disabledFocusNode = FocusNode();
@@ -62,6 +64,7 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
     _errorController.dispose();
     _disabledController.dispose();
     _readOnlyController.dispose();
+    _numericController.dispose();
     _restFocusNode.dispose();
     _errorFocusNode.dispose();
     _disabledFocusNode.dispose();
@@ -139,8 +142,11 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
           // 7. Dense mode
           _DenseModeShowcase(tokens: tokens),
 
-          // 8. Label icon
-          _LabelIconShowcase(tokens: tokens),
+          // 8. Widget slot variants
+          _WidgetSlotsShowcase(
+            tokens: tokens,
+            numericController: _numericController,
+          ),
 
           // 9. Shortcut badge
           _ShortcutBadgeShowcase(tokens: tokens),
@@ -730,10 +736,18 @@ class _DenseModeShowcase extends StatelessWidget {
 /// Demonstrates the label icon feature.
 ///
 /// Shows: optional icon rendered before label text, inheriting the label's color and size.
-class _LabelIconShowcase extends StatelessWidget {
+/// Demonstrates widget slot variants for prefix and suffix.
+///
+/// Shows: custom widget in prefix slot (color swatch), custom widget in suffix slot (tall widget
+/// demonstrating height constraint), and numeric input with formatter.
+class _WidgetSlotsShowcase extends StatelessWidget {
   final LayrzTokens tokens;
+  final TextEditingController numericController;
 
-  const _LabelIconShowcase({required this.tokens});
+  const _WidgetSlotsShowcase({
+    required this.tokens,
+    required this.numericController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -741,9 +755,9 @@ class _LabelIconShowcase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: tokens.spacing.sp16,
       children: [
-        LayrzText('Label Icon', style: tokens.typography.title),
+        LayrzText('Widget Slot Variants', style: tokens.typography.title),
         LayrzText(
-          'Optional icon rendered before label text. Icon inherits label color and typography sizing.',
+          'Prefix and suffix can be arbitrary widgets. The field constrains widgets to match the content height.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Row(
@@ -754,11 +768,18 @@ class _LabelIconShowcase extends StatelessWidget {
               child: Column(
                 spacing: tokens.spacing.sp8,
                 children: [
-                  LayrzText('With Label Icon', style: tokens.typography.label),
+                  LayrzText('Prefix Widget (Color Swatch)', style: tokens.typography.label),
                   LayrzTextInput(
-                    labelText: 'Username',
-                    labelIcon: LayrzIcons.solarOutlineUser,
-                    hintText: 'Enter your username',
+                    labelText: 'Color Picker',
+                    hintText: 'Select a color',
+                    prefix: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -767,13 +788,53 @@ class _LabelIconShowcase extends StatelessWidget {
               child: Column(
                 spacing: tokens.spacing.sp8,
                 children: [
-                  LayrzText('Without Icon', style: tokens.typography.label),
-                  const LayrzTextInput(
-                    labelText: 'Password',
-                    hintText: 'Enter your password',
+                  LayrzText('Suffix Widget (Tall Demo)', style: tokens.typography.label),
+                  LayrzTextInput(
+                    labelText: 'Field with Tall Suffix',
+                    hintText: 'Suffix height is constrained',
+                    suffix: Container(
+                      width: 16,
+                      height: 100,
+                      color: tokens.colors.surface2,
+                      child: Center(
+                        child: LayrzText(
+                          'Constrained',
+                          style: tokens.typography.body.copyWith(
+                            fontSize: 10,
+                            color: tokens.colors.fg3,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: tokens.spacing.sp16,
+          children: [
+            Expanded(
+              child: Column(
+                spacing: tokens.spacing.sp8,
+                children: [
+                  LayrzText('Numeric Input', style: tokens.typography.label),
+                  LayrzTextInput(
+                    labelText: 'Age',
+                    hintText: 'Enter digits only',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    controller: numericController,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SizedBox(),
             ),
           ],
         ),
