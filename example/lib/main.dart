@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -45,40 +46,116 @@ Future<void> main() async {
   runApp(const ShowroomApp());
 }
 
+/// The singleton go_router instance for the showroom application.
+///
+/// Uses a [ShellRoute] to persist the [ShowroomLayout] shell while only
+/// swapping the body content during navigation. This avoids rebuilding the
+/// entire layout (rail, drawer, search, notifications) on every navigation,
+/// dramatically improving performance.
+///
+/// To revert to the original named-route implementation, replace [ShowroomApp.build]
+/// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
+final _router = GoRouter(
+  initialLocation: '/buttons',
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) => ShowroomLayout(child: child),
+      routes: [
+        GoRoute(
+          path: '/buttons',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildButtonsSection()),
+        ),
+        GoRoute(
+          path: '/button-group',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildButtonGroupSection()),
+        ),
+        GoRoute(
+          path: '/alerts',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildAlertsSection()),
+        ),
+        GoRoute(
+          path: '/tooltips',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildTooltipsSection()),
+        ),
+        GoRoute(
+          path: '/images',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildImagesSection()),
+        ),
+        GoRoute(
+          path: '/menus',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildMenusSection()),
+        ),
+        GoRoute(
+          path: '/chips',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildChipsSection()),
+        ),
+        GoRoute(
+          path: '/text',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildTextSection()),
+        ),
+        GoRoute(
+          path: '/inputs',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildInputsSection()),
+        ),
+        GoRoute(
+          path: '/grid',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildGridSection()),
+        ),
+        GoRoute(
+          path: '/typography',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildTypographySection()),
+        ),
+        GoRoute(
+          path: '/colors',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildColorsSection()),
+        ),
+        GoRoute(
+          path: '/spacing',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildSpacingSection()),
+        ),
+        GoRoute(
+          path: '/radius',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildRadiusSection()),
+        ),
+        GoRoute(
+          path: '/elevation',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildElevationSection()),
+        ),
+        GoRoute(
+          path: '/borders',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildBordersSection()),
+        ),
+        GoRoute(
+          path: '/motion',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildMotionSection()),
+        ),
+        GoRoute(
+          path: '/access-paths',
+          pageBuilder: (context, state) => NoTransitionPage(child: buildAccessPathsSection()),
+        ),
+      ],
+    ),
+  ],
+);
+
 /// Root widget of the showroom application.
 ///
 /// The [LayrzThemeData.light] constructor now automatically loads and resolves
 /// the Open Sans font from Google Fonts. No configuration is needed.
+///
+/// Uses [LayrzApp.router] with a go_router [GoRouter] configured with a [ShellRoute],
+/// ensuring the application shell persists across navigation while only the body
+/// content changes.
 class ShowroomApp extends StatelessWidget {
   /// Creates a new [ShowroomApp].
   const ShowroomApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return LayrzApp(
+    return LayrzApp.router(
+      routerConfig: _router,
       title: kAppTitle,
       theme: LayrzThemeData.light(),
-      initialRoute: '/buttons',
-      routes: {
-        '/buttons': (_) => ShowroomLayout(child: buildButtonsSection()),
-        '/button-group': (_) => ShowroomLayout(child: buildButtonGroupSection()),
-        '/alerts': (_) => ShowroomLayout(child: buildAlertsSection()),
-        '/tooltips': (_) => ShowroomLayout(child: buildTooltipsSection()),
-        '/images': (_) => ShowroomLayout(child: buildImagesSection()),
-        '/menus': (_) => ShowroomLayout(child: buildMenusSection()),
-        '/chips': (_) => ShowroomLayout(child: buildChipsSection()),
-        '/text': (_) => ShowroomLayout(child: buildTextSection()),
-        '/inputs': (_) => ShowroomLayout(child: buildInputsSection()),
-        '/grid': (_) => ShowroomLayout(child: buildGridSection()),
-        '/typography': (_) => ShowroomLayout(child: buildTypographySection()),
-        '/colors': (_) => ShowroomLayout(child: buildColorsSection()),
-        '/spacing': (_) => ShowroomLayout(child: buildSpacingSection()),
-        '/radius': (_) => ShowroomLayout(child: buildRadiusSection()),
-        '/elevation': (_) => ShowroomLayout(child: buildElevationSection()),
-        '/borders': (_) => ShowroomLayout(child: buildBordersSection()),
-        '/motion': (_) => ShowroomLayout(child: buildMotionSection()),
-        '/access-paths': (_) => ShowroomLayout(child: buildAccessPathsSection()),
-      },
       // To view the original component showroom, uncomment:
       // home: const Showroom(),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -6,7 +7,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 ///
 /// [ShowroomLayout] is a stateless container that renders a page inside
 /// [LayrzLayout]. The currently selected navigation entry is derived from the
-/// active route name via [ModalRoute.of].
+/// active route path via [GoRouterState.of].
 class ShowroomLayout extends StatelessWidget {
   /// The page content rendered inside the layout's body slot.
   final Widget child;
@@ -16,8 +17,8 @@ class ShowroomLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final routeName = ModalRoute.of(context)?.settings.name ?? '/buttons';
-    final items = _buildNavigationItems(context, routeName);
+    final routePath = GoRouterState.of(context).uri.path;
+    final items = _buildNavigationItems(context, routePath);
 
     return LayrzLayout(
       items: items,
@@ -206,7 +207,8 @@ class ShowroomLayout extends StatelessWidget {
     ];
   }
 
+  /// Navigate to the specified route path using go_router.
   void _navigateTo(BuildContext context, String route) {
-    Navigator.of(context).pushReplacementNamed(route);
+    context.go(route);
   }
 }
