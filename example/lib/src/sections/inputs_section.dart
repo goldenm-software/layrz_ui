@@ -153,6 +153,9 @@ class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
 
           // 10. Additional features
           _AdditionalFeaturesShowcase(tokens: tokens),
+
+          // 11. Character counter
+          _CharacterCounterShowcase(tokens: tokens),
         ],
       ),
     );
@@ -972,6 +975,63 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Demonstrates character counter functionality.
+///
+/// Shows: character counter alone, and character counter combined with error messages.
+class _CharacterCounterShowcase extends StatelessWidget {
+  final LayrzTokens tokens;
+
+  const _CharacterCounterShowcase({required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp16,
+      children: [
+        LayrzText('Character Counter', style: tokens.typography.title),
+        LayrzText(
+          'Character counter displays current/max without focus or content threshold. Stays fg3 even when errors are present.',
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: tokens.spacing.sp16,
+          children: [
+            Expanded(
+              child: Column(
+                spacing: tokens.spacing.sp8,
+                children: [
+                  LayrzText('Counter alone (50 chars)', style: tokens.typography.label),
+                  const LayrzTextInput(
+                    labelText: 'Bio',
+                    hintText: 'Tell us about yourself',
+                    maxLength: 50,
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Column(
+                spacing: tokens.spacing.sp8,
+                children: [
+                  LayrzText('Counter with error (30 chars)', style: tokens.typography.label),
+                  const LayrzTextInput(
+                    labelText: 'Username',
+                    hintText: 'Enter username',
+                    maxLength: 30,
+                    errors: ['Username contains invalid characters'],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
