@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 // Structural constants for [LayrzScaffoldShell] layout and styling.
 // These constants define exact pixel values, spacing, and typography
 // specifications for the scaffold list panel, detail pane, and interactive elements.
@@ -68,11 +70,11 @@ const double kLayrzScaffoldListItemLabelFontSize = 12.5;
 /// List item meta (subtitle) font size in logical pixels.
 const double kLayrzScaffoldListItemMetaFontSize = 10.5;
 
-/// List item selected label font weight multiplier (w600).
-const double kLayrzScaffoldListItemSelectedLabelFontWeight = 600.0;
+/// Font weight of a selected list item's label.
+const FontWeight kLayrzScaffoldListItemSelectedLabelFontWeight = FontWeight.w600;
 
-/// List item unselected label font weight (w400).
-const double kLayrzScaffoldListItemUnselectedLabelFontWeight = 400.0;
+/// Font weight of an unselected list item's label.
+const FontWeight kLayrzScaffoldListItemUnselectedLabelFontWeight = FontWeight.w400;
 
 /// Group header sticky background padding: vertical in logical pixels.
 const double kLayrzScaffoldGroupHeaderVerticalPadding = 7.0;
@@ -83,8 +85,8 @@ const double kLayrzScaffoldGroupHeaderHorizontalPadding = 13.0;
 /// Group header font size in logical pixels.
 const double kLayrzScaffoldGroupHeaderFontSize = 10.0;
 
-/// Group header font weight (w600).
-const double kLayrzScaffoldGroupHeaderFontWeight = 600.0;
+/// Font weight of the group header.
+const FontWeight kLayrzScaffoldGroupHeaderFontWeight = FontWeight.w600;
 
 /// Group header letter spacing as a multiple of font size.
 const double kLayrzScaffoldGroupHeaderLetterSpacing = 0.09;
@@ -119,8 +121,8 @@ const double kLayrzScaffoldDetailHeaderGap = 18.0;
 /// Detail pane header title font size in logical pixels.
 const double kLayrzScaffoldDetailHeaderTitleFontSize = 17.0;
 
-/// Detail pane header title font weight (w700).
-const double kLayrzScaffoldDetailHeaderTitleFontWeight = 700.0;
+/// Font weight of the detail pane header title.
+const FontWeight kLayrzScaffoldDetailHeaderTitleFontWeight = FontWeight.w700;
 
 /// Detail pane header subtitle font size in logical pixels.
 const double kLayrzScaffoldDetailHeaderSubtitleFontSize = 11.5;
@@ -158,5 +160,5 @@ const double kLayrzScaffoldToggleSegmentVerticalPadding = 4.0;
 /// Grouped/flat toggle button font size in logical pixels.
 const double kLayrzScaffoldToggleFontSize = 11.0;
 
-/// Grouped/flat toggle button font weight (w500).
-const double kLayrzScaffoldToggleFontWeight = 500.0;
+/// Font weight of the grouped/flat toggle button.
+const FontWeight kLayrzScaffoldToggleFontWeight = FontWeight.w500;
