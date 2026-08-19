@@ -238,3 +238,22 @@ const double kLayrzLayoutSearchToItemsGap = 8.0;
 /// Both the leading indicator bar and the trailing reserved space total this width,
 /// allowing geometry to be identical between selected and unselected items.
 const double kLayrzLayoutActiveIndicatorReservedWidth = kLayrzLayoutActiveIndicatorWidth + 6.0;
+
+/// The vertical padding (top and bottom) of a navigator label band, in logical pixels.
+///
+/// The band spans the full width of the sidebar and uses this padding to establish
+/// visual weight as a section divider.
+const double kLayrzLayoutNavigatorLabelBandPaddingVertical = 8.0;
+
+/// The horizontal padding of a navigator label band, in logical pixels.
+///
+/// The band spans the full width of the sidebar, so this padding determines the
+/// distance between text and the band edges.
+const double kLayrzLayoutNavigatorLabelBandPaddingHorizontal = 12.0;
+
+/// The icon size used in dense mode text inputs, in logical pixels.
+///
+/// When [LayrzTextInput.dense] is true, slot icons are rendered at this size
+/// to reduce the overall field height. This keeps the field compact while maintaining
+/// legibility.
+const double kLayrzTextInputDenseIconSize = 14.0;

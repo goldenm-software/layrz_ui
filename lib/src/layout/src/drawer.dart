@@ -168,14 +168,9 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                 // Navigation items
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: kLayrzLayoutRailPaddingHorizontal,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: _buildFilteredItems(tokens),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: _buildFilteredItems(tokens),
                     ),
                   ),
                 ),
@@ -230,18 +225,16 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
 
   Widget _buildSearchField(LayrzTokens tokens) {
     final context = this.context;
-    return SizedBox(
-      height: kLayrzLayoutSearchFieldHeight,
-      child: LayrzTextInput(
-        hintText: context.l10n.actionSearch,
-        hideDetails: true,
-        controller: _searchController,
-        onChanged: (_) {},
-        prefixIcon: LayrzIcons.solarOutlineMagnifer,
-        padding: const EdgeInsets.symmetric(
-          horizontal: kLayrzLayoutSearchFieldPaddingHorizontal,
-          vertical: 0,
-        ),
+    return LayrzTextInput(
+      hintText: context.l10n.actionSearch,
+      hideDetails: true,
+      controller: _searchController,
+      onChanged: (_) {},
+      prefixIcon: LayrzIcons.solarOutlineMagnifer,
+      dense: true,
+      padding: EdgeInsets.symmetric(
+        horizontal: kLayrzLayoutSearchFieldPaddingHorizontal,
+        vertical: tokens.spacing.sp6,
       ),
     );
   }
@@ -258,18 +251,23 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
 
           if (matches) {
             if (currentLabel != null && !currentLabelHasMatches) {
-              results.add(_buildSectionCaption(currentLabel.labelText));
+              results.add(_buildSectionCaption(currentLabel));
               currentLabelHasMatches = true;
             }
 
             results.add(
-              LayrzLayoutRailItem(
-                tokens: tokens,
-                page: item,
-                isSelected: item.isSelected,
-                onTap: () {
-                  item.onTap?.call();
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: kLayrzLayoutRailPaddingHorizontal,
+                ),
+                child: LayrzLayoutRailItem(
+                  tokens: tokens,
+                  page: item,
+                  isSelected: item.isSelected,
+                  onTap: () {
+                    item.onTap?.call();
+                  },
+                ),
               ),
             );
           }
@@ -309,37 +307,52 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
       switch (item) {
         case LayrzNavigatorPage():
           widgets.add(
-            LayrzLayoutRailItem(
-              tokens: tokens,
-              page: item,
-              isSelected: item.isSelected,
-              onTap: () {
-                item.onTap?.call();
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: kLayrzLayoutRailPaddingHorizontal,
+              ),
+              child: LayrzLayoutRailItem(
+                tokens: tokens,
+                page: item,
+                isSelected: item.isSelected,
+                onTap: () {
+                  item.onTap?.call();
+                },
+              ),
             ),
           );
         case LayrzNavigatorLabel():
-          widgets.add(_buildSectionCaption(item.labelText));
+          widgets.add(_buildSectionCaption(item));
       }
     }
 
     return widgets;
   }
 
-  Widget _buildSectionCaption(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: kLayrzLayoutSectionCaptionPaddingTop,
-        left: kLayrzLayoutSectionCaptionPaddingLeft,
-        bottom: kLayrzLayoutSectionCaptionPaddingBottom,
+  Widget _buildSectionCaption(LayrzNavigatorLabel label) {
+    final tokens = widget.tokens;
+    final band = label.color == null
+        ? tokens.colors.surface3
+        : label.color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
+
+    return Container(
+      width: double.infinity,
+      color: band,
+      padding: EdgeInsets.only(
+        left: kLayrzLayoutItemPaddingHorizontal,
+        right: kLayrzLayoutItemPaddingHorizontal,
+        top: kLayrzLayoutNavigatorLabelBandPaddingVertical,
+        bottom: kLayrzLayoutNavigatorLabelBandPaddingVertical,
       ),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: kLayrzLayoutSectionCaptionFontSize,
-          fontWeight: kLayrzLayoutSectionCaptionFontWeight,
-          letterSpacing: kLayrzLayoutSectionCaptionLetterSpacing,
-          color: widget.tokens.colors.fg3,
+      margin: const EdgeInsets.only(top: 8.0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          label.labelText.toUpperCase(),
+          style: tokens.typography.label.copyWith(
+            color: label.color != null ? label.color! : tokens.colors.fg3,
+            letterSpacing: kLayrzLayoutSectionCaptionLetterSpacing,
+          ),
         ),
       ),
     );

@@ -108,7 +108,7 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
 
 /// A non-interactive section caption in [LayrzLayout] navigation.
 ///
-/// [LayrzNavigatorLabel] renders as a static text label with no tap handling,
+/// [LayrzNavigatorLabel] renders as a full-bleed band with optional colour tinting,
 /// used to group or separate related [LayrzNavigatorPage] items in the navigation
 /// rail or drawer (e.g., "MAIN" or "REFERENCE").
 final class LayrzNavigatorLabel extends LayrzNavigatorItem {
@@ -116,7 +116,11 @@ final class LayrzNavigatorLabel extends LayrzNavigatorItem {
   ///
   /// The [labelText] parameter is required and defines the text displayed
   /// in uppercase (via CSS text-transform or manual conversion).
-  const LayrzNavigatorLabel(this.labelText);
+  /// The [color] parameter is optional and tints the band background.
+  const LayrzNavigatorLabel(
+    this.labelText, {
+    this.color,
+  });
 
   /// The text displayed for this section caption.
   ///
@@ -125,16 +129,33 @@ final class LayrzNavigatorLabel extends LayrzNavigatorItem {
   /// colour to distinguish it from interactive pages.
   final String labelText;
 
+  /// Optional colour used to tint the label's band.
+  ///
+  /// When null, the band keeps the neutral [LayrzColorTokens.surface3] fill, so
+  /// navigators written before this parameter existed are unchanged. When set, the
+  /// band is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened
+  /// over the panel surface.
+  final Color? color;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LayrzNavigatorLabel && runtimeType == other.runtimeType && labelText == other.labelText;
+      other is LayrzNavigatorLabel &&
+          runtimeType == other.runtimeType &&
+          labelText == other.labelText &&
+          color == other.color;
 
   @override
-  int get hashCode => Object.hash(runtimeType, labelText);
+  int get hashCode => Object.hash(runtimeType, labelText, color);
 
   /// Returns a copy of this label with the given fields replaced.
-  LayrzNavigatorLabel copyWith({String? labelText}) {
-    return LayrzNavigatorLabel(labelText ?? this.labelText);
+  LayrzNavigatorLabel copyWith({
+    String? labelText,
+    Color? color,
+  }) {
+    return LayrzNavigatorLabel(
+      labelText ?? this.labelText,
+      color: color ?? this.color,
+    );
   }
 }
