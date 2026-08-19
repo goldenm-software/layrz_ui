@@ -110,89 +110,92 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
         color: tokens.colors.surface,
         boxShadow: tokens.shadow.elevation2,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Logo block (constrained to 80% width, 40px height)
-          if (widget.logo.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: kLayrzLayoutLogoLeftPadding,
-                top: kLayrzLayoutRailPaddingVertical,
-                bottom: kLayrzLayoutLogoBottomPadding,
+      child: SafeArea(
+        right: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Logo block (constrained to 80% width, 40px height)
+            if (widget.logo.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: kLayrzLayoutLogoLeftPadding,
+                  top: kLayrzLayoutRailPaddingVertical,
+                  bottom: kLayrzLayoutLogoBottomPadding,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: LayrzImage(
+                    source: widget.logo,
+                    width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
+                    height: kLayrzLayoutLogoHeight,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: LayrzImage(
-                  source: widget.logo,
-                  width: kLayrzLayoutRailWidth * kLayrzLayoutLogoWidthFactor,
-                  height: kLayrzLayoutLogoHeight,
-                  fit: BoxFit.contain,
+
+            // Search field
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: kLayrzLayoutRailPaddingHorizontal,
+              ),
+              child: _buildSearchField(tokens),
+            ),
+
+            SizedBox(height: kLayrzLayoutSearchToItemsGap),
+
+            // Navigation items
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: _buildFilteredItems(tokens),
                 ),
               ),
             ),
 
-          // Search field
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: kLayrzLayoutRailPaddingHorizontal,
+            // Footer: 1px divider + notifications + user chrome
+            Container(
+              height: 1.0,
+              color: tokens.colors.divider,
             ),
-            child: _buildSearchField(tokens),
-          ),
-
-          SizedBox(height: kLayrzLayoutSearchToItemsGap),
-
-          // Navigation items
-          Expanded(
-            child: SingleChildScrollView(
+            Padding(
+              padding: const EdgeInsets.only(top: kLayrzLayoutFooterPaddingTop),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: _buildFilteredItems(tokens),
+                children: [
+                  // Notifications row
+                  if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: kLayrzLayoutRailPaddingHorizontal,
+                      ),
+                      child: _buildNotificationsRow(tokens),
+                    ),
+
+                  if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
+                    const SizedBox(height: kLayrzLayoutFooterGap),
+
+                  // User chrome
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: kLayrzLayoutRailPaddingHorizontal,
+                      right: kLayrzLayoutRailPaddingHorizontal,
+                      bottom: kLayrzLayoutUserChromePaddingBottom,
+                    ),
+                    child: LayrzLayoutUserChrome(
+                      tokens: tokens,
+                      userName: widget.userName,
+                      userAvatar: widget.userAvatar,
+                      userMenuItems: widget.userMenuItems,
+                      getInitials: widget.getInitials,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-
-          // Footer: 1px divider + notifications + user chrome
-          Container(
-            height: 1.0,
-            color: tokens.colors.divider,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: kLayrzLayoutFooterPaddingTop),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Notifications row
-                if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: kLayrzLayoutRailPaddingHorizontal,
-                    ),
-                    child: _buildNotificationsRow(tokens),
-                  ),
-
-                if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
-                  const SizedBox(height: kLayrzLayoutFooterGap),
-
-                // User chrome
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: kLayrzLayoutRailPaddingHorizontal,
-                    right: kLayrzLayoutRailPaddingHorizontal,
-                    bottom: kLayrzLayoutUserChromePaddingBottom,
-                  ),
-                  child: LayrzLayoutUserChrome(
-                    tokens: tokens,
-                    userName: widget.userName,
-                    userAvatar: widget.userAvatar,
-                    userMenuItems: widget.userMenuItems,
-                    getInitials: widget.getInitials,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

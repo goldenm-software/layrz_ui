@@ -185,6 +185,8 @@ void main() {
       });
 
       testWidgets('pressing produces elevation1 shadow', (tester) async {
+        // Desktop mouse: hover first (same pointer), then button-down on that pointer.
+        // This test verifies the press-after-hover behavior (desktop interaction).
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -217,9 +219,9 @@ void main() {
           reason: 'Hovered state must have elevation2 shadow',
         );
 
-        // Now press (while hovered)
+        // Now press with the SAME mouse gesture (button-down on same pointer)
         final center = tester.getCenter(find.byType(LayrzAlert));
-        final pressGesture = await tester.startGesture(center);
+        await gesture.down(center);
         await tester.pumpAndSettle();
 
         // Pressed should now have elevation1 (even while hovered)
@@ -235,10 +237,10 @@ void main() {
         expect(
           decoration?.boxShadow,
           equals(themeData.tokens.shadow.elevation1),
-          reason: 'Pressed alert must produce elevation1 shadow',
+          reason: 'Pressed alert must produce elevation1 shadow (desktop: press settles)',
         );
 
-        await pressGesture.up();
+        await gesture.up();
       });
 
       testWidgets('shadow animates during hover transition', (tester) async {
@@ -463,6 +465,102 @@ void main() {
         );
 
         await pressGesture.up();
+      });
+
+      testWidgets('touch press without hover shows elevation2 (touchscreen device)', (tester) async {
+        // Touchscreen: press with no prior hover — gets elevation2 shadow for feedback.
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              onTap: () {},
+            ),
+          ),
+          theme: themeData,
+        );
+
+        await tester.pumpAndSettle();
+
+        // Touch press without hovering (PointerDeviceKind.touch, which cannot hover)
+        final center = tester.getCenter(find.byType(LayrzAlert));
+        final gesture = await tester.startGesture(center, kind: PointerDeviceKind.touch);
+        await tester.pumpAndSettle();
+
+        // Touch press without prior hover: should have elevation2 shadow
+        final container = tester.widget<AnimatedContainer>(_findAnimatedContainer());
+        final decoration = container.decoration as BoxDecoration?;
+
+        expect(
+          decoration?.boxShadow,
+          isNotEmpty,
+          reason: 'Touch press must produce a shadow',
+        );
+
+        expect(
+          decoration?.boxShadow,
+          equals(themeData.tokens.shadow.elevation2),
+          reason: 'Touch press without prior hover must produce elevation2 shadow',
+        );
+
+        await gesture.up();
+      });
+
+      testWidgets('shadow transitions none→elevation2→none on touch (DESIGN-79)', (tester) async {
+        // Touchscreen: rest → press → release.
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 300,
+            child: LayrzAlert(
+              title: 'Title',
+              description: 'Description',
+              onTap: () {},
+            ),
+          ),
+          theme: themeData,
+        );
+
+        await tester.pumpAndSettle();
+
+        // At rest: no shadow
+        var container = tester.widget<AnimatedContainer>(_findAnimatedContainer());
+        var decoration = container.decoration as BoxDecoration?;
+        expect(
+          decoration?.boxShadow,
+          anyOf(isNull, isEmpty),
+          reason: 'At rest must have no shadow',
+        );
+
+        // Touch press (PointerDeviceKind.touch)
+        final center = tester.getCenter(find.byType(LayrzAlert));
+        final gesture = await tester.startGesture(center, kind: PointerDeviceKind.touch);
+        await tester.pumpAndSettle();
+
+        // During press: elevation2
+        container = tester.widget<AnimatedContainer>(_findAnimatedContainer());
+        decoration = container.decoration as BoxDecoration?;
+        expect(
+          decoration?.boxShadow,
+          equals(themeData.tokens.shadow.elevation2),
+          reason: 'Touch press must transition to elevation2 shadow',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // After release: back to no shadow
+        container = tester.widget<AnimatedContainer>(_findAnimatedContainer());
+        decoration = container.decoration as BoxDecoration?;
+        expect(
+          decoration?.boxShadow,
+          anyOf(isNull, isEmpty),
+          reason: 'After release: back to no shadow',
+        );
       });
     });
   });
