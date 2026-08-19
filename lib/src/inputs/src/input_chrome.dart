@@ -121,26 +121,20 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
+    // Centralized density specification — all dimensions that change with dense mode
+    final density = dense ? _DenseSpec(tokens) : _ComfortableSpec(tokens, context.theme.iconTheme);
+
     // Compute padding: explicit caller value wins over dense mode
-    final verticalPadding = dense ? tokens.spacing.sp6 : tokens.spacing.sp10;
     final resolvedPadding =
         padding ??
         EdgeInsets.symmetric(
           horizontal: tokens.spacing.sp10,
-          vertical: verticalPadding,
+          vertical: density.verticalPadding,
         );
-
-    // Compute icon size — dense mode uses a smaller size for compact layout.
-    // Otherwise falls back to icon theme size or a token-derived default.
-    // In dense mode, all icon slots use the dense size; in normal mode, use the theme size.
-    final iconSize = dense
-        ? kLayrzTextInputDenseIconSize
-        : (context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4);
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. Icons fit inside this height.
-    // In dense mode, the height is reduced to match the smaller icon size.
-    final contentHeight = iconSize;
+    final contentHeight = density.iconSize;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -194,7 +188,8 @@ class LayrzInputChrome extends StatelessWidget {
                     tokens: tokens,
                     spec: spec,
                     contentHeight: contentHeight,
-                    iconSize: iconSize,
+                    iconSize: density.iconSize,
+                    density: density,
                   ),
                   SizedBox(width: tokens.spacing.sp8),
                 ],
@@ -202,8 +197,7 @@ class LayrzInputChrome extends StatelessWidget {
                 // Child (the actual input field) with optional hint text overlay
                 Expanded(
                   child: DefaultTextStyle(
-                    style: tokens.typography.body.copyWith(
-                      fontSize: tokens.typography.title.fontSize,
+                    style: density.textStyle.copyWith(
                       color: spec.textColor,
                     ),
                     child: Stack(
@@ -216,8 +210,7 @@ class LayrzInputChrome extends StatelessWidget {
                                     alignment: Alignment.centerLeft,
                                     child: Text(
                                       hintText!,
-                                      style: tokens.typography.body.copyWith(
-                                        fontSize: tokens.typography.title.fontSize,
+                                      style: density.textStyle.copyWith(
                                         color: tokens.colors.fg3,
                                       ),
                                       maxLines: 1,
@@ -231,8 +224,7 @@ class LayrzInputChrome extends StatelessWidget {
                             alignment: Alignment.centerLeft,
                             child: Text(
                               hintText!,
-                              style: tokens.typography.body.copyWith(
-                                fontSize: tokens.typography.title.fontSize,
+                              style: density.textStyle.copyWith(
                                 color: tokens.colors.fg3,
                               ),
                               maxLines: 1,
@@ -251,7 +243,8 @@ class LayrzInputChrome extends StatelessWidget {
                   tokens: tokens,
                   spec: spec,
                   contentHeight: contentHeight,
-                  iconSize: iconSize,
+                  iconSize: density.iconSize,
+                  density: density,
                 ),
               ],
             ),
@@ -290,6 +283,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
+    required _DensitySpec density,
   }) {
     final trailing = <Widget>[];
 
@@ -318,6 +312,7 @@ class LayrzInputChrome extends StatelessWidget {
           spec: spec,
           contentHeight: contentHeight,
           iconSize: iconSize,
+          density: density,
         ),
       );
     }
@@ -388,6 +383,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
+    required _DensitySpec density,
   }) {
     final hasCallback = slot.onTap != null;
 
@@ -407,8 +403,7 @@ class LayrzInputChrome extends StatelessWidget {
     } else if (slot.text != null) {
       content = Text(
         slot.text!,
-        style: tokens.typography.body.copyWith(
-          fontSize: tokens.typography.title.fontSize,
+        style: density.textStyle.copyWith(
           color: spec.textColor,
         ),
       );
@@ -553,4 +548,56 @@ class _HelpAffordanceState extends State<_HelpAffordance> {
       ),
     );
   }
+}
+
+/// Centralized specification of all dimensions that change with dense mode.
+///
+/// Dense and comfortable modes differ in three dimensions: vertical padding,
+/// icon size, and text style. This class centralizes the specification so that
+/// (a) all three are always in sync, and (b) adding a new density dimension
+/// is impossible to miss — there is exactly one place to do it.
+abstract class _DensitySpec {
+  /// The vertical padding inside the input field (top and bottom).
+  double get verticalPadding;
+
+  /// The size of icons in slots and state indicators.
+  double get iconSize;
+
+  /// The text style for input content, hints, and slot text.
+  TextStyle get textStyle;
+}
+
+/// Comfortable (normal) density specification.
+class _ComfortableSpec extends _DensitySpec {
+  final LayrzTokens tokens;
+  final IconThemeData? iconTheme;
+
+  _ComfortableSpec(this.tokens, this.iconTheme);
+
+  @override
+  double get verticalPadding => tokens.spacing.sp10;
+
+  @override
+  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+
+  @override
+  TextStyle get textStyle => tokens.typography.body.copyWith(
+    fontSize: tokens.typography.title.fontSize,
+  );
+}
+
+/// Dense (compact) density specification.
+class _DenseSpec extends _DensitySpec {
+  final LayrzTokens tokens;
+
+  _DenseSpec(this.tokens);
+
+  @override
+  double get verticalPadding => tokens.spacing.sp6;
+
+  @override
+  double get iconSize => kLayrzTextInputDenseIconSize;
+
+  @override
+  TextStyle get textStyle => tokens.typography.label;
 }

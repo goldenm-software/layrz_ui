@@ -336,22 +336,27 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
         : label.color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
 
     return Container(
-      width: double.infinity,
-      color: band,
-      padding: EdgeInsets.only(
-        left: kLayrzLayoutItemPaddingHorizontal,
-        right: kLayrzLayoutItemPaddingHorizontal,
-        top: kLayrzLayoutNavigatorLabelBandPaddingVertical,
-        bottom: kLayrzLayoutNavigatorLabelBandPaddingVertical,
+      margin: EdgeInsets.only(
+        top: 8.0,
+        bottom: kLayrzLayoutNavigatorLabelMarginBottom,
       ),
-      margin: const EdgeInsets.only(top: 8.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          label.labelText.toUpperCase(),
-          style: tokens.typography.label.copyWith(
-            color: label.color != null ? label.color! : tokens.colors.fg3,
-            letterSpacing: kLayrzLayoutSectionCaptionLetterSpacing,
+      child: Container(
+        width: double.infinity,
+        color: band,
+        padding: EdgeInsets.only(
+          left: kLayrzLayoutItemPaddingHorizontal,
+          right: kLayrzLayoutItemPaddingHorizontal,
+          top: kLayrzLayoutNavigatorLabelBandPaddingVertical,
+          bottom: kLayrzLayoutNavigatorLabelBandPaddingVertical,
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label.labelText.toUpperCase(),
+            style: tokens.typography.label.copyWith(
+              color: label.color != null ? label.color! : tokens.colors.fg3,
+              letterSpacing: kLayrzLayoutSectionCaptionLetterSpacing,
+            ),
           ),
         ),
       ),

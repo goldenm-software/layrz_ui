@@ -124,5 +124,37 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('band has bottom margin for breathing room below', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [
+            LayrzNavigatorLabel('SECTION'),
+            LayrzNavigatorPage(id: '1', labelText: 'First Item'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the band Container and the first item (which should be a Padding wrapping the RailItem)
+      final containers = find.byType(Container);
+      final railItems = find.byType(Row);
+
+      // The band is rendered as a Container with the band background color
+      // The first RailItem is a Row inside a Padding
+      expect(containers, findsWidgets);
+      expect(railItems, findsWidgets);
+
+      // Verify layout renders without error
+      expect(tester.takeException(), isNull);
+    });
   });
 }

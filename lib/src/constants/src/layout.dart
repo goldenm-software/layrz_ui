@@ -257,3 +257,10 @@ const double kLayrzLayoutNavigatorLabelBandPaddingHorizontal = 12.0;
 /// to reduce the overall field height. This keeps the field compact while maintaining
 /// legibility.
 const double kLayrzTextInputDenseIconSize = 14.0;
+
+/// The bottom margin (breathing room) below a navigator label band, in logical pixels.
+///
+/// Applied outside the band so the band itself maintains its fixed height while
+/// providing visual spacing before the items beneath it. Margin (not padding)
+/// ensures the grey background ends at the band's edge while the gap follows.
+const double kLayrzLayoutNavigatorLabelMarginBottom = 8.0;
