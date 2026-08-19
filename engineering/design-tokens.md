@@ -124,19 +124,19 @@ Typography tokens define text scales for all text in the system. They combine fo
 // Design sketch
 class LayrzTextTheme {
   // Display: hero text, splash screens
-  final TextStyle display;   // 45px, weight 800
+  final TextStyle display;   // 40px, weight 700
   
   // Headline: section headings
-  final TextStyle headline;  // 28px, weight 700
+  final TextStyle headline;  // 28px, weight 600
   
   // Title: card titles, dialog headers
-  final TextStyle title;     // 16px, weight 500
+  final TextStyle title;     // 16px, weight 600
   
   // Body: paragraph text, default root style
-  final TextStyle body;      // 14px, weight 300
+  final TextStyle body;      // 14px, weight 400
   
   // Label: button labels, form labels, badges
-  final TextStyle label;     // 12px, weight 100
+  final TextStyle label;     // 12px, weight 400
 }
 ```
 
@@ -592,7 +592,7 @@ Token names follow these rules:
 For Milestone 1, the token system must meet these criteria:
 
 - All color tokens defined for light theme, including `primary`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
-- Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (45px, w800), `headline` (28px, w700), `title` (16px, w500), `body` (14px, w300), `label` (12px, w100) — see decision D23 for the rationale
+- Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (40px, w700), `headline` (28px, w600), `title` (16px, w600), `body` (14px, w400), `label` (12px, w400) — see decision D23 for the rationale
 - Spacing tokens are defined as `double` and include: `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, plus convenience accessors (`spacingSize`, `sizedBox`, `margin`, `reducedMargin`, `padding`)
 - Radius tokens include: `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `full` (pill shape), plus `borderRadius` getter and `innerRadius()` method
 - Shadow tokens define 5 elevation levels (1–5) using the mathematical algorithm, plus a builder method for custom elevation and radius

@@ -18,7 +18,7 @@ void main() {
     test('defaults factory uses correct font sizes', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.display.fontSize, equals(45));
+      expect(theme.display.fontSize, equals(40));
       expect(theme.headline.fontSize, equals(28));
       expect(theme.title.fontSize, equals(16));
       expect(theme.body.fontSize, equals(14));
@@ -28,11 +28,11 @@ void main() {
     test('defaults factory uses correct font weights', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.display.fontWeight, equals(FontWeight.w800));
-      expect(theme.headline.fontWeight, equals(FontWeight.w700));
+      expect(theme.display.fontWeight, equals(FontWeight.w700));
+      expect(theme.headline.fontWeight, equals(FontWeight.w600));
       expect(theme.title.fontWeight, equals(FontWeight.w600));
       expect(theme.body.fontWeight, equals(FontWeight.w400));
-      expect(theme.label.fontWeight, equals(FontWeight.w300));
+      expect(theme.label.fontWeight, equals(FontWeight.w400));
     });
 
     test('defaults factory with null fontHandler uses font name directly', () {
