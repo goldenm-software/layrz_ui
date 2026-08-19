@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'input_chrome.dart';
 import 'input_slot.dart';
+import 'input_style_spec.dart';
 
 /// A Material-free text input field in the layrz_ui design system.
 ///
@@ -327,6 +328,15 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       _states.remove(WidgetState.disabled);
     }
 
+    // Resolve style spec once to use for EditableText text color (Task 2)
+    final hasErrors = widget.errors.isNotEmpty;
+    final spec = LayrzInputStyleSpec.resolve(
+      states: _states,
+      tokens: tokens,
+      hasErrors: hasErrors,
+      readOnly: widget.readOnly,
+    );
+
     // Format shortcut for display
     final shortcutText = widget.shortcut != null ? formatLayrzShortcut(widget.shortcut) : null;
 
@@ -347,6 +357,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       controller: _controller,
       padding: widget.padding,
       dense: widget.dense,
+      maxLength: widget.maxLength,
       child: Listener(
         onPointerDown: widget.disabled ? null : _updateStates,
         onPointerUp: widget.disabled ? null : _updateStates,
@@ -361,7 +372,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
               focusNode: _focusNode,
               style: tokens.typography.body.copyWith(
                 fontSize: tokens.typography.title.fontSize,
-                color: widget.disabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                color: spec.textColor,
               ),
               cursorColor: tokens.colors.primary,
               backgroundCursorColor: tokens.colors.fg3,
