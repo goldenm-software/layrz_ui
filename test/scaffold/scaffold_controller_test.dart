@@ -88,6 +88,66 @@ void main() {
       });
       controller.dispose();
       expect(() => controller.open("item1"), throwsFlutterError);
+      expect(notificationCount, 0);
+    });
+
+    test("multiple listeners receive notifications", () async {
+      final controller = LayrzScaffoldController<String>();
+      int count1 = 0;
+      int count2 = 0;
+
+      controller.addListener(() => count1++);
+      controller.addListener(() => count2++);
+
+      controller.open("item1");
+      await Future.microtask(() {});
+
+      expect(count1, 1);
+      expect(count2, 1);
+      controller.dispose();
+    });
+
+    test("listener can be removed", () async {
+      final controller = LayrzScaffoldController<String>();
+      int callCount = 0;
+      final listener = () => callCount++;
+
+      controller.addListener(listener);
+      controller.open("item1");
+      await Future.microtask(() {});
+      expect(callCount, 1);
+
+      controller.removeListener(listener);
+      controller.open("item2");
+      await Future.microtask(() {});
+      expect(callCount, 1);
+
+      controller.dispose();
+    });
+
+    test("close on already-closed controller is no-op", () async {
+      final controller = LayrzScaffoldController<String>();
+      controller.close();
+      await Future.microtask(() {});
+      expect(controller.isOpen, isFalse);
+      expect(controller.opened, isNull);
+      controller.dispose();
+    });
+
+    test("opened property reflects current state", () async {
+      final controller = LayrzScaffoldController<String>();
+      expect(controller.opened, isNull);
+      expect(controller.isOpen, isFalse);
+
+      controller.open("item1");
+      expect(controller.opened, equals("item1"));
+      expect(controller.isOpen, isTrue);
+
+      controller.open("item2");
+      expect(controller.opened, equals("item2"));
+      expect(controller.isOpen, isTrue);
+
+      controller.dispose();
     });
   });
 }

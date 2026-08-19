@@ -106,9 +106,14 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     );
   }
 
-  /// Check if the opened item's tile is present in the current items.
+  /// Check if the opened item is present in the current items.
+  ///
+  /// First tries value equality via [contains] (cheap, works when [T] implements [==]).
+  /// Falls back to tile equality only if value equality fails, for cases where the
+  /// consumer has replaced items with equal-but-distinct instances.
   bool _isOpenedTileInList(BuildContext context, T? opened) {
     if (opened == null) return false;
+    if (widget.items.contains(opened)) return true;
     final openedTile = widget.onBuild(context, opened);
     for (final item in widget.items) {
       final itemTile = widget.onBuild(context, item);
