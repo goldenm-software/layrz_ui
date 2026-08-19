@@ -75,18 +75,6 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
             ),
             child: Row(
               children: [
-                // Active indicator bar (reserved space even when inactive)
-                Container(
-                  width: kLayrzLayoutActiveIndicatorWidth,
-                  height: kLayrzLayoutActiveIndicatorHeight,
-                  decoration: BoxDecoration(
-                    color: widget.isSelected ? tokens.colors.primary : const Color(0x00000000),
-                    borderRadius: BorderRadius.circular(kLayrzLayoutActiveIndicatorWidth / 2),
-                  ),
-                ),
-
-                SizedBox(width: 6.0),
-
                 // Icon
                 if (widget.page.icon != null)
                   Padding(
@@ -125,6 +113,19 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
                       ),
                     ),
                   ),
+
+                // Reserved space for trailing active indicator bar (width: 6.0 + 3.0 = 9.0)
+                SizedBox(width: 6.0),
+
+                // Active indicator bar (reserved space even when inactive)
+                Container(
+                  width: kLayrzLayoutActiveIndicatorWidth,
+                  height: kLayrzLayoutActiveIndicatorHeight,
+                  decoration: BoxDecoration(
+                    color: widget.isSelected ? tokens.colors.primary : const Color(0x00000000),
+                    borderRadius: BorderRadius.circular(kLayrzLayoutActiveIndicatorWidth / 2),
+                  ),
+                ),
               ],
             ),
           ),
