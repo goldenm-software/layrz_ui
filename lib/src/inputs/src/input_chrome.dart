@@ -315,17 +315,14 @@ class LayrzInputChrome extends StatelessWidget {
       );
     }
 
-    // Help affordance (meta icon)
+    // Help affordance (meta icon) with help cursor and hover feedback
     if (helpContentText != null && helpContentText!.isNotEmpty) {
       trailing.add(
-        LayrzTooltip(
+        _HelpAffordance(
           titleText: helpTitleText,
           contentText: helpContentText,
-          child: Icon(
-            LayrzIcons.solarOutlineHelp,
-            size: iconSize,
-            color: tokens.colors.fg3,
-          ),
+          iconSize: iconSize,
+          iconColor: tokens.colors.fg3,
         ),
       );
     }
@@ -361,6 +358,11 @@ class LayrzInputChrome extends StatelessWidget {
   ///
   /// Caller-supplied widgets are constrained to [contentHeight] to prevent them
   /// from changing field geometry. This ensures consistent height across all states.
+  ///
+  /// When [slot.onTap] is non-null and the field is not disabled, wraps the content
+  /// in a [MouseRegion] with [SystemMouseCursors.click] cursor and hover/press opacity
+  /// feedback (following D15: state changes only affect colour, opacity, shadow, cursor;
+  /// never size, padding, margin, or scale).
   Widget _buildSlotContent({
     required BuildContext context,
     required dynamic slot,
@@ -368,14 +370,14 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
   }) {
-    final isPrefix = slot is LayrzInputPrefixSlot;
-    final hasCallback = isPrefix ? slot.onTap != null : slot.onTap != null;
+    final iconSize = context.theme.iconTheme.size ?? 20.0;
+    final hasCallback = slot.onTap != null;
 
     Widget content;
     if (slot.icon != null) {
       content = Icon(
         slot.icon!,
-        size: 20,
+        size: iconSize,
         color: spec.textColor,
       );
     } else if (slot.widget != null) {
@@ -400,9 +402,137 @@ class LayrzInputChrome extends StatelessWidget {
       return content;
     }
 
-    return GestureDetector(
-      onTap: disabled ? null : slot.onTap,
+    // Tappable slot: wrap with cursor and press feedback (opacity only, per D15)
+    return _buildTappableSlot(
+      onTap: slot.onTap,
       child: content,
+    );
+  }
+
+  /// Wraps a tappable slot with cursor feedback and press-state opacity change.
+  ///
+  /// Provides [SystemMouseCursors.click] cursor to indicate interactivity and
+  /// opacity feedback on press (no size/padding changes per D15).
+  Widget _buildTappableSlot({
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return _TappableSlotWidget(
+      onTap: onTap,
+      child: child,
+    );
+  }
+}
+
+/// Stateful wrapper for a tappable slot that provides cursor and press-state feedback.
+///
+/// Combines [MouseRegion] (for cursor), [Listener] (for press detection),
+/// and [GestureDetector] (for tap handling) with opacity feedback.
+class _TappableSlotWidget extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _TappableSlotWidget({
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  State<_TappableSlotWidget> createState() => _TappableSlotWidgetState();
+}
+
+class _TappableSlotWidgetState extends State<_TappableSlotWidget> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: Listener(
+        onPointerDown: (_) {
+          setState(() {
+            _isPressed = true;
+          });
+        },
+        onPointerUp: (_) {
+          setState(() {
+            _isPressed = false;
+          });
+        },
+        onPointerCancel: (_) {
+          setState(() {
+            _isPressed = false;
+          });
+        },
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: Opacity(
+            opacity: _isPressed ? 0.7 : 1.0,
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Stateful wrapper for the help affordance that shows a help tooltip with cursor feedback.
+///
+/// Provides [SystemMouseCursors.help] (the `?` cursor) to indicate help information,
+/// and opacity feedback on hover/press (no size/padding changes per D15).
+class _HelpAffordance extends StatefulWidget {
+  final String? titleText;
+  final String? contentText;
+  final double iconSize;
+  final Color iconColor;
+
+  const _HelpAffordance({
+    required this.titleText,
+    required this.contentText,
+    required this.iconSize,
+    required this.iconColor,
+  });
+
+  @override
+  State<_HelpAffordance> createState() => _HelpAffordanceState();
+}
+
+class _HelpAffordanceState extends State<_HelpAffordance> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.help,
+      child: Listener(
+        onPointerDown: (_) {
+          setState(() {
+            _isPressed = true;
+          });
+        },
+        onPointerUp: (_) {
+          setState(() {
+            _isPressed = false;
+          });
+        },
+        onPointerCancel: (_) {
+          setState(() {
+            _isPressed = false;
+          });
+        },
+        child: LayrzTooltip(
+          titleText: widget.titleText,
+          contentText: widget.contentText,
+          child: Opacity(
+            opacity: _isPressed ? 0.7 : 1.0,
+            child: Icon(
+              LayrzIcons.solarOutlineHelp,
+              size: widget.iconSize,
+              color: widget.iconColor,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
