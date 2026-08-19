@@ -63,11 +63,17 @@ InlineSpan buildButtonContentSpan({
 ///
 /// Uses the shared [buildButtonContentSpan] to measure and render the same span,
 /// ensuring consistent width calculations without hand-summing component widths.
+///
+/// **Text scaling**: The [textScaler] parameter ensures the rendered text is scaled
+/// consistently with how it was measured in [_measureButtonContentWidth].
+/// Both paths must use the same scaler to prevent width mismatches at non-standard
+/// text scales.
 Widget buildButtonContent({
   required String labelText,
   required IconData? icon,
   required LayrzButtonStyleSpec spec,
   required LayrzTokens tokens,
+  required TextScaler textScaler,
 }) {
   final span = buildButtonContentSpan(
     labelText: labelText,
@@ -84,6 +90,7 @@ Widget buildButtonContent({
       text: span,
       overflow: TextOverflow.ellipsis,
       maxLines: 1,
+      textScaler: textScaler,
     ),
   );
 }
