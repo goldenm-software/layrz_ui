@@ -36,10 +36,7 @@ final class LayrzAvatarUrl extends LayrzAvatarSource {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LayrzAvatarUrl &&
-          runtimeType == other.runtimeType &&
-          url == other.url;
+      identical(this, other) || other is LayrzAvatarUrl && runtimeType == other.runtimeType && url == other.url;
 
   @override
   int get hashCode => Object.hash(runtimeType, url);
@@ -67,9 +64,7 @@ final class LayrzAvatarBase64 extends LayrzAvatarSource {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LayrzAvatarBase64 &&
-          runtimeType == other.runtimeType &&
-          base64 == other.base64;
+      other is LayrzAvatarBase64 && runtimeType == other.runtimeType && base64 == other.base64;
 
   @override
   int get hashCode => Object.hash(runtimeType, base64);
@@ -97,10 +92,7 @@ final class LayrzAvatarIcon extends LayrzAvatarSource {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LayrzAvatarIcon &&
-          runtimeType == other.runtimeType &&
-          icon == other.icon;
+      identical(this, other) || other is LayrzAvatarIcon && runtimeType == other.runtimeType && icon == other.icon;
 
   @override
   int get hashCode => Object.hash(runtimeType, icon);
@@ -129,10 +121,7 @@ final class LayrzAvatarEmoji extends LayrzAvatarSource {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LayrzAvatarEmoji &&
-          runtimeType == other.runtimeType &&
-          emoji == other.emoji;
+      identical(this, other) || other is LayrzAvatarEmoji && runtimeType == other.runtimeType && emoji == other.emoji;
 
   @override
   int get hashCode => Object.hash(runtimeType, emoji);

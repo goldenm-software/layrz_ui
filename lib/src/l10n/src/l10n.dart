@@ -85,24 +85,25 @@ import 'namespaces/weekdays.dart';
 /// The default remaining in the list is a deliberate fallback — if your
 /// delegate's [LocalizationsDelegate.isSupported] returns false for a locale,
 /// that locale degrades to English rather than throwing.
-abstract class LayrzUiL10n with
-    LayrzUiL10nActionsMixin,
-    LayrzUiL10nAboutMixin,
-    LayrzUiL10nCalendarMixin,
-    LayrzUiL10nDateTimePickersMixin,
-    LayrzUiL10nDualListMixin,
-    LayrzUiL10nDynamicAvatarMixin,
-    LayrzUiL10nEditorMixin,
-    LayrzUiL10nFilesMixin,
-    LayrzUiL10nHelpersMixin,
-    LayrzUiL10nMapMixin,
-    LayrzUiL10nNotificationsMixin,
-    LayrzUiL10nPasswordMixin,
-    LayrzUiL10nRequiredFieldsMixin,
-    LayrzUiL10nSelectMixin,
-    LayrzUiL10nTableMixin,
-    LayrzUiL10nTaskbarMixin,
-    LayrzUiL10nWeekdaysMixin {
+abstract class LayrzUiL10n
+    with
+        LayrzUiL10nActionsMixin,
+        LayrzUiL10nAboutMixin,
+        LayrzUiL10nCalendarMixin,
+        LayrzUiL10nDateTimePickersMixin,
+        LayrzUiL10nDualListMixin,
+        LayrzUiL10nDynamicAvatarMixin,
+        LayrzUiL10nEditorMixin,
+        LayrzUiL10nFilesMixin,
+        LayrzUiL10nHelpersMixin,
+        LayrzUiL10nMapMixin,
+        LayrzUiL10nNotificationsMixin,
+        LayrzUiL10nPasswordMixin,
+        LayrzUiL10nRequiredFieldsMixin,
+        LayrzUiL10nSelectMixin,
+        LayrzUiL10nTableMixin,
+        LayrzUiL10nTaskbarMixin,
+        LayrzUiL10nWeekdaysMixin {
   /// Creates an instance of [LayrzUiL10n].
   const LayrzUiL10n();
 

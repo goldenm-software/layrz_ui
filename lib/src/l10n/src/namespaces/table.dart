@@ -2,18 +2,23 @@
 mixin LayrzUiL10nTableMixin {
   /// Localized label for rows per page dropdown.
   String get tableRowsPerPage => 'Rows per page';
+
   /// Localized text for first-page navigation button.
   ///
   /// Default: "Start"
   String get tablePaginatorStart => 'Start';
+
   /// Localized text for previous-page navigation button.
   String get tablePaginatorPrevious => 'Previous';
+
   /// Localized text for next-page navigation button.
   String get tablePaginatorNext => 'Next';
+
   /// Localized text for last-page navigation button.
   ///
   /// Default: "End"
   String get tablePaginatorEnd => 'End';
+
   /// Localized text showing page range with parameters: start row, end row, total rows.
   ///
   /// Example: "Showing 1 to 10 of 100"
