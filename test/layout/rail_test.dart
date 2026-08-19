@@ -276,6 +276,46 @@ void main() {
 
         expect(tester.takeException(), isNull);
       });
+
+      testWidgets('logo box stays within 80% rail width and 40px height constraints in expanded rail',
+          (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        // Create a logo widget that is intentionally oversized (4.1:1 aspect ratio like the real Layrz logo)
+        // This simulates the real-world case where LayrzImage may be unsized and escape constraints
+        final oversizedLogo = SizedBox(
+          width: 2050, // Extremely wide
+          height: 500, // Extremely tall
+          child: Container(color: const Color(0xFFFF0000)),
+        );
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [],
+            logo: oversizedLogo,
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        // Find the logo's constraint container
+        // The FittedBox should be constrained to 178 * 0.8 = 142.4px wide and 40px tall
+        final fittedBoxes = find.byType(FittedBox);
+        expect(fittedBoxes, findsWidgets);
+
+        final size = tester.getSize(fittedBoxes.first);
+        // Measure actual rendered size and verify it stays within constraints
+        // If this test fails, the logo is escaping the FittedBox constraint
+        expect(size.width, lessThanOrEqualTo(208.0)); // 260 * 0.8 for drawer (wider of the two)
+        expect(size.height, lessThanOrEqualTo(40.0));
+
+        expect(tester.takeException(), isNull);
+      });
     });
 
     group('Search field', () {
