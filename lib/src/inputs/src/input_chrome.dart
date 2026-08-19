@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -129,12 +130,16 @@ class LayrzInputChrome extends StatelessWidget {
           vertical: verticalPadding,
         );
 
-    // Compute icon size once — used for slot icons, trailing icons, and content height.
-    // Falls back to icon theme size from context, or a token-derived default.
-    final iconSize = context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+    // Compute icon size — dense mode uses a smaller size for compact layout.
+    // Otherwise falls back to icon theme size or a token-derived default.
+    // In dense mode, all icon slots use the dense size; in normal mode, use the theme size.
+    final iconSize = dense
+        ? kLayrzTextInputDenseIconSize
+        : (context.theme.iconTheme.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4);
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. Icons fit inside this height.
+    // In dense mode, the height is reduced to match the smaller icon size.
     final contentHeight = iconSize;
 
     return Column(
