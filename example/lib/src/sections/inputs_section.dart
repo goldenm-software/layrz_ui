@@ -616,13 +616,8 @@ class _HelpAffordanceShowcase extends StatelessWidget {
 ///
 /// Shows: readOnly state (fires onTap, shows lock icon, allows focus) vs
 /// disabled state (does not fire onTap, no icon, no focus), with tap counters.
-class _ReadOnlyVsDisabledShowcase extends StatelessWidget {
-  final LayrzTokens tokens;
-  final int readOnlyTapCount;
-  final int disabledTapCount;
-  final VoidCallback onReadOnlyTap;
-  final VoidCallback onDisabledTap;
-
+class _ReadOnlyVsDisabledShowcase extends StatefulWidget {
+  /// Creates a new [_ReadOnlyVsDisabledShowcase].
   const _ReadOnlyVsDisabledShowcase({
     required this.tokens,
     required this.readOnlyTapCount,
@@ -631,46 +626,83 @@ class _ReadOnlyVsDisabledShowcase extends StatelessWidget {
     required this.onDisabledTap,
   });
 
+  /// The design system tokens.
+  final LayrzTokens tokens;
+
+  /// The number of times the read-only field was tapped.
+  final int readOnlyTapCount;
+
+  /// The number of times the disabled field was tapped.
+  final int disabledTapCount;
+
+  /// Callback fired when the read-only field is tapped.
+  final VoidCallback onReadOnlyTap;
+
+  /// Callback fired when the disabled field is tapped.
+  final VoidCallback onDisabledTap;
+
+  @override
+  State<_ReadOnlyVsDisabledShowcase> createState() => _ReadOnlyVsDisabledShowcaseState();
+}
+
+class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase> {
+  late TextEditingController _readOnlyController;
+  late TextEditingController _disabledController;
+
+  @override
+  void initState() {
+    super.initState();
+    _readOnlyController = TextEditingController(text: '2024-08-18');
+    _disabledController = TextEditingController(text: '2024-08-18');
+  }
+
+  @override
+  void dispose() {
+    _readOnlyController.dispose();
+    _disabledController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: widget.tokens.spacing.sp16,
       children: [
-        LayrzText('Read-only vs Disabled Behavior', style: tokens.typography.title),
+        LayrzText('Read-only vs Disabled Behavior', style: widget.tokens.typography.title),
         LayrzText(
           'Read-only fires onTap (used by pickers); disabled does not. Tap each field to see the difference.',
-          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+          style: widget.tokens.typography.body.copyWith(color: widget.tokens.colors.fg3),
         ),
         Row(
-          spacing: tokens.spacing.sp16,
+          spacing: widget.tokens.spacing.sp16,
           children: [
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: widget.tokens.spacing.sp8,
                 children: [
-                  LayrzText('Read-only (fires onTap)', style: tokens.typography.label),
+                  LayrzText('Read-only (fires onTap)', style: widget.tokens.typography.label),
                   LayrzTextInput(
                     labelText: 'Date Picker',
-                    controller: TextEditingController(text: '2024-08-18'),
+                    controller: _readOnlyController,
                     readOnly: true,
-                    onTap: onReadOnlyTap,
-                    placeholder: 'Taps: $readOnlyTapCount',
+                    onTap: widget.onReadOnlyTap,
+                    placeholder: 'Taps: ${widget.readOnlyTapCount}',
                   ),
                 ],
               ),
             ),
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: widget.tokens.spacing.sp8,
                 children: [
-                  LayrzText('Disabled (no onTap)', style: tokens.typography.label),
+                  LayrzText('Disabled (no onTap)', style: widget.tokens.typography.label),
                   LayrzTextInput(
                     labelText: 'Disabled Field',
-                    controller: TextEditingController(text: '2024-08-18'),
+                    controller: _disabledController,
                     disabled: true,
-                    onTap: onDisabledTap,
-                    placeholder: 'Taps: $disabledTapCount',
+                    onTap: widget.onDisabledTap,
+                    placeholder: 'Taps: ${widget.disabledTapCount}',
                   ),
                 ],
               ),
