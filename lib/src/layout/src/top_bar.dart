@@ -64,60 +64,65 @@ class LayrzLayoutTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: kLayrzLayoutTopBarHeight,
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: tokens.colors.surface,
         boxShadow: tokens.shadow.elevation2,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: kLayrzLayoutTopBarPaddingHorizontal),
-        child: Row(
-          children: [
-            // Drawer trigger
-            GestureDetector(
-              onTap: onDrawerTap,
-              child: Icon(
-                LayrzIcons.solarOutlineHamburgerMenu,
-                size: kLayrzLayoutDrawerTriggerIconSize,
-                color: tokens.colors.fg2,
-              ),
-            ),
-
-            SizedBox(width: kLayrzLayoutTopBarGap),
-
-            // Logo/mark
-            Expanded(
-              child: Center(
-                child: LayrzImage(
-                  source: logo,
-                  width: kLayrzLayoutTopBarLogoWidth,
-                  height: kLayrzLayoutTopBarLogoHeight,
-                  fit: BoxFit.contain,
+      child: SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: kLayrzLayoutTopBarHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kLayrzLayoutTopBarPaddingHorizontal),
+            child: Row(
+              children: [
+                // Drawer trigger
+                GestureDetector(
+                  onTap: onDrawerTap,
+                  child: Icon(
+                    LayrzIcons.solarOutlineHamburgerMenu,
+                    size: kLayrzLayoutDrawerTriggerIconSize,
+                    color: tokens.colors.fg2,
+                  ),
                 ),
-              ),
-            ),
 
-            SizedBox(width: kLayrzLayoutTopBarGap),
+                SizedBox(width: kLayrzLayoutTopBarGap),
 
-            // User avatar
-            SizedBox(
-              width: kLayrzLayoutTopBarUserAvatarSize,
-              height: kLayrzLayoutTopBarUserAvatarSize,
-              child: LayrzAvatar(
-                source: userAvatar,
-                size: kLayrzLayoutTopBarUserAvatarSize,
-                nameText: userName,
-              ),
-            ),
+                // Logo/mark
+                Expanded(
+                  child: Center(
+                    child: LayrzImage(
+                      source: logo,
+                      width: kLayrzLayoutTopBarLogoWidth,
+                      height: kLayrzLayoutTopBarLogoHeight,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
 
-            // Bottom divider
-            Container(
-              margin: const EdgeInsets.only(top: 8.0),
-              height: 1.0,
-              color: tokens.colors.divider,
+                SizedBox(width: kLayrzLayoutTopBarGap),
+
+                // User avatar
+                SizedBox(
+                  width: kLayrzLayoutTopBarUserAvatarSize,
+                  height: kLayrzLayoutTopBarUserAvatarSize,
+                  child: LayrzAvatar(
+                    source: userAvatar,
+                    size: kLayrzLayoutTopBarUserAvatarSize,
+                    nameText: userName,
+                  ),
+                ),
+
+                // Bottom divider
+                Container(
+                  margin: const EdgeInsets.only(top: 8.0),
+                  height: 1.0,
+                  color: tokens.colors.divider,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
