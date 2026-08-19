@@ -20,6 +20,8 @@ Likewise, `example/pubspec.yaml` and `.widget_preview/pubspec.yaml` are not publ
 
 **The version is self-managed — CI never injects it.** No workflow runs `sed` (or anything equivalent) to write the version into `pubspec.yaml` at deploy time, so a release means editing that `version:` line by hand and committing it. Do not go looking for CI-managed version substitution; there is none.
 
+**layrz_ui_i18n binding:** Localization support is provided via `layrz_ui_i18n`, a separate package published in [goldenm-software/layrz_ui_i18n](https://github.com/goldenm-software/layrz_ui_i18n). It depends on `layrz_ui >= 0.0.9` where `LayrzUiL10n` was introduced.
+
 ---
 
 ## Project structure
