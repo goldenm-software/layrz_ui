@@ -126,6 +126,12 @@ const double kLayrzLayoutUserChromePaddingHorizontal = 8.0;
 /// The border radius of the user chrome block, in logical pixels.
 const double kLayrzLayoutUserChromeRadius = 9.0;
 
+/// The bottom padding of the user chrome block, in logical pixels.
+///
+/// Provides spacing between the user chrome and the rail/drawer bottom edge,
+/// preventing visual collision with the container edge.
+const double kLayrzLayoutUserChromePaddingBottom = 8.0;
+
 /// The size of the user avatar (width × height) in the user chrome, in logical pixels.
 const double kLayrzLayoutUserAvatarSize = 28.0;
 
