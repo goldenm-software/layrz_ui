@@ -5,4 +5,5 @@ export 'src/chip.dart';
 export 'src/colors.dart';
 export 'src/durations.dart';
 export 'src/menu.dart';
+export 'src/scaffold.dart';
 export 'src/tooltip.dart';

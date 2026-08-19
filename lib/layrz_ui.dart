@@ -13,6 +13,7 @@ export 'src/keyboard/keyboard.dart';
 export 'src/l10n/l10n.dart';
 export 'src/menus/menus.dart';
 export 'src/platform/platform.dart';
+export 'src/scaffold/scaffold.dart';
 export 'src/state/state.dart';
 export 'src/text/text.dart';
 export 'src/theme/theme.dart';
