@@ -185,6 +185,8 @@ void main() {
       });
 
       testWidgets('pressing produces elevation1 shadow', (tester) async {
+        // Desktop mouse: hover first (same pointer), then button-down on that pointer.
+        // This test verifies the press-after-hover behavior (desktop interaction).
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
         await pumpThemed(
           tester,
@@ -217,9 +219,9 @@ void main() {
           reason: 'Hovered state must have elevation2 shadow',
         );
 
-        // Now press (while hovered)
+        // Now press with the SAME mouse gesture (button-down on same pointer)
         final center = tester.getCenter(find.byType(LayrzAlert));
-        final pressGesture = await tester.startGesture(center);
+        await gesture.down(center);
         await tester.pumpAndSettle();
 
         // Pressed should now have elevation1 (even while hovered)
@@ -235,10 +237,10 @@ void main() {
         expect(
           decoration?.boxShadow,
           equals(themeData.tokens.shadow.elevation1),
-          reason: 'Pressed alert must produce elevation1 shadow',
+          reason: 'Pressed alert must produce elevation1 shadow (desktop: press settles)',
         );
 
-        await pressGesture.up();
+        await gesture.up();
       });
 
       testWidgets('shadow animates during hover transition', (tester) async {
