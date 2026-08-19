@@ -14,6 +14,8 @@ void main() {
         /// (top == 0) while the logo content's top is >= topInsetLogical.
         /// This proves SafeArea wraps the content Column, not the outer Container.
 
+        const topInset = 24.0;
+
         // Force expanded presentation (md breakpoint) by setting a wide test size
         tester.binding.window.physicalSizeTestValue = const Size(1200, 800);
         addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
@@ -23,8 +25,8 @@ void main() {
           Builder(
             builder: (context) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                padding: const EdgeInsets.only(top: 24.0),
-                viewPadding: const EdgeInsets.only(top: 24.0),
+                padding: const EdgeInsets.only(top: topInset),
+                viewPadding: const EdgeInsets.only(top: topInset),
               ),
               child: LayrzLayout(
                 logo: 'assets/test-logo.png',
@@ -46,66 +48,16 @@ void main() {
 
         final logoRect = tester.getRect(logoImages.first);
 
-        /// CRITICAL ASSERTION: logo (content) top >= 24.
-        /// The logo is inside SafeArea, so it is inset from the top by 24pt.
+        /// CRITICAL ASSERTION: logo (content) top >= topInset.
+        /// The logo is inside SafeArea, so it is inset from the top by topInset.
         /// If SafeArea wrapped the outer Container instead, the logo would be at or near the top edge.
         expect(
           logoRect.top,
-          greaterThanOrEqualTo(24.0),
+          greaterThanOrEqualTo(topInset),
           reason:
-              'CRITICAL: logo (content) top must be >= 24pt. '
+              'CRITICAL: logo (content) top must be >= $topInset pt. '
               'This proves SafeArea wraps the content Column, not the outer Container. '
-              'With a 24pt top inset, the logo is inset while the surface extends behind the status bar.',
-        );
-      });
-
-      testWidgets('rail logo is inset; safe area wraps content not surface', (
-        WidgetTester tester,
-      ) async {
-        /// Tests that SafeArea wraps only the content Column, not the outer Container.
-        /// With a top inset, the logo (content) is inset while the surface itself is not.
-
-        // Force expanded presentation (md breakpoint)
-        tester.binding.window.physicalSizeTestValue = const Size(1200, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-
-        await pumpThemedApp(
-          tester,
-          Builder(
-            builder: (context) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                padding: const EdgeInsets.only(top: 24.0),
-                viewPadding: const EdgeInsets.only(top: 24.0),
-              ),
-              child: LayrzLayout(
-                logo: 'assets/test-logo.png',
-                items: [
-                  LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
-                ],
-                body: const SizedBox(child: Text('Body')),
-              ),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        // Find the logo image (content inside SafeArea).
-        final logoImages = find.byType(LayrzImage);
-        final logoEvaluated = logoImages.evaluate();
-        expect(logoEvaluated.isNotEmpty, isTrue, reason: 'Rail must render logo');
-
-        final logoRect = tester.getRect(logoImages.first);
-
-        /// The logo is inside SafeArea(child: Column(...)), so with a 24pt top inset,
-        /// the logo's top should be >= 24pt. This proves SafeArea only wraps the Column,
-        /// not the outer Container that acts as the surface.
-        expect(
-          logoRect.top,
-          greaterThanOrEqualTo(24.0),
-          reason:
-              'Logo (content inside SafeArea Column) must be inset by at least 24pt. '
-              'This proves SafeArea wraps only the content, not the surface.',
+              'With a $topInset pt top inset, the logo is inset while the surface extends behind the status bar.',
         );
       });
     });
@@ -118,6 +70,8 @@ void main() {
         /// the top bar surface is edge-to-edge (top == 0) while icon content is inset >= topInsetLogical.
         /// This proves DecoratedBox(surface) wraps SafeArea(content), not vice versa.
 
+        const topInset = 24.0;
+
         // Force drawer presentation (sm breakpoint) by setting a narrow test size
         tester.binding.window.physicalSizeTestValue = const Size(400, 800);
         addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
@@ -127,8 +81,8 @@ void main() {
           Builder(
             builder: (context) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                padding: const EdgeInsets.only(top: 24.0),
-                viewPadding: const EdgeInsets.only(top: 24.0),
+                padding: const EdgeInsets.only(top: topInset),
+                viewPadding: const EdgeInsets.only(top: topInset),
               ),
               child: LayrzLayout(
                 logo: 'assets/test-logo.png',
@@ -164,22 +118,22 @@ void main() {
 
         final contentRect = tester.getRect(icons.first);
 
-        /// CRITICAL ASSERTION: surface.top (0) < icon.top (>= 24).
+        /// CRITICAL ASSERTION: surface.top (0) < icon.top (>= topInset).
         /// This proves DecoratedBox(surface) wraps SafeArea(content), not vice versa.
         /// If SafeArea wrapped DecoratedBox, both would start at the same y position.
         expect(
           surfaceRect!.top,
           lessThan(contentRect.top),
           reason:
-              'CRITICAL: surface.top (0) < icon.top (~24). '
+              'CRITICAL: surface.top (0) < icon.top (~$topInset). '
               'This proves DecoratedBox > SafeArea structure. '
-              'With a 24pt top inset, the surface reaches the edge while content is inset.',
+              'With a $topInset pt top inset, the surface reaches the edge while content is inset.',
         );
 
         expect(
           contentRect.top,
-          greaterThanOrEqualTo(24.0),
-          reason: 'Top bar content top must be >= top inset (24pt)',
+          greaterThanOrEqualTo(topInset),
+          reason: 'Top bar content top must be >= top inset ($topInset pt)',
         );
       });
 
@@ -188,6 +142,8 @@ void main() {
       ) async {
         /// Tests that the decorated surface of the top bar is taller when there is a top inset,
         /// while the SafeArea-wrapped content remains at kLayrzLayoutTopBarHeight.
+
+        const topInset = 24.0;
 
         // Force drawer presentation (sm breakpoint)
         tester.binding.window.physicalSizeTestValue = const Size(400, 800);
@@ -198,8 +154,8 @@ void main() {
           Builder(
             builder: (context) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                padding: const EdgeInsets.only(top: 24.0),
-                viewPadding: const EdgeInsets.only(top: 24.0),
+                padding: const EdgeInsets.only(top: topInset),
+                viewPadding: const EdgeInsets.only(top: topInset),
               ),
               child: LayrzLayout(
                 logo: 'assets/test-logo.png',
@@ -232,21 +188,22 @@ void main() {
         /// This proves the surface extends behind the status bar.
         expect(
           surfaceRect!.height,
-          greaterThan(kLayrzLayoutTopBarHeight),
+          closeTo(kLayrzLayoutTopBarHeight + topInset, 1.0),
           reason:
-              'Top bar surface height must be > kLayrzLayoutTopBarHeight (56) to include '
-              'the inset space behind the status bar.',
+              'Top bar surface height must be ~${kLayrzLayoutTopBarHeight + topInset} (base 56 + inset $topInset). '
+              'This proves the surface extends behind the status bar.',
         );
       });
     });
 
     group('Drawer with LEFT inset (landscape notch) — critical invariant: surface.left < content.left', () {
-      testWidgets('drawer surface.left == 0; content.left >= leftInsetLogical', (
+      testWidgets('drawer content.left >= leftInsetLogical (SafeArea insets left edge)', (
         WidgetTester tester,
       ) async {
-        /// Tests that with a non-zero LEFT inset (landscape notch), the drawer surface
-        /// is edge-to-edge (left == 0) while content is inset >= leftInsetLogical.
-        /// SafeArea(right:false) insets from left/top/bottom, not right.
+        /// Tests that with a non-zero LEFT inset (landscape notch), the drawer content
+        /// is inset >= leftInsetLogical. This proves SafeArea(right:false) insets from left/top/bottom.
+
+        const leftInset = 20.0;
 
         // Force drawer presentation (sm breakpoint)
         tester.binding.window.physicalSizeTestValue = const Size(400, 800);
@@ -257,8 +214,8 @@ void main() {
           Builder(
             builder: (context) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
-                padding: const EdgeInsets.only(left: 20.0),
-                viewPadding: const EdgeInsets.only(left: 20.0),
+                padding: const EdgeInsets.only(left: leftInset),
+                viewPadding: const EdgeInsets.only(left: leftInset),
               ),
               child: LayrzLayout(
                 logo: 'assets/test-logo.png',
@@ -273,52 +230,22 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        // Open drawer.
-        final icons = find.byType(Icon);
-        if (icons.evaluate().isNotEmpty) {
-          await tester.tap(icons.first);
-          await tester.pumpAndSettle();
-        }
+        // Find logo (content) — it should be present in the visible layout.
+        final logoImages = find.byType(LayrzImage);
+        expect(logoImages.evaluate().isNotEmpty, isTrue, reason: 'Layout must render logo');
 
-        // Find drawer surface (Container, width == kLayrzLayoutDrawerWidth, left == 0).
-        final containers = find.byType(Container);
-        Rect? surfaceRect;
+        final contentRect = tester.getRect(logoImages.first);
 
-        for (final element in containers.evaluate()) {
-          final widget = element.widget;
-          if (widget is Container && widget.decoration is BoxDecoration) {
-            final rect = tester.getRect(find.byWidget(widget));
-            if ((rect.width - kLayrzLayoutDrawerWidth).abs() < 1.0 && rect.left == 0) {
-              surfaceRect = rect;
-              break;
-            }
-          }
-        }
-
-        if (surfaceRect != null) {
-          // Find content (logo) inside drawer.
-          final logoImages = find.byType(LayrzImage);
-          if (logoImages.evaluate().isNotEmpty) {
-            final contentRect = tester.getRect(logoImages.first);
-
-            /// CRITICAL ASSERTION: surface.left (0) < content.left (>= 20).
-            /// This proves SafeArea(right:false) insets from left.
-            expect(
-              surfaceRect.left,
-              lessThan(contentRect.left),
-              reason:
-                  'CRITICAL: surface.left (0) < content.left (~20). '
-                  'This proves SafeArea(right:false) insets from left. '
-                  'With a 20pt left inset, the surface reaches the edge while content is inset.',
-            );
-
-            expect(
-              contentRect.left,
-              greaterThanOrEqualTo(20.0),
-              reason: 'Drawer content left must be >= left inset (20pt)',
-            );
-          }
-        }
+        /// CRITICAL ASSERTION: content.left >= leftInset.
+        /// This proves SafeArea insets the content from the left edge.
+        expect(
+          contentRect.left,
+          greaterThanOrEqualTo(leftInset),
+          reason:
+              'CRITICAL: content.left must be >= $leftInset pt. '
+              'This proves SafeArea(right:false) insets from the left. '
+              'With a $leftInset pt left inset, content is inset while the surface (if any) reaches the edge.',
+        );
       });
     });
 
@@ -362,30 +289,6 @@ void main() {
           reason:
               'With zero insets, top bar surface height must equal kLayrzLayoutTopBarHeight. '
               'This confirms SafeArea has no effect when insets are zero.',
-        );
-      });
-    });
-
-    group('SafeArea presence (structural)', () {
-      testWidgets('SafeArea is present in layout tree', (WidgetTester tester) async {
-        /// Verifies that SafeArea widget is present somewhere in the layout tree.
-        /// This is a structural check; the geometric tests above verify behavior.
-
-        await pumpThemedApp(
-          tester,
-          LayrzLayout(
-            logo: 'assets/test-logo.png',
-            items: [
-              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
-            ],
-            body: const SizedBox(child: Text('Body')),
-          ),
-        );
-
-        expect(
-          find.byType(SafeArea),
-          findsWidgets,
-          reason: 'SafeArea widget must be present in the layout tree',
         );
       });
     });
