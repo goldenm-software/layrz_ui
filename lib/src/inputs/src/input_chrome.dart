@@ -1,11 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
+import 'input_density.dart';
 import 'input_error_block.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
@@ -122,7 +122,11 @@ class LayrzInputChrome extends StatelessWidget {
     );
 
     // Centralized density specification — all dimensions that change with dense mode
-    final density = dense ? _DenseSpec(tokens) : _ComfortableSpec(tokens, context.theme.iconTheme);
+    final density = InputDensitySpec(
+      dense: dense,
+      tokens: tokens,
+      iconTheme: context.theme.iconTheme,
+    );
 
     // Compute padding: explicit caller value wins over dense mode
     final resolvedPadding =
@@ -283,7 +287,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required _DensitySpec density,
+    required InputDensitySpec density,
   }) {
     final trailing = <Widget>[];
 
@@ -383,7 +387,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required _DensitySpec density,
+    required InputDensitySpec density,
   }) {
     final hasCallback = slot.onTap != null;
 
@@ -548,56 +552,4 @@ class _HelpAffordanceState extends State<_HelpAffordance> {
       ),
     );
   }
-}
-
-/// Centralized specification of all dimensions that change with dense mode.
-///
-/// Dense and comfortable modes differ in three dimensions: vertical padding,
-/// icon size, and text style. This class centralizes the specification so that
-/// (a) all three are always in sync, and (b) adding a new density dimension
-/// is impossible to miss — there is exactly one place to do it.
-abstract class _DensitySpec {
-  /// The vertical padding inside the input field (top and bottom).
-  double get verticalPadding;
-
-  /// The size of icons in slots and state indicators.
-  double get iconSize;
-
-  /// The text style for input content, hints, and slot text.
-  TextStyle get textStyle;
-}
-
-/// Comfortable (normal) density specification.
-class _ComfortableSpec extends _DensitySpec {
-  final LayrzTokens tokens;
-  final IconThemeData? iconTheme;
-
-  _ComfortableSpec(this.tokens, this.iconTheme);
-
-  @override
-  double get verticalPadding => tokens.spacing.sp10;
-
-  @override
-  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
-
-  @override
-  TextStyle get textStyle => tokens.typography.body.copyWith(
-    fontSize: tokens.typography.title.fontSize,
-  );
-}
-
-/// Dense (compact) density specification.
-class _DenseSpec extends _DensitySpec {
-  final LayrzTokens tokens;
-
-  _DenseSpec(this.tokens);
-
-  @override
-  double get verticalPadding => tokens.spacing.sp6;
-
-  @override
-  double get iconSize => kLayrzTextInputDenseIconSize;
-
-  @override
-  TextStyle get textStyle => tokens.typography.label;
 }
