@@ -60,14 +60,17 @@ class LayrzLayoutUserChrome extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
-            SizedBox(
-              width: kLayrzLayoutUserAvatarSize,
-              height: kLayrzLayoutUserAvatarSize,
-              child: LayrzAvatar(
-                source: userAvatar,
-                size: kLayrzLayoutUserAvatarSize,
-                nameText: userName,
+            // Avatar with rounded square shape (r8 radius)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              child: SizedBox(
+                width: kLayrzLayoutUserAvatarSize,
+                height: kLayrzLayoutUserAvatarSize,
+                child: LayrzAvatar(
+                  source: userAvatar,
+                  size: kLayrzLayoutUserAvatarSize,
+                  nameText: userName,
+                ),
               ),
             ),
 
@@ -109,14 +112,17 @@ class LayrzLayoutUserChrome extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Avatar
-              SizedBox(
-                width: kLayrzLayoutUserAvatarSize,
-                height: kLayrzLayoutUserAvatarSize,
-                child: LayrzAvatar(
-                  source: userAvatar,
-                  size: kLayrzLayoutUserAvatarSize,
-                  nameText: userName,
+              // Avatar with rounded square shape (r8 radius)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(tokens.radius.r8),
+                child: SizedBox(
+                  width: kLayrzLayoutUserAvatarSize,
+                  height: kLayrzLayoutUserAvatarSize,
+                  child: LayrzAvatar(
+                    source: userAvatar,
+                    size: kLayrzLayoutUserAvatarSize,
+                    nameText: userName,
+                  ),
                 ),
               ),
 
