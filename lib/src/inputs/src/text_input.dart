@@ -348,6 +348,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       shortcutText: shortcutText,
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
+      padding: widget.padding,
       dense: widget.dense,
       child: Listener(
         onPointerDown: widget.disabled ? null : _updateStates,

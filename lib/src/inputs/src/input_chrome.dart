@@ -66,7 +66,19 @@ class LayrzInputChrome extends StatelessWidget {
   /// The content text for the help affordance tooltip.
   final String? helpContentText;
 
+  /// The padding applied inside the input field.
+  ///
+  /// If provided, this padding is used as-is and [dense] is ignored.
+  /// If null, padding is derived from tokens: sp8 all sides when normal,
+  /// or sp8 horizontal with sp4 vertical when [dense] is true.
+  ///
+  /// Explicit padding takes precedence over [dense] to prevent silent geometry
+  /// mutations when a caller provides an exact layout requirement.
+  final EdgeInsets? padding;
+
   /// Whether the input field uses a compact (dense) layout.
+  ///
+  /// Ignored when [padding] is non-null.
   final bool dense;
 
   /// Creates a new [LayrzInputChrome] with the given properties.
@@ -88,6 +100,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.hideShortcutOnMobile = true,
     this.helpTitleText,
     this.helpContentText,
+    this.padding,
     this.dense = false,
   });
 
@@ -102,12 +115,14 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
-    // Compute padding: dense mode tightens vertical padding only
-    final verticalPadding = dense ? tokens.spacing.sp6 : tokens.spacing.sp10;
-    final padding = EdgeInsets.symmetric(
-      horizontal: tokens.spacing.sp12,
-      vertical: verticalPadding,
-    );
+    // Compute padding: explicit caller value wins over dense mode
+    final verticalPadding = dense ? tokens.spacing.sp4 : tokens.spacing.sp8;
+    final resolvedPadding =
+        padding ??
+        EdgeInsets.symmetric(
+          horizontal: tokens.spacing.sp8,
+          vertical: verticalPadding,
+        );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -177,7 +192,7 @@ class LayrzInputChrome extends StatelessWidget {
                       ),
                 borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
               ),
-              padding: padding,
+              padding: resolvedPadding,
               child: Row(
                 children: [
                   // Prefix slot
