@@ -1,5 +1,4 @@
-.PHONY: help run-linux run-android run-ios run-windows run-macos get
-
+.PHONY: help
 help:
 	@echo "layrz_ui example — available targets:"
 	@echo "  get          Run flutter pub get"
@@ -9,20 +8,26 @@ help:
 	@echo "  run-windows  Run on Windows desktop"
 	@echo "  run-macos    Run on macOS desktop"
 
+.PHONY: get
 get:
 	flutter pub get
 
+.PHONY: run-linux
 run-linux:
 	flutter run -d linux
 
+.PHONY: run-android
 run-android:
 	flutter run -d android
 
-run-ios:
-	flutter run -d ios
+.PHONY: clean
+clean:
+	flutter clean
+	$(MAKE) get
 
-run-windows:
-	flutter run -d windows
+.PHONY: build-android
+build-android: clean
+	@rm -rf com.layrz.ui.apk
+	flutter build apk --release --no-tree-shake-icons
+	mv build/app/outputs/flutter-apk/app-release.apk com.layrz.ui.apk
 
-run-macos:
-	flutter run -d macos
