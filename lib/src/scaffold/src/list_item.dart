@@ -1,26 +1,46 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/menus/menus.dart';
 
-import 'scaffold_item.dart';
+import 'scaffold_tile.dart';
 
-/// Private list item widget.
-class ListItem extends StatefulWidget {
-  /// The item data to display.
-  final LayrzScaffoldItem item;
+/// Renders a single row in the scaffold list.
+///
+/// This widget displays a tile's title, subtitle, and actions menu.
+/// The row shows selected state via background color and title color change (no geometry change per D15).
+///
+/// - [tile]: The tile data to render.
+/// - [isSelected]: Whether this row is currently selected.
+/// - [onTap]: Callback when the row is tapped.
+/// - [onActionTap]: Callback when an action is tapped, called with the action item.
+class ListItem<T> extends StatefulWidget {
+  /// The tile to render.
+  final LayrzScaffoldTile tile;
 
-  /// Whether this item is currently selected.
+  /// Whether this row is currently selected.
   final bool isSelected;
 
-  /// Callback fired when the item is tapped.
-  final VoidCallback onTap;
+  /// Callback when the row is tapped to select it.
+  final VoidCallback? onTap;
+
+  /// Callback when an action menu item is tapped.
+  ///
+  /// Called with the tapped [LayrzDropdownItem].
+  final ValueChanged<LayrzDropdownItem>? onActionTap;
 
   /// Creates a new [ListItem].
+  ///
+  /// - [tile]: The tile to render. Required.
+  /// - [isSelected]: Whether this row is selected. Required.
+  /// - [onTap]: Callback when tapped, or null. Defaults to null.
+  /// - [onActionTap]: Callback for action taps, or null. Defaults to null.
   const ListItem({
     super.key,
-    required this.item,
+    required this.tile,
     required this.isSelected,
-    required this.onTap,
+    this.onTap,
+    this.onActionTap,
   });
 
   @override
@@ -32,127 +52,94 @@ class _ListItemState extends State<ListItem> {
 
   @override
   Widget build(BuildContext context) {
-    final t = context.tokens;
-    final item = widget.item;
+    final tokens = context.tokens;
+    final tile = widget.tile;
 
     final backgroundColor = widget.isSelected
-        ? t.colors.primary.withOpacityValue(
-            kLayrzScaffoldListItemSelectedRowBackgroundOpacity,
-          )
-        : (_isHovered
-              ? t.colors.primary.withOpacityValue(
-                  kLayrzScaffoldListItemHoverBackgroundOpacity,
-                )
-              : null);
+        ? tokens.colors.primary.withValues(alpha: 0.07)
+        : _isHovered
+        ? tokens.colors.primary.withValues(alpha: 0.04)
+        : const Color(0x00000000);
 
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        cursor: SystemMouseCursors.click,
+    final titleColor = widget.isSelected ? tokens.colors.primary : tokens.colors.fg1;
+
+    return MouseRegion(
+      onEnter: (_) {
+        setState(() {
+          _isHovered = true;
+        });
+      },
+      onExit: (_) {
+        setState(() {
+          _isHovered = false;
+        });
+      },
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
         child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 8),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(kLayrzScaffoldListItemRadius),
-          ),
-          padding: const EdgeInsets.symmetric(
-            vertical: kLayrzScaffoldListItemVerticalPadding,
-            horizontal: kLayrzScaffoldListItemHorizontalPadding,
+            borderRadius: BorderRadius.circular(9),
           ),
           child: Row(
             children: [
-              IconTile(
-                icon: item.icon,
-                isSelected: widget.isSelected,
-                tint: item.tint,
-              ),
-              const SizedBox(width: kLayrzScaffoldListItemGap),
               Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      item.title,
+                    RichText(
+                      text: TextSpan(
+                        children: [tile.titleRichText],
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: titleColor,
+                        ),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: kLayrzScaffoldListItemLabelFontSize,
-                        fontWeight: widget.isSelected
-                            ? kLayrzScaffoldListItemSelectedLabelFontWeight
-                            : kLayrzScaffoldListItemUnselectedLabelFontWeight,
-                        color: widget.isSelected ? t.colors.primary : t.colors.fg1,
-                      ),
                     ),
-                    if (item.subtitle != null) ...[
+                    if (tile.subtitleRichText != null) ...[
                       const SizedBox(height: 2),
-                      Text(
-                        item.subtitle!,
+                      RichText(
+                        text: TextSpan(
+                          children: [tile.subtitleRichText!],
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w400,
+                            color: tokens.colors.fg3,
+                          ),
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: kLayrzScaffoldListItemMetaFontSize,
-                          color: t.colors.fg3,
-                        ),
                       ),
                     ],
                   ],
                 ),
               ),
+              if (tile.actions.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                LayrzDropdownMenu(
+                  items: tile.actions,
+                  builder: (context, controller) {
+                    return GestureDetector(
+                      onTap: controller.open,
+                      child: Icon(
+                        LayrzIcons.solarOutlineMenuDots,
+                        size: 16,
+                        color: tokens.colors.fg3,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Private icon tile widget.
-class IconTile extends StatelessWidget {
-  /// The icon to display, or null for no icon.
-  final IconData? icon;
-
-  /// Whether this tile's item is currently selected.
-  final bool isSelected;
-
-  /// Optional tint color for the tile background.
-  final Color? tint;
-
-  /// Creates a new [IconTile].
-  const IconTile({
-    super.key,
-    required this.icon,
-    required this.isSelected,
-    required this.tint,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-
-    final tileColor = isSelected
-        ? t.colors.primary.withOpacityValue(
-            kLayrzScaffoldListItemSelectedIconTileBackgroundOpacity,
-          )
-        : (tint ?? t.colors.surface3);
-
-    return Container(
-      width: kLayrzScaffoldListItemIconTileSize,
-      height: kLayrzScaffoldListItemIconTileSize,
-      decoration: BoxDecoration(
-        color: tileColor,
-        borderRadius: BorderRadius.circular(kLayrzScaffoldListItemIconTileRadius),
-      ),
-      child: icon == null
-          ? const SizedBox.shrink()
-          : Center(
-              child: Icon(
-                icon,
-                size: kLayrzScaffoldListItemIconSize,
-                color: isSelected ? t.colors.primary : t.colors.fg3,
-              ),
-            ),
     );
   }
 }

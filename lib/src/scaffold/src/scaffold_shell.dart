@@ -1,155 +1,91 @@
-import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
+import "package:flutter/widgets.dart";
+import "package:layrz_ui/src/extensions/extensions.dart";
+import "package:layrz_ui/src/tokens/tokens.dart";
 
-import 'detail_pane.dart';
-import 'group_mode.dart';
-import 'list_panel.dart';
-import 'scaffold_item.dart';
+import "detail_pane.dart";
+import "list_panel.dart";
+import "scaffold_controller.dart";
+import "scaffold_tile.dart";
 
 /// An adaptive list-detail shell widget in the layrz_ui design system.
 ///
 /// [LayrzScaffoldShell] provides a responsive container for list-detail navigation.
 /// On wide containers (md, lg, xl breakpoints), the list panel (250px) and detail pane
 /// are displayed side-by-side. On narrow containers (xs, sm breakpoints), a single pane
-/// is shown: the list by default, and the detail after selection. The shell owns the layout,
-/// visibility, and state; the consuming app owns which item is selected.
+/// is shown: the list by default, and the detail after opening an item.
 ///
-/// **Core contract:**
-/// - The consuming app passes [items] and [selectedId], and receives [onSelected] callbacks.
-/// - The shell owns the filter query, group mode, and detail visibility on narrow containers.
-/// - The [contentBuilder] callback receives the selected item and returns the detail widget.
-///
-/// **Narrow-mode behaviour:**
-/// - When no item is selected ([selectedId] is null), the list is shown.
-/// - When an item is selected ([selectedId] is non-null), the detail is shown.
-/// - A back affordance in the detail header returns to the list without modifying [selectedId].
-/// - This is a pure state transition, not a navigation operation (no [Navigator] calls).
-///
-/// **Filtering and grouping:**
-/// - The filter query is applied case-insensitively as a substring match over [title] and [subtitle].
-/// - The group mode toggle is rendered only when at least one item has a non-null [group].
-/// - When no items match the filter, an empty state is shown quoting the active query.
-class LayrzScaffoldShell extends StatefulWidget {
+/// The shell is container-driven via [LayoutBuilder] constraints, not viewport-driven.
+/// The consuming app passes items and owns the controller; the shell owns the layout.
+class LayrzScaffoldShell<T> extends StatefulWidget {
+  /// The items to display in the list.
+  final List<T> items;
+
+  /// Callback to build a tile for each item.
+  final LayrzScaffoldTile Function(BuildContext, T) onBuild;
+
+  /// Callback to build the detail content for an opened item.
+  final Widget Function(BuildContext, T) onDetailsBuild;
+
+  /// Controller for managing the opened item.
+  final LayrzScaffoldController<T> controller;
+
+  /// Optional footer widget for the list panel.
+  final Widget? footer;
+
+  /// Whether the search field is visible.
+  final bool searchable;
+
+  /// Callback when the search query changes.
+  final ValueChanged<String>? onSearch;
+
   /// Creates a new [LayrzScaffoldShell].
+  ///
+  /// - [items]: The items to display in the list. Required.
+  /// - [onBuild]: Callback to build a tile for each item. Required.
+  /// - [onDetailsBuild]: Callback to build the detail content for an opened item. Required.
+  /// - [controller]: Controller for managing the opened item. Required.
+  /// - [footer]: Optional footer widget for the list panel. Defaults to null.
+  /// - [searchable]: Whether the search field is visible. Defaults to true.
+  /// - [onSearch]: Callback when the search query changes, or null. Defaults to null.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
-    required this.selectedId,
-    required this.onSelected,
-    required this.contentBuilder,
-    this.listTitle,
+    required this.onBuild,
+    required this.onDetailsBuild,
+    required this.controller,
     this.footer,
-    this.detailActions = const [],
-    this.detailTitle,
-    this.detailSubtitle,
     this.searchable = true,
-    this.initialGroupMode = LayrzScaffoldGroupMode.grouped,
+    this.onSearch,
   });
 
-  /// The list of items to display in the list panel.
-  ///
-  /// When empty, the list shows as empty. When the filter query matches no items,
-  /// the empty state is shown. Otherwise, the matching items are displayed.
-  final List<LayrzScaffoldItem> items;
-
-  /// The [id] of the currently selected item.
-  ///
-  /// When null or matching no item, the detail pane shows an empty state.
-  /// When non-null and matching an item, the detail pane shows the result
-  /// of [contentBuilder] called with the selected item.
-  /// Owned by the consuming app; changes are reported via [onSelected].
-  final String? selectedId;
-
-  /// Callback fired when the user selects an item in the list panel.
-  ///
-  /// The callback receives the [id] of the selected item. The consuming app
-  /// is responsible for updating [selectedId] in response.
-  final ValueChanged<String> onSelected;
-
-  /// Builds the detail widget for the currently selected item.
-  ///
-  /// Called with the selected [LayrzScaffoldItem]. The returned widget is displayed
-  /// in the detail pane. When [selectedId] is null or matches no item, the detail pane
-  /// shows an empty state and this callback is not called.
-  final Widget Function(BuildContext, LayrzScaffoldItem) contentBuilder;
-
-  /// Optional title for the list panel.
-  ///
-  /// When non-null, this title is displayed in the list header above the filter field.
-  /// Defaults to null.
-  final String? listTitle;
-
-  /// Optional footer widget for the list panel.
-  ///
-  /// When non-null, this widget is displayed in a footer section below the list body.
-  /// The footer receives 1px divider above it, padding, and is scrolled with the panel.
-  /// Defaults to null.
-  final Widget? footer;
-
-  /// List of action widgets to display in the detail pane header.
-  ///
-  /// These widgets are right-aligned in the detail header, after the title/subtitle block.
-  /// Useful for edit, delete, or other item-specific actions. Defaults to an empty list.
-  final List<Widget> detailActions;
-
-  /// Optional title to override the selected item's title in the detail header.
-  ///
-  /// When non-null, this title is displayed instead of [LayrzScaffoldItem.title].
-  /// When null, the selected item's [title] is displayed. Defaults to null.
-  final String? detailTitle;
-
-  /// Optional subtitle to display in the detail header.
-  ///
-  /// When non-null, this subtitle is displayed below the detail title.
-  /// Defaults to null.
-  final String? detailSubtitle;
-
-  /// Whether the list panel includes a search/filter field.
-  ///
-  /// When true, the filter field is rendered in the list header, allowing the user
-  /// to narrow the list by substring match over [title] and [subtitle].
-  /// When false, the filter field is hidden. Defaults to true.
-  final bool searchable;
-
-  /// The initial group mode for the list panel.
-  ///
-  /// Sets the default arrangement of items (grouped vs. flat). The user can toggle
-  /// this if at least one item has a non-null [group]. Defaults to [LayrzScaffoldGroupMode.grouped].
-  final LayrzScaffoldGroupMode initialGroupMode;
-
   @override
-  State<LayrzScaffoldShell> createState() => _LayrzScaffoldShellState();
+  State<LayrzScaffoldShell<T>> createState() => _LayrzScaffoldShellState<T>();
 }
 
-class _LayrzScaffoldShellState extends State<LayrzScaffoldShell> {
-  late TextEditingController _filterController;
-  late LayrzScaffoldGroupMode _groupMode;
-  late bool _showDetailOnNarrow;
+class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
+  late void Function() _controllerListener;
 
   @override
   void initState() {
     super.initState();
-    _filterController = TextEditingController();
-    _groupMode = widget.initialGroupMode;
-    _showDetailOnNarrow = widget.selectedId != null;
+    _controllerListener = () {
+      setState(() {});
+    };
+    widget.controller.addListener(_controllerListener);
   }
 
   @override
-  void didUpdateWidget(LayrzScaffoldShell oldWidget) {
+  void didUpdateWidget(LayrzScaffoldShell<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialGroupMode != widget.initialGroupMode) {
-      _groupMode = widget.initialGroupMode;
-    }
-    if (oldWidget.selectedId != widget.selectedId) {
-      _showDetailOnNarrow = widget.selectedId != null;
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_controllerListener);
+      widget.controller.addListener(_controllerListener);
     }
   }
 
   @override
   void dispose() {
-    _filterController.dispose();
+    widget.controller.removeListener(_controllerListener);
     super.dispose();
   }
 
@@ -157,66 +93,87 @@ class _LayrzScaffoldShellState extends State<LayrzScaffoldShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final band = context.tokens.breakpoints.bandAt(constraints.maxWidth);
-        final isNarrow = band == LayrzBreakpoint.xs || band == LayrzBreakpoint.sm;
+        final tokens = context.tokens;
+        final breakpoint = tokens.breakpoints.bandAt(constraints.maxWidth);
+        final isWide = breakpoint.index >= LayrzBreakpoint.md.index;
 
-        return Flex(
-          direction: Axis.horizontal,
-          children: [
-            if (isNarrow && _showDetailOnNarrow)
-              Expanded(
-                child: _buildDetailPane(context, isNarrow),
-              )
-            else if (!isNarrow)
-              SizedBox(
-                width: kLayrzScaffoldListWidth,
-                child: _buildListPanel(context),
-              )
-            else
-              Expanded(
-                child: _buildListPanel(context),
-              ),
-            if (!isNarrow)
-              Expanded(
-                child: _buildDetailPane(context, isNarrow),
-              ),
-          ],
-        );
+        if (isWide) {
+          return _buildWideLayout(context, tokens);
+        } else {
+          return _buildNarrowLayout(context, tokens);
+        }
       },
     );
   }
 
-  Widget _buildListPanel(BuildContext context) {
-    return ListPanel(
-      items: widget.items,
-      selectedId: widget.selectedId,
-      onSelected: (id) {
-        widget.onSelected(id);
-        setState(() => _showDetailOnNarrow = true);
-      },
-      filterController: _filterController,
-      groupMode: _groupMode,
-      onGroupModeChanged: (mode) => setState(() => _groupMode = mode),
-      listTitle: widget.listTitle,
-      searchable: widget.searchable,
-      footer: widget.footer,
+  /// Check if the opened item's tile is present in the current items.
+  bool _isOpenedTileInList(BuildContext context, T? opened) {
+    if (opened == null) return false;
+    final openedTile = widget.onBuild(context, opened);
+    for (final item in widget.items) {
+      final itemTile = widget.onBuild(context, item);
+      if (itemTile == openedTile) return true;
+    }
+    return false;
+  }
+
+  Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
+    final opened = widget.controller.opened;
+    final isOpenedInList = _isOpenedTileInList(context, opened);
+
+    return Row(
+      children: [
+        ListPanel<T>(
+          items: widget.items,
+          onBuild: widget.onBuild,
+          opened: opened,
+          onTap: (item) {
+            widget.controller.open(item);
+          },
+          onSearch: widget.onSearch,
+          searchable: widget.searchable,
+          footer: widget.footer,
+        ),
+        Container(
+          width: 1,
+          color: tokens.colors.divider,
+        ),
+        Expanded(
+          child: DetailPane<T>(
+            opened: isOpenedInList ? opened : null,
+            contentBuilder: isOpenedInList ? widget.onDetailsBuild : null,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildDetailPane(BuildContext context, bool isNarrow) {
-    final selectedItem = widget.items.cast<LayrzScaffoldItem?>().firstWhere(
-      (item) => item?.id == widget.selectedId,
-      orElse: () => null,
-    );
+  Widget _buildNarrowLayout(BuildContext context, LayrzTokens tokens) {
+    final opened = widget.controller.opened;
+    final isOpenedInList = _isOpenedTileInList(context, opened);
+    final showDetail = widget.controller.isOpen && isOpenedInList;
 
-    return DetailPane(
-      selectedItem: selectedItem,
-      contentBuilder: selectedItem == null ? null : (ctx) => widget.contentBuilder(ctx, selectedItem),
-      onBack: () => setState(() => _showDetailOnNarrow = false),
-      detailTitle: widget.detailTitle ?? selectedItem?.title,
-      detailSubtitle: widget.detailSubtitle,
-      detailActions: widget.detailActions,
-      showBack: isNarrow,
-    );
+    if (showDetail) {
+      return DetailPane<T>(
+        opened: opened,
+        contentBuilder: widget.onDetailsBuild,
+        onClose: () {
+          widget.controller.close();
+        },
+        showBack: true,
+      );
+    } else {
+      return ListPanel<T>(
+        items: widget.items,
+        onBuild: widget.onBuild,
+        opened: opened,
+        onTap: (item) {
+          widget.controller.open(item);
+        },
+        onSearch: widget.onSearch,
+        searchable: widget.searchable,
+        footer: widget.footer,
+      );
+    }
   }
 }

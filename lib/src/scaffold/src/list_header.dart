@@ -1,48 +1,28 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_icons/layrz_icons.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
-import 'group_mode.dart';
-import 'group_toggle.dart';
-
-/// Private list header widget.
+/// The search field header for the list panel.
+///
+/// Renders a search input with a leading magnifier icon, only when [searchable] is true.
+/// When the user types, [onSearch] is called with the query.
 class ListHeader extends StatefulWidget {
-  /// Optional title for the list header.
-  final String? title;
-
-  /// The number of items currently displayed.
-  final int itemCount;
-
-  /// Whether any items have a non-null group.
-  final bool hasGroupedItems;
-
-  /// The current group mode (grouped or flat).
-  final LayrzScaffoldGroupMode groupMode;
-
-  /// Callback fired when the group mode is changed.
-  final ValueChanged<LayrzScaffoldGroupMode> onGroupModeChanged;
-
-  /// Whether to display the filter/search field.
+  /// Whether the search field is visible.
   final bool searchable;
 
-  /// Controller for the filter text field.
-  final TextEditingController filterController;
-
-  /// Callback fired when the filter text changes.
-  final VoidCallback onFilterChanged;
+  /// Callback fired when the search query changes.
+  ///
+  /// Called with the current text in the search field.
+  final ValueChanged<String>? onSearch;
 
   /// Creates a new [ListHeader].
+  ///
+  /// - [searchable]: Whether to render the search field. Required.
+  /// - [onSearch]: Callback for search query changes, or null. Defaults to null.
   const ListHeader({
     super.key,
-    required this.title,
-    required this.itemCount,
-    required this.hasGroupedItems,
-    required this.groupMode,
-    required this.onGroupModeChanged,
     required this.searchable,
-    required this.filterController,
-    required this.onFilterChanged,
+    this.onSearch,
   });
 
   @override
@@ -50,136 +30,69 @@ class ListHeader extends StatefulWidget {
 }
 
 class _ListHeaderState extends State<ListHeader> {
-  late FocusNode _filterFocusNode;
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
-    _filterFocusNode = FocusNode();
-    widget.filterController.addListener(widget.onFilterChanged);
+    _controller = TextEditingController();
+    _focusNode = FocusNode();
+    _controller.addListener(() {
+      widget.onSearch?.call(_controller.text);
+    });
   }
 
   @override
   void dispose() {
-    _filterFocusNode.dispose();
-    widget.filterController.removeListener(widget.onFilterChanged);
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = context.tokens;
+    final tokens = context.tokens;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        kLayrzScaffoldHeaderHorizontalPadding,
-        kLayrzScaffoldHeaderTopPadding,
-        kLayrzScaffoldHeaderHorizontalPadding,
-        kLayrzScaffoldHeaderBottomPadding,
+    if (!widget.searchable) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: tokens.colors.surface2,
+        border: Border(
+          bottom: BorderSide(
+            color: tokens.colors.divider,
+            width: 1,
+          ),
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          if (widget.title != null || widget.hasGroupedItems)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Row(
-                children: [
-                  if (widget.title != null)
-                    Expanded(
-                      child: Text(
-                        widget.title!,
-                        style: TextStyle(
-                          fontSize: kLayrzScaffoldHeaderTitleFontSize,
-                          fontWeight: FontWeight.w700,
-                          color: t.colors.fg1,
-                        ),
-                      ),
-                    ),
-                  if (widget.title != null)
-                    Text(
-                      widget.itemCount.toString(),
-                      style: TextStyle(
-                        fontSize: kLayrzScaffoldHeaderCountFontSize,
-                        color: t.colors.fg3,
-                      ),
-                    ),
-                  if (widget.hasGroupedItems) ...[
-                    const SizedBox(width: kLayrzScaffoldHeaderGap),
-                    GroupToggle(
-                      groupMode: widget.groupMode,
-                      onChanged: widget.onGroupModeChanged,
-                    ),
-                  ],
-                ],
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Icon(
+              LayrzIcons.solarOutlineMagnifer,
+              size: 12,
+              color: tokens.colors.fg3,
+            ),
+          ),
+          Expanded(
+            child: EditableText(
+              controller: _controller,
+              focusNode: _focusNode,
+              style: TextStyle(
+                fontSize: 13,
+                color: tokens.colors.fg1,
               ),
+              cursorColor: tokens.colors.primary,
+              backgroundCursorColor: tokens.colors.surface2,
             ),
-          if (widget.searchable)
-            FilterField(
-              controller: widget.filterController,
-              focusNode: _filterFocusNode,
-            ),
+          ),
         ],
-      ),
-    );
-  }
-}
-
-/// Private filter field widget.
-class FilterField extends StatelessWidget {
-  /// Controller for the filter text field.
-  final TextEditingController controller;
-
-  /// Focus node for the filter text field.
-  final FocusNode focusNode;
-
-  /// Creates a new [FilterField].
-  const FilterField({
-    super.key,
-    required this.controller,
-    required this.focusNode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final t = context.tokens;
-
-    return SizedBox(
-      height: kLayrzScaffoldFilterHeight,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: t.colors.surface2,
-          border: Border.all(color: t.colors.divider, width: 1),
-          borderRadius: BorderRadius.circular(kLayrzScaffoldFilterHeight / 2),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: kLayrzScaffoldFilterHorizontalPadding,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                LayrzIcons.solarOutlineMagnifer,
-                size: kLayrzScaffoldFilterIconSize,
-                color: t.colors.fg3,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: EditableText(
-                  controller: controller,
-                  focusNode: focusNode,
-                  style: TextStyle(
-                    fontSize: kLayrzScaffoldFilterFontSize,
-                    color: t.colors.fg1,
-                  ),
-                  cursorColor: t.colors.primary,
-                  backgroundCursorColor: t.colors.surface2,
-                  selectionColor: t.colors.primary.withOpacityValue(0.2),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
