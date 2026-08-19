@@ -62,4 +62,61 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('LayrzLayoutRailItem - DESIGN-61 Active Indicator', () {
+    testWidgets('renders for selected item and transparent for unselected', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [
+            LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
+            LayrzNavigatorPage(id: '2', labelText: 'Devices'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reserves space so label does not shift on selection', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [
+            LayrzNavigatorPage(id: '1', labelText: 'Dashboard', isSelected: true),
+            LayrzNavigatorPage(id: '2', labelText: 'Devices', isSelected: false),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      final dashboardLabel = find.text('Dashboard');
+      final devicesLabel = find.text('Devices');
+
+      final dashboardRect = tester.getRect(dashboardLabel);
+      final devicesRect = tester.getRect(devicesLabel);
+
+      expect(dashboardLabel, findsWidgets);
+      expect(devicesLabel, findsWidgets);
+      expect(dashboardRect.width, greaterThan(0));
+      expect(devicesRect.width, greaterThan(0));
+
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

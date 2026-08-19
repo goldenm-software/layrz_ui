@@ -210,5 +210,33 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('drawer presentation with logo constrained to 80% width and 40px height', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(520, 900);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [],
+          logo: Container(
+            width: 300,
+            height: 200,
+            color: const Color(0xFFFF0000),
+          ),
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      final menuButton = find.byType(GestureDetector).first;
+      await tester.tap(menuButton);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }

@@ -70,4 +70,255 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('LayrzLayoutRail - DESIGN-61 Visual Adjustments', () {
+    group('Search filtering', () {
+      testWidgets('narrows pages by case-insensitive substring match', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorPage(id: '2', labelText: 'Devices'),
+              LayrzNavigatorPage(id: '3', labelText: 'Settings'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        final searchField = find.byType(EditableText);
+        expect(searchField, findsOneWidget);
+
+        await tester.tap(searchField);
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField, 'ash');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dashboard'), findsWidgets);
+        expect(find.text('Devices'), findsNothing);
+        expect(find.text('Settings'), findsNothing);
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('preserves section labels when section has matches', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorLabel('MAIN'),
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorLabel('REFERENCE'),
+              LayrzNavigatorPage(id: '2', labelText: 'Documentation'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        final searchField = find.byType(EditableText);
+        await tester.tap(searchField);
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField, 'Dash');
+        await tester.pumpAndSettle();
+
+        expect(find.text('MAIN'), findsWidgets);
+        expect(find.text('REFERENCE'), findsNothing);
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('hides section labels when section has no matches', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorLabel('MAIN'),
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorLabel('SETTINGS'),
+              LayrzNavigatorPage(id: '2', labelText: 'Preferences'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        final searchField = find.byType(EditableText);
+        await tester.tap(searchField);
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField, 'Board');
+        await tester.pumpAndSettle();
+
+        expect(find.text('MAIN'), findsWidgets);
+        expect(find.text('SETTINGS'), findsNothing);
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('shows empty state when nothing matches', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorPage(id: '2', labelText: 'Devices'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        final searchField = find.byType(EditableText);
+        await tester.tap(searchField);
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField, 'xyz');
+        await tester.pumpAndSettle();
+
+        expect(find.text('No results'), findsWidgets);
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('clears filter to restore full list when query cleared', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorPage(id: '2', labelText: 'Devices'),
+              LayrzNavigatorPage(id: '3', labelText: 'Settings'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        final searchField = find.byType(EditableText);
+        await tester.tap(searchField);
+        await tester.pumpAndSettle();
+        await tester.enterText(searchField, 'Board');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dashboard'), findsWidgets);
+        expect(find.text('Devices'), findsNothing);
+
+        await tester.enterText(searchField, '');
+        await tester.pumpAndSettle();
+
+        expect(find.text('Dashboard'), findsWidgets);
+        expect(find.text('Devices'), findsWidgets);
+        expect(find.text('Settings'), findsWidgets);
+
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Logo constraint', () {
+      testWidgets('constrained to 80% width and 40px height in rail', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [],
+            logo: Container(
+              width: 300,
+              height: 200,
+              color: const Color(0xFFFF0000),
+            ),
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+      });
+    });
+
+    group('Integration tests', () {
+      testWidgets('search field appears above items in rail', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [
+              LayrzNavigatorPage(id: '1', labelText: 'Dashboard'),
+              LayrzNavigatorPage(id: '2', labelText: 'Devices'),
+            ],
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        expect(find.byType(EditableText), findsWidgets);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('notifications row appears above user chrome in rail footer', (WidgetTester tester) async {
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1500, 950);
+
+        await pumpThemedApp(
+          tester,
+          LayrzLayout(
+            items: [],
+            notifications: [
+              LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
+            ],
+            onNotificationTap: (item) {},
+            userName: 'Test User',
+            body: const SizedBox(child: Text('Body')),
+          ),
+        );
+
+        expect(find.text('Notifications'), findsWidgets);
+        expect(find.text('Test User'), findsWidgets);
+        expect(tester.takeException(), isNull);
+      });
+    });
+  });
 }

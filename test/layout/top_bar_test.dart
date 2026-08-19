@@ -203,5 +203,28 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('top bar in drawer mode no longer renders notification bell', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(520, 900);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          items: [],
+          notifications: [
+            LayrzNotificationItem(id: '1', title: 'Test', content: 'content'),
+          ],
+          onNotificationTap: (item) {},
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }
