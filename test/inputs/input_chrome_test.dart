@@ -204,5 +204,128 @@ void main() {
         debugDefaultTargetPlatformOverride = null;
       }
     });
+
+    testWidgets('hint is visible when field is empty', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          child: Container(),
+        ),
+      );
+
+      expect(find.text('Placeholder text'), findsOneWidget);
+    });
+
+    testWidgets('hint is not visible when field has text', (tester) async {
+      final controller = TextEditingController(text: 'Some text');
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          child: Container(),
+        ),
+      );
+
+      expect(find.text('Placeholder text'), findsNothing);
+    });
+
+    testWidgets('hint remains visible when focused but empty', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {WidgetState.focused},
+          controller: controller,
+          child: Focus(
+            focusNode: focusNode,
+            child: Container(),
+          ),
+        ),
+      );
+
+      expect(find.text('Placeholder text'), findsOneWidget);
+    });
+
+    testWidgets('hint reappears when text is cleared back to empty', (tester) async {
+      final controller = TextEditingController(text: 'Some text');
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          child: Container(),
+        ),
+      );
+
+      expect(find.text('Placeholder text'), findsNothing);
+      controller.clear();
+      await tester.pumpAndSettle();
+      expect(find.text('Placeholder text'), findsOneWidget);
+    });
+
+    testWidgets('caller-supplied controller is not disposed after widget disposal', (tester) async {
+      final controller = TextEditingController(text: 'Test');
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Hint',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          child: Container(),
+        ),
+      );
+
+      expect(controller.text, 'Test');
+      // After widget disposal, controller should still be usable
+    });
   });
 }

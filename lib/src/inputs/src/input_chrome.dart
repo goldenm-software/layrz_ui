@@ -66,11 +66,17 @@ class LayrzInputChrome extends StatelessWidget {
   /// The content text for the help affordance tooltip.
   final String? helpContentText;
 
+  /// The text editing controller for listening to text changes.
+  ///
+  /// Required for hint text visibility logic (hint visible only when field is empty).
+  /// If null, the hint text is always shown when [hintText] is non-null.
+  final TextEditingController? controller;
+
   /// The padding applied inside the input field.
   ///
   /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp8 all sides when normal,
-  /// or sp8 horizontal with sp4 vertical when [dense] is true.
+  /// If null, padding is derived from tokens: sp16 horizontal and sp16 vertical when normal,
+  /// or sp16 horizontal with sp8 vertical when [dense] is true.
   ///
   /// Explicit padding takes precedence over [dense] to prevent silent geometry
   /// mutations when a caller provides an exact layout requirement.
@@ -100,6 +106,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.hideShortcutOnMobile = true,
     this.helpTitleText,
     this.helpContentText,
+    this.controller,
     this.padding,
     this.dense = false,
   });
@@ -116,11 +123,11 @@ class LayrzInputChrome extends StatelessWidget {
     );
 
     // Compute padding: explicit caller value wins over dense mode
-    final verticalPadding = dense ? tokens.spacing.sp4 : tokens.spacing.sp8;
+    final verticalPadding = dense ? tokens.spacing.sp8 : tokens.spacing.sp16;
     final resolvedPadding =
         padding ??
         EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp8,
+          horizontal: tokens.spacing.sp16,
           vertical: verticalPadding,
         );
 
@@ -214,7 +221,24 @@ class LayrzInputChrome extends StatelessWidget {
                       ),
                       child: Stack(
                         children: [
-                          if (hintText != null && hintText!.isNotEmpty)
+                          if (hintText != null && hintText!.isNotEmpty && controller != null)
+                            ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: controller!,
+                              builder: (context, value, _) => value.text.isEmpty
+                                  ? Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        hintText!,
+                                        style: tokens.typography.body.copyWith(
+                                          color: tokens.colors.fg3,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            )
+                          else if (hintText != null && hintText!.isNotEmpty && controller == null)
                             Align(
                               alignment: Alignment.centerLeft,
                               child: Text(

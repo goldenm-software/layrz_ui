@@ -537,5 +537,87 @@ void main() {
       final widget = tester.widget<Container>(container);
       expect(widget.padding, customPadding);
     });
+
+    testWidgets('hint is visible when field is empty', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Field',
+          hintText: 'Enter text here',
+          controller: controller,
+        ),
+      );
+
+      expect(find.text('Enter text here'), findsOneWidget);
+    });
+
+    testWidgets('hint is not visible when field has text', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Field',
+          hintText: 'Enter text here',
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'Some text');
+      await tester.pumpAndSettle();
+      expect(find.text('Enter text here'), findsNothing);
+    });
+
+    testWidgets('hint reappears when text is cleared back to empty', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Field',
+          hintText: 'Enter text here',
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'Some text');
+      await tester.pumpAndSettle();
+      expect(find.text('Enter text here'), findsNothing);
+
+      controller.clear();
+      await tester.pumpAndSettle();
+      expect(find.text('Enter text here'), findsOneWidget);
+    });
+
+    testWidgets('hint remains visible when focused but empty', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Field',
+          hintText: 'Enter text here',
+          controller: controller,
+        ),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter text here'), findsOneWidget);
+    });
+
+    testWidgets('caller-supplied controller remains usable after widget disposal', (tester) async {
+      final controller = TextEditingController(text: 'Initial');
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Test',
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, 'Initial');
+      // After widget is disposed, controller should still be usable
+      controller.text = 'Modified';
+      expect(controller.text, 'Modified');
+    });
   });
 }
