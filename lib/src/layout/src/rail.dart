@@ -138,7 +138,7 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
             child: _buildSearchField(tokens),
           ),
 
-          SizedBox(height: kLayrzLayoutRailPaddingVertical),
+          SizedBox(height: kLayrzLayoutSearchToItemsGap),
 
           // Navigation items
           Expanded(

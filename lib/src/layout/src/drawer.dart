@@ -134,9 +134,9 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                 if (widget.logo != null)
                   Padding(
                     padding: const EdgeInsets.only(
-                      left: 6.0,
-                      top: 14.0,
-                      bottom: 8.0,
+                      left: kLayrzLayoutLogoLeftPadding,
+                      top: kLayrzLayoutRailPaddingVertical,
+                      bottom: kLayrzLayoutLogoBottomPadding,
                     ),
                     child: SizedBox(
                       width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
@@ -152,18 +152,18 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                 // Search field
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10.0,
+                    horizontal: kLayrzLayoutRailPaddingHorizontal,
                   ),
                   child: _buildSearchField(tokens),
                 ),
 
-                const SizedBox(height: 8.0),
+                SizedBox(height: kLayrzLayoutSearchToItemsGap),
 
                 // Navigation items
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0,
+                      horizontal: kLayrzLayoutRailPaddingHorizontal,
                     ),
                     child: SingleChildScrollView(
                       child: Column(
@@ -180,7 +180,7 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                   color: tokens.colors.divider,
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
+                  padding: const EdgeInsets.only(top: kLayrzLayoutFooterPaddingTop),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -188,18 +188,18 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                       if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10.0,
+                            horizontal: kLayrzLayoutRailPaddingHorizontal,
                           ),
                           child: _buildNotificationsRow(tokens),
                         ),
 
                       if (widget.notifications.isNotEmpty || widget.onNotificationTap != null)
-                        const SizedBox(height: 6.0),
+                        const SizedBox(height: kLayrzLayoutFooterGap),
 
                       // User chrome
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10.0,
+                          horizontal: kLayrzLayoutRailPaddingHorizontal,
                         ),
                         child: LayrzLayoutUserChrome(
                           tokens: tokens,
