@@ -4,26 +4,13 @@ import 'package:layrz_icons/layrz_icons.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzAlert] styles, types, configurations, and the [LayrzAlertIcon] standalone chip.
-///
-/// Demonstrates the matrix of 2 styles × 6 types (12 combinations), variable maxLines
-/// truncation, custom type with explicit color and icon, and the reusable [LayrzAlertIcon]
-/// at different sizes.
-Widget buildAlertsSection() {
-  return Builder(
-    builder: (context) {
-      return const _AlertsSectionContent();
-    },
-  );
-}
-
 /// The content widget for the alerts section.
 ///
 /// Shows multiple demo subsections illustrating alert styles, types, configurations,
 /// and the standalone icon chip.
-class _AlertsSectionContent extends StatelessWidget {
-  /// Creates a new [_AlertsSectionContent].
-  const _AlertsSectionContent();
+class AlertsSection extends StatelessWidget {
+  /// Creates a new [AlertsSection].
+  const AlertsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -417,107 +404,83 @@ class _AlertIconDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp16),
         // Row of icons at different sizes
+        Text('Small (24)', style: tokens.typography.label),
         Row(
-          spacing: tokens.spacing.sp24,
+          spacing: tokens.spacing.sp8,
           children: [
-            // Small
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Small (24)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 24,
+              iconSize: 16,
             ),
-            // Medium
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Medium (40)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 24,
+              iconSize: 16,
             ),
-            // Large
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Large (56)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 24,
+              iconSize: 16,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 24,
+              iconSize: 16,
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp16),
+        Text('Medium (40)', style: tokens.typography.label),
+        Row(
+          spacing: tokens.spacing.sp8,
+          children: [
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 40,
+              iconSize: 24,
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp16),
+        Text('Large (56)', style: tokens.typography.label),
+        Row(
+          spacing: tokens.spacing.sp8,
+          children: [
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 56,
+              iconSize: 32,
             ),
           ],
         ),

@@ -602,6 +602,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                           icon: widget.icon,
                           spec: spec,
                           tokens: tokens,
+                          textScaler: MediaQuery.textScalerOf(context),
                         )
                       else
                         buildFabContent(

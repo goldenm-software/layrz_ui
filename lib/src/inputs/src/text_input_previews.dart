@@ -6,7 +6,8 @@ import 'package:layrz_ui/src/preview/preview.dart';
 /// Displays the default [LayrzTextInput] state with label and placeholder.
 @Preview(
   name: 'Default',
-  theme: LayrzPreviewTheme.light,
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTextInputDefault() => LayrzTextInput(
   labelText: 'Enter your name',
@@ -16,7 +17,8 @@ Widget previewLayrzTextInputDefault() => LayrzTextInput(
 /// Displays the [LayrzTextInput] in error state with error message.
 @Preview(
   name: 'With Error',
-  theme: LayrzPreviewTheme.light,
+  size: Size(400, 150),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTextInputError() => LayrzTextInput(
   labelText: 'Email',
@@ -26,7 +28,8 @@ Widget previewLayrzTextInputError() => LayrzTextInput(
 /// Displays the disabled [LayrzTextInput] state.
 @Preview(
   name: 'Disabled',
-  theme: LayrzPreviewTheme.light,
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTextInputDisabled() => LayrzTextInput(
   labelText: 'Disabled Field',
@@ -37,7 +40,8 @@ Widget previewLayrzTextInputDisabled() => LayrzTextInput(
 /// Displays the read-only [LayrzTextInput] state.
 @Preview(
   name: 'Read-only',
-  theme: LayrzPreviewTheme.light,
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTextInputReadOnly() => LayrzTextInput(
   labelText: 'Read-only',
@@ -48,7 +52,8 @@ Widget previewLayrzTextInputReadOnly() => LayrzTextInput(
 /// Displays the [LayrzTextInput] with required field indicator.
 @Preview(
   name: 'Required',
-  theme: LayrzPreviewTheme.light,
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTextInputRequired() => LayrzTextInput(
   labelText: 'Username',

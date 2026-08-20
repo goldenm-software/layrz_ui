@@ -39,24 +39,25 @@ class Showroom extends StatelessWidget {
   /// This is the **only** place sections are registered. New sections can be added
   /// by inserting their builder widgets here without modifying any other files.
   static const List<Widget> _sections = [
-    _SectionWrapper(builder: buildTypographySection),
-    _SectionWrapper(builder: buildButtonsSection),
-    _SectionWrapper(builder: buildButtonGroupSection),
-    _SectionWrapper(builder: buildAlertsSection),
-    _SectionWrapper(builder: buildTooltipsSection),
-    _SectionWrapper(builder: buildGridSection),
-    _SectionWrapper(builder: buildImagesSection),
-    _SectionWrapper(builder: buildMenusSection),
-    _SectionWrapper(builder: buildChipsSection),
-    _SectionWrapper(builder: buildTextSection),
-    _SectionWrapper(builder: buildInputsSection),
-    _SectionWrapper(builder: buildColorsSection),
-    _SectionWrapper(builder: buildSpacingSection),
-    _SectionWrapper(builder: buildRadiusSection),
-    _SectionWrapper(builder: buildElevationSection),
-    _SectionWrapper(builder: buildBordersSection),
-    _SectionWrapper(builder: buildMotionSection),
-    _SectionWrapper(builder: buildAccessPathsSection),
+    TypographySection(),
+    ButtonsSection(),
+    ButtonGroupSection(),
+    AlertsSection(),
+
+    TooltipsSection(),
+    GridSection(),
+    ImagesSection(),
+    MenusSection(),
+    ChipsSection(),
+    TextSection(),
+    InputsSection(),
+    ColorsSection(),
+    SpacingSection(),
+    RadiusSection(),
+    ElevationSection(),
+    BordersSection(),
+    MotionSection(),
+    AccessPathsSection(),
   ];
 
   @override
@@ -130,21 +131,5 @@ class Showroom extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-/// A wrapper widget that builds a section with lazy initialization.
-///
-/// This ensures each section is only built once, even if the parent rebuilds.
-class _SectionWrapper extends StatelessWidget {
-  /// Creates a new [_SectionWrapper].
-  const _SectionWrapper({required this.builder});
-
-  /// The builder function that creates the section widget.
-  final Widget Function() builder;
-
-  @override
-  Widget build(BuildContext context) {
-    return builder();
   }
 }

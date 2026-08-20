@@ -5,7 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzAvatar] with initials display.
-@Preview(name: 'Avatar - Initials', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Avatar - Initials', size: Size(200, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzAvatarInitials() {
   return const Center(
     child: LayrzAvatar(
@@ -16,7 +16,7 @@ Widget previewLayrzAvatarInitials() {
 }
 
 /// Preview of [LayrzAvatar] with icon display.
-@Preview(name: 'Avatar - Icon', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Avatar - Icon', size: Size(200, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzAvatarIcon() {
   return Center(
     child: LayrzAvatar.icon(
@@ -27,7 +27,7 @@ Widget previewLayrzAvatarIcon() {
 }
 
 /// Preview of [LayrzAvatar] with emoji display.
-@Preview(name: 'Avatar - Emoji', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Avatar - Emoji', size: Size(200, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzAvatarEmoji() {
   return const Center(
     child: LayrzAvatar.emoji(
@@ -38,7 +38,7 @@ Widget previewLayrzAvatarEmoji() {
 }
 
 /// Preview of [LayrzAvatar] with image source.
-@Preview(name: 'Avatar - Image', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Avatar - Image', size: Size(200, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzAvatarImage() {
   return const Center(
     child: LayrzAvatar.image(
@@ -49,7 +49,7 @@ Widget previewLayrzAvatarImage() {
 }
 
 /// Preview of [LayrzImage] with a data-URI image.
-@Preview(name: 'Image - Data URI', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Image - Data URI', size: Size(200, 200), theme: layrzPreviewLightTheme)
 Widget previewLayrzImageDataUri() {
   // A simple 1x1 PNG pixel (red)
   const dataUri =

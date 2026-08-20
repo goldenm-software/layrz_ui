@@ -308,11 +308,11 @@ void main() {
     testWidgets(
       'Case 1: tap passes through a SHOWING tooltip to backdrop GestureDetector',
       (tester) async {
-        // Requirement: ignorePointer: true on RawTooltip ensures that when
-        // the tooltip surface is visible, taps inside that surface reach the
-        // widget painted BEHIND it (the backdrop).
+        // DESIGN-77 UPDATE: The global pointer route dismisses tooltips on PointerDownEvent
+        // but does NOT claim the pointer, so taps pass through to underlying widgets.
         //
-        // This test WILL FAIL if ignorePointer is set to false.
+        // This test uses longPress (touch), so the pointer route observes the down event,
+        // dismisses the tooltip, and lets the tap propagate to the backdrop GestureDetector.
 
         bool backdropTapped = false;
         final anchorKey = GlobalKey();
@@ -329,7 +329,7 @@ void main() {
         // Verify the anchor is in the tree
         expect(find.text('Anchor'), findsOneWidget);
 
-        // Long-press the anchor to show the tooltip
+        // Long-press the anchor to show the tooltip via TOUCH
         await tester.longPress(find.text('Anchor'));
         await tester.pumpAndSettle();
 
@@ -357,15 +357,20 @@ void main() {
         await tester.tapAt(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop GestureDetector.onTap FIRED, proving the tap
-        // passed through the tooltip surface.
-        // This assertion FAILS if ignorePointer is false (tooltip blocks hit-test).
+        // Assert: The backdrop DOES receive the tap (global route observes without claiming)
         expect(
           backdropTapped,
           isTrue,
           reason:
-              'Tap inside tooltip should pass through to backdrop '
-              '(ignorePointer: true allows this)',
+              'Tap inside tooltip passes through to backdrop via global pointer route '
+              '(pointer route dismisses tooltip but does not claim the pointer, DESIGN-77)',
+        );
+
+        // Assert: The tooltip is now dismissed
+        expect(
+          find.text('Tooltip body'),
+          findsNothing,
+          reason: 'Tap inside tooltip should dismiss it via global pointer route',
         );
       },
     );
@@ -373,11 +378,9 @@ void main() {
     testWidgets(
       'Case 2: hover passes through a SHOWING tooltip to backdrop MouseRegion',
       (tester) async {
-        // Requirement: ignorePointer: true means the tooltip surface does not
-        // block mouse hover either. A mouse movement inside the tooltip surface
-        // should reach the MouseRegion on the backdrop.
-        //
-        // This test WILL FAIL if ignorePointer is set to false.
+        // DESIGN-77 UPDATE: The global pointer route observes PointerDownEvent to dismiss
+        // tooltips but does NOT block mouse hover. Mouse movement is not claimed by the
+        // route, so hover events pass through to underlying MouseRegions.
 
         PointerEnterEvent? backdropEnterEvent;
         final anchorKey = GlobalKey();
@@ -391,7 +394,7 @@ void main() {
           ),
         );
 
-        // Long-press the anchor to show the tooltip
+        // Long-press the anchor to show the tooltip via TOUCH
         await tester.longPress(find.text('Anchor'));
         await tester.pumpAndSettle();
 
@@ -414,14 +417,14 @@ void main() {
         await gesture.moveTo(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop MouseRegion.onEnter FIRED.
-        // This assertion FAILS if ignorePointer is false (tooltip blocks hover).
+        // Assert: The backdrop MouseRegion.onEnter DOES fire.
+        // The global pointer route observes without claiming, allowing hover to pass through.
         expect(
           backdropEnterEvent,
           isNotNull,
           reason:
-              'Hover inside tooltip should pass through to backdrop '
-              '(ignorePointer: true allows this)',
+              'Hover inside tooltip passes through to backdrop MouseRegion '
+              '(global pointer route observes without claiming mouse events, DESIGN-77)',
         );
       },
     );

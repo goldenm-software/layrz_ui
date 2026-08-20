@@ -21,126 +21,127 @@ const double _sampleStrokeWidth = 2;
 
 /// Displays all radius tokens as rounded corner samples and demonstrates
 /// the [innerRadius] helper for nested container borders.
-Widget buildRadiusSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class RadiusSection extends StatelessWidget {
+  const RadiusSection({super.key});
 
-      return ShowroomSection(
-        title: 'Radius',
-        description: 'All border radius tokens and innerRadius helper',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Radius samples
-            Text('Border Radius Values', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            Wrap(
-              spacing: tokens.spacing.sp16,
-              runSpacing: tokens.spacing.sp16,
-              children: [
-                LayrzTooltip(
-                  contentText: 'r8 — 8px',
-                  child: ShowroomSwatch(
-                    label: 'r8',
-                    value: '8u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r8),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r10 — 10px',
-                  child: ShowroomSwatch(
-                    label: 'r10',
-                    value: '10u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r10),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r12 — 12px',
-                  child: ShowroomSwatch(
-                    label: 'r12',
-                    value: '12u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r12),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r14 — 14px',
-                  child: ShowroomSwatch(
-                    label: 'r14',
-                    value: '14u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r14),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r16 — 16px',
-                  child: ShowroomSwatch(
-                    label: 'r16',
-                    value: '16u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r16),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r20 — 20px',
-                  child: ShowroomSwatch(
-                    label: 'r20',
-                    value: '20u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r20),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'r24 — 24px',
-                  child: ShowroomSwatch(
-                    label: 'r24',
-                    value: '24u',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.r24),
-                    ),
-                  ),
-                ),
-                LayrzTooltip(
-                  contentText: 'full — infinite (pill)',
-                  child: ShowroomSwatch(
-                    label: 'full',
-                    value: '∞ (pill)',
-                    decoration: BoxDecoration(
-                      color: tokens.colors.primary,
-                      borderRadius: BorderRadius.circular(tokens.radius.full),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
 
-            SizedBox(height: tokens.spacing.sp24),
+    return ShowroomSection(
+      title: 'Radius',
+      description: 'All border radius tokens and innerRadius helper',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Radius samples
+          Text('Border Radius Values', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          Wrap(
+            spacing: tokens.spacing.sp16,
+            runSpacing: tokens.spacing.sp16,
+            children: [
+              LayrzTooltip(
+                contentText: 'r8 — 8px',
+                child: ShowroomSwatch(
+                  label: 'r8',
+                  value: '8u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r10 — 10px',
+                child: ShowroomSwatch(
+                  label: 'r10',
+                  value: '10u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r10),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r12 — 12px',
+                child: ShowroomSwatch(
+                  label: 'r12',
+                  value: '12u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r12),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r14 — 14px',
+                child: ShowroomSwatch(
+                  label: 'r14',
+                  value: '14u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r14),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r16 — 16px',
+                child: ShowroomSwatch(
+                  label: 'r16',
+                  value: '16u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r16),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r20 — 20px',
+                child: ShowroomSwatch(
+                  label: 'r20',
+                  value: '20u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r20),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r24 — 24px',
+                child: ShowroomSwatch(
+                  label: 'r24',
+                  value: '24u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.r24),
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'full — infinite (pill)',
+                child: ShowroomSwatch(
+                  label: 'full',
+                  value: '∞ (pill)',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: BorderRadius.circular(tokens.radius.full),
+                  ),
+                ),
+              ),
+            ],
+          ),
 
-            // innerRadius demonstration
-            Text('innerRadius() Helper', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            _InnerRadiusDemonstration(tokens: tokens),
-          ],
-        ),
-      );
-    },
-  );
+          SizedBox(height: tokens.spacing.sp24),
+
+          // innerRadius demonstration
+          Text('innerRadius() Helper', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          _InnerRadiusDemonstration(tokens: tokens),
+        ],
+      ),
+    );
+  }
 }
 
 /// Demonstrates the innerRadius helper for nested container borders.

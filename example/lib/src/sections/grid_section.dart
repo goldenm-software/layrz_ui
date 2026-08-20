@@ -4,25 +4,13 @@ import 'package:layrz_ui/layrz_ui.dart';
 import '../common/showroom_section.dart';
 import '../common/unit_display.dart';
 
-/// Displays responsive grid layout behavior with [LayrzRow], [LayrzCol], and [LayrzConstrainedView].
-///
-/// Demonstrates responsive column spans across breakpoints, live width/breakpoint readout,
-/// wrapping behavior with uneven spans, and constrained view layouts.
-Widget buildGridSection() {
-  return Builder(
-    builder: (context) {
-      return const _GridSectionContent();
-    },
-  );
-}
-
 /// The content widget for the grid section.
 ///
 /// Shows multiple demo subsections illustrating responsive grid behavior,
 /// breakpoint transitions, wrapping, and constrained layouts.
-class _GridSectionContent extends StatelessWidget {
-  /// Creates a new [_GridSectionContent].
-  const _GridSectionContent();
+class GridSection extends StatelessWidget {
+  /// Creates a new [GridSection].
+  const GridSection({super.key});
 
   @override
   Widget build(BuildContext context) {

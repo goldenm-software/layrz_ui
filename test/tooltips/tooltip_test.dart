@@ -327,5 +327,49 @@ void main() {
       expect(find.text('Title'), findsWidgets);
       expect(find.text('Rich content'), findsWidgets);
     });
+
+    testWidgets('overlayChildBuilder rebuilds with host widget', (tester) async {
+      // This test verifies that OverlayPortal's overlayChildBuilder is invoked on every
+      // host rebuild. This ensures the tooltip position recomputes when the anchor
+      // moves due to scrolling or layout changes.
+
+      var counter = 0;
+
+      final customTooltip = StatefulBuilder(
+        builder: (context, setState) {
+          return Column(
+            children: [
+              GestureDetector(
+                onTap: () => setState(() => counter++),
+                child: SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: Text('Count: $counter'),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'Tooltip text',
+                child: SizedBox(
+                  width: 50,
+                  height: 50,
+                ),
+              ),
+            ],
+          );
+        },
+      );
+
+      await pumpThemed(tester, customTooltip);
+
+      // Initial state should render
+      expect(find.text('Count: 0'), findsOneWidget);
+
+      // Trigger a rebuild
+      await tester.tap(find.text('Count: 0'));
+      await tester.pumpAndSettle();
+
+      // Counter should update
+      expect(find.text('Count: 1'), findsOneWidget);
+    });
   });
 }

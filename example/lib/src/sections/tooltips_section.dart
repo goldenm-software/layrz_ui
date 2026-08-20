@@ -3,26 +3,13 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzTooltip] positions, text variants, and interactive pass-through behavior.
-///
-/// Demonstrates the four cardinal positions with overflow flip behavior, rich text styling,
-/// and the headline feature: tooltip surfaces that do not block interaction with widgets
-/// behind them.
-Widget buildTooltipsSection() {
-  return Builder(
-    builder: (context) {
-      return const _TooltipsSectionContent();
-    },
-  );
-}
-
 /// The content widget for the tooltips section.
 ///
 /// Shows multiple demo subsections illustrating tooltip positioning, text variants,
 /// overflow flip behavior, and pass-through interactivity.
-class _TooltipsSectionContent extends StatelessWidget {
-  /// Creates a new [_TooltipsSectionContent].
-  const _TooltipsSectionContent();
+class TooltipsSection extends StatelessWidget {
+  /// Creates a new [TooltipsSection].
+  const TooltipsSection({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -81,89 +68,103 @@ class _PositionsDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp16),
         // Grid layout with 4 anchors: top-left, top-right, bottom-left, bottom-right
-        Row(
-          spacing: tokens.spacing.sp32,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        LayrzRow(
           children: [
-            // Top
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Top', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'T',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip above the anchor',
-                    position: LayrzTooltipPosition.top,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'T', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Top', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'T',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip above the anchor',
+                      position: LayrzTooltipPosition.top,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'T', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Bottom
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Bottom', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'B',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip below the anchor',
-                    position: LayrzTooltipPosition.bottom,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'B', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Bottom', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'B',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip below the anchor',
+                      position: LayrzTooltipPosition.bottom,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'B', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Left
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Left', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'L',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip to the left',
-                    position: LayrzTooltipPosition.left,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'L', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Left', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'L',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip to the left',
+                      position: LayrzTooltipPosition.left,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'L', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Right
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Right', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'R',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip to the right',
-                    position: LayrzTooltipPosition.right,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'R', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Right', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'R',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip to the right',
+                      position: LayrzTooltipPosition.right,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'R', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

@@ -4,22 +4,10 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays [LayrzAvatar] and [LayrzImage] components with various configurations.
-///
-/// Demonstrates avatar types (initials, icon, emoji, image), shapes, and sizes,
-/// as well as image source handling (asset, data-URI, bare base64).
-Widget buildImagesSection() {
-  return Builder(
-    builder: (context) {
-      return const _ImagesSectionContent();
-    },
-  );
-}
-
 /// Content for the images section of the showroom.
-class _ImagesSectionContent extends StatelessWidget {
-  /// Creates a new [_ImagesSectionContent].
-  const _ImagesSectionContent();
+class ImagesSection extends StatelessWidget {
+  /// Creates a new [ImagesSection].
+  const ImagesSection({super.key});
 
   @override
   Widget build(BuildContext context) {

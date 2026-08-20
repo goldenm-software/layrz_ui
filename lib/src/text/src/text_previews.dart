@@ -5,7 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of a [LayrzText] widget displaying plain text.
-@Preview(name: 'Plain Text', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Plain Text', size: Size(400, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzTextPlain() {
   return const LayrzText(
     'This is a simple text widget. Try selecting the text!',
@@ -13,7 +13,7 @@ Widget previewLayrzTextPlain() {
 }
 
 /// Preview of a [LayrzText] widget displaying rich text with [TextSpan] styling.
-@Preview(name: 'Rich Text', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Rich Text', size: Size(400, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzTextRich() {
   return LayrzText.rich(
     TextSpan(
@@ -38,7 +38,7 @@ Widget previewLayrzTextRich() {
 }
 
 /// Preview of a [LayrzText] widget displaying a long paragraph with soft wrapping.
-@Preview(name: 'Paragraph', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Paragraph', size: Size(400, 200), theme: layrzPreviewLightTheme)
 Widget previewLayrzTextParagraph() {
   return const SizedBox(
     width: 300,

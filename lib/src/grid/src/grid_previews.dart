@@ -8,7 +8,7 @@ import 'package:layrz_ui/src/preview/preview.dart';
 ///
 /// Shows the same three columns at different widths to demonstrate how the
 /// spans change across breakpoints.
-@Preview(name: 'Breakpoints', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Breakpoints', size: Size(1000, 400), theme: layrzPreviewLightTheme)
 Widget previewLayrzRowBreakpoints() {
   return _PreviewBreakpoints();
 }
@@ -65,7 +65,7 @@ class _PreviewBreakpoints extends StatelessWidget {
 /// Preview of [LayrzRow] wrapping behavior.
 ///
 /// Shows columns with spans that wrap into multiple visual rows at a fixed width.
-@Preview(name: 'Wrapping', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Wrapping', size: Size(800, 300), theme: layrzPreviewLightTheme)
 Widget previewLayrzRowWrapping() {
   return _PreviewWrapping();
 }
@@ -94,7 +94,7 @@ class _PreviewWrapping extends StatelessWidget {
 /// Preview of [LayrzRow] main-axis alignment.
 ///
 /// Shows a short row of a single column with different [MainAxisAlignment] options.
-@Preview(name: 'Alignment', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Alignment', size: Size(600, 400), theme: layrzPreviewLightTheme)
 Widget previewLayrzRowAlignment() {
   return _PreviewAlignment();
 }
@@ -145,7 +145,7 @@ class _PreviewAlignment extends StatelessWidget {
 /// Preview of [LayrzConstrainedView].
 ///
 /// Shows a constrained view centered within a wider container.
-@Preview(name: 'Constrained View', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Constrained View', size: Size(1000, 200), theme: layrzPreviewLightTheme)
 Widget previewLayrzConstrainedView() {
   return _PreviewConstrainedView();
 }

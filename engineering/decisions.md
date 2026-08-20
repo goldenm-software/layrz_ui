@@ -2212,6 +2212,291 @@ If feedback indicates a second presentation is essential, revisit in M5.x (post-
 
 ---
 
+---
+
+## D38: Touch Press Feedback Without Hover Precedent — Lift + Elevation2
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Interaction Design / Feedback
+
+### Context
+
+Touch devices (phones, tablets) cannot hover, so a two-stage gesture on desktop (hover → press) collapses on touch to a single press event. Earlier design applied `elevation1` (the hover treatment) to press-without-hover on all platforms, but on touch this resulted in imperceptible feedback — the surface remained visually idle throughout the user's interaction, harming tactile feedback.
+
+### Decision
+
+**When a press is not preceded by hover, apply a lift transform (4dp) plus `elevation2` (one level above the hover treatment).** Desktop presses after hover remain unchanged (settle to `elevation1`). Touch, which cannot hover, always gets the lift treatment.
+
+### Rationale
+
+- Touch interaction is inherently gesture-based and brief — feedback must be immediate and obvious.
+- Lift is a paint-only transform (not a layout change) and satisfies decision D15's invariant: only color, shadow, elevation, opacity, and cursor change during interaction states.
+- `elevation2` on touch (press-no-hover) mirrors the visual weight of desktop hover, providing the missing feedback stage on touch.
+- The asymmetry (desktop press settles, touch press lifts) is justified by the physical nature of the input: a mouse press follows hover, while a touch press stands alone.
+
+### Consequences
+
+- Touch buttons now show more dramatic feedback: lift + elevated shadow on press.
+- Desktop interaction remains unchanged: hover lifts, press settles.
+- All interactive components (buttons, cards, alerts) adopt this pattern consistently.
+- Tests asserting the old press-only behavior must be updated to verify lift + `elevation2` when no hover precedes.
+
+### Review Trigger
+
+After the first month of apps using touch buttons, gather user feedback: is the lift + elevation feedback clear, or does it feel excessive? Adjust elevation level or lift distance if needed.
+
+---
+
+## D39: Touch Tooltips — Open on Long-Press, Close on Tap-Away
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Interaction Design / Accessibility
+
+### Context
+
+An earlier iteration closed tooltips on finger release, requiring the user to press and hold to read, then release to dismiss. This violated the principle of readable UI on touch: a tooltip visible only while holding is difficult to read. Additionally, closing on release conflicted with the `LayrzTooltipTrigger` enum design, which needed to distinguish pointer (hover/press) from tap triggers. A revision was needed.
+
+### Decision
+
+**Tooltips on touch stay open after the finger lifts and dismiss only when the user taps elsewhere.** A separate full-screen barrier `OverlayEntry` inserted below the tooltip captures tap-away events. The `LayrzTooltipTrigger` enum defaults to `.pointer` (hover/press on desktop, long-press on touch) with `.tap` for manual trigger control.
+
+### Rationale
+
+- Open-after-release provides readable text without requiring the user to hold.
+- A tap-away barrier is cleaner than mixing release-dismiss with tap-dismiss logic.
+- Tap-away is a familiar gesture on mobile: tap anything outside a menu to close it.
+- Reusing the barrier mechanism for `.tap`-triggered tooltips avoids code duplication.
+- The implementation eliminates ~22 test rewrites that would have been required by the earlier release-based design.
+
+### Consequences
+
+- Tooltips are now persistent surfaces on touch, not transient on-hold overlays.
+- Users must tap to dismiss, not just release.
+- The barrier entry consumes a small overlay slot and one pointer event per tap-away.
+- Tooltip scroll-following (anchor moves during scroll) requires scroll position listeners to call `markNeedsBuild` on the barrier.
+
+### Review Trigger
+
+Monitor apps using tooltips on touch devices: are users naturally discovering the tap-to-close pattern, or do they expect hover/release behavior? Adjust messaging or gesture if needed.
+
+---
+
+## D40: `LayrzTooltipTrigger { pointer, tap }` Enum — Default Pointer
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: API Design
+
+### Context
+
+The `LayrzTooltip` widget needed to distinguish between automatic triggers (hover on desktop, long-press on touch) and manual triggers (explicit tap events). A sealed enum was required to express this choice cleanly.
+
+### Decision
+
+**Introduce `LayrzTooltipTrigger` enum with two values: `.pointer` (default) and `.tap`.** Existing call sites remain unchanged (default to `.pointer`). `.tap` explicitly opts into tap-to-open behavior, reusing the tap-away barrier from D39.
+
+### Rationale
+
+- Enum provides type safety and clarity compared to a boolean `autoTrigger`.
+- Default `.pointer` ensures backward compatibility; no API change for existing code.
+- `.tap` is explicit, making it clear to readers that manual tap handling is required.
+- The same barrier logic (D39) powers both trigger modes, reducing implementation complexity.
+
+### Consequences
+
+- `LayrzTooltip` constructor accepts a `trigger` parameter defaulting to `.pointer`.
+- No changes to existing call sites unless `.tap` behavior is desired.
+- Tests for trigger modes are isolated to the trigger enum and tooltip integration tests.
+
+---
+
+## D41: Field Errors Below sm Breakpoint — Tooltip Slot
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Interaction Design / Responsive Layout
+
+### Context
+
+On small screens (below 960px), inline error messages in text input fields consume valuable vertical space and are often invisible below the fold. A mobile-first design needed to move errors out of the inline slot and into a dismissible surface when space is constrained.
+
+### Decision
+
+**Below the sm breakpoint (`LayrzBreakpoint.xs` or `LayrzBreakpoint.sm`, < 960px), field errors open in a left-positioned tap tooltip, one error per line. The counter gains full width in the freed inline slot.** Breakpoint resolution is internal; no public parameter exposes this behavior.
+
+### Rationale
+
+- Mobile screens are narrow; tooltips reclaim vertical real estate.
+- Tooltips are discoverable via visual affordance (error state + optional hint).
+- Tap-to-read errors match the touch-friendly interaction model (D39).
+- Reusing `LayrzTooltipTrigger { pointer, tap }` (D40) with `.tap` mode ensures consistency.
+- The left-positioning rule avoids obscuring the input field itself.
+- An 800px browser window (common tablet width) and most tablets in portrait receive this treatment, not just mobile-OS devices.
+
+### Consequences
+
+- Text input errors behave differently below 960px: tooltip instead of inline.
+- Test suites must verify both presentations (inline above sm, tooltip below sm).
+- Error messages are no longer always visible; users must interact to see them.
+- The counter field (character count, for example) gains full width below sm.
+
+### Review Trigger
+
+After the first release on mobile and tablet devices, measure error discovery: do users find and read the error tooltips, or do they miss them? Adjust affordance (e.g., color, animation) if needed.
+
+---
+
+## D42: Layout Does Not Inset Body Slot — Surface Edge-to-Edge, Content Per-Edge
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Architecture / Layout
+
+### Context
+
+`LayrzLayout` and the navigation UI (rail, drawer, top bar) paint surfaces (backgrounds) that should extend edge-to-edge for visual impact. Simultaneously, page content inside the body slot should be inset to avoid the surfaces' edges. A decision was needed on where inset responsibility lies.
+
+### Decision
+
+**Surfaces (rail, drawer, top bar) paint edge-to-edge. Content inset is applied per-edge: the page itself owns its own SafeArea or equivalent inset.** The body slot passes content through unchanged; it does not wrap the child in an inset.
+
+### Rationale
+
+- Edge-to-edge surfaces maximize visual impact and work well with shadow/color transitions.
+- Delegating inset to the page allows flexibility: pages can inset globally via SafeArea, or selectively inset specific children.
+- The body slot is transparent about the page's layout, not a layout intermediary.
+- This pattern is familiar from Bootstrap's `.container` approach: the framework provides a constrained wrapper, and the consumer owns padding.
+
+### Consequences
+
+- Page content inside the body slot must apply its own SafeArea or equivalent inset to avoid collision with surfaces.
+- Keyboard `viewInsets` (the on-screen keyboard) are not automatically handled by the layout. Each page owns its input handling and scroll behavior.
+- Tests must verify that surfaces paint edge-to-edge and that the body slot is transparent (renders the child directly).
+
+### Review Trigger
+
+After the first app ships using `LayrzLayout`, review padding in the body slot: are pages consistently applying SafeArea, or is manual inset tedious? If tedious, consider a future version that provides optional default inset with an escape hatch.
+
+---
+
+## D43: Top Bar Surface — Background Colour with No Elevation
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Design / Visual System
+
+### Context
+
+The mobile top bar in `LayrzLayout` (drawer presentation) was initially shadowed to distinguish it from the body. Mobile design review determined that the shadow was unnecessary and visually heavy on small screens.
+
+### Decision
+
+**Top bar uses `tokens.colors.background` with no shadow (elevation 0).** The user avatar, previously in the top bar, is removed and lives only in the drawer's user block. This reduces visual clutter and unifies user identity in a single location.
+
+### Rationale
+
+- A plain background (no shadow) is lighter and less dominant on constrained mobile screens.
+- Removing the avatar from the top bar reduces visual noise and focuses attention on page content.
+- The user is discoverable in the drawer's user block, which is one swipe away.
+- Consistency: rail on desktop also uses a plain background without shadow.
+
+### Consequences
+
+- Top bar is now identical in color to the page background, visually receding.
+- User identity is accessible via the drawer user block, not the top bar.
+- Accessibility concern: the top bar is less distinct. Ensure the drawer trigger icon is prominent and the affordance is clear.
+- Tests asserting the old shadow treatment must be updated to verify `background` color with zero elevation.
+
+### Review Trigger
+
+After the first release, monitor accessibility feedback: do users find the user menu and drawer trigger, or is the collapsed top bar confusing? Adjust affordance or add a visual separator if needed.
+
+---
+
+## D44: Mobile Drawer Presentation — Floating-Page Transition
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Design / Visual System
+
+### Context
+
+The mobile drawer presentation in `LayrzLayout` was implemented with two competing approaches under review:
+1. **Conventional slide-over**: drawer slides in from the left over the page (Material.io pattern), with a semi-transparent scrim behind it to darken the page.
+2. **Floating-page reveal**: the page shrinks, translates right, gains rounded corners and elevation, and reveals the drawer as a flat backdrop behind it (card-over-backdrop pattern).
+
+Design review with the product team included reference material from a banking app showcasing the floating-page approach. The question was whether the drawer's visual impact justified the implementation complexity and performance implications.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Conventional slide-over + scrim (rejected) | Familiar Material.io pattern; minimal page change; drawer moves in one direction | Scrim darkens content; drawer reads as modal occlusion, not depth |
+| (b) **Floating-page reveal (chosen)** | Reads as depth via layering; page elevation creates visual hierarchy; drawer recedes to backdrop; scrim unnecessary | More complex animation (scale + translate page); larger per-frame cost if animated property affects layout |
+| (c) Parallax reveal (rejected) | Visually engaging; page and drawer move together | High complexity; difficult to parallax two unrelated widgets; parallax affordance unclear to users (not a standard mobile pattern) |
+| (d) Staggered item entrance (rejected) | Smooth, polished feel; items animate in sequence | Complexity increases linearly with item count; does not improve drawer findability on first open; visual noise on mobile |
+
+### Decision
+
+**Chose (b): Floating-page reveal with scale + translate.**
+
+When the drawer opens, the page (top bar + body content) **scales to 0.88** (anchored `Alignment.centerLeft`) and **translates right by 260 px** (the drawer width). The page gains **rounded corners (r16)** and **elevation4 shadow**. The drawer renders as a **flat, unshaded backdrop** behind the page.
+
+The drawer does **not** have elevation or shadow; the page's shadow creates all the depth. This inverse-shadow rule is critical: it ensures the drawer reads as "behind" (non-interactive visual anchor) while the page reads as "above" (interactive, draggable, closable).
+
+**Full-screen scrim removed.** With the drawer behind the page, a scrim can never be seen, so it is eliminated from the design and from the constants (`kLayrzLayoutDrawerScrimOpacity` was removed).
+
+### Rationale
+
+- **Depth hierarchy**: Scaling + translating the page while revealing the drawer creates a clear visual depth relationship. The page reads as a floating card; the drawer as the surface it floats above.
+- **Feedback clarity**: Users immediately understand that the drawer is a separate layer, not an overlaid modal. The page's elevation shadow and rounded corners provide haptic-like feedback.
+- **Touch affordance**: The visible page sliver (12% of the original width on the right) remains draggable, providing a clear dismissal affordance. Users can either tap the page or drag it to close the drawer.
+- **No scrim needed**: Without a scrim, the visual design is cleaner and simpler. The absence of dimming is intentional: the drawer is not "interrupting" the page, it is an alternative view.
+
+### Constraint: Layout-Affecting Animations Are Performance Killers
+
+**Critical finding from profiling**: Never animate layout-affecting properties in the drawer transition.
+
+When the drawer gesture updates the animation, the page's `Positioned` offset was being mutated, which marked `RenderStack` dirty for **LAYOUT**. This forced the entire subtree to relayout on every frame:
+
+| Metric | Cost |
+|--------|------|
+| LAYOUT | 795ms per gesture frame |
+| PAINT | 205ms per gesture frame |
+| Frame drop | Up to 48.8ms frame time (max sustainable: 16.6ms at 60fps) |
+
+**Solution**: Replace the `Positioned` offset mutation with `Positioned.fill` + `Transform.translate` (paint-and-hit-test only). `Transform` does NOT mark parents dirty for layout; it only affects painting and hit testing. New metrics:
+
+| Metric | Cost |
+|--------|------|
+| LAYOUT | ~1ms per gesture frame (no dirty marks) |
+| PAINT | ~50ms per gesture frame |
+| Frame drop | ~8.2ms frame time (no jank) |
+
+**Rule for future work**: In animations and gestures, only vary `Transform`, opacity, color, shadow, and border radius. Never mutate `Positioned` offsets, sizes, or `Flex` grow factors on every frame. If you must animate geometry, profile first and confirm the RenderBox's parents do NOT get marked dirty for layout.
+
+This constraint is encoded in the implementation (`Transform.translate` inside `Positioned.fill`) and documented here for future drawer/rail/tab work.
+
+### Consequences
+
+- **Page is uninteractable while drawer is open**: The page is wrapped in `IgnorePointer(ignoring: true)` when the drawer opens, preventing accidental taps from reaching content beneath. This is intentional — the drawer should be closed before interacting with the page.
+- **Scrim constant removed**: `kLayrzLayoutDrawerScrimOpacity` no longer exists; code referencing it will fail at compile time, forcing explicit acknowledgment of the design change.
+- **Gesture handling is stateful**: The drawer manages two gesture regions (closed-state left edge, open-state page sliver) and switches between them. Tests must verify both paths.
+- **Animation curves are tuned**: The transition uses `motion.easingEnter` and `motion.easingExit` from tokens, so the feel can be adjusted per-theme without code changes.
+- **Drawer is no longer a scroll container**: The previous draft rendered the drawer as a scrollable surface. The new design renders it as a flat, static backdrop. If navigation items exceed viewport height, the drawer menu itself must become scrollable (not the entire drawer).
+
+### Review Trigger
+
+**Revisit if**:
+- User testing reveals that the 12% visible page sliver is not an obvious dismissal affordance; users miss the drag-to-close interaction.
+- Animation smoothness during gesture degrades on older devices despite the `Transform` optimization.
+- A future design update decides the drawer should have elevation or a different backdrop treatment.
+- A consuming app reports that the page's uninteractability while the drawer is open breaks their workflow (e.g., they need background content to remain partially interactive).
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

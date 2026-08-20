@@ -204,7 +204,7 @@ Widget previewDropdownMenuWithDots() {
 ///
 /// Demonstrates the optional [LayrzDropdownLabel.color] parameter that tints
 /// section headers with a tonal fill over the panel surface.
-@Preview(name: 'Colored Labels', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Colored Labels', size: Size(300, 250), theme: layrzPreviewLightTheme)
 Widget previewDropdownMenuColoredLabels() {
   return Center(
     child: Builder(

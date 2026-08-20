@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
@@ -7,6 +9,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'tooltip_position.dart';
+import 'tooltip_trigger.dart';
 
 /// A Material-free tooltip widget in the layrz_ui design system.
 ///
@@ -36,8 +39,12 @@ import 'tooltip_position.dart';
 /// This prevents the anchor from losing hover state and entering a flicker loop.
 ///
 /// **Trigger modes:**
-/// - **Trigger:** long-press (touch) or hover (desktop)
-/// - **Dismiss:** automatic on pointer-exit, or tap
+/// - **[LayrzTooltipTrigger.pointer]** (default): long-press (touch) or hover (desktop);
+///   dismissed on next touch or pointer exit. On touch-only devices (no mouse), a global
+///   pointer route dismisses the tooltip on the next PointerDown event anywhere on screen.
+///   On mouse-connected devices, hover opens via MouseRegion and pointer events pass through.
+/// - **[LayrzTooltipTrigger.tap]**: toggled by single tap; uses global pointer route so
+///   the next PointerDown anywhere dismisses the tooltip. Hover has no effect.
 ///
 /// Parameters:
 /// - [child]: the widget to be wrapped (mandatory)
@@ -45,6 +52,7 @@ import 'tooltip_position.dart';
 /// - [contentText]: plain-text tooltip content (mutually exclusive with [contentRichText])
 /// - [contentRichText]: rich-text content with optional per-span styling (mutually exclusive with [contentText])
 /// - [position]: preferred position relative to the anchor (default: [LayrzTooltipPosition.bottom])
+/// - [trigger]: the trigger mode for showing/dismissing the tooltip (default: [LayrzTooltipTrigger.pointer])
 class LayrzTooltip extends StatefulWidget {
   /// The widget to be wrapped with the tooltip.
   final Widget child;
@@ -72,6 +80,12 @@ class LayrzTooltip extends StatefulWidget {
   /// overlay bounds on the preferred side, it automatically flips to the opposite side.
   final LayrzTooltipPosition position;
 
+  /// The trigger mode for showing and dismissing the tooltip.
+  ///
+  /// Defaults to [LayrzTooltipTrigger.pointer]. See [LayrzTooltipTrigger] for details
+  /// on each mode's behavior.
+  final LayrzTooltipTrigger trigger;
+
   /// Creates a new [LayrzTooltip] with the given properties.
   ///
   /// Exactly one of [contentText] or [contentRichText] must be non-null.
@@ -83,6 +97,7 @@ class LayrzTooltip extends StatefulWidget {
     this.contentText,
     this.contentRichText,
     this.position = LayrzTooltipPosition.bottom,
+    this.trigger = LayrzTooltipTrigger.pointer,
   }) : assert(
          (contentText == null) != (contentRichText == null),
          'Provide exactly one of contentText or contentRichText.',
@@ -92,10 +107,23 @@ class LayrzTooltip extends StatefulWidget {
   State<LayrzTooltip> createState() => _LayrzTooltipState();
 }
 
-class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderStateMixin {
+class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
   late CurvedAnimation _curvedAnimation;
-  OverlayEntry? _overlayEntry;
+
+  /// Controller for the overlay portal in mouse/hover mode.
+  late OverlayPortalController _overlayControllerMouse;
+
+  /// Controller for the overlay portal in tap mode.
+  late OverlayPortalController _overlayControllerTap;
+
+  /// Whether a mouse is currently connected to the device.
+  ///
+  /// True when `RendererBinding.instance.mouseTracker.mouseIsConnected` is true,
+  /// indicating mouse/desktop mode where hover tooltips work and pointer events pass through.
+  /// False on touch-only devices, where a global pointer route dismisses the tooltip.
+  late bool _hasMouseDetected;
+
   Timer? _hideTimer;
   final GlobalKey _anchorKey = GlobalKey();
   bool _themedInitialized = false;
@@ -103,6 +131,10 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    // Initialize overlay portal controllers.
+    _overlayControllerMouse = OverlayPortalController();
+    _overlayControllerTap = OverlayPortalController();
+
     // Use placeholder durations initially; they will be updated in didChangeDependencies.
     _animationController = AnimationController(
       vsync: this,
@@ -113,6 +145,18 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       curve: Curves.easeInOut,
     );
     _animationController.addStatusListener(_handleAnimationStatusChange);
+
+    // Detect current mouse presence and listen for changes.
+    _hasMouseDetected = RendererBinding.instance.mouseTracker.mouseIsConnected;
+    RendererBinding.instance.mouseTracker.addListener(_handleMouseTrackerChange);
+
+    // Register global pointer route to dismiss tooltip on touch.
+    // This is added here to intercept all pointer events, but is only active
+    // when the tooltip is open on a touch-only device.
+    GestureBinding.instance.pointerRouter.addGlobalRoute(_handlePointerEvent);
+
+    // Observe app lifecycle for dismissal on pause/suspend.
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -138,11 +182,71 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     }
   }
 
+  /// Called when the mouse connection status changes.
+  ///
+  /// Detects when a mouse is connected or disconnected and updates [_hasMouseDetected]
+  /// to branch between hover mode (mouse) and touch mode (no mouse) in [build].
+  void _handleMouseTrackerChange() {
+    if (!mounted) return;
+
+    final bool hasMouseDetected = RendererBinding.instance.mouseTracker.mouseIsConnected;
+    if (hasMouseDetected != _hasMouseDetected) {
+      setState(() => _hasMouseDetected = hasMouseDetected);
+    }
+  }
+
+  /// Returns whether the anchor widget contains the given global position.
+  ///
+  /// Used by the global pointer route to determine whether a PointerDown event
+  /// landed on the anchor itself, in which case the anchor's own gesture detector
+  /// (for tap mode) should own the event rather than the global route dismissing.
+  bool _anchorContainsGlobalPosition(Offset globalPosition) {
+    final box = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !box.hasSize) return false;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    return rect.contains(globalPosition);
+  }
+
+  /// Handles global pointer events to dismiss the tooltip on touch.
+  ///
+  /// **CRITICAL: Dismisses on PointerDown ONLY, NOT on PointerUp.**
+  ///
+  /// The long-press gesture that OPENS the tooltip ends with a PointerUpEvent
+  /// (when the finger lifts). If we dismissed on PointerUp, the tooltip would close
+  /// immediately on release, contradicting DESIGN-77 (stay open until tapped away).
+  /// Instead, we dismiss only on PointerDown (next touch anywhere), which allows:
+  ///
+  /// - Long-press opens → PointerUp on release (ignored) → **tooltip stays open** ✓
+  /// - Next touch anywhere (PointerDown) → dismisses ✓
+  /// - Swipe → PointerDown dismisses, gesture continues to scroll ✓
+  /// - Existing `tester.longPress()` tests stay valid (assert tooltip visible) ✓
+  ///
+  /// **In tap mode only**: The anchor's own GestureDetector(onTap:) owns the toggle
+  /// behavior, so pointer-downs on the anchor must not also dismiss here — otherwise
+  /// the route hides the tooltip before onTap fires, then onTap reopens it immediately,
+  /// making it impossible to close by tapping. This exclusion is ONLY for tap mode;
+  /// in pointer mode there is no onTap conflict, so pointer-downs anywhere should dismiss.
+  void _handlePointerEvent(PointerEvent event) {
+    if (event is! PointerDownEvent) return;
+
+    // In tap mode, exclude pointer-downs on the anchor so the anchor's own
+    // GestureDetector(onTap) can own the toggle without the global route interfering.
+    if (widget.trigger == LayrzTooltipTrigger.tap && _anchorContainsGlobalPosition(event.position)) {
+      return;
+    }
+
+    _hideTooltip();
+  }
+
   void _handleAnimationStatusChange(AnimationStatus status) {
-    // Remove the overlay entry only when animation completes dismissal.
+    // Hide the overlay portals when animation completes dismissal.
     if (status == AnimationStatus.dismissed) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
+      if (_overlayControllerMouse.isShowing) {
+        _overlayControllerMouse.hide();
+      }
+      if (_overlayControllerTap.isShowing) {
+        _overlayControllerTap.hide();
+      }
     }
   }
 
@@ -163,14 +267,37 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     _showTooltip();
   }
 
+  void _handleLongPressEnd(LongPressEndDetails details) {
+    // When the user releases the long-press, the tooltip remains visible.
+    // It is dismissed only by the next PointerDownEvent (tap or new gesture).
+  }
+
+  void _handleLongPressCancel() {
+    // When the long-press is cancelled, the tooltip remains visible.
+    // It is dismissed only by the next PointerDownEvent (tap or new gesture).
+  }
+
+  void _handleTap() {
+    // In tap mode, a single tap toggles the tooltip open/closed.
+    if (widget.trigger == LayrzTooltipTrigger.tap) {
+      if (_animationController.status == AnimationStatus.completed) {
+        _hideTooltip();
+      } else {
+        _showTooltip();
+      }
+    }
+  }
+
   void _showTooltip() {
     if (!mounted || Overlay.maybeOf(context) == null) return;
 
-    if (_overlayEntry == null) {
-      _overlayEntry = OverlayEntry(
-        builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
-      );
-      Overlay.of(context).insert(_overlayEntry!);
+    // Determine which controller to use based on trigger mode and mouse presence.
+    final controller = widget.trigger == LayrzTooltipTrigger.tap || !_hasMouseDetected
+        ? _overlayControllerTap
+        : _overlayControllerMouse;
+
+    if (!controller.isShowing) {
+      controller.show();
     }
 
     if (_animationController.status != AnimationStatus.completed) {
@@ -184,7 +311,12 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     _animationController.reverse();
   }
 
-  Widget _buildTooltipOverlay(BuildContext overlayContext) {
+  /// Builds the tooltip overlay content.
+  ///
+  /// This is called by the [OverlayPortal]'s overlayChildBuilder, which means it
+  /// rebuilds whenever the host widget rebuilds. This ensures the position is
+  /// always computed fresh based on the anchor's current location, even after scrolling.
+  Widget _buildTooltipContent(BuildContext overlayContext) {
     final tokens = overlayContext.tokens;
     final baseStyle = tokens.typography.label.copyWith(
       color: tokens.colors.background,
@@ -237,19 +369,33 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       tokens: tokens,
     );
 
-    // Get anchor geometry
+    // Get anchor geometry — FRESH on every rebuild
     final anchorRenderBox = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
     if (anchorRenderBox == null) {
       return const SizedBox.shrink();
     }
 
-    final anchorGlobalOffset = anchorRenderBox.localToGlobal(Offset.zero);
-    final anchorRect = anchorGlobalOffset & anchorRenderBox.size;
+    // Get the overlay's render box to resolve anchor position in overlay space (not window space).
+    // The bug: without ancestor:, the anchor is in window coordinates, but Positioned uses overlay coords.
+    // This causes 2x movement during scroll when overlay and window spaces diverge.
+    final overlayRenderBox = Overlay.of(overlayContext).context.findRenderObject() as RenderBox?;
+    if (overlayRenderBox == null || !overlayRenderBox.hasSize) {
+      return const SizedBox.shrink();
+    }
 
-    // Compute tooltip position using the position delegate
-    final overlaySize = MediaQuery.sizeOf(overlayContext);
+    // Compute localToGlobal INSIDE the builder so it recomputes on every host rebuild.
+    // Pass ancestor: overlayRenderBox to get coordinates in overlay space.
+    final anchorOffsetInOverlay = anchorRenderBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayRenderBox,
+    );
+    final anchorRect = anchorOffsetInOverlay & anchorRenderBox.size;
+
+    // Compute tooltip position using the position delegate.
+    // Use overlay's own size (not MediaQuery) so placement decisions happen in the same space.
+    final overlaySize = overlayRenderBox.size;
     final delegate = positionDelegate(widget.position);
-    final context = TooltipPositionContext(
+    final positionContext = TooltipPositionContext(
       target: Offset(anchorRect.center.dx, anchorRect.center.dy),
       targetSize: anchorRect.size,
       tooltipSize: surfaceSize,
@@ -258,9 +404,9 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       verticalOffset: 0,
     );
 
-    final tooltipOffset = delegate(context);
+    final tooltipOffset = delegate(positionContext);
 
-    return Positioned(
+    final tooltipWidget = Positioned(
       left: tooltipOffset.dx,
       top: tooltipOffset.dy,
       child: IgnorePointer(
@@ -271,6 +417,8 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         ),
       ),
     );
+
+    return tooltipWidget;
   }
 
   Size _predictTooltipSize({
@@ -333,16 +481,33 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     );
   }
 
+  /// Respond to app lifecycle changes - dismiss tooltip when app is suspended.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _hideTooltip();
+    }
+  }
+
   @override
   void dispose() {
-    // Dispose order: cancel timer → remove overlay entry → dispose animations → dispose controller
+    // Dispose order: cancel timer → remove listeners → hide portals →
+    // dispose animations → dispose controller
     _hideTimer?.cancel();
     _hideTimer = null;
 
-    if (_overlayEntry != null && _overlayEntry!.mounted) {
-      _overlayEntry!.remove();
+    // Remove listeners before disposing the overlay to prevent fires during teardown.
+    GestureBinding.instance.pointerRouter.removeGlobalRoute(_handlePointerEvent);
+    RendererBinding.instance.mouseTracker.removeListener(_handleMouseTrackerChange);
+    WidgetsBinding.instance.removeObserver(this);
+
+    // Hide the overlay portals on dispose.
+    if (_overlayControllerMouse.isShowing) {
+      _overlayControllerMouse.hide();
     }
-    _overlayEntry = null;
+    if (_overlayControllerTap.isShowing) {
+      _overlayControllerTap.hide();
+    }
 
     _animationController.removeStatusListener(_handleAnimationStatusChange);
     _curvedAnimation.dispose();
@@ -359,18 +524,57 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     }
 
     final plainText = widget.contentText ?? widget.contentRichText!.toPlainText();
+    final child = KeyedSubtree(key: _anchorKey, child: widget.child);
 
-    return Semantics(
-      tooltip: plainText,
-      child: MouseRegion(
-        opaque: false,
-        hitTestBehavior: HitTestBehavior.translucent,
-        onEnter: (_) => _handleMouseEnter(),
-        onExit: (_) => _handleMouseExit(),
+    // On mouse-connected devices: use hover for pointer mode, ignore for tap mode.
+    if (_hasMouseDetected && widget.trigger != LayrzTooltipTrigger.tap) {
+      return Semantics(
+        tooltip: plainText,
+        child: MouseRegion(
+          opaque: false,
+          hitTestBehavior: HitTestBehavior.translucent,
+          onEnter: (_) => _handleMouseEnter(),
+          onExit: (_) => _handleMouseExit(),
+          child: OverlayPortal(
+            controller: _overlayControllerMouse,
+            overlayChildBuilder: _buildTooltipContent,
+            child: child,
+          ),
+        ),
+      );
+    }
+
+    // On touch-only devices or in tap mode: use long-press / tap, with global
+    // pointer route dismissing on next touch (PointerDownEvent).
+    if (widget.trigger == LayrzTooltipTrigger.tap) {
+      return Semantics(
+        tooltip: plainText,
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onLongPress: _handleLongPress,
-          child: KeyedSubtree(key: _anchorKey, child: widget.child),
+          onTap: _handleTap,
+          excludeFromSemantics: true,
+          child: OverlayPortal(
+            controller: _overlayControllerTap,
+            overlayChildBuilder: _buildTooltipContent,
+            child: child,
+          ),
+        ),
+      );
+    }
+
+    // Pointer mode on touch device: long-press opens, global route dismisses.
+    return Semantics(
+      tooltip: plainText,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPress: _handleLongPress,
+        onLongPressEnd: _handleLongPressEnd,
+        onLongPressCancel: _handleLongPressCancel,
+        excludeFromSemantics: true,
+        child: OverlayPortal(
+          controller: _overlayControllerTap,
+          overlayChildBuilder: _buildTooltipContent,
+          child: child,
         ),
       ),
     );

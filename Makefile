@@ -1,4 +1,4 @@
-CHMOD_CMD = chmod +x .githooks/pre-commit
+CHMOD_CMD = chmod +x tool/checks.sh tool/coverage.sh
 ifeq ($(OS),Windows_NT)
     CHMOD_CMD = echo "Skipping chmod on Windows"
 endif
@@ -8,67 +8,43 @@ help:
 	@echo "layrz_ui — available targets:"
 	@echo "  get           Run flutter pub get on the package"
 	@echo "  get-example   Run flutter pub get on the example app"
-	@echo "  checks        Run all CI checks (analyze, test, guards, coverage floor)"
+	@echo "  checks        Run static CI checks (analyze, guards)"
 	@echo "  run-linux     Run example on Linux desktop"
 	@echo "  run-android   Run example on Android"
 	@echo "  run-ios       Run example on iOS"
 	@echo "  run-windows   Run example on Windows desktop"
 	@echo "  run-macos     Run example on macOS desktop"
-	@echo "  coverage      Run tests with coverage and report percentage (exits non-zero if <90%)"
+	@echo "  coverage      Run tests with coverage and enforce 90% floor"
 	@echo "  coverage-html Generate HTML coverage report in coverage/html/"
 
 .PHONY: install-hooks
 install-hooks:
-	@echo "Installing git hooks from .githooks directory..."
+	@echo "Installing git hooks..."
 	@$(CHMOD_CMD)
-	@git config core.hooksPath .githooks
+	@echo "Setting up pre-commit hook to run tool/checks.sh..."
+	@mkdir -p .git/hooks
+	@echo "#!/bin/sh" > .git/hooks/pre-commit
+	@echo "# Pre-commit hook: delegate to tool/checks.sh for static checks." >> .git/hooks/pre-commit
+	@echo "#" >> .git/hooks/pre-commit
+	@echo "# Resolve the toplevel of the CURRENT worktree, so each worktree runs its own" >> .git/hooks/pre-commit
+	@echo "# copy of the script rather than the main checkout's." >> .git/hooks/pre-commit
+	@echo "#" >> .git/hooks/pre-commit
+	@echo "# Skip gracefully when the script is absent — branches and worktrees created" >> .git/hooks/pre-commit
+	@echo "# before tool/checks.sh existed must remain committable, and a hook that hard" >> .git/hooks/pre-commit
+	@echo "# fails on a missing file would block them with an opaque error." >> .git/hooks/pre-commit
+	@echo 'ROOT="$$(git rev-parse --show-toplevel)"' >> .git/hooks/pre-commit
+	@echo 'if [ -x "$$ROOT/tool/checks.sh" ]; then' >> .git/hooks/pre-commit
+	@echo '  exec "$$ROOT/tool/checks.sh" --staged-only' >> .git/hooks/pre-commit
+	@echo 'fi' >> .git/hooks/pre-commit
+	@echo 'echo "pre-commit: $$ROOT/tool/checks.sh not found — skipping static checks"' >> .git/hooks/pre-commit
+	@echo 'exit 0' >> .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@git config --unset core.hooksPath 2>/dev/null || true
+	@echo "✓ Git hooks installed"
 
 .PHONY: checks
 checks:
-	@echo "Running CI checks..."
-	@echo ""
-	@echo "1. flutter analyze (lib/)..."
-	@flutter analyze lib/ || exit 1
-	@echo "   ✓ lib/ is clean"
-	@echo ""
-	@echo "2. flutter analyze (example/)..."
-	@flutter analyze example/ || exit 1
-	@echo "   ✓ example/ is clean"
-	@echo ""
-	@echo "3. Material/Cupertino guard..."
-	@if grep -rq "package:flutter/material\|package:flutter/cupertino" lib/; then \
-		echo "   ❌ Material or Cupertino imports found in lib/"; exit 1; \
-	else \
-		echo "   ✓ No Material or Cupertino imports in lib/"; \
-	fi
-	@echo ""
-	@echo "4. GoogleFonts TextTheme guard..."
-	@if grep -rq "GoogleFonts\..*TextTheme\|from 'package:google_fonts/.*TextTheme" lib/; then \
-		echo "   ❌ Material-coupled GoogleFonts TextTheme methods found in lib/"; exit 1; \
-	else \
-		echo "   ✓ No Material-coupled GoogleFonts TextTheme methods in lib/"; \
-	fi
-	@echo ""
-	@echo "5. Running tests with coverage..."
-	@flutter test --coverage > /dev/null 2>&1 || { echo "   ❌ Tests failed"; exit 1; }
-	@echo "   ✓ All tests passed"
-	@echo ""
-	@echo "6. Coverage floor (90%)..."
-	@if command -v lcov > /dev/null 2>&1; then \
-		PERCENTAGE=$$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE '[0-9]+\.[0-9]+' | head -1); \
-	else \
-		LH=$$(grep "^LH:" coverage/lcov.info | cut -d: -f2 | awk '{sum+=$$1} END {print sum}'); \
-		LF=$$(grep "^LF:" coverage/lcov.info | cut -d: -f2 | awk '{sum+=$$1} END {print sum}'); \
-		PERCENTAGE=$$(awk "BEGIN {printf \"%.2f\", ($$LH / $$LF) * 100}"); \
-	fi; \
-	echo "   Coverage: $$PERCENTAGE%"; \
-	if [ "$$(echo "$$PERCENTAGE < 90" | bc)" -eq 1 ]; then \
-		echo "   ❌ Coverage is below the 90% floor!"; exit 1; \
-	else \
-		echo "   ✓ Coverage meets the 90% floor"; \
-	fi
-	@echo ""
-	@echo "All checks passed ✓"
+	@sh tool/checks.sh
 
 .PHONY: get
 get:
@@ -100,27 +76,7 @@ run-macos:
 
 .PHONY: coverage
 coverage:
-	@echo "Running tests with coverage..."
-	@flutter test --coverage > /dev/null 2>&1 || { echo "Tests failed"; exit 1; }
-	@if command -v lcov > /dev/null 2>&1; then \
-		PERCENTAGE=$$(lcov --summary coverage/lcov.info 2>/dev/null | grep "lines" | grep -oE '[0-9]+\.[0-9]+' | head -1); \
-	else \
-		LH=$$(grep "^LH:" coverage/lcov.info | cut -d: -f2 | awk '{sum+=$$1} END {print sum}'); \
-		LF=$$(grep "^LF:" coverage/lcov.info | cut -d: -f2 | awk '{sum+=$$1} END {print sum}'); \
-		PERCENTAGE=$$(awk "BEGIN {printf \"%.2f\", ($$LH / $$LF) * 100}"); \
-	fi; \
-	echo ""; \
-	echo "Coverage Report"; \
-	echo "==============="; \
-	echo "Overall line coverage: $$PERCENTAGE%"; \
-	echo "CI floor: 90%"; \
-	echo ""; \
-	if [ "$$(echo "$$PERCENTAGE < 90" | bc)" -eq 1 ]; then \
-		echo "❌ Coverage is below the 90% floor!"; \
-		exit 1; \
-	else \
-		echo "✓ Coverage meets the 90% floor"; \
-	fi
+	@sh tool/coverage.sh
 
 .PHONY: coverage-html
 coverage-html:

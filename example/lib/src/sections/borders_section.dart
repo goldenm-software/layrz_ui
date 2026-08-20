@@ -9,66 +9,67 @@ import '../common/unit_display.dart';
 /// Shows the pre-built [BorderSide] objects (light, normal, thick) and the
 /// base stroke width, each applied to a visible container so the stroke width
 /// can be clearly compared.
-Widget buildBordersSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class BordersSection extends StatelessWidget {
+  const BordersSection({super.key});
 
-      return ShowroomSection(
-        title: 'Borders & Strokes',
-        description: 'Pre-built BorderSide tokens with consistent divider color',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Pre-built border sides
-            Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            Row(
-              children: [
-                Expanded(
-                  child: LayrzTooltip(
-                    contentText: 'border.light — ${tokens.border.light.width.toStringAsFixed(1)}px',
-                    child: _BorderSample(label: 'light', side: tokens.border.light),
-                  ),
-                ),
-                SizedBox(width: tokens.spacing.sp16),
-                Expanded(
-                  child: LayrzTooltip(
-                    contentText: 'border.normal — ${tokens.border.normal.width.toStringAsFixed(1)}px',
-                    child: _BorderSample(label: 'normal', side: tokens.border.normal),
-                  ),
-                ),
-                SizedBox(width: tokens.spacing.sp16),
-                Expanded(
-                  child: LayrzTooltip(
-                    contentText: 'border.thick — ${tokens.border.thick.width.toStringAsFixed(1)}px',
-                    child: _BorderSample(label: 'thick', side: tokens.border.thick),
-                  ),
-                ),
-              ],
-            ),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
 
-            SizedBox(height: tokens.spacing.sp24),
+    return ShowroomSection(
+      title: 'Borders & Strokes',
+      description: 'Pre-built BorderSide tokens with consistent divider color',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Pre-built border sides
+          Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          Row(
+            children: [
+              Expanded(
+                child: LayrzTooltip(
+                  contentText: 'border.light — ${tokens.border.light.width.toStringAsFixed(1)}px',
+                  child: _BorderSample(label: 'light', side: tokens.border.light),
+                ),
+              ),
+              SizedBox(width: tokens.spacing.sp16),
+              Expanded(
+                child: LayrzTooltip(
+                  contentText: 'border.normal — ${tokens.border.normal.width.toStringAsFixed(1)}px',
+                  child: _BorderSample(label: 'normal', side: tokens.border.normal),
+                ),
+              ),
+              SizedBox(width: tokens.spacing.sp16),
+              Expanded(
+                child: LayrzTooltip(
+                  contentText: 'border.thick — ${tokens.border.thick.width.toStringAsFixed(1)}px',
+                  child: _BorderSample(label: 'thick', side: tokens.border.thick),
+                ),
+              ),
+            ],
+          ),
 
-            // Stroke width values
-            Text('Stroke Width Values', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            Column(
-              children: [
-                _StrokeValueRow(label: 'base', width: tokens.border.base, tokens: tokens),
-                SizedBox(height: tokens.spacing.sp12),
-                _StrokeValueRow(label: 'stroke1', width: tokens.border.stroke1, tokens: tokens),
-                SizedBox(height: tokens.spacing.sp12),
-                _StrokeValueRow(label: 'stroke2', width: tokens.border.stroke2, tokens: tokens),
-                SizedBox(height: tokens.spacing.sp12),
-                _StrokeValueRow(label: 'stroke3', width: tokens.border.stroke3, tokens: tokens),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
+          SizedBox(height: tokens.spacing.sp24),
+
+          // Stroke width values
+          Text('Stroke Width Values', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          Column(
+            children: [
+              _StrokeValueRow(label: 'base', width: tokens.border.base, tokens: tokens),
+              SizedBox(height: tokens.spacing.sp12),
+              _StrokeValueRow(label: 'stroke1', width: tokens.border.stroke1, tokens: tokens),
+              SizedBox(height: tokens.spacing.sp12),
+              _StrokeValueRow(label: 'stroke2', width: tokens.border.stroke2, tokens: tokens),
+              SizedBox(height: tokens.spacing.sp12),
+              _StrokeValueRow(label: 'stroke3', width: tokens.border.stroke3, tokens: tokens),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A sample demonstrating a [BorderSide] with visual container.

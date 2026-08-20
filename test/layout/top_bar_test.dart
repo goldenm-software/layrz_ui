@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed_app.dart';
@@ -217,6 +218,88 @@ void main() {
           onNotificationTap: (item) {},
           body: const SizedBox(child: Text('Body')),
         ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('top bar decoration has no shadow', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(500, 900);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the DecoratedBox widgets in the tree
+      final decoratedBoxes = find.byType(DecoratedBox);
+      expect(decoratedBoxes, findsWidgets);
+
+      // Verify that top bar has no boxShadow
+      // The top bar is a DecoratedBox with no shadow (different from previous implementation)
+      bool foundTopBarDecoration = false;
+
+      for (int i = 0; i < decoratedBoxes.evaluate().length; i++) {
+        final widget = tester.widget<DecoratedBox>(decoratedBoxes.at(i));
+        final decoration = widget.decoration;
+
+        if (decoration is BoxDecoration && widget.child is SafeArea) {
+          // This is likely the top bar (DecoratedBox > SafeArea structure)
+          // Verify it has no shadow
+          expect(
+            decoration.boxShadow,
+            null,
+            reason: 'Top bar decoration should have no boxShadow',
+          );
+          foundTopBarDecoration = true;
+          break;
+        }
+      }
+
+      expect(foundTopBarDecoration, true, reason: 'Top bar structure (DecoratedBox > SafeArea) not found');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('top bar drawer trigger icon is solarBoldMenuDots', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(500, 900);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the Icon widget that represents the drawer trigger
+      final icons = find.byType(Icon);
+      expect(icons, findsWidgets);
+
+      // Get the first Icon (drawer trigger icon in top bar)
+      final firstIcon = tester.widget<Icon>(icons.first);
+      expect(
+        firstIcon.icon,
+        LayrzIcons.solarBoldMenuDots,
+        reason: 'Top bar drawer trigger icon should be LayrzIcons.solarBoldMenuDots',
       );
 
       expect(tester.takeException(), isNull);

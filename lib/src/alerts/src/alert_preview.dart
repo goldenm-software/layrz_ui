@@ -4,7 +4,11 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzAlert] with [LayrzAlertStyle.layrz] in light theme.
-@Preview(name: 'Layrz', theme: LayrzPreviewTheme.light)
+@Preview(
+  name: 'Layrz',
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
+)
 Widget previewLayrzAlertLayrz() => LayrzAlert(
   type: LayrzAlertType.success,
   title: 'Success',
@@ -12,7 +16,11 @@ Widget previewLayrzAlertLayrz() => LayrzAlert(
 );
 
 /// Preview of [LayrzAlert] with [LayrzAlertStyle.filledIcon] in light theme.
-@Preview(name: 'FilledIcon', theme: LayrzPreviewTheme.light)
+@Preview(
+  name: 'FilledIcon',
+  size: Size(400, 120),
+  theme: layrzPreviewLightTheme,
+)
 Widget previewLayrzAlertFilledIcon() => LayrzAlert(
   type: LayrzAlertType.context,
   title: 'Context',

@@ -1,6 +1,5 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
@@ -8,6 +7,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/preview.dart';
 
 import 'drawer.dart';
+import 'drawer_scaffold.dart';
 import 'navigator_item.dart';
 import 'notification_item.dart';
 import 'presentation.dart';
@@ -112,16 +112,6 @@ class LayrzLayout extends StatefulWidget {
 }
 
 class _LayrzLayoutState extends State<LayrzLayout> {
-  bool _isDrawerOpen = false;
-
-  void _openDrawer() {
-    setState(() => _isDrawerOpen = true);
-  }
-
-  void _closeDrawer() {
-    setState(() => _isDrawerOpen = false);
-  }
-
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return '?';
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -167,76 +157,44 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             onNotificationTap: widget.onNotificationTap,
             getInitials: _getInitials,
           ),
-          Expanded(
-            child: _buildBodyContent(context, tokens),
-          ),
+          Expanded(child: widget.body),
         ],
       ),
     );
   }
 
   Widget _buildDrawer(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
-    return Container(
-      color: backgroundColor,
-      child: Stack(
-        children: [
-          Column(
-            children: [
-              LayrzLayoutTopBar(
-                tokens: tokens,
-                logo: widget.logo,
-                userName: widget.userName,
-                userAvatar: widget.userAvatar,
-                notifications: widget.notifications,
-                onNotificationTap: widget.onNotificationTap,
-                onDrawerTap: _openDrawer,
-                getInitials: _getInitials,
-              ),
-              Expanded(
-                child: _buildBodyContent(context, tokens),
-              ),
-            ],
-          ),
-          if (_isDrawerOpen)
-            LayrzLayoutDrawer(
-              tokens: tokens,
-              items: widget.items,
-              logo: widget.logo,
-              userName: widget.userName,
-              userAvatar: widget.userAvatar,
-              userMenuItems: widget.userMenuItems,
-              notifications: widget.notifications,
-              onNotificationTap: widget.onNotificationTap,
-              onClose: _closeDrawer,
-              getInitials: _getInitials,
-            ),
-        ],
+    return LayrzLayoutDrawerScaffold(
+      backgroundColor: backgroundColor,
+      topBarBuilder: (openDrawer) => LayrzLayoutTopBar(
+        tokens: tokens,
+        logo: widget.logo,
+        notifications: widget.notifications,
+        onNotificationTap: widget.onNotificationTap,
+        onDrawerTap: openDrawer,
+      ),
+      body: widget.body,
+      drawerBuilder: (closeDrawer) => LayrzLayoutDrawer(
+        tokens: tokens,
+        items: widget.items,
+        logo: widget.logo,
+        userName: widget.userName,
+        userAvatar: widget.userAvatar,
+        userMenuItems: widget.userMenuItems,
+        notifications: widget.notifications,
+        onNotificationTap: widget.onNotificationTap,
+        onClose: closeDrawer,
+        getInitials: _getInitials,
       ),
     );
-  }
-
-  Widget _buildBodyContent(BuildContext context, LayrzTokens tokens) {
-    final band = tokens.breakpoints.bandAt(MediaQuery.sizeOf(context).width);
-    final isXl = band == LayrzBreakpoint.xl;
-
-    if (isXl) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: kLayrzLayoutBodyMaxWidth),
-          child: widget.body,
-        ),
-      );
-    }
-
-    return widget.body;
   }
 }
 
 /// Preview widget for LayrzLayout in expanded presentation mode.
 @Preview(
   name: 'Light',
-  theme: LayrzPreviewTheme.light,
+  size: Size(1200, 600),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzLayout() => LayrzLayout(
   logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',

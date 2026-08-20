@@ -11,33 +11,34 @@ import '../common/unit_display.dart';
 /// Shows each spacing value (sp4 through sp48) as a bar whose width is that token,
 /// labelled with name and pixel value. Also demonstrates [margin], [reducedMargin],
 /// and [padding] with visual examples.
-Widget buildSpacingSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class SpacingSection extends StatelessWidget {
+  const SpacingSection({super.key});
 
-      return ShowroomSection(
-        title: 'Spacing',
-        description: 'Spacing tokens with values from 4 to 48 pixels (not all multiples of 4)',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Spacing ruler
-            Text('Spacing Values (sp4 → sp48)', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            _SpacingRuler(tokens: tokens),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
 
-            SizedBox(height: tokens.spacing.sp24),
+    return ShowroomSection(
+      title: 'Spacing',
+      description: 'Spacing tokens with values from 4 to 48 pixels (not all multiples of 4)',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Spacing ruler
+          Text('Spacing Values (sp4 → sp48)', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          _SpacingRuler(tokens: tokens),
 
-            // Convenience accessors
-            Text('Convenience Accessors', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            _SpacingAccessors(tokens: tokens),
-          ],
-        ),
-      );
-    },
-  );
+          SizedBox(height: tokens.spacing.sp24),
+
+          // Convenience accessors
+          Text('Convenience Accessors', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          _SpacingAccessors(tokens: tokens),
+        ],
+      ),
+    );
+  }
 }
 
 /// A visual ruler showing all spacing values as bars with labels.

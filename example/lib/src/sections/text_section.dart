@@ -3,25 +3,13 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzText] configurations, including plain text, rich text, and selectability.
-///
-/// Demonstrates text rendering with different styles, selection behavior, and use cases
-/// from simple labels to long paragraphs.
-Widget buildTextSection() {
-  return Builder(
-    builder: (context) {
-      return const _TextSectionContent();
-    },
-  );
-}
-
 /// The content widget for the text section.
 ///
 /// Shows multiple demo subsections illustrating text styles, rich text,
 /// selection behavior, and accessibility.
-class _TextSectionContent extends StatelessWidget {
-  /// Creates a new [_TextSectionContent].
-  const _TextSectionContent();
+class TextSection extends StatelessWidget {
+  /// Creates a new [TextSection].
+  const TextSection({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -8,39 +8,40 @@ import '../common/showroom_section.dart';
 /// Shows interactive tiles that animate on hover and press using the motion tokens.
 /// This is the one section that actually moves, demonstrating the animation durations
 /// and easing curves in a tangible way.
-Widget buildMotionSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class MotionSection extends StatelessWidget {
+  const MotionSection({super.key});
 
-      return ShowroomSection(
-        title: 'Motion',
-        description: 'Animation durations and easing curves with interactive demos',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Motion values reference
-            Text('Motion Token Values', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            _MotionValuesTable(tokens: tokens),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
 
-            SizedBox(height: tokens.spacing.sp24),
+    return ShowroomSection(
+      title: 'Motion',
+      description: 'Animation durations and easing curves with interactive demos',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Motion values reference
+          Text('Motion Token Values', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          _MotionValuesTable(tokens: tokens),
 
-            // Interactive demonstrations
-            Text('Interactive Demonstrations', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            Row(
-              children: [
-                Expanded(child: _HoverAnimationDemo(tokens: tokens)),
-                SizedBox(width: tokens.spacing.sp16),
-                Expanded(child: _PressAnimationDemo(tokens: tokens)),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
+          SizedBox(height: tokens.spacing.sp24),
+
+          // Interactive demonstrations
+          Text('Interactive Demonstrations', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          Row(
+            children: [
+              Expanded(child: _HoverAnimationDemo(tokens: tokens)),
+              SizedBox(width: tokens.spacing.sp16),
+              Expanded(child: _PressAnimationDemo(tokens: tokens)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A table displaying all motion token values.

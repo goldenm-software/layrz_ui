@@ -9,105 +9,106 @@ import '../common/showroom_swatch.dart';
 /// Each color swatch shows the token name and its hex value. Text automatically
 /// adapts for contrast. Includes a demonstration of the [tonalOpacity] token
 /// by showing primary color at full and reduced opacity.
-Widget buildColorsSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class ColorsSection extends StatelessWidget {
+  const ColorsSection({super.key});
 
-      return ShowroomSection(
-        title: 'Colors',
-        description: 'All semantic color tokens with hex values and contrast-aware text',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Brand colors
-            _ColorCategory(
-              title: 'Brand',
-              colors: [_ColorSample('primary', tokens.colors.primary)],
-            ),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
 
-            SizedBox(height: tokens.spacing.sp24),
+    return ShowroomSection(
+      title: 'Colors',
+      description: 'All semantic color tokens with hex values and contrast-aware text',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Brand colors
+          _ColorCategory(
+            title: 'Brand',
+            colors: [_ColorSample('primary', tokens.colors.primary)],
+          ),
 
-            // Surface colors
-            _ColorCategory(
-              title: 'Surface',
-              colors: [
-                _ColorSample('background', tokens.colors.background),
-                _ColorSample('surface', tokens.colors.surface),
-                _ColorSample('surface2', tokens.colors.surface2),
-                _ColorSample('surface3', tokens.colors.surface3),
-              ],
-            ),
+          SizedBox(height: tokens.spacing.sp24),
 
-            SizedBox(height: tokens.spacing.sp24),
+          // Surface colors
+          _ColorCategory(
+            title: 'Surface',
+            colors: [
+              _ColorSample('background', tokens.colors.background),
+              _ColorSample('surface', tokens.colors.surface),
+              _ColorSample('surface2', tokens.colors.surface2),
+              _ColorSample('surface3', tokens.colors.surface3),
+            ],
+          ),
 
-            // Foreground colors
-            _ColorCategory(
-              title: 'Foreground / Text',
-              colors: [
-                _ColorSample('fg1', tokens.colors.fg1),
-                _ColorSample('fg2', tokens.colors.fg2),
-                _ColorSample('fg3', tokens.colors.fg3),
-                _ColorSample('fg4', tokens.colors.fg4),
-              ],
-            ),
+          SizedBox(height: tokens.spacing.sp24),
 
-            SizedBox(height: tokens.spacing.sp24),
+          // Foreground colors
+          _ColorCategory(
+            title: 'Foreground / Text',
+            colors: [
+              _ColorSample('fg1', tokens.colors.fg1),
+              _ColorSample('fg2', tokens.colors.fg2),
+              _ColorSample('fg3', tokens.colors.fg3),
+              _ColorSample('fg4', tokens.colors.fg4),
+            ],
+          ),
 
-            // Semantic colors
-            _ColorCategory(
-              title: 'Semantic',
-              colors: [
-                _ColorSample('success', tokens.colors.success),
-                _ColorSample('warning', tokens.colors.warning),
-                _ColorSample('danger', tokens.colors.danger),
-                _ColorSample('info', tokens.colors.info),
-              ],
-            ),
+          SizedBox(height: tokens.spacing.sp24),
 
-            SizedBox(height: tokens.spacing.sp24),
+          // Semantic colors
+          _ColorCategory(
+            title: 'Semantic',
+            colors: [
+              _ColorSample('success', tokens.colors.success),
+              _ColorSample('warning', tokens.colors.warning),
+              _ColorSample('danger', tokens.colors.danger),
+              _ColorSample('info', tokens.colors.info),
+            ],
+          ),
 
-            // Structural colors
-            _ColorCategory(
-              title: 'Structural',
-              colors: [
-                _ColorSample('divider', tokens.colors.divider),
-                _ColorSample('contextual', tokens.colors.contextual),
-              ],
-            ),
+          SizedBox(height: tokens.spacing.sp24),
 
-            SizedBox(height: tokens.spacing.sp24),
+          // Structural colors
+          _ColorCategory(
+            title: 'Structural',
+            colors: [
+              _ColorSample('divider', tokens.colors.divider),
+              _ColorSample('contextual', tokens.colors.contextual),
+            ],
+          ),
 
-            // Overlay and tonal opacity demonstration
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Overlay & Tonal Opacity', style: tokens.typography.title),
-                SizedBox(height: tokens.spacing.sp12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: LayrzTooltip(
-                        contentText: 'overlay — ${tokens.colors.overlay.toHex()}',
-                        child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
-                      ),
+          SizedBox(height: tokens.spacing.sp24),
+
+          // Overlay and tonal opacity demonstration
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Overlay & Tonal Opacity', style: tokens.typography.title),
+              SizedBox(height: tokens.spacing.sp12),
+              Row(
+                children: [
+                  Expanded(
+                    child: LayrzTooltip(
+                      contentText: 'overlay — ${tokens.colors.overlay.toHex()}',
+                      child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
                     ),
-                    SizedBox(width: tokens.spacing.sp16),
-                    Expanded(
-                      child: LayrzTooltip(
-                        contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
-                        child: _TonalOpacitySwatch(tokens: tokens),
-                      ),
+                  ),
+                  SizedBox(width: tokens.spacing.sp16),
+                  Expanded(
+                    child: LayrzTooltip(
+                      contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
+                      child: _TonalOpacitySwatch(tokens: tokens),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A category of color samples grouped under a heading.

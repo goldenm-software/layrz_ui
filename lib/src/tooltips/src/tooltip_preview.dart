@@ -8,7 +8,8 @@ import 'package:layrz_ui/src/preview/preview.dart';
 /// Demonstrates the tooltip surface styling and positioning below the anchor.
 @Preview(
   name: 'Light',
-  theme: LayrzPreviewTheme.light,
+  size: Size(300, 200),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTooltip() {
   return Overlay(

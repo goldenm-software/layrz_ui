@@ -10,7 +10,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 
 | # | Item | Status |
 |---|---|---|
-| 1 | LayrzLayout (application shell with sidebar/drawer nav, flat navigator items, user menu, notifications) | Done |
+| 1 | LayrzLayout (application shell with sidebar/drawer nav, drawer floating-page reveal transition, flat navigator items, user menu, notifications) | Done |
 | 2 | LayrzScaffoldShell<T> (adaptive list-detail shell, container-driven breakpoints) | Done |
 | 3 | LayrzScrollbar (Material-free on RawScrollbar, installed by default in LayrzApp) | Done |
 | 4 | LayrzTabView and LayrzTab (horizontal tabs with Material 3 styling) | Todo |

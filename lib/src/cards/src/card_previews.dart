@@ -4,7 +4,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzCard] with all elevation levels.
-@Preview(name: 'Elevations', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Elevations', size: Size(400, 300), theme: layrzPreviewLightTheme)
 Widget previewLayrzCardElevations() {
   return _PreviewElevations();
 }
@@ -33,7 +33,7 @@ class _PreviewElevations extends StatelessWidget {
 }
 
 /// Preview of an interactive [LayrzCard].
-@Preview(name: 'Interactive', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Interactive', size: Size(300, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzCardInteractive() {
   return _PreviewInteractive();
 }
@@ -65,7 +65,7 @@ class _PreviewInteractiveState extends State<_PreviewInteractive> {
 }
 
 /// Preview of [LayrzCard] with custom background color.
-@Preview(name: 'Custom Background', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Custom Background', size: Size(300, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzCardCustomBackground() {
   return _PreviewCustomBackground();
 }

@@ -22,17 +22,10 @@ class ShowroomLayout extends StatelessWidget {
 
     return LayrzLayout(
       items: items,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: child,
-            ),
-          ),
-        ),
+      body: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: SingleChildScrollView(child: child),
       ),
       logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
       userName: 'John Doe',

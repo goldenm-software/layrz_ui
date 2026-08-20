@@ -13,14 +13,13 @@ import '../common/showroom_section.dart';
 /// - Interactive delete (with setState to remove from list)
 /// - Scrollable chip group (.none behavior)
 /// - Compact chip group (.compact behavior) with +N overflow indicator
-Widget buildChipsSection() => _ChipsSectionWidget();
-
-class _ChipsSectionWidget extends StatefulWidget {
+class ChipsSection extends StatefulWidget {
+  const ChipsSection({super.key});
   @override
-  State<_ChipsSectionWidget> createState() => _ChipsSectionWidgetState();
+  State<ChipsSection> createState() => _ChipsSectionState();
 }
 
-class _ChipsSectionWidgetState extends State<_ChipsSectionWidget> {
+class _ChipsSectionState extends State<ChipsSection> {
   late List<String> deletableChips;
 
   @override

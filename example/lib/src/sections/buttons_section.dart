@@ -4,33 +4,20 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzButton] styles, semantic factories, and interaction states.
-///
-/// Demonstrates button styles dynamically generated from [LayrzButtonStyle.values],
-/// the six semantic factories with both normal and Fab layouts, style variants,
-/// loading/cooldown states with live toggle controls, disabled states, custom colors, and tooltips.
-Widget buildButtonsSection() {
-  return Builder(
-    builder: (context) {
-      return const _ButtonsSectionContent();
-    },
-  );
-}
-
 /// A stateful widget that owns [LayrzButtonController]s for loading and cooldown states.
 ///
 /// This allows the showroom to demonstrate live state changes on buttons with
 /// controller ownership — the key behavioural difference between buttons
 /// in layrz_ui and previous implementations.
-class _ButtonsSectionContent extends StatefulWidget {
-  /// Creates a new [_ButtonsSectionContent].
-  const _ButtonsSectionContent();
+class ButtonsSection extends StatefulWidget {
+  /// Creates a new [ButtonsSection].
+  const ButtonsSection({super.key});
 
   @override
-  State<_ButtonsSectionContent> createState() => _ButtonsSectionContentState();
+  State<ButtonsSection> createState() => _ButtonsSectionState();
 }
 
-class _ButtonsSectionContentState extends State<_ButtonsSectionContent> {
+class _ButtonsSectionState extends State<ButtonsSection> {
   late LayrzButtonController _loadingController;
   late LayrzButtonController _cooldownController;
   late LayrzButtonController _sharedFormController;
@@ -143,20 +130,32 @@ class _StylesDemo extends StatelessWidget {
           "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
           "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
         }.entries.map((e) {
-          return Row(
-            spacing: tokens.spacing.sp12,
+          return LayrzRow(
             children: [
-              Text(e.key),
-              ...e.value.map((e) {
-                return LayrzButton(
-                  labelText: 'Example button',
-                  icon: LayrzIcons.solarBoldHomeN2,
-                  style: e,
-                  onTap: () {},
-                  color: tokens.colors.primary,
-                  hintText: e.toString().split('.').last,
-                );
-              }),
+              LayrzCol(
+                xs: 12,
+                md: 4,
+                child: Text(e.key),
+              ),
+              LayrzCol(
+                xs: 12,
+                md: 8,
+                child: Row(
+                  spacing: context.tokens.spacing.sp8,
+                  children: [
+                    ...e.value.map((style) {
+                      return LayrzButton(
+                        labelText: 'Example button',
+                        icon: LayrzIcons.solarBoldHomeN2,
+                        style: style,
+                        onTap: () {},
+                        color: tokens.colors.primary,
+                        hintText: style.toString().split('.').last,
+                      );
+                    }),
+                  ],
+                ),
+              ),
             ],
           );
         }),
@@ -582,6 +581,7 @@ class _TooltipDemo extends StatelessWidget {
           'Non-Fab buttons show hintText as a tooltip on hover/long-press. '
           'Fab buttons always show labelText as a tooltip.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+          maxLines: 3,
         ),
         SizedBox(height: tokens.spacing.sp12),
         Wrap(

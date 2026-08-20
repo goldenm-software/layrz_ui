@@ -28,8 +28,10 @@ import 'alert_type.dart';
 ///   - Cursor becomes [SystemMouseCursors.click].
 ///   - **At rest**: no shadow.
 ///   - **Hovered**: surface lifts by [kLayrzAlertHoverLift] and shadow appears at elevation 2.
-///   - **Pressed**: surface settles back down and shadow steps down to elevation 1.
 ///   - **Focused**: surface lifts (same as hover) and shadow appears at elevation 2.
+///   - **Pressed without prior hover** (touch device): surface lifts by [kLayrzAlertHoverLift] and shadow
+///     appears at elevation 2 (touch press gets the full hover treatment for visibility).
+///   - **Pressed with prior hover** (desktop): surface settles back down and shadow steps down to elevation 1.
 ///   - Geometry (size, padding, radius) remains constant across states.
 ///   - Focusable by Tab navigation; activatable by Enter or Space keys.
 ///   - Announced to assistive technology as an interactive button.
@@ -149,20 +151,32 @@ class _LayrzAlertState extends State<LayrzAlert> {
   }
 
   /// Updates the current lift based on hover, press, and focus states.
+  ///
+  /// A press not preceded by hover gets the hover treatment (touch press feedback).
+  /// A press preceded by hover settles back down (desktop interaction).
   void _updateLift() {
     if (!mounted) return;
 
     double newLift = 0.0;
     final states = _statesController.value;
+    final isPressed = states.contains(WidgetState.pressed);
+    final isHovered = states.contains(WidgetState.hovered);
+    final isFocused = states.contains(WidgetState.focused);
 
     // Hover or Focus: lift the surface up.
-    if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+    if (isHovered || isFocused) {
       newLift = kLayrzAlertHoverLift;
     }
 
-    // Press takes precedence: settle back down.
-    if (states.contains(WidgetState.pressed)) {
-      newLift = 0.0;
+    // Press handling: touch press gets hover treatment, desktop press settles down.
+    if (isPressed) {
+      if (isHovered) {
+        // Desktop case: press while already hovered settles back down.
+        newLift = 0.0;
+      } else {
+        // Touch case: press without prior hover gets hover treatment (lift + elevation2).
+        newLift = kLayrzAlertHoverLift;
+      }
     }
 
     if (newLift != _currentLift) {
@@ -175,21 +189,31 @@ class _LayrzAlertState extends State<LayrzAlert> {
   /// Resolves the shadow list for the current interactive state.
   ///
   /// Returns null for inert alerts (onTap == null) and at-rest interactive alerts.
-  /// Returns [LayrzShadowTokens.elevation2] for hovered or focused states.
-  /// Returns [LayrzShadowTokens.elevation1] for pressed state.
+  /// Returns [LayrzShadowTokens.elevation2] for:
+  ///   - Hovered or focused states
+  ///   - Pressed state without prior hover (touch press gets hover treatment)
+  /// Returns [LayrzShadowTokens.elevation1] for pressed state with prior hover (desktop interaction).
   List<BoxShadow>? _resolveShadow(LayrzTokens tokens) {
     // Inert alerts have no shadow.
     if (widget.onTap == null) return null;
 
     final states = _statesController.value;
+    final isPressed = states.contains(WidgetState.pressed);
+    final isHovered = states.contains(WidgetState.hovered);
+    final isFocused = states.contains(WidgetState.focused);
 
-    // Pressed: lower shadow level.
-    if (states.contains(WidgetState.pressed)) {
+    // Pressed without prior hover: elevated shadow (touch press gets hover treatment).
+    if (isPressed && !isHovered) {
+      return tokens.shadow.elevation2;
+    }
+
+    // Pressed with prior hover: lower shadow level (desktop interaction).
+    if (isPressed && isHovered) {
       return tokens.shadow.elevation1;
     }
 
     // Hovered or Focused: elevated shadow.
-    if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
+    if (isHovered || isFocused) {
       return tokens.shadow.elevation2;
     }
 

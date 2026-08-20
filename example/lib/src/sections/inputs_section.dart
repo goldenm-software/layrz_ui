@@ -5,30 +5,18 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Builds a comprehensive showroom section demonstrating all LayrzTextInput features.
-///
-/// This section displays:
-/// - Field states (rest, error, disabled, read-only) with live hover and focus effects
-/// - Label and placeholder variations (with/without, isRequired)
-/// - Slot forms (prefix/suffix icon, widget, and text variants)
-/// - Error display (single, multiple, hidden details)
-/// - Help affordance via tooltip
-/// - Behavioral differences (readOnly vs disabled, onTap firing)
-/// - Dense mode
-/// - Shortcut badge
-/// - Additional features (obscureText, keyboardType, maxLength)
-Widget buildInputsSection() => _InputsSectionWidget();
-
 /// A stateful widget that manages [TextEditingController]s and [FocusNode]s.
 ///
 /// This allows the showroom to demonstrate all interactive states, state changes,
 /// and proper resource disposal.
-class _InputsSectionWidget extends StatefulWidget {
+class InputsSection extends StatefulWidget {
+  const InputsSection({super.key});
+
   @override
-  State<_InputsSectionWidget> createState() => _InputsSectionWidgetState();
+  State<InputsSection> createState() => _InputsSectionState();
 }
 
-class _InputsSectionWidgetState extends State<_InputsSectionWidget> {
+class _InputsSectionState extends State<InputsSection> {
   late TextEditingController _restController;
   late TextEditingController _errorController;
   late TextEditingController _disabledController;
