@@ -182,12 +182,9 @@ class _LayrzLayoutState extends State<LayrzLayout> {
               LayrzLayoutTopBar(
                 tokens: tokens,
                 logo: widget.logo,
-                userName: widget.userName,
-                userAvatar: widget.userAvatar,
                 notifications: widget.notifications,
                 onNotificationTap: widget.onNotificationTap,
                 onDrawerTap: _openDrawer,
-                getInitials: _getInitials,
               ),
               Expanded(child: widget.body),
             ],

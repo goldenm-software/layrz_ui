@@ -18,12 +18,6 @@ class LayrzLayoutTopBar extends StatelessWidget {
     /// A widget displayed in the top bar center.
     required this.logo,
 
-    /// The user's display name.
-    required this.userName,
-
-    /// The user's avatar source.
-    required this.userAvatar,
-
     /// The list of notifications to display (for backwards compatibility).
     required this.notifications,
 
@@ -33,8 +27,6 @@ class LayrzLayoutTopBar extends StatelessWidget {
     /// Callback fired when the drawer trigger is tapped.
     required this.onDrawerTap,
 
-    /// Function to derive initials from a name.
-    required this.getInitials,
     super.key,
   });
 
@@ -43,12 +35,6 @@ class LayrzLayoutTopBar extends StatelessWidget {
 
   /// A widget displayed in the top bar center.
   final String logo;
-
-  /// The user's display name.
-  final String? userName;
-
-  /// The user's avatar source.
-  final LayrzAvatarSource? userAvatar;
 
   /// The list of notifications to display.
   final List<LayrzNotificationItem> notifications;
@@ -59,15 +45,11 @@ class LayrzLayoutTopBar extends StatelessWidget {
   /// Callback fired when the drawer trigger is tapped.
   final VoidCallback onDrawerTap;
 
-  /// Function to derive initials from a name.
-  final String Function(String?) getInitials;
-
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: tokens.colors.surface,
-        boxShadow: tokens.shadow.elevation2,
+        color: tokens.colors.background,
       ),
       child: SafeArea(
         bottom: false,
@@ -81,7 +63,7 @@ class LayrzLayoutTopBar extends StatelessWidget {
                 GestureDetector(
                   onTap: onDrawerTap,
                   child: Icon(
-                    LayrzIcons.solarOutlineHamburgerMenu,
+                    LayrzIcons.solarBoldMenuDots,
                     size: kLayrzLayoutDrawerTriggerIconSize,
                     color: tokens.colors.fg2,
                   ),
@@ -101,20 +83,7 @@ class LayrzLayoutTopBar extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(width: kLayrzLayoutTopBarGap),
-
-                // User avatar
-                SizedBox(
-                  width: kLayrzLayoutTopBarUserAvatarSize,
-                  height: kLayrzLayoutTopBarUserAvatarSize,
-                  child: LayrzAvatar(
-                    source: userAvatar,
-                    size: kLayrzLayoutTopBarUserAvatarSize,
-                    nameText: userName,
-                  ),
-                ),
-
-                // Bottom divider
+                // Bottom divider (dead code — height 1.0 Container with no width inside a Row)
                 Container(
                   margin: const EdgeInsets.only(top: 8.0),
                   height: 1.0,
