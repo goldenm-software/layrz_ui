@@ -517,61 +517,6 @@ void main() {
         );
       });
 
-      /// Verifies that dense mode uses a smaller icon size for compact layout.
-      testWidgets('dense mode reduces height when combined with normal padding', (tester) async {
-        final modeVariants = <String, bool>{
-          'normal': false,
-          'dense': true,
-        };
-
-        final dimensions = <String, ({double width, double height})>{};
-
-        for (final MapEntry(:key, :value) in modeVariants.entries) {
-          await tester.pumpWidget(
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: LayrzTheme(
-                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
-                child: Overlay(
-                  initialEntries: [
-                    OverlayEntry(
-                      builder: (context) => Center(
-                        child: LayrzInputChrome(
-                          labelText: 'Test Field',
-                          isRequired: false,
-                          prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.plusCircleOutline),
-                          suffixSlot: LayrzInputSuffixSlot(),
-                          disabled: false,
-                          readOnly: false,
-                          errors: [],
-                          hideDetails: false,
-                          states: {},
-                          dense: value,
-                          child: Container(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-          await tester.pump();
-
-          final containerFinder = find.byType(Container).first;
-          final rect = tester.getRect(containerFinder);
-          dimensions[key] = (width: rect.width, height: rect.height);
-        }
-
-        // Dense and normal modes should have the same width (icon doesn't affect width).
-        // Dense mode with smaller icon and padding should still work correctly.
-        expect(
-          dimensions['dense']!.width,
-          dimensions['normal']!.width,
-          reason: 'Dense and normal modes should have the same width',
-        );
-      });
-
       /// Verifies that trailing elements appear in the correct left-to-right order:
       /// shortcut → suffix → lock → help → error (error always last).
       testWidgets('trailing elements are positioned in canonical order', (tester) async {
@@ -839,6 +784,63 @@ void main() {
         // Verify the field is rendered and disabled state is present
         final chromeField = find.byType(LayrzInputChrome);
         expect(chromeField, findsOneWidget);
+      });
+
+      /// Verifies that padding is uniform on all four sides and matches the expected token value.
+      testWidgets('padding is uniform (all sides) and equals token default (8px)', (tester) async {
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: LayrzTheme(
+              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              child: Overlay(
+                initialEntries: [
+                  OverlayEntry(
+                    builder: (context) => Center(
+                      child: LayrzInputChrome(
+                        labelText: 'Test Field',
+                        isRequired: false,
+                        prefixSlot: LayrzInputPrefixSlot(),
+                        suffixSlot: LayrzInputSuffixSlot(),
+                        disabled: false,
+                        readOnly: false,
+                        errors: [],
+                        hideDetails: false,
+                        states: {},
+                        child: Container(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // Find the input container
+        final containers = find.byType(Container);
+        // The first Container after theming is the input field container (with decoration and padding)
+        final containerWidget = tester.widget<Container>(containers.first);
+        final padding = containerWidget.padding as EdgeInsets?;
+
+        expect(padding, isNotNull, reason: 'Input container should have padding');
+
+        // Verify relative uniformity: all sides equal
+        expect(padding!.left, equals(padding.right), reason: 'Left padding should equal right padding');
+        expect(padding.top, equals(padding.bottom), reason: 'Top padding should equal bottom padding');
+        expect(
+          padding.left,
+          equals(padding.top),
+          reason: 'Horizontal padding should equal vertical padding (uniform all sides)',
+        );
+
+        // Verify absolute value: padding should be 8px (pd2 token)
+        expect(
+          padding.left,
+          equals(8.0),
+          reason: 'Padding should equal tokens.spacing.pd2 (8px)',
+        );
       });
     });
   });

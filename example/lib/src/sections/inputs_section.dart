@@ -127,10 +127,7 @@ class _InputsSectionState extends State<InputsSection> {
             },
           ),
 
-          // 7. Dense mode
-          _DenseModeShowcase(tokens: tokens),
-
-          // 8. Widget slot variants
+          // 7. Widget slot variants
           _WidgetSlotsShowcase(
             tokens: tokens,
             numericController: _numericController,
@@ -662,57 +659,6 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
                     disabled: true,
                     onTap: widget.onDisabledTap,
                     hintText: 'Taps: ${widget.disabledTapCount}',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-/// Demonstrates dense mode (compact layout).
-///
-/// Shows: default vs dense side by side to highlight the spacing difference.
-class _DenseModeShowcase extends StatelessWidget {
-  final LayrzTokens tokens;
-
-  const _DenseModeShowcase({required this.tokens});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp3,
-      children: [
-        Text('Dense Mode', style: tokens.typography.title),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp3,
-          children: [
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Default', style: tokens.typography.label),
-                  const LayrzTextInput(
-                    labelText: 'Regular size',
-                    hintText: 'Normal padding',
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Dense: true', style: tokens.typography.label),
-                  const LayrzTextInput(
-                    labelText: 'Compact size',
-                    hintText: 'Reduced padding',
-                    dense: true,
                   ),
                 ],
               ),

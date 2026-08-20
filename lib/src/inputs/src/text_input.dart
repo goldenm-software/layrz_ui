@@ -4,7 +4,6 @@ import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'input_chrome.dart';
-import 'input_density.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
 
@@ -124,13 +123,8 @@ class LayrzTextInput extends StatefulWidget {
 
   /// The padding applied inside the input field.
   ///
-  /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp2 horizontal and sp3 vertical when normal,
-  /// or sp2 horizontal with sp2 vertical when [dense] is true.
+  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
   final EdgeInsets? padding;
-
-  /// Whether the input field uses a compact (dense) layout.
-  final bool dense;
 
   /// The keyboard type for the input field.
   final TextInputType keyboardType;
@@ -196,7 +190,6 @@ class LayrzTextInput extends StatefulWidget {
     this.controller,
     this.focusNode,
     this.padding,
-    this.dense = false,
     this.keyboardType = TextInputType.text,
     this.textInputAction,
     this.inputFormatters = const [],
@@ -357,7 +350,6 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       helpContentText: widget.helpContentText,
       controller: _controller,
       padding: widget.padding,
-      dense: widget.dense,
       maxLength: widget.maxLength,
       child: Listener(
         onPointerDown: widget.disabled ? null : _updateStates,
@@ -371,14 +363,9 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
             child: EditableText(
               controller: _controller,
               focusNode: _focusNode,
-              style:
-                  InputDensitySpec(
-                    dense: widget.dense,
-                    tokens: tokens,
-                    iconTheme: context.theme.iconTheme,
-                  ).editableTextStyle.copyWith(
-                    color: spec.textColor,
-                  ),
+              style: tokens.typography.body.copyWith(
+                color: spec.textColor,
+              ),
               cursorColor: tokens.colors.primary,
               backgroundCursorColor: tokens.colors.fg3,
               selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),

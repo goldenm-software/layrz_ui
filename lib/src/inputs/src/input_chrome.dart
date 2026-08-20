@@ -5,10 +5,43 @@ import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
-import 'input_density.dart';
 import 'input_error_block.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
+
+/// Comfortable (normal) density specification for input fields.
+///
+/// Encapsulates all dimensions that define the comfortable density mode:
+/// padding (8px all sides), icon size (fontSize + 2px), text style (body),
+/// and content height that accommodates both icons and text.
+class _InputComfortableSpec {
+  final LayrzTokens tokens;
+  final IconThemeData? iconTheme;
+
+  _InputComfortableSpec(this.tokens, this.iconTheme);
+
+  /// The padding applied to all sides inside the input field.
+  EdgeInsets get padding => tokens.spacing.pd2;
+
+  /// The size of icons in slots and state indicators.
+  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp1;
+
+  /// The text style for input hints and slot text.
+  TextStyle get textStyle => tokens.typography.body;
+
+  /// The text style for the editable value itself (EditableText.style).
+  TextStyle get editableTextStyle => tokens.typography.body;
+
+  /// The minimum content height to accommodate both icons and text without clipping.
+  ///
+  /// This is the maximum of [iconSize] and the text line height computed from [editableTextStyle].
+  double get contentHeight {
+    final fontSize = editableTextStyle.fontSize ?? 16.0;
+    final lineHeightMultiplier = editableTextStyle.height ?? 1.0;
+    final textLineHeight = fontSize * lineHeightMultiplier;
+    return textLineHeight > iconSize ? textLineHeight : iconSize;
+  }
+}
 
 /// Library-private chrome widget that wraps an input field with label, border, and error handling.
 ///
@@ -68,18 +101,8 @@ class LayrzInputChrome extends StatelessWidget {
 
   /// The padding applied inside the input field.
   ///
-  /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp2 horizontal and sp3 vertical when normal,
-  /// or sp2 horizontal with sp2 vertical when [dense] is true.
-  ///
-  /// Explicit padding takes precedence over [dense] to prevent silent geometry
-  /// mutations when a caller provides an exact layout requirement.
+  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
   final EdgeInsets? padding;
-
-  /// Whether the input field uses a compact (dense) layout.
-  ///
-  /// Ignored when [padding] is non-null.
-  final bool dense;
 
   /// Maximum length of the input text.
   ///
@@ -106,7 +129,6 @@ class LayrzInputChrome extends StatelessWidget {
     this.helpContentText,
     this.controller,
     this.padding,
-    this.dense = false,
     this.maxLength,
   });
 
@@ -121,20 +143,11 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
-    // Centralized density specification — all dimensions that change with dense mode
-    final density = InputDensitySpec(
-      dense: dense,
-      tokens: tokens,
-      iconTheme: context.theme.iconTheme,
-    );
+    // Comfortable density specification — all dimensions for normal field layout
+    final density = _InputComfortableSpec(tokens, context.theme.iconTheme);
 
-    // Compute padding: explicit caller value wins over dense mode
-    final resolvedPadding =
-        padding ??
-        EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp2,
-          vertical: density.verticalPadding,
-        );
+    // Compute padding: explicit caller value wins over comfortable default
+    final resolvedPadding = padding ?? density.padding;
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. The height accommodates both
@@ -315,7 +328,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required InputDensitySpec density,
+    required _InputComfortableSpec density,
   }) {
     final trailing = <Widget>[];
 
@@ -427,7 +440,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required InputDensitySpec density,
+    required _InputComfortableSpec density,
   }) {
     final hasCallback = slot.onTap != null;
 
