@@ -375,12 +375,25 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       return const SizedBox.shrink();
     }
 
-    // Compute localToGlobal INSIDE the builder so it recomputes on every host rebuild
-    final anchorGlobalOffset = anchorRenderBox.localToGlobal(Offset.zero);
-    final anchorRect = anchorGlobalOffset & anchorRenderBox.size;
+    // Get the overlay's render box to resolve anchor position in overlay space (not window space).
+    // The bug: without ancestor:, the anchor is in window coordinates, but Positioned uses overlay coords.
+    // This causes 2x movement during scroll when overlay and window spaces diverge.
+    final overlayRenderBox = Overlay.of(overlayContext).context.findRenderObject() as RenderBox?;
+    if (overlayRenderBox == null || !overlayRenderBox.hasSize) {
+      return const SizedBox.shrink();
+    }
 
-    // Compute tooltip position using the position delegate
-    final overlaySize = MediaQuery.sizeOf(overlayContext);
+    // Compute localToGlobal INSIDE the builder so it recomputes on every host rebuild.
+    // Pass ancestor: overlayRenderBox to get coordinates in overlay space.
+    final anchorOffsetInOverlay = anchorRenderBox.localToGlobal(
+      Offset.zero,
+      ancestor: overlayRenderBox,
+    );
+    final anchorRect = anchorOffsetInOverlay & anchorRenderBox.size;
+
+    // Compute tooltip position using the position delegate.
+    // Use overlay's own size (not MediaQuery) so placement decisions happen in the same space.
+    final overlaySize = overlayRenderBox.size;
     final delegate = positionDelegate(widget.position);
     final positionContext = TooltipPositionContext(
       target: Offset(anchorRect.center.dx, anchorRect.center.dy),
