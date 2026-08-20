@@ -9,38 +9,38 @@ import 'package:layrz_ui/src/fonts/fonts.dart';
 /// use [copyWith(fontSize:)] to be explicit about deviating from the design system.
 ///
 /// The five styles are:
-/// - [display]: 45px, w800 — for hero and splash screens
-/// - [headline]: 28px, w700 — for page-level headings
-/// - [title]: 16px, w600 — for dialog and card titles
-/// - [body]: 14px, w400 — for body text and reading passages
-/// - [label]: 12px, w300 — for labels, buttons, tooltips, and badges
+/// - [display]: 40px, w700 — for hero and splash screens
+/// - [headline]: 24px, w600 — for page-level headings
+/// - [title]: 20px, w600 — for dialog and card titles
+/// - [body]: 16px, w400 — for body text and reading passages (web-equivalent to 1em)
+/// - [label]: 14px, w400 — for labels, buttons, tooltips, and badges
 ///
 /// All styles use the font families provided to [LayrzTextTheme.defaults].
 @immutable
 class LayrzTextTheme {
   /// Display style for hero text and splash screens.
   ///
-  /// Characteristics: 45px, w800, title font family.
+  /// Characteristics: 40px, w700, title font family.
   final TextStyle display;
 
   /// Headline style for page-level headings.
   ///
-  /// Characteristics: 28px, w700, title font family.
+  /// Characteristics: 24px, w600, title font family.
   final TextStyle headline;
 
   /// Title style for dialog and card titles.
   ///
-  /// Characteristics: 16px, w600, title font family.
+  /// Characteristics: 20px, w600, title font family.
   final TextStyle title;
 
   /// Body style for body text and reading passages.
   ///
-  /// Characteristics: 14px, w400, body font family.
+  /// Characteristics: 16px, w400, body font family.
   final TextStyle body;
 
   /// Label style for button labels, input labels, tooltips, and badges.
   ///
-  /// Characteristics: 12px, w300, body font family.
+  /// Characteristics: 14px, w400, body font family.
   final TextStyle label;
 
   /// Creates a new [LayrzTextTheme] with all text styles explicitly set.
@@ -112,10 +112,10 @@ class LayrzTextTheme {
 
     return LayrzTextTheme(
       display: titleStyle(40, FontWeight.w700),
-      headline: titleStyle(28, FontWeight.w600),
-      title: titleStyle(16, FontWeight.w600),
-      body: bodyStyle(14, FontWeight.w400),
-      label: bodyStyle(12, FontWeight.w400),
+      headline: titleStyle(24, FontWeight.w600),
+      title: titleStyle(20, FontWeight.w600),
+      body: bodyStyle(16, FontWeight.w400),
+      label: bodyStyle(14, FontWeight.w400),
     );
   }
 
