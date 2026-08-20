@@ -264,6 +264,7 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                   isSelected: item.isSelected,
                   onTap: () {
                     item.onTap?.call();
+                    widget.onClose();
                   },
                 ),
               ),
@@ -315,6 +316,7 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                 isSelected: item.isSelected,
                 onTap: () {
                   item.onTap?.call();
+                  widget.onClose();
                 },
               ),
             ),
