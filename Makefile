@@ -25,8 +25,19 @@ install-hooks:
 	@mkdir -p .git/hooks
 	@echo "#!/bin/sh" > .git/hooks/pre-commit
 	@echo "# Pre-commit hook: delegate to tool/checks.sh for static checks." >> .git/hooks/pre-commit
-	@echo "# This shim ensures checks run before every commit." >> .git/hooks/pre-commit
-	@echo 'exec "$$(git rev-parse --show-toplevel)"/tool/checks.sh' >> .git/hooks/pre-commit
+	@echo "#" >> .git/hooks/pre-commit
+	@echo "# Resolve the toplevel of the CURRENT worktree, so each worktree runs its own" >> .git/hooks/pre-commit
+	@echo "# copy of the script rather than the main checkout's." >> .git/hooks/pre-commit
+	@echo "#" >> .git/hooks/pre-commit
+	@echo "# Skip gracefully when the script is absent — branches and worktrees created" >> .git/hooks/pre-commit
+	@echo "# before tool/checks.sh existed must remain committable, and a hook that hard" >> .git/hooks/pre-commit
+	@echo "# fails on a missing file would block them with an opaque error." >> .git/hooks/pre-commit
+	@echo 'ROOT="$$(git rev-parse --show-toplevel)"' >> .git/hooks/pre-commit
+	@echo 'if [ -x "$$ROOT/tool/checks.sh" ]; then' >> .git/hooks/pre-commit
+	@echo '  exec "$$ROOT/tool/checks.sh"' >> .git/hooks/pre-commit
+	@echo 'fi' >> .git/hooks/pre-commit
+	@echo 'echo "pre-commit: $$ROOT/tool/checks.sh not found — skipping static checks"' >> .git/hooks/pre-commit
+	@echo 'exit 0' >> .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@git config --unset core.hooksPath 2>/dev/null || true
 	@echo "✓ Git hooks installed"

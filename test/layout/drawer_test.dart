@@ -276,7 +276,6 @@ void main() {
       tester.view.physicalSize = const Size(500, 900);
 
       bool homeTapCalled = false;
-      bool dashboardTapCalled = false;
 
       await pumpThemedApp(
         tester,
@@ -291,7 +290,7 @@ void main() {
             LayrzNavigatorPage(
               id: 'dashboard',
               labelText: 'Dashboard',
-              onTap: () => dashboardTapCalled = true,
+              onTap: () {},
             ),
           ],
           body: const SizedBox(child: Text('Body')),
