@@ -14,3 +14,19 @@ Así mismo, se ajustó el `LayrzLayout` en mobile, con las siguientes correccion
 * Mobile usaba Hamburguer icon (≡), reemplazado por three-dots horizontales (⋯)
 * Se removió el avatar de la esquina superior derecha, ya que no es necesario en mobile
 * Se integró de forma automática el `SafeArea` para evitar que el contenido salga de pantalla, sin embargo, se agregó una opción para apagarlo desde un argumento en caso de así requerirlo
+
+Adicionalmente, nuevos entries:
+
+* `LayrzStepper`, un widget para crear los wizards - M3
+* `LayrzSlider`, un slider pues, no necesita explicaciones - M3
+* `LayrzProgressBar`, un progress bar horizontal - M6
+* `LayrzTimeline`, por primera vez una timeline automática, con soporte para mostrar elementos a la izquierda y derecha - M6
+* `LayrzBadge`, el circulito chiquito que indica que pasó algo ahí - M6
+* `LayrzSkeleton`, un widget para mostrar un placeholder mientras se carga el contenido - M6
+* `LayrzAccordion`, un contenedor colapsable, como el que sale en reportes - M6
+* `LayrzTreeView`, un widget para mostrar árboles de información, como la vista en un editor de código - M6
+* `LayrzSplitView`, un widget para mostrar dos vistas, tamaños variables, es decir, se puede mover pa allá y pa acá - M5
+* `LayrzRefreshIndicator`, resulta que el `RefreshIndicator` de Flutter es Material, so necesitamos un equivalente - M5
+* `LayrzDialog`, un dialogo pues, no tengo que explicarlo, verdad? - M2
+* `LayrzBottomSheet`, un bottom sheet para hacer las vistas detalles un bottom sheet en mobile, como en Layrz KICK - M2
+* `LayrzEndDrawer`, el drawer de la derecha, para reemplazar los `LayrzDialog` en desktop mode :smile: - M5
