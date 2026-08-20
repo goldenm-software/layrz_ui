@@ -193,7 +193,8 @@ class _LayrzLayoutState extends State<LayrzLayout> {
 /// Preview widget for LayrzLayout in expanded presentation mode.
 @Preview(
   name: 'Light',
-  theme: LayrzPreviewTheme.light,
+  size: Size(1200, 600),
+  theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzLayout() => LayrzLayout(
   logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',

@@ -8,7 +8,7 @@ import 'package:layrz_ui/src/preview/preview.dart';
 ///
 /// Displays multiple semantic buttons horizontally with default spacing.
 /// Semantic factories preset the icon and colour dot to match the action's meaning.
-@Preview(name: 'Row', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Row', size: Size(500, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzButtonGroupRow() {
   return LayrzButtonGroup(
     triggerHintText: 'Row actions',
@@ -39,7 +39,7 @@ Widget previewLayrzButtonGroupRow() {
 /// Displays a single trigger button that opens a menu with semantic entry items.
 /// Labels can organize entries into logical sections; they render in dropdown mode
 /// but are silently skipped in row mode.
-@Preview(name: 'Dropdown', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Dropdown', size: Size(300, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzButtonGroupDropdown() {
   return LayrzButtonGroup(
     items: [
@@ -73,7 +73,7 @@ Widget previewLayrzButtonGroupDropdown() {
 /// Demonstrates how the builder pattern allows full control over the trigger's
 /// appearance and behavior. This example uses an outlined FAB style instead of
 /// the default elevated FAB.
-@Preview(name: 'Builder (Custom Trigger)', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Builder (Custom Trigger)', size: Size(300, 120), theme: layrzPreviewLightTheme)
 Widget previewLayrzButtonGroupBuilder() {
   return LayrzButtonGroup.builder(
     items: [

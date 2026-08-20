@@ -5,7 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzChip] with different style variants.
-@Preview(name: 'Styles', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Styles', size: Size(500, 150), theme: layrzPreviewLightTheme)
 Widget previewChipStyles() {
   return _PreviewChipStyles();
 }
@@ -47,7 +47,7 @@ class _PreviewChipStyles extends StatelessWidget {
 }
 
 /// Preview of [LayrzChip] with different semantic types.
-@Preview(name: 'Types', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Types', size: Size(500, 250), theme: layrzPreviewLightTheme)
 Widget previewChipTypes() {
   return _PreviewChipTypes();
 }
@@ -86,7 +86,7 @@ class _PreviewChipTypes extends StatelessWidget {
 }
 
 /// Preview of [LayrzChip] with leading icon and delete affordance.
-@Preview(name: 'Features', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Features', size: Size(500, 250), theme: layrzPreviewLightTheme)
 Widget previewChipFeatures() {
   return _PreviewChipFeatures();
 }
@@ -135,7 +135,7 @@ class _PreviewChipFeatures extends StatelessWidget {
 }
 
 /// Preview of [LayrzChipGroup] with scrollable behavior.
-@Preview(name: 'Group Scrollable', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Group Scrollable', size: Size(400, 250), theme: layrzPreviewLightTheme)
 Widget previewChipGroupScrollable() {
   return _PreviewChipGroupScrollable();
 }
@@ -168,7 +168,7 @@ class _PreviewChipGroupScrollable extends StatelessWidget {
 }
 
 /// Preview of [LayrzChipGroup] with compact behavior.
-@Preview(name: 'Group Compact', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Group Compact', size: Size(400, 200), theme: layrzPreviewLightTheme)
 Widget previewChipGroupCompact() {
   return _PreviewChipGroupCompact();
 }

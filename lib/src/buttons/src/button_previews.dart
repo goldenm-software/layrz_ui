@@ -5,7 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
 /// Preview of [LayrzButton] with different style variants.
-@Preview(name: 'Styles', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Styles', size: Size(400, 150), theme: layrzPreviewLightTheme)
 Widget previewLayrzButtonStyles() {
   return _PreviewButtonStyles();
 }
@@ -36,7 +36,7 @@ class _PreviewButtonStyles extends StatelessWidget {
 }
 
 /// Preview of [LayrzButton] semantic factories.
-@Preview(name: 'Semantic', theme: LayrzPreviewTheme.light)
+@Preview(name: 'Semantic', size: Size(400, 150), theme: layrzPreviewLightTheme)
 Widget previewLayrzButtonSemantic() {
   return _PreviewSemantic();
 }

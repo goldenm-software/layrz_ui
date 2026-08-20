@@ -269,7 +269,7 @@ The convention of mirroring `lib/src/<module>/` structure under `test/<module>/`
 
 ### 3. Use @Preview for visual widgets
 
-For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with `LayrzPreviewTheme`.
+For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with the `layrzPreviewLightTheme` top-level function.
 
 ```dart
 import 'package:flutter/widget_previews.dart';
@@ -277,7 +277,7 @@ import 'package:layrz_ui/preview.dart';
 
 @Preview(
   name: 'Light',
-  theme: LayrzPreviewTheme.light,
+  theme: layrzPreviewLightTheme,
 )
 Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
 ```
@@ -288,11 +288,11 @@ The real API in Flutter 3.47:
 - **Theme type**: `PreviewThemeData` (abstract base class in the SDK)
 - **layrz_ui integration**: `LayrzPreviewTheme extends PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface). Light theme only; dark mode is out of scope per decision D7.
 
-**Important**: The `theme:` parameter accepts a tear-off: `@Preview(theme: LayrzPreviewTheme.light)`, not an instance. `LayrzPreviewTheme.light` is a static method that returns a `PreviewThemeData`.
+**Important**: The `theme:` parameter accepts a tear-off **to a top-level function** (not a static method on a class): `@Preview(theme: layrzPreviewLightTheme)`, not an instance. The widget-preview code generator can only serialize top-level function tear-offs; it cannot resolve static methods on a class. So you **must** use the `layrzPreviewLightTheme` top-level function, not `LayrzPreviewTheme.light`.
 
 Rules:
 - Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Use `LayrzPreviewTheme.light` as a tear-off in the `@Preview` annotation.
+- Use `layrzPreviewLightTheme` as a tear-off in the `@Preview` annotation (not `LayrzPreviewTheme.light`, which will fail at compile time).
 - Add a single `@Preview` annotation for the light theme.
 - Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
 

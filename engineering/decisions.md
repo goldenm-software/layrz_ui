@@ -2415,6 +2415,88 @@ After the first release, monitor accessibility feedback: do users find the user 
 
 ---
 
+## D44: Mobile Drawer Presentation — Floating-Page Transition
+
+**Date**: 2026-08-19  
+**Status**: Decided  
+**Category**: Design / Visual System
+
+### Context
+
+The mobile drawer presentation in `LayrzLayout` was implemented with two competing approaches under review:
+1. **Conventional slide-over**: drawer slides in from the left over the page (Material.io pattern), with a semi-transparent scrim behind it to darken the page.
+2. **Floating-page reveal**: the page shrinks, translates right, gains rounded corners and elevation, and reveals the drawer as a flat backdrop behind it (card-over-backdrop pattern).
+
+Design review with the product team included reference material from a banking app showcasing the floating-page approach. The question was whether the drawer's visual impact justified the implementation complexity and performance implications.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Conventional slide-over + scrim (rejected) | Familiar Material.io pattern; minimal page change; drawer moves in one direction | Scrim darkens content; drawer reads as modal occlusion, not depth |
+| (b) **Floating-page reveal (chosen)** | Reads as depth via layering; page elevation creates visual hierarchy; drawer recedes to backdrop; scrim unnecessary | More complex animation (scale + translate page); larger per-frame cost if animated property affects layout |
+| (c) Parallax reveal (rejected) | Visually engaging; page and drawer move together | High complexity; difficult to parallax two unrelated widgets; parallax affordance unclear to users (not a standard mobile pattern) |
+| (d) Staggered item entrance (rejected) | Smooth, polished feel; items animate in sequence | Complexity increases linearly with item count; does not improve drawer findability on first open; visual noise on mobile |
+
+### Decision
+
+**Chose (b): Floating-page reveal with scale + translate.**
+
+When the drawer opens, the page (top bar + body content) **scales to 0.88** (anchored `Alignment.centerLeft`) and **translates right by 260 px** (the drawer width). The page gains **rounded corners (r16)** and **elevation4 shadow**. The drawer renders as a **flat, unshaded backdrop** behind the page.
+
+The drawer does **not** have elevation or shadow; the page's shadow creates all the depth. This inverse-shadow rule is critical: it ensures the drawer reads as "behind" (non-interactive visual anchor) while the page reads as "above" (interactive, draggable, closable).
+
+**Full-screen scrim removed.** With the drawer behind the page, a scrim can never be seen, so it is eliminated from the design and from the constants (`kLayrzLayoutDrawerScrimOpacity` was removed).
+
+### Rationale
+
+- **Depth hierarchy**: Scaling + translating the page while revealing the drawer creates a clear visual depth relationship. The page reads as a floating card; the drawer as the surface it floats above.
+- **Feedback clarity**: Users immediately understand that the drawer is a separate layer, not an overlaid modal. The page's elevation shadow and rounded corners provide haptic-like feedback.
+- **Touch affordance**: The visible page sliver (12% of the original width on the right) remains draggable, providing a clear dismissal affordance. Users can either tap the page or drag it to close the drawer.
+- **No scrim needed**: Without a scrim, the visual design is cleaner and simpler. The absence of dimming is intentional: the drawer is not "interrupting" the page, it is an alternative view.
+
+### Constraint: Layout-Affecting Animations Are Performance Killers
+
+**Critical finding from profiling**: Never animate layout-affecting properties in the drawer transition.
+
+When the drawer gesture updates the animation, the page's `Positioned` offset was being mutated, which marked `RenderStack` dirty for **LAYOUT**. This forced the entire subtree to relayout on every frame:
+
+| Metric | Cost |
+|--------|------|
+| LAYOUT | 795ms per gesture frame |
+| PAINT | 205ms per gesture frame |
+| Frame drop | Up to 48.8ms frame time (max sustainable: 16.6ms at 60fps) |
+
+**Solution**: Replace the `Positioned` offset mutation with `Positioned.fill` + `Transform.translate` (paint-and-hit-test only). `Transform` does NOT mark parents dirty for layout; it only affects painting and hit testing. New metrics:
+
+| Metric | Cost |
+|--------|------|
+| LAYOUT | ~1ms per gesture frame (no dirty marks) |
+| PAINT | ~50ms per gesture frame |
+| Frame drop | ~8.2ms frame time (no jank) |
+
+**Rule for future work**: In animations and gestures, only vary `Transform`, opacity, color, shadow, and border radius. Never mutate `Positioned` offsets, sizes, or `Flex` grow factors on every frame. If you must animate geometry, profile first and confirm the RenderBox's parents do NOT get marked dirty for layout.
+
+This constraint is encoded in the implementation (`Transform.translate` inside `Positioned.fill`) and documented here for future drawer/rail/tab work.
+
+### Consequences
+
+- **Page is uninteractable while drawer is open**: The page is wrapped in `IgnorePointer(ignoring: true)` when the drawer opens, preventing accidental taps from reaching content beneath. This is intentional — the drawer should be closed before interacting with the page.
+- **Scrim constant removed**: `kLayrzLayoutDrawerScrimOpacity` no longer exists; code referencing it will fail at compile time, forcing explicit acknowledgment of the design change.
+- **Gesture handling is stateful**: The drawer manages two gesture regions (closed-state left edge, open-state page sliver) and switches between them. Tests must verify both paths.
+- **Animation curves are tuned**: The transition uses `motion.easingEnter` and `motion.easingExit` from tokens, so the feel can be adjusted per-theme without code changes.
+- **Drawer is no longer a scroll container**: The previous draft rendered the drawer as a scrollable surface. The new design renders it as a flat, static backdrop. If navigation items exceed viewport height, the drawer menu itself must become scrollable (not the entire drawer).
+
+### Review Trigger
+
+**Revisit if**:
+- User testing reveals that the 12% visible page sliver is not an obvious dismissal affordance; users miss the drag-to-close interaction.
+- Animation smoothness during gesture degrades on older devices despite the `Transform` optimization.
+- A future design update decides the drawer should have elevation or a different backdrop treatment.
+- A consuming app reports that the page's uninteractability while the drawer is open breaks their workflow (e.g., they need background content to remain partially interactive).
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:

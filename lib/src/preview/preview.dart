@@ -2,6 +2,31 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
+/// Creates a [LayrzPreviewTheme] with default light-mode design tokens.
+///
+/// This function is a top-level tear-off that returns a [PreviewThemeData] suitable
+/// for use as the `theme:` parameter in `@Preview` annotations. The widget-preview
+/// code generator can only serialize top-level function tear-offs (not static methods
+/// on a class), so this top-level function is the working pattern for `@Preview`.
+///
+/// **Use this in your `@Preview` annotations:**
+/// ```dart
+/// import 'package:flutter/widget_previews.dart';
+/// import 'package:layrz_ui/preview.dart';
+///
+/// @Preview(
+///   name: 'Light',
+///   theme: layrzPreviewLightTheme,
+/// )
+/// Widget previewMyWidget() => MyWidget(/* ... */);
+/// ```
+///
+/// On each call, it constructs a new [LayrzPreviewTheme] wrapping a fresh
+/// [LayrzThemeData.light()], ensuring previewed widgets render with the complete
+/// layrz_ui light-mode theme (including [LayrzTheme], [DefaultTextStyle], [IconTheme],
+/// and background color).
+PreviewThemeData layrzPreviewLightTheme() => LayrzPreviewTheme(data: LayrzThemeData.light());
+
 /// A [PreviewThemeData] implementation that applies the layrz_ui light-mode theme
 /// to Flutter 3.47+ widget previews.
 ///
@@ -10,14 +35,16 @@ import 'package:layrz_ui/src/theme/theme.dart';
 /// widget nesting that [LayrzApp] installs at the root, so previewed widgets render
 /// identically to the production app rather than with SDK defaults.
 ///
-/// Usage with `@Preview` annotations:
+/// To use with `@Preview` annotations, use the top-level function [layrzPreviewLightTheme]
+/// (not the static method [LayrzPreviewTheme.light], which the code generator cannot resolve):
+///
 /// ```dart
 /// import 'package:flutter/widget_previews.dart';
 /// import 'package:layrz_ui/preview.dart';
 ///
 /// @Preview(
 ///   name: 'Light',
-///   theme: LayrzPreviewTheme.light,
+///   theme: layrzPreviewLightTheme,
 /// )
 /// Widget previewMyWidget() => MyWidget(/* ... */);
 /// ```
@@ -39,24 +66,18 @@ final class LayrzPreviewTheme extends PreviewThemeData {
   ///
   /// [data] must be a complete [LayrzThemeData]; typically created via
   /// [LayrzThemeData.light()]. This constructor is const, which allows the
-  /// static factory method [light] to produce a compile-time constant tear-off
-  /// suitable for the `@Preview.theme` parameter.
+  /// static factory method [light] to produce a compile-time constant tear-off.
   const LayrzPreviewTheme({required this.data});
 
   /// Creates a [LayrzPreviewTheme] with default light-mode design tokens.
   ///
-  /// This static method constructs a new [LayrzPreviewTheme] wrapping a fresh
-  /// [LayrzThemeData.light()] on each call. The tear-off `LayrzPreviewTheme.light`
-  /// (the function itself) is a compile-time constant suitable for the
-  /// `@Preview.theme` parameter:
+  /// **Deprecated in favor of the top-level function [layrzPreviewLightTheme].** The
+  /// widget-preview code generator can only serialize top-level function tear-offs (not
+  /// static methods on a class), so `@Preview(theme: LayrzPreviewTheme.light)` will fail
+  /// to compile. Use [layrzPreviewLightTheme] instead.
   ///
-  /// ```dart
-  /// @Preview(theme: LayrzPreviewTheme.light)
-  /// ```
-  ///
-  /// The return type is [PreviewThemeData] (the SDK interface), ensuring
-  /// type-safe assignment to the annotation parameter.
-  static PreviewThemeData light() => LayrzPreviewTheme(data: LayrzThemeData.light());
+  /// This method is retained for backward compatibility in code that does not use `@Preview`.
+  static PreviewThemeData light() => layrzPreviewLightTheme();
 
   /// Wraps the child widget in the full layrz_ui theme context.
   ///
