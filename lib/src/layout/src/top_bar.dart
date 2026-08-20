@@ -82,13 +82,6 @@ class LayrzLayoutTopBar extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Bottom divider (dead code — height 1.0 Container with no width inside a Row)
-                Container(
-                  margin: const EdgeInsets.only(top: 8.0),
-                  height: 1.0,
-                  color: tokens.colors.divider,
-                ),
               ],
             ),
           ),
