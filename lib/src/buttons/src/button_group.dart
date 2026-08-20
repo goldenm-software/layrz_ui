@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -42,7 +42,7 @@ class LayrzButtonGroup extends StatelessWidget {
   /// - `null` (default): switch automatically at the md breakpoint
   final bool? useDropdown;
 
-  /// Gap between buttons in row mode. Defaults to `tokens.spacing.base`.
+  /// Gap between buttons in row mode. Defaults to `tokens.spacing.sp2`.
   ///
   /// Only applies in row mode. Unused in dropdown mode.
   final double? spacing;
@@ -157,7 +157,7 @@ class LayrzButtonGroup extends StatelessWidget {
       }
 
       return Wrap(
-        spacing: spacing ?? tokens.spacing.base,
+        spacing: spacing ?? tokens.spacing.sp2,
         children: buttons,
       );
     }
@@ -167,7 +167,7 @@ class LayrzButtonGroup extends StatelessWidget {
         builder ??
         (context, controller) => LayrzButton(
           labelText: triggerHintText!,
-          icon: triggerIcon ?? LayrzIcons.solarOutlineMenuDots,
+          icon: triggerIcon ?? MdiIcons.dotsVertical,
           style: LayrzButtonStyle.elevatedFab,
           onTap: controller.isOpen ? controller.close : controller.open,
         );

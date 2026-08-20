@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
@@ -212,7 +212,7 @@ void main() {
         () {
           LayrzTextInput(
             labelText: 'Invalid',
-            prefixIcon: LayrzIcons.solarOutlineCheckCircle,
+            prefixIcon: MdiIcons.checkCircleOutline,
             prefixText: r'$',
           );
         },
@@ -225,7 +225,7 @@ void main() {
         () {
           LayrzTextInput(
             labelText: 'Invalid',
-            suffixIcon: LayrzIcons.solarOutlineEyeScan,
+            suffixIcon: MdiIcons.eyeOutline,
             suffixText: '%',
           );
         },
@@ -786,8 +786,8 @@ void main() {
         tester,
         LayrzTextInput(
           labelText: 'With slots',
-          prefixIcon: LayrzIcons.solarOutlineCheckCircle,
-          suffixIcon: LayrzIcons.solarOutlineEyeScan,
+          prefixIcon: MdiIcons.checkCircleOutline,
+          suffixIcon: MdiIcons.eyeOutline,
         ),
       );
 

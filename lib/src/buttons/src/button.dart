@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -281,7 +280,6 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      // icon: MdiIcons.eyeOutline,
       icon: MdiIcons.eyeOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
@@ -370,8 +368,7 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      // icon: LayrzIcons.mdiEmoticonPoop,
-      icon: LayrzIcons.mdiTrashCanOutline,
+      icon: MdiIcons.trashCanOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -592,7 +589,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                       color: spec.borderColor,
                       width: spec.borderWidth,
                     ),
-                    borderRadius: BorderRadius.circular(tokens.radius.base),
+                    borderRadius: BorderRadius.circular(tokens.radius.r2),
                     boxShadow: spec.shadows,
                   ),
                   child: Stack(

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/input_slot.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed.dart';
@@ -409,7 +409,7 @@ void main() {
       testWidgets('field height is constant regardless of icon presence', (tester) async {
         final fieldVariants = <String, LayrzInputPrefixSlot>{
           'no-prefix': LayrzInputPrefixSlot(),
-          'prefix-icon': LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+          'prefix-icon': LayrzInputPrefixSlot(icon: MdiIcons.plusCircleOutline),
         };
 
         final heights = <String, double>{};
@@ -466,8 +466,8 @@ void main() {
             suffix: LayrzInputSuffixSlot(),
           ),
           'both-icons': (
-            prefix: LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
-            suffix: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineCheckCircle),
+            prefix: LayrzInputPrefixSlot(icon: MdiIcons.plusCircleOutline),
+            suffix: LayrzInputSuffixSlot(icon: MdiIcons.checkCircleOutline),
           ),
         };
 
@@ -539,7 +539,7 @@ void main() {
                         child: LayrzInputChrome(
                           labelText: 'Test Field',
                           isRequired: false,
-                          prefixSlot: LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                          prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.plusCircleOutline),
                           suffixSlot: LayrzInputSuffixSlot(),
                           disabled: false,
                           readOnly: false,
@@ -588,7 +588,7 @@ void main() {
                         labelText: 'Test Field',
                         isRequired: false,
                         prefixSlot: LayrzInputPrefixSlot(),
-                        suffixSlot: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                        suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.plusCircleOutline),
                         disabled: false,
                         readOnly: true,
                         errors: ['Error message'],
@@ -612,10 +612,10 @@ void main() {
         expect(allIcons, findsWidgets, reason: 'Should have trailing icons');
 
         // Find specific elements: suffix icon, lock icon, help icon, error icon
-        final suffixIconFinder = find.byIcon(LayrzIcons.solarOutlineAddCircle);
-        final lockIconFinder = find.byIcon(LayrzIcons.solarOutlineLockKeyhole);
-        final helpIconFinder = find.byIcon(LayrzIcons.solarOutlineHelp);
-        final errorIconFinder = find.byIcon(LayrzIcons.solarOutlineDangerTriangle);
+        final suffixIconFinder = find.byIcon(MdiIcons.plusCircleOutline);
+        final lockIconFinder = find.byIcon(MdiIcons.lockOutline);
+        final helpIconFinder = find.byIcon(MdiIcons.helpCircleOutline);
+        final errorIconFinder = find.byIcon(MdiIcons.alertOutline);
 
         // Get the x-coordinates (left positions) of each element
         final suffixRect = tester.getRect(suffixIconFinder);
@@ -657,7 +657,7 @@ void main() {
                         labelText: 'Test Field',
                         isRequired: false,
                         prefixSlot: LayrzInputPrefixSlot(),
-                        suffixSlot: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+                        suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.plusCircleOutline),
                         disabled: false,
                         readOnly: false,
                         errors: ['Error message'],
@@ -674,8 +674,8 @@ void main() {
         );
         await tester.pump();
 
-        final suffixIconFinder = find.byIcon(LayrzIcons.solarOutlineAddCircle);
-        final errorIconFinder = find.byIcon(LayrzIcons.solarOutlineDangerTriangle);
+        final suffixIconFinder = find.byIcon(MdiIcons.plusCircleOutline);
+        final errorIconFinder = find.byIcon(MdiIcons.alertOutline);
 
         final suffixRect = tester.getRect(suffixIconFinder);
         final errorRect = tester.getRect(errorIconFinder);
@@ -696,7 +696,7 @@ void main() {
             labelText: 'Test',
             isRequired: false,
             prefixSlot: LayrzInputPrefixSlot(
-              icon: LayrzIcons.solarOutlineCheckCircle,
+              icon: MdiIcons.checkCircleOutline,
               onTap: () {},
             ),
             suffixSlot: LayrzInputSuffixSlot(),
@@ -725,7 +725,7 @@ void main() {
             isRequired: false,
             prefixSlot: LayrzInputPrefixSlot(),
             suffixSlot: LayrzInputSuffixSlot(
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
               // No onTap callback — not tappable
             ),
             disabled: false,
@@ -738,7 +738,7 @@ void main() {
         );
 
         // The suffix icon should be rendered but not wrapped in a MouseRegion for interaction
-        final suffixIcon = find.byIcon(LayrzIcons.solarOutlineAddCircle);
+        final suffixIcon = find.byIcon(MdiIcons.plusCircleOutline);
         expect(suffixIcon, findsOneWidget);
       });
 
@@ -762,7 +762,7 @@ void main() {
         );
 
         // Help icon should be rendered with MouseRegion for help cursor
-        final helpIcon = find.byIcon(LayrzIcons.solarOutlineHelp);
+        final helpIcon = find.byIcon(MdiIcons.helpCircleOutline);
         expect(helpIcon, findsOneWidget);
       });
 
@@ -773,8 +773,8 @@ void main() {
           LayrzInputChrome(
             labelText: 'Test',
             isRequired: false,
-            prefixSlot: LayrzInputPrefixSlot(icon: LayrzIcons.solarOutlineCheckCircle),
-            suffixSlot: LayrzInputSuffixSlot(icon: LayrzIcons.solarOutlineAddCircle),
+            prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.checkCircleOutline),
+            suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.plusCircleOutline),
             disabled: false,
             readOnly: false,
             errors: [],
@@ -787,8 +787,8 @@ void main() {
         // Both prefix icon and suffix icon should use theme icon size (24),
         // not hardcoded 20. This test verifies they render at the same size
         // as trailing icons by checking their visual sizes are consistent.
-        final prefixIcon = find.byIcon(LayrzIcons.solarOutlineCheckCircle);
-        final suffixIcon = find.byIcon(LayrzIcons.solarOutlineAddCircle);
+        final prefixIcon = find.byIcon(MdiIcons.checkCircleOutline);
+        final suffixIcon = find.byIcon(MdiIcons.plusCircleOutline);
 
         expect(prefixIcon, findsOneWidget);
         expect(suffixIcon, findsOneWidget);

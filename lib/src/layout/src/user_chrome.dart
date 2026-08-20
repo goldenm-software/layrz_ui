@@ -1,5 +1,5 @@
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
@@ -62,7 +62,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
           children: [
             // Avatar with rounded square shape (r8 radius)
             ClipRRect(
-              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              borderRadius: tokens.radius.br2,
               child: SizedBox(
                 width: kLayrzLayoutUserAvatarSize,
                 height: kLayrzLayoutUserAvatarSize,
@@ -114,7 +114,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
             children: [
               // Avatar with rounded square shape (r8 radius)
               ClipRRect(
-                borderRadius: BorderRadius.circular(tokens.radius.r8),
+                borderRadius: tokens.radius.br2,
                 child: SizedBox(
                   width: kLayrzLayoutUserAvatarSize,
                   height: kLayrzLayoutUserAvatarSize,
@@ -147,7 +147,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
               // Chevron
               SizedBox(width: 6.0),
               Icon(
-                LayrzIcons.solarOutlineAltArrowUp,
+                MdiIcons.chevronUp,
                 size: kLayrzLayoutUserChromeChevronSize,
                 color: tokens.colors.fg3,
               ),

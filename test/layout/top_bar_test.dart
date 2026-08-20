@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed_app.dart';
@@ -271,7 +271,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('top bar drawer trigger icon is solarBoldMenuDots', (WidgetTester tester) async {
+    testWidgets('top bar drawer trigger icon is menu', (WidgetTester tester) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -298,8 +298,8 @@ void main() {
       final firstIcon = tester.widget<Icon>(icons.first);
       expect(
         firstIcon.icon,
-        LayrzIcons.solarBoldMenuDots,
-        reason: 'Top bar drawer trigger icon should be LayrzIcons.solarBoldMenuDots',
+        MdiIcons.menu,
+        reason: 'Top bar drawer trigger icon should be MdiIcons.menu',
       );
 
       expect(tester.takeException(), isNull);

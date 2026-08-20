@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -15,17 +15,17 @@ Widget previewDropdownMenuClosed() {
         LayrzDropdownEntry(
           labelText: 'New Item',
           onTap: () {},
-          icon: LayrzIcons.solarOutlineAddCircle,
+          icon: MdiIcons.plusCircleOutline,
         ),
         LayrzDropdownEntry(
           labelText: 'Edit',
           onTap: () {},
-          icon: LayrzIcons.solarOutlinePenNewSquare,
+          icon: MdiIcons.pencilOutline,
         ),
         LayrzDropdownEntry(
           labelText: 'Delete',
           onTap: () {},
-          icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+          icon: MdiIcons.trashCanOutline,
         ),
       ],
       builder: (context, controller) => LayrzButton(
@@ -47,18 +47,18 @@ Widget previewDropdownMenuMixed() {
         LayrzDropdownEntry(
           labelText: 'Create',
           onTap: () {},
-          icon: LayrzIcons.solarOutlineAddCircle,
+          icon: MdiIcons.plusCircleOutline,
         ),
         LayrzDropdownEntry(
           labelText: 'Edit',
           onTap: () {},
-          icon: LayrzIcons.solarOutlinePenNewSquare,
+          icon: MdiIcons.pencilOutline,
         ),
         LayrzDropdownLabel(labelText: 'Danger'),
         LayrzDropdownEntry(
           labelText: 'Delete',
           onTap: () {},
-          icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+          icon: MdiIcons.trashCanOutline,
         ),
       ],
       builder: (context, controller) => LayrzButton(
@@ -167,21 +167,21 @@ Widget previewDropdownMenuWithDots() {
             LayrzDropdownEntry(
               labelText: 'Create',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
               color: tokens.colors.primary,
               shortcut: {LogicalKeyboardKey.control, LogicalKeyboardKey.keyN},
             ),
             LayrzDropdownEntry(
               labelText: 'Edit',
               onTap: () {},
-              icon: LayrzIcons.solarOutlinePenNewSquare,
+              icon: MdiIcons.pencilOutline,
               color: tokens.colors.primary,
               shortcut: {LogicalKeyboardKey.control, LogicalKeyboardKey.keyE},
             ),
             LayrzDropdownEntry(
               labelText: 'Delete',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+              icon: MdiIcons.trashCanOutline,
               color: tokens.colors.danger,
               shortcut: {
                 LogicalKeyboardKey.control,
@@ -220,12 +220,12 @@ Widget previewDropdownMenuColoredLabels() {
             LayrzDropdownEntry(
               labelText: 'Create',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
             ),
             LayrzDropdownEntry(
               labelText: 'Edit',
               onTap: () {},
-              icon: LayrzIcons.solarOutlinePenNewSquare,
+              icon: MdiIcons.pencilOutline,
             ),
             LayrzDropdownLabel(
               labelText: 'Danger',
@@ -234,7 +234,7 @@ Widget previewDropdownMenuColoredLabels() {
             LayrzDropdownEntry(
               labelText: 'Delete',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+              icon: MdiIcons.trashCanOutline,
             ),
           ],
           builder: (context, controller) => LayrzButton(

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
@@ -21,14 +21,14 @@ class ImagesSection extends StatelessWidget {
         children: [
           // Avatar variants
           Text('Avatar Variants', style: tokens.typography.headline.copyWith(fontSize: 16)),
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
           _buildAvatarRow(tokens),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Image component
           Text('Image Component', style: tokens.typography.headline.copyWith(fontSize: 16)),
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
           _buildImageDemo(tokens),
         ],
       ),
@@ -44,34 +44,34 @@ class ImagesSection extends StatelessWidget {
           Column(
             children: [
               const LayrzAvatar(nameText: 'John Doe', size: 48),
-              SizedBox(height: tokens.spacing.sp8),
+              SizedBox(height: tokens.spacing.sp2),
               Text('Initials', style: tokens.typography.label),
             ],
           ),
-          SizedBox(width: tokens.spacing.sp24),
+          SizedBox(width: tokens.spacing.sp4),
           Column(
             children: [
-              LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 48),
-              SizedBox(height: tokens.spacing.sp8),
+              LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline, size: 48),
+              SizedBox(height: tokens.spacing.sp2),
               Text('Icon', style: tokens.typography.label),
             ],
           ),
-          SizedBox(width: tokens.spacing.sp24),
+          SizedBox(width: tokens.spacing.sp4),
           Column(
             children: [
               const LayrzAvatar.emoji(emoji: '🎉', size: 48),
-              SizedBox(height: tokens.spacing.sp8),
+              SizedBox(height: tokens.spacing.sp2),
               Text('Emoji', style: tokens.typography.label),
             ],
           ),
-          SizedBox(width: tokens.spacing.sp24),
+          SizedBox(width: tokens.spacing.sp4),
           Column(
             children: [
               const LayrzAvatar.image(
                 imageSource: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
                 size: 48,
               ),
-              SizedBox(height: tokens.spacing.sp8),
+              SizedBox(height: tokens.spacing.sp2),
               Text('Network Image', style: tokens.typography.label),
             ],
           ),
@@ -93,7 +93,7 @@ class ImagesSection extends StatelessWidget {
             height: 64,
             fit: BoxFit.cover,
           ),
-          SizedBox(height: tokens.spacing.sp8),
+          SizedBox(height: tokens.spacing.sp2),
           Text('Network Image', style: tokens.typography.label),
         ],
       ),

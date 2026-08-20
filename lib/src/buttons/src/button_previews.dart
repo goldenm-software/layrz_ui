@@ -1,6 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -19,14 +19,14 @@ class _PreviewButtonStyles extends StatelessWidget {
       children: [
         LayrzButton(
           labelText: 'Elevated',
-          icon: LayrzIcons.solarOutlineCheckCircle,
+          icon: MdiIcons.checkCircleOutline,
           onTap: () {},
           style: LayrzButtonStyle.elevated,
         ),
         const SizedBox(height: 12),
         LayrzButton(
           labelText: 'Outlined Tonal',
-          icon: LayrzIcons.solarOutlineCheckCircle,
+          icon: MdiIcons.checkCircleOutline,
           onTap: () {},
           style: LayrzButtonStyle.outlinedTonal,
         ),

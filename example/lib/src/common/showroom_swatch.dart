@@ -50,7 +50,7 @@ class ShowroomSwatch extends StatelessWidget {
         Container(
           width: 80,
           height: 80,
-          decoration: decoration ?? BoxDecoration(color: color, borderRadius: BorderRadius.circular(tokens.radius.r8)),
+          decoration: decoration ?? BoxDecoration(color: color, borderRadius: tokens.radius.br2),
           alignment: Alignment.center,
           child: Text(
             label,
@@ -60,7 +60,7 @@ class ShowroomSwatch extends StatelessWidget {
         ),
 
         // Label and value
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         Text(
           label,
           textAlign: TextAlign.center,
@@ -69,7 +69,7 @@ class ShowroomSwatch extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         if (value != null) ...[
-          SizedBox(height: tokens.spacing.sp4),
+          SizedBox(height: tokens.spacing.sp1),
           Text(
             value!,
             textAlign: TextAlign.center,

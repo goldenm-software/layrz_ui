@@ -68,7 +68,7 @@ class LayrzInputErrorBlock extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(height: tokens.spacing.sp6),
+        SizedBox(height: tokens.spacing.sp2),
         if (hasErrors && hasCounter)
           _ErrorAndCounterRow(
             errors: errors,
@@ -129,7 +129,7 @@ class _ErrorAndCounterRow extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(width: tokens.spacing.sp8),
+        SizedBox(width: tokens.spacing.sp2),
         _CharacterCounter(
           maxLength: maxLength,
           controller: controller,

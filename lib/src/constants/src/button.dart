@@ -14,7 +14,7 @@ const double kLayrzButtonIndicatorHeight = 3.0;
 /// to maintain visual clearance from the button's rounded corners. This inset is applied in addition
 /// to the button's border width.
 ///
-/// Set to 8.0 to match the button's base corner radius ([tokens.radius.base]), ensuring the
+/// Set to 8.0 to match the button's base corner radius ([tokens.radius.r2]), ensuring the
 /// progress bar's pill-shaped ends remain visually distinct and do not clash with the
 /// button's corner curve.
 const double kLayrzButtonIndicatorInsetHorizontal = 8.0;

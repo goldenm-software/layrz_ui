@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -224,7 +224,7 @@ void main() {
               LayrzDropdownEntry.save(
                 labelText: 'Custom Save',
                 onTap: () {},
-                icon: LayrzIcons.solarOutlineCheckCircle,
+                icon: MdiIcons.checkCircleOutline,
               ),
             ],
             builder: (context, controller) => LayrzButton(
@@ -444,7 +444,7 @@ void main() {
             LayrzDropdownEntry(
               labelText: 'With Icon',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
             ),
           ],
           builder: (context, controller) => LayrzButton(
@@ -543,7 +543,7 @@ void main() {
             LayrzDropdownEntry(
               labelText: 'Dot and Icon',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
               color: themeData.tokens.colors.primary,
             ),
           ],
@@ -582,7 +582,7 @@ void main() {
             LayrzDropdownEntry(
               labelText: 'Dot Icon Label',
               onTap: () {},
-              icon: LayrzIcons.solarOutlineAddCircle,
+              icon: MdiIcons.plusCircleOutline,
               color: themeData.tokens.colors.danger,
             ),
           ],

@@ -207,9 +207,9 @@ void main() {
                 Builder(
                   builder: (innerContext) {
                     final tokens = LayrzTheme.of(innerContext).tokens;
-                    expect(tokens.spacing.sp4, isNotNull);
+                    expect(tokens.spacing.sp1, isNotNull);
                     expect(tokens.colors.primary, isNotNull);
-                    expect(tokens.radius.base, isNotNull);
+                    expect(tokens.radius.r2, isNotNull);
                     return const SizedBox();
                   },
                 ),

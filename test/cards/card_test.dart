@@ -183,7 +183,7 @@ void main() {
     group('Border radius', () {
       testWidgets('uses r12 radius token', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final expectedRadius = themeData.tokens.radius.r12;
+        final expectedRadius = themeData.tokens.radius.r3;
 
         await pumpThemed(
           tester,

@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -86,7 +85,7 @@ class LayrzAlert extends StatefulWidget {
   /// The custom icon glyph, used only when [type] is [LayrzAlertType.custom].
   ///
   /// If [type] is not custom, this parameter is ignored.
-  /// If null and [type] is custom, defaults to [LayrzIcons.solarOutlineInfoSquare].
+  /// If null and [type] is custom, defaults to [MdiIcons.informationBoxOutline].
   final IconData? icon;
 
   /// The size of the icon glyph.
@@ -235,7 +234,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
     required double iconSize,
   }) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(tokens.radius.r12),
+      borderRadius: tokens.radius.br3,
       child: IntrinsicHeight(
         child: Row(
           children: [
@@ -243,7 +242,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
             ExcludeSemantics(
               child: Container(
                 color: leftPanelColor,
-                padding: EdgeInsets.all(tokens.spacing.sp16),
+                padding: EdgeInsets.all(tokens.spacing.sp3),
                 child: Center(
                   child: Icon(
                     icon,
@@ -257,7 +256,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
             Expanded(
               child: Container(
                 color: tokens.colors.surface,
-                padding: EdgeInsets.all(tokens.spacing.sp16),
+                padding: EdgeInsets.all(tokens.spacing.sp3),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -269,7 +268,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
                         color: tokens.colors.fg1,
                       ),
                     ),
-                    SizedBox(height: tokens.spacing.sp4),
+                    SizedBox(height: tokens.spacing.sp1),
                     Text(
                       widget.description,
                       style: tokens.typography.body.copyWith(
@@ -335,14 +334,14 @@ class _LayrzAlertState extends State<LayrzAlert> {
         container: true,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(tokens.radius.r12),
+            borderRadius: tokens.radius.br3,
           ),
           foregroundDecoration: BoxDecoration(
             border: Border.all(
               color: spec.borderColor,
               width: spec.borderWidth,
             ),
-            borderRadius: BorderRadius.circular(tokens.radius.r12),
+            borderRadius: tokens.radius.br3,
           ),
           child: content,
         ),
@@ -392,7 +391,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
               curve: tokens.motion.easingEnter,
               transform: Matrix4.translationValues(0, -_currentLift, 0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(tokens.radius.r12),
+                borderRadius: tokens.radius.br3,
                 boxShadow: _resolveShadow(tokens),
               ),
               foregroundDecoration: BoxDecoration(
@@ -400,7 +399,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
                   color: spec.borderColor,
                   width: spec.borderWidth,
                 ),
-                borderRadius: BorderRadius.circular(tokens.radius.r12),
+                borderRadius: tokens.radius.br3,
               ),
               child: content,
             ),

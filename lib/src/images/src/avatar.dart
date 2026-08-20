@@ -277,7 +277,7 @@ class LayrzAvatar extends StatelessWidget {
     required Color backgroundColor,
     required Widget child,
   }) {
-    final radius = BorderRadius.circular(context.tokens.radius.r12);
+    final radius = BorderRadius.circular(context.tokens.radius.r3);
 
     return Container(
       width: size,

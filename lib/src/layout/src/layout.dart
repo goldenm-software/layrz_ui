@@ -1,5 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
@@ -201,19 +202,19 @@ Widget previewLayrzLayout() => LayrzLayout(
   items: [
     LayrzNavigatorPage(
       id: 'dashboard',
-      icon: IconData(0xe900, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.viewDashboardOutline,
       labelText: 'Dashboard',
       isSelected: true,
     ),
     LayrzNavigatorPage(
       id: 'devices',
-      icon: IconData(0xe901, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cellphoneLink,
       labelText: 'Devices',
     ),
     LayrzNavigatorLabel('Settings'),
     LayrzNavigatorPage(
       id: 'config',
-      icon: IconData(0xe902, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cogOutline,
       labelText: 'Configuration',
     ),
   ],
@@ -221,12 +222,12 @@ Widget previewLayrzLayout() => LayrzLayout(
   userMenuItems: [
     LayrzDropdownEntry(
       labelText: 'Profile',
-      icon: IconData(0xe903, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.accountOutline,
       onTap: () {},
     ),
     LayrzDropdownEntry(
       labelText: 'Settings',
-      icon: IconData(0xe904, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cogOutline,
       onTap: () {},
     ),
   ],

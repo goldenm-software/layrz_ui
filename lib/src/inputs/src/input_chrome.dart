@@ -69,8 +69,8 @@ class LayrzInputChrome extends StatelessWidget {
   /// The padding applied inside the input field.
   ///
   /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp10 horizontal and sp10 vertical when normal,
-  /// or sp10 horizontal with sp6 vertical when [dense] is true.
+  /// If null, padding is derived from tokens: sp2 horizontal and sp3 vertical when normal,
+  /// or sp2 horizontal with sp2 vertical when [dense] is true.
   ///
   /// Explicit padding takes precedence over [dense] to prevent silent geometry
   /// mutations when a caller provides an exact layout requirement.
@@ -132,7 +132,7 @@ class LayrzInputChrome extends StatelessWidget {
     final resolvedPadding =
         padding ??
         EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp10,
+          horizontal: tokens.spacing.sp2,
           vertical: density.verticalPadding,
         );
 
@@ -148,7 +148,7 @@ class LayrzInputChrome extends StatelessWidget {
         // Label row
         if (labelText != null)
           Padding(
-            padding: EdgeInsets.only(bottom: tokens.spacing.sp8),
+            padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
             child: RichText(
               text: TextSpan(
                 children: [
@@ -178,7 +178,7 @@ class LayrzInputChrome extends StatelessWidget {
               color: spec.borderColor,
               width: spec.borderWidth,
             ),
-            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
+            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
           ),
           padding: resolvedPadding,
           child: SizedBox(
@@ -196,7 +196,7 @@ class LayrzInputChrome extends StatelessWidget {
                     iconSize: density.iconSize,
                     density: density,
                   ),
-                  SizedBox(width: tokens.spacing.sp8),
+                  SizedBox(width: tokens.spacing.sp2),
                 ],
 
                 // Child (the actual input field) with optional hint text overlay
@@ -402,10 +402,10 @@ class LayrzInputChrome extends StatelessWidget {
 
     // Return inner gap + row of trailing elements with inter-element spacing
     return [
-      SizedBox(width: tokens.spacing.sp8),
+      SizedBox(width: tokens.spacing.sp2),
       Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: tokens.spacing.sp8,
+        spacing: tokens.spacing.sp2,
         children: trailing,
       ),
     ];

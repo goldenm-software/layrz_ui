@@ -339,12 +339,12 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     // Build the surface widget
     final surface = Container(
       padding: EdgeInsets.symmetric(
-        horizontal: tokens.spacing.sp12,
-        vertical: tokens.spacing.sp6,
+        horizontal: tokens.spacing.sp3,
+        vertical: tokens.spacing.sp2,
       ),
       decoration: BoxDecoration(
         color: tokens.colors.fg1,
-        borderRadius: BorderRadius.circular(tokens.radius.r8),
+        borderRadius: tokens.radius.br2,
       ),
       child: widget.titleText != null
           ? Column(
@@ -355,7 +355,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
                   widget.titleText!,
                   style: titleStyle,
                 ),
-                SizedBox(height: tokens.spacing.sp4),
+                SizedBox(height: tokens.spacing.sp1),
                 contentWidget,
               ],
             )
@@ -452,13 +452,13 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       );
       titlePainter.layout(maxWidth: maxWidth);
 
-      contentHeight = titlePainter.height + tokens.spacing.sp4 + painter.height;
+      contentHeight = titlePainter.height + tokens.spacing.sp1 + painter.height;
       contentWidth = [titlePainter.width, painter.width].reduce((a, b) => a > b ? a : b);
     }
 
     return Size(
-      contentWidth + tokens.spacing.sp12 * 2,
-      contentHeight + tokens.spacing.sp6 * 2,
+      contentWidth + tokens.spacing.sp3 * 2,
+      contentHeight + tokens.spacing.sp2 * 2,
     );
   }
 

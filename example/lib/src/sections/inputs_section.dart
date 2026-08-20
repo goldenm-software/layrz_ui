@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
@@ -69,7 +69,7 @@ class _InputsSectionState extends State<InputsSection> {
       description: 'Single-line text input with optional label, errors, help tooltip, and interactive slots',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: tokens.spacing.sp32,
+        spacing: tokens.spacing.sp5,
         children: [
           // 1. Field states
           _FieldStatesShowcase(
@@ -181,7 +181,7 @@ class _FieldStatesShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Field States', style: tokens.typography.title),
         Text(
@@ -189,16 +189,16 @@ class _FieldStatesShowcase extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Column(
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             // Row 1: Rest and Error
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Rest', style: tokens.typography.label),
                       LayrzTextInput(
@@ -210,7 +210,7 @@ class _FieldStatesShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Error', style: tokens.typography.label),
                       LayrzTextInput(
@@ -226,11 +226,11 @@ class _FieldStatesShowcase extends StatelessWidget {
             // Row 2: Disabled and Read-only
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Disabled', style: tokens.typography.label),
                       LayrzTextInput(
@@ -243,7 +243,7 @@ class _FieldStatesShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Read-only', style: tokens.typography.label),
                       LayrzTextInput(
@@ -275,19 +275,19 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Label and Placeholder Variations', style: tokens.typography.title),
         Column(
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('With Label', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -299,7 +299,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Without Label', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -312,11 +312,11 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Required Indicator', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -329,7 +329,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('No Placeholder', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -370,7 +370,7 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Prefix and Suffix Slot Forms', style: tokens.typography.title),
         Text(
@@ -378,22 +378,22 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         Column(
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             // Prefix forms
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 Text('Prefix Variants', style: tokens.typography.label),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: tokens.spacing.sp16,
+                  spacing: tokens.spacing.sp3,
                   children: [
                     Expanded(
                       child: LayrzTextInput(
                         labelText: 'prefixIcon',
-                        prefixIcon: LayrzIcons.solarOutlineCheckCircle,
+                        prefixIcon: MdiIcons.checkCircleOutline,
                         onPrefixTap: onPrefixTap,
                         hintText: 'Taps: $prefixTapCount',
                       ),
@@ -413,17 +413,17 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
             // Suffix forms
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 Text('Suffix Variants', style: tokens.typography.label),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: tokens.spacing.sp16,
+                  spacing: tokens.spacing.sp3,
                   children: [
                     Expanded(
                       child: LayrzTextInput(
                         labelText: 'suffixIcon',
-                        suffixIcon: LayrzIcons.solarOutlineEyeScan,
+                        suffixIcon: MdiIcons.eyeOutline,
                         onSuffixTap: onSuffixTap,
                         hintText: 'Taps: $suffixTapCount',
                       ),
@@ -460,19 +460,19 @@ class _ErrorsShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Error Display', style: tokens.typography.title),
         Column(
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Single Error', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -485,7 +485,7 @@ class _ErrorsShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Multiple Errors', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -502,11 +502,11 @@ class _ErrorsShowcase extends StatelessWidget {
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('hideDetails: true', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -520,12 +520,12 @@ class _ErrorsShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Error + Suffix', style: tokens.typography.label),
                       LayrzTextInput(
                         labelText: 'Username',
-                        suffixIcon: LayrzIcons.solarOutlineCheckCircle,
+                        suffixIcon: MdiIcons.checkCircleOutline,
                         errors: const ['Already taken'],
                       ),
                     ],
@@ -552,7 +552,7 @@ class _HelpAffordanceShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Help Affordance', style: tokens.typography.title),
         Text(
@@ -625,7 +625,7 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: widget.tokens.spacing.sp16,
+      spacing: widget.tokens.spacing.sp3,
       children: [
         Text('Read-only vs Disabled Behavior', style: widget.tokens.typography.title),
         Text(
@@ -634,11 +634,11 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: widget.tokens.spacing.sp16,
+          spacing: widget.tokens.spacing.sp3,
           children: [
             Expanded(
               child: Column(
-                spacing: widget.tokens.spacing.sp8,
+                spacing: widget.tokens.spacing.sp2,
                 children: [
                   Text('Read-only (fires onTap)', style: widget.tokens.typography.label),
                   LayrzTextInput(
@@ -653,7 +653,7 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
             ),
             Expanded(
               child: Column(
-                spacing: widget.tokens.spacing.sp8,
+                spacing: widget.tokens.spacing.sp2,
                 children: [
                   Text('Disabled (no onTap)', style: widget.tokens.typography.label),
                   LayrzTextInput(
@@ -685,16 +685,16 @@ class _DenseModeShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Dense Mode', style: tokens.typography.title),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Default', style: tokens.typography.label),
                   const LayrzTextInput(
@@ -706,7 +706,7 @@ class _DenseModeShowcase extends StatelessWidget {
             ),
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Dense: true', style: tokens.typography.label),
                   const LayrzTextInput(
@@ -744,7 +744,7 @@ class _WidgetSlotsShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Widget Slot Variants', style: tokens.typography.title),
         Text(
@@ -753,11 +753,11 @@ class _WidgetSlotsShowcase extends StatelessWidget {
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Prefix Widget (Color Swatch)', style: tokens.typography.label),
                   LayrzTextInput(
@@ -777,7 +777,7 @@ class _WidgetSlotsShowcase extends StatelessWidget {
             ),
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Suffix Widget (Height Constraint)', style: tokens.typography.label),
                   LayrzTextInput(
@@ -809,11 +809,11 @@ class _WidgetSlotsShowcase extends StatelessWidget {
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Numeric Input', style: tokens.typography.label),
                   LayrzTextInput(
@@ -850,7 +850,7 @@ class _ShortcutBadgeShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Shortcut Badge', style: tokens.typography.title),
         Text(
@@ -859,7 +859,7 @@ class _ShortcutBadgeShowcase extends StatelessWidget {
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Expanded(
               child: LayrzTextInput(
@@ -894,19 +894,19 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Additional Features', style: tokens.typography.title),
         Column(
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Password (obscureText)', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -919,7 +919,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Email Keyboard', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -934,11 +934,11 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp16,
+              spacing: tokens.spacing.sp3,
               children: [
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Phone Keyboard', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -951,7 +951,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                 ),
                 Expanded(
                   child: Column(
-                    spacing: tokens.spacing.sp8,
+                    spacing: tokens.spacing.sp2,
                     children: [
                       Text('Max Length (20 chars)', style: tokens.typography.label),
                       const LayrzTextInput(
@@ -983,7 +983,7 @@ class _CharacterCounterShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp16,
+      spacing: tokens.spacing.sp3,
       children: [
         Text('Character Counter', style: tokens.typography.title),
         Text(
@@ -992,11 +992,11 @@ class _CharacterCounterShowcase extends StatelessWidget {
         ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Counter alone (50 chars)', style: tokens.typography.label),
                   const LayrzTextInput(
@@ -1009,7 +1009,7 @@ class _CharacterCounterShowcase extends StatelessWidget {
             ),
             Expanded(
               child: Column(
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Text('Counter with error (30 chars)', style: tokens.typography.label),
                   const LayrzTextInput(

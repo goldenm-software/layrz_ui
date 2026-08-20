@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
@@ -30,7 +30,7 @@ void main() {
     });
 
     testWidgets('provides semantic label for icon', (tester) async {
-      final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+      final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
 
       await pumpThemed(
         tester,

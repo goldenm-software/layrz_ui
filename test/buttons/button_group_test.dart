@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -366,7 +366,7 @@ void main() {
               LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
             ],
             useDropdown: true,
-            triggerIcon: LayrzIcons.solarOutlineCheckCircle,
+            triggerIcon: MdiIcons.checkCircleOutline,
           ),
         );
 
@@ -542,7 +542,7 @@ void main() {
             items: [
               LayrzDropdownEntry(
                 labelText: 'Save',
-                icon: LayrzIcons.solarOutlineCheckCircle,
+                icon: MdiIcons.checkCircleOutline,
                 onTap: () {},
               ),
             ],
@@ -892,7 +892,7 @@ void main() {
             builder: (context, controller) => LayrzButton(
               labelText: 'Options',
               style: LayrzButtonStyle.outlinedFab,
-              icon: LayrzIcons.solarOutlineSettings,
+              icon: MdiIcons.cogOutline,
               onTap: controller.isOpen ? controller.close : controller.open,
             ),
           ),

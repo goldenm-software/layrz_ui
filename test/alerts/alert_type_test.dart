@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import '../helpers/fake_font_handler.dart';
 
@@ -13,38 +13,38 @@ void main() {
     });
 
     group('icon resolution', () {
-      test('info type returns solarOutlineInfoSquare', () {
+      test('info type returns informationBoxOutline', () {
         expect(
           LayrzAlertType.info.icon,
-          equals(LayrzIcons.solarOutlineInfoSquare),
+          equals(MdiIcons.informationBoxOutline),
         );
       });
 
-      test('success type returns solarOutlineCheckSquare', () {
+      test('success type returns checkboxOutline', () {
         expect(
           LayrzAlertType.success.icon,
-          equals(LayrzIcons.solarOutlineCheckSquare),
+          equals(MdiIcons.checkboxOutline),
         );
       });
 
-      test('warning type returns solarOutlineDangerSquare', () {
+      test('warning type returns alertBoxOutline', () {
         expect(
           LayrzAlertType.warning.icon,
-          equals(LayrzIcons.solarOutlineDangerSquare),
+          equals(MdiIcons.alertBoxOutline),
         );
       });
 
-      test('danger type returns solarOutlineCloseSquare', () {
+      test('danger type returns closeBoxOutline', () {
         expect(
           LayrzAlertType.danger.icon,
-          equals(LayrzIcons.solarOutlineCloseSquare),
+          equals(MdiIcons.closeBoxOutline),
         );
       });
 
-      test('context type returns solarOutlineMenuDotsSquare', () {
+      test('context type returns dotsSquare', () {
         expect(
           LayrzAlertType.context.icon,
-          equals(LayrzIcons.solarOutlineMenuDotsSquare),
+          equals(MdiIcons.dotsSquare),
         );
       });
 

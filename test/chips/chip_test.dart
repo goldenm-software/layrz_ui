@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
@@ -23,12 +23,12 @@ void main() {
           tester,
           LayrzChip(
             labelText: 'With Icon',
-            leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+            leadingIcon: MdiIcons.checkCircleOutline,
           ),
         );
 
         expect(find.byType(LayrzChip), findsOneWidget);
-        expect(find.byIcon(LayrzIcons.solarOutlineCheckCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
       });
 
       testWidgets('renders delete icon when onDelete is non-null', (tester) async {
@@ -40,7 +40,7 @@ void main() {
           ),
         );
 
-        expect(find.byIcon(LayrzIcons.solarBoldCloseCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
       });
 
       testWidgets('does not render delete icon when onDelete is null', (tester) async {
@@ -49,7 +49,7 @@ void main() {
           const LayrzChip(labelText: 'Not Deletable'),
         );
 
-        expect(find.byIcon(LayrzIcons.solarBoldCloseCircle), findsNothing);
+        expect(find.byIcon(MdiIcons.closeCircle), findsNothing);
       });
 
       testWidgets('renders with long labelText', (tester) async {
@@ -215,7 +215,7 @@ void main() {
         expect(deleted, isFalse);
 
         // Tap the delete icon
-        await tester.tap(find.byIcon(LayrzIcons.solarBoldCloseCircle));
+        await tester.tap(find.byIcon(MdiIcons.closeCircle));
         await tester.pump();
 
         expect(deleted, isTrue);
@@ -296,7 +296,7 @@ void main() {
           tester,
           LayrzChip(
             labelText: 'Base',
-            leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+            leadingIcon: MdiIcons.checkCircleOutline,
           ),
         );
 
@@ -362,7 +362,7 @@ void main() {
 
         // Verify both chip label and delete icon are rendered
         expect(find.text('My Chip'), findsOneWidget);
-        expect(find.byIcon(LayrzIcons.solarBoldCloseCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
       });
     });
   });

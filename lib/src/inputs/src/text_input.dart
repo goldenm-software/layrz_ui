@@ -125,8 +125,8 @@ class LayrzTextInput extends StatefulWidget {
   /// The padding applied inside the input field.
   ///
   /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp10 horizontal and sp10 vertical when normal,
-  /// or sp10 horizontal with sp6 vertical when [dense] is true.
+  /// If null, padding is derived from tokens: sp2 horizontal and sp3 vertical when normal,
+  /// or sp2 horizontal with sp2 vertical when [dense] is true.
   final EdgeInsets? padding;
 
   /// Whether the input field uses a compact (dense) layout.

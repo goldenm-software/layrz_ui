@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -33,7 +33,7 @@ void main() {
       expect(find.text('Username contains invalid characters'), findsNothing);
 
       // The error icon should be visible (on the right of the field)
-      expect(find.byIcon(LayrzIcons.solarOutlineDangerTriangle), findsWidgets);
+      expect(find.byIcon(MdiIcons.alertOutline), findsWidgets);
     });
 
     /// Test that inline errors are shown at md breakpoint and above (>= 960px).
@@ -92,7 +92,7 @@ void main() {
       expect(find.text('Email already in use'), findsNothing);
 
       // The error icon should be visible
-      final iconFinder = find.byIcon(LayrzIcons.solarOutlineDangerTriangle);
+      final iconFinder = find.byIcon(MdiIcons.alertOutline);
       expect(iconFinder, findsOneWidget);
 
       // Tap the error icon to open the tooltip
@@ -124,7 +124,7 @@ void main() {
       await pumpThemedApp(tester, widget);
 
       // Open tooltip
-      await tester.tap(find.byIcon(LayrzIcons.solarOutlineDangerTriangle));
+      await tester.tap(find.byIcon(MdiIcons.alertOutline));
       await tester.pumpAndSettle();
 
       expect(find.text('This is an error'), findsOneWidget);
@@ -224,13 +224,13 @@ void main() {
       await pumpThemedApp(tester, widget);
 
       // Error icon should be visible
-      expect(find.byIcon(LayrzIcons.solarOutlineDangerTriangle), findsWidgets);
+      expect(find.byIcon(MdiIcons.alertOutline), findsWidgets);
 
       // Inline error text should be visible
       expect(find.text('Username contains invalid characters'), findsWidgets);
 
       // Tapping the error icon should NOT open a tooltip (no tooltip in desktop mode)
-      await tester.tap(find.byIcon(LayrzIcons.solarOutlineDangerTriangle));
+      await tester.tap(find.byIcon(MdiIcons.alertOutline));
       await tester.pumpAndSettle();
 
       // The error text should still be visible as-is (not in a tooltip)

@@ -59,7 +59,7 @@ void main() {
         expect(foundCorrectSpacing, isTrue);
       });
 
-      testWidgets('defaults to tokens.spacing.base when spacing is null', (tester) async {
+      testWidgets('defaults to tokens.spacing.sp2 when spacing is null', (tester) async {
         await pumpThemed(
           tester,
           LayrzChipGroup(
@@ -81,7 +81,7 @@ void main() {
         for (final element in rows) {
           if (element.widget is Row) {
             final row = element.widget as Row;
-            if (row.spacing == tokens.spacing.base) {
+            if (row.spacing == tokens.spacing.sp2) {
               foundCorrectSpacing = true;
               break;
             }

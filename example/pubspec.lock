@@ -95,7 +95,7 @@ packages:
     source: hosted
     version: "6.0.0"
   flutter_material_design_icons:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_material_design_icons
       sha256: "9a7b6308736e328f9ce2249c3727a56a289c915a65ebf1b1b5f237c8232e92b7"

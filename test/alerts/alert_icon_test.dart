@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
@@ -143,7 +143,7 @@ void main() {
         expect(icon.icon, equals(customIcon));
       });
 
-      testWidgets('custom type without explicit icon defaults to solarOutlineInfoSquare', (tester) async {
+      testWidgets('custom type without explicit icon defaults to informationBoxOutline', (tester) async {
         await pumpThemed(
           tester,
           const LayrzAlertIcon(
@@ -152,7 +152,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.icon?.codePoint, equals(LayrzIcons.solarOutlineInfoSquare.codePoint));
+        expect(icon.icon?.codePoint, equals(MdiIcons.informationBoxOutline.codePoint));
       });
     });
 
@@ -218,7 +218,7 @@ void main() {
 
         final container = tester.widget<Container>(find.byType(Container));
         final decoration = container.decoration! as BoxDecoration;
-        expect(decoration.borderRadius, equals(BorderRadius.circular(tokens.radius.r10)));
+        expect(decoration.borderRadius, equals(tokens.radius.br2));
       });
     });
   });

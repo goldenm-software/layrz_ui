@@ -1,5 +1,4 @@
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -208,11 +207,11 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
       hideDetails: true,
       controller: _searchController,
       onChanged: (_) {},
-      prefixIcon: LayrzIcons.solarOutlineMagnifer,
+      prefixIcon: MdiIcons.magnify,
       dense: true,
       padding: EdgeInsets.symmetric(
         horizontal: kLayrzLayoutSearchFieldPaddingHorizontal,
-        vertical: tokens.spacing.sp6,
+        vertical: tokens.spacing.sp2,
       ),
     );
   }

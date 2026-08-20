@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
@@ -86,16 +86,16 @@ class LayrzChip extends StatefulWidget {
 
     // Add space for leading icon
     if (leadingIcon != null) {
-      width += kLayrzChipIconSize + tokens.spacing.sp4; // icon + gap
+      width += kLayrzChipIconSize + tokens.spacing.sp1; // icon + gap
     }
 
     // Add space for delete icon
     if (onDelete != null) {
-      width += kLayrzChipIconSize + tokens.spacing.sp4; // icon + gap
+      width += kLayrzChipIconSize + tokens.spacing.sp1; // icon + gap
     }
 
     // Add horizontal padding
-    width += tokens.spacing.sp10 * 2;
+    width += tokens.spacing.sp2 * 2;
 
     return width;
   }
@@ -135,8 +135,8 @@ class _LayrzChipState extends State<LayrzChip> {
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: tokens.spacing.sp10,
-        vertical: tokens.spacing.sp4,
+        horizontal: tokens.spacing.sp2,
+        vertical: tokens.spacing.sp1,
       ),
       decoration: BoxDecoration(
         color: spec.backgroundColor,
@@ -158,7 +158,7 @@ class _LayrzChipState extends State<LayrzChip> {
               color: spec.contentColor,
               size: kLayrzChipIconSize,
             ),
-            SizedBox(width: tokens.spacing.sp4),
+            SizedBox(width: tokens.spacing.sp1),
           ],
 
           // Label text
@@ -174,7 +174,7 @@ class _LayrzChipState extends State<LayrzChip> {
 
           // Delete affordance (if onDelete is non-null)
           if (widget.onDelete != null) ...[
-            SizedBox(width: tokens.spacing.sp4),
+            SizedBox(width: tokens.spacing.sp1),
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: Listener(
@@ -201,7 +201,7 @@ class _LayrzChipState extends State<LayrzChip> {
                           isPressed: isPressed,
                         );
                         return Icon(
-                          LayrzIcons.solarBoldCloseCircle,
+                          MdiIcons.closeCircle,
                           color: iconColor,
                           size: kLayrzChipIconSize,
                         );

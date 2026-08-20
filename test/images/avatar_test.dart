@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -32,7 +32,7 @@ void main() {
       });
 
       testWidgets('renders icon from IconData', (tester) async {
-        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
 
         await pumpThemed(
           tester,
@@ -85,7 +85,7 @@ void main() {
       });
 
       testWidgets('LayrzAvatarIcon renders icon', (tester) async {
-        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
 
         await pumpThemed(
           tester,
@@ -194,7 +194,7 @@ void main() {
       testWidgets('LayrzAvatar.icon renders icon from IconData', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline),
         );
 
         expect(find.byType(Icon), findsOneWidget);
@@ -231,7 +231,7 @@ void main() {
 
         final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
         // Avatar should use r12 radius, which is a circular BorderRadius
-        final expectedRadius = BorderRadius.circular(themeData.tokens.radius.r12);
+        final expectedRadius = BorderRadius.circular(themeData.tokens.radius.r3);
         expect(clipRRect.borderRadius, equals(expectedRadius));
       });
     });
@@ -383,7 +383,7 @@ void main() {
       testWidgets('renders icon at 70% of avatar size', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 100),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline, size: 100),
         );
 
         final iconWidget = tester.widget<Icon>(find.byType(Icon));
@@ -453,7 +453,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline),
           theme: themeData,
         );
 

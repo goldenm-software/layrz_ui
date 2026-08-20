@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 
@@ -128,7 +128,7 @@ class _ListItemState extends State<ListItem> {
                     return GestureDetector(
                       onTap: controller.open,
                       child: Icon(
-                        LayrzIcons.solarOutlineMenuDots,
+                        MdiIcons.dotsVertical,
                         size: 16,
                         color: tokens.colors.fg3,
                       ),
