@@ -123,6 +123,18 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   /// Used to determine whether to create a tap-away barrier.
   bool _openedByTouch = false;
 
+  /// The scroll position of the enclosing scrollable, if any.
+  ///
+  /// Non-null when the tooltip is open and the enclosing scrollable is found.
+  /// Used to attach and remove the scroll listener.
+  ScrollPosition? _scrollPosition;
+
+  /// The scroll position listener used to update the tooltip when the page scrolls.
+  ///
+  /// Non-null when the tooltip is open and the enclosing scrollable is found.
+  /// Cleaned up in [_hideTooltip], [_handleAnimationStatusChange], and [dispose].
+  VoidCallback? _scrollPositionListener;
+
   Timer? _hideTimer;
   final GlobalKey _anchorKey = GlobalKey();
   bool _themedInitialized = false;
@@ -165,9 +177,58 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     }
   }
 
+  /// Sets up a listener on the enclosing scrollable's scroll position.
+  ///
+  /// When the scrollable scrolls, the tooltip overlay entry is marked as needing
+  /// rebuild, which causes [_buildTooltipOverlay] to recompute the tooltip's position
+  /// based on the anchor's new global coordinates. This ensures the tooltip follows
+  /// the anchor as the page scrolls.
+  ///
+  /// If no scrollable is found, no listener is created (the tooltip will remain
+  /// in its last computed position, which is the pre-DESIGN-77 behavior).
+  void _setupScrollListener() {
+    // Clear any existing listener before setting up a new one.
+    _removeScrollListener();
+
+    // Find the enclosing scrollable, if any.
+    final scrollable = Scrollable.maybeOf(context);
+    if (scrollable == null) return;
+
+    _scrollPosition = scrollable.position;
+
+    // Create a listener that rebuilds the tooltip when scrolling occurs.
+    void onScroll() {
+      // Rebuild the tooltip entry to recompute its position.
+      if (_tooltipEntry?.mounted == true) {
+        _tooltipEntry!.markNeedsBuild();
+      }
+      // Also rebuild the barrier to ensure it stays in sync.
+      if (_barrierEntry?.mounted == true) {
+        _barrierEntry!.markNeedsBuild();
+      }
+    }
+
+    _scrollPosition!.addListener(onScroll);
+    _scrollPositionListener = onScroll;
+  }
+
+  /// Removes the scroll position listener and cleans up any scroll-related state.
+  ///
+  /// Called when the tooltip is hidden or when the widget is disposed to prevent
+  /// memory leaks from a listener attached to a disposed ScrollPosition.
+  void _removeScrollListener() {
+    if (_scrollPosition != null && _scrollPositionListener != null) {
+      _scrollPosition!.removeListener(_scrollPositionListener!);
+    }
+    _scrollPosition = null;
+    _scrollPositionListener = null;
+  }
+
   void _handleAnimationStatusChange(AnimationStatus status) {
     // Remove both overlay entries when animation completes dismissal.
     if (status == AnimationStatus.dismissed) {
+      _removeScrollListener();
+
       if (_tooltipEntry != null && _tooltipEntry!.mounted) {
         _tooltipEntry!.remove();
       }
@@ -245,6 +306,9 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
       );
       Overlay.of(context).insert(_tooltipEntry!);
+
+      // Set up scroll listener to follow the anchor when the page scrolls.
+      _setupScrollListener();
     }
 
     if (_animationController.status != AnimationStatus.completed) {
@@ -255,6 +319,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _hideTooltip() {
     if (!mounted) return;
     if (_animationController.status == AnimationStatus.dismissed) return;
+    _removeScrollListener();
     _animationController.reverse();
   }
 
@@ -411,9 +476,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    // Dispose order: cancel timer → remove overlay entries → dispose animations → dispose controller
+    // Dispose order: cancel timer → remove scroll listener → remove overlay entries → dispose animations → dispose controller
     _hideTimer?.cancel();
     _hideTimer = null;
+
+    _removeScrollListener();
 
     if (_tooltipEntry != null && _tooltipEntry!.mounted) {
       _tooltipEntry!.remove();
