@@ -404,107 +404,83 @@ class _AlertIconDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp16),
         // Row of icons at different sizes
+        Text('Small (24)', style: tokens.typography.label),
         Row(
-          spacing: tokens.spacing.sp24,
+          spacing: tokens.spacing.sp8,
           children: [
-            // Small
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Small (24)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 24,
-                      iconSize: 16,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 24,
+              iconSize: 16,
             ),
-            // Medium
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Medium (40)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 40,
-                      iconSize: 24,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 24,
+              iconSize: 16,
             ),
-            // Large
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
-              children: [
-                Text('Large (56)', style: tokens.typography.label),
-                Row(
-                  spacing: tokens.spacing.sp8,
-                  children: [
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.info,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.success,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.warning,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                    LayrzAlertIcon(
-                      type: LayrzAlertType.danger,
-                      size: 56,
-                      iconSize: 32,
-                    ),
-                  ],
-                ),
-              ],
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 24,
+              iconSize: 16,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 24,
+              iconSize: 16,
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp16),
+        Text('Medium (40)', style: tokens.typography.label),
+        Row(
+          spacing: tokens.spacing.sp8,
+          children: [
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 40,
+              iconSize: 24,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 40,
+              iconSize: 24,
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp16),
+        Text('Large (56)', style: tokens.typography.label),
+        Row(
+          spacing: tokens.spacing.sp8,
+          children: [
+            LayrzAlertIcon(
+              type: LayrzAlertType.info,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.success,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.warning,
+              size: 56,
+              iconSize: 32,
+            ),
+            LayrzAlertIcon(
+              type: LayrzAlertType.danger,
+              size: 56,
+              iconSize: 32,
             ),
           ],
         ),

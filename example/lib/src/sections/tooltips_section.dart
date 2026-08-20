@@ -68,89 +68,103 @@ class _PositionsDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp16),
         // Grid layout with 4 anchors: top-left, top-right, bottom-left, bottom-right
-        Row(
-          spacing: tokens.spacing.sp32,
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        LayrzRow(
           children: [
-            // Top
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Top', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'T',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip above the anchor',
-                    position: LayrzTooltipPosition.top,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'T', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Top', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'T',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip above the anchor',
+                      position: LayrzTooltipPosition.top,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'T', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Bottom
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Bottom', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'B',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip below the anchor',
-                    position: LayrzTooltipPosition.bottom,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'B', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Bottom', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'B',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip below the anchor',
+                      position: LayrzTooltipPosition.bottom,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'B', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Left
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Left', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'L',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip to the left',
-                    position: LayrzTooltipPosition.left,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'L', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Left', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'L',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip to the left',
+                      position: LayrzTooltipPosition.left,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'L', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            // Right
-            Column(
-              spacing: tokens.spacing.sp12,
-              children: [
-                Text('Right', style: tokens.typography.label),
-                _AnchorBox(
-                  label: 'R',
-                  tokens: tokens,
-                  tooltip: LayrzTooltip(
-                    contentText: 'Tooltip to the right',
-                    position: LayrzTooltipPosition.right,
-                    child: SizedBox(
-                      width: 60,
-                      height: 40,
-                      child: _AnchorContent(label: 'R', tokens: tokens),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              lg: 3,
+              child: Column(
+                spacing: tokens.spacing.sp12,
+                children: [
+                  Text('Right', style: tokens.typography.label),
+                  _AnchorBox(
+                    label: 'R',
+                    tokens: tokens,
+                    tooltip: LayrzTooltip(
+                      contentText: 'Tooltip to the right',
+                      position: LayrzTooltipPosition.right,
+                      child: SizedBox(
+                        width: 60,
+                        height: 40,
+                        child: _AnchorContent(label: 'R', tokens: tokens),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

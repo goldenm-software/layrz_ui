@@ -25,14 +25,17 @@ class ElevationSection extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(
-              children: List.generate(
-                6,
-                (index) => Padding(
-                  padding: EdgeInsets.only(right: tokens.spacing.sp12),
-                  child: LayrzTooltip(
-                    contentText: 'elevation$index shadow token',
-                    child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
+            child: Padding(
+              padding: EdgeInsets.all(tokens.spacing.sp8).add(EdgeInsets.only(bottom: tokens.spacing.sp16)),
+              child: Row(
+                children: List.generate(
+                  6,
+                  (index) => Padding(
+                    padding: EdgeInsets.only(right: tokens.spacing.sp12),
+                    child: LayrzTooltip(
+                      contentText: 'elevation$index shadow token',
+                      child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
+                    ),
                   ),
                 ),
               ),
