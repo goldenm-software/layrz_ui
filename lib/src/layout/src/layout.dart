@@ -1,6 +1,5 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
@@ -167,9 +166,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             onNotificationTap: widget.onNotificationTap,
             getInitials: _getInitials,
           ),
-          Expanded(
-            child: _buildBodyContent(context, tokens),
-          ),
+          Expanded(child: widget.body),
         ],
       ),
     );
@@ -192,9 +189,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
                 onDrawerTap: _openDrawer,
                 getInitials: _getInitials,
               ),
-              Expanded(
-                child: _buildBodyContent(context, tokens),
-              ),
+              Expanded(child: widget.body),
             ],
           ),
           if (_isDrawerOpen)
@@ -213,23 +208,6 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         ],
       ),
     );
-  }
-
-  Widget _buildBodyContent(BuildContext context, LayrzTokens tokens) {
-    final band = tokens.breakpoints.bandAt(MediaQuery.sizeOf(context).width);
-    final isXl = band == LayrzBreakpoint.xl;
-
-    if (isXl) {
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: kLayrzLayoutBodyMaxWidth),
-          child: widget.body,
-        ),
-      );
-    }
-
-    return widget.body;
   }
 }
 
