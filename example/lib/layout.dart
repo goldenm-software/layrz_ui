@@ -22,8 +22,9 @@ class ShowroomLayout extends StatelessWidget {
 
     return LayrzLayout(
       items: items,
-      body: Padding(
-        padding: EdgeInsets.all(context.tokens.spacing.sp16),
+      body: SizedBox(
+        width: double.infinity,
+        height: double.infinity,
         child: SingleChildScrollView(child: child),
       ),
       logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',

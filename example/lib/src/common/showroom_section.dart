@@ -28,9 +28,10 @@ class ShowroomSection extends StatelessWidget {
     final tokens = context.tokens;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: tokens.spacing.sp32),
+      padding: EdgeInsets.all(context.tokens.spacing.sp16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           // Title
           Text(title, style: tokens.typography.headline),
