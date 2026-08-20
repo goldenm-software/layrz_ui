@@ -12,19 +12,30 @@ import 'notification_item.dart';
 import 'rail_item.dart';
 import 'user_chrome.dart';
 
-/// The off-canvas drawer widget displayed in drawer presentation.
+/// A unified navigation panel widget for both expanded (rail) and drawer presentations.
 ///
-/// This widget is private to the layout module and is not exported.
-class LayrzLayoutDrawer extends StatefulWidget {
-  /// Creates an off-canvas drawer.
-  const LayrzLayoutDrawer({
+/// This widget is private to the layout module and is not exported. It renders a
+/// vertical navigation panel with search, items, and user chrome. The presentation
+/// is controlled via the [width] and [onClose] parameters:
+///
+/// - Persistent (rail) mode: [onClose] is null, panel casts a shadow, no close affordance
+/// - Drawer mode: [onClose] is non-null, panel has no shadow, tapping items calls [onClose]
+class LayrzLayoutNavigatorPanel extends StatefulWidget {
+  /// Creates a navigation panel.
+  const LayrzLayoutNavigatorPanel({
     /// The design tokens for colors and spacing.
     required this.tokens,
 
-    /// The navigation items to display in the drawer.
+    /// The width of the panel in logical pixels.
+    ///
+    /// Typically [kLayrzLayoutRailWidth] (178.0) for persistent mode
+    /// or [kLayrzLayoutDrawerWidth] (260.0) for drawer mode.
+    required this.width,
+
+    /// The navigation items to display.
     required this.items,
 
-    /// A widget displayed in the drawer header.
+    /// A widget displayed in the panel header.
     required this.logo,
 
     /// The user's display name.
@@ -42,8 +53,13 @@ class LayrzLayoutDrawer extends StatefulWidget {
     /// Callback fired when a notification is tapped.
     required this.onNotificationTap,
 
-    /// Callback fired when the drawer is closed.
-    required this.onClose,
+    /// Callback fired when the panel should close.
+    ///
+    /// When null, the panel is persistent (rail mode) and does not show a close affordance.
+    /// When non-null, the panel is in drawer mode and invokes this callback when navigation
+    /// items are tapped. The panel does not render a close button; the affordance is
+    /// provided by the enclosing drawer scaffold (swipe, tap outside).
+    this.onClose,
 
     /// Function to derive initials from a name.
     required this.getInitials,
@@ -51,15 +67,18 @@ class LayrzLayoutDrawer extends StatefulWidget {
   });
 
   @override
-  State<LayrzLayoutDrawer> createState() => _LayrzLayoutDrawerState();
+  State<LayrzLayoutNavigatorPanel> createState() => _LayrzLayoutNavigatorPanelState();
 
   /// The design tokens for colors and spacing.
   final LayrzTokens tokens;
 
-  /// The navigation items to display in the drawer.
+  /// The width of the panel in logical pixels.
+  final double width;
+
+  /// The navigation items to display.
   final List<LayrzNavigatorItem> items;
 
-  /// A widget displayed in the drawer header.
+  /// A source image for the layout's logo, displayed in the panel header.
   final String logo;
 
   /// The user's display name.
@@ -77,14 +96,14 @@ class LayrzLayoutDrawer extends StatefulWidget {
   /// Callback fired when a notification is tapped.
   final void Function(LayrzNotificationItem)? onNotificationTap;
 
-  /// Callback fired when the drawer is closed.
-  final VoidCallback onClose;
+  /// Callback fired when the panel should close (drawer mode only).
+  final VoidCallback? onClose;
 
   /// Function to derive initials from a name.
   final String Function(String?) getInitials;
 }
 
-class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
+class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
   late TextEditingController _searchController;
   String _searchQuery = '';
 
@@ -110,40 +129,54 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
   @override
   Widget build(BuildContext context) {
     final tokens = widget.tokens;
+    final isPersistent = widget.onClose == null;
+
     return Container(
-      width: kLayrzLayoutDrawerWidth,
+      width: widget.width,
       decoration: BoxDecoration(
         color: tokens.colors.surface,
+        boxShadow: isPersistent ? tokens.shadow.elevation2 : null,
       ),
       child: SafeArea(
         right: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Logo block (constrained to 80% width, 40px height)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: kLayrzLayoutLogoLeftPadding,
-                top: kLayrzLayoutRailPaddingVertical,
-                bottom: kLayrzLayoutLogoBottomPadding,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: LayrzImage(
-                  source: widget.logo,
-                  width: kLayrzLayoutDrawerWidth * kLayrzLayoutLogoWidthFactor,
-                  height: kLayrzLayoutLogoHeight,
-                  fit: BoxFit.contain,
+            // Logo block with edge-to-edge width and 100px height ceiling
+            if (widget.logo.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: kLayrzLayoutItemPaddingHorizontal,
+                  right: kLayrzLayoutItemPaddingHorizontal,
+                  top: kLayrzLayoutRailPaddingVertical,
+                  bottom: kLayrzLayoutLogoBottomPadding,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 100),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return LayrzImage(
+                        source: widget.logo,
+                        width: constraints.maxWidth,
+                        fit: BoxFit.contain,
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
 
             // Search field
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: kLayrzLayoutRailPaddingHorizontal,
               ),
-              child: _buildSearchField(tokens),
+              child: LayrzTextInput(
+                hintText: context.l10n.actionSearch,
+                hideDetails: true,
+                controller: _searchController,
+                onChanged: (_) {},
+                prefixIcon: MdiIcons.magnify,
+              ),
             ),
 
             SizedBox(height: kLayrzLayoutSearchToItemsGap),
@@ -204,22 +237,6 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
     );
   }
 
-  Widget _buildSearchField(LayrzTokens tokens) {
-    final context = this.context;
-    return LayrzTextInput(
-      hintText: context.l10n.actionSearch,
-      hideDetails: true,
-      controller: _searchController,
-      onChanged: (_) {},
-      prefixIcon: MdiIcons.magnify,
-      dense: true,
-      padding: EdgeInsets.symmetric(
-        horizontal: kLayrzLayoutSearchFieldPaddingHorizontal,
-        vertical: tokens.spacing.sp2,
-      ),
-    );
-  }
-
   List<Widget> _buildFilteredItems(LayrzTokens tokens) {
     LayrzNavigatorLabel? currentLabel;
     bool currentLabelHasMatches = false;
@@ -247,7 +264,7 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                   isSelected: item.isSelected,
                   onTap: () {
                     item.onTap?.call();
-                    widget.onClose();
+                    widget.onClose?.call();
                   },
                 ),
               ),
@@ -299,7 +316,7 @@ class _LayrzLayoutDrawerState extends State<LayrzLayoutDrawer> {
                 isSelected: item.isSelected,
                 onTap: () {
                   item.onTap?.call();
-                  widget.onClose();
+                  widget.onClose?.call();
                 },
               ),
             ),

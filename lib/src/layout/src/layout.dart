@@ -1,18 +1,18 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/preview.dart';
 
-import 'drawer.dart';
 import 'drawer_scaffold.dart';
 import 'navigator_item.dart';
+import 'navigator_panel.dart';
 import 'notification_item.dart';
 import 'presentation.dart';
-import 'rail.dart';
 import 'top_bar.dart';
 
 /// An opinionated application shell layout for layrz_ui apps.
@@ -147,8 +147,9 @@ class _LayrzLayoutState extends State<LayrzLayout> {
       color: backgroundColor,
       child: Row(
         children: [
-          LayrzLayoutRail(
+          LayrzLayoutNavigatorPanel(
             tokens: tokens,
+            width: kLayrzLayoutRailWidth,
             items: widget.items,
             logo: widget.logo,
             userName: widget.userName,
@@ -156,6 +157,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             userMenuItems: widget.userMenuItems,
             notifications: widget.notifications,
             onNotificationTap: widget.onNotificationTap,
+            onClose: null,
             getInitials: _getInitials,
           ),
           Expanded(child: widget.body),
@@ -175,8 +177,9 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         onDrawerTap: openDrawer,
       ),
       body: widget.body,
-      drawerBuilder: (closeDrawer) => LayrzLayoutDrawer(
+      drawerBuilder: (closeDrawer) => LayrzLayoutNavigatorPanel(
         tokens: tokens,
+        width: kLayrzLayoutDrawerWidth,
         items: widget.items,
         logo: widget.logo,
         userName: widget.userName,

@@ -19,32 +19,8 @@ const double kLayrzLayoutRailPaddingVertical = 14.0;
 /// The horizontal padding inside the rail, in logical pixels.
 const double kLayrzLayoutRailPaddingHorizontal = 10.0;
 
-/// The size of the logo tile (width × height) in the rail header, in logical pixels.
-const double kLayrzLayoutLogoTileSize = 26.0;
-
-/// The border radius of the logo tile, in logical pixels.
-const double kLayrzLayoutLogoTileRadius = 8.0;
-
-/// The gap between the logo tile and the label in the rail header, in logical pixels.
-const double kLayrzLayoutLogoGap = 9.0;
-
 /// The bottom padding of the logo block, in logical pixels.
 const double kLayrzLayoutLogoBottomPadding = 8.0;
-
-/// The width factor applied to logo width to constrain it within its container.
-///
-/// The logo width is constrained to 80% of the rail/drawer width so it does not
-/// overflow. It is applied in both rail (178px) and drawer (260px) presentations.
-const double kLayrzLayoutLogoWidthFactor = 0.8;
-
-/// The height of the logo in its container, in logical pixels.
-///
-/// The logo is constrained to this fixed height and scaled to fit within
-/// the box while maintaining aspect ratio.
-const double kLayrzLayoutLogoHeight = 40.0;
-
-/// The left padding of the logo block, in logical pixels.
-const double kLayrzLayoutLogoLeftPadding = 6.0;
 
 /// The vertical padding of a rail item row, in logical pixels.
 const double kLayrzLayoutItemPaddingVertical = 8.0;
@@ -229,21 +205,6 @@ const double kLayrzLayoutActiveIndicatorWidth = 3.0;
 /// selected items, fully rounded.
 const double kLayrzLayoutActiveIndicatorHeight = 16.0;
 
-/// The height of the search field above navigation items, in logical pixels.
-const double kLayrzLayoutSearchFieldHeight = 30.0;
-
-/// The horizontal padding of the search field, in logical pixels.
-const double kLayrzLayoutSearchFieldPaddingHorizontal = 10.0;
-
-/// The horizontal padding inside the search field text input, in logical pixels.
-const double kLayrzLayoutSearchFieldInternalPaddingHorizontal = 10.0;
-
-/// The font size of the search field text, in logical pixels.
-const double kLayrzLayoutSearchFieldFontSize = 13.0;
-
-/// The size of the leading search icon in the search field, in logical pixels.
-const double kLayrzLayoutSearchFieldIconSize = 12.0;
-
 /// The height of the notifications row in the footer, in logical pixels.
 const double kLayrzLayoutNotificationsRowHeight = 32.0;
 
@@ -280,13 +241,6 @@ const double kLayrzLayoutNavigatorLabelBandPaddingVertical = 8.0;
 /// The band spans the full width of the sidebar, so this padding determines the
 /// distance between text and the band edges.
 const double kLayrzLayoutNavigatorLabelBandPaddingHorizontal = 12.0;
-
-/// The icon size used in dense mode text inputs, in logical pixels.
-///
-/// When [LayrzTextInput.dense] is true, slot icons are rendered at this size
-/// to reduce the overall field height. This keeps the field compact while maintaining
-/// legibility.
-const double kLayrzTextInputDenseIconSize = 14.0;
 
 /// The bottom margin (breathing room) below a navigator label band, in logical pixels.
 ///
