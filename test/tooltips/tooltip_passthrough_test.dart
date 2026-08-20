@@ -308,13 +308,11 @@ void main() {
     testWidgets(
       'Case 1: tap passes through a SHOWING tooltip to backdrop GestureDetector',
       (tester) async {
-        // DESIGN-77 UPDATE: Touch-opened tooltips have a barrier that blocks taps.
-        // Hover-opened tooltips remain pass-through (no barrier).
+        // DESIGN-77 UPDATE: The global pointer route dismisses tooltips on PointerDownEvent
+        // but does NOT claim the pointer, so taps pass through to underlying widgets.
         //
-        // This test uses longPress (touch), so it tests the NEW touch-barrier behavior:
-        // The tap is absorbed by the barrier and does NOT pass through to the backdrop.
-        //
-        // The old "pass through" behavior only applied to hover tooltips.
+        // This test uses longPress (touch), so the pointer route observes the down event,
+        // dismisses the tooltip, and lets the tap propagate to the backdrop GestureDetector.
 
         bool backdropTapped = false;
         final anchorKey = GlobalKey();
@@ -359,20 +357,20 @@ void main() {
         await tester.tapAt(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop DID NOT receive the tap (barrier absorbed it)
+        // Assert: The backdrop DOES receive the tap (global route observes without claiming)
         expect(
           backdropTapped,
-          isFalse,
+          isTrue,
           reason:
-              'Tap inside TOUCH-OPENED tooltip must be absorbed by barrier '
-              'and NOT pass through to backdrop (DESIGN-77)',
+              'Tap inside tooltip passes through to backdrop via global pointer route '
+              '(pointer route dismisses tooltip but does not claim the pointer, DESIGN-77)',
         );
 
         // Assert: The tooltip is now dismissed
         expect(
           find.text('Tooltip body'),
           findsNothing,
-          reason: 'Tap inside touch-opened tooltip should dismiss it',
+          reason: 'Tap inside tooltip should dismiss it via global pointer route',
         );
       },
     );
@@ -380,14 +378,9 @@ void main() {
     testWidgets(
       'Case 2: hover passes through a SHOWING tooltip to backdrop MouseRegion',
       (tester) async {
-        // DESIGN-77 UPDATE: Touch-opened tooltips have a barrier with opaque HitTestBehavior
-        // that blocks BOTH taps AND hovers. Hover-opened tooltips have no barrier and
-        // remain pass-through.
-        //
-        // This test uses longPress (touch), so it tests the NEW touch-barrier behavior:
-        // Mouse hover is blocked by the barrier and does NOT pass through to the backdrop.
-        //
-        // To test true hover pass-through, use mouse hover to open the tooltip (not longPress).
+        // DESIGN-77 UPDATE: The global pointer route observes PointerDownEvent to dismiss
+        // tooltips but does NOT block mouse hover. Mouse movement is not claimed by the
+        // route, so hover events pass through to underlying MouseRegions.
 
         PointerEnterEvent? backdropEnterEvent;
         final anchorKey = GlobalKey();
@@ -424,14 +417,14 @@ void main() {
         await gesture.moveTo(pointInTooltip);
         await tester.pumpAndSettle();
 
-        // Assert: The backdrop MouseRegion.onEnter did NOT fire.
-        // The barrier's opaque HitTestBehavior blocks mouse hover from reaching the backdrop.
+        // Assert: The backdrop MouseRegion.onEnter DOES fire.
+        // The global pointer route observes without claiming, allowing hover to pass through.
         expect(
           backdropEnterEvent,
-          isNull,
+          isNotNull,
           reason:
-              'Hover inside TOUCH-OPENED tooltip is blocked by barrier '
-              '(opaque HitTestBehavior prevents passthrough for touch-opened tooltips, DESIGN-77)',
+              'Hover inside tooltip passes through to backdrop MouseRegion '
+              '(global pointer route observes without claiming mouse events, DESIGN-77)',
         );
       },
     );

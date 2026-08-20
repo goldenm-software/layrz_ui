@@ -267,7 +267,9 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('drawer closes when LayrzNavigatorPage item is tapped from unfiltered list', (WidgetTester tester) async {
+    testWidgets('drawer closes when LayrzNavigatorPage item is tapped from unfiltered list', (
+      WidgetTester tester,
+    ) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -356,7 +358,9 @@ void main() {
       expect(find.text('Home'), findsOneWidget);
     });
 
-    testWidgets('drawer closes when LayrzNavigatorPage item is tapped from search-filtered list', (WidgetTester tester) async {
+    testWidgets('drawer closes when LayrzNavigatorPage item is tapped from search-filtered list', (
+      WidgetTester tester,
+    ) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -414,7 +418,11 @@ void main() {
       expect(reportsTapCalled, true, reason: 'LayrzNavigatorPage.onTap was not called from filtered list');
 
       // Assert the drawer is closed
-      expect(find.text('Reports'), findsNothing, reason: 'Drawer did not close after tapping LayrzNavigatorPage from filtered list');
+      expect(
+        find.text('Reports'),
+        findsNothing,
+        reason: 'Drawer did not close after tapping LayrzNavigatorPage from filtered list',
+      );
     });
 
     testWidgets('avatar removed from top bar but retained in drawer', (WidgetTester tester) async {
