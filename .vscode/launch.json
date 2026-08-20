@@ -2,11 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run example",
+      "name": "Run example (debug)",
       "request": "launch",
       "type": "dart",
       "cwd": "example",
       "program": "lib/main.dart"
+    },
+    {
+      "name": "Run example (profile)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "example",
+      "program": "lib/main.dart",
+      "args": ["--profile"]
     }
   ]
 }
