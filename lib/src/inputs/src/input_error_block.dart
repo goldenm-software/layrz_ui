@@ -4,9 +4,13 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Renders the error message block and character counter below a [LayrzTextInput].
 ///
-/// When error messages are present, displays them using `typography.label` text style
-/// with danger color and bold weight (w700). Bold rendering serves as a deliberate visual
-/// signal to direct the user's attention to what went wrong.
+/// When error messages are present and [showErrorsInline] is true, displays them
+/// using `typography.label` text style with danger color and bold weight (w700).
+/// Bold rendering serves as a deliberate visual signal to direct the user's attention
+/// to what went wrong.
+///
+/// When error messages are present and [showErrorsInline] is false (typical on compact
+/// widths), errors are hidden and the counter (if present) takes full width.
 ///
 /// When `maxLength` is set, displays a character counter in the format `"5/50"` (current/max)
 /// aligned to the right. The counter uses `typography.label` in `fg3` color and remains
@@ -19,6 +23,12 @@ class LayrzInputErrorBlock extends StatelessWidget {
 
   /// Whether to hide the error block and character counter.
   final bool hideDetails;
+
+  /// Whether to show errors inline below the field.
+  ///
+  /// When false (typical on compact widths), errors are not displayed inline;
+  /// they are shown only in the tooltip. The counter still displays at full width.
+  final bool showErrorsInline;
 
   /// Maximum character length for the input field.
   ///
@@ -35,13 +45,14 @@ class LayrzInputErrorBlock extends StatelessWidget {
     super.key,
     required this.errors,
     required this.hideDetails,
+    this.showErrorsInline = true,
     this.maxLength,
     this.controller,
   });
 
   @override
   Widget build(BuildContext context) {
-    final hasErrors = errors.isNotEmpty;
+    final hasErrors = errors.isNotEmpty && showErrorsInline;
     final hasCounter = maxLength != null;
 
     // Hide the entire detail block if hideDetails is true, or if there's nothing to show
