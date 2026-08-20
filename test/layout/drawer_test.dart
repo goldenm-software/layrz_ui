@@ -241,7 +241,7 @@ void main() {
         ),
       );
 
-      final menuButton = find.byType(GestureDetector).first;
+      final menuButton = find.byKey(const ValueKey('drawer_trigger_button'));
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 
@@ -300,7 +300,7 @@ void main() {
       );
 
       // Open the drawer
-      final menuButton = find.byType(GestureDetector).first;
+      final menuButton = find.byKey(const ValueKey('drawer_trigger_button'));
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 
@@ -341,7 +341,7 @@ void main() {
       );
 
       // Open the drawer
-      final menuButton = find.byType(GestureDetector).first;
+      final menuButton = find.byKey(const ValueKey('drawer_trigger_button'));
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 
@@ -388,7 +388,7 @@ void main() {
       );
 
       // Open the drawer
-      final menuButton = find.byType(GestureDetector).first;
+      final menuButton = find.byKey(const ValueKey('drawer_trigger_button'));
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 
@@ -453,7 +453,7 @@ void main() {
       expect(find.byType(LayrzAvatar), findsNothing, reason: 'LayrzAvatar found in top bar (should only be in drawer)');
 
       // Open the drawer
-      final menuButton = find.byType(GestureDetector).first;
+      final menuButton = find.byKey(const ValueKey('drawer_trigger_button'));
       await tester.tap(menuButton);
       await tester.pumpAndSettle();
 

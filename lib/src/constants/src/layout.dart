@@ -181,13 +181,34 @@ const double kLayrzLayoutTopBarLogoWidth = 200.0;
 /// of `kLayrzLayoutTopBarHeight - 16` (56 - 16 = 40).
 const double kLayrzLayoutTopBarLogoHeight = 40.0;
 
+/// The size of the top bar icon button (width × height) in the top bar, in logical pixels.
+///
+/// The drawer trigger button in the top bar is 40×40 pixels, providing a 40px
+/// hit target while fitting comfortably within the 56px top bar height.
+const double kLayrzLayoutTopBarIconButtonSize = 40.0;
+
 /// The width of the off-canvas drawer in drawer presentation, in logical pixels.
 const double kLayrzLayoutDrawerWidth = 260.0;
 
-/// The opacity of the scrim behind the off-canvas drawer, as a fraction from 0 to 1.
+/// The width of the edge drag zone when the drawer is closed, in logical pixels.
 ///
-/// The scrim uses overlay colour at this opacity to darken the background.
-const double kLayrzLayoutDrawerScrimOpacity = 1.0;
+/// When the drawer is closed, a 20-pixel strip along the left edge is tappable
+/// to open the drawer. When open, the entire page area is draggable to close.
+const double kLayrzLayoutDrawerEdgeDragWidth = 20.0;
+
+/// The scale factor applied to the page when the drawer is fully open.
+///
+/// The page scales to 0.88 (scaled down by 12%) when the drawer is fully open.
+/// The anchor is Alignment.centerLeft, so the left edge remains fixed while the
+/// page compresses horizontally from the center and right edge.
+const double kLayrzLayoutDrawerOpenScale = 0.88;
+
+/// The velocity threshold for fling settle in the drawer drag handler, in pixels per second.
+///
+/// When a drag is released with velocity > 365 px/s in either direction, the drawer
+/// settles toward that direction. Otherwise, it settles based on whether the current
+/// position is > 0.5 (halfway open).
+const double kLayrzLayoutDrawerDragSettleVelocity = 365.0;
 
 /// The maximum width of the body content in xl breakpoint band.
 ///

@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'notification_item.dart';
+import 'top_bar_icon_button.dart';
 
 /// The top bar widget displayed in drawer presentation.
 ///
@@ -60,25 +61,26 @@ class LayrzLayoutTopBar extends StatelessWidget {
             child: Row(
               children: [
                 // Drawer trigger
-                GestureDetector(
+                LayrzLayoutTopBarIconButton(
+                  key: const ValueKey('drawer_trigger_button'),
+                  icon: LayrzIcons.solarBoldMenuDots,
+                  iconColor: tokens.colors.fg2,
+                  iconSize: kLayrzLayoutDrawerTriggerIconSize,
                   onTap: onDrawerTap,
-                  child: Icon(
-                    LayrzIcons.solarBoldMenuDots,
-                    size: kLayrzLayoutDrawerTriggerIconSize,
-                    color: tokens.colors.fg2,
-                  ),
                 ),
 
                 SizedBox(width: kLayrzLayoutTopBarGap),
 
                 // Logo/mark
                 Expanded(
-                  child: Center(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
                     child: LayrzImage(
                       source: logo,
                       width: kLayrzLayoutTopBarLogoWidth,
                       height: kLayrzLayoutTopBarLogoHeight,
                       fit: BoxFit.contain,
+                      alignment: Alignment.centerLeft,
                     ),
                   ),
                 ),
