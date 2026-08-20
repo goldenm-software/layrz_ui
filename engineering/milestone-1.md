@@ -242,8 +242,8 @@ These are aggregated into a top-level `LayrzTokens` class.
 These tokens define the visual language: how tight or loose the spacing is, how rounded or sharp the corners are, how fast animations feel. They are all interdependent (spacing scales with breakpoints, radii with component sizes). Treating them as a unified system prevents inconsistency.
 
 **Verification**:
-- `LayrzTokens.spacing.sp8` is a `double` representing 8.0 logical pixels
-- `LayrzTokens.radius.r12` is a `double`
+- `LayrzTokens.spacing.sp2` is a `double` representing 8.0 logical pixels
+- `LayrzTokens.radius.r3` is a `double` representing 16.0 logical pixels
 - `LayrzTokens.motion.dHover` is a `Duration`
 - Light theme tokens are correctly initialized with sensible defaults
 

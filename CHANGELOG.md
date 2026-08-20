@@ -1,5 +1,62 @@
 # Changelog
 
+## Unreleased
+
+**Token system refactor: spacing and radius to semantic level ramps.** Both `LayrzSpacingTokens` and `LayrzRadiusTokens` move from ad-hoc pixel-named members to five semantic levels (1–5) sharing the value scale 4, 8, 16, 24, 32 — consistent with the pre-existing shadow elevation pattern. This is a **breaking change** requiring migration of every spacing and radius call site. See decision D46 for full context and migration guide.
+
+**Icon set migration to Material Design Icons.** Migrates the system-wide icon source from the Solar set (`layrz_icons`) to Material Design Icons (`flutter_material_design_icons`), aligning with industry standards while retaining `layrz_icons` for the planned `LayrzIconInput` widget.
+
+### Breaking
+
+**Spacing tokens (`LayrzSpacingTokens`)**:
+- **Removed entirely** (no deprecation, no aliases — all stale call sites MUST fail at compile time): `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, `margin`, `reducedMargin`, `padding`, `spacingSize`, `sizedBox`.
+- **Added as final fields** (in `copyWith`, `==`, `hashCode`): `sp1` (4.0), `sp2` (8.0), `sp3` (16.0), `sp4` (24.0), `sp5` (32.0). **Note**: `sp4` existed in the old scheme at 4.0; it now means 24.0. This silent-failure hazard necessitated complete removal of the old member first, then introduction of the new one.
+- **Added as derived getters** (NOT in `copyWith`, `==`, `hashCode`): `pd1`…`pd5` and `mg1`…`mg5`, each returning `EdgeInsets.all(spN)`. These exist for call-site clarity; padding and margin intent is now explicit in the token name.
+- **Migration table** (all 23 old members):
+  - `sp4` (4.0) → `sp1`
+  - `sp6` (6.0) → `sp2`
+  - `sp8`–`sp10` (8.0–10.0) → `sp2`
+  - `sp12`–`sp14` (12.0–14.0) → `sp3`
+  - `sp16` (16.0) → `sp3`
+  - `sp20` (20.0) → `sp4`
+  - `sp24` (24.0) → `sp4`
+  - `sp28` (28.0) → `sp5`
+  - `sp32` (32.0) → `sp5`
+  - `sp36`, `sp40`, `sp44`, `sp48` (36.0–48.0) → `sp5` [clamps to 32; 23 call sites tighten spacing by 1/3]
+  - `base`, `padding`, `margin` → `sp2` (8.0)
+  - `reducedMargin` → `mg1` (4.0)
+  - `spacingSize` → `Size(sp2, sp2)` inline
+  - `sizedBox` → `SizedBox.square(dimension: sp2)` inline
+
+**Radius tokens (`LayrzRadiusTokens`)**:
+- **Removed entirely** (no deprecation, no aliases): `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `borderRadius` getter.
+- **Added as final fields** (in `copyWith`, `==`, `hashCode`): `r1` (4.0), `r2` (8.0), `r3` (16.0), `r4` (24.0), `r5` (32.0). **Note**: `r12` existed at 12.0; it now does not exist, and `r3` (16.0) is the nearest match.
+- **Retained unchanged**: `full` (999.0, pill shape), `innerRadius()`, `innerRadiusValue()`.
+- **Added as derived getters** (NOT in `copyWith`, `==`, `hashCode`): `br1`…`br5`, each returning `BorderRadius.circular(rN)`.
+- **Migration table** (all 8 old members):
+  - `r8`, `r10` → `r2` (8.0)
+  - `r12`–`r16` → `r3` (16.0) [16 call sites see visibly rounder corners]
+  - `r20`, `r24` → `r4` (24.0)
+  - `base`, `borderRadius` → `r2` (8.0)
+
+### Changed
+
+- **All icons now use `flutter_material_design_icons` (^3.1.0+7447) instead of `layrz_icons`.** Every component that previously rendered `LayrzIcons.solarOutlineXxx` now uses `MdiIcons.xxx`. This is a visual change to icon appearance, as the Solar and MDI glyph sets differ. Components affected:
+  - `LayrzButton` and `LayrzDropdownEntry` semantic factories (save/cancel/info/show/edit/delete) now use MDI icons
+  - `LayrzAlert` types (info/success/warning/danger/context) now use MDI icons
+  - `LayrzLayout` drawer trigger and navigation examples now use MDI
+  - All widget examples and documentation pages updated to reflect the new icons
+  
+  Reference decision D45.
+
+- **`layrz_icons` dependency remains** but is no longer the system-wide icon source. It is retained exclusively for the planned `LayrzIconInput` widget, which browses the full Solar catalogue. The dependency version is pinned at `^1.1.1` (co-constrained with `layrz_sdk`); this will remain until `layrz_sdk` upgrades to `layrz_icons: ^2.0.0`.
+
+### Dependencies Added
+
+- **`flutter_material_design_icons: ^3.1.0+7447`** — Pure icon-font package providing Material Design Icons. No Material or Cupertino coupling; purely a font and constant library. All components now import icons from this package.
+
+---
+
 ## 0.0.11
 
 **Touch behaviour, and a drawer that reads as depth.** Reworks how tooltips behave under a finger, corrects coordinate and scaling faults that only surface on a real device, and rebuilds the mobile drawer transition so the page floats above a flat backdrop.

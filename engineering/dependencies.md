@@ -110,7 +110,7 @@ google_fonts resolves to version 8.2.1 in layrz_theme's pubspec.lock (latest as 
 
 ### Clean (No Material or Cupertino Coupling)
 
-#### layrz_icons 1.1.1 (downgraded from 2.0.0)
+#### layrz_icons 1.1.1 (retained for future LayrzIconInput)
 
 **Verdict**: ✅ **Clean**
 
@@ -123,18 +123,30 @@ google_fonts resolves to version 8.2.1 in layrz_theme's pubspec.lock (latest as 
 
 **Consequence**: Safe to depend on. Aligns with layrz_ui's design-system-agnostic foundation.
 
-**Breaking Change Note**: `layrz_ui` pinned `layrz_icons` to `^1.1.1` (not `^2.0.0`) to co-resolve with `layrz_sdk ^4.4.3`, which requires `layrz_icons: ^1.1.1`. **This is intentional and verified**:
-- All 20 `LayrzIcons.*` symbols used across `lib/`, `test/`, and `example/lib/` exist in both 1.1.1 and 2.0.0 with identical names and signatures.
+**Deprecation Note**: As of M2, layrz_ui's icon rendering has migrated to `flutter_material_design_icons` (see below). This dependency is retained exclusively for the planned `LayrzIconInput` widget, which browses the full Solar icon catalogue. The dependency is no longer the system-wide icon source.
+
+**Version Note**: `layrz_ui` pinned `layrz_icons` to `^1.1.1` (not `^2.0.0`) to co-resolve with `layrz_sdk ^4.4.3`, which requires `layrz_icons: ^1.1.1`. This is intentional and verified:
+- All 20 `LayrzIcons.*` symbols used across `lib/`, `test/`, and `example/lib/` (before the M2 migration) exist in both 1.1.1 and 2.0.0 with identical names and signatures.
 - `LayrzIcon` and `LayrzFamily` class definitions are byte-for-byte identical between the two versions.
 - Both versions import ONLY `package:flutter/widgets.dart` — no Material or Cupertino coupling.
 - 1.1.1 declares `sdk: >=3.12.0 <4.0.0` and `flutter: >=3.44.0`, which are looser constraints than layrz_ui's own `sdk: >=3.13.0 <4.0.0` and `flutter: >=3.47.0`, so it imposes no additional constraint.
-- All tests pass identically; no glyph changes or rendering differences.
 
 **Exit condition**: Raise back to `^2.0.0` once `layrz_sdk` moves to `layrz_icons: ^2.0.0`.
 
 ---
 
-#### layrz_sdk 4.4.3
+#### flutter_material_design_icons 3.1.0+7447
+
+**Verdict**: ✅ **Clean** — Widgets-only; system-wide icon source
+
+**Evidence**: Pure icon-font package importing only `package:flutter/widgets.dart`. No Material or Cupertino anywhere. Ships `IconData` constants and font assets only.
+
+- `IconData` constants for Material Design Icons (MDI) icon set (7,447 icons)
+- Font asset files only; no Material widgets or Material-coupled logic
+
+**Consequence**: Safe to depend on. This is the new system-wide icon source for layrz_ui, replacing the Solar set as the primary icon vocabulary. All components that previously used `LayrzIcons.solarOutlineXxx` now use `MdiIcons.xxx` from this package. This does not violate the Material-free invariant because the package is purely a font and constant library — it contains no Material design decisions, no Material widgets, and no Material runtime coupling.
+
+**Rationale**: Material Design Icons is a neutral, comprehensive icon vocabulary maintained by Google. Unlike Material components (which impose design patterns), the icon set is a pure asset that aligns with layrz_ui's design-system-agnostic foundation. Icon selection is independent of the Flutter design system in use.
 
 **Verdict**: ✅ **Accepted** — Widgets-only imports; used for `Avatar` model
 

@@ -168,111 +168,160 @@ class LayrzCard extends StatelessWidget {
 
 ### Spacing Tokens
 
-Spacing tokens define a consistent grid for margins, padding, and gaps.
+Spacing tokens define a consistent five-level semantic grid for margins, padding, and gaps. The same value scale (4, 8, 16, 24, 32) is mirrored across spacing and radius tokens, unifying the design system's proportional vocabulary.
 
 #### Token Structure
+
+Five semantic levels with consistent values:
 
 ```dart
 // Design sketch
 class LayrzSpacingTokens {
-  // Base unit: 8 pixels
-  final double base = 8.0;
+  // Five semantic spacing levels
+  final double sp1 = 4.0;    // Level 1: Extra-small gaps
+  final double sp2 = 8.0;    // Level 2: Small gaps
+  final double sp3 = 16.0;   // Level 3: Standard padding
+  final double sp4 = 24.0;   // Level 4: Large padding
+  final double sp5 = 32.0;   // Level 5: Extra-large padding
   
-  // Spacing scale
-  final double sp4 = 4.0;
-  final double sp6 = 6.0;
-  final double sp8 = 8.0;
-  final double sp10 = 10.0;
-  final double sp12 = 12.0;
-  final double sp14 = 14.0;
-  final double sp16 = 16.0;
-  final double sp20 = 20.0;
-  final double sp24 = 24.0;
-  final double sp28 = 28.0;
-  final double sp32 = 32.0;
-  final double sp36 = 36.0;
-  final double sp40 = 40.0;
-  final double sp44 = 44.0;
-  final double sp48 = 48.0;
-  
-  // Convenience accessors
-  Size get spacingSize => Size(base, base);
-  Widget get sizedBox => SizedBox.fromSize(size: spacingSize);
-  EdgeInsets get margin => EdgeInsets.all(base);
-  EdgeInsets get reducedMargin => EdgeInsets.all(base / 2);
-  EdgeInsets get padding => EdgeInsets.all(base);
+  // Convenience accessors — identical in value, exist for call-site clarity
+  EdgeInsets get pd1 => EdgeInsets.all(sp1);  // ... through pd5
+  EdgeInsets get mg1 => EdgeInsets.all(sp1);  // ... through mg5
 }
 ```
 
-All spacing values are stored as `double`, allowing fine-grained pixel control and eliminating the need for `.toDouble()` conversions at call sites.
+**Design principle**: `pdN` and `mgN` are intentionally identical in value; they exist so call sites read as explicit padding vs margin intent, improving code clarity without requiring a different token. Both resolve to `EdgeInsets.all(spN)`.
+
+All spacing values are stored as `double`, allowing fine-grained pixel control.
 
 #### Use in Components
 
 ```dart
-// Design sketch
+// Raw values for gaps, SizedBox dimensions, and widths/heights
 class LayrzButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spacing = LayrzTheme.of(context).tokens.spacing;
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: spacing.sp16,
-        vertical: spacing.sp12,
+    return SizedBox(
+      height: spacing.sp3,  // 16 logical pixels
+      child: Row(
+        children: [
+          SizedBox(width: spacing.sp1),  // 4-pixel gap
+          Icon(...),
+          SizedBox(width: spacing.sp2),  // 8-pixel gap
+          Text(...),
+        ],
       ),
-      child: ...,
     );
   }
 }
+
+// EdgeInsets accessors for padding and margin clarity
+Container(
+  padding: context.tokens.spacing.pd3,  // 16 logical pixels all sides
+  margin: context.tokens.spacing.mg2,   // 8 logical pixels all sides
+  child: ...,
+)
 ```
+
+#### Overriding Tokens
+
+The five values are overridable per-field via `copyWith`:
+
+```dart
+final customSpacing = tokens.spacing.copyWith(
+  sp2: 10.0,  // Custom small gap
+  sp4: 28.0,  // Custom large padding
+);
+```
+
+The derived accessors (`pdN`, `mgN`) follow automatically — no separate override.
+
+**Migration note**: Previous versions used pixel-named members (`sp6`, `sp8`, `sp10`, etc.). The five-level model aligns spacing with the existing shadow `elevation1`…`elevation5` pattern. Rounding rule: tighten only when unavoidable; loosen otherwise. So 6→8 (`sp1` to `sp2`), 12→16 (`sp2` to `sp3`), 20→24 (`sp3` to `sp4`), 28→32 (`sp4` to `sp5`).
 
 ### Radius Tokens
 
-Radius tokens define border radius values for rounded corners.
+Radius tokens define border radius values for rounded corners using the same five semantic levels as spacing: 4, 8, 16, 24, 32 logical pixels. A sixth member, `full` (999), expresses pill shapes.
 
 #### Token Structure
+
+Five semantic levels plus pill shape:
 
 ```dart
 // Design sketch
 class LayrzRadiusTokens {
-  // Base radius
-  final double base = 8.0;
+  // Five semantic radius levels — mirrors spacing scale
+  final double r1 = 4.0;     // Level 1: Subtle rounding
+  final double r2 = 8.0;     // Level 2: Standard corners
+  final double r3 = 16.0;    // Level 3: Medium rounding
+  final double r4 = 24.0;    // Level 4: Large rounding
+  final double r5 = 32.0;    // Level 5: Extra-large rounding
   
-  // Predefined radii
-  final double r8 = 8.0;
-  final double r10 = 10.0;
-  final double r12 = 12.0;
-  final double r14 = 14.0;
-  final double r16 = 16.0;
-  final double r20 = 20.0;
-  final double r24 = 24.0;
-  final double full = 999.0;  // Fully rounded (pill shape)
+  // Pill shape (no ramp level)
+  final double full = 999.0;
   
-  // Convenience accessors
-  BorderRadius get borderRadius => BorderRadius.circular(base);
-  BorderRadius innerRadius({
-    required double outerRadius,
-    required double spacer,
-  });  // Computes visually consistent inner radius for nested containers
+  // Convenience accessors — NOT in copyWith/==/hashCode
+  BorderRadius get br1 => BorderRadius.circular(r1);  // ... through br5
+  
+  // Nested container math — not level-based
+  double innerRadiusValue({required double outerRadius, required double spacer});
+  BorderRadius innerRadius({required double outerRadius, required double spacer});
 }
 ```
+
+**Design principle**: Derived accessors (`brN`) are computed on-demand; only the five fields (`r1`–`r5`) and `full` participate in `copyWith`, equality and hashing.
 
 #### Use in Components
 
 ```dart
-// Design sketch
+// Raw values for custom BorderRadius or shape computations
 class LayrzCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final radius = LayrzTheme.of(context).tokens.radius;
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(radius.r12)),
+        borderRadius: BorderRadius.circular(radius.r3),  // 16 logical pixels
       ),
       child: ...,
     );
   }
 }
+
+// BorderRadius accessors for the common all-corners-equal case
+Container(
+  decoration: BoxDecoration(
+    borderRadius: context.tokens.radius.br2,  // BorderRadius.circular(8)
+  ),
+  child: ...,
+)
+
+// Nested container borders
+final inner = context.tokens.radius.innerRadius(
+  outerRadius: context.tokens.radius.r4,  // Outer: 24 pixels
+  spacer: context.tokens.spacing.sp2,     // Spacing between arcs: 8 pixels
+);  // Returns BorderRadius.circular(16) — computed as 24 − 8 = 16
 ```
+
+#### Pill Shape and innerRadius
+
+- `full` is kept separately because no level on the 1–5 ramp expresses a pill shape (all are too small). Removing `full` would force call sites to hardcode 999 — a functional regression. If the ramp grows to express a pill naturally, this will be revisited.
+- `innerRadius` and `innerRadiusValue` compute visually consistent inner radii for nested container borders. Both are non-level-based; they use the ramp only if called with a ramp value, otherwise accept any double.
+
+#### Overriding Tokens
+
+The five values are overridable per-field via `copyWith`:
+
+```dart
+final customRadius = tokens.radius.copyWith(
+  r3: 20.0,  // Custom medium rounding
+  full: 500.0,  // Custom pill shape (rare)
+);
+```
+
+The derived accessors (`brN`) follow automatically.
+
+**Migration note**: Previous versions used pixel-named members (`r8`, `r10`, `r12`, etc.). The five-level model mirrors the spacing token structure. Rounding rule: loosen (increase) to the next level. So 8→8 (`r2`), 10→8 (`r2`), 12→16 (`r3`), 14→16 (`r3`), 16→16 (`r3`), 20→24 (`r4`), 24→24 (`r4`).
 
 ### Shadow and Elevation Tokens
 
@@ -472,7 +521,7 @@ Component access pattern:
 // Preferred: all tokens via LayrzTheme.of(context).tokens.*
 final tokens = LayrzTheme.of(context).tokens;
 final color = tokens.colors.primary;
-final spacing = tokens.spacing.sp16;
+final spacing = tokens.spacing.sp3;
 
 // Or via extension:
 final color = context.theme.tokens.colors.primary;
@@ -580,27 +629,31 @@ Each extension reads from Material's `Theme.of(context)` when possible, with lay
 
 Token names follow these rules:
 
-- **Category prefix** — Color tokens: `colors.primary`, spacing: `spacing.sp16`, radius: `radius.r12`
+- **Category prefix** — Color tokens: `colors.primary`, spacing: `spacing.sp3`, radius: `radius.r3`
 - **Semantic names** — Never use color values in names (not `colors.blue`, use `colors.primary`)
-- **Consistent scaling** — Spacing from 4 to 48 pixels (not all multiples), radius from 8 to 24 pixels, durations in explicit units (ms)
+- **Consistent scaling** — Spacing uses five semantic levels (4, 8, 16, 24, 32 pixels), radius uses the same five levels plus a pill shape (999), durations in explicit units (ms)
 - **Abbreviated suffixes** — `sp` for spacing, `r` for radius, `d` for duration
 - **fg1–fg4** — Foreground levels for text, ordered by contrast (1 = highest)
 - **surface / surface2 / surface3** — Elevation levels for nested containers
 
 ## Acceptance Criteria
 
-For Milestone 1, the token system must meet these criteria:
+For Milestone 1 and ongoing, the token system must meet these criteria:
 
 - All color tokens defined for light theme, including `primary`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
 - Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (40px, w700), `headline` (28px, w600), `title` (16px, w600), `body` (14px, w400), `label` (12px, w400) — see decision D23 for the rationale
-- Spacing tokens are defined as `double` and include: `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, plus convenience accessors (`spacingSize`, `sizedBox`, `margin`, `reducedMargin`, `padding`)
-- Radius tokens include: `base`, `r8`, `r10`, `r12`, `r14`, `r16`, `r20`, `r24`, `full` (pill shape), plus `borderRadius` getter and `innerRadius()` method
+- Spacing tokens use five semantic levels: `sp1`=4, `sp2`=8, `sp3`=16, `sp4`=24, `sp5`=32 logical pixels, with derived `pdN` and `mgN` accessors returning `EdgeInsets.all(spN)` for padding and margin clarity (not in copyWith/==/hashCode)
+- Radius tokens use five semantic levels: `r1`=4, `r2`=8, `r3`=16, `r4`=24, `r5`=32 logical pixels, plus `full`=999 (pill shape), with derived `brN` accessors returning `BorderRadius.circular(rN)` (not in copyWith/==/hashCode)
+- Radius tokens also provide `innerRadius(outerRadius, spacer)` and `innerRadiusValue(outerRadius, spacer)` for computing nested container borders
 - Shadow tokens define 5 elevation levels (1–5) using the mathematical algorithm, plus a builder method for custom elevation and radius
 - Border tokens include: `base`, `stroke1`, `stroke2`, `stroke3`, and pre-defined borders (`light`, `normal`, `thick`)
 - Motion tokens cover hover, press, transition, page transition, dialog durations, plus standard easing curves
 - Test: `LayrzTheme.of(context).tokens.colors.primary` resolves correctly in light theme
 - Test: `LayrzTokenizer.of(context).primary` also resolves to the same value (both access paths in sync)
-- Test: `LayrzTheme.of(context).tokens.spacing.sp8` returns 8.0 as a `double`
+- Test: `LayrzTheme.of(context).tokens.spacing.sp3` returns 16.0 as a `double`
+- Test: `LayrzTheme.of(context).tokens.radius.r2` returns 8.0 as a `double`
+- Test: `LayrzTheme.of(context).tokens.spacing.pd2` returns `EdgeInsets.all(8.0)`
+- Test: `LayrzTheme.of(context).tokens.radius.br3` returns `BorderRadius.circular(16.0)`
 - Test: All tokens are immutable and never null
 - Documentation: Every token has a doc comment explaining its purpose and usage
 

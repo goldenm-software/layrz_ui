@@ -379,23 +379,35 @@ For colors, use `LayrzTheme.of(context)` or `context.theme`. For more complex to
 
 ## Icon and Font Layers
 
-### Icons: layrz_icons Package
+### Icons: flutter_material_design_icons Package (Primary)
 
-Icons come from `layrz_icons` 1.1.0, a pure-Dart package that provides:
+The layrz_ui design system renders icons from `flutter_material_design_icons` (^3.1.0), a pure-font package providing Material Design Icons:
+
+- 7,447 icon constants as bare `IconData` (not wrapped)
+- Imported as `package:flutter_material_design_icons/flutter_material_design_icons.dart`
+- Accessed as `MdiIcons.<name>` (e.g., `MdiIcons.checkCircleOutline`)
+
+No special setup needed. Use icons directly:
+
+```dart
+Icon(
+  MdiIcons.checkCircleOutline,
+  size: 24,
+  color: context.theme.colors.success,
+)
+```
+
+This package is Material-free; it is purely a font and constant library with no Material widgets or design coupling.
+
+### Icons: layrz_icons Package (Legacy, Retained for Future LayrzIconInput)
+
+`layrz_icons` 1.1.0 is no longer the system-wide icon source. It is retained exclusively for the planned `LayrzIconInput` widget, which provides a searchable icon picker browsing the full Solar catalogue:
 
 - Class `LayrzIcon` (the icon widget)
 - Static getters on `LayrzIconsClasses` covering 14,572+ icons across 8 font families
 - Families: Material Design Icons, Font Awesome (brands, solid, regular), Solar (bold, broken, linear, outline)
 
-No special setup needed. Use icons directly:
-
-```dart
-LayrzIcon(
-  icon: LayrzIconsClasses.soloBold.check,
-  size: 24,
-  color: context.theme.colors.success,
-)
-```
+See the `LayrzIconInput` documentation for usage in that picker context.
 
 ### Fonts: google_fonts (TextStyle API Only)
 

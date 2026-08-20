@@ -58,7 +58,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 
 `LayrzButton` constructor:
 - `labelText` (String, required) — the only label form; no Widget label parameter
-- `icon` (IconData?, optional) — from layrz_icons 2.0.0 (bare IconData constants)
+- `icon` (IconData?, optional) — from flutter_material_design_icons (bare IconData constants)
 - `onTap` (VoidCallback?, nullable) — null disables the button; also respects `isDisabled` flag
 - `isDisabled` (bool, default false) — explicit disable flag; either `onTap: null` OR `isDisabled: true` disables
 - `color` (Color?, optional) — overrides the accent, defaulting to tokens.colors.primary (only used when `type == LayrzButtonType.custom`)
@@ -80,12 +80,12 @@ Each factory takes:
 
 | Factory | Icon | Semantic Color | Default `style` |
 |---|---|---|---|
-| `.save()` | `solarOutlineInboxIn` | `success` (green) | `elevated` |
-| `.cancel()` | `solarOutlineCloseSquare` | `danger` (red) | `elevated` |
-| `.info()` | `solarOutlineInfoSquare` | `info` (blue) | `elevated` |
-| `.show()` | `solarOutlineEyeScan` | `info` (blue) | `elevated` |
-| `.edit()` | `solarOutlinePenNewSquare` | `warning` (orange) | `elevated` |
-| `.delete()` | `solarOutlineTrashBinMinimalisticN2` | `danger` (red) | `elevated` |
+| `.save()` | `contentSaveOutline` | `success` (green) | `elevated` |
+| `.cancel()` | `closeCircleOutline` | `danger` (red) | `elevated` |
+| `.info()` | `informationOutline` | `info` (blue) | `elevated` |
+| `.show()` | `eyeOutline` | `info` (blue) | `elevated` |
+| `.edit()` | `pencilOutline` | `warning` (orange) | `elevated` |
+| `.delete()` | `trashCanOutline` | `danger` (red) | `elevated` |
 
 **Style context**: All factories default to `elevated`, reflecting typical button placement on plain surfaces where shadow depth helps the button stand out. Callers pass `style: LayrzButtonStyle.outlined` when nesting buttons inside elevated containers (cards, dialogs) or when a quieter appearance is desired for secondary or destructive actions like `.cancel()` or `.delete()`.
 
@@ -160,14 +160,14 @@ This prevents reflow and flicker during state changes.
 
 **Dependencies**:
 - M1: LayrzTheme, tokens, state resolution (WidgetState, WidgetStateProperty)
-- `layrz_icons: ^2.0.0` — added to pubspec.yaml (2.0.0 provides bare IconData constants)
+- `flutter_material_design_icons: ^3.1.0` — added to pubspec.yaml (provides bare IconData constants for Material Design Icons)
 
 **Files affected**:
 - `lib/buttons.dart` (entrypoint barrel, new)
 - `lib/src/buttons/` (new module directory)
 - `lib/src/buttons/button.dart` (new, ~300–400 lines)
 - `lib/src/buttons/button_style.dart` (new, enums and style definitions)
-- `pubspec.yaml` (add layrz_icons dependency)
+- `pubspec.yaml` (add flutter_material_design_icons dependency)
 - `test/buttons/button_test.dart` (tests)
 - `wiki/Widgets/LayrzButton.md` (wiki page, update with resolved spec)
 
@@ -215,8 +215,8 @@ This prevents reflow and flicker during state changes.
 - **Interactive** (`onTap: non-null`): hover steps shadow +1 (clamped at 5), press steps shadow −1 (clamped at 1), keyboard-focusable, activatable by Enter/Space, announced as button
 
 **Styling**:
-- Padding fixed at `tokens.spacing.sp16` (16u) on all sides; not exposed
-- Border radius fixed at `tokens.radius.r12` (12u); not exposed
+- Padding fixed at `tokens.spacing.sp3` (16 logical pixels) on all sides; not exposed
+- Border radius fixed at `tokens.radius.r3` (16 logical pixels); not exposed
 - No outer margin (inter-child spacing owned by LayrzRow/LayrzConstrainedView)
 
 **D15 Compliance** (no geometry changes):
@@ -270,8 +270,8 @@ This prevents reflow and flicker during state changes.
 - Background color: `tokens.colors.fg1`
 - Text color: `tokens.colors.background`
 - Text style: `tokens.typography.labelSmall`
-- Padding: horizontal `sp12`, vertical `sp6`
-- Border radius: `r8`
+- Padding: horizontal `sp3` (16 logical pixels), vertical `sp2` (8 logical pixels)
+- Border radius: `r2` (8 logical pixels)
 - Max width: 80% of viewport width (guarded by `kLayrzTooltipMaxWidthFactor`)
 
 **LayrzTooltipPosition enum** — specifies anchor position:
@@ -315,7 +315,7 @@ This prevents reflow and flicker during state changes.
 **Acceptance criteria**:
 - Constructor has every parameter documented (rule #1)
 - Exactly one of `contentText` or `contentRichText` is non-null (enforced by assert)
-- Surface styling is fixed and consistent with spec (fg1 background, background text color, labelSmall style, sp12/sp6 padding, r8 radius)
+- Surface styling is fixed and consistent with spec (fg1 background, background text color, labelSmall style, sp3/sp2 padding, r2 radius)
 - `LayrzTooltipPosition` enum correctly positions tooltip on specified side (top, bottom, left, right)
 - Overflow detection flips tooltip to opposite side when needed; tests verify all four positions and all four flips
 - Cross-axis clamping keeps tooltip inside overlay bounds
@@ -362,12 +362,12 @@ This prevents reflow and flicker during state changes.
 - `onTap` (VoidCallback?, optional, default null) — callback invoked when the alert is tapped; null disables interactivity
 
 **LayrzAlertType enum** — controls semantic color and icon:
-- `info` — `tokens.colors.info` (blue), icon: `solarOutlineInfoSquare`
-- `success` — `tokens.colors.success` (green), icon: `solarOutlineCheckSquare`
-- `warning` — `tokens.colors.warning` (orange), icon: `solarOutlineDangerSquare`
-- `danger` — `tokens.colors.danger` (red), icon: `solarOutlineCloseSquare`
-- `context` — `tokens.colors.contextual`, icon: `solarOutlineMenuDotsSquare`
-- `custom` — explicit `color` and `icon` parameters required; falls back to `tokens.colors.primary` and `solarOutlineInfoSquare` if not provided
+- `info` — `tokens.colors.info` (blue), icon: `informationBoxOutline`
+- `success` — `tokens.colors.success` (green), icon: `checkboxOutline`
+- `warning` — `tokens.colors.warning` (orange), icon: `alertBoxOutline`
+- `danger` — `tokens.colors.danger` (red), icon: `closeCircleOutline`
+- `context` — `tokens.colors.contextual`, icon: `dotsSquare`
+- `custom` — explicit `color` and `icon` parameters required; falls back to `tokens.colors.primary` and `informationBoxOutline` if not provided
 
 **LayrzAlertStyle enum** — controls visual appearance:
 
@@ -386,7 +386,7 @@ This prevents reflow and flicker during state changes.
 - `bodyColor` — color of description text (fg2)
 
 **Layout patterns**:
-- **All styles** — split-panel layout with left panel (colored background, centered icon, sp16 padding) and right panel (surface background, title/description, sp16 padding); border painted via `foregroundDecoration` over both panels
+- **All styles** — split-panel layout with left panel (colored background, centered icon, sp3 padding, 16 logical pixels) and right panel (surface background, title/description, sp3 padding, 16 logical pixels); border painted via `foregroundDecoration` over both panels
 
 **Interaction behavior**:
 - **Non-interactive** (`onTap: null`, the default): Alert is inert — no cursor change, no hover/press visual feedback, not focusable, announces as a container to assistive technology. Rendering is identical to the pre-interactive design.
@@ -411,7 +411,7 @@ This prevents reflow and flicker during state changes.
 
 **Dependencies**:
 - M1: LayrzTheme, tokens, extensions (contrastColor, withOpacityValue)
-- `layrz_icons: ^2.0.0` — semantic icons
+- `flutter_material_design_icons: ^3.1.0` — semantic icons
 
 **Files affected**:
 - `lib/alerts.dart` (entrypoint barrel, new)
@@ -445,7 +445,7 @@ This prevents reflow and flicker during state changes.
 - Interactive alerts announce as button with enabled state; non-interactive alert announces as container
 - `LayrzAlertType` enum correctly maps to token colors via `colorToken()` method
 - `LayrzAlertType` enum correctly maps to icons via `icon` property
-- Custom type falls back to `primary` color and `solarOutlineInfoSquare` icon
+- Custom type falls back to `primary` color and `informationBoxOutline` icon
 - `LayrzAlertStyle` enum resolves to correct spec via `LayrzAlertStyleSpec.resolve()`
 - **Layrz style**: split-panel layout with tonal (20% opacity) left panel, surface right panel, solid accent border, accent icon, fg1/fg2 text
 - **FilledTonal style**: single-panel, tonal background, no border, no icon chip, accent text
@@ -567,7 +567,7 @@ The component constructs the internal `Column` itself; callers pass `children` d
 
 Because the `Column` is built internally, properties a caller would normally set on it must be deliberately exposed or they become inaccessible. The decision is:
 
-- **`spacing` (double?, optional)** — **Exposed.** Controls the gap between children. When not provided, defaults to `context.tokens.spacing.base` from the theme, allowing design system control. Callers can pass `0` for flush layouts or any other value.
+- **`spacing` (double?, optional)** — **Exposed.** Controls the gap between children. When not provided, defaults to `context.tokens.spacing.sp2` (8 logical pixels) from the theme, allowing design system control. Callers can pass `0` for flush layouts or any other value.
 
 - **`mainAxisAlignment` and `crossAxisAlignment`** — **Fixed (not exposed).** The internal `Column` is fixed to `mainAxisAlignment: MainAxisAlignment.start` and `crossAxisAlignment: CrossAxisAlignment.stretch`. These are deliberately not exposed as parameters because this component is designed for a specific layout pattern (top-to-bottom, full width). Callers needing different alignments pass their own `Column` as a child.
 
@@ -663,7 +663,7 @@ A horizontal group of buttons (typically 2–4) that renders in a row on large v
 
 **Brief description**:
 
-`LayrzAvatar` — static display component rendering a layrz_sdk `Avatar` by type, with fallback to generated initials. Always a rounded box using the `r12` radius token, consistent with `LayrzCard` and `LayrzAlert`. No interaction affordances (callers wrap if needed). Per decision D31, avatars are display-only.
+`LayrzAvatar` — static display component rendering a layrz_sdk `Avatar` by type, with fallback to generated initials. Always a rounded box using the `r3` radius token (16 logical pixels), consistent with `LayrzCard` and `LayrzAlert`. No interaction affordances (callers wrap if needed). Per decision D31, avatars are display-only.
 
 `LayrzImage` — image widget resolving network URLs, data-URIs, bare base64, and asset paths. Includes SVG support via flutter_svg and a bounded cache for decoded base64 bytes.
 

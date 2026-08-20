@@ -2497,6 +2497,138 @@ This constraint is encoded in the implementation (`Transform.translate` inside `
 
 ---
 
+## D45: Icon Set Migration — Solar (layrz_icons) to Material Design Icons (flutter_material_design_icons)
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Dependency Policy / Design System
+
+### Context
+
+layrz_ui initially planned to use the Solar icon set via `layrz_icons` (1.1.1 and 2.0.0) as the system-wide icon source. On 2026-08-20, the maintainer directed the design system to migrate to Material Design Icons (`flutter_material_design_icons`). This was a product/design direction, not a decision derived from technical evaluation of alternatives.
+
+### Decision
+
+**Chose: Material Design Icons via `flutter_material_design_icons` (^3.1.0+7447).**
+
+### Rationale
+
+This was directed by the maintainer as a design-language change; no comparative technical evaluation was performed.
+
+However, several properties of the chosen package are worth recording:
+
+- **Material-free package**: `flutter_material_design_icons` is a pure font + constants library importing only `package:flutter/widgets.dart`. It has zero Material coupling, despite its name. This preserves layrz_ui's design-system-agnostic foundation.
+- **Const-preserving**: All members are `static const IconData`, so call sites retain `const` semantics — no change to component API const-ness. `layrz_icons` by contrast exposes `static IconData get`, which is not const; only `flutter_material_design_icons` constants are usable in const contexts (e.g., const default parameter values).
+- **Icon coverage**: The package provides 7,447 icon constants. This is comparable in scale to the Solar set (which layrz_icons bundles along with Material Design Icons and Font Awesome); it is not a smaller catalogue, despite its name suggesting a Material-specific set. A name-by-name mapping verified that all required icons had MDI equivalents or close substitutes.
+- **Semantic factories parity**: All semantic factories (LayrzButton.save, .cancel, .info, .show, .edit, .delete; LayrzDropdownEntry equivalents; LayrzAlert types) use identical icons across all components. Each semantic factory has a deliberate icon mapping (e.g., `.save` → `contentSaveOutline`, `.cancel` → `closeCircleOutline`, `.info` → `informationOutline`, `.show` → `eyeOutline`, `.edit` → `pencilOutline`, `.delete` → `trashCanOutline`). Note: `LayrzAlert`'s info icon is `informationBoxOutline` (boxed), which is intentionally *different* from the `.info` factory icon (`informationOutline`, bare).
+- **layrz_icons retention**: `layrz_icons` is **retained** in `pubspec.yaml` exclusively for the planned `LayrzIconInput` widget. This picker widget browses the Solar catalogue, which is its intended use case. The system-wide icon source is MDI only; `layrz_icons` is no longer used in components.
+
+### Consequences
+
+**Immediate**:
+- All components using `LayrzIcons.solarOutlineXxx` migrate to `MdiIcons.xxx` (e.g., `MdiIcons.informationBoxOutline`, `MdiIcons.checkCircleOutline`).
+- Every wiki widget page, engineering doc, and code example listing icon names must be updated.
+- The mapping from Solar → MDI is recorded in a canonical table in the migration commit.
+
+**Visual appearance change**: Where a Solar icon had no exact MDI counterpart, the closest substitute was chosen, so some icons changed appearance beyond a like-for-like swap.
+
+**Dependency graph**:
+- `flutter_material_design_icons: ^3.1.0+7447` is added to `pubspec.yaml`.
+- `layrz_icons: ^1.1.1` remains (for future LayrzIconInput) and is no longer the system-wide icon source. Note: `layrz_icons` 1.1.1 itself depends on `flutter_material_design_icons: ^3.1.0+7447`, so adding it to layrz_ui's pubspec promotes a transitive dependency to a direct one, adding no new font asset to the bundle. Both packages expose the same font family and code points (7,447 MDI members).
+
+**Future components**: Components that need icons not in MDI must either use a reasonable MDI substitute, add a new icon to a custom icon font, or defer implementation.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports that a critical UI icon is missing from MDI and no reasonable substitute exists, necessitating a custom icon font or package replacement.
+- The Material Design Icons package is discontinued or significantly degraded in maintenance, requiring evaluation of alternatives.
+
+---
+
+## D46: Spacing and Radius Token Refactor — Semantic Level Ramps
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design System / Token Architecture
+
+### Context
+
+Both spacing and radius tokens had grown ad-hoc collections of pixel-named members (e.g., `sp4`, `sp6`, `sp8`… `sp48` for spacing; `r8`, `r10`, `r12`… `r24` for radius). The shadow token system already exposed five semantic elevation levels (`elevation1`…`elevation5`), providing a unified mental model. On 2026-08-20, the maintainer directed a refactor to align spacing and radius with the pre-existing shadow pattern.
+
+### Decision
+
+**Chose: Replace pixel-named members with five semantic levels using a shared value scale (4, 8, 16, 24, 32).**
+
+Both `LayrzSpacingTokens` and `LayrzRadiusTokens` now expose:
+- Five final `double` fields: `sp1`/`r1` (4), `sp2`/`r2` (8), `sp3`/`r3` (16), `sp4`/`r4` (24), `sp5`/`r5` (32)
+- Derived getters (not in `copyWith`/`==`/`hashCode`): `pdN`/`mgN` returning `EdgeInsets.all(spN)` for spacing clarity; `brN` returning `BorderRadius.circular(rN)` for radius clarity
+- For radius only: `full` = 999 (pill shape, retained), `innerRadius()` and `innerRadiusValue()` (nested container math)
+
+### Rationale
+
+- **Unification**: One value scale (4, 8, 16, 24, 32) across spacing, radius, and shadow (elevation) eliminates memorization and makes design system choices faster.
+- **Semantic clarity**: Named levels (sp1–5) replace pixel names, aligning intent with the shadow pattern already in use.
+- **API simplification**: Fewer members (5 vs. 15+ in spacing; 5 + 1 vs. 8 + 1 in radius) reduce cognitive load and discovery burden.
+- **Accessibility**: Derived getters (`pdN`, `mgN`, `brN`) make call sites read as intent-driven rather than shape-driven, improving code clarity without additional tokens.
+
+### Consequences
+
+**Breaking API change**: All consuming code must migrate from pixel-named members to level-based ones.
+
+**Silent failure hazard**: `sp4` existed in both schemes with *different* values (4.0 → 24.0). Stale code using the old `sp4` would compile and render six times the intended spacing. The mitigation adopted was **complete removal with no deprecation aliases or `@deprecated` annotations**, forcing every stale call site to fail at compile time rather than silently. This is a one-time safety trade-off (clean break) over ongoing technical debt (dual API surface).
+
+**Safe migration order** (applied to this codebase):
+1. Rewrite all old `sp4` references to `sp1` *first*, verify zero `sp4` remains.
+2. *Then* introduce the new `sp4` definition.
+3. Generalize: whenever a rename reuses an existing identifier with a new value, delete before re-adding.
+
+**Call-site migration (spacing)**:
+
+| Old | New | Justification |
+|-----|-----|---|
+| `sp4` (4.0) | `sp1` | Exact; level 1 is 4 |
+| `sp6` (6.0) | `sp2` | Round up to 8 |
+| `sp8` (8.0) | `sp2` | Exact; level 2 is 8 |
+| `sp10` (10.0) | `sp2` | Nearest (8) |
+| `sp12` (12.0) | `sp3` | Round up to 16 |
+| `sp14`–`sp16` (14–16) | `sp3` | Exact or near; level 3 is 16 |
+| `sp20` (20.0) | `sp4` | Round up to 24 |
+| `sp24` (24.0) | `sp4` | Exact; level 4 is 24 |
+| `sp28` (28.0) | `sp5` | Round up to 32 |
+| `sp32` (32.0) | `sp5` | Exact; level 5 is 32 |
+| `sp36`, `sp40`, `sp44`, `sp48` (36–48) | `sp5` | Clamp to 32 (23 call sites lose ~1/3 spacing) |
+| `base` | `sp2` | Base was 8.0; level 2 is 8 |
+| `padding`, `margin` | `pd2`, `mg2` | Base-derived; 8.0 values |
+| `reducedMargin` | `mg1` | Was `base / 2` = 4.0; level 1 is 4 |
+| `spacingSize`, `sizedBox` | Inline `Size(sp2, sp2)` / `SizedBox.square(dimension: sp2)` | No longer convenience members |
+
+**Call-site migration (radius)**:
+
+| Old | New | Justification |
+|-----|-----|---|
+| `r8`, `r10` | `r2` | Both ≤ 8; level 2 is 8 |
+| `r12`–`r16` | `r3` | 12–16 range; level 3 is 16 (16 sites see visibly rounder corners) |
+| `r20`, `r24` | `r4` | 20–24 range; level 4 is 24 |
+| `base` | `r2` | Base was 8.0; level 2 is 8 |
+| `borderRadius` | `br2` | Was `BorderRadius.circular(base)` = 8.0 |
+
+**Visual consequences** (accepted):
+- 23 old `sp48` (48.0) call sites now render at `sp5` (32.0) — a 33% tightening. This tightens spacing on some large containers but is preferable to overriding the entire ramp.
+- 16 old `r12` (12.0) call sites now render at `r3` (16.0) — corners are visibly rounder.
+- Consumers migrating incrementally must ensure all sites are updated together to avoid visual inconsistency.
+
+**`full` and `innerRadius` retained** on assumption: The ramp does not express a pill shape; removing `full` would force 3 call sites to hardcode 999 (a functional regression). Keeping one extra member is trivially reversible; re-deriving pill shapes is not. If the maintainer confirms pill shapes should be removed, this is a one-line field deletion plus 3 call-site updates.
+
+### Review Trigger
+
+**Revisit if**:
+- Consuming apps report that the ramp is too coarse (e.g., 24 is too large and 16 is too small) — revisit the five-level scale.
+- The visual tightening of the 23 `sp48` → `sp5` sites is confirmed to be a problem — consider aliasing the old `sp48` as `sp5 + 8` or reverting to a six-level ramp.
+- Pill shapes should be removed entirely — this is a one-line change once confirmed.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
