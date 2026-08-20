@@ -169,9 +169,6 @@ const double kLayrzLayoutDrawerTriggerIconSize = 24.0;
 /// The size of the notifications bell icon in the top bar, in logical pixels.
 const double kLayrzLayoutNotificationsBellIconSize = 20.0;
 
-/// The size of the user avatar in the top bar, in logical pixels.
-const double kLayrzLayoutTopBarUserAvatarSize = 28.0;
-
 /// The width of the logo in the top bar, in logical pixels.
 ///
 /// The logo image is constrained to this fixed width in the top bar presentation.
