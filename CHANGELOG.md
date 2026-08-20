@@ -2,11 +2,22 @@
 
 ## Unreleased
 
+**Input family: `dense` parameter removed.** The `dense` parameter is entirely removed from `LayrzTextInput` and all picker-style inputs (`LayrzDateInput`, `LayrzTimeInput`, `LayrzSelectInput`, etc.). Only one density remains: uniform `pd2` (8 logical pixels) padding on all sides. Callers needing tighter geometry use the `padding:` parameter explicitly. This is a **breaking change** for any consumer code using `dense:`. See decision D47 for full context and the removal rationale.
+
 **Token system refactor: spacing and radius to semantic level ramps.** Both `LayrzSpacingTokens` and `LayrzRadiusTokens` move from ad-hoc pixel-named members to five semantic levels (1–5) sharing the value scale 4, 8, 16, 24, 32 — consistent with the pre-existing shadow elevation pattern. This is a **breaking change** requiring migration of every spacing and radius call site. See decision D46 for full context and migration guide.
 
 **Icon set migration to Material Design Icons.** Migrates the system-wide icon source from the Solar set (`layrz_icons`) to Material Design Icons (`flutter_material_design_icons`), aligning with industry standards while retaining `layrz_icons` for the planned `LayrzIconInput` widget.
 
+**Navigation panel unification and layout constants refactor.** The rail and drawer navigation panels were merged into a single internal widget (`LayrzLayoutNavigatorPanel`), eliminating ~770 lines of ~91%-identical code. The logo block was rewritten to be edge-to-edge with aspect-ratio scaling. Ten hardcoded layout design constants were removed as they were unused outside their definitions. This is a **breaking change** for any consumer code referencing the deleted constants. See decision D48 for full context. Note: `LayrzLayoutRail` and `LayrzLayoutDrawer` were never exported, so their internal removal is not a public API break; only the constant removals affect external consumers.
+
 ### Breaking
+
+**Input family (`LayrzTextInput` and all picker-style inputs)**:
+- **Removed entirely** (no deprecation, no aliases — all stale call sites MUST fail at compile time): `dense` parameter.
+- **Removed as side effect**: `kLayrzLayoutSearchFieldPaddingHorizontal` (was 10.0, not on the token ramp), `kLayrzTextInputDenseIconSize` (was 14.0).
+- **Abstraction deleted**: `InputDensitySpec` class from `lib/src/inputs/src/input_density.dart` (91 lines).
+- **Default padding**: All inputs now use `pd2` (8 logical pixels uniformly) as the default padding. The `padding:` parameter remains for custom overrides.
+- **Migration**: Remove all `dense: true` and `dense: false` call sites. If custom padding is needed, pass `padding: EdgeInsets.all(…)` explicitly.
 
 **Spacing tokens (`LayrzSpacingTokens`)**:
 - **Removed entirely** (no deprecation, no aliases — all stale call sites MUST fail at compile time): `base`, `sp4`, `sp6`, `sp8`, `sp10`, `sp12`, `sp14`, `sp16`, `sp20`, `sp24`, `sp28`, `sp32`, `sp36`, `sp40`, `sp44`, `sp48`, `margin`, `reducedMargin`, `padding`, `spacingSize`, `sizedBox`.
@@ -38,6 +49,11 @@
   - `r12`–`r16` → `r3` (16.0) [16 call sites see visibly rounder corners]
   - `r20`, `r24` → `r4` (24.0)
   - `base`, `borderRadius` → `r2` (8.0)
+
+**Layout constants**: 
+- **Removed entirely** (no deprecation, no aliases — all stale call sites MUST fail at compile time): Six logo design constants (`kLayrzLayoutLogoTileSize`, `kLayrzLayoutLogoTileRadius`, `kLayrzLayoutLogoGap`, `kLayrzLayoutLogoWidthFactor`, `kLayrzLayoutLogoHeight`, `kLayrzLayoutLogoLeftPadding`) and four search-field constants (`kLayrzLayoutSearchFieldHeight`, `kLayrzLayoutSearchFieldInternalPaddingHorizontal`, `kLayrzLayoutSearchFieldFontSize`, `kLayrzLayoutSearchFieldIconSize`).
+- **Rationale**: All ten constants were unused outside their definitions (internal to the now-merged rail/drawer panels). Their removal simplifies the token landscape and retires two off-ramp hardcoded values: `kLayrzLayoutSearchFieldInternalPaddingHorizontal` (10.0) and `kLayrzLayoutLogoLeftPadding` (6.0), neither on the 4/8/16/24/32 spacing ramp.
+- **Retained unchanged**: `kLayrzLayoutRailPaddingHorizontal`, `kLayrzLayoutRailPaddingVertical`, `kLayrzLayoutLogoBottomPadding`. Note: Rail padding constants now apply to both rail and drawer presentations; renaming them would introduce a second breaking change, making them candidates for a future breaking release.
 
 ### Changed
 

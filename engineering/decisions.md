@@ -2629,6 +2629,78 @@ Both `LayrzSpacingTokens` and `LayrzRadiusTokens` now expose:
 
 ---
 
+## D47: Dense Parameter Removed from the Input Family
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: API Design / Feature Scope
+
+### Context
+
+The `dense` parameter was introduced as a public boolean on `LayrzTextInput` and inherited by all input-family components. Its purported purpose was to enable compact rendering with tighter padding. However, analysis of production usage showed:
+
+1. **Two call sites only** in the codebase itself: the navigation search field in the drawer and the search field in the rail.
+2. **Both call sites also pass an explicit `padding:` parameter** that overrides the default, making `dense` ineffective for padding control.
+3. **The parameter adds friction**: threaded through two public widgets (LayrzTextInput and picker wrappers), documented across ~31 references, and maintained through 91 lines of code (InputDensitySpec abstraction and related logic).
+
+The cost of maintaining the parameter significantly outweighed its utility.
+
+### Decision
+
+**Remove the `dense` parameter and the `InputDensitySpec` abstraction entirely.**
+
+All inputs now use a single, uniform default: `pd2` (8 logical pixels) on all four sides. The `padding` parameter survives as an escape hatch for callers who need non-standard padding.
+
+### Rationale
+
+**Usage data**: Two call sites in the entire codebase, both with overriding `padding:` parameters, means `dense` is not earning its API surface. Removing it eliminates:
+- A boolean with unclear semantics (what is "dense" without measuring the actual reduction?)
+- A parameter that silently had no effect on its two production consumers
+- 91 lines of abstraction code and ~31 wiki/engineering doc references
+
+**Future extensibility**: If a future use case genuinely needs tighter geometry, it can be addressed by:
+1. Passing an explicit `padding:` parameter (already available).
+2. Creating a purpose-built, compact-input component with its own name and contract (e.g., `LayrzCompactTextInput`), rather than resurrecting a confusing boolean.
+
+**Breaking-change timing**: The parameter was public from 0.0.9 onward, but production consumers of layrz_ui are zero at removal time (2026-08-20); the breaking change is free to execute now.
+
+### Consequences
+
+**Removed entirely**:
+- `dense: bool` parameter from `LayrzTextInput` and all picker-style inputs
+- `InputDensitySpec` abstraction file (`lib/src/inputs/src/input_density.dart`, 91 lines)
+- All references in wiki and engineering documentation
+
+**Retained**:
+- The `padding: EdgeInsets?` parameter on `LayrzTextInput`, defaulting to `pd2` (8px uniform)
+- Two constants that were unused: `kLayrzLayoutSearchFieldPaddingHorizontal` (10.0, not on token ramp) and `kLayrzTextInputDenseIconSize` (14.0)
+
+**Visual change**: Two production call sites (drawer and rail search fields) now render with `body` (16px) text and 8px uniform padding (vs. 14px text and 10px horizontal / 8px vertical under the old dense rendering). The change is intentional and aligns with the single-density design.
+
+### Removal Strategy
+
+When removing a parameter or abstraction:
+1. **Delete the parameter entirely** (not `@deprecated`) — forces all call sites to fail at compile time.
+2. **Search for references** beyond the parameter itself (e.g., constants used only by that feature).
+3. **Clean up orphaned code** (the abstraction file, derived getters, helper methods).
+
+This is preferred over deprecation cycles because:
+- Dart has no feature flags; deprecation leaves dead code in production binaries.
+- layrz_ui is 0.0.x (pre-release); clean breaks are expected and free.
+- Forcing compile-time failure ensures no code silently uses a removed feature and behaves incorrectly.
+
+### Related Decisions
+
+- **D32** (Filled Visual Language) — established the input interaction matrix and padding as a design token.
+- **D33** (Read-Only as Rest + Lock Icon) — part of the same M3 input family contract.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports that the removal of `dense` blocks a critical workflow, requiring a purpose-built compact-input component be created instead.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
@@ -2648,3 +2720,69 @@ When a significant decision is made during layrz_ui development, follow this for
 6. **Example PR**: Link the PR in which the decision was documented so that decision history is tied to code history.
 
 Keep decisions concise (300-500 words) but complete. Future maintainers should be able to understand the context and rationale without reading external documents.
+
+---
+
+## D48: Navigation Panel Unification and Logo/Search Field Refactor
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Code Refactoring / Design System
+
+### Context
+
+The navigation panel appeared twice in `LayrzLayout`:
+- `LayrzLayoutRail` (386 lines) in `lib/src/layout/src/rail.dart` — persistent sidebar on desktop (md, lg, xl breakpoints)
+- `LayrzLayoutDrawer` (385 lines) in `lib/src/layout/src/drawer.dart` — off-canvas drawer on mobile (sm, xs breakpoints)
+
+The two widgets were ~91% identical in structure, differing only in two behavioural axes:
+1. Width: 178px (rail) vs. 260px (drawer)
+2. Closure mode: no close affordance (rail) vs. callback-driven closure on navigation item tap (drawer)
+
+Both rendered the same internal structure: logo block, search field, navigation items, user chrome, notifications footer. The duplication introduced:
+- Risk of divergent behaviour between presentations (e.g., search filtering differently, logo sizing inconsistently)
+- 69 lines of actual code difference across ~770 lines total — roughly 9% divergence, or about 91% duplication
+- Maintenance burden: a change to logo rendering or search filtering required edits in two places
+
+Additionally, the logo block carried six hardcoded constants (`kLayrzLayoutLogoWidthFactor`, `kLayrzLayoutLogoHeight`, etc.), and the search field carried four more (`kLayrzLayoutSearchFieldHeight`, etc.). Analysis showed these constants were used nowhere else and were not consumed by external packages.
+
+### Decision
+
+**Chose: Merge into a single internal widget, `LayrzLayoutNavigatorPanel`, parameterised on width and closure mode.**
+
+The merged widget:
+- Takes `width: double` (caller passes 178 or 260)
+- Takes `onClose: VoidCallback?` — **null means persistent (rail) mode; non-null means drawer mode**
+- Derives shadow rendering from the `onClose` flag: shadow (`elevation2`) only when persistent; no shadow in drawer mode (sits on backdrop)
+- Renders a unified logo block and search field
+
+### Rationale
+
+**Deduplication**: Eliminating duplication reduces defect risk and maintenance cost. A single implementation path for logo and search ensures both presentations behave consistently.
+
+**Parameterisation strategy**: The two axes of variance (width and closure behaviour) map cleanly to constructor parameters. The choice to derive shadow from `onClose` is semantic: a persistent panel needs visual separation from the body; a drawer is a floating overlay on a backdrop and reads correctly without shadow.
+
+**Constant removal**: The ten deleted constants were examined for external use (grep across `lib/`, `test/`, `example/`) and found to be unused outside their definition within this repository. Removing them simplifies the token landscape. This is a genuine breaking change: the constants were public via `lib/src/constants/src/layout.dart` → `lib/src/constants/constants.dart` → `lib/layrz_ui.dart`, and the impact on consuming packages is unknown. External consumers may reference them at upgrade time and will need to migrate their code.
+
+**Two normalisations applied during merge**:
+1. Logo block now guarded by `logo.isNotEmpty` in both modes (drawer previously rendered an empty `LayrzImage` for empty logo, rail omitted it)
+2. Logo block made edge-to-edge via `LayoutBuilder` + symmetric `kLayrzLayoutItemPaddingHorizontal` on left/right, with `maxHeight` ceiling at 100px allowing aspect-ratio scaling via `BoxFit.contain`
+
+### Consequences
+
+**Code removed**:
+- `lib/src/layout/src/rail.dart` (386 lines)
+- `lib/src/layout/src/drawer.dart` (385 lines)
+- Ten public constants from `lib/src/constants/src/layout.dart`:
+  - Logo: `kLayrzLayoutLogoTileSize`, `kLayrzLayoutLogoTileRadius`, `kLayrzLayoutLogoGap`, `kLayrzLayoutLogoWidthFactor`, `kLayrzLayoutLogoHeight`, `kLayrzLayoutLogoLeftPadding`
+  - Search: `kLayrzLayoutSearchFieldHeight`, `kLayrzLayoutSearchFieldInternalPaddingHorizontal`, `kLayrzLayoutSearchFieldFontSize`, `kLayrzLayoutSearchFieldIconSize`
+
+**Public API impact**: `LayrzLayoutRail` and `LayrzLayoutDrawer` were **never exported** from `lib/src/layout/layout.dart`, so their removal is not a public breaking change. However, the ten constants *were* public, making their removal a **genuine breaking change** for any consumer code referencing them by name.
+
+**Known wart**: `kLayrzLayoutRailPaddingHorizontal` and `kLayrzLayoutRailPaddingVertical` retain the `Rail` prefix despite applying to both presentations. Renaming would introduce a second breaking change. These constants are candidates for a future breaking release.
+
+### Review Trigger
+
+**Revisit if**:
+- Drawer and rail presentations show visual divergence in logo rendering or search filtering, indicating the merged implementation is insufficient for future variance.
+- A consuming app reports that removal of the ten constants blocks critical custom styling, requiring a feature-flag constant restoration strategy.

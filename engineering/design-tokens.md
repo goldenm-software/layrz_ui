@@ -127,16 +127,16 @@ class LayrzTextTheme {
   final TextStyle display;   // 40px, weight 700
   
   // Headline: section headings
-  final TextStyle headline;  // 28px, weight 600
+  final TextStyle headline;  // 24px, weight 600
   
   // Title: card titles, dialog headers
-  final TextStyle title;     // 16px, weight 600
+  final TextStyle title;     // 20px, weight 600
   
   // Body: paragraph text, default root style
-  final TextStyle body;      // 14px, weight 400
+  final TextStyle body;      // 16px, weight 400
   
   // Label: button labels, form labels, badges
-  final TextStyle label;     // 12px, weight 400
+  final TextStyle label;     // 14px, weight 400
 }
 ```
 
@@ -641,7 +641,7 @@ Token names follow these rules:
 For Milestone 1 and ongoing, the token system must meet these criteria:
 
 - All color tokens defined for light theme, including `primary`, `surface` (three levels), `fg1`–`fg4`, `danger`, `success`, `warning`, `info`, `contextual`, `divider`, `overlay`, and `tonalOpacity`
-- Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (40px, w700), `headline` (28px, w600), `title` (16px, w600), `body` (14px, w400), `label` (12px, w400) — see decision D23 for the rationale
+- Typography tokens (`LayrzTextTheme`) cover five text styles: `display` (40px, w700), `headline` (24px, w600), `title` (20px, w600), `body` (16px, w400), `label` (14px, w400) — see decision D23 for the rationale
 - Spacing tokens use five semantic levels: `sp1`=4, `sp2`=8, `sp3`=16, `sp4`=24, `sp5`=32 logical pixels, with derived `pdN` and `mgN` accessors returning `EdgeInsets.all(spN)` for padding and margin clarity (not in copyWith/==/hashCode)
 - Radius tokens use five semantic levels: `r1`=4, `r2`=8, `r3`=16, `r4`=24, `r5`=32 logical pixels, plus `full`=999 (pill shape), with derived `brN` accessors returning `BorderRadius.circular(rN)` (not in copyWith/==/hashCode)
 - Radius tokens also provide `innerRadius(outerRadius, spacer)` and `innerRadiusValue(outerRadius, spacer)` for computing nested container borders
