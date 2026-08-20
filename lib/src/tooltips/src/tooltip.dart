@@ -111,8 +111,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   late AnimationController _animationController;
   late CurvedAnimation _curvedAnimation;
 
-  /// The overlay entry for the tooltip widget itself.
-  OverlayEntry? _tooltipEntry;
+  /// Controller for the overlay portal in mouse/hover mode.
+  late OverlayPortalController _overlayControllerMouse;
+
+  /// Controller for the overlay portal in tap mode.
+  late OverlayPortalController _overlayControllerTap;
 
   /// Whether a mouse is currently connected to the device.
   ///
@@ -128,6 +131,10 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    // Initialize overlay portal controllers.
+    _overlayControllerMouse = OverlayPortalController();
+    _overlayControllerTap = OverlayPortalController();
+
     // Use placeholder durations initially; they will be updated in didChangeDependencies.
     _animationController = AnimationController(
       vsync: this,
@@ -232,12 +239,14 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   }
 
   void _handleAnimationStatusChange(AnimationStatus status) {
-    // Remove the tooltip entry when animation completes dismissal.
+    // Hide the overlay portals when animation completes dismissal.
     if (status == AnimationStatus.dismissed) {
-      if (_tooltipEntry != null && _tooltipEntry!.mounted) {
-        _tooltipEntry!.remove();
+      if (_overlayControllerMouse.isShowing) {
+        _overlayControllerMouse.hide();
       }
-      _tooltipEntry = null;
+      if (_overlayControllerTap.isShowing) {
+        _overlayControllerTap.hide();
+      }
     }
   }
 
@@ -282,11 +291,13 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   void _showTooltip() {
     if (!mounted || Overlay.maybeOf(context) == null) return;
 
-    if (_tooltipEntry == null) {
-      _tooltipEntry = OverlayEntry(
-        builder: (overlayContext) => _buildTooltipOverlay(overlayContext),
-      );
-      Overlay.of(context).insert(_tooltipEntry!);
+    // Determine which controller to use based on trigger mode and mouse presence.
+    final controller = widget.trigger == LayrzTooltipTrigger.tap || !_hasMouseDetected
+        ? _overlayControllerTap
+        : _overlayControllerMouse;
+
+    if (!controller.isShowing) {
+      controller.show();
     }
 
     if (_animationController.status != AnimationStatus.completed) {
@@ -300,7 +311,12 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     _animationController.reverse();
   }
 
-  Widget _buildTooltipOverlay(BuildContext overlayContext) {
+  /// Builds the tooltip overlay content.
+  ///
+  /// This is called by the [OverlayPortal]'s overlayChildBuilder, which means it
+  /// rebuilds whenever the host widget rebuilds. This ensures the position is
+  /// always computed fresh based on the anchor's current location, even after scrolling.
+  Widget _buildTooltipContent(BuildContext overlayContext) {
     final tokens = overlayContext.tokens;
     final baseStyle = tokens.typography.label.copyWith(
       color: tokens.colors.background,
@@ -353,19 +369,20 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       tokens: tokens,
     );
 
-    // Get anchor geometry
+    // Get anchor geometry — FRESH on every rebuild
     final anchorRenderBox = _anchorKey.currentContext?.findRenderObject() as RenderBox?;
     if (anchorRenderBox == null) {
       return const SizedBox.shrink();
     }
 
+    // Compute localToGlobal INSIDE the builder so it recomputes on every host rebuild
     final anchorGlobalOffset = anchorRenderBox.localToGlobal(Offset.zero);
     final anchorRect = anchorGlobalOffset & anchorRenderBox.size;
 
     // Compute tooltip position using the position delegate
     final overlaySize = MediaQuery.sizeOf(overlayContext);
     final delegate = positionDelegate(widget.position);
-    final context = TooltipPositionContext(
+    final positionContext = TooltipPositionContext(
       target: Offset(anchorRect.center.dx, anchorRect.center.dy),
       targetSize: anchorRect.size,
       tooltipSize: surfaceSize,
@@ -374,7 +391,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       verticalOffset: 0,
     );
 
-    final tooltipOffset = delegate(context);
+    final tooltipOffset = delegate(positionContext);
 
     final tooltipWidget = Positioned(
       left: tooltipOffset.dx,
@@ -461,7 +478,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    // Dispose order: cancel timer → remove listeners → remove overlay entries →
+    // Dispose order: cancel timer → remove listeners → hide portals →
     // dispose animations → dispose controller
     _hideTimer?.cancel();
     _hideTimer = null;
@@ -471,10 +488,13 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     RendererBinding.instance.mouseTracker.removeListener(_handleMouseTrackerChange);
     WidgetsBinding.instance.removeObserver(this);
 
-    if (_tooltipEntry != null && _tooltipEntry!.mounted) {
-      _tooltipEntry!.remove();
+    // Hide the overlay portals on dispose.
+    if (_overlayControllerMouse.isShowing) {
+      _overlayControllerMouse.hide();
     }
-    _tooltipEntry = null;
+    if (_overlayControllerTap.isShowing) {
+      _overlayControllerTap.hide();
+    }
 
     _animationController.removeStatusListener(_handleAnimationStatusChange);
     _curvedAnimation.dispose();
@@ -502,7 +522,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
           hitTestBehavior: HitTestBehavior.translucent,
           onEnter: (_) => _handleMouseEnter(),
           onExit: (_) => _handleMouseExit(),
-          child: child,
+          child: OverlayPortal(
+            controller: _overlayControllerMouse,
+            overlayChildBuilder: _buildTooltipContent,
+            child: child,
+          ),
         ),
       );
     }
@@ -516,7 +540,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
           behavior: HitTestBehavior.translucent,
           onTap: _handleTap,
           excludeFromSemantics: true,
-          child: child,
+          child: OverlayPortal(
+            controller: _overlayControllerTap,
+            overlayChildBuilder: _buildTooltipContent,
+            child: child,
+          ),
         ),
       );
     }
@@ -530,7 +558,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
         onLongPressEnd: _handleLongPressEnd,
         onLongPressCancel: _handleLongPressCancel,
         excludeFromSemantics: true,
-        child: child,
+        child: OverlayPortal(
+          controller: _overlayControllerTap,
+          overlayChildBuilder: _buildTooltipContent,
+          child: child,
+        ),
       ),
     );
   }
