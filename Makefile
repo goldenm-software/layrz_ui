@@ -92,3 +92,10 @@ coverage-html:
 	@rm -rf coverage/html
 	@genhtml coverage/lcov.info --output-directory coverage/html > /dev/null 2>&1
 	@echo "✓ Report generated at coverage/html/index.html"
+
+.PHONY: build-android
+build-android:
+	@echo "Cleaning previous build artifacts..."
+	@rm -rf com.layrz.ui.apk
+	@echo "Building Android APK..."
+	$(MAKE) -C example build-android
