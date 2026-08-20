@@ -527,5 +527,83 @@ void main() {
         );
       },
     );
+
+    testWidgets(
+      'Long-pressing a new anchor while a touch tooltip is showing dismisses the old one',
+      (tester) async {
+        /// Critical multi-anchor regression test.
+        ///
+        /// When a touch-opened tooltip (A) is showing and the user long-presses a
+        /// second anchor (B), the global pointer route must:
+        /// 1. Observe the PointerDownEvent on B
+        /// 2. Dismiss the old tooltip (A)
+        /// 3. Allow B's long-press to proceed and open B's tooltip
+        ///
+        /// This guards the interaction between the global route (which dismisses A on B's
+        /// PointerDown) and B's long-press opening, ensuring exactly one tooltip is ever
+        /// visible and only the correct one (B's) is shown.
+
+        await pumpThemed(
+          tester,
+          Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    LayrzTooltip(
+                      contentText: 'Tooltip A',
+                      child: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: const Center(child: Text('Anchor A')),
+                      ),
+                    ),
+                    const SizedBox(width: 100),
+                    LayrzTooltip(
+                      contentText: 'Tooltip B',
+                      child: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: const Center(child: Text('Anchor B')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+        final anchorACenter = tester.getCenter(find.text('Anchor A'));
+        final anchorBCenter = tester.getCenter(find.text('Anchor B'));
+
+        // Step 1: Long-press anchor A to show tooltip A
+        var gestureA = await tester.startGesture(anchorACenter, kind: PointerDeviceKind.touch);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        expect(find.text('Tooltip A'), findsOneWidget, reason: 'Tooltip A should be visible after long-press');
+        expect(find.text('Tooltip B'), findsNothing, reason: 'Tooltip B should not be visible yet');
+        await gestureA.up();
+        await tester.pump(const Duration(milliseconds: 50)); // Small pump after release
+
+        // Step 2: Long-press anchor B to show tooltip B
+        var gestureB = await tester.startGesture(anchorBCenter, kind: PointerDeviceKind.touch);
+        await tester.pump(const Duration(milliseconds: 500)); // Trigger long-press
+        await tester.pumpAndSettle();
+        await gestureB.up();
+
+        // Step 3: Verify exactly ONE tooltip is visible, and it's B's
+        expect(
+          find.text('Tooltip A'),
+          findsNothing,
+          reason: 'Tooltip A must be dismissed when B is long-pressed (global route dismissal)',
+        );
+        expect(
+          find.text('Tooltip B'),
+          findsOneWidget,
+          reason: 'Tooltip B must be visible after long-press on anchor B',
+        );
+      },
+    );
   });
 }
