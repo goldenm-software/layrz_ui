@@ -53,6 +53,11 @@ void main() {
     });
 
     testWidgets('renders error messages', (tester) async {
+      // Set desktop width (>= 960px) so errors render inline (not in compact mode)
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
       await pumpThemed(
         tester,
         LayrzInputChrome(

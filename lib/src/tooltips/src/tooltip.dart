@@ -7,6 +7,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'tooltip_position.dart';
+import 'tooltip_trigger.dart';
 
 /// A Material-free tooltip widget in the layrz_ui design system.
 ///
@@ -36,8 +37,11 @@ import 'tooltip_position.dart';
 /// This prevents the anchor from losing hover state and entering a flicker loop.
 ///
 /// **Trigger modes:**
-/// - **Trigger:** long-press (touch) or hover (desktop)
-/// - **Dismiss:** automatic on pointer-exit, or tap
+/// - **[LayrzTooltipTrigger.pointer]** (default): long-press (touch) or hover (desktop);
+///   dismissed on pointer-exit or tap-away. When opened by touch, a barrier is created;
+///   when opened by hover, no barrier is created.
+/// - **[LayrzTooltipTrigger.tap]**: toggled by single tap; a full-screen barrier is
+///   always created so tap-away dismisses the tooltip. Hover has no effect.
 ///
 /// Parameters:
 /// - [child]: the widget to be wrapped (mandatory)
@@ -45,6 +49,7 @@ import 'tooltip_position.dart';
 /// - [contentText]: plain-text tooltip content (mutually exclusive with [contentRichText])
 /// - [contentRichText]: rich-text content with optional per-span styling (mutually exclusive with [contentText])
 /// - [position]: preferred position relative to the anchor (default: [LayrzTooltipPosition.bottom])
+/// - [trigger]: the trigger mode for showing/dismissing the tooltip (default: [LayrzTooltipTrigger.pointer])
 class LayrzTooltip extends StatefulWidget {
   /// The widget to be wrapped with the tooltip.
   final Widget child;
@@ -72,6 +77,12 @@ class LayrzTooltip extends StatefulWidget {
   /// overlay bounds on the preferred side, it automatically flips to the opposite side.
   final LayrzTooltipPosition position;
 
+  /// The trigger mode for showing and dismissing the tooltip.
+  ///
+  /// Defaults to [LayrzTooltipTrigger.pointer]. See [LayrzTooltipTrigger] for details
+  /// on each mode's behavior.
+  final LayrzTooltipTrigger trigger;
+
   /// Creates a new [LayrzTooltip] with the given properties.
   ///
   /// Exactly one of [contentText] or [contentRichText] must be non-null.
@@ -83,6 +94,7 @@ class LayrzTooltip extends StatefulWidget {
     this.contentText,
     this.contentRichText,
     this.position = LayrzTooltipPosition.bottom,
+    this.trigger = LayrzTooltipTrigger.pointer,
   }) : assert(
          (contentText == null) != (contentRichText == null),
          'Provide exactly one of contentText or contentRichText.',
@@ -197,13 +209,27 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     // It is dismissed only by tapping elsewhere (barrier tap) or by other explicit dismissal.
   }
 
+  void _handleTap() {
+    // In tap mode, a single tap toggles the tooltip open/closed.
+    if (widget.trigger == LayrzTooltipTrigger.tap) {
+      if (_animationController.status == AnimationStatus.completed) {
+        _hideTooltip();
+      } else {
+        _openedByTouch = true; // Treat tap like a touch gesture for barrier creation
+        _showTooltip();
+      }
+    }
+  }
+
   void _showTooltip() {
     if (!mounted || Overlay.maybeOf(context) == null) return;
 
     if (_tooltipEntry == null) {
-      // If opened by touch, create a barrier to dismiss on tap-away.
+      // Create a barrier when:
+      // 1. Opened by touch (long-press), OR
+      // 2. Trigger mode is tap (always create barrier for tap-away dismissal)
       // Insert the barrier FIRST so the tooltip sits on top of it in the overlay stack.
-      if (_openedByTouch) {
+      if (_openedByTouch || widget.trigger == LayrzTooltipTrigger.tap) {
         _barrierEntry = OverlayEntry(
           builder: (context) => Positioned.fill(
             child: GestureDetector(
@@ -415,6 +441,19 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     final plainText = widget.contentText ?? widget.contentRichText!.toPlainText();
 
+    // In tap mode, use tap to toggle; ignore hover and long-press
+    if (widget.trigger == LayrzTooltipTrigger.tap) {
+      return Semantics(
+        tooltip: plainText,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _handleTap,
+          child: KeyedSubtree(key: _anchorKey, child: widget.child),
+        ),
+      );
+    }
+
+    // In pointer mode (default), use hover + long-press
     return Semantics(
       tooltip: plainText,
       child: MouseRegion(
