@@ -1,9 +1,0 @@
-#!/bin/sh
-# Git exports GIT_DIR / GIT_WORK_TREE when running a hook.
-# Flutter resolves its own version via git inside $FLUTTER_ROOT,
-# and an inherited GIT_DIR overrides -C — so Flutter reads THIS
-# repo instead and reports 0.0.0-unknown, failing the SDK
-# constraint in pubspec.yaml. Unset them before calling flutter.
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
-
-make checks
