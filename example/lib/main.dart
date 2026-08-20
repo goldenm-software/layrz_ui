@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -156,6 +157,15 @@ class ShowroomApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle.dark.copyWith(
+        statusBarBrightness: .dark,
+        statusBarIconBrightness: .dark,
+        systemStatusBarContrastEnforced: true,
+        systemNavigationBarIconBrightness: .dark,
+        systemNavigationBarContrastEnforced: true,
+      ),
+    );
     return LayrzApp.router(
       routerConfig: _router,
       title: kAppTitle,
