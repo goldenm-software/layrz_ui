@@ -71,8 +71,7 @@ void main() {
       expect(tapped, true);
     });
 
-    testWidgets('size, padding, and radius are identical across states',
-        (WidgetTester tester) async {
+    testWidgets('size, padding, and radius are identical across states', (WidgetTester tester) async {
       await pumpButton(tester, onTap: () {});
 
       final buttonFinder = find.byKey(const ValueKey('test_button'));

@@ -24,7 +24,7 @@ class LayrzLayoutDrawerScaffold extends StatefulWidget {
     /// Callback to build the drawer with access to close drawer.
     required this.drawerBuilder,
 
-    /// The background color of the page when rendered.
+    /// The background color of the page layer.
     required this.backgroundColor,
 
     super.key,
@@ -168,12 +168,18 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    // Build the page (top bar + body).
+    // Build the page (top bar + body) once, outside the AnimatedBuilder.
     final page = Column(
       children: [
         widget.topBarBuilder(openDrawer),
         Expanded(child: widget.body),
       ],
+    );
+
+    // Build the drawer once, outside the AnimatedBuilder, and reuse it.
+    // This prevents ~1000 rebuilds per second and eliminates GC pressure.
+    final drawerWidget = RepaintBoundary(
+      child: widget.drawerBuilder(closeDrawer),
     );
 
     return PopScope(
@@ -187,7 +193,8 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
         color: widget.backgroundColor,
         child: AnimatedBuilder(
           animation: _isDragging ? _controller : _curvedAnimation,
-          builder: (context, child) {
+          child: drawerWidget,
+          builder: (context, drawerChild) {
             // Use curved value for animations, raw value for drags.
             final t = _isDragging ? _controller.value : _curvedAnimation.value;
 
@@ -209,6 +216,7 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
                 child: Transform.translate(
                   offset: Offset(dx, 0),
                   child: Transform.scale(
+                    key: const ValueKey('drawer_scaffold_page_layer_transformed'),
                     scale: scale,
                     alignment: Alignment.centerLeft,
                     child: DecoratedBox(
@@ -218,9 +226,11 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(borderRadius),
-                        child: ColoredBox(
-                          color: widget.backgroundColor,
-                          child: page,
+                        child: RepaintBoundary(
+                          child: ColoredBox(
+                            color: widget.backgroundColor,
+                            child: page,
+                          ),
                         ),
                       ),
                     ),
@@ -238,28 +248,26 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
                     bottom: 0,
                     left: 0,
                     width: kLayrzLayoutDrawerWidth,
-                    child: widget.drawerBuilder(closeDrawer),
+                    child: drawerChild!,
                   ),
 
                 // (2) Page layer: bare when closed, transformed/clipped when open.
                 Positioned.fill(child: pageLayer),
 
                 // (3) Tap-to-close and open-state drag detector (merged into one).
-                // Covers the visible page sliver when open, inactive when closed.
-                // Uses HitTestBehavior.opaque for hit-testability.
+                // Uses fixed Positioned.fill + Transform for paint-only, no layout.
                 if (t > 0)
-                  Positioned(
-                    top: 0,
-                    bottom: 0,
-                    left: kLayrzLayoutDrawerWidth * t,
-                    right: 0,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: closeDrawer,
-                      onHorizontalDragStart: _onHorizontalDragStart,
-                      onHorizontalDragUpdate: _onHorizontalDragUpdate,
-                      onHorizontalDragEnd: _onHorizontalDragEnd,
-                      child: const SizedBox.expand(),
+                  Positioned.fill(
+                    child: Transform.translate(
+                      offset: Offset(kLayrzLayoutDrawerWidth * t, 0),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: closeDrawer,
+                        onHorizontalDragStart: _onHorizontalDragStart,
+                        onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                        onHorizontalDragEnd: _onHorizontalDragEnd,
+                        child: const SizedBox.expand(),
+                      ),
                     ),
                   ),
 
