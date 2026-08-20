@@ -34,7 +34,7 @@ install-hooks:
 	@echo "# fails on a missing file would block them with an opaque error." >> .git/hooks/pre-commit
 	@echo 'ROOT="$$(git rev-parse --show-toplevel)"' >> .git/hooks/pre-commit
 	@echo 'if [ -x "$$ROOT/tool/checks.sh" ]; then' >> .git/hooks/pre-commit
-	@echo '  exec "$$ROOT/tool/checks.sh"' >> .git/hooks/pre-commit
+	@echo '  exec "$$ROOT/tool/checks.sh" --staged-only' >> .git/hooks/pre-commit
 	@echo 'fi' >> .git/hooks/pre-commit
 	@echo 'echo "pre-commit: $$ROOT/tool/checks.sh not found — skipping static checks"' >> .git/hooks/pre-commit
 	@echo 'exit 0' >> .git/hooks/pre-commit
