@@ -27,28 +27,35 @@ class ShowroomSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return Padding(
-      padding: EdgeInsets.all(context.tokens.spacing.sp16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          // Title
-          Text(title, style: tokens.typography.headline),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.all(context.tokens.spacing.sp16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            // Title
+            Text(title, style: tokens.typography.headline),
 
-          // Description (if provided)
-          if (description != null) ...[
-            SizedBox(height: tokens.spacing.sp8),
-            Text(description!, style: tokens.typography.body.copyWith(color: tokens.colors.fg3)),
+            // Description (if provided)
+            if (description != null) ...[
+              SizedBox(height: tokens.spacing.sp8),
+              Text(
+                description!,
+                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+                maxLines: 3,
+              ),
+            ],
+
+            // Content area with LayrzCard for elevation and surface styling
+            SizedBox(height: tokens.spacing.sp16),
+            LayrzCard(
+              elevation: 1,
+              child: child,
+            ),
           ],
-
-          // Content area with LayrzCard for elevation and surface styling
-          SizedBox(height: tokens.spacing.sp16),
-          LayrzCard(
-            elevation: 1,
-            child: child,
-          ),
-        ],
+        ),
       ),
     );
   }

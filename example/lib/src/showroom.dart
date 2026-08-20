@@ -40,7 +40,7 @@ class Showroom extends StatelessWidget {
   /// by inserting their builder widgets here without modifying any other files.
   static const List<Widget> _sections = [
     _SectionWrapper(builder: buildTypographySection),
-    _SectionWrapper(builder: buildButtonsSection),
+    ButtonsSectionContent(),
     _SectionWrapper(builder: buildButtonGroupSection),
     _SectionWrapper(builder: buildAlertsSection),
     _SectionWrapper(builder: buildTooltipsSection),

@@ -67,7 +67,7 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: '/buttons',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildButtonsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ButtonsSectionContent()),
         ),
         GoRoute(
           path: '/button-group',
