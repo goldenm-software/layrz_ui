@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -47,15 +48,15 @@ enum LayrzAlertType {
   IconData? get icon {
     switch (this) {
       case LayrzAlertType.info:
-        return LayrzIcons.solarOutlineInfoSquare;
+        return MdiIcons.informationBoxOutline;
       case LayrzAlertType.success:
-        return LayrzIcons.solarOutlineCheckSquare;
+        return MdiIcons.checkboxOutline;
       case LayrzAlertType.warning:
-        return LayrzIcons.solarOutlineDangerSquare;
+        return MdiIcons.alertBoxOutline;
       case LayrzAlertType.danger:
-        return LayrzIcons.solarOutlineCloseSquare;
+        return MdiIcons.closeBoxOutline;
       case LayrzAlertType.context:
-        return LayrzIcons.solarOutlineMenuDotsSquare;
+        return MdiIcons.dotsSquare;
       case LayrzAlertType.custom:
         return null;
     }

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -353,7 +353,7 @@ class LayrzInputChrome extends StatelessWidget {
     if (readOnly && !disabled) {
       trailing.add(
         Icon(
-          LayrzIcons.solarOutlineLockKeyhole,
+          MdiIcons.lockOutline,
           size: iconSize,
           color: spec.textColor,
         ),
@@ -375,7 +375,7 @@ class LayrzInputChrome extends StatelessWidget {
     // Error icon (always last/rightmost — error state is critical)
     if (errors.isNotEmpty) {
       final errorIcon = Icon(
-        LayrzIcons.solarOutlineDangerTriangle,
+        MdiIcons.alertOutline,
         size: iconSize,
         color: tokens.colors.danger,
       );
@@ -583,7 +583,7 @@ class _HelpAffordanceState extends State<_HelpAffordance> {
           child: Opacity(
             opacity: _isPressed ? 0.7 : 1.0,
             child: Icon(
-              LayrzIcons.solarOutlineHelp,
+              MdiIcons.helpCircleOutline,
               size: widget.iconSize,
               color: widget.iconColor,
             ),

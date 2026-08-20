@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
@@ -302,9 +303,9 @@ class _LayrzAlertState extends State<LayrzAlert> {
     // Resolve icon.
     IconData resolvedIcon;
     if (widget.type == LayrzAlertType.custom) {
-      resolvedIcon = widget.icon ?? LayrzIcons.solarOutlineInfoSquare;
+      resolvedIcon = widget.icon ?? MdiIcons.informationBoxOutline;
     } else {
-      resolvedIcon = widget.type.icon ?? LayrzIcons.solarOutlineInfoSquare;
+      resolvedIcon = widget.type.icon ?? MdiIcons.informationBoxOutline;
     }
 
     // Resolve icon size.

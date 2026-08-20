@@ -69,7 +69,7 @@ class ShowroomLayout extends StatelessWidget {
 
   List<LayrzNavigatorItem> _buildNavigationItems(BuildContext context, String currentRoute) {
     return [
-      LayrzNavigatorLabel('FOUNDATION'),
+      LayrzNavigatorLabel('FOUNDATION', color: context.tokens.colors.primary),
       LayrzNavigatorPage(
         id: '/typography',
         labelText: 'Typography',
@@ -126,7 +126,7 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/access-paths',
         onTap: () => _navigateTo(context, '/access-paths'),
       ),
-      LayrzNavigatorLabel('COMPONENTS'),
+      LayrzNavigatorLabel('COMPONENTS', color: context.tokens.colors.primary),
       LayrzNavigatorPage(
         id: '/buttons',
         labelText: 'Buttons',

@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -63,7 +63,7 @@ class LayrzLayoutTopBar extends StatelessWidget {
                 // Drawer trigger
                 LayrzLayoutTopBarIconButton(
                   key: const ValueKey('drawer_trigger_button'),
-                  icon: LayrzIcons.solarBoldMenuDots,
+                  icon: MdiIcons.menu,
                   iconColor: tokens.colors.fg2,
                   iconSize: kLayrzLayoutDrawerTriggerIconSize,
                   onTap: onDrawerTap,

@@ -1,7 +1,7 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -60,7 +60,7 @@ class _DrawerScaffoldPreviewState extends State<_DrawerScaffoldPreview> {
               GestureDetector(
                 onTap: openDrawer,
                 child: Icon(
-                  LayrzIcons.solarOutlineMenuDots,
+                  MdiIcons.menu,
                   size: 24,
                 ),
               ),

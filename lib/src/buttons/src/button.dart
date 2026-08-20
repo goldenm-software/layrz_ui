@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -148,7 +149,7 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlineInboxIn,
+      icon: MdiIcons.contentSaveOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -192,7 +193,7 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlineCloseSquare,
+      icon: MdiIcons.closeCircleOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -236,7 +237,7 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlineInfoSquare,
+      icon: MdiIcons.informationOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -280,7 +281,8 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlineEyeScan,
+      // icon: MdiIcons.eyeOutline,
+      icon: MdiIcons.eyeOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -324,7 +326,7 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlinePenNewSquare,
+      icon: MdiIcons.pencilOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,
@@ -368,7 +370,8 @@ class LayrzButton extends StatefulWidget {
     return LayrzButton(
       key: key,
       labelText: labelText,
-      icon: LayrzIcons.solarOutlineTrashBinMinimalisticN2,
+      // icon: LayrzIcons.mdiEmoticonPoop,
+      icon: LayrzIcons.mdiTrashCanOutline,
       onTap: isDisabled ? null : onTap,
       isDisabled: isDisabled,
       controller: controller,

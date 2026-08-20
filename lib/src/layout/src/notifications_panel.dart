@@ -1,4 +1,4 @@
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -85,7 +85,7 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
         return GestureDetector(
           onTap: controller.isOpen ? controller.close : controller.open,
           child: Icon(
-            LayrzIcons.solarOutlineBell,
+            MdiIcons.bellRingOutline,
             size: 20.0,
             color: widget.tokens.colors.fg2,
           ),

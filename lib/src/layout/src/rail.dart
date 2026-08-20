@@ -1,3 +1,4 @@
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_icons/layrz_icons.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
@@ -352,7 +353,7 @@ class _LayrzLayoutRailState extends State<LayrzLayoutRail> {
           Padding(
             padding: const EdgeInsets.only(left: 10.0),
             child: Icon(
-              LayrzIcons.solarOutlineBell,
+              MdiIcons.bellRingOutline,
               size: 16.0,
               color: tokens.colors.fg2,
             ),
