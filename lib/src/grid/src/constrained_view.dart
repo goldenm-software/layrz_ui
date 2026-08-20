@@ -28,7 +28,7 @@ class LayrzConstrainedView extends StatelessWidget {
 
   /// The vertical spacing between children.
   ///
-  /// If `null`, defaults to [LayrzTokens.spacing.base] (8.0).
+  /// If `null`, defaults to [LayrzTokens.spacing.sp2] (8.0).
   /// Set to 0 for no spacing.
   final double? spacing;
 
@@ -50,7 +50,7 @@ class LayrzConstrainedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedSpacing = spacing ?? context.tokens.spacing.base;
+    final resolvedSpacing = spacing ?? context.tokens.spacing.sp2;
 
     return Center(
       child: ConstrainedBox(

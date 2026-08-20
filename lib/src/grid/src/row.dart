@@ -94,7 +94,7 @@ class LayrzRow extends StatelessWidget {
     required double breakpointWidth,
     required double layoutWidth,
   }) {
-    final resolvedSpacing = spacing ?? context.tokens.spacing.base;
+    final resolvedSpacing = spacing ?? context.tokens.spacing.sp2;
     final breakpoints = context.tokens.breakpoints;
 
     // Greedy grouping: place columns left-to-right, starting a new row when

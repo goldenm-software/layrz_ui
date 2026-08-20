@@ -65,7 +65,7 @@ class LayrzTokens {
   ///
   /// Wires all derived tokens consistently:
   /// - [LayrzColorTokens.light] is seeded with [primaryColor]
-  /// - [LayrzShadowTokens] is seeded with the resulting [colors.surface] and [radius.base]
+  /// - [LayrzShadowTokens] is seeded with the resulting [colors.surface] and [radius.r2]
   /// - [LayrzBorderTokens] is seeded with [colors.divider]
   /// - [LayrzTextTheme.defaults] is constructed with [colors.fg1] as the text color
   ///   and the provided font specifications
@@ -101,7 +101,7 @@ class LayrzTokens {
     // Build derived tokens seeded from colors and radius
     final shadowTokens = LayrzShadowTokens(
       surfaceColor: colorTokens.surface,
-      baseRadius: radiusTokens.base,
+      baseRadius: radiusTokens.r2,
     );
 
     final borderTokens = LayrzBorderTokens(dividerColor: colorTokens.divider);

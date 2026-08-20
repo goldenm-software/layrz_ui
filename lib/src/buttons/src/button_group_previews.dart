@@ -1,6 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -64,7 +64,7 @@ Widget previewLayrzButtonGroupDropdown() {
     ],
     useDropdown: true,
     triggerHintText: 'Actions',
-    triggerIcon: LayrzIcons.solarOutlineMenuDots,
+    triggerIcon: MdiIcons.dotsVertical,
   );
 }
 
@@ -79,29 +79,29 @@ Widget previewLayrzButtonGroupBuilder() {
     items: [
       LayrzDropdownEntry.save(
         labelText: 'Create',
-        icon: LayrzIcons.solarOutlineAddCircle,
+        icon: MdiIcons.plusCircleOutline,
         onTap: () {},
       ),
       LayrzDropdownEntry.info(
         labelText: 'Duplicate',
-        icon: LayrzIcons.solarOutlineClipboardList,
+        icon: MdiIcons.clipboardListOutline,
         onTap: () {},
       ),
       LayrzDropdownEntry.edit(
         labelText: 'Archive',
-        icon: LayrzIcons.solarOutlineCheckCircle,
+        icon: MdiIcons.checkCircleOutline,
         onTap: () {},
       ),
       LayrzDropdownEntry.delete(
         labelText: 'Delete',
-        icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+        icon: MdiIcons.trashCanOutline,
         onTap: () {},
       ),
     ],
     useDropdown: true,
     builder: (context, controller) => LayrzButton(
       labelText: 'Options',
-      icon: LayrzIcons.solarOutlineSettings,
+      icon: MdiIcons.cogOutline,
       style: LayrzButtonStyle.outlinedFab,
       onTap: controller.isOpen ? controller.close : controller.open,
     ),

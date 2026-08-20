@@ -43,10 +43,10 @@ class _ComfortableSpec implements InputDensitySpec {
   _ComfortableSpec(this.tokens, this.iconTheme);
 
   @override
-  double get verticalPadding => tokens.spacing.sp10;
+  double get verticalPadding => tokens.spacing.sp3;
 
   @override
-  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp4;
+  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp1;
 
   @override
   TextStyle get textStyle => tokens.typography.body.copyWith(
@@ -74,7 +74,7 @@ class _DenseSpec implements InputDensitySpec {
   _DenseSpec(this.tokens);
 
   @override
-  double get verticalPadding => tokens.spacing.sp6;
+  double get verticalPadding => tokens.spacing.sp2;
 
   @override
   double get iconSize => kLayrzTextInputDenseIconSize;

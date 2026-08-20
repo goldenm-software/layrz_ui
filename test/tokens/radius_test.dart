@@ -7,22 +7,22 @@ void main() {
     test('default constructor uses correct values', () {
       const tokens = LayrzRadiusTokens();
 
-      expect(tokens.base, equals(8.0));
-      expect(tokens.r8, equals(8.0));
-      expect(tokens.r10, equals(10.0));
-      expect(tokens.r12, equals(12.0));
-      expect(tokens.r14, equals(14.0));
-      expect(tokens.r16, equals(16.0));
-      expect(tokens.r20, equals(20.0));
-      expect(tokens.r24, equals(24.0));
+      expect(tokens.r1, equals(4.0));
+      expect(tokens.r2, equals(8.0));
+      expect(tokens.r3, equals(16.0));
+      expect(tokens.r4, equals(24.0));
+      expect(tokens.r5, equals(32.0));
       expect(tokens.full, equals(999.0));
     });
 
-    test('radius values match their names', () {
+    test('border radius getters return BorderRadius.circular with correct values', () {
       const tokens = LayrzRadiusTokens();
 
-      expect(tokens.r12, equals(12.0));
-      expect(tokens.r24, equals(24.0));
+      expect(tokens.br1, equals(BorderRadius.circular(4.0)));
+      expect(tokens.br2, equals(BorderRadius.circular(8.0)));
+      expect(tokens.br3, equals(BorderRadius.circular(16.0)));
+      expect(tokens.br4, equals(BorderRadius.circular(24.0)));
+      expect(tokens.br5, equals(BorderRadius.circular(32.0)));
     });
 
     test('full is pill-shaped (999)', () {
@@ -30,9 +30,22 @@ void main() {
       expect(tokens.full, equals(999.0));
     });
 
-    test('borderRadius getter returns BorderRadius with base value', () {
+    test('innerRadiusValue subtracts spacer from outer radius', () {
       const tokens = LayrzRadiusTokens();
-      expect(tokens.borderRadius, equals(BorderRadius.circular(8.0)));
+      final result = tokens.innerRadiusValue(outerRadius: 12.0, spacer: 4.0);
+      expect(result, equals(8.0));
+    });
+
+    test('innerRadiusValue clamps to zero when spacer exceeds outerRadius', () {
+      const tokens = LayrzRadiusTokens();
+      final result = tokens.innerRadiusValue(outerRadius: 4.0, spacer: 10.0);
+      expect(result, equals(0.0));
+    });
+
+    test('innerRadiusValue never goes negative', () {
+      const tokens = LayrzRadiusTokens();
+      final result = tokens.innerRadiusValue(outerRadius: 2.0, spacer: 100.0);
+      expect(result, equals(0.0));
     });
 
     test('innerRadius subtracts spacer from outer radius', () {
@@ -55,12 +68,21 @@ void main() {
 
     test('copyWith creates new instance with replaced fields', () {
       const original = LayrzRadiusTokens();
-      final modified = original.copyWith(r12: 14.0, base: 10.0);
+      final modified = original.copyWith(r1: 5.0, r4: 25.0);
 
-      expect(modified.r12, equals(14.0));
-      expect(modified.base, equals(10.0));
-      expect(modified.r8, equals(original.r8));
-      expect(original.r12, equals(12.0)); // original unchanged
+      expect(modified.r1, equals(5.0));
+      expect(modified.r4, equals(25.0));
+      expect(modified.r2, equals(original.r2));
+      expect(modified.r3, equals(original.r3));
+      expect(modified.r5, equals(original.r5));
+      expect(modified.full, equals(original.full));
+      expect(original.r1, equals(4.0)); // original unchanged
+    });
+
+    test('copyWith with no arguments returns equal instance', () {
+      const original = LayrzRadiusTokens();
+      final copy = original.copyWith();
+      expect(copy, equals(original));
     });
 
     test('equality works for identical values', () {
@@ -69,15 +91,9 @@ void main() {
       expect(tokens1, equals(tokens2));
     });
 
-    test('equality works for copyWith with same values', () {
-      const original = LayrzRadiusTokens();
-      final copy = original.copyWith();
-      expect(copy, equals(original));
-    });
-
-    test('inequality works for different base values', () {
+    test('inequality works for different values', () {
       const tokens1 = LayrzRadiusTokens();
-      final tokens2 = LayrzRadiusTokens(base: 10.0);
+      final tokens2 = LayrzRadiusTokens(r1: 5.0);
       expect(tokens1, isNot(equals(tokens2)));
     });
 
@@ -89,13 +105,29 @@ void main() {
 
     test('hashCode differs for different values', () {
       const tokens1 = LayrzRadiusTokens();
-      final tokens2 = LayrzRadiusTokens(base: 10.0);
+      final tokens2 = LayrzRadiusTokens(r1: 5.0);
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
 
-    test('custom base value propagates to borderRadius getter', () {
-      final tokens = LayrzRadiusTokens(base: 12.0);
-      expect(tokens.borderRadius, equals(BorderRadius.circular(12.0)));
+    test('custom radius values propagate to border radius getters', () {
+      final tokens = LayrzRadiusTokens(
+        r1: 5.0,
+        r2: 10.0,
+        r3: 20.0,
+        r4: 30.0,
+        r5: 40.0,
+      );
+
+      expect(tokens.br1, equals(BorderRadius.circular(5.0)));
+      expect(tokens.br2, equals(BorderRadius.circular(10.0)));
+      expect(tokens.br3, equals(BorderRadius.circular(20.0)));
+      expect(tokens.br4, equals(BorderRadius.circular(30.0)));
+      expect(tokens.br5, equals(BorderRadius.circular(40.0)));
+    });
+
+    test('custom full value is preserved', () {
+      final tokens = LayrzRadiusTokens(full: 500.0);
+      expect(tokens.full, equals(500.0));
     });
   });
 }

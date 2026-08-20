@@ -123,35 +123,35 @@ void main() {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.spacing, equals(tokens.spacing.base));
+      expect(tokenizer.spacing, equals(tokens.spacing.sp2));
       expect(tokenizer.spacing, equals(8.0));
     });
 
-    test('margin shortcut returns spacing.margin', () {
+    test('margin shortcut returns spacing.mg2', () {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.margin, equals(tokens.spacing.margin));
+      expect(tokenizer.margin, equals(tokens.spacing.mg2));
       expect(tokenizer.margin, equals(EdgeInsets.all(8.0)));
     });
 
-    test('reducedMargin shortcut returns spacing.reducedMargin', () {
+    test('reducedMargin shortcut returns spacing.mg1', () {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.reducedMargin, equals(tokens.spacing.reducedMargin));
+      expect(tokenizer.reducedMargin, equals(tokens.spacing.mg1));
       expect(tokenizer.reducedMargin, equals(EdgeInsets.all(4.0)));
     });
 
-    test('padding shortcut returns spacing.padding', () {
+    test('padding shortcut returns spacing.pd2', () {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.padding, equals(tokens.spacing.padding));
+      expect(tokenizer.padding, equals(tokens.spacing.pd2));
       expect(tokenizer.padding, equals(EdgeInsets.all(8.0)));
     });
 
-    test('sizedBox shortcut returns spacing.sizedBox', () {
+    test('sizedBox shortcut returns SizedBox with sp2 dimension', () {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
@@ -164,15 +164,15 @@ void main() {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.radius, equals(tokens.radius.base));
+      expect(tokenizer.radius, equals(tokens.radius.r2));
       expect(tokenizer.radius, equals(8.0));
     });
 
-    test('borderRadius shortcut returns radius.borderRadius', () {
+    test('borderRadius shortcut returns radius.br2', () {
       final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
       final tokenizer = LayrzTokenizer(tokens);
 
-      expect(tokenizer.borderRadius, equals(tokens.radius.borderRadius));
+      expect(tokenizer.borderRadius, equals(tokens.radius.br2));
       expect(tokenizer.borderRadius, equals(BorderRadius.circular(8.0)));
     });
 
@@ -253,12 +253,12 @@ void main() {
       expect(tokenizer.tonalOpacity, equals(tokens.colors.tonalOpacity));
 
       // Spacing shortcuts
-      expect(tokenizer.spacing, equals(tokens.spacing.base));
-      expect(tokenizer.margin, equals(tokens.spacing.margin));
+      expect(tokenizer.spacing, equals(tokens.spacing.sp2));
+      expect(tokenizer.margin, equals(tokens.spacing.mg2));
 
       // Radius shortcuts
-      expect(tokenizer.radius, equals(tokens.radius.base));
-      expect(tokenizer.borderRadius, equals(tokens.radius.borderRadius));
+      expect(tokenizer.radius, equals(tokens.radius.r2));
+      expect(tokenizer.borderRadius, equals(tokens.radius.br2));
 
       // Border shortcuts
       expect(tokenizer.borderWidth, equals(tokens.border.base));

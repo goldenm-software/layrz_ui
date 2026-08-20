@@ -24,7 +24,7 @@ class BordersSection extends StatelessWidget {
         children: [
           // Pre-built border sides
           Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           Row(
             children: [
               Expanded(
@@ -33,14 +33,14 @@ class BordersSection extends StatelessWidget {
                   child: _BorderSample(label: 'light', side: tokens.border.light),
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp16),
+              SizedBox(width: tokens.spacing.sp3),
               Expanded(
                 child: LayrzTooltip(
                   contentText: 'border.normal — ${tokens.border.normal.width.toStringAsFixed(1)}px',
                   child: _BorderSample(label: 'normal', side: tokens.border.normal),
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp16),
+              SizedBox(width: tokens.spacing.sp3),
               Expanded(
                 child: LayrzTooltip(
                   contentText: 'border.thick — ${tokens.border.thick.width.toStringAsFixed(1)}px',
@@ -50,19 +50,19 @@ class BordersSection extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Stroke width values
           Text('Stroke Width Values', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           Column(
             children: [
               _StrokeValueRow(label: 'base', width: tokens.border.base, tokens: tokens),
-              SizedBox(height: tokens.spacing.sp12),
+              SizedBox(height: tokens.spacing.sp3),
               _StrokeValueRow(label: 'stroke1', width: tokens.border.stroke1, tokens: tokens),
-              SizedBox(height: tokens.spacing.sp12),
+              SizedBox(height: tokens.spacing.sp3),
               _StrokeValueRow(label: 'stroke2', width: tokens.border.stroke2, tokens: tokens),
-              SizedBox(height: tokens.spacing.sp12),
+              SizedBox(height: tokens.spacing.sp3),
               _StrokeValueRow(label: 'stroke3', width: tokens.border.stroke3, tokens: tokens),
             ],
           ),
@@ -91,15 +91,15 @@ class _BorderSample extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         Container(
-          height: tokens.spacing.sp48,
+          height: tokens.spacing.sp5,
           decoration: BoxDecoration(
             color: tokens.colors.surface,
             border: Border(bottom: side),
           ),
         ),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         UnitDisplay(
           value: side.width,
           textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3, fontSize: 11),
@@ -129,7 +129,7 @@ class _StrokeValueRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
-          width: tokens.spacing.sp48,
+          width: tokens.spacing.sp5,
           child: Text(label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
         Expanded(
@@ -138,9 +138,9 @@ class _StrokeValueRow extends StatelessWidget {
             child: Container(height: width, color: tokens.colors.divider),
           ),
         ),
-        SizedBox(width: tokens.spacing.sp8),
+        SizedBox(width: tokens.spacing.sp2),
         SizedBox(
-          width: tokens.spacing.sp48,
+          width: tokens.spacing.sp5,
           child: Align(
             alignment: Alignment.centerRight,
             child: UnitDisplay(

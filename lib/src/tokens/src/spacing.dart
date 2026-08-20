@@ -1,133 +1,139 @@
 import 'package:flutter/widgets.dart';
 
-/// Immutable spacing tokens defining a consistent grid for margins, padding, and gaps.
+/// Immutable spacing tokens defining a consistent five-level grid for margins, padding, and sized-box gaps.
 ///
-/// All spacing values are multiples of 4, making them harmonious and easy to reason about.
-/// The base unit is 8 pixels.
+/// Spacing values use five semantic levels (1–5) with the following pixel values:
+/// - Level 1: 4 pixels
+/// - Level 2: 8 pixels
+/// - Level 3: 16 pixels
+/// - Level 4: 24 pixels
+/// - Level 5: 32 pixels
+///
+/// Three accessor families derive from the base [spN] fields:
+/// - [pdN] — [EdgeInsets.all] for padding; returned as explicit padding intent.
+/// - [mgN] — [EdgeInsets.all] for margins; returned as explicit margin intent.
+/// - [sbN] — [SizedBox] spacers in three variants:
+///   - [sbN] — square spacer, constrained to [sp N]×[spN].
+///   - [sbNh] — horizontal gap, constrained to width [spN], unconstrained height.
+///   - [sbNv] — vertical gap, constrained to height [spN], unconstrained width.
+///
+/// The [pdN] and [mgN] accessors are intentionally identical in value; they exist
+/// so call sites read as explicit padding vs margin intent.
 @immutable
 class LayrzSpacingTokens {
-  /// Base spacing unit used in convenience accessors like [margin] and [padding].
-  ///
-  /// Defaults to 8 pixels. All other tokens ([sp4], [sp6], etc.) are independent
-  /// and can be overridden separately.
-  final double base;
+  /// Spacing level 1 — 4 pixels.
+  final double sp1;
 
-  /// Extra-small spacing value (4 pixels).
+  /// Spacing level 2 — 8 pixels.
+  final double sp2;
+
+  /// Spacing level 3 — 16 pixels.
+  final double sp3;
+
+  /// Spacing level 4 — 24 pixels.
   final double sp4;
 
-  /// Small spacing value (6 pixels).
-  final double sp6;
+  /// Spacing level 5 — 32 pixels.
+  final double sp5;
 
-  /// Small spacing value (8 pixels).
-  final double sp8;
-
-  /// Small-medium spacing value (10 pixels).
-  final double sp10;
-
-  /// Medium spacing value (12 pixels).
-  final double sp12;
-
-  /// Medium spacing value (14 pixels).
-  final double sp14;
-
-  /// Medium spacing value (16 pixels).
-  final double sp16;
-
-  /// Large spacing value (20 pixels).
-  final double sp20;
-
-  /// Large spacing value (24 pixels).
-  final double sp24;
-
-  /// Large spacing value (28 pixels).
-  final double sp28;
-
-  /// Large spacing value (32 pixels).
-  final double sp32;
-
-  /// Large spacing value (36 pixels).
-  final double sp36;
-
-  /// Large spacing value (40 pixels).
-  final double sp40;
-
-  /// Large spacing value (44 pixels).
-  final double sp44;
-
-  /// Large spacing value (48 pixels).
-  final double sp48;
-
-  /// Creates a new [LayrzSpacingTokens] with all spacing values.
+  /// Creates a new [LayrzSpacingTokens] with all spacing levels.
   const LayrzSpacingTokens({
-    this.base = 8.0,
-    this.sp4 = 4.0,
-    this.sp6 = 6.0,
-    this.sp8 = 8.0,
-    this.sp10 = 10.0,
-    this.sp12 = 12.0,
-    this.sp14 = 14.0,
-    this.sp16 = 16.0,
-    this.sp20 = 20.0,
-    this.sp24 = 24.0,
-    this.sp28 = 28.0,
-    this.sp32 = 32.0,
-    this.sp36 = 36.0,
-    this.sp40 = 40.0,
-    this.sp44 = 44.0,
-    this.sp48 = 48.0,
+    this.sp1 = 4.0,
+    this.sp2 = 8.0,
+    this.sp3 = 16.0,
+    this.sp4 = 24.0,
+    this.sp5 = 32.0,
   });
 
-  /// The base spacing value as a [Size], used by convenience accessors.
-  Size get spacingSize => Size(base, base);
+  /// Padding level 1 — [EdgeInsets.all] with 4 pixels on all sides.
+  EdgeInsets get pd1 => EdgeInsets.all(sp1);
 
-  /// A [SizedBox] with width and height set to [base].
-  Widget get sizedBox => SizedBox.fromSize(size: spacingSize);
+  /// Padding level 2 — [EdgeInsets.all] with 8 pixels on all sides.
+  EdgeInsets get pd2 => EdgeInsets.all(sp2);
 
-  /// [EdgeInsets] with all sides set to [base].
-  EdgeInsets get margin => EdgeInsets.all(base);
+  /// Padding level 3 — [EdgeInsets.all] with 16 pixels on all sides.
+  EdgeInsets get pd3 => EdgeInsets.all(sp3);
 
-  /// [EdgeInsets] with all sides set to half of [base].
-  EdgeInsets get reducedMargin => EdgeInsets.all(base / 2);
+  /// Padding level 4 — [EdgeInsets.all] with 24 pixels on all sides.
+  EdgeInsets get pd4 => EdgeInsets.all(sp4);
 
-  /// [EdgeInsets] with all sides set to [base].
-  EdgeInsets get padding => EdgeInsets.all(base);
+  /// Padding level 5 — [EdgeInsets.all] with 32 pixels on all sides.
+  EdgeInsets get pd5 => EdgeInsets.all(sp5);
+
+  /// Margin level 1 — [EdgeInsets.all] with 4 pixels on all sides.
+  EdgeInsets get mg1 => EdgeInsets.all(sp1);
+
+  /// Margin level 2 — [EdgeInsets.all] with 8 pixels on all sides.
+  EdgeInsets get mg2 => EdgeInsets.all(sp2);
+
+  /// Margin level 3 — [EdgeInsets.all] with 16 pixels on all sides.
+  EdgeInsets get mg3 => EdgeInsets.all(sp3);
+
+  /// Margin level 4 — [EdgeInsets.all] with 24 pixels on all sides.
+  EdgeInsets get mg4 => EdgeInsets.all(sp4);
+
+  /// Margin level 5 — [EdgeInsets.all] with 32 pixels on all sides.
+  EdgeInsets get mg5 => EdgeInsets.all(sp5);
+
+  /// Sized-box spacer level 1 — [SizedBox.square] with 4-pixel dimensions.
+  Widget get sb1 => SizedBox.square(dimension: sp1);
+
+  /// Sized-box spacer level 2 — [SizedBox.square] with 8-pixel dimensions.
+  Widget get sb2 => SizedBox.square(dimension: sp2);
+
+  /// Sized-box spacer level 3 — [SizedBox.square] with 16-pixel dimensions.
+  Widget get sb3 => SizedBox.square(dimension: sp3);
+
+  /// Sized-box spacer level 4 — [SizedBox.square] with 24-pixel dimensions.
+  Widget get sb4 => SizedBox.square(dimension: sp4);
+
+  /// Sized-box spacer level 5 — [SizedBox.square] with 32-pixel dimensions.
+  Widget get sb5 => SizedBox.square(dimension: sp5);
+
+  /// Horizontal spacer level 1 — [SizedBox] with 4-pixel width, unconstrained height.
+  Widget get sb1h => SizedBox(width: sp1);
+
+  /// Horizontal spacer level 2 — [SizedBox] with 8-pixel width, unconstrained height.
+  Widget get sb2h => SizedBox(width: sp2);
+
+  /// Horizontal spacer level 3 — [SizedBox] with 16-pixel width, unconstrained height.
+  Widget get sb3h => SizedBox(width: sp3);
+
+  /// Horizontal spacer level 4 — [SizedBox] with 24-pixel width, unconstrained height.
+  Widget get sb4h => SizedBox(width: sp4);
+
+  /// Horizontal spacer level 5 — [SizedBox] with 32-pixel width, unconstrained height.
+  Widget get sb5h => SizedBox(width: sp5);
+
+  /// Vertical spacer level 1 — [SizedBox] with 4-pixel height, unconstrained width.
+  Widget get sb1v => SizedBox(height: sp1);
+
+  /// Vertical spacer level 2 — [SizedBox] with 8-pixel height, unconstrained width.
+  Widget get sb2v => SizedBox(height: sp2);
+
+  /// Vertical spacer level 3 — [SizedBox] with 16-pixel height, unconstrained width.
+  Widget get sb3v => SizedBox(height: sp3);
+
+  /// Vertical spacer level 4 — [SizedBox] with 24-pixel height, unconstrained width.
+  Widget get sb4v => SizedBox(height: sp4);
+
+  /// Vertical spacer level 5 — [SizedBox] with 32-pixel height, unconstrained width.
+  Widget get sb5v => SizedBox(height: sp5);
 
   /// Returns a copy of this spacing tokens object with the given fields replaced.
   LayrzSpacingTokens copyWith({
-    double? base,
+    double? sp1,
+    double? sp2,
+    double? sp3,
     double? sp4,
-    double? sp6,
-    double? sp8,
-    double? sp10,
-    double? sp12,
-    double? sp14,
-    double? sp16,
-    double? sp20,
-    double? sp24,
-    double? sp28,
-    double? sp32,
-    double? sp36,
-    double? sp40,
-    double? sp44,
-    double? sp48,
+    double? sp5,
   }) {
     return LayrzSpacingTokens(
-      base: base ?? this.base,
+      sp1: sp1 ?? this.sp1,
+      sp2: sp2 ?? this.sp2,
+      sp3: sp3 ?? this.sp3,
       sp4: sp4 ?? this.sp4,
-      sp6: sp6 ?? this.sp6,
-      sp8: sp8 ?? this.sp8,
-      sp10: sp10 ?? this.sp10,
-      sp12: sp12 ?? this.sp12,
-      sp14: sp14 ?? this.sp14,
-      sp16: sp16 ?? this.sp16,
-      sp20: sp20 ?? this.sp20,
-      sp24: sp24 ?? this.sp24,
-      sp28: sp28 ?? this.sp28,
-      sp32: sp32 ?? this.sp32,
-      sp36: sp36 ?? this.sp36,
-      sp40: sp40 ?? this.sp40,
-      sp44: sp44 ?? this.sp44,
-      sp48: sp48 ?? this.sp48,
+      sp5: sp5 ?? this.sp5,
     );
   }
 
@@ -136,40 +142,12 @@ class LayrzSpacingTokens {
       identical(this, other) ||
       other is LayrzSpacingTokens &&
           runtimeType == other.runtimeType &&
-          base == other.base &&
+          sp1 == other.sp1 &&
+          sp2 == other.sp2 &&
+          sp3 == other.sp3 &&
           sp4 == other.sp4 &&
-          sp6 == other.sp6 &&
-          sp8 == other.sp8 &&
-          sp10 == other.sp10 &&
-          sp12 == other.sp12 &&
-          sp14 == other.sp14 &&
-          sp16 == other.sp16 &&
-          sp20 == other.sp20 &&
-          sp24 == other.sp24 &&
-          sp28 == other.sp28 &&
-          sp32 == other.sp32 &&
-          sp36 == other.sp36 &&
-          sp40 == other.sp40 &&
-          sp44 == other.sp44 &&
-          sp48 == other.sp48;
+          sp5 == other.sp5;
 
   @override
-  int get hashCode => Object.hashAll(<double>[
-    base,
-    sp4,
-    sp6,
-    sp8,
-    sp10,
-    sp12,
-    sp14,
-    sp16,
-    sp20,
-    sp24,
-    sp28,
-    sp32,
-    sp36,
-    sp40,
-    sp44,
-    sp48,
-  ]);
+  int get hashCode => Object.hash(sp1, sp2, sp3, sp4, sp5);
 }

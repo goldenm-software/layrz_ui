@@ -209,7 +209,7 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
               // Geometry: scale and translate.
               final scale = lerpDouble(1.0, kLayrzLayoutDrawerOpenScale, t) ?? 1.0;
               final dx = kLayrzLayoutDrawerWidth * t;
-              final borderRadius = lerpDouble(0.0, tokens.radius.r16, t) ?? 0.0;
+              final borderRadius = lerpDouble(0.0, tokens.radius.r3, t) ?? 0.0;
 
               pageLayer = IgnorePointer(
                 ignoring: true,

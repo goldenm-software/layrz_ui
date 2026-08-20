@@ -25,17 +25,17 @@ class TextSection extends StatelessWidget {
           // 1. Plain text examples with different styles
           _PlainTextDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 2. Rich text examples
           _RichTextDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 3. Selection behavior demonstration
           _SelectionDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 4. Long paragraph with selection
           _ParagraphDemo(tokens: tokens),
@@ -65,19 +65,19 @@ class _PlainTextDemo extends StatelessWidget {
           'Plain Text Examples',
           style: tokens.typography.title,
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzText(
           'Each style scale renders with default theme colors and fonts.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp12,
+          spacing: tokens.spacing.sp3,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp4,
+              spacing: tokens.spacing.sp1,
               children: [
                 LayrzText(
                   'Display Style (45px, w800)',
@@ -91,7 +91,7 @@ class _PlainTextDemo extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp4,
+              spacing: tokens.spacing.sp1,
               children: [
                 LayrzText(
                   'Headline Style (28px, w700)',
@@ -105,7 +105,7 @@ class _PlainTextDemo extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp4,
+              spacing: tokens.spacing.sp1,
               children: [
                 LayrzText(
                   'Title Style (16px, w600)',
@@ -119,7 +119,7 @@ class _PlainTextDemo extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp4,
+              spacing: tokens.spacing.sp1,
               children: [
                 LayrzText(
                   'Body Style (14px, w400) — Default',
@@ -130,7 +130,7 @@ class _PlainTextDemo extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp4,
+              spacing: tokens.spacing.sp1,
               children: [
                 LayrzText(
                   'Label Style (12px, w300)',
@@ -168,15 +168,15 @@ class _RichTextDemo extends StatelessWidget {
           'Rich Text Examples',
           style: tokens.typography.title,
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzText(
           'Mix multiple styles within a single text widget.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             LayrzText.rich(
               TextSpan(
@@ -254,29 +254,29 @@ class _SelectionDemo extends StatelessWidget {
           'Selection Behavior',
           style: tokens.typography.title,
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzText(
           'Control whether text can be selected and copied to the clipboard.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 LayrzText(
                   'Selectable (default): Try dragging to select',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
                 Container(
-                  padding: EdgeInsets.all(tokens.spacing.sp12),
+                  padding: EdgeInsets.all(tokens.spacing.sp3),
                   decoration: BoxDecoration(
                     color: tokens.colors.surface2,
-                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
                   child: const LayrzText(
@@ -289,17 +289,17 @@ class _SelectionDemo extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 LayrzText(
                   'Non-selectable: No selection overhead',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
                 Container(
-                  padding: EdgeInsets.all(tokens.spacing.sp12),
+                  padding: EdgeInsets.all(tokens.spacing.sp3),
                   decoration: BoxDecoration(
                     color: tokens.colors.surface2,
-                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
                   child: const LayrzText(
@@ -337,17 +337,17 @@ class _ParagraphDemo extends StatelessWidget {
           'Long-form Content',
           style: tokens.typography.title,
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzText(
           'Reading passages and longer text blocks render naturally with appropriate line height and letter spacing.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         Container(
-          padding: EdgeInsets.all(tokens.spacing.sp16),
+          padding: EdgeInsets.all(tokens.spacing.sp3),
           decoration: BoxDecoration(
             color: tokens.colors.surface2,
-            borderRadius: BorderRadius.circular(tokens.radius.r12),
+            borderRadius: tokens.radius.br3,
             border: Border.all(color: tokens.colors.divider),
           ),
           child: const LayrzText(

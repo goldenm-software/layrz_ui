@@ -35,86 +35,64 @@ class RadiusSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Radius samples
-          Text('Border Radius Values', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          Text('Border Radius Levels', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp3),
           Wrap(
-            spacing: tokens.spacing.sp16,
-            runSpacing: tokens.spacing.sp16,
+            spacing: tokens.spacing.sp3,
+            runSpacing: tokens.spacing.sp3,
             children: [
               LayrzTooltip(
-                contentText: 'r8 — 8px',
+                contentText: 'r1 — 4px',
                 child: ShowroomSwatch(
-                  label: 'r8',
+                  label: 'r1',
+                  value: '4u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: tokens.radius.br1,
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r2 — 8px',
+                child: ShowroomSwatch(
+                  label: 'r2',
                   value: '8u',
                   decoration: BoxDecoration(
                     color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r8),
+                    borderRadius: tokens.radius.br2,
                   ),
                 ),
               ),
               LayrzTooltip(
-                contentText: 'r10 — 10px',
+                contentText: 'r3 — 16px',
                 child: ShowroomSwatch(
-                  label: 'r10',
-                  value: '10u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r10),
-                  ),
-                ),
-              ),
-              LayrzTooltip(
-                contentText: 'r12 — 12px',
-                child: ShowroomSwatch(
-                  label: 'r12',
-                  value: '12u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r12),
-                  ),
-                ),
-              ),
-              LayrzTooltip(
-                contentText: 'r14 — 14px',
-                child: ShowroomSwatch(
-                  label: 'r14',
-                  value: '14u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r14),
-                  ),
-                ),
-              ),
-              LayrzTooltip(
-                contentText: 'r16 — 16px',
-                child: ShowroomSwatch(
-                  label: 'r16',
+                  label: 'r3',
                   value: '16u',
                   decoration: BoxDecoration(
                     color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r16),
+                    borderRadius: tokens.radius.br3,
                   ),
                 ),
               ),
               LayrzTooltip(
-                contentText: 'r20 — 20px',
+                contentText: 'r4 — 24px',
                 child: ShowroomSwatch(
-                  label: 'r20',
-                  value: '20u',
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r20),
-                  ),
-                ),
-              ),
-              LayrzTooltip(
-                contentText: 'r24 — 24px',
-                child: ShowroomSwatch(
-                  label: 'r24',
+                  label: 'r4',
                   value: '24u',
                   decoration: BoxDecoration(
                     color: tokens.colors.primary,
-                    borderRadius: BorderRadius.circular(tokens.radius.r24),
+                    borderRadius: tokens.radius.br4,
+                  ),
+                ),
+              ),
+              LayrzTooltip(
+                contentText: 'r5 — 32px',
+                child: ShowroomSwatch(
+                  label: 'r5',
+                  value: '32u',
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: tokens.radius.br5,
                   ),
                 ),
               ),
@@ -132,11 +110,11 @@ class RadiusSection extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // innerRadius demonstration
           Text('innerRadius() Helper', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           _InnerRadiusDemonstration(tokens: tokens),
         ],
       ),
@@ -162,7 +140,7 @@ class _InnerRadiusDemonstration extends StatelessWidget {
           'For concentric corners, inner_radius = max(outer_radius − gap, 0)',
           style: tokens.typography.label,
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
 
         // Main demonstration: Correct vs. Naive, responsive layout
         LayoutBuilder(
@@ -177,19 +155,19 @@ class _InnerRadiusDemonstration extends StatelessWidget {
                   _InnerRadiusCase(
                     tokens: tokens,
                     title: 'Correct',
-                    outerRadius: tokens.radius.r24,
-                    spacer: tokens.spacing.sp12,
-                    innerRadius: tokens.radius.innerRadius(outerRadius: tokens.radius.r24, spacer: tokens.spacing.sp12),
+                    outerRadius: tokens.radius.r4,
+                    spacer: tokens.spacing.sp3,
+                    innerRadius: tokens.radius.innerRadius(outerRadius: tokens.radius.r4, spacer: tokens.spacing.sp3),
                     isCorrect: true,
                     keyPrefix: 'innerRadius-demo-correct',
                   ),
-                  SizedBox(height: tokens.spacing.sp20),
+                  SizedBox(height: tokens.spacing.sp4),
                   _InnerRadiusCase(
                     tokens: tokens,
                     title: 'Naive / Wrong',
-                    outerRadius: tokens.radius.r24,
-                    spacer: tokens.spacing.sp12,
-                    innerRadius: BorderRadius.circular(tokens.radius.r24),
+                    outerRadius: tokens.radius.r4,
+                    spacer: tokens.spacing.sp3,
+                    innerRadius: tokens.radius.br4,
                     isCorrect: false,
                     keyPrefix: 'innerRadius-demo-naive',
                   ),
@@ -204,24 +182,24 @@ class _InnerRadiusDemonstration extends StatelessWidget {
                     child: _InnerRadiusCase(
                       tokens: tokens,
                       title: 'Correct',
-                      outerRadius: tokens.radius.r24,
-                      spacer: tokens.spacing.sp12,
+                      outerRadius: tokens.radius.r4,
+                      spacer: tokens.spacing.sp3,
                       innerRadius: tokens.radius.innerRadius(
-                        outerRadius: tokens.radius.r24,
-                        spacer: tokens.spacing.sp12,
+                        outerRadius: tokens.radius.r4,
+                        spacer: tokens.spacing.sp3,
                       ),
                       isCorrect: true,
                       keyPrefix: 'innerRadius-demo-correct',
                     ),
                   ),
-                  SizedBox(width: tokens.spacing.sp20),
+                  SizedBox(width: tokens.spacing.sp4),
                   Expanded(
                     child: _InnerRadiusCase(
                       tokens: tokens,
                       title: 'Naive / Wrong',
-                      outerRadius: tokens.radius.r24,
-                      spacer: tokens.spacing.sp12,
-                      innerRadius: BorderRadius.circular(tokens.radius.r24),
+                      outerRadius: tokens.radius.r4,
+                      spacer: tokens.spacing.sp3,
+                      innerRadius: tokens.radius.br4,
                       isCorrect: false,
                       keyPrefix: 'innerRadius-demo-naive',
                     ),
@@ -231,17 +209,17 @@ class _InnerRadiusDemonstration extends StatelessWidget {
             }
           },
         ),
-        SizedBox(height: tokens.spacing.sp24),
+        SizedBox(height: tokens.spacing.sp4),
 
         // Clamp demonstration: when spacer > outerRadius
         Text('When gap exceeds outer radius, corners clamp to square:', style: tokens.typography.label),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         _InnerRadiusCase(
           tokens: tokens,
           title: 'Clamped to 0',
-          outerRadius: tokens.radius.r8,
-          spacer: tokens.spacing.sp12,
-          innerRadius: tokens.radius.innerRadius(outerRadius: tokens.radius.r8, spacer: tokens.spacing.sp12),
+          outerRadius: tokens.radius.r2,
+          spacer: tokens.spacing.sp3,
+          innerRadius: tokens.radius.innerRadius(outerRadius: tokens.radius.r2, spacer: tokens.spacing.sp3),
           isCorrect: true,
           keyPrefix: 'innerRadius-demo-clamp',
         ),
@@ -297,7 +275,7 @@ class _InnerRadiusCase extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         // Parameters label
         Text(
           'outer = ${outerRadius.toStringAsFixed(0)}u',
@@ -319,7 +297,7 @@ class _InnerRadiusCase extends StatelessWidget {
             'inner = ${computedInnerRadius.toStringAsFixed(0)}u (reusing outer)',
             style: tokens.typography.label.copyWith(fontWeight: FontWeight.bold),
           ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         // Visual demonstration: outlined rings (both arcs directly visible)
         Container(
           key: ValueKey('$keyPrefix-outer'),
@@ -346,13 +324,13 @@ class _InnerRadiusCase extends StatelessWidget {
         ),
         // Show the discrepancy for naive case
         if (!isCorrect) ...[
-          SizedBox(height: tokens.spacing.sp8),
+          SizedBox(height: tokens.spacing.sp2),
           Text(
             '✗ Corners bulge; gap looks wider at corners',
             style: tokens.typography.label.copyWith(color: tokens.colors.danger),
           ),
         ] else if (computedInnerRadius == 0.0) ...[
-          SizedBox(height: tokens.spacing.sp8),
+          SizedBox(height: tokens.spacing.sp2),
           Text(
             'Square corners (clamped)',
             style: tokens.typography.label,

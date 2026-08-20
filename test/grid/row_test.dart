@@ -187,7 +187,7 @@ void main() {
     });
 
     group('spacing', () {
-      testWidgets('spacing=null uses tokens.spacing.base (8.0)', (tester) async {
+      testWidgets('spacing=null uses tokens.spacing.sp2 (8.0)', (tester) async {
         await pumpThemed(
           tester,
           SizedBox(

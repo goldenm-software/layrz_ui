@@ -120,7 +120,7 @@ void main() {
         expect(verticalGap, closeTo(20.0, 0.1), reason: 'gap should be exactly 20px');
       });
 
-      testWidgets('spacing=null uses tokens.spacing.base (8.0)', (tester) async {
+      testWidgets('spacing=null uses tokens.spacing.sp2 (8.0)', (tester) async {
         await pumpThemed(
           tester,
           SizedBox(
