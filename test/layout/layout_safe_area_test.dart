@@ -17,8 +17,8 @@ void main() {
         const topInset = 24.0;
 
         // Force expanded presentation (md breakpoint) by setting a wide test size
-        tester.binding.window.physicalSizeTestValue = const Size(1200, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(1200, 800);
 
         await pumpThemedApp(
           tester,
@@ -73,8 +73,8 @@ void main() {
         const topInset = 24.0;
 
         // Force drawer presentation (sm breakpoint) by setting a narrow test size
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(400, 800);
 
         await pumpThemedApp(
           tester,
@@ -146,8 +146,8 @@ void main() {
         const topInset = 24.0;
 
         // Force drawer presentation (sm breakpoint)
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(400, 800);
 
         await pumpThemedApp(
           tester,
@@ -206,8 +206,8 @@ void main() {
         const leftInset = 20.0;
 
         // Force drawer presentation (sm breakpoint)
-        tester.binding.window.physicalSizeTestValue = const Size(400, 800);
-        addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(400, 800);
 
         await pumpThemedApp(
           tester,
