@@ -30,3 +30,4 @@ Adicionalmente, nuevos entries:
 * `LayrzDialog`, un dialogo pues, no tengo que explicarlo, verdad? - M2
 * `LayrzBottomSheet`, un bottom sheet para hacer las vistas detalles un bottom sheet en mobile, como en Layrz KICK - M2
 * `LayrzEndDrawer`, el drawer de la derecha, para reemplazar los `LayrzDialog` en desktop mode :smile: - M5
+* `LayrzAdaptativeModal`, esencialmente, un balurdo if que cambia entre `LayrzDialog` y `LayrzBottomSheet` dependiendo del tamaño de la pantalla - M5
