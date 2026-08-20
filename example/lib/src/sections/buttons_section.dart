@@ -9,15 +9,15 @@ import '../common/showroom_section.dart';
 /// This allows the showroom to demonstrate live state changes on buttons with
 /// controller ownership — the key behavioural difference between buttons
 /// in layrz_ui and previous implementations.
-class ButtonsSectionContent extends StatefulWidget {
-  /// Creates a new [ButtonsSectionContent].
-  const ButtonsSectionContent({super.key});
+class ButtonsSection extends StatefulWidget {
+  /// Creates a new [ButtonsSection].
+  const ButtonsSection({super.key});
 
   @override
-  State<ButtonsSectionContent> createState() => _ButtonsSectionContentState();
+  State<ButtonsSection> createState() => _ButtonsSectionState();
 }
 
-class _ButtonsSectionContentState extends State<ButtonsSectionContent> {
+class _ButtonsSectionState extends State<ButtonsSection> {
   late LayrzButtonController _loadingController;
   late LayrzButtonController _cooldownController;
   late LayrzButtonController _sharedFormController;

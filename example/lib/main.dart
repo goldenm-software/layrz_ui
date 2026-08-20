@@ -67,75 +67,75 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: '/buttons',
-          pageBuilder: (context, state) => NoTransitionPage(child: ButtonsSectionContent()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ButtonsSection()),
         ),
         GoRoute(
           path: '/button-group',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildButtonGroupSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ButtonGroupSection()),
         ),
         GoRoute(
           path: '/alerts',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildAlertsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: AlertsSection()),
         ),
         GoRoute(
           path: '/tooltips',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildTooltipsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: TooltipsSection()),
         ),
         GoRoute(
           path: '/images',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildImagesSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ImagesSection()),
         ),
         GoRoute(
           path: '/menus',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildMenusSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: MenusSection()),
         ),
         GoRoute(
           path: '/chips',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildChipsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ChipsSection()),
         ),
         GoRoute(
           path: '/text',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildTextSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: TextSection()),
         ),
         GoRoute(
           path: '/inputs',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildInputsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: InputsSection()),
         ),
         GoRoute(
           path: '/grid',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildGridSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
         ),
         GoRoute(
           path: '/typography',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildTypographySection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: TypographySection()),
         ),
         GoRoute(
           path: '/colors',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildColorsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ColorsSection()),
         ),
         GoRoute(
           path: '/spacing',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildSpacingSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: SpacingSection()),
         ),
         GoRoute(
           path: '/radius',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildRadiusSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: RadiusSection()),
         ),
         GoRoute(
           path: '/elevation',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildElevationSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: ElevationSection()),
         ),
         GoRoute(
           path: '/borders',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildBordersSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: BordersSection()),
         ),
         GoRoute(
           path: '/motion',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildMotionSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: MotionSection()),
         ),
         GoRoute(
           path: '/access-paths',
-          pageBuilder: (context, state) => NoTransitionPage(child: buildAccessPathsSection()),
+          pageBuilder: (context, state) => NoTransitionPage(child: AccessPathsSection()),
         ),
       ],
     ),

@@ -4,26 +4,13 @@ import 'package:layrz_icons/layrz_icons.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzAlert] styles, types, configurations, and the [LayrzAlertIcon] standalone chip.
-///
-/// Demonstrates the matrix of 2 styles × 6 types (12 combinations), variable maxLines
-/// truncation, custom type with explicit color and icon, and the reusable [LayrzAlertIcon]
-/// at different sizes.
-Widget buildAlertsSection() {
-  return Builder(
-    builder: (context) {
-      return const _AlertsSectionContent();
-    },
-  );
-}
-
 /// The content widget for the alerts section.
 ///
 /// Shows multiple demo subsections illustrating alert styles, types, configurations,
 /// and the standalone icon chip.
-class _AlertsSectionContent extends StatelessWidget {
-  /// Creates a new [_AlertsSectionContent].
-  const _AlertsSectionContent();
+class AlertsSection extends StatelessWidget {
+  /// Creates a new [AlertsSection].
+  const AlertsSection({super.key});
 
   @override
   Widget build(BuildContext context) {

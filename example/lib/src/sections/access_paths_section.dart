@@ -10,86 +10,87 @@ import '../common/showroom_section.dart';
 /// [context.tokens]) and asserts they are equal at runtime. If they ever
 /// diverge, the showroom displays a mismatch indicator, proving the access
 /// paths remain consistent.
-Widget buildAccessPathsSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
-      final tokenizer = LayrzTokenizer.of(context);
+class AccessPathsSection extends StatelessWidget {
+  const AccessPathsSection({super.key});
 
-      return ShowroomSection(
-        title: 'Token Access Paths',
-        description: 'Demonstrating D12: two equivalent token access patterns',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Both access paths must return the same values',
-              style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
-            ),
-            SizedBox(height: tokens.spacing.sp16),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final tokenizer = LayrzTokenizer.of(context);
 
-            // Primary color
-            _AccessPathComparison(
-              label: 'primary',
-              path1: 'context.tokens.colors.primary',
-              value1: tokens.colors.primary.toHex(),
-              path2: 'LayrzTokenizer.of(context).primary',
-              value2: tokenizer.primary.toHex(),
-              match: tokens.colors.primary == tokenizer.primary,
-            ),
+    return ShowroomSection(
+      title: 'Token Access Paths',
+      description: 'Demonstrating D12: two equivalent token access patterns',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Both access paths must return the same values',
+            style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
+          ),
+          SizedBox(height: tokens.spacing.sp16),
 
-            SizedBox(height: tokens.spacing.sp16),
+          // Primary color
+          _AccessPathComparison(
+            label: 'primary',
+            path1: 'context.tokens.colors.primary',
+            value1: tokens.colors.primary.toHex(),
+            path2: 'LayrzTokenizer.of(context).primary',
+            value2: tokenizer.primary.toHex(),
+            match: tokens.colors.primary == tokenizer.primary,
+          ),
 
-            // Spacing base
-            _AccessPathComparison(
-              label: 'spacing (base)',
-              path1: 'context.tokens.spacing.base',
-              value1: '${tokens.spacing.base}',
-              path2: 'LayrzTokenizer.of(context).spacing',
-              value2: '${tokenizer.spacing}',
-              match: tokens.spacing.base == tokenizer.spacing,
-            ),
+          SizedBox(height: tokens.spacing.sp16),
 
-            SizedBox(height: tokens.spacing.sp16),
+          // Spacing base
+          _AccessPathComparison(
+            label: 'spacing (base)',
+            path1: 'context.tokens.spacing.base',
+            value1: '${tokens.spacing.base}',
+            path2: 'LayrzTokenizer.of(context).spacing',
+            value2: '${tokenizer.spacing}',
+            match: tokens.spacing.base == tokenizer.spacing,
+          ),
 
-            // Radius base
-            _AccessPathComparison(
-              label: 'radius (base)',
-              path1: 'context.tokens.radius.base',
-              value1: '${tokens.radius.base}',
-              path2: 'LayrzTokenizer.of(context).radius',
-              value2: '${tokenizer.radius}',
-              match: tokens.radius.base == tokenizer.radius,
-            ),
+          SizedBox(height: tokens.spacing.sp16),
 
-            SizedBox(height: tokens.spacing.sp16),
+          // Radius base
+          _AccessPathComparison(
+            label: 'radius (base)',
+            path1: 'context.tokens.radius.base',
+            value1: '${tokens.radius.base}',
+            path2: 'LayrzTokenizer.of(context).radius',
+            value2: '${tokenizer.radius}',
+            match: tokens.radius.base == tokenizer.radius,
+          ),
 
-            // Border width
-            _AccessPathComparison(
-              label: 'borderWidth',
-              path1: 'context.tokens.border.base',
-              value1: '${tokens.border.base}',
-              path2: 'LayrzTokenizer.of(context).borderWidth',
-              value2: '${tokenizer.borderWidth}',
-              match: tokens.border.base == tokenizer.borderWidth,
-            ),
+          SizedBox(height: tokens.spacing.sp16),
 
-            SizedBox(height: tokens.spacing.sp16),
+          // Border width
+          _AccessPathComparison(
+            label: 'borderWidth',
+            path1: 'context.tokens.border.base',
+            value1: '${tokens.border.base}',
+            path2: 'LayrzTokenizer.of(context).borderWidth',
+            value2: '${tokenizer.borderWidth}',
+            match: tokens.border.base == tokenizer.borderWidth,
+          ),
 
-            // Success color
-            _AccessPathComparison(
-              label: 'success',
-              path1: 'context.tokens.colors.success',
-              value1: tokens.colors.success.toHex(),
-              path2: 'LayrzTokenizer.of(context).success',
-              value2: tokenizer.success.toHex(),
-              match: tokens.colors.success == tokenizer.success,
-            ),
-          ],
-        ),
-      );
-    },
-  );
+          SizedBox(height: tokens.spacing.sp16),
+
+          // Success color
+          _AccessPathComparison(
+            label: 'success',
+            path1: 'context.tokens.colors.success',
+            value1: tokens.colors.success.toHex(),
+            path2: 'LayrzTokenizer.of(context).success',
+            value2: tokenizer.success.toHex(),
+            match: tokens.colors.success == tokenizer.success,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A row comparing two access paths for a single token value.

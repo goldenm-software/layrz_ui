@@ -3,26 +3,13 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays all [LayrzTooltip] positions, text variants, and interactive pass-through behavior.
-///
-/// Demonstrates the four cardinal positions with overflow flip behavior, rich text styling,
-/// and the headline feature: tooltip surfaces that do not block interaction with widgets
-/// behind them.
-Widget buildTooltipsSection() {
-  return Builder(
-    builder: (context) {
-      return const _TooltipsSectionContent();
-    },
-  );
-}
-
 /// The content widget for the tooltips section.
 ///
 /// Shows multiple demo subsections illustrating tooltip positioning, text variants,
 /// overflow flip behavior, and pass-through interactivity.
-class _TooltipsSectionContent extends StatelessWidget {
-  /// Creates a new [_TooltipsSectionContent].
-  const _TooltipsSectionContent();
+class TooltipsSection extends StatelessWidget {
+  /// Creates a new [TooltipsSection].
+  const TooltipsSection({super.key});
 
   @override
   Widget build(BuildContext context) {

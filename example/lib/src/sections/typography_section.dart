@@ -8,31 +8,36 @@ import '../common/unit_display.dart';
 ///
 /// Each of the five styles (display, headline, title, body, label) is rendered
 /// in its own style and labelled with name and actual font size.
-Widget buildTypographySection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class TypographySection extends StatelessWidget {
+  const TypographySection({super.key});
 
-      return ShowroomSection(
-        title: 'Typography',
-        description: 'Five core text styles with their actual computed font sizes',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _StyleRow(sample: _StyleSample('display', tokens.typography.display)),
-            SizedBox(height: tokens.spacing.sp16),
-            _StyleRow(sample: _StyleSample('headline', tokens.typography.headline)),
-            SizedBox(height: tokens.spacing.sp16),
-            _StyleRow(sample: _StyleSample('title', tokens.typography.title)),
-            SizedBox(height: tokens.spacing.sp16),
-            _StyleRow(sample: _StyleSample('body', tokens.typography.body)),
-            SizedBox(height: tokens.spacing.sp16),
-            _StyleRow(sample: _StyleSample('label', tokens.typography.label)),
-          ],
-        ),
-      );
-    },
-  );
+  @override
+  Widget build(BuildContext context) {
+    return Builder(
+      builder: (context) {
+        final tokens = context.tokens;
+
+        return ShowroomSection(
+          title: 'Typography',
+          description: 'Five core text styles with their actual computed font sizes',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StyleRow(sample: _StyleSample('display', tokens.typography.display)),
+              SizedBox(height: tokens.spacing.sp16),
+              _StyleRow(sample: _StyleSample('headline', tokens.typography.headline)),
+              SizedBox(height: tokens.spacing.sp16),
+              _StyleRow(sample: _StyleSample('title', tokens.typography.title)),
+              SizedBox(height: tokens.spacing.sp16),
+              _StyleRow(sample: _StyleSample('body', tokens.typography.body)),
+              SizedBox(height: tokens.spacing.sp16),
+              _StyleRow(sample: _StyleSample('label', tokens.typography.label)),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// A single text style sample with its label and font size.

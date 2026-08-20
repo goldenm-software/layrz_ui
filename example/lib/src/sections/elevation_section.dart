@@ -7,100 +7,101 @@ import '../common/showroom_section.dart';
 ///
 /// Shows cards at elevation levels 0–5, plus special cases like [reverse] (shadow
 /// flipped downward) and [hideOnElevationZero] to demonstrate outline behavior.
-Widget buildElevationSection() {
-  return Builder(
-    builder: (context) {
-      final tokens = context.tokens;
+class ElevationSection extends StatelessWidget {
+  const ElevationSection({super.key});
 
-      return ShowroomSection(
-        title: 'Elevation & Shadow',
-        description: 'Shadow tokens mapped to elevation levels 0–5',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Main elevation ramp
-            Text('Elevation Ramp (0–5)', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(
-                  6,
-                  (index) => Padding(
-                    padding: EdgeInsets.only(right: tokens.spacing.sp12),
-                    child: LayrzTooltip(
-                      contentText: 'elevation$index shadow token',
-                      child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
-                    ),
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return ShowroomSection(
+      title: 'Elevation & Shadow',
+      description: 'Shadow tokens mapped to elevation levels 0–5',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main elevation ramp
+          Text('Elevation Ramp (0–5)', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(
+                6,
+                (index) => Padding(
+                  padding: EdgeInsets.only(right: tokens.spacing.sp12),
+                  child: LayrzTooltip(
+                    contentText: 'elevation$index shadow token',
+                    child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
                   ),
                 ),
               ),
             ),
+          ),
 
-            SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp24),
 
-            // Special cases
-            Text('Special Cases', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Elevation 0 (outline)',
-                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
-                      ),
-                      SizedBox(height: tokens.spacing.sp8),
-                      LayrzTooltip(
-                        contentText: 'elevation0 with outline border',
-                        child: _ElevationCard(elevation: 0, label: '0u outline'),
-                      ),
-                    ],
-                  ),
+          // Special cases
+          Text('Special Cases', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Elevation 0 (outline)',
+                      style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+                    ),
+                    SizedBox(height: tokens.spacing.sp8),
+                    LayrzTooltip(
+                      contentText: 'elevation0 with outline border',
+                      child: _ElevationCard(elevation: 0, label: '0u outline'),
+                    ),
+                  ],
                 ),
-                SizedBox(width: tokens.spacing.sp16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Reversed (flipped shadow)',
-                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
-                      ),
-                      SizedBox(height: tokens.spacing.sp8),
-                      LayrzTooltip(
-                        contentText: 'elevation2 with shadow flipped downward',
-                        child: _ElevationCard(elevation: 2, label: 'Reversed', reverse: true),
-                      ),
-                    ],
-                  ),
+              ),
+              SizedBox(width: tokens.spacing.sp16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reversed (flipped shadow)',
+                      style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+                    ),
+                    SizedBox(height: tokens.spacing.sp8),
+                    LayrzTooltip(
+                      contentText: 'elevation2 with shadow flipped downward',
+                      child: _ElevationCard(elevation: 2, label: 'Reversed', reverse: true),
+                    ),
+                  ],
                 ),
-                SizedBox(width: tokens.spacing.sp16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'hideOnElevationZero',
-                        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
-                      ),
-                      SizedBox(height: tokens.spacing.sp8),
-                      LayrzTooltip(
-                        contentText: 'elevation0 with no outline or shadow',
-                        child: _ElevationCard(elevation: 0, label: 'No outline', hideOnElevationZero: true),
-                      ),
-                    ],
-                  ),
+              ),
+              SizedBox(width: tokens.spacing.sp16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'hideOnElevationZero',
+                      style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+                    ),
+                    SizedBox(height: tokens.spacing.sp8),
+                    LayrzTooltip(
+                      contentText: 'elevation0 with no outline or shadow',
+                      child: _ElevationCard(elevation: 0, label: 'No outline', hideOnElevationZero: true),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  );
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// A card demonstrating a specific elevation level.

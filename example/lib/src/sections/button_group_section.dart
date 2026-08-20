@@ -4,18 +4,10 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
 
-/// Displays [LayrzButtonGroup] in both row and dropdown modes.
-///
-/// Demonstrates responsive layout switching, semantic type preservation,
-/// custom triggers, and custom spacing.
-Widget buildButtonGroupSection() {
-  return const _ButtonGroupSectionContent();
-}
-
 /// Stateless widget displaying [LayrzButtonGroup] examples.
-class _ButtonGroupSectionContent extends StatelessWidget {
-  /// Creates a new [_ButtonGroupSectionContent].
-  const _ButtonGroupSectionContent();
+class ButtonGroupSection extends StatelessWidget {
+  /// Creates a new [ButtonGroupSection].
+  const ButtonGroupSection({super.key});
 
   @override
   Widget build(BuildContext context) {
