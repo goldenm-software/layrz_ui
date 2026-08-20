@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.0.11
+
+**Touch behaviour, and a drawer that reads as depth.** Reworks how tooltips behave under a finger, corrects coordinate and scaling faults that only surface on a real device, and rebuilds the mobile drawer transition so the page floats above a flat backdrop.
+
+### Added
+
+- **Drag gestures and back-button handling for the `LayrzLayout` drawer.** A 20px edge strip (`kLayrzLayoutDrawerEdgeDragWidth`) drags the drawer open while it is closed, and the visible page sliver drags it shut while it is open; both track the finger and settle by fling velocity (`kLayrzLayoutDrawerDragSettleVelocity`, 365 px/s) or by whether the gesture passed the halfway point. The system back button now closes an open drawer instead of popping the route, via `PopScope`. Reference decision D44.
+
+- **Field errors surface in a tap tooltip below the sm breakpoint.** On compact widths there is no room for an error line beneath the field, so the error is reachable by tapping instead. Reference DESIGN-80 and decision D41.
+
+- **`LayrzLayout` honours the safe area.** The top bar and drawer surfaces paint edge-to-edge beneath notches, status bars and home indicators so their fill reaches the physical screen edge, while their content stays inset. The body slot is deliberately not inset — the page owns its own edges. Reference DESIGN-82 and decision D42.
+
+### Changed
+
+- **The mobile drawer no longer slides in over the page; the page moves out of the way.** It scales to 0.88 anchored at `Alignment.centerLeft`, translates right by the 260px drawer width, and gains `radius.r16` corners with `shadow.elevation4`, so it reads as a card floating above the drawer. The drawer panel lost its own shadow and now renders flat, and the full-screen scrim is gone along with `kLayrzLayoutDrawerScrimOpacity` — with the drawer painted behind the page, a scrim can never be seen. This is a visible behaviour change. Reference decision D44.
+
+- **The drawer trigger is a 40x40 button with hover and press states** (`colors.surface3` on hover, `colors.surface2` on press), replacing a bare 24px icon that had no feedback and a hit target below the touch minimum. Only colour varies across states; geometry is held constant per decision D15. The top bar logo is left-aligned rather than centred.
+
+- **`@Preview` requires a top-level function tear-off for `theme:`.** Use `layrzPreviewLightTheme`; `LayrzPreviewTheme.light` is a static method and the widget-preview code generator cannot serialize it. Every bundled preview now also declares a `size:`, because the preview harness supplies unbounded width, which forces the intrinsic and dry-layout measurement that a `Row` with `Expanded` or an embedded `LayoutBuilder` cannot answer.
+
+### Fixed
+
+- **Touch tooltips stay open until tapped away.** They previously vanished the instant a long-press was released, because the gesture that opens them ends with a pointer-up event. Dismissal now runs through a global pointer route gated on mouse presence and fires on pointer-down. Reference DESIGN-77.
+
+- **Tooltips are positioned in the overlay's coordinate space rather than the window's.** The anchor was resolved with `localToGlobal` and no `ancestor:`, and the bounds came from `MediaQuery`, while the surface is placed by a `Positioned` inside the `OverlayPortal`'s overlay child. Inside a scrollable the two spaces diverged by the scroll offset, so it was applied twice and the tooltip drifted at twice the distance the anchor moved — measured on device at ratios of 2.00 across three pages, with the error growing linearly from zero at the top of a page.
+
+- **The drawer transition no longer relays out the page on every frame.** The sliver's gesture region animated a `Positioned` offset, and mutating one marks `RenderStack` dirty for layout, so the whole body subtree — including long scrollables — was laid out every frame. Profiling on device measured `LAYOUT` at 795ms against `PAINT`'s 205ms, with UI frames peaking at 48.8ms. The region is now offset with `Transform.translate`, which is paint-and-hit-test only; the drawer subtree is built once outside the `AnimatedBuilder` instead of being reallocated per frame; and the page content and drawer panel each get a `RepaintBoundary`.
+
+- **Button labels render at the measured text scale.** Reference DESIGN-78.
+
+- **Alert touch presses receive the hover treatment**, so a press registers visually on a device with no pointer. Reference DESIGN-79.
+
+- **The drawer closes when a navigation item is tapped**, while section labels leave it open.
+
+### Known issues
+
+- **Widget previews do not render.** The preview harness installs no `LayrzUiL10n`, so any preview of a widget that reads `context.l10n` fails during build. Bounding every preview's size cleared the earlier layout assertions, but this remains.
+
 ## 0.0.10
 
 **The application shell.** Adds `LayrzLayout` and `LayrzScaffoldShell` — the two components that turn the primitives into an application — plus a Material-free scrollbar the package installs for you.
