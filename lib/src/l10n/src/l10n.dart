@@ -9,6 +9,7 @@ import 'namespaces/dynamic_avatar.dart';
 import 'namespaces/editor.dart';
 import 'namespaces/files.dart';
 import 'namespaces/helpers.dart';
+import 'namespaces/inputs.dart';
 import 'namespaces/map.dart';
 import 'namespaces/notifications.dart';
 import 'namespaces/password.dart';
@@ -98,6 +99,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nEditorMixin,
         LayrzUiL10nFilesMixin,
         LayrzUiL10nHelpersMixin,
+        LayrzUiL10nInputsMixin,
         LayrzUiL10nMapMixin,
         LayrzUiL10nNotificationsMixin,
         LayrzUiL10nPasswordMixin,
