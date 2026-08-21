@@ -5,15 +5,15 @@ import 'package:flutter/widgets.dart';
 /// [LayrzSelectionHandlePainter] renders a teardrop-shaped handle that marks the
 /// start/end position of a text selection or the position of a collapsed caret.
 ///
-/// The teardrop is a circle with the top-left quadrant removed, creating a circular
-/// bulge with a square corner / point. Unrotated, the square corner points up-right (NE).
-/// The point orientation for each handle type is controlled via Transform.rotate in
-/// [LayrzTextSelectionControls.buildHandle]:
-/// - **left**: no rotation (0°) → square corner points up-right, touching selection start
-/// - **right**: rotated 90° (π/2) → square corner points up-left, touching selection end
-/// - **collapsed**: rotated 45° (π/4) → square corner points up, marking caret position
+/// The teardrop is a circle with a square corner in the top-left quadrant, creating a
+/// circular bulge with a pointed corner. Unrotated, the square corner points to the
+/// top-left (NW). The point orientation for each handle type is controlled via
+/// Transform.rotate in [LayrzTextSelectionControls.buildHandle]:
+/// - **left**: rotated 90° clockwise (π/2) → corner points up-right (NE), touching selection start
+/// - **right**: no rotation (0°) → corner points up-left (NW), touching selection end
+/// - **collapsed**: rotated 45° clockwise (π/4) → corner points up (N), marking caret position
 ///
-/// This matches Material Design's text selection handle pattern.
+/// Transform.rotate rotates clockwise for positive angles in Flutter.
 class LayrzSelectionHandlePainter extends CustomPainter {
   /// Color of the handle, typically from tokens.colors.primary.
   final Color color;
@@ -31,14 +31,15 @@ class LayrzSelectionHandlePainter extends CustomPainter {
     final paint = Paint()..color = color;
 
     // Create a circle and a square corner (top-left quadrant).
-    // When combined, this creates a teardrop: a circle with a square corner
-    // cut out of the top-left, leaving a sharp point.
+    // When combined with path winding rules, this creates a teardrop:
+    // a circle with a pointed corner at the top-left (NW).
     final double radius = size.width / 2.0;
     final circle = Rect.fromCircle(center: Offset(radius, radius), radius: radius);
     final point = Rect.fromLTWH(0.0, 0.0, radius, radius);
 
     // Path combining the circle and the square point creates the teardrop.
-    // addOval draws the circle, addRect removes the top-left quadrant.
+    // addOval traces the circle outline, addRect traces the square outline.
+    // The winding rule determines the final fill, producing the teardrop shape.
     final path = Path()
       ..addOval(circle)
       ..addRect(point);

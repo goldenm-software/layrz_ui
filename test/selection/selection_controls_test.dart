@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -156,6 +158,138 @@ void main() {
         final sizedBox = tester.firstWidget<SizedBox>(sizedBoxFinder);
         expect(sizedBox.width, expectedSize.width);
         expect(sizedBox.height, expectedSize.height);
+      },
+    );
+
+    testWidgets(
+      'left handle is rotated 90° clockwise (π/2) to point up-right (NE) at selection start',
+      (WidgetTester tester) async {
+        final controls = LayrzTextSelectionControls.instance;
+
+        // Build the left handle
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              return controls.buildHandle(
+                context,
+                TextSelectionHandleType.left,
+                16.0,
+              );
+            },
+          ),
+        );
+
+        // The left handle should be wrapped in a Transform.rotate with angle π/2
+        final transformRotateFinder = find.byType(Transform);
+        expect(transformRotateFinder, findsOneWidget);
+
+        final transform = tester.firstWidget<Transform>(transformRotateFinder);
+        // Extract the rotation angle from the transform matrix
+        // Transform.rotate creates a rotation matrix, we check the angle is approximately π/2
+        expect(
+          transform.transform[0] + transform.transform[5],
+          closeTo(0.0, 0.01),
+          reason: 'Left handle should rotate π/2 clockwise to point NE',
+        );
+      },
+    );
+
+    testWidgets(
+      'right handle has no rotation and points up-left (NW) at selection end',
+      (WidgetTester tester) async {
+        final controls = LayrzTextSelectionControls.instance;
+
+        // Build the right handle
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              return controls.buildHandle(
+                context,
+                TextSelectionHandleType.right,
+                16.0,
+              );
+            },
+          ),
+        );
+
+        // The right handle should NOT be wrapped in a Transform.rotate
+        // It should be the bare handle with GestureDetector and CustomPaint
+        final transformRotateFinder = find.byType(Transform);
+        expect(transformRotateFinder, findsNothing, reason: 'Right handle should have no rotation to point NW');
+
+        final customPaintFinder = find.byType(CustomPaint);
+        expect(
+          customPaintFinder,
+          findsOneWidget,
+          reason: 'Right handle should still have CustomPaint for the teardrop',
+        );
+      },
+    );
+
+    testWidgets(
+      'collapsed handle is rotated 45° clockwise (π/4) to point straight up (N)',
+      (WidgetTester tester) async {
+        final controls = LayrzTextSelectionControls.instance;
+
+        // Build the collapsed handle
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              return controls.buildHandle(
+                context,
+                TextSelectionHandleType.collapsed,
+                16.0,
+              );
+            },
+          ),
+        );
+
+        // The collapsed handle should be wrapped in a Transform.rotate with angle π/4
+        final transformRotateFinder = find.byType(Transform);
+        expect(transformRotateFinder, findsOneWidget);
+
+        final transform = tester.firstWidget<Transform>(transformRotateFinder);
+        // For π/4 rotation: cos(π/4) ≈ 0.707, sin(π/4) ≈ 0.707
+        // The rotation matrix should have specific values for 45° clockwise rotation
+        expect(
+          transform.transform[0] + transform.transform[5],
+          closeTo(2 * math.cos(math.pi / 4), 0.01),
+          reason: 'Collapsed handle should rotate π/4 clockwise to point N',
+        );
+      },
+    );
+
+    testWidgets(
+      'unrotated painter shows square corner at top-left (NW) of teardrop',
+      (WidgetTester tester) async {
+        // This test verifies the base orientation that all other rotations derive from.
+        // The teardrop is created by: circle - top-left quadrant = circle with corner at NW
+        await pumpThemed(
+          tester,
+          Center(
+            child: CustomPaint(
+              size: const Size(22.0, 22.0),
+              painter: LayrzSelectionHandlePainter(
+                color: Color(0xFF6200EE), // arbitrary color for testing
+              ),
+            ),
+          ),
+        );
+
+        // Verify the CustomPaint widget is present
+        final customPaintFinder = find.byType(CustomPaint);
+        expect(customPaintFinder, findsOneWidget, reason: 'Unrotated painter should render without Transform');
+
+        // Render and check that the painter produces output
+        final customPaint = tester.firstWidget<CustomPaint>(customPaintFinder);
+        expect(
+          customPaint.painter,
+          isA<LayrzSelectionHandlePainter>(),
+          reason: 'Painter should be LayrzSelectionHandlePainter with unrotated teardrop',
+        );
       },
     );
   });

@@ -74,23 +74,22 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
     );
 
     // Rotate the handle based on type to point in the correct direction.
-    // The unrotated teardrop (circle with top-left quadrant removed) has its
-    // square corner pointing toward the top-right (NE).
-    //
-    // Rotations move the corner counterclockwise from this base:
-    // - left: no rotation (0°) → corner points up-right, touching selection start
-    // - right: rotate 90° (π/2) → corner points up-left, touching selection end
-    // - collapsed: rotate 45° (π/4) → corner points up, marking caret position
+    // The unrotated teardrop has its square corner at the top-left (NW).
+    // Transform.rotate uses clockwise rotation for positive angles.
+    // Each handle type is rotated clockwise from this NW base:
+    // - left: rotate 90° clockwise (π/2) → corner points up-right (NE), touching selection start
+    // - right: no rotation (0°) → corner points up-left (NW), touching selection end
+    // - collapsed: rotate 45° clockwise (π/4) → corner points up (N), marking caret position
     return switch (type) {
-      TextSelectionHandleType.left => handle, // points up-right (no rotation)
-      TextSelectionHandleType.right => Transform.rotate(
+      TextSelectionHandleType.left => Transform.rotate(
         angle: math.pi / 2.0,
         child: handle,
-      ), // points up-left
+      ), // points up-right (NE)
+      TextSelectionHandleType.right => handle, // points up-left (NW) - no rotation
       TextSelectionHandleType.collapsed => Transform.rotate(
         angle: math.pi / 4.0,
         child: handle,
-      ), // points up
+      ), // points up (N)
     };
   }
 
@@ -98,14 +97,15 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
   Offset getHandleAnchor(TextSelectionHandleType type, double textLineHeight) {
     // The anchor point determines where the handle's teardrop corner attaches to the text.
     // It's specified relative to the handle's top-left (0, 0) in the 22×22 bounding box.
-    // Each handle type uses a different anchor to align the corner with the selection edge.
+    // Each handle type uses a different anchor to align the corner with the selection edge
+    // after the rotation specified in buildHandle.
     const handleSize = 22.0;
     return switch (type) {
-      // Collapsed: anchor at center-top, corner points up above the text
+      // Collapsed: anchor at center-top (11, -4), corner points straight up (N) after π/4 rotation
       TextSelectionHandleType.collapsed => Offset(handleSize / 2, -4),
-      // Left: anchor at right edge, corner points up-right at selection start
+      // Left: anchor at right edge (22, 0), corner points up-right (NE) after π/2 rotation
       TextSelectionHandleType.left => Offset(handleSize, 0),
-      // Right: anchor at left edge, corner points up-left at selection end (after π/2 rotation)
+      // Right: anchor at top-left corner (0, 0), corner points up-left (NW) with no rotation
       TextSelectionHandleType.right => Offset.zero,
     };
   }
