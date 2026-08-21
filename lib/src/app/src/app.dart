@@ -131,6 +131,7 @@ class LayrzApp extends StatefulWidget {
   /// Set this to a custom [ScrollBehavior] to opt out of the default behavior.
   final ScrollBehavior? scrollBehavior;
 
+
   // ── Shortcuts / actions ─────────────────────────────────────────────
 
   /// A map of keyboard shortcut activators to [Intent]s.

@@ -41,7 +41,8 @@ class LayrzLayout extends StatefulWidget {
   /// Creates a responsive application shell layout.
   ///
   /// The [body] and [items] parameters are required. All other parameters
-  /// are optional and default to null or empty collections.
+  /// are optional and default to null or empty collections. The [selectableContent]
+  /// parameter defaults to `true`, enabling text selection within the layout's body.
   const LayrzLayout({
     required this.body,
     required this.items,
@@ -52,6 +53,7 @@ class LayrzLayout extends StatefulWidget {
     this.notifications = const [],
     this.onNotificationTap,
     this.backgroundColor,
+    this.selectableContent = true,
     super.key,
   });
 
@@ -108,11 +110,68 @@ class LayrzLayout extends StatefulWidget {
   /// Defaults to [LayrzTokens.colors.background].
   final Color? backgroundColor;
 
+  /// Whether text selection should be enabled within the layout.
+  ///
+  /// When `true` (the default), a single [SelectableRegion] wraps the layout's body,
+  /// allowing users to select and copy text across the page content with drag selection
+  /// and Ctrl+A / Ctrl+C keyboard shortcuts.
+  ///
+  /// When `false`, no [SelectableRegion] is present and text selection is disabled for
+  /// content within this layout. The selection region is entirely absent from the widget
+  /// tree, not merely inert.
+  ///
+  /// **Desktop behavior**: [SelectableRegion] uses [emptyTextSelectionControls],
+  /// so Ctrl+C and Ctrl+A work on pointer platforms (desktop/web), but the selection
+  /// has no visual handles or toolbar.
+  ///
+  /// **Touch behavior**: On mobile platforms, selection works but has no handles or
+  /// toolbar, limiting adjustment and copy operations to keyboard shortcuts.
+  ///
+  /// **Scope**: The region encompasses the layout's body and all widgets mounted within it.
+  /// Overlays (dialogs, bottom sheets, menus, tooltips) mounted into the app's Overlay
+  /// are outside this region and cannot be selected.
+  final bool selectableContent;
+
   @override
   State<LayrzLayout> createState() => _LayrzLayoutState();
 }
 
 class _LayrzLayoutState extends State<LayrzLayout> {
+  /// The long-lived [FocusNode] for text selection within the layout.
+  ///
+  /// Created once when the state is initialized and reused across all rebuilds.
+  /// Disposed when the state is disposed. Only created if [selectableContent] is true.
+  late FocusNode _selectableFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectableContent) {
+      _selectableFocusNode = FocusNode();
+    }
+  }
+
+  @override
+  void didUpdateWidget(LayrzLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If selectableContent changed from false to true, create the node
+    if (!oldWidget.selectableContent && widget.selectableContent) {
+      _selectableFocusNode = FocusNode();
+    }
+    // If selectableContent changed from true to false, dispose the node
+    if (oldWidget.selectableContent && !widget.selectableContent) {
+      _selectableFocusNode.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.selectableContent) {
+      _selectableFocusNode.dispose();
+    }
+    super.dispose();
+  }
+
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return '?';
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -143,6 +202,14 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   }
 
   Widget _buildExpanded(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
+    final bodyWidget = widget.selectableContent
+        ? SelectableRegion(
+            focusNode: _selectableFocusNode,
+            selectionControls: emptyTextSelectionControls,
+            child: widget.body,
+          )
+        : widget.body;
+
     return Container(
       color: backgroundColor,
       child: Row(
@@ -160,13 +227,21 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             onClose: null,
             getInitials: _getInitials,
           ),
-          Expanded(child: widget.body),
+          Expanded(child: bodyWidget),
         ],
       ),
     );
   }
 
   Widget _buildDrawer(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
+    final bodyWidget = widget.selectableContent
+        ? SelectableRegion(
+            focusNode: _selectableFocusNode,
+            selectionControls: emptyTextSelectionControls,
+            child: widget.body,
+          )
+        : widget.body;
+
     return LayrzLayoutDrawerScaffold(
       backgroundColor: backgroundColor,
       drawerBackgroundColor: tokens.colors.surface,
@@ -177,7 +252,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         onNotificationTap: widget.onNotificationTap,
         onDrawerTap: openDrawer,
       ),
-      body: widget.body,
+      body: bodyWidget,
       drawerBuilder: (closeDrawer) => LayrzLayoutNavigatorPanel(
         tokens: tokens,
         width: kLayrzLayoutDrawerWidth,
@@ -235,6 +310,7 @@ Widget previewLayrzLayout() => LayrzLayout(
       onTap: () {},
     ),
   ],
+  selectableContent: true,
   body: Center(
     child: Text('Body content goes here'),
   ),

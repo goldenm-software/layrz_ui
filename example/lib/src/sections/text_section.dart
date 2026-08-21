@@ -48,7 +48,7 @@ class TextSection extends StatelessWidget {
 /// Demonstrates plain text rendering with different typography styles.
 ///
 /// Shows the five typography scales (display, headline, title, body, label)
-/// and how they render with [LayrzText].
+/// and how they render with plain [Text] widgets using the app's theme.
 class _PlainTextDemo extends StatelessWidget {
   /// Creates a new [_PlainTextDemo].
   const _PlainTextDemo({required this.tokens});
@@ -61,12 +61,12 @@ class _PlainTextDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(
+        Text(
           'Plain Text Examples',
           style: tokens.typography.title,
         ),
         SizedBox(height: tokens.spacing.sp3),
-        LayrzText(
+        Text(
           'Each style scale renders with default theme colors and fonts.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -79,11 +79,11 @@ class _PlainTextDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp1,
               children: [
-                LayrzText(
+                Text(
                   'Display Style (45px, w800)',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
-                LayrzText(
+                Text(
                   'This is display text',
                   style: tokens.typography.display,
                 ),
@@ -93,11 +93,11 @@ class _PlainTextDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp1,
               children: [
-                LayrzText(
+                Text(
                   'Headline Style (28px, w700)',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
-                LayrzText(
+                Text(
                   'This is headline text',
                   style: tokens.typography.headline,
                 ),
@@ -107,11 +107,11 @@ class _PlainTextDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp1,
               children: [
-                LayrzText(
+                Text(
                   'Title Style (16px, w600)',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
-                LayrzText(
+                Text(
                   'This is title text',
                   style: tokens.typography.title,
                 ),
@@ -121,22 +121,22 @@ class _PlainTextDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp1,
               children: [
-                LayrzText(
+                Text(
                   'Body Style (14px, w400) — Default',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
-                const LayrzText('This is body text, rendered with default style'),
+                const Text('This is body text, rendered with default style'),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp1,
               children: [
-                LayrzText(
+                Text(
                   'Label Style (12px, w300)',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
-                LayrzText(
+                Text(
                   'This is label text',
                   style: tokens.typography.label,
                 ),
@@ -151,7 +151,7 @@ class _PlainTextDemo extends StatelessWidget {
 
 /// Demonstrates rich text rendering with mixed styles within a single text span.
 ///
-/// Shows how [LayrzText.rich] allows styling different parts of the text differently.
+/// Shows how [Text.rich] allows styling different parts of the text differently.
 class _RichTextDemo extends StatelessWidget {
   /// Creates a new [_RichTextDemo].
   const _RichTextDemo({required this.tokens});
@@ -164,12 +164,12 @@ class _RichTextDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(
+        Text(
           'Rich Text Examples',
           style: tokens.typography.title,
         ),
         SizedBox(height: tokens.spacing.sp3),
-        LayrzText(
+        Text(
           'Mix multiple styles within a single text widget.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -178,7 +178,7 @@ class _RichTextDemo extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: tokens.spacing.sp3,
           children: [
-            LayrzText.rich(
+            Text.rich(
               TextSpan(
                 text: 'This text is ',
                 children: [
@@ -195,7 +195,7 @@ class _RichTextDemo extends StatelessWidget {
                 ],
               ),
             ),
-            LayrzText.rich(
+            Text.rich(
               TextSpan(
                 text: 'You can also ',
                 children: [
@@ -212,7 +212,7 @@ class _RichTextDemo extends StatelessWidget {
                 ],
               ),
             ),
-            LayrzText.rich(
+            Text.rich(
               TextSpan(
                 text: 'Even ',
                 children: [
@@ -234,10 +234,10 @@ class _RichTextDemo extends StatelessWidget {
   }
 }
 
-/// Demonstrates the selectability behavior of [LayrzText].
+/// Demonstrates text selection behavior in the app.
 ///
-/// Shows the difference between `selectable: true` (default, allows drag-selection
-/// and copy) and `selectable: false` (plain text, no selection overhead).
+/// With the app-wide [SelectableRegion] enabled, text across all widgets
+/// can be selected and copied using drag-selection and Ctrl+A / Ctrl+C.
 class _SelectionDemo extends StatelessWidget {
   /// Creates a new [_SelectionDemo].
   const _SelectionDemo({required this.tokens});
@@ -250,12 +250,12 @@ class _SelectionDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(
+        Text(
           'Selection Behavior',
           style: tokens.typography.title,
         ),
         SizedBox(height: tokens.spacing.sp3),
-        LayrzText(
+        Text(
           'Control whether text can be selected and copied to the clipboard.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -268,7 +268,7 @@ class _SelectionDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp2,
               children: [
-                LayrzText(
+                Text(
                   'Selectable (default): Try dragging to select',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
@@ -279,10 +279,9 @@ class _SelectionDemo extends StatelessWidget {
                     borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
-                  child: const LayrzText(
+                  child: const Text(
                     'This text is fully selectable. You can drag your cursor across it to select, '
                     'and press Ctrl+C (or Cmd+C on Mac) to copy to clipboard.',
-                    selectable: true,
                   ),
                 ),
               ],
@@ -291,7 +290,7 @@ class _SelectionDemo extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp2,
               children: [
-                LayrzText(
+                Text(
                   'Non-selectable: No selection overhead',
                   style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                 ),
@@ -302,10 +301,9 @@ class _SelectionDemo extends StatelessWidget {
                     borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
-                  child: const LayrzText(
-                    'This text cannot be selected. Use this in performance-sensitive '
-                    'contexts like long lists where selection is not needed.',
-                    selectable: false,
+                  child: const Text(
+                    'With the app-wide SelectableRegion enabled, all text in the app is selectable '
+                    'using drag-selection and Ctrl+A / Ctrl+C.',
                   ),
                 ),
               ],
@@ -317,7 +315,7 @@ class _SelectionDemo extends StatelessWidget {
   }
 }
 
-/// Demonstrates [LayrzText] with a longer paragraph of content.
+/// Demonstrates plain [Text] widgets with a longer paragraph of content.
 ///
 /// Shows how text wrapping, line breaks, and readability are handled
 /// with the default body style.
@@ -333,12 +331,12 @@ class _ParagraphDemo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayrzText(
+        Text(
           'Long-form Content',
           style: tokens.typography.title,
         ),
         SizedBox(height: tokens.spacing.sp3),
-        LayrzText(
+        Text(
           'Reading passages and longer text blocks render naturally with appropriate line height and letter spacing.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
@@ -350,14 +348,13 @@ class _ParagraphDemo extends StatelessWidget {
             borderRadius: tokens.radius.br3,
             border: Border.all(color: tokens.colors.divider),
           ),
-          child: const LayrzText(
+          child: const Text(
             'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '
             'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. '
             'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. '
             'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. '
             'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. '
             'Try selecting and copying this entire paragraph!',
-            selectable: true,
           ),
         ),
       ],

@@ -17,7 +17,6 @@ export 'src/platform/platform.dart';
 export 'src/scaffold/scaffold.dart';
 export 'src/scrollbar/scrollbar.dart';
 export 'src/state/state.dart';
-export 'src/text/text.dart';
 export 'src/theme/theme.dart';
 export 'src/tokenizer/tokenizer.dart';
 export 'src/tokens/tokens.dart';
