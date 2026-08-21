@@ -1,17 +1,26 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/keyboard/keyboard.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 
 import 'editable_field.dart';
 import 'input_chrome.dart';
 import 'input_slot.dart';
 
-/// A Material-free text input field in the layrz_ui design system.
+/// A Material-free multi-line text input field in the layrz_ui design system.
 ///
-/// [LayrzTextInput] is a single-line text input with optional label, prefix/suffix slots,
-/// error display, help affordance, and keyboard shortcut badging. It wraps [EditableText]
-/// to provide a themed, ready-to-use input control.
+/// [LayrzTextAreaInput] is a multi-line text input with optional label, prefix/suffix slots,
+/// error display, help affordance, and character counter. It wraps [EditableText] through
+/// the shared [LayrzEditableField] to provide consistent selection, magnifier, and context
+/// menu behavior across single-line and multi-line inputs.
+///
+/// **Line limits**: The field grows from [minLines] (default 3) up to [maxLines] (default 10).
+/// Once [maxLines] is reached, the field scrolls internally rather than continuing to grow.
+/// Both bounds must be positive, and [minLines] must not exceed [maxLines].
+///
+/// **Keyboard behavior**: Enter inserts a newline by default. The [textInputAction] is set to
+/// [TextInputAction.newline] if not explicitly provided. If you need to handle form submission,
+/// combine the Enter key with an explicit keyboard action (e.g., [TextInputAction.send]).
 ///
 /// **Slot exclusivity**: At most one of `prefixIcon` / `prefix` / `prefixText` may be
 /// non-null; the same rule applies to the suffix trio. Providing multiple slot values
@@ -25,7 +34,7 @@ import 'input_slot.dart';
 /// - **Read-only**: Not editable but tap callbacks fire (used by picker-style inputs).
 /// - **Error**: Renders danger-colored border and error icon, displays error messages below.
 /// - **Read-only lock icon**: Appears only in read-only state, never in disabled state.
-class LayrzTextInput extends StatefulWidget {
+class LayrzTextAreaInput extends StatefulWidget {
   /// The label text displayed above the input field.
   ///
   /// At least one of [labelText] or [hintText] must be non-null.
@@ -100,9 +109,6 @@ class LayrzTextInput extends StatefulWidget {
   /// Callback fired when the input value changes.
   final ValueChanged<String>? onChanged;
 
-  /// Callback fired when the user submits the input (e.g., presses Enter).
-  final ValueChanged<String>? onSubmit;
-
   /// Callback fired when the input gains or loses focus.
   final ValueChanged<bool>? onFocusChanged;
 
@@ -123,13 +129,17 @@ class LayrzTextInput extends StatefulWidget {
 
   /// The padding applied inside the input field.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
+  /// If null, defaults to `tokens.spacing.pd2` (10px regular / 14px compact on all sides).
   final EdgeInsets? padding;
 
   /// The keyboard type for the input field.
+  ///
+  /// Defaults to [TextInputType.multiline] for multi-line text entry.
   final TextInputType keyboardType;
 
   /// The text input action (e.g., 'go', 'search', 'send').
+  ///
+  /// Defaults to [TextInputAction.newline] to insert newlines instead of submitting.
   final TextInputAction? textInputAction;
 
   /// List of input formatters to apply to the input.
@@ -137,8 +147,20 @@ class LayrzTextInput extends StatefulWidget {
 
   /// Maximum length of the input text.
   ///
-  /// If provided, a [LengthLimitingTextInputFormatter] is automatically appended.
+  /// If provided, a [LengthLimitingTextInputFormatter] is automatically appended
+  /// and a character counter is displayed below the field.
   final int? maxLength;
+
+  /// The minimum number of lines the field occupies.
+  ///
+  /// Defaults to 3. Must be a positive integer not exceeding [maxLines].
+  final int minLines;
+
+  /// The maximum number of lines before the field becomes scrollable.
+  ///
+  /// Defaults to 10. Must be a positive integer not less than [minLines].
+  /// Once exceeded, the field scrolls internally rather than growing further.
+  final int maxLines;
 
   /// Whether the field should request focus on creation.
   final bool autofocus;
@@ -149,30 +171,22 @@ class LayrzTextInput extends StatefulWidget {
   /// List of autofill hints for platform autofill services.
   final List<String> autofillHints;
 
-  /// Whether the input text should be obscured (for passwords).
-  final bool obscureText;
-
   /// Whether autocorrection is enabled.
   final bool autocorrect;
 
   /// Whether suggestions are enabled.
   final bool enableSuggestions;
 
-  /// The keyboard shortcut set to display as a muted badge.
-  ///
-  /// Display-only; does not bind any functionality. Automatically hidden on mobile.
-  final Set<LogicalKeyboardKey>? shortcut;
-
   /// The set of text selection actions available in the context menu.
   ///
   /// When null, all four built-in actions (copy, cut, paste, selectAll) are offered.
   /// Pass an explicit set to narrow the list, or `const {}` to suppress the toolbar entirely.
-  /// The set is further intersected with what the field's state permits, so an obscured
-  /// field never offers copy or cut regardless of what is passed here.
+  /// The set is further intersected with what the field's state permits, so a read-only
+  /// field never offers cut or paste regardless of what is passed here.
   final Set<LayrzSelectableAction>? actions;
 
-  /// Creates a new [LayrzTextInput] with the given properties.
-  const LayrzTextInput({
+  /// Creates a new [LayrzTextAreaInput] with the given properties.
+  const LayrzTextAreaInput({
     super.key,
     this.labelText,
     this.hintText,
@@ -192,27 +206,38 @@ class LayrzTextInput extends StatefulWidget {
     this.errors = const [],
     this.hideDetails = false,
     this.onChanged,
-    this.onSubmit,
     this.onFocusChanged,
     this.onTap,
     this.controller,
     this.focusNode,
     this.padding,
-    this.keyboardType = TextInputType.text,
-    this.textInputAction,
+    this.keyboardType = TextInputType.multiline,
+    this.textInputAction = TextInputAction.newline,
     this.inputFormatters = const [],
     this.maxLength,
+    this.minLines = 3,
+    this.maxLines = 10,
     this.autofocus = false,
     this.textCapitalization = TextCapitalization.none,
     this.autofillHints = const [],
-    this.obscureText = false,
     this.autocorrect = true,
     this.enableSuggestions = true,
-    this.shortcut,
     this.actions,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
+       ),
+       assert(
+         minLines > 0,
+         'minLines must be a positive integer.',
+       ),
+       assert(
+         maxLines > 0,
+         'maxLines must be a positive integer.',
+       ),
+       assert(
+         minLines <= maxLines,
+         'minLines ($minLines) must not exceed maxLines ($maxLines).',
        ),
        assert(
          (prefixIcon == null || prefix == null) &&
@@ -228,10 +253,10 @@ class LayrzTextInput extends StatefulWidget {
        );
 
   @override
-  State<LayrzTextInput> createState() => _LayrzTextInputState();
+  State<LayrzTextAreaInput> createState() => _LayrzTextAreaInputState();
 }
 
-class _LayrzTextInputState extends State<LayrzTextInput> {
+class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   final Set<WidgetState> _states = {};
@@ -244,7 +269,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
   }
 
   @override
-  void didUpdateWidget(LayrzTextInput oldWidget) {
+  void didUpdateWidget(LayrzTextAreaInput oldWidget) {
     super.didUpdateWidget(oldWidget);
     // If controller changed, update the reference
     if (widget.controller != oldWidget.controller) {
@@ -276,6 +301,8 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     // Resolve slots
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
@@ -298,9 +325,6 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       _states.remove(WidgetState.disabled);
     }
 
-    // Format shortcut for display
-    final shortcutText = widget.shortcut != null ? formatLayrzShortcut(widget.shortcut) : null;
-
     // Create the editable field configuration
     final fieldConfig = LayrzEditableFieldConfig(
       labelText: widget.labelText,
@@ -310,7 +334,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       controller: _controller,
       focusNode: _focusNode,
       onChanged: widget.onChanged,
-      onSubmit: widget.onSubmit,
+      onSubmit: null, // Don't submit on Enter in multiline mode
       onFocusChanged: (isFocused) {
         setState(() {
           if (isFocused) {
@@ -329,16 +353,26 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       autofocus: widget.autofocus,
       textCapitalization: widget.textCapitalization,
       autofillHints: widget.autofillHints,
-      obscureText: widget.obscureText,
+      obscureText: false, // TextArea does not support obscureText
       autocorrect: widget.autocorrect,
       enableSuggestions: widget.enableSuggestions,
       actions: widget.actions,
-      minLines: 1,
-      maxLines: 1,
+      minLines: widget.minLines,
+      maxLines: widget.maxLines,
       expands: false,
     );
 
-    return LayrzInputChrome(
+    // Calculate the minimum content height from minLines
+    // Content height is approximately fontSize * lineHeightMultiplier * lineCount
+    final fontSize = tokens.typography.body.fontSize ?? 16.0;
+    final lineHeightMultiplier = tokens.typography.body.height ?? 1.0;
+    final lineHeight = fontSize * lineHeightMultiplier;
+    final minContentHeight = (lineHeight * widget.minLines).ceil().toDouble();
+
+    // Calculate the maximum content height from maxLines
+    final maxContentHeight = (lineHeight * widget.maxLines).ceil().toDouble();
+
+    return LayrzInputChrome.variableHeight(
       labelText: widget.labelText,
       hintText: widget.hintText,
       isRequired: widget.isRequired,
@@ -349,12 +383,13 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       errors: widget.errors,
       hideDetails: widget.hideDetails,
       states: _states,
-      shortcutText: shortcutText,
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
+      minContentHeight: minContentHeight,
+      maxContentHeight: maxContentHeight,
       child: LayrzEditableField(config: fieldConfig),
     );
   }
