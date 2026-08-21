@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 
 import 'color_swatch.dart';
+import 'palette.dart';
 
 /// Immutable semantic color tokens for the layrz_ui design system.
 ///
@@ -112,83 +113,13 @@ class LayrzColorTokens {
       fg3: const Color(0xFF9E9E9E),
       fg4: const Color(0xFFC4C4C4),
       // Semantic colors use the standard Material 500 shades and full swatch palettes
-      // (50, 100, 200, …, 900) for consistent, familiar appearance. These values mirror
-      // the Flutter Material palette to prevent unintended changes if later "tidied".
-      danger: LayrzColorSwatch(
-        0xFFF44336, // red 500
-        <int, Color>{
-          50: const Color(0xFFFFEBEE),
-          100: const Color(0xFFFFCDD2),
-          200: const Color(0xFFEF9A9A),
-          300: const Color(0xFFE57373),
-          400: const Color(0xFFEF5350),
-          500: const Color(0xFFF44336),
-          600: const Color(0xFFE53935),
-          700: const Color(0xFFD32F2F),
-          800: const Color(0xFFC62828),
-          900: const Color(0xFFB71C1C),
-        },
-      ),
-      success: LayrzColorSwatch(
-        0xFF4CAF50, // green 500
-        <int, Color>{
-          50: const Color(0xFFE8F5E9),
-          100: const Color(0xFFC8E6C9),
-          200: const Color(0xFFA5D6A7),
-          300: const Color(0xFF81C784),
-          400: const Color(0xFF66BB6A),
-          500: const Color(0xFF4CAF50),
-          600: const Color(0xFF43A047),
-          700: const Color(0xFF388E3C),
-          800: const Color(0xFF2E7D32),
-          900: const Color(0xFF1B5E20),
-        },
-      ),
-      warning: LayrzColorSwatch(
-        0xFFFF9800, // orange 500
-        <int, Color>{
-          50: const Color(0xFFFFF3E0),
-          100: const Color(0xFFFFE0B2),
-          200: const Color(0xFFFFCC80),
-          300: const Color(0xFFFFB74D),
-          400: const Color(0xFFFFA726),
-          500: const Color(0xFFFF9800),
-          600: const Color(0xFFFB8C00),
-          700: const Color(0xFFF57C00),
-          800: const Color(0xFFEF6C00),
-          900: const Color(0xFFE65100),
-        },
-      ),
-      info: LayrzColorSwatch(
-        0xFF2196F3, // blue 500
-        <int, Color>{
-          50: const Color(0xFFE3F2FD),
-          100: const Color(0xFFBBDEFB),
-          200: const Color(0xFF90CAF9),
-          300: const Color(0xFF64B5F6),
-          400: const Color(0xFF42A5F5),
-          500: const Color(0xFF2196F3),
-          600: const Color(0xFF1E88E5),
-          700: const Color(0xFF1976D2),
-          800: const Color(0xFF1565C0),
-          900: const Color(0xFF0D47A1),
-        },
-      ),
-      contextual: LayrzColorSwatch(
-        0xFF9E9E9E, // grey 500
-        <int, Color>{
-          50: const Color(0xFFFAFAFA),
-          100: const Color(0xFFF5F5F5),
-          200: const Color(0xFFEEEEEE),
-          300: const Color(0xFFE0E0E0),
-          400: const Color(0xFFBDBDBD),
-          500: const Color(0xFF9E9E9E),
-          600: const Color(0xFF757575),
-          700: const Color(0xFF616161),
-          800: const Color(0xFF424242),
-          900: const Color(0xFF212121),
-        },
-      ),
+      // (50, 100, 200, …, 900) for consistent, familiar appearance. These values are
+      // now defined as static constants in [LayrzColors] to centralize the palette.
+      danger: LayrzColors.red,
+      success: LayrzColors.green,
+      warning: LayrzColors.orange,
+      info: LayrzColors.blue,
+      contextual: LayrzColors.grey,
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,

@@ -3,6 +3,7 @@ export 'src/breakpoints.dart';
 export 'src/color_swatch.dart';
 export 'src/colors.dart';
 export 'src/motion.dart';
+export 'src/palette.dart';
 export 'src/radius.dart';
 export 'src/shadow.dart';
 export 'src/spacing.dart';
