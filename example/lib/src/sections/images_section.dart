@@ -75,6 +75,18 @@ class ImagesSection extends StatelessWidget {
               Text('Network Image', style: tokens.typography.label),
             ],
           ),
+          SizedBox(width: tokens.spacing.sp4),
+          Column(
+            children: [
+              const LayrzAvatar(
+                nameText: 'Jane Doe',
+                size: 48,
+                borderRadius: 8.0,
+              ),
+              SizedBox(height: tokens.spacing.sp2),
+              Text('Custom Radius', style: tokens.typography.label),
+            ],
+          ),
         ],
       ),
     );

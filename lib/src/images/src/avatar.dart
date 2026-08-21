@@ -19,9 +19,11 @@ const Color _kWhiteBackground = Color(0xFFFFFFFF);
 /// The avatar is created using either the default constructor (which accepts a [LayrzAvatarSource])
 /// or one of the semantic named constructors: `.image()`, `.icon()`, `.emoji()`, or `.initials()`.
 ///
-/// **Container shape** is always a rounded box using the `r12` radius token, consistent
-/// with [LayrzCard], [LayrzAlert], and the dropdown panel. **Background color** defaults
-/// to the primary token color and is ignored behind images.
+/// **Container shape** defaults to a rounded box using the `r3` radius token from the theme.
+/// The corner radius can be customized via the [borderRadius] parameter. When null (the default),
+/// the shape defaults to `context.tokens.radius.r3` (16px). When provided, [borderRadius]
+/// replaces (does not augment) the token value. Values at or above `size / 2` render a circle.
+/// **Background color** defaults to the primary token color and is ignored behind images.
 ///
 /// **Fixed drop shadow**: Every avatar carries `tokens.shadow.compact1` — the same ramp
 /// used by small components like [LayrzButton]. This is intentionally not configurable.
@@ -55,6 +57,7 @@ class LayrzAvatar extends StatelessWidget {
     this.nameText,
     this.size = 40,
     this.color,
+    this.borderRadius,
   }) : _imageSource = null,
        _icon = null,
        _emoji = null;
@@ -71,6 +74,7 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required String imageSource,
     this.size = 40,
+    this.borderRadius,
   }) : source = null,
        nameText = null,
        color = null,
@@ -88,6 +92,7 @@ class LayrzAvatar extends StatelessWidget {
     required IconData icon,
     this.size = 40,
     this.color,
+    this.borderRadius,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -104,6 +109,7 @@ class LayrzAvatar extends StatelessWidget {
     super.key,
     required String emoji,
     this.size = 40,
+    this.borderRadius,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -122,6 +128,7 @@ class LayrzAvatar extends StatelessWidget {
     required this.nameText,
     this.size = 40,
     this.color,
+    this.borderRadius,
   }) : source = null,
        _imageSource = null,
        _icon = null,
@@ -149,6 +156,13 @@ class LayrzAvatar extends StatelessWidget {
   /// image (images render on a white background to ensure visibility when the
   /// source has transparency).
   final Color? color;
+
+  /// Corner radius of the avatar in logical pixels.
+  ///
+  /// When null (the default), the avatar uses the `r3` radius token from the theme.
+  /// When provided, this value replaces (rather than augments) the token value.
+  /// Values at or above `size / 2` render a circle.
+  final double? borderRadius;
 
   /// For named constructors: the image source (used by `.image()` constructor).
   final String? _imageSource;
@@ -270,14 +284,14 @@ class LayrzAvatar extends StatelessWidget {
   /// Builds the container (surface, clipping, shape).
   ///
   /// The outer container applies the fixed compact-level-1 shadow, ensuring it is
-  /// not clipped by the inner [ClipRRect]. The inner container clips to [r12] radius
-  /// and applies the background color.
+  /// not clipped by the inner [ClipRRect]. The inner container clips to the resolved
+  /// radius and applies the background color.
   Widget _buildContainer({
     required BuildContext context,
     required Color backgroundColor,
     required Widget child,
   }) {
-    final radius = BorderRadius.circular(context.tokens.radius.r3);
+    final radius = BorderRadius.circular(borderRadius ?? context.tokens.radius.r3);
 
     return Container(
       width: size,
