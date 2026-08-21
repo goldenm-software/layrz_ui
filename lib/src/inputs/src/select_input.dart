@@ -312,35 +312,39 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       }
     }
 
-    // Build the content display widget
+    // Build the content display widget with full width
     final contentChild = Padding(
       padding: tokens.spacing.pd2,
-      child: Text(
-        selectedLabel ?? '',
-        style: tokens.typography.body,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      child: SizedBox(
+        width: double.infinity,
+        child: Text(
+          selectedLabel ?? '',
+          style: tokens.typography.body,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
     );
 
-    return LayrzInputChrome(
-      labelText: widget.labelText,
-      hintText: widget.hintText,
-      isRequired: widget.isRequired,
-      prefixSlot: prefixSlot,
-      suffixSlot: finalSuffixSlot,
-      disabled: widget.disabled,
-      readOnly: true,
-      errors: widget.errors,
-      hideDetails: widget.hideDetails,
-      states: _states,
-      helpTitleText: widget.helpTitleText,
-      helpContentText: widget.helpContentText,
-      controller: _controller,
-      padding: widget.padding,
-      suppressReadOnlyLock: true,
-      child: GestureDetector(
-        onTap: widget.disabled ? null : controller.open,
+    return GestureDetector(
+      onTap: widget.disabled ? null : controller.open,
+      behavior: HitTestBehavior.opaque,
+      child: LayrzInputChrome(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        isRequired: widget.isRequired,
+        prefixSlot: prefixSlot,
+        suffixSlot: finalSuffixSlot,
+        disabled: widget.disabled,
+        readOnly: true,
+        errors: widget.errors,
+        hideDetails: widget.hideDetails,
+        states: _states,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        controller: _controller,
+        padding: widget.padding,
+        suppressReadOnlyLock: true,
         child: contentChild,
       ),
     );
@@ -394,35 +398,39 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
         }
       }
 
-      // Build the content display widget
+      // Build the content display widget with full width
       final contentChild = Padding(
         padding: tokens.spacing.pd2,
-        child: Text(
-          selectedLabel ?? '',
-          style: tokens.typography.body,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        child: SizedBox(
+          width: double.infinity,
+          child: Text(
+            selectedLabel ?? '',
+            style: tokens.typography.body,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       );
 
-      return LayrzInputChrome(
-        labelText: widget.labelText,
-        hintText: widget.hintText,
-        isRequired: widget.isRequired,
-        prefixSlot: prefixSlot,
-        suffixSlot: finalSuffixSlot,
-        disabled: widget.disabled,
-        readOnly: true,
-        errors: widget.errors,
-        hideDetails: widget.hideDetails,
-        states: _states,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        controller: _controller,
-        padding: widget.padding,
-        suppressReadOnlyLock: true,
-        child: GestureDetector(
-          onTap: widget.disabled ? null : _openMobileSurface,
+      return GestureDetector(
+        onTap: widget.disabled ? null : _openMobileSurface,
+        behavior: HitTestBehavior.opaque,
+        child: LayrzInputChrome(
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          isRequired: widget.isRequired,
+          prefixSlot: prefixSlot,
+          suffixSlot: finalSuffixSlot,
+          disabled: widget.disabled,
+          readOnly: true,
+          errors: widget.errors,
+          hideDetails: widget.hideDetails,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
+          padding: widget.padding,
+          suppressReadOnlyLock: true,
           child: contentChild,
         ),
       );
