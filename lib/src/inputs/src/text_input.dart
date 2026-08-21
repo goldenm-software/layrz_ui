@@ -249,8 +249,8 @@ class _LayrzTextInputSelectionGestureDetectorBuilder extends TextSelectionGestur
     required super.delegate,
     required VoidCallback? onUserTapCallback,
     required bool isDisabled,
-  })  : _onUserTapCallback = onUserTapCallback, // ignore: prefer_initializing_formals
-        _isDisabled = isDisabled; // ignore: prefer_initializing_formals
+  }) : _onUserTapCallback = onUserTapCallback, // ignore: prefer_initializing_formals
+       _isDisabled = isDisabled; // ignore: prefer_initializing_formals
 
   /// Called when the user taps the field.
   ///
@@ -271,12 +271,26 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
   final Set<WidgetState> _states = {};
   final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
 
+  /// Cached magnifier configuration to prevent overlay disposal on every rebuild.
+  /// Initialized once in initState.
+  late TextMagnifierConfiguration? _cachedMagnifierConfiguration;
+
+  /// Cached context menu builder to prevent overlay disposal on every rebuild.
+  /// Method references are compared by identity, so we cache it to ensure the same
+  /// reference is used across rebuilds.
+  late EditableTextContextMenuBuilder _cachedContextMenuBuilder;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_handleFocusChange);
+    // Initialize cached magnifier configuration once; it never changes.
+    _cachedMagnifierConfiguration = LayrzSelectionMagnifier.magnifierConfigurationFor();
+    // Cache the context menu builder to ensure the same reference is used across rebuilds.
+    // Method references are compared by identity in EditableText.didUpdateWidget.
+    _cachedContextMenuBuilder = _buildContextMenu;
   }
 
   @override
@@ -494,10 +508,9 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
               autofocus: widget.autofocus,
               autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
               paintCursorAboveText: true,
-              selectionControls: LayrzTextSelectionControls(tokens: tokens),
-              contextMenuBuilder: _buildContextMenu,
-              magnifierConfiguration:
-                  LayrzSelectionMagnifier.magnifierConfigurationFor() ?? const TextMagnifierConfiguration(),
+              selectionControls: LayrzTextSelectionControls.instance,
+              contextMenuBuilder: _cachedContextMenuBuilder,
+              magnifierConfiguration: _cachedMagnifierConfiguration ?? const TextMagnifierConfiguration(),
               maxLines: 1,
               minLines: 1,
               expands: false,

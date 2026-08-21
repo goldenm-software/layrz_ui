@@ -207,7 +207,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: LayrzTextSelectionControls(tokens: tokens),
+            selectionControls: LayrzTextSelectionControls.instance,
             child: widget.body,
           )
         : widget.body;
@@ -239,7 +239,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: LayrzTextSelectionControls(tokens: tokens),
+            selectionControls: LayrzTextSelectionControls.instance,
             child: widget.body,
           )
         : widget.body;

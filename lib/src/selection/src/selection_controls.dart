@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'selection_handle_painter.dart';
 
@@ -12,17 +12,30 @@ import 'selection_handle_painter.dart';
 ///
 /// The toolbar is handled via the deprecated [buildToolbar] which returns empty,
 /// and the real action toolbar is provided through [EditableText.contextMenuBuilder].
+///
+/// **Stability**: This class is a singleton to prevent the EditableText widget from
+/// disposing and recreating the selection overlay on every rebuild. Tokens are accessed
+/// from the build context at render time, so theme changes are reflected without
+/// needing to recreate this instance.
 class LayrzTextSelectionControls extends TextSelectionControls {
-  /// The design system tokens providing color, spacing, and radius values.
-  final LayrzTokens tokens;
+  /// Singleton instance of [LayrzTextSelectionControls].
+  static final LayrzTextSelectionControls _instance = LayrzTextSelectionControls._internal();
 
-  /// Creates a new [LayrzTextSelectionControls].
-  ///
-  /// Parameters:
-  ///   - [tokens]: The design system tokens for styling handles.
-  LayrzTextSelectionControls({
-    required this.tokens,
-  });
+  /// Creates a new [LayrzTextSelectionControls]. Use [LayrzTextSelectionControls.instance]
+  /// to get the singleton instance.
+  LayrzTextSelectionControls._internal();
+
+  /// Returns the singleton instance of [LayrzTextSelectionControls].
+  static LayrzTextSelectionControls get instance => _instance;
+
+  @override
+  bool operator ==(Object other) {
+    // All instances are the same (singleton), so we use identity equality.
+    return identical(this, other) || other is LayrzTextSelectionControls;
+  }
+
+  @override
+  int get hashCode => 0; // Constant hash for singleton.
 
   @override
   Widget buildHandle(
@@ -31,6 +44,9 @@ class LayrzTextSelectionControls extends TextSelectionControls {
     double textLineHeight, [
     VoidCallback? onTap,
   ]) {
+    // Read tokens from context at render time.
+    final tokens = context.tokens;
+
     // The handle is a small rounded rectangle positioned at the selection endpoint.
     // Size is proportional to text line height but capped at reasonable bounds.
     final handleHeight = (textLineHeight * 0.25).clamp(6.0, 24.0);
