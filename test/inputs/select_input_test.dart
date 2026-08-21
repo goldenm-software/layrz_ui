@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
 import '../helpers/pump_themed_app.dart';
 
@@ -120,7 +121,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -150,7 +151,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -193,7 +194,7 @@ void main() {
       expect(find.text('Option B'), findsOneWidget);
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -220,12 +221,12 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput).first;
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
       // Type in search
-      final searchField = find.byType(LayrzTextInput).last;
+      final searchField = find.byType(LayrzTextInput);
       await tester.tap(searchField);
       await tester.enterText(searchField, 'B');
       await tester.pumpAndSettle();
@@ -251,7 +252,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -288,7 +289,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -317,12 +318,12 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput).first;
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
       // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput).last;
+      final searchField = find.byType(LayrzTextInput);
       await tester.tap(searchField);
       await tester.enterText(searchField, 'nonexistent');
       await tester.pumpAndSettle();
@@ -347,7 +348,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput).first;
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -392,7 +393,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -424,7 +425,7 @@ void main() {
       expect(find.text('Option A'), findsOneWidget);
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 

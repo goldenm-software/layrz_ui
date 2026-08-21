@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
 import '../helpers/pump_themed_app.dart';
 
@@ -83,12 +84,12 @@ void main() {
       );
 
       // Field should not be interactive
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       expect(field, findsOneWidget);
 
       // Verify disabled state by checking widget properties
-      final textInput = tester.widget<LayrzTextInput>(field);
-      expect(textInput.disabled, true);
+      final chrome = tester.widget<LayrzInputChrome>(field);
+      expect(chrome.disabled, true);
     });
 
     testWidgets('focus is properly managed in selection surface',
@@ -103,12 +104,12 @@ void main() {
       );
 
       // Tap the field to open surface
-      final field = find.byType(LayrzTextInput).first;
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
       // Search field should receive focus (for keyboard entry)
-      final searchField = find.byType(LayrzTextInput).last;
+      final searchField = find.byType(LayrzTextInput);
       expect(searchField, findsOneWidget);
 
       // Select an item
@@ -129,7 +130,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -160,7 +161,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput).first;
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -170,7 +171,7 @@ void main() {
       expect(find.text('Option C'), findsOneWidget);
 
       // Type a search query
-      final searchField = find.byType(LayrzTextInput).last;
+      final searchField = find.byType(LayrzTextInput);
       await tester.tap(searchField);
       await tester.enterText(searchField, 'B');
       await tester.pumpAndSettle();
@@ -199,7 +200,7 @@ void main() {
       );
 
       // Tap the field to open surface
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
@@ -235,7 +236,7 @@ void main() {
       );
 
       // Tap the field
-      final field = find.byType(LayrzTextInput);
+      final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
