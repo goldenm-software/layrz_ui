@@ -11,15 +11,19 @@ import 'selectable_action.dart';
 /// is styled using design system tokens and positioned via [Offset] anchors.
 ///
 /// **Usage** typically occurs via [EditableText.contextMenuBuilder], which provides
-/// the toolbar anchor position and selection state. The toolbar is NOT positioned
-/// automatically; the caller is responsible for wrapping it in a [Positioned] widget
-/// or similar layout mechanism.
+/// the toolbar anchor positions and selection state. The toolbar is NOT positioned
+/// automatically; the caller (TextSelectionOverlay) is responsible for wrapping it
+/// in a [Positioned] widget or similar layout mechanism.
 class LayrzSelectionToolbar extends StatelessWidget {
   /// The set of actions to display as buttons in the toolbar.
   final Set<LayrzSelectableAction> actions;
 
-  /// The anchor offset where the toolbar should be positioned (typically above the text).
+  /// The anchor offset where the toolbar should be positioned above the selection.
   final Offset anchorAbove;
+
+  /// The anchor offset where the toolbar should be positioned below the selection.
+  /// Used when there is not enough space above to render the toolbar.
+  final Offset? anchorBelow;
 
   /// Design system tokens for colors, spacing, radius, and typography.
   final LayrzTokens tokens;
@@ -33,12 +37,14 @@ class LayrzSelectionToolbar extends StatelessWidget {
   ///   - [key]: Optional widget key for identification.
   ///   - [actions]: The set of action buttons to display.
   ///   - [anchorAbove]: The offset where the toolbar should appear above the selection.
+  ///   - [anchorBelow]: The offset where the toolbar should appear below the selection if needed.
   ///   - [tokens]: Design system tokens for styling.
   ///   - [onActionPressed]: Callback invoked with the action type when a button is pressed.
   const LayrzSelectionToolbar({
     super.key,
     required this.actions,
     required this.anchorAbove,
+    this.anchorBelow,
     required this.tokens,
     required this.onActionPressed,
   });

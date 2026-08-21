@@ -381,6 +381,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
     }).toSet();
 
     // Wire selection toolbar with actual clipboard/selection handling
+    // The TextSelectionOverlay handles positioning of the toolbar automatically.
     return LayrzSelectionToolbar(
       actions: resolvedActions,
       anchorAbove: Offset.zero,
