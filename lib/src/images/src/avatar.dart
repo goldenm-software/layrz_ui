@@ -209,6 +209,8 @@ class LayrzAvatar extends StatelessWidget {
         child: Text(
           emoji,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: size * 0.6,
             height: 1.0,
@@ -231,6 +233,8 @@ class LayrzAvatar extends StatelessWidget {
       child: Text(
         initials,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: size * 0.4,
           fontWeight: FontWeight.w600,
@@ -272,6 +276,8 @@ class LayrzAvatar extends StatelessWidget {
         child: Text(
           emoji,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: size * 0.6,
             height: 1.0,

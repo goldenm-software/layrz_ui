@@ -113,6 +113,8 @@ class LayrzSelectionToolbar extends StatelessWidget {
               if (action.icon != null) SizedBox(width: tokens.spacing.sp2),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: tokens.typography.label.copyWith(
                   color: tokens.colors.sf1,
                 ),

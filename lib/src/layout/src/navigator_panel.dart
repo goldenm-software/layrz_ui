@@ -348,6 +348,8 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
           alignment: Alignment.centerLeft,
           child: Text(
             label.labelText.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: tokens.typography.label.copyWith(
               color: effectiveColor,
               letterSpacing: 0.11 * (tokens.typography.label.fontSize ?? 14),

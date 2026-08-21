@@ -342,6 +342,8 @@ class LayrzInputChrome extends StatelessWidget {
       trailing.add(
         Text(
           shortcutText!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: tokens.typography.label.copyWith(
             color: tokens.colors.fg3,
           ),
@@ -450,6 +452,8 @@ class LayrzInputChrome extends StatelessWidget {
     } else if (slot.text != null) {
       content = Text(
         slot.text!,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: density.textStyle.copyWith(
           color: spec.textColor,
         ),
