@@ -138,6 +138,28 @@ void main() {
         expect(textInputFinder, findsOneWidget);
       });
 
+      testWidgets('panel width bounds work on wide surface', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+          ),
+        );
+
+        // Tap to open the panel
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        // The text input should still be present and usable on a wide surface
+        // The contentSized policy ensures the panel width is appropriate (280-480px)
+        // regardless of available viewport width
+        expect(find.byType(LayrzTextInput), findsOneWidget);
+      });
+
       testWidgets('escape key closes panel', (tester) async {
         await pumpThemedApp(
           tester,
@@ -180,19 +202,40 @@ void main() {
     });
 
     group('auto mode', () {
-      testWidgets('default auto mode can render without error', (tester) async {
+      testWidgets('auto renders the field on a wide surface', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
         await pumpThemedApp(
           tester,
-          const LayrzSearchInput(
+          LayrzSearchInput(
             mode: LayrzSearchInputMode.auto,
+            onSearch: (_) {},
           ),
         );
 
-        // Auto mode should pick a rendering based on current viewport
-        // Either field or icon should be present
-        final textInputCount = find.byType(LayrzTextInput).evaluate().length;
-        final buttonCount = find.byType(LayrzButton).evaluate().length;
-        expect(textInputCount > 0 || buttonCount > 0, isTrue);
+        // Field mode should be active on wide surface (>= 960px)
+        expect(find.byType(LayrzTextInput), findsOneWidget);
+        expect(find.byType(LayrzButton), findsNothing);
+      });
+
+      testWidgets('auto renders the icon button on a narrow surface', (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          LayrzSearchInput(
+            mode: LayrzSearchInputMode.auto,
+            onSearch: (_) {},
+          ),
+        );
+
+        // Icon mode should be active on narrow surface (< 960px)
+        expect(find.byType(LayrzButton), findsOneWidget);
+        expect(find.byType(LayrzTextInput), findsNothing);
       });
     });
 
