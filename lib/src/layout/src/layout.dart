@@ -212,6 +212,8 @@ class _LayrzLayoutState extends State<LayrzLayout> {
               userName: widget.userName,
               userAvatar: widget.userAvatar,
               userMenuItems: widget.userMenuItems,
+              notifications: widget.notifications,
+              onNotificationTap: widget.onNotificationTap,
               onClose: _closeDrawer,
               getInitials: _getInitials,
             ),
