@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.12
 
 **Text selection actions and page-wide toolbar.** `LayrzTextInput` adds an `actions` parameter to customize the text selection toolbar actions (copy, cut, paste, select all). Pass `null` for all four built-in actions, `const {}` to suppress the toolbar, or a custom set of `LayrzSelectableAction` instances. Page-wide text selection (via `SelectableRegion` under `LayrzLayout`) now displays a copy-only toolbar. The field automatically filters actions based on state (obscured fields never offer copy/cut; read-only fields never offer cut/paste). See decision D50 for design details and the five Flutter text selection traps encountered.
 
@@ -63,7 +63,7 @@
 - **Migration table** (all 4 old members):
   - `background` → `sf1` (#FCFCFC) — canvas/scaffold background
   - `surface` → `sf1` (#FCFCFC) — on-canvas fills (cards, dialogs, panels, alerts); elevation shadows separate layers
-  - `surface2` → `sf1` (#FCFCFC)
+  - `surface2` → `sf2` (#F7F7F7) — nested surfaces (e.g. input fields inside a card); value unchanged
   - `surface3` → `sf3` (#F0F0F0)
 - **New step**: `sf4` (#E8E8E8) added for deepest nesting with maximum contrast.
 - **Rendering change**: Pure white (#FFFFFF) is no longer used anywhere. All elevation shadows and backgrounds now render against the light gray (#FCFCFC) canvas, improving consistency. Default `LayrzShadowTokens.surfaceColor` updated from white to #FCFCFC; `LayrzAvatar` background updated similarly.
