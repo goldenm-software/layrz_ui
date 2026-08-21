@@ -57,7 +57,7 @@ Future<void> main() async {
 /// To revert to the original named-route implementation, replace [ShowroomApp.build]
 /// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
 final _router = GoRouter(
-  initialLocation: '/buttons',
+  initialLocation: '/typography',
   routes: [
     GoRoute(
       path: '/',

@@ -3,6 +3,11 @@
 
 Buenas tardes,
 
-Me tomé la libertad de, aprovechando los ajustes de ancho de botones y demás, ultra-simplificar la tokenización de espacios, anteriormente iba sp4, sp8, sp12, sp16, etc etc etc (hasta el 48), ahora, seguirá la misma regla de la elevación, es decir, sp1, sp2, sp3, sp4 y sp5, de esta forma, sacrifica flexibilidad en favor de estandarización.
+`layrz_ui v0.0.12` se ha liberado, y con ello, se aplican los siguientes cambios (No hay componentes nuevos):
 
-De igual manera, la tokenización ofrecerá sus variantes para margenes, paddings y sized boxes, siguiendo la misma regla de pdN, mgN y sbN.
+* Se ha eliminado `layrz_icons` como dependencia, y se ha reemplazado por `flutter_material_design_icons` (MdiIcons) para la iconografía.
+* `LayrzLayout` ahora respeta al 100% la tokenización de espacio, tipografía e iconografía
+* `LayrzButton` ahora es de `50u` de alto.
+* Se ajustó la tipografía base a `16u` para simular un `1em` de tamaño de fuente, y se ajustaron los tamaños de tipografía para que sean consistentes con la tokenización.
+* Se estandarizó la tokenización de espaciadores (spN, pdN, mgN, sbN) para tener una paridad lógica con la elevación.
+* 
