@@ -131,6 +131,23 @@ class LayrzInputChrome extends StatelessWidget {
   /// If provided, a character counter is displayed below the field.
   final int? maxLength;
 
+  /// Library-private: Whether the content box should expand with content (multiline).
+  ///
+  /// When false (default), the content box has a fixed height equal to a single line.
+  /// When true, the content box grows vertically with the content, up to [_maxContentHeight].
+  final bool _expandHeight;
+
+  /// Library-private: Minimum height for the content box in expanded mode.
+  ///
+  /// Used only when [_expandHeight] is true. Defaults to the single-line height.
+  final double? _minContentHeight;
+
+  /// Library-private: Maximum height for the content box in expanded mode.
+  ///
+  /// Used only when [_expandHeight] is true. When the content exceeds this height,
+  /// scrolling is enabled. If null, no maximum is enforced.
+  final double? _maxContentHeight;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -152,7 +169,49 @@ class LayrzInputChrome extends StatelessWidget {
     this.controller,
     this.padding,
     this.maxLength,
-  });
+    bool expandHeight = false,
+    double? minContentHeight,
+    double? maxContentHeight,
+    // ignore: prefer_initializing_formals
+  }) : _expandHeight = expandHeight,
+       // ignore: prefer_initializing_formals
+       _minContentHeight = minContentHeight,
+       // ignore: prefer_initializing_formals
+       _maxContentHeight = maxContentHeight;
+
+  /// Library-private named constructor for variable-height content boxes (multiline use).
+  ///
+  /// Creates a chrome with content that grows vertically between [minContentHeight]
+  /// and [maxContentHeight]. Intended for use by multiline input widgets.
+  @visibleForTesting
+  const LayrzInputChrome.variableHeight({
+    required this.labelText,
+    this.hintText,
+    required this.isRequired,
+    required this.prefixSlot,
+    required this.suffixSlot,
+    required this.child,
+    required this.disabled,
+    required this.readOnly,
+    required this.errors,
+    required this.hideDetails,
+    required this.states,
+    this.shortcutText,
+    this.hideShortcutOnMobile = true,
+    this.helpTitleText,
+    this.helpContentText,
+    this.controller,
+    this.padding,
+    this.maxLength,
+    required double minContentHeight,
+    double? maxContentHeight,
+    super.key,
+    // ignore: prefer_initializing_formals
+  }) : _expandHeight = true,
+       // ignore: prefer_initializing_formals
+       _minContentHeight = minContentHeight,
+       // ignore: prefer_initializing_formals
+       _maxContentHeight = maxContentHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -220,51 +279,91 @@ class LayrzInputChrome extends StatelessWidget {
             borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
           ),
           padding: resolvedPadding,
-          child: SizedBox(
-            height: contentHeight,
-            child: Row(
-              children: [
-                // Prefix slot
-                if (prefixSlot.hasContent) ...[
-                  _buildSlotContent(
+          child: _expandHeight
+              ? ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: _minContentHeight ?? contentHeight,
+                    maxHeight: _maxContentHeight ?? double.infinity,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.vertical,
+                    child: _buildRowContent(
+                      context: context,
+                      tokens: tokens,
+                      spec: spec,
+                      density: density,
+                      contentHeight: contentHeight,
+                      alignTrailingTop: true,
+                    ),
+                  ),
+                )
+              : SizedBox(
+                  height: contentHeight,
+                  child: _buildRowContent(
                     context: context,
-                    slot: prefixSlot,
                     tokens: tokens,
                     spec: spec,
-                    contentHeight: contentHeight,
-                    iconSize: density.iconSize,
                     density: density,
+                    contentHeight: contentHeight,
+                    alignTrailingTop: false,
                   ),
-                  SizedBox(width: tokens.spacing.sp2),
-                ],
+                ),
+        ),
 
-                // Child (the actual input field) with optional hint text overlay
-                Expanded(
-                  child: DefaultTextStyle(
-                    style: density.textStyle.copyWith(
-                      color: spec.textColor,
-                    ),
-                    child: Stack(
-                      children: [
-                        if (hintText != null && hintText!.isNotEmpty && controller != null)
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: controller!,
-                            builder: (context, value, _) => value.text.isEmpty
-                                ? Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      hintText!,
-                                      style: density.textStyle.copyWith(
-                                        color: tokens.colors.fg3,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          )
-                        else if (hintText != null && hintText!.isNotEmpty && controller == null)
-                          Align(
+        // Error block and character counter
+        LayrzInputErrorBlock(
+          errors: errors,
+          hideDetails: hideDetails,
+          maxLength: maxLength,
+          controller: controller,
+        ),
+      ],
+    );
+  }
+
+  /// Builds the Row containing prefix, child content, and trailing elements.
+  ///
+  /// This is extracted to avoid duplication between fixed-height and variable-height modes.
+  /// The Row's [crossAxisAlignment] and [Align.alignment] for the child depend on whether
+  /// trailing elements should align to the top (multiline) or center (single-line).
+  Widget _buildRowContent({
+    required BuildContext context,
+    required LayrzTokens tokens,
+    required LayrzInputStyleSpec spec,
+    required _InputComfortableSpec density,
+    required double contentHeight,
+    required bool alignTrailingTop,
+  }) {
+    return Row(
+      crossAxisAlignment: alignTrailingTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        // Prefix slot
+        if (prefixSlot.hasContent) ...[
+          _buildSlotContent(
+            context: context,
+            slot: prefixSlot,
+            tokens: tokens,
+            spec: spec,
+            contentHeight: contentHeight,
+            iconSize: density.iconSize,
+            density: density,
+          ),
+          SizedBox(width: tokens.spacing.sp2),
+        ],
+
+        // Child (the actual input field) with optional hint text overlay
+        Expanded(
+          child: DefaultTextStyle(
+            style: density.textStyle.copyWith(
+              color: spec.textColor,
+            ),
+            child: Stack(
+              children: [
+                if (hintText != null && hintText!.isNotEmpty && controller != null)
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller!,
+                    builder: (context, value, _) => value.text.isEmpty
+                        ? Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
                               hintText!,
@@ -274,36 +373,38 @@ class LayrzInputChrome extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        Align(
-                          alignment: Alignment.center,
-                          child: child,
-                        ),
-                      ],
+                          )
+                        : const SizedBox.shrink(),
+                  )
+                else if (hintText != null && hintText!.isNotEmpty && controller == null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      hintText!,
+                      style: density.textStyle.copyWith(
+                        color: tokens.colors.fg3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-
-                // Canonical order: shortcut → suffix → lock → help → error (error always last)
-                ..._buildTrailingElements(
-                  context: context,
-                  tokens: tokens,
-                  spec: spec,
-                  contentHeight: contentHeight,
-                  iconSize: density.iconSize,
-                  density: density,
+                Align(
+                  alignment: Alignment.center,
+                  child: child,
                 ),
               ],
             ),
           ),
         ),
 
-        // Error block and character counter
-        LayrzInputErrorBlock(
-          errors: errors,
-          hideDetails: hideDetails,
-          maxLength: maxLength,
-          controller: controller,
+        // Canonical order: shortcut → suffix → lock → help → error (error always last)
+        ..._buildTrailingElements(
+          context: context,
+          tokens: tokens,
+          spec: spec,
+          contentHeight: contentHeight,
+          iconSize: density.iconSize,
+          density: density,
         ),
       ],
     );
