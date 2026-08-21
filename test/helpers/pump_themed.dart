@@ -12,7 +12,8 @@ import 'fake_font_handler.dart';
 /// 3. **[Overlay]**: MANDATORY for widgets that use [RawTooltip], which asserts
 ///    an [Overlay] ancestor via [debugCheckHasOverlay]. Without this, Fab tests
 ///    will fail with a confusing "No Overlay widget found" assertion.
-/// 4. **[Center]**: centers the child for easier visibility in test output.
+/// 4. **[Localizations]**: provides localization support via [LayrzUiL10nDelegate].
+/// 5. **[Center]**: centers the child for easier visibility in test output.
 ///
 /// **Why [Overlay] is essential**: [RawTooltip] is used by [LayrzButton.Fab]
 /// variants to show tooltips on long-press. [RawTooltip] internally calls
@@ -36,14 +37,21 @@ Future<void> pumpThemed(
   await tester.pumpWidget(
     Directionality(
       textDirection: TextDirection.ltr,
-      child: LayrzTheme(
-        data: theme ?? LayrzThemeData.light(fontHandler: const FakeFontHandler()),
-        child: Overlay(
-          initialEntries: [
-            OverlayEntry(
-              builder: (context) => Center(child: child),
-            ),
-          ],
+      child: Localizations(
+        locale: const Locale('en'),
+        delegates: const [
+          DefaultWidgetsLocalizations.delegate,
+          LayrzUiL10nDelegate(),
+        ],
+        child: LayrzTheme(
+          data: theme ?? LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+          child: Overlay(
+            initialEntries: [
+              OverlayEntry(
+                builder: (context) => Center(child: child),
+              ),
+            ],
+          ),
         ),
       ),
     ),
