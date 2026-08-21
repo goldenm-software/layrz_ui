@@ -122,7 +122,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(RawRadio), findsWidgets);
+      expect(find.byWidgetPredicate((w) => w is RawRadio), findsWidgets);
       expect(find.text('Option A'), findsOneWidget);
       expect(find.text('Option B'), findsOneWidget);
     });
