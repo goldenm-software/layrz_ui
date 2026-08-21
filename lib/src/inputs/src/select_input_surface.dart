@@ -206,7 +206,8 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
             ),
           )
         else
-          Expanded(
+          LimitedBox(
+            maxHeight: 300,
             child: KeyboardListener(
               focusNode: _listFocusNode,
               onKeyEvent: _handleKeyEvent,

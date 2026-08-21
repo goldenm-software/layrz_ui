@@ -7,6 +7,8 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
+import 'input_chrome.dart';
+import 'input_slot.dart';
 import 'select_input_surface.dart';
 
 /// A Material-free, adaptive select input in the layrz_ui design system.
@@ -194,6 +196,7 @@ class LayrzSelectInput<T> extends StatefulWidget {
 class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   late FocusNode _focusNode;
   late TextEditingController _controller;
+  final Set<WidgetState> _states = {};
   MenuController? _panelController;
 
   @override
@@ -264,31 +267,81 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
   /// Builds the anchor widget for desktop anchored panel.
   ///
-  /// The anchor is a LayrzTextInput with readOnly=true, wrapped in a GestureDetector
-  /// to open the panel when tapped via the provided controller.
+  /// The anchor is built from LayrzInputChrome with suppressReadOnlyLock=true
+  /// to hide the read-only lock icon and show the dropdown chevron instead.
   Widget _buildAnchor(BuildContext context, MenuController controller) {
-    return GestureDetector(
-      onTap: widget.disabled ? null : controller.open,
-      child: LayrzTextInput(
-        labelText: widget.labelText,
-        hintText: widget.hintText,
-        controller: _controller,
-        readOnly: true,
-        isRequired: widget.isRequired,
-        disabled: widget.disabled,
-        errors: widget.errors,
-        hideDetails: widget.hideDetails,
-        prefixIcon: widget.prefixIcon,
-        prefix: widget.prefix,
-        prefixText: widget.prefixText,
-        onPrefixTap: widget.onPrefixTap,
-        suffixIcon: widget.suffixIcon ?? MdiIcons.chevronDown,
-        suffix: widget.suffix,
-        suffixText: widget.suffixText,
-        onSuffixTap: widget.onSuffixTap,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        padding: widget.padding,
+    final tokens = context.tokens;
+
+    // Resolve slots
+    final prefixSlot = resolvePrefixSlot(
+      prefixIcon: widget.prefixIcon,
+      prefix: widget.prefix,
+      prefixText: widget.prefixText,
+      onPrefixTap: widget.onPrefixTap,
+    );
+
+    final suffixSlot = resolveSuffixSlot(
+      suffixIcon: widget.suffixIcon,
+      suffix: widget.suffix,
+      suffixText: widget.suffixText,
+      onSuffixTap: widget.onSuffixTap,
+    );
+
+    // Add dropdown chevron to the suffix slot if not provided
+    final finalSuffixSlot = suffixSlot.hasContent
+        ? suffixSlot
+        : LayrzInputSuffixSlot(
+            icon: MdiIcons.chevronDown,
+          );
+
+    // Compute states
+    if (widget.disabled) {
+      _states.add(WidgetState.disabled);
+    } else {
+      _states.remove(WidgetState.disabled);
+    }
+
+    // Find the selected item's label text
+    String? selectedLabel;
+    if (widget.value != null) {
+      for (final item in widget.items) {
+        if (item.value == widget.value) {
+          selectedLabel = item.labelText;
+          break;
+        }
+      }
+    }
+
+    // Build the content display widget
+    final contentChild = Padding(
+      padding: tokens.spacing.pd2,
+      child: Text(
+        selectedLabel ?? '',
+        style: tokens.typography.body,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+
+    return LayrzInputChrome(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      isRequired: widget.isRequired,
+      prefixSlot: prefixSlot,
+      suffixSlot: finalSuffixSlot,
+      disabled: widget.disabled,
+      readOnly: true,
+      errors: widget.errors,
+      hideDetails: widget.hideDetails,
+      states: _states,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
+      controller: _controller,
+      padding: widget.padding,
+      suppressReadOnlyLock: true,
+      child: GestureDetector(
+        onTap: widget.disabled ? null : controller.open,
+        child: contentChild,
       ),
     );
   }
@@ -298,29 +351,79 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     final isCompact = context.isCompact;
 
     if (isCompact) {
-      // Mobile: wrap field in gesture detector to open bottom sheet
-      return GestureDetector(
-        onTap: widget.disabled ? null : _openMobileSurface,
-        child: LayrzTextInput(
-          labelText: widget.labelText,
-          hintText: widget.hintText,
-          controller: _controller,
-          readOnly: true,
-          isRequired: widget.isRequired,
-          disabled: widget.disabled,
-          errors: widget.errors,
-          hideDetails: widget.hideDetails,
-          prefixIcon: widget.prefixIcon,
-          prefix: widget.prefix,
-          prefixText: widget.prefixText,
-          onPrefixTap: widget.onPrefixTap,
-          suffixIcon: widget.suffixIcon ?? MdiIcons.chevronDown,
-          suffix: widget.suffix,
-          suffixText: widget.suffixText,
-          onSuffixTap: widget.onSuffixTap,
-          helpTitleText: widget.helpTitleText,
-          helpContentText: widget.helpContentText,
-          padding: widget.padding,
+      // Mobile: build anchor that opens bottom sheet on tap
+      final tokens = context.tokens;
+
+      // Resolve slots
+      final prefixSlot = resolvePrefixSlot(
+        prefixIcon: widget.prefixIcon,
+        prefix: widget.prefix,
+        prefixText: widget.prefixText,
+        onPrefixTap: widget.onPrefixTap,
+      );
+
+      final suffixSlot = resolveSuffixSlot(
+        suffixIcon: widget.suffixIcon,
+        suffix: widget.suffix,
+        suffixText: widget.suffixText,
+        onSuffixTap: widget.onSuffixTap,
+      );
+
+      // Add dropdown chevron to the suffix slot if not provided
+      final finalSuffixSlot = suffixSlot.hasContent
+          ? suffixSlot
+          : LayrzInputSuffixSlot(
+              icon: MdiIcons.chevronDown,
+            );
+
+      // Compute states
+      if (widget.disabled) {
+        _states.add(WidgetState.disabled);
+      } else {
+        _states.remove(WidgetState.disabled);
+      }
+
+      // Find the selected item's label text
+      String? selectedLabel;
+      if (widget.value != null) {
+        for (final item in widget.items) {
+          if (item.value == widget.value) {
+            selectedLabel = item.labelText;
+            break;
+          }
+        }
+      }
+
+      // Build the content display widget
+      final contentChild = Padding(
+        padding: tokens.spacing.pd2,
+        child: Text(
+          selectedLabel ?? '',
+          style: tokens.typography.body,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+
+      return LayrzInputChrome(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        isRequired: widget.isRequired,
+        prefixSlot: prefixSlot,
+        suffixSlot: finalSuffixSlot,
+        disabled: widget.disabled,
+        readOnly: true,
+        errors: widget.errors,
+        hideDetails: widget.hideDetails,
+        states: _states,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        controller: _controller,
+        padding: widget.padding,
+        suppressReadOnlyLock: true,
+        child: GestureDetector(
+          onTap: widget.disabled ? null : _openMobileSurface,
+          child: contentChild,
         ),
       );
     } else {
