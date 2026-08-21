@@ -2786,3 +2786,85 @@ The merged widget:
 **Revisit if**:
 - Drawer and rail presentations show visual divergence in logo rendering or search filtering, indicating the merged implementation is insufficient for future variance.
 - A consuming app reports that removal of the ten constants blocks critical custom styling, requiring a feature-flag constant restoration strategy.
+
+---
+
+## D49: Surface Color Tokens — Collapse to Numbered Ramp `sf1`–`sf4`, Remove Pure White
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design Tokens / Breaking Change
+
+### Context
+
+layrz_ui currently has four surface color tokens with inconsistent naming:
+- `background` (#FCFCFC) — canvas/scaffold color
+- `surface` (#FFFFFF) — card/dialog color
+- `surface2` (#F7F7F7) — nested container color
+- `surface3` (#F0F0F0) — deepest nesting color
+
+The naming is ad-hoc (no semantic pattern), and the use of pure white (#FFFFFF) for `surface` is problematic:
+1. **Rendering contrast**: All elevation shadows are calculated assuming the card sits on a #FCFCFC canvas. A white card on a light-gray canvas has no visual elevation separation, requiring shadow to do all the visual work.
+2. **Inconsistency with ramp logic**: The spacing and radius token refactors (D46) introduced semantic level ramps (1–5). Surfaces should follow the same pattern for consistency.
+3. **Naming confusion**: Neither `background` nor `surface` clearly communicates the ramp structure or values. A numbered sequence is unambiguous.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep as-is | No breaking change | Inconsistent naming; pure white causes visual flattening; not aligned with D46 ramp pattern |
+| (b) Rename to `surface1`–`surface4` | Clearer numbering | Still `surface` prefix; does not address white issue |
+| (c) Use `sf1`–`sf4` numbered ramp and promote on-canvas fills to #F7F7F7 (chosen) | Aligns with D46 ramp pattern; removes pure white; improves elevation shadow contrast; clear 1–4 ordering | Breaking change affecting ~108 call sites across lib/, test/, example/ |
+
+### Decision
+
+**Chose (c): Collapse to `sf1`–`sf4` numbered ramp, promote on-canvas fills to #F7F7F7, remove pure white.**
+
+### Token Values
+
+| New | Value | Replaces | Usage |
+|-----|-------|----------|-------|
+| `sf1` | #FCFCFC | `background` | Canvas/scaffold background, overlay fills (dropdowns) |
+| `sf2` | #F7F7F7 | `surface` (promoted) | On-canvas fills: cards, dialogs, panels, alerts |
+| `sf3` | #F0F0F0 | `surface2` | Nested containers, secondary elevations |
+| `sf4` | #E8E8E8 | — (new) | Deepest nesting, maximum contrast |
+
+### Rationale
+
+**Ramp consistency**: Spacing (D46) and radius (D46) now use semantic level ramps (1–5). Surfaces follow the same pattern for mental coherence. The prefix `sf` (surface fill) is unambiguous and compact.
+
+**Contrast improvement**: Promoting on-canvas fills from white (#FFFFFF) to #F7F7F7 (old `surface2`) creates visual separation from the #FCFCFC canvas, reducing reliance on shadow alone. Shadows are now computed with `surfaceColor: #F7F7F7` (instead of #FFFFFF), making them calibrated to the actual background they appear on.
+
+**Removal of pure white**: Pure white has no place in a light-mode system with a light-gray canvas. It reads as "too bright" and forces surfaces to rely entirely on shadow or border for elevation cues. The ramp is now a true grayscale progression: #FCFCFC → #F7F7F7 → #F0F0F0 → #E8E8E8.
+
+**New `sf4` step**: Adds a fourth step for cases requiring maximum contrast (e.g., deepest nested panels, edge cases). Currently unused in shipped components, but available for future expansions.
+
+### Consequences
+
+**Breaking changes**:
+- Removed: `LayrzColorTokens.background`, `.surface`, `.surface2`, `.surface3` (all four fields).
+- Removed: constant `kLightBackgroundColor` from `lib/src/constants/src/colors.dart`.
+- Added: `LayrzColorTokens.sf1`, `.sf2`, `.sf3`, `.sf4` (all in `copyWith`, `==`, `hashCode`).
+- Updated: `LayrzThemeData.backgroundColor` getter now returns `.sf1` (was `.background`); `surfaceColor` returns `.sf2` (was `.surface`).
+
+**Call-site count**: ~108 across lib/ (~40), test/ (~33), example/ (~35).
+
+**Migration table**:
+- `colors.background` → `colors.sf1`
+- `colors.surface` → `colors.sf2` (on-canvas fills) or `colors.sf1` (overlays)
+- `colors.surface2` → `colors.sf2`
+- `colors.surface3` → `colors.sf3`
+
+**Rendering changes**:
+- `LayrzShadowTokens` default `surfaceColor` updated from #FFFFFF to #FCFCFC.
+- `LayrzAvatar` private background constant `_kWhiteBackground` updated from #FFFFFF to #FCFCFC.
+- All elevation shadows now render against light gray, improving visual separation.
+
+**Shadow seeding**: `LayrzTokens.light()` factory wires shadow `surfaceColor` to `colors.sf2` (the new on-canvas fill), ensuring shadow calculations are consistent with the surfaces they shade.
+
+### Review Trigger
+
+**Revisit if**:
+- Adopters report that `sf1` (light gray overlay on light gray canvas) reads as insufficient visual separation for persistent overlay panels (dropdowns, popovers). Contingency: add an `sf0` (#FAFAFA) or shift overlay fills to `sf2`.
+- The ramp is too shallow (4 steps) and components need intermediate nesting levels. Contingency: expand to 5–6 steps.
+

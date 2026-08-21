@@ -55,6 +55,18 @@
 - **Rationale**: All ten constants were unused outside their definitions (internal to the now-merged rail/drawer panels). Their removal simplifies the token landscape and retires two off-ramp hardcoded values: `kLayrzLayoutSearchFieldInternalPaddingHorizontal` (10.0) and `kLayrzLayoutLogoLeftPadding` (6.0), neither on the 4/8/16/24/32 spacing ramp.
 - **Retained unchanged**: `kLayrzLayoutRailPaddingHorizontal`, `kLayrzLayoutRailPaddingVertical`, `kLayrzLayoutLogoBottomPadding`. Note: Rail padding constants now apply to both rail and drawer presentations; renaming them would introduce a second breaking change, making them candidates for a future breaking release.
 
+**Surface color tokens: collapse to `sf1`–`sf4` numbered ramp, remove pure white.**
+- **Removed entirely** (no deprecation, no aliases): `colors.background`, `colors.surface`, `colors.surface2`, `colors.surface3`, constant `kLightBackgroundColor`.
+- **Added as final fields** (in `copyWith`, `==`, `hashCode`): `sf1` (#FCFCFC), `sf2` (#F7F7F7), `sf3` (#F0F0F0), `sf4` (#E8E8E8). All surfaces now use numbered ramp logic.
+- **Migration table** (all 4 old members):
+  - `background` → `sf1` (#FCFCFC) — canvas/scaffold background
+  - `surface` → `sf2` (#F7F7F7) for on-canvas fills (cards, dialogs, panels, alerts), or `sf1` for overlay fills (dropdown menus)
+  - `surface2` → `sf2` (#F7F7F7)
+  - `surface3` → `sf3` (#F0F0F0)
+- **New step**: `sf4` (#E8E8E8) added for deepest nesting with maximum contrast.
+- **Rendering change**: Pure white (#FFFFFF) is no longer used anywhere. All elevation shadows and backgrounds now render against the light gray (#FCFCFC) canvas, improving consistency. Default `LayrzShadowTokens.surfaceColor` updated from white to #FCFCFC; `LayrzAvatar` background updated similarly.
+- **Rationale**: The collapse removes redundancy (old `background` and `surface` both mapped to similar values); the ramp adds structure (numbered 1–4 mirrors the pre-existing elevation and semantic level pattern). See decision D49 for full context.
+
 ### Changed
 
 - **All icons now use `flutter_material_design_icons` (^3.1.0+7447) instead of `layrz_icons`.** Every component that previously rendered `LayrzIcons.solarOutlineXxx` now uses `MdiIcons.xxx`. This is a visual change to icon appearance, as the Solar and MDI glyph sets differ. Components affected:

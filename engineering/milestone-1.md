@@ -22,12 +22,13 @@ This is a **foundation-only** milestone with **zero components**. Success means 
 | 10 | Enable `public_member_api_docs` | Done |
 | 11 | Close the test gap | Done |
 | 12 | Update CHANGELOG.md and commit pubspec version bumps | Done |
+| 13 | Surface color token refactor: collapse to `sf1`–`sf4` ramp, remove pure white | Done |
 
-**Note**: This table tracks the 12 work items in `engineering/milestone-1.md`. GitHub Project 9 tracks 17 M1 Foundation modules at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together.
+**Note**: This table tracks the 13 work items in `engineering/milestone-1.md`. GitHub Project 9 tracks 17 M1 Foundation modules at finer granularity. Both describe the same milestone work at different decomposition levels. When any item completes, both the Status table above and the corresponding GitHub Project item must be updated together.
 
 ## Definition of Done
 
-- All 12 work items below complete
+- All 13 work items below complete
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass (test gap closed)
 - Invariant verified: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
