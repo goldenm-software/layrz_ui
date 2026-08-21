@@ -182,8 +182,8 @@ class LayrzInputChrome extends StatelessWidget {
   /// Library-private named constructor for variable-height content boxes (multiline use).
   ///
   /// Creates a chrome with content that grows vertically between [minContentHeight]
-  /// and [maxContentHeight]. Intended for use by multiline input widgets.
-  @visibleForTesting
+  /// and [maxContentHeight]. Intended for use by [LayrzTextAreaInput] and other
+  /// multiline input widgets.
   const LayrzInputChrome.variableHeight({
     required this.labelText,
     this.hintText,
