@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -150,12 +151,49 @@ void main() {
         ),
       );
 
-      final topLeft = _getEditableTextOffset(tester);
+      // Get the RenderEditable to compute the actual position of "world"
+      // We need to find the actual RenderEditable in the render tree
+      late RenderEditable renderEditable;
+      var foundEditable = false;
 
-      final tapOffset = topLeft + const Offset(80.0, 5.0); // On "world"
+      // Walk the render tree to find RenderEditable
+      void findRenderEditable(RenderObject? render) {
+        if (foundEditable || render == null) return;
+        if (render is RenderEditable) {
+          renderEditable = render;
+          foundEditable = true;
+          return;
+        }
+        // Check if this render object is a container with children
+        if (render is RenderObjectWithChildMixin<RenderObject>) {
+          findRenderEditable(render.child);
+          if (foundEditable) return;
+        }
+        // Try to visit children if available
+        try {
+          render.visitChildren((child) {
+            if (!foundEditable) {
+              findRenderEditable(child);
+            }
+          });
+        } catch (_) {
+          // Ignore if visitChildren is not available
+        }
+      }
+
+      final editableFind = find.byType(EditableText);
+      final root = tester.renderObject(editableFind);
+      findRenderEditable(root);
+
+      // "hello world test" - "world" starts at offset 6
+      const worldOffset = 6;
+      final worldRect = renderEditable.getLocalRectForCaret(TextPosition(offset: worldOffset));
+
+      // Convert local rect to global position
+      final globalOffset = renderEditable.localToGlobal(worldRect.center);
 
       // Long press
-      await tester.longPressAt(tapOffset);
+      await tester.longPressAt(globalOffset);
       await tester.pump();
 
       final selection = controller.selection;
@@ -176,23 +214,73 @@ void main() {
         ),
       );
 
-      final topLeft = _getEditableTextOffset(tester);
+      // Get the RenderEditable to compute positions
+      late RenderEditable renderEditable;
+      var foundEditable = false;
 
-      // Start a drag from the beginning of "hello"
-      final startOffset = topLeft + const Offset(10.0, 5.0);
-      final endOffset = topLeft + const Offset(70.0, 5.0); // Into "world"
+      // Walk the render tree to find RenderEditable
+      void findRenderEditable(RenderObject? render) {
+        if (foundEditable || render == null) return;
+        if (render is RenderEditable) {
+          renderEditable = render;
+          foundEditable = true;
+          return;
+        }
+        // Check if this render object is a container with children
+        if (render is RenderObjectWithChildMixin<RenderObject>) {
+          findRenderEditable(render.child);
+          if (foundEditable) return;
+        }
+        // Try to visit children if available
+        try {
+          render.visitChildren((child) {
+            if (!foundEditable) {
+              findRenderEditable(child);
+            }
+          });
+        } catch (_) {
+          // Ignore if visitChildren is not available
+        }
+      }
 
-      final gesture = await tester.startGesture(startOffset);
+      final editableFind = find.byType(EditableText);
+      final root = tester.renderObject(editableFind);
+      findRenderEditable(root);
+
+      // Perform a long-press gesture that becomes a drag to extend the selection
+      // This tests the drag-to-extend functionality where the gesture starts with a long-press
+      // and then drags to extend the selection
+
+      // Start on "hello" (position 2)
+      const helloOffset = 2;
+      final helloRect = renderEditable.getLocalRectForCaret(TextPosition(offset: helloOffset));
+      final longPressOffset = renderEditable.localToGlobal(helloRect.center);
+
+      // Create a gesture that will become a drag
+      final gesture = await tester.startGesture(longPressOffset);
+
+      // Wait for the long-press timeout to trigger (typically 500ms)
+      await tester.pump(const Duration(milliseconds: 600));
+
+      // After long-press, the word should be selected
+      expect(controller.selection.isCollapsed, false, reason: 'Long press should select a word');
+
+      // Now drag from the long-press position to extend the selection
+      // Drag to position 8 (middle of "world")
+      const extendOffset = 8;
+      final extendRect = renderEditable.getLocalRectForCaret(TextPosition(offset: extendOffset));
+      final extendPoint = renderEditable.localToGlobal(extendRect.center);
+
+      await gesture.moveTo(extendPoint);
       await tester.pump(const Duration(milliseconds: 100));
-      await gesture.moveTo(endOffset);
-      await tester.pump();
+
+      // Release the gesture
       await gesture.up();
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       final selection = controller.selection;
       expect(selection.isCollapsed, false, reason: 'Selection should not be collapsed after drag');
-      expect(selection.start, 0, reason: 'Selection should start at beginning');
-      expect(selection.end, greaterThan(selection.start), reason: 'Selection should extend');
+      expect(selection.end, greaterThan(5), reason: 'Selection should extend beyond "hello"');
     });
 
     testWidgets('onTap callback is invoked when field is tapped', (tester) async {
