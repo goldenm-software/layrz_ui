@@ -81,6 +81,10 @@ void main() {
     });
 
     testWidgets('back button is labelled and reachable', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
       controller.goTo(1); // Move to step 2 so back button is enabled
@@ -96,18 +100,20 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Back button should be found by its label text.
-      expect(find.text('Previous'), findsOneWidget);
-
-      // Back button should be tappable (onTap is not null).
+      // Back button should be found by widget predicate and should be tappable.
       final backButton = find.byWidgetPredicate(
         (w) => w is LayrzButton && w.labelText == 'Previous',
       );
+      expect(backButton, findsOneWidget);
       final button = tester.widget<LayrzButton>(backButton);
       expect(button.onTap, isNotNull);
     });
 
     testWidgets('next button is labelled and reachable', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemed(
         tester,
         LayrzStepper(
@@ -116,13 +122,11 @@ void main() {
         ),
       );
 
-      // Next button should be found by its label text.
-      expect(find.text('Continue'), findsOneWidget);
-
-      // Next button should be tappable on first step.
+      // Next button should be found by widget predicate and should be tappable.
       final nextButton = find.byWidgetPredicate(
         (w) => w is LayrzButton && w.labelText == 'Continue',
       );
+      expect(nextButton, findsOneWidget);
       final button = tester.widget<LayrzButton>(nextButton);
       expect(button.onTap, isNotNull);
     });

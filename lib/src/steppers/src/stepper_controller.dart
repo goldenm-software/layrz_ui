@@ -45,6 +45,9 @@ class LayrzStepperController extends ChangeNotifier {
   /// The callback can return a [Future] for async validation (e.g. server checks).
   Future<bool> Function()? _canAdvance;
 
+  /// Tracks whether this controller has been disposed.
+  bool _disposed = false;
+
   /// Gets the zero-based index of the currently active step.
   int get currentStepIndex => _currentStepIndex;
 
@@ -82,11 +85,11 @@ class LayrzStepperController extends ChangeNotifier {
   /// Moves to the previous step without validation.
   ///
   /// Unlike [next], this does not check [canAdvance].
-  /// Calling [previous] when already on the first step is a no-op.
+  /// Calling [previous] when already on the first step is a no-op, but still notifies listeners.
   void previous() {
-    if (!canMovePrevious) return;
-
-    _currentStepIndex--;
+    if (canMovePrevious) {
+      _currentStepIndex--;
+    }
     notifyListeners();
   }
 
@@ -130,5 +133,15 @@ class LayrzStepperController extends ChangeNotifier {
     _currentStepIndex = 0;
     _stepCount = 0;
     notifyListeners();
+  }
+
+  /// Disposes the controller and releases resources.
+  ///
+  /// Safe to call multiple times. Subsequent calls are no-ops.
+  @override
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    super.dispose();
   }
 }
