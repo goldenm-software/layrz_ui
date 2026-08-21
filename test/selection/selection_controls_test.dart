@@ -24,46 +24,75 @@ void main() {
       expect(controls1 == controls1, true);
     });
 
-    testWidgets('buildHandle returns a GestureDetector with CustomPaint', (WidgetTester tester) async {
+    testWidgets('buildHandle returns a GestureDetector with CustomPaint for each type', (WidgetTester tester) async {
       final controls = LayrzTextSelectionControls.instance;
-      final handle = controls.buildHandle(
-        tester.binding.rootElement!,
-        TextSelectionHandleType.left,
-        16.0,
-        () {},
-      );
 
-      await pumpThemed(tester, handle);
+      // Test left handle
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            return controls.buildHandle(context, TextSelectionHandleType.left, 16.0, () {});
+          },
+        ),
+      );
+      expect(find.byType(GestureDetector), findsOneWidget);
+      expect(find.byType(CustomPaint), findsOneWidget);
+
+      // Test right handle
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            return controls.buildHandle(context, TextSelectionHandleType.right, 16.0, () {});
+          },
+        ),
+      );
+      expect(find.byType(GestureDetector), findsOneWidget);
+      expect(find.byType(CustomPaint), findsOneWidget);
+
+      // Test collapsed handle
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            return controls.buildHandle(context, TextSelectionHandleType.collapsed, 16.0, () {});
+          },
+        ),
+      );
       expect(find.byType(GestureDetector), findsOneWidget);
       expect(find.byType(CustomPaint), findsOneWidget);
     });
 
-    test('getHandleSize returns proportional size based on text line height', () {
+    test('getHandleSize returns fixed 22x22 size', () {
       final controls = LayrzTextSelectionControls.instance;
 
-      // Test with 16.0 line height
+      // Size should be fixed at 22x22 regardless of text line height
       final size1 = controls.getHandleSize(16.0);
-      expect(size1.height, greaterThan(0));
-      expect(size1.width, greaterThan(0));
-      expect(size1.width, lessThan(size1.height)); // width should be < height
+      expect(size1, const Size(22.0, 22.0));
 
-      // Test with larger line height
       final size2 = controls.getHandleSize(32.0);
-      expect(size2.height, greaterThanOrEqualTo(size1.height));
+      expect(size2, const Size(22.0, 22.0));
 
-      // Test minimum clamping
       final sizeSmall = controls.getHandleSize(1.0);
-      expect(sizeSmall.height, greaterThanOrEqualTo(6.0)); // minimum 6px
+      expect(sizeSmall, const Size(22.0, 22.0));
     });
 
-    test('getHandleAnchor returns offset at handle bottom-center', () {
+    test('getHandleAnchor returns correct anchor for each handle type', () {
       final controls = LayrzTextSelectionControls.instance;
-      final size = controls.getHandleSize(16.0);
-      final anchor = controls.getHandleAnchor(TextSelectionHandleType.left, 16.0);
+      const handleSize = 22.0;
 
-      // Anchor should be at the bottom-center of the handle
-      expect(anchor.dx, size.width / 2);
-      expect(anchor.dy, size.height);
+      // Collapsed: anchor at top-center
+      final collapsedAnchor = controls.getHandleAnchor(TextSelectionHandleType.collapsed, 16.0);
+      expect(collapsedAnchor, Offset(handleSize / 2, -4));
+
+      // Left: anchor at right edge
+      final leftAnchor = controls.getHandleAnchor(TextSelectionHandleType.left, 16.0);
+      expect(leftAnchor, Offset(handleSize, 0));
+
+      // Right: anchor at left edge
+      final rightAnchor = controls.getHandleAnchor(TextSelectionHandleType.right, 16.0);
+      expect(rightAnchor, Offset.zero);
     });
   });
 }

@@ -47,21 +47,26 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
     // Read tokens from context at render time.
     final tokens = context.tokens;
 
-    // The handle is a small rounded rectangle positioned at the selection endpoint.
-    // Size is proportional to text line height but capped at reasonable bounds.
-    final handleHeight = (textLineHeight * 0.25).clamp(6.0, 24.0);
-    final handleWidth = handleHeight * 0.6;
+    // The handle is a fixed-size teardrop (22x22) that points toward the text.
+    // A larger hit area (48x48) is provided for comfortable dragging without
+    // affecting the visual size.
+    const handleSize = Size(22.0, 22.0);
+    const hitAreaSize = Size(48.0, 48.0);
 
     return GestureDetector(
       onTap: onTap,
       child: MouseRegion(
         cursor: SystemMouseCursors.text,
-        child: CustomPaint(
-          size: Size(handleWidth, handleHeight),
-          painter: LayrzSelectionHandlePainter(
-            color: tokens.colors.primary,
-            borderRadius: BorderRadius.all(
-              Radius.circular(tokens.radius.r2),
+        child: SizedBox(
+          width: hitAreaSize.width,
+          height: hitAreaSize.height,
+          child: Center(
+            child: CustomPaint(
+              size: handleSize,
+              painter: LayrzSelectionHandlePainter(
+                type: type,
+                color: tokens.colors.primary,
+              ),
             ),
           ),
         ),
@@ -71,17 +76,24 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
 
   @override
   Offset getHandleAnchor(TextSelectionHandleType type, double textLineHeight) {
-    // The anchor point is the bottom-center of the handle, positioned
-    // at the text selection endpoint.
-    final handleHeight = (textLineHeight * 0.25).clamp(6.0, 24.0);
-    final handleWidth = handleHeight * 0.6;
-    return Offset(handleWidth / 2, handleHeight);
+    // The anchor point determines where the handle's teardrop points attach to the text.
+    // Each handle type uses a different anchor to align the square corner with the selection edge.
+    // These anchors match the fixed 22x22 handle size.
+    const handleSize = 22.0;
+    return switch (type) {
+      // Collapsed: anchor at the center-top, with teardrop hanging below
+      TextSelectionHandleType.collapsed => Offset(handleSize / 2, -4),
+      // Left: anchor at the right edge, teardrop points up-right
+      TextSelectionHandleType.left => Offset(handleSize, 0),
+      // Right: anchor at the left edge, teardrop points up-left
+      TextSelectionHandleType.right => Offset.zero,
+    };
   }
 
   @override
   Size getHandleSize(double textLineHeight) {
-    final handleHeight = (textLineHeight * 0.25).clamp(6.0, 24.0);
-    final handleWidth = handleHeight * 0.6;
-    return Size(handleWidth, handleHeight);
+    // Fixed handle size: 22x22 pixels, independent of text line height.
+    // This ensures handles are consistently sized and align properly with selection edges.
+    return const Size(22.0, 22.0);
   }
 }
