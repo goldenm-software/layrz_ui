@@ -259,6 +259,7 @@ class _LayrzTextInputSelectionGestureDetectorBuilder extends TextSelectionGestur
   /// this method to avoid multiple competing tap recognizers.
   @override
   void onUserTap() {
+    super.onUserTap();
     if (!_isDisabled) {
       _onUserTapCallback?.call();
     }
