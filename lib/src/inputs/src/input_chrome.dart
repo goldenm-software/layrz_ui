@@ -285,16 +285,13 @@ class LayrzInputChrome extends StatelessWidget {
                     minHeight: _minContentHeight ?? contentHeight,
                     maxHeight: _maxContentHeight ?? double.infinity,
                   ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.vertical,
-                    child: _buildRowContent(
-                      context: context,
-                      tokens: tokens,
-                      spec: spec,
-                      density: density,
-                      contentHeight: contentHeight,
-                      alignTrailingTop: true,
-                    ),
+                  child: _buildRowContent(
+                    context: context,
+                    tokens: tokens,
+                    spec: spec,
+                    density: density,
+                    contentHeight: contentHeight,
+                    alignTrailingTop: true,
                   ),
                 )
               : SizedBox(
