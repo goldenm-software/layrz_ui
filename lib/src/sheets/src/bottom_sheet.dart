@@ -12,7 +12,6 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 ///   useful for supplementary UI that coexists with the main content
 ///
 /// The sheet is draggable by the drag handle or (when [showDragHandle] is true) the entire
-/// header area. Dragging to the top can optionally expand to full screen ([expandOnDragToTop]).
 /// Uses [DraggableScrollableSheet] internally to avoid the classic trap of hand-rolling
 /// the drag/scroll handoff — it solves that problem directly.
 ///
@@ -64,7 +63,6 @@ class LayrzBottomSheet {
   /// - [showDragHandle]: whether to render a visual drag handle above the content.
   ///   Defaults to `true`. When true, the entire header region is draggable
   ///   (more forgiving than handle-only drag, which is easy to miss on touch).
-  /// - [expandOnDragToTop]: when `true`, dragging the sheet to the top transitions
   ///   to a full-screen presentation. The drag handle remains visible for dismissal.
   ///   Defaults to `false`. This parameter is out of scope for the current implementation;
   ///   setting it to `true` is accepted but the feature may be added in a future release.
@@ -80,7 +78,6 @@ class LayrzBottomSheet {
     double minSize = 0.25,
     double maxSize = 0.95,
     bool showDragHandle = true,
-    bool expandOnDragToTop = false,
     bool useRootNavigator = false,
   }) {
     // Validate snapSizes constraints
@@ -126,7 +123,6 @@ class LayrzBottomSheet {
         minSize: minSize,
         maxSize: maxSize,
         showDragHandle: showDragHandle,
-        expandOnDragToTop: expandOnDragToTop,
       ),
     );
   }
@@ -154,7 +150,6 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
     required double minSize,
     required double maxSize,
     required bool showDragHandle,
-    required bool expandOnDragToTop,
   }) : super(
          pageBuilder: (context, animation, secondaryAnimation) {
            return _BottomSheetContent(
@@ -165,7 +160,6 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
              minSize: minSize,
              maxSize: maxSize,
              showDragHandle: showDragHandle,
-             expandOnDragToTop: expandOnDragToTop,
            );
          },
          barrierDismissible: !isPersistent,
@@ -241,7 +235,6 @@ class _BottomSheetContent<T> extends StatefulWidget {
   final bool showDragHandle;
 
   /// Whether to expand to full screen when dragged to top.
-  final bool expandOnDragToTop;
 
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
@@ -252,7 +245,6 @@ class _BottomSheetContent<T> extends StatefulWidget {
     required this.minSize,
     required this.maxSize,
     required this.showDragHandle,
-    required this.expandOnDragToTop,
   });
 
   @override
