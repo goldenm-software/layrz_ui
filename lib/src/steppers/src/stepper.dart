@@ -223,8 +223,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
           vertical: tokens.spacing.sp2,
         ),
         child: Semantics(
-          label:
-              'Step ${currentIndex + 1} of $stepCount. ${widget.steps[currentIndex].labelText}.',
+          label: 'Step ${currentIndex + 1} of $stepCount. ${widget.steps[currentIndex].labelText}.',
           child: Text(
             'Step ${currentIndex + 1} of $stepCount',
             style: tokens.typography.label,
@@ -300,14 +299,12 @@ class _LayrzStepperState extends State<LayrzStepper> {
     final bgColor = isActive
         ? tokens.colors.primary
         : isCompleted
-            ? tokens.colors.success
-            : isError
-                ? tokens.colors.danger
-                : tokens.colors.sf3;
+        ? tokens.colors.success
+        : isError
+        ? tokens.colors.danger
+        : tokens.colors.sf3;
 
-    final fgColor = isActive || isCompleted || isError
-        ? tokens.colors.sf1
-        : tokens.colors.fg2;
+    final fgColor = isActive || isCompleted || isError ? tokens.colors.sf1 : tokens.colors.fg2;
 
     final isTappable = isCompleted || isActive;
     final cursor = isTappable ? SystemMouseCursors.click : MouseCursor.defer;
@@ -343,8 +340,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
       child: MouseRegion(
         cursor: cursor,
         child: Semantics(
-          label:
-              'Step ${index + 1} of ${widget.steps.length}, ${step.labelText}. ${_semanticsStateLabel(state)}.',
+          label: 'Step ${index + 1} of ${widget.steps.length}, ${step.labelText}. ${_semanticsStateLabel(state)}.',
           enabled: isTappable,
           child: Column(
             children: [
