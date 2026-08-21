@@ -185,73 +185,44 @@ class _FieldStatesShowcase extends StatelessWidget {
           'Rest, error, disabled and read-only. Hover and focus are live — hover or tab into any field to see them.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        Column(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            // Row 1: Rest and Error
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Rest', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: restController,
-                        labelText: 'Rest state',
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Error', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: errorController,
-                        labelText: 'Error state',
-                        errors: ['This is an error'],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                controller: restController,
+                focusNode: restFocusNode,
+                labelText: 'Rest state',
+              ),
             ),
-            // Row 2: Disabled and Read-only
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Disabled', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: disabledController,
-                        labelText: 'Disabled state',
-                        disabled: true,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Read-only', style: tokens.typography.label),
-                      LayrzTextInput(
-                        controller: readOnlyController,
-                        labelText: 'Read-only state',
-                        readOnly: true,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                controller: errorController,
+                labelText: 'Error state',
+                errors: ['This is an error'],
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                controller: disabledController,
+                labelText: 'Disabled state',
+                disabled: true,
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                controller: readOnlyController,
+                labelText: 'Read-only state',
+                readOnly: true,
+              ),
             ),
           ],
         ),
@@ -275,67 +246,35 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
       spacing: tokens.spacing.sp3,
       children: [
         Text('Label and Placeholder Variations', style: tokens.typography.title),
-        Column(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('With Label', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Username',
-                        hintText: 'Enter your username',
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Without Label', style: tokens.typography.label),
-                      LayrzTextInput(
-                        hintText: 'No label here',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Username',
+                hintText: 'Enter your username',
+              ),
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Required Indicator', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Email',
-                        isRequired: true,
-                        hintText: 'your@email.com',
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('No Placeholder', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Optional field',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(hintText: 'No label here'),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Email',
+                isRequired: true,
+                hintText: 'your@email.com',
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(labelText: 'Optional field'),
             ),
           ],
         ),
@@ -374,68 +313,48 @@ class _PrefixSuffixSlotsShowcase extends StatelessWidget {
           'Prefix and suffix are mutually exclusive variants. Click prefix/suffix to increment the tap counter.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        Column(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            // Prefix forms
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp2,
-              children: [
-                Text('Prefix Variants', style: tokens.typography.label),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: tokens.spacing.sp3,
-                  children: [
-                    Expanded(
-                      child: LayrzTextInput(
-                        labelText: 'prefixIcon',
-                        prefixIcon: MdiIcons.checkCircleOutline,
-                        onPrefixTap: onPrefixTap,
-                        hintText: 'Taps: $prefixTapCount',
-                      ),
-                    ),
-                    Expanded(
-                      child: LayrzTextInput(
-                        labelText: 'prefixText',
-                        prefixText: '@',
-                        onPrefixTap: onPrefixTap,
-                        hintText: 'Taps: $prefixTapCount',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Prefix Icon',
+                prefixIcon: MdiIcons.checkCircleOutline,
+                onPrefixTap: onPrefixTap,
+                hintText: 'Taps: $prefixTapCount',
+              ),
             ),
-            // Suffix forms
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp2,
-              children: [
-                Text('Suffix Variants', style: tokens.typography.label),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: tokens.spacing.sp3,
-                  children: [
-                    Expanded(
-                      child: LayrzTextInput(
-                        labelText: 'suffixIcon',
-                        suffixIcon: MdiIcons.eyeOutline,
-                        onSuffixTap: onSuffixTap,
-                        hintText: 'Taps: $suffixTapCount',
-                      ),
-                    ),
-                    Expanded(
-                      child: LayrzTextInput(
-                        labelText: 'suffixText',
-                        suffixText: '.com',
-                        onSuffixTap: onSuffixTap,
-                        hintText: 'Taps: $suffixTapCount',
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Suffix Icon',
+                suffixIcon: MdiIcons.eyeOutline,
+                onSuffixTap: onSuffixTap,
+                hintText: 'Taps: $suffixTapCount',
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Prefix Text',
+                prefixText: '@',
+                onPrefixTap: onPrefixTap,
+                hintText: 'Taps: $prefixTapCount',
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Suffix Text',
+                suffixText: '.com',
+                onSuffixTap: onSuffixTap,
+                hintText: 'Taps: $suffixTapCount',
+              ),
             ),
           ],
         ),
@@ -460,75 +379,47 @@ class _ErrorsShowcase extends StatelessWidget {
       spacing: tokens.spacing.sp3,
       children: [
         Text('Error Display', style: tokens.typography.title),
-        Column(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Single Error', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Email',
-                        hintText: 'your@email.com',
-                        errors: ['Invalid email format'],
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Multiple Errors', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Password',
-                        errors: [
-                          'Must be at least 8 characters',
-                          'Must contain uppercase letter',
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Email',
+                hintText: 'your@email.com',
+                errors: ['Invalid email format'],
+              ),
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('hideDetails: true', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Field',
-                        hintText: 'Error hidden',
-                        errors: ['Error message is suppressed'],
-                        hideDetails: true,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Error + Suffix', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Username',
-                        suffixIcon: MdiIcons.checkCircleOutline,
-                        errors: const ['Already taken'],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Password',
+                errors: [
+                  'Must be at least 8 characters',
+                  'Must contain uppercase letter',
+                ],
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Field',
+                hintText: 'Error hidden',
+                errors: ['Error message is suppressed'],
+                hideDetails: true,
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Username',
+                suffixIcon: MdiIcons.checkCircleOutline,
+                errors: const ['Already taken'],
+              ),
             ),
           ],
         ),
@@ -629,38 +520,29 @@ class _ReadOnlyVsDisabledShowcaseState extends State<_ReadOnlyVsDisabledShowcase
           'Read-only fires onTap (used by pickers); disabled does not. Tap each field to see the difference.',
           style: widget.tokens.typography.body.copyWith(color: widget.tokens.colors.fg3),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        LayrzRow(
           spacing: widget.tokens.spacing.sp3,
           children: [
-            Expanded(
-              child: Column(
-                spacing: widget.tokens.spacing.sp2,
-                children: [
-                  Text('Read-only (fires onTap)', style: widget.tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Date Picker',
-                    controller: _readOnlyController,
-                    readOnly: true,
-                    onTap: widget.onReadOnlyTap,
-                    hintText: 'Taps: ${widget.readOnlyTapCount}',
-                  ),
-                ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Date Picker',
+                controller: _readOnlyController,
+                readOnly: true,
+                onTap: widget.onReadOnlyTap,
+                hintText: 'Taps: ${widget.readOnlyTapCount}',
               ),
             ),
-            Expanded(
-              child: Column(
-                spacing: widget.tokens.spacing.sp2,
-                children: [
-                  Text('Disabled (no onTap)', style: widget.tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Disabled Field',
-                    controller: _disabledController,
-                    disabled: true,
-                    onTap: widget.onDisabledTap,
-                    hintText: 'Taps: ${widget.disabledTapCount}',
-                  ),
-                ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Disabled Field',
+                controller: _disabledController,
+                disabled: true,
+                onTap: widget.onDisabledTap,
+                hintText: 'Taps: ${widget.disabledTapCount}',
               ),
             ),
           ],
@@ -697,85 +579,61 @@ class _WidgetSlotsShowcase extends StatelessWidget {
           'Prefix and suffix can be arbitrary widgets. The field constrains widgets to match the content height.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Prefix Widget (Color Swatch)', style: tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Color Picker',
-                    hintText: 'Select a color',
-                    prefix: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3B82F6),
-                        borderRadius: BorderRadius.circular(4),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Color Picker',
+                hintText: 'Select a color',
+                prefix: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Field with Tall Suffix',
+                hintText: 'Type or observe the suffix',
+                suffix: Container(
+                  width: 64,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: tokens.colors.sf2,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '100px tall\nfield ≈24px',
+                      style: tokens.typography.body.copyWith(
+                        fontSize: 10,
+                        color: tokens.colors.fg3,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Suffix Widget (Height Constraint)', style: tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Field with Tall Suffix',
-                    hintText: 'Type or observe the suffix',
-                    suffix: Container(
-                      width: 64,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: tokens.colors.sf2,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '100px tall\nfield ≈24px',
-                          style: tokens.typography.body.copyWith(
-                            fontSize: 10,
-                            color: tokens.colors.fg3,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
+            LayrzCol(
+              child: LayrzTextInput(
+                labelText: 'Age',
+                hintText: 'Enter digits only',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
                 ],
+                controller: numericController,
               ),
-            ),
-          ],
-        ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp3,
-          children: [
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Numeric Input', style: tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Age',
-                    hintText: 'Enter digits only',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    controller: numericController,
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SizedBox(),
             ),
           ],
         ),
@@ -803,18 +661,21 @@ class _ShortcutBadgeShowcase extends StatelessWidget {
           'Keyboard shortcut displayed as a muted badge. Hidden on mobile devices.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              md: 6,
               child: LayrzTextInput(
                 labelText: 'Search',
                 hintText: 'Try Cmd+K',
                 shortcut: {LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK},
               ),
             ),
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              md: 6,
               child: LayrzTextInput(
                 labelText: 'Command',
                 hintText: 'Try Ctrl+Shift+P',
@@ -846,69 +707,41 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
         Column(
           spacing: tokens.spacing.sp3,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Password (obscureText)', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Password',
-                        hintText: '••••••••',
-                        obscureText: true,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Email Keyboard', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Email',
-                        hintText: 'user@example.com',
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Phone Number',
+                hintText: '+1 (555) 123-4567',
+                keyboardType: TextInputType.phone,
+              ),
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp3,
-              children: [
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Phone Keyboard', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Phone Number',
-                        hintText: '+1 (555) 123-4567',
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    spacing: tokens.spacing.sp2,
-                    children: [
-                      Text('Max Length (20 chars)', style: tokens.typography.label),
-                      LayrzTextInput(
-                        labelText: 'Limited',
-                        hintText: 'Type to see counter',
-                        maxLength: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Limited',
+                hintText: 'Type to see counter',
+                maxLength: 20,
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Password',
+                hintText: '••••••••',
+                obscureText: true,
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Email',
+                hintText: 'user@example.com',
+                keyboardType: TextInputType.emailAddress,
+              ),
             ),
           ],
         ),
@@ -936,35 +769,26 @@ class _CharacterCounterShowcase extends StatelessWidget {
           'Character counter displays current/max without focus or content threshold. Stays fg3 even when errors are present.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Counter alone (50 chars)', style: tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Bio',
-                    hintText: 'Tell us about yourself',
-                    maxLength: 50,
-                  ),
-                ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Bio',
+                hintText: 'Tell us about yourself',
+                maxLength: 50,
               ),
             ),
-            Expanded(
-              child: Column(
-                spacing: tokens.spacing.sp2,
-                children: [
-                  Text('Counter with error (30 chars)', style: tokens.typography.label),
-                  LayrzTextInput(
-                    labelText: 'Username',
-                    hintText: 'Enter username',
-                    maxLength: 30,
-                    errors: ['Username contains invalid characters'],
-                  ),
-                ],
+            LayrzCol(
+              xs: 12,
+              md: 6,
+              child: LayrzTextInput(
+                labelText: 'Username',
+                hintText: 'Enter username',
+                maxLength: 30,
+                errors: ['Username contains invalid characters'],
               ),
             ),
           ],
