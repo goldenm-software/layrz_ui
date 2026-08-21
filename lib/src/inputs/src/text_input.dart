@@ -1,12 +1,11 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 
+import '_layrzeditable_field.dart';
 import 'input_chrome.dart';
 import 'input_slot.dart';
-import 'input_style_spec.dart';
 
 /// A Material-free text input field in the layrz_ui design system.
 ///
@@ -232,73 +231,16 @@ class LayrzTextInput extends StatefulWidget {
   State<LayrzTextInput> createState() => _LayrzTextInputState();
 }
 
-/// Custom gesture detector builder that threads the [onTap] callback through
-/// the selection gesture recognizer to avoid conflicts.
-///
-/// Overrides [onUserTap] to invoke the field's [onTap] callback when the user
-/// taps, eliminating the need for a separate wrapping [GestureDetector].
-class _LayrzTextInputSelectionGestureDetectorBuilder extends TextSelectionGestureDetectorBuilder {
-  /// Callback to invoke when the user taps the field.
-  final VoidCallback? _onUserTapCallback;
-
-  /// Whether the field is disabled.
-  final bool _isDisabled;
-
-  /// Creates a custom gesture detector builder for [LayrzTextInput].
-  _LayrzTextInputSelectionGestureDetectorBuilder({
-    required super.delegate,
-    required VoidCallback? onUserTapCallback,
-    required bool isDisabled,
-  }) : _onUserTapCallback = onUserTapCallback, // ignore: prefer_initializing_formals
-       _isDisabled = isDisabled; // ignore: prefer_initializing_formals
-
-  /// Called when the user taps the field.
-  ///
-  /// Invoked by [TextSelectionGestureDetectorBuilder] when [selectionEnabled]
-  /// is true and a tap is recognized. Threads the [onTap] callback through
-  /// this method to avoid multiple competing tap recognizers.
-  @override
-  void onUserTap() {
-    super.onUserTap();
-    if (!_isDisabled) {
-      _onUserTapCallback?.call();
-    }
-  }
-}
-
-class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectionGestureDetectorBuilderDelegate {
+class _LayrzTextInputState extends State<LayrzTextInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   final Set<WidgetState> _states = {};
-  final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
-
-  /// Whether to show text selection handles (left/right/collapsed cursors).
-  ///
-  /// Handles are shown for touch-driven selection (longPress, drag) but not
-  /// for keyboard-driven selection. This field is updated by [_handleSelectionChanged]
-  /// and passed to [EditableText.showSelectionHandles].
-  bool _showSelectionHandles = false;
-
-  /// Cached magnifier configuration to prevent overlay disposal on every rebuild.
-  /// Initialized once in initState.
-  late TextMagnifierConfiguration? _cachedMagnifierConfiguration;
-
-  /// Cached context menu builder to prevent overlay disposal on every rebuild.
-  /// Method references are compared by identity, so we cache it to ensure the same
-  /// reference is used across rebuilds.
-  late EditableTextContextMenuBuilder _cachedContextMenuBuilder;
 
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.addListener(_handleFocusChange);
-    // Initialize cached magnifier configuration once; it never changes.
-    _cachedMagnifierConfiguration = LayrzSelectionMagnifier.magnifierConfigurationFor();
-    // Cache the context menu builder to ensure the same reference is used across rebuilds.
-    // Method references are compared by identity in EditableText.didUpdateWidget.
-    _cachedContextMenuBuilder = _buildContextMenu;
   }
 
   @override
@@ -311,14 +253,12 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       }
       _controller = widget.controller ?? TextEditingController();
     }
-    // If focusNode changed, update the reference and listener
+    // If focusNode changed, update the reference
     if (widget.focusNode != oldWidget.focusNode) {
-      _focusNode.removeListener(_handleFocusChange);
       if (oldWidget.focusNode == null) {
         _focusNode.dispose();
       }
       _focusNode = widget.focusNode ?? FocusNode();
-      _focusNode.addListener(_handleFocusChange);
     }
   }
 
@@ -329,117 +269,13 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       _controller.dispose();
     }
     if (widget.focusNode == null) {
-      _focusNode.removeListener(_handleFocusChange);
       _focusNode.dispose();
     }
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() {
-      if (_focusNode.hasFocus) {
-        _states.add(WidgetState.focused);
-      } else {
-        _states.remove(WidgetState.focused);
-      }
-    });
-    widget.onFocusChanged?.call(_focusNode.hasFocus);
-  }
-
-  // TextSelectionGestureDetectorBuilderDelegate implementation
-  @override
-  GlobalKey<EditableTextState> get editableTextKey => _editableTextKey;
-
-  @override
-  bool get forcePressEnabled => true;
-
-  @override
-  bool get selectionEnabled => !widget.disabled;
-
-  void _updateStates(PointerEvent event) {
-    setState(() {
-      if (event is PointerDownEvent) {
-        _states.add(WidgetState.pressed);
-      } else if (event is PointerUpEvent) {
-        _states.remove(WidgetState.pressed);
-      }
-    });
-  }
-
-  Widget _buildContextMenu(
-    BuildContext context,
-    EditableTextState editableTextState,
-  ) {
-    // Resolve which actions to display based on editability state
-    final tokens = context.tokens;
-
-    // Filter actions based on field state
-    final actionSet = widget.actions ?? LayrzSelectableAction.defaults;
-    final resolvedActions = actionSet.where((action) {
-      // Drop copy and cut for obscured text
-      if (widget.obscureText && (action.type == 'copy' || action.type == 'cut')) {
-        return false;
-      }
-      // Drop cut and paste for read-only text
-      if (widget.readOnly && (action.type == 'cut' || action.type == 'paste')) {
-        return false;
-      }
-      return true;
-    }).toSet();
-
-    // Get the toolbar anchor positions from the editable text state
-    // These provide both above and below positions for automatic flip logic
-    final anchors = editableTextState.contextMenuAnchors;
-
-    // Build the toolbar widget
-    final toolbar = LayrzSelectionToolbar(
-      actions: resolvedActions,
-      anchorAbove: anchors.primaryAnchor,
-      anchorBelow: anchors.secondaryAnchor,
-      tokens: tokens,
-      onActionPressed: (actionType) {
-        switch (actionType) {
-          case 'copy':
-            editableTextState.copySelection(SelectionChangedCause.toolbar);
-          case 'cut':
-            editableTextState.cutSelection(SelectionChangedCause.toolbar);
-          case 'paste':
-            editableTextState.pasteText(SelectionChangedCause.toolbar);
-          case 'selectAll':
-            editableTextState.selectAll(SelectionChangedCause.toolbar);
-          default:
-            // Custom action: find and invoke the callback
-            final customAction = actionSet.firstWhere(
-              (a) => a.type == actionType,
-              orElse: () => throw StateError('Unknown action: $actionType'),
-            );
-            customAction.onPressed();
-        }
-      },
-    );
-
-    // Wrap the toolbar with CustomSingleChildLayout to handle positioning
-    // The TextSelectionToolbarLayoutDelegate automatically positions above the selection
-    // and flips below when there is not enough room above
-    return CustomSingleChildLayout(
-      delegate: TextSelectionToolbarLayoutDelegate(
-        anchorAbove: anchors.primaryAnchor,
-        anchorBelow: anchors.secondaryAnchor ?? Offset.zero,
-      ),
-      child: toolbar,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    // Build formatters list
-    final formatters = [...widget.inputFormatters];
-    if (widget.maxLength != null) {
-      formatters.add(LengthLimitingTextInputFormatter(widget.maxLength!));
-    }
-
     // Resolve slots
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
@@ -462,25 +298,44 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       _states.remove(WidgetState.disabled);
     }
 
-    // Resolve style spec once to use for EditableText text color (Task 2)
-    final hasErrors = widget.errors.isNotEmpty;
-    final spec = LayrzInputStyleSpec.resolve(
-      states: _states,
-      tokens: tokens,
-      hasErrors: hasErrors,
-      readOnly: widget.readOnly,
-    );
-
     // Format shortcut for display
     final shortcutText = widget.shortcut != null ? formatLayrzShortcut(widget.shortcut) : null;
 
-    // Build gesture detector for selection.
-    // The custom builder threads the onTap callback through the selection gesture
-    // detector to prevent conflicts between separate tap recognizers.
-    final gestureDetectorBuilder = _LayrzTextInputSelectionGestureDetectorBuilder(
-      delegate: this,
-      onUserTapCallback: widget.disabled ? null : (widget.readOnly ? widget.onTap : _handleTap),
-      isDisabled: widget.disabled,
+    // Create the editable field configuration
+    final fieldConfig = LayrzEditableFieldConfig(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      controller: _controller,
+      focusNode: _focusNode,
+      onChanged: widget.onChanged,
+      onSubmit: widget.onSubmit,
+      onFocusChanged: (isFocused) {
+        setState(() {
+          if (isFocused) {
+            _states.add(WidgetState.focused);
+          } else {
+            _states.remove(WidgetState.focused);
+          }
+        });
+        widget.onFocusChanged?.call(isFocused);
+      },
+      onTap: widget.onTap,
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      inputFormatters: widget.inputFormatters,
+      maxLength: widget.maxLength,
+      autofocus: widget.autofocus,
+      textCapitalization: widget.textCapitalization,
+      autofillHints: widget.autofillHints,
+      obscureText: widget.obscureText,
+      autocorrect: widget.autocorrect,
+      enableSuggestions: widget.enableSuggestions,
+      actions: widget.actions,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
     );
 
     return LayrzInputChrome(
@@ -500,109 +355,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
-      child: Listener(
-        onPointerDown: widget.disabled ? null : _updateStates,
-        onPointerUp: widget.disabled ? null : _updateStates,
-        onPointerCancel: widget.disabled ? null : _updateStates,
-        child: MouseRegion(
-          onEnter: widget.disabled ? null : (_) => setState(() => _states.add(WidgetState.hovered)),
-          onExit: widget.disabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
-          child: gestureDetectorBuilder.buildGestureDetector(
-            child: EditableText(
-              key: _editableTextKey,
-              rendererIgnoresPointer: true,
-              controller: _controller,
-              focusNode: _focusNode,
-              style: tokens.typography.body.copyWith(
-                color: spec.textColor,
-              ),
-              cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.fg3,
-              selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              inputFormatters: formatters,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmit,
-              onSelectionChanged: _handleSelectionChanged,
-              readOnly: widget.readOnly || widget.disabled,
-              textCapitalization: widget.textCapitalization,
-              autocorrect: widget.autocorrect,
-              enableSuggestions: widget.enableSuggestions,
-              obscureText: widget.obscureText,
-              autofocus: widget.autofocus,
-              autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
-              paintCursorAboveText: true,
-              showSelectionHandles: _showSelectionHandles,
-              selectionControls: LayrzTextSelectionControls.instance,
-              contextMenuBuilder: _cachedContextMenuBuilder,
-              magnifierConfiguration: _cachedMagnifierConfiguration ?? const TextMagnifierConfiguration(),
-              maxLines: 1,
-              minLines: 1,
-              expands: false,
-            ),
-          ),
-        ),
-      ),
+      child: LayrzEditableField(config: fieldConfig),
     );
-  }
-
-  void _handleTap() {
-    widget.onTap?.call();
-    if (!widget.disabled && !widget.readOnly) {
-      _focusNode.requestFocus();
-    }
-  }
-
-  /// Determines whether selection handles should be displayed based on the selection cause.
-  ///
-  /// Handles are shown for touch-driven selection causes (longPress, drag) but not for
-  /// keyboard-driven selection. Follows Material Design patterns:
-  /// - longPress and drag: show handles (user is interacting directly)
-  /// - keyboard: hide handles (selection is driven by software keyboard)
-  /// - readOnly + collapsed: hide handles (no editing possible)
-  /// - disabled: hide handles (field is not editable)
-  bool _shouldShowSelectionHandles(SelectionChangedCause? cause) {
-    // Don't show handles if field is disabled
-    if (widget.disabled) {
-      return false;
-    }
-
-    // Don't show handles for keyboard-driven selection
-    if (cause == SelectionChangedCause.keyboard) {
-      return false;
-    }
-
-    // Don't show handles if read-only and selection is collapsed (just a cursor)
-    if (widget.readOnly && _controller.selection.isCollapsed) {
-      return false;
-    }
-
-    // Show handles for touch-driven causes: long press, drag, force press
-    if (cause == SelectionChangedCause.longPress ||
-        cause == SelectionChangedCause.drag ||
-        cause == SelectionChangedCause.forcePress) {
-      return true;
-    }
-
-    // For other causes (tap), only show if there's text to select
-    if (_controller.text.isNotEmpty) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// Called when the text selection changes.
-  ///
-  /// Updates [_showSelectionHandles] based on the [cause] and rebuilds
-  /// if the visibility changed. Also invokes the user's [onChanged] callback.
-  void _handleSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
-    final bool willShowSelectionHandles = _shouldShowSelectionHandles(cause);
-    if (willShowSelectionHandles != _showSelectionHandles) {
-      setState(() {
-        _showSelectionHandles = willShowSelectionHandles;
-      });
-    }
   }
 }
