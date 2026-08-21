@@ -52,7 +52,7 @@ class LayrzBottomSheet {
   ///   - Values must be in ascending order
   ///   - An assertion fires if constraints are violated, failing loudly at the call site
   ///   rather than deep in the SDK.
-  ///   If null, defaults to [0.5, 1.0] (half-height and full-height snap points).
+  ///   If null, defaults to [0.5, 0.95] (half-height and full-height-minus-status-bar snap points).
   /// - [initialSize]: the fraction of the screen height the sheet initially occupies.
   ///   Defaults to 0.5 (half the screen). Must be between [minSize] and [maxSize].
   /// - [minSize]: the minimum fraction of screen height the sheet can be dragged down to.
@@ -107,7 +107,7 @@ class LayrzBottomSheet {
     );
 
     // Use default snap sizes if not provided
-    final effectiveSnapSizes = snapSizes ?? [0.5, 1.0];
+    final effectiveSnapSizes = snapSizes ?? [0.5, 0.95];
 
     final navigator = Navigator.of(
       context,
