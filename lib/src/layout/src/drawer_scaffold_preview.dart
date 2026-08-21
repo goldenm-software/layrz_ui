@@ -50,6 +50,7 @@ class _DrawerScaffoldPreviewState extends State<_DrawerScaffoldPreview> {
   Widget build(BuildContext context) {
     return LayrzLayoutDrawerScaffold(
       backgroundColor: const Color(0xFFFAFAFA),
+      drawerBackgroundColor: const Color(0xFFFFFFFF),
       topBarBuilder: (openDrawer) => Container(
         height: 56,
         color: const Color(0xFFFFFFFF),
@@ -61,7 +62,7 @@ class _DrawerScaffoldPreviewState extends State<_DrawerScaffoldPreview> {
                 onTap: openDrawer,
                 child: Icon(
                   MdiIcons.menu,
-                  size: 24,
+                  size: kLayrzLayoutIconSize,
                 ),
               ),
               const SizedBox(width: 16),

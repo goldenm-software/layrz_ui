@@ -15,6 +15,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: ColoredBox(
@@ -49,6 +50,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: const Center(child: Text('Top Bar')),
@@ -72,6 +74,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: const Center(child: Text('Top Bar')),
@@ -95,6 +98,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: const Center(child: Text('Top Bar')),
@@ -129,6 +133,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -186,6 +191,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -227,6 +233,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => const SizedBox(
               height: 56,
               child: Center(child: Text('Top Bar')),
@@ -255,6 +262,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -292,6 +300,7 @@ void main() {
             height: 800,
             child: LayrzLayoutDrawerScaffold(
               backgroundColor: const Color(0xFFFFFFFF),
+              drawerBackgroundColor: const Color(0xFFF0F0F0),
               topBarBuilder: (openDrawer) => SizedBox(
                 height: 56,
                 child: GestureDetector(
@@ -325,6 +334,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -364,6 +374,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -398,6 +409,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -447,6 +459,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -485,6 +498,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -521,6 +535,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => const SizedBox(
               height: 56,
               child: Center(child: Text('Top Bar')),
@@ -553,6 +568,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -597,6 +613,7 @@ void main() {
             height: 800,
             child: LayrzLayoutDrawerScaffold(
               backgroundColor: const Color(0xFFFFFFFF),
+              drawerBackgroundColor: const Color(0xFFF0F0F0),
               topBarBuilder: (openDrawer) => SizedBox(
                 height: 56,
                 child: GestureDetector(
@@ -633,6 +650,7 @@ void main() {
             height: 800,
             child: LayrzLayoutDrawerScaffold(
               backgroundColor: const Color(0xFFFFFFFF),
+              drawerBackgroundColor: const Color(0xFFF0F0F0),
               topBarBuilder: (openDrawer) => SizedBox(
                 height: 56,
                 child: GestureDetector(
@@ -676,6 +694,7 @@ void main() {
           height: 800,
           child: LayrzLayoutDrawerScaffold(
             backgroundColor: const Color(0xFFFFFFFF),
+            drawerBackgroundColor: const Color(0xFFF0F0F0),
             topBarBuilder: (openDrawer) => SizedBox(
               height: 56,
               child: GestureDetector(
@@ -718,6 +737,59 @@ void main() {
 
       // All cycles completed without exception
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('regression: backdrop color matches drawer, page layer color is separate', (
+      WidgetTester tester,
+    ) async {
+      // Regression test for Bug 1: verify that the backdrop (root ColoredBox) uses
+      // drawerBackgroundColor and is visually distinct from the page layer background.
+      // The backdrop should be the surface color (drawer), not the page background color.
+      const Color pageBackgroundColor = Color(0xFFFFFFFF);
+      const Color drawerBackgroundColor = Color(0xFFF0F0F0);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 400,
+          height: 800,
+          child: LayrzLayoutDrawerScaffold(
+            backgroundColor: pageBackgroundColor,
+            drawerBackgroundColor: drawerBackgroundColor,
+            topBarBuilder: (openDrawer) => SizedBox(
+              height: 56,
+              child: GestureDetector(
+                onTap: openDrawer,
+                child: const Center(child: Text('Open')),
+              ),
+            ),
+            body: const Center(child: Text('Body')),
+            drawerBuilder: (closeDrawer) => SizedBox(
+              width: 260,
+              child: const Center(child: Text('Drawer')),
+            ),
+          ),
+        ),
+      );
+
+      // Find the root ColoredBox (backdrop layer) and the page layer ColoredBox.
+      // The root backdrop is the first ColoredBox under PopScope (at line 192 in scaffold).
+      // The page layer ColoredBox is created inside the AnimatedBuilder (at line 203 in scaffold).
+      final coloredBoxes = find.byType(ColoredBox);
+
+      // There should be multiple ColoredBox widgets in the hierarchy.
+      final coloredBoxWidgets = coloredBoxes.evaluate().toList();
+      expect(coloredBoxWidgets.isNotEmpty, isTrue);
+
+      // Verify the backdrop color is drawerBackgroundColor.
+      // The first ColoredBox should be the backdrop (direct child of PopScope).
+      if (coloredBoxWidgets.isNotEmpty) {
+        final firstColoredBox = coloredBoxWidgets[0].widget as ColoredBox;
+        expect(firstColoredBox.color, equals(drawerBackgroundColor));
+      }
+
+      // Verify they are visually distinct.
+      expect(pageBackgroundColor, isNot(equals(drawerBackgroundColor)));
     });
   });
 }

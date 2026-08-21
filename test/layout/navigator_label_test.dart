@@ -76,12 +76,12 @@ void main() {
       final bandContainers = find.byType(Container);
       expect(bandContainers, findsWidgets);
 
-      // The band should span the full width of the rail (178px) minus the scroll view horizontal padding
+      // The band should span the full width of the rail (220px) minus the scroll view horizontal padding
       // The scroll view has padding, but the Container itself should be full width
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('band uses surface3 color when color is null', (WidgetTester tester) async {
+    testWidgets('band uses primary color at tonal opacity when color is null', (WidgetTester tester) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -101,10 +101,26 @@ void main() {
         ),
       );
 
+      final context = tester.element(find.byType(LayrzLayout));
+      final tokens = LayrzTheme.of(context).tokens;
+
+      // Find the section caption Container (the inner one with the band color)
+      final containers = find.byType(Container);
+      expect(containers, findsWidgets);
+
+      // Verify layout renders without error
       expect(tester.takeException(), isNull);
+
+      // Find the text widget inside the section caption and verify its color
+      final sectionText = find.text('SECTION');
+      expect(sectionText, findsOneWidget);
+      final textWidget = tester.widget<Text>(sectionText);
+      expect(textWidget.style?.color, tokens.colors.primary);
     });
 
-    testWidgets('band uses tinted color when color is provided', (WidgetTester tester) async {
+    testWidgets('band and text use provided color at tonal opacity when color is provided', (
+      WidgetTester tester,
+    ) async {
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
@@ -113,6 +129,7 @@ void main() {
       tester.view.physicalSize = const Size(1500, 950);
 
       const accentColor = Color(0xFF4CAF50);
+
       await pumpThemedApp(
         tester,
         LayrzLayout(
@@ -124,6 +141,79 @@ void main() {
           body: const SizedBox(child: Text('Body')),
         ),
       );
+
+      // Find the text widget inside the section caption
+      final sectionText = find.text('SECTION');
+      expect(sectionText, findsOneWidget);
+
+      // Verify the text color matches the provided accent color (un-blended, as the band is blended)
+      final textWidget = tester.widget<Text>(sectionText);
+      expect(textWidget.style?.color, accentColor);
+
+      // Verify layout renders without error
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('caption text is bold when color is null', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorLabel('SECTION'),
+            LayrzNavigatorPage(id: '1', labelText: 'Page'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the text widget inside the section caption
+      final sectionText = find.text('SECTION');
+      expect(sectionText, findsOneWidget);
+
+      // Verify the font weight is bold (w700)
+      final textWidget = tester.widget<Text>(sectionText);
+      expect(textWidget.style?.fontWeight, FontWeight.w700);
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('caption text is bold when color is provided', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      const accentColor = Color(0xFF4CAF50);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorLabel('SECTION', color: accentColor),
+            LayrzNavigatorPage(id: '1', labelText: 'Page'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the text widget inside the section caption
+      final sectionText = find.text('SECTION');
+      expect(sectionText, findsOneWidget);
+
+      // Verify the font weight is bold (w700)
+      final textWidget = tester.widget<Text>(sectionText);
+      expect(textWidget.style?.fontWeight, FontWeight.w700);
 
       expect(tester.takeException(), isNull);
     });

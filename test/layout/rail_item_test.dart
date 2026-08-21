@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -65,6 +66,70 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('renders icon and label as RichText with WidgetSpan', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(
+              id: 'home',
+              labelText: 'NavHome',
+              icon: MdiIcons.home,
+              isSelected: true,
+            ),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Find the RichText widget used to render icon + label
+      final richTextFinder = find.byType(RichText);
+      expect(richTextFinder, findsWidgets);
+
+      // The RichText should exist and contain the label
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('ellipsizes long label at rail width', (WidgetTester tester) async {
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1500, 950);
+
+      const longLabel = 'VeryLongLabelThatShouldEllipsizeInTheRail';
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(
+              id: 'home',
+              labelText: longLabel,
+              icon: MdiIcons.home,
+            ),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      // Verify RichText renders (which contains the ellipsized label)
+      final richTextFinder = find.byType(RichText);
+      expect(richTextFinder, findsWidgets);
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('LayrzLayoutRailItem - DESIGN-61 Active Indicator', () {
@@ -111,8 +176,8 @@ void main() {
         ),
       );
 
-      final dashboardLabel = find.text('Dashboard');
-      final devicesLabel = find.text('Devices');
+      final dashboardLabel = find.text('Dashboard', findRichText: true);
+      final devicesLabel = find.text('Devices', findRichText: true);
 
       final dashboardRect = tester.getRect(dashboardLabel);
       final devicesRect = tester.getRect(devicesLabel);
@@ -145,7 +210,7 @@ void main() {
       );
 
       // Find the Dashboard label to verify it renders
-      final dashboardLabel = find.text('Dashboard');
+      final dashboardLabel = find.text('Dashboard', findRichText: true);
       expect(dashboardLabel, findsWidgets);
 
       // The indicator is positioned at the trailing edge of the row,

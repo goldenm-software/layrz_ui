@@ -27,6 +27,9 @@ class LayrzLayoutDrawerScaffold extends StatefulWidget {
     /// The background color of the page layer.
     required this.backgroundColor,
 
+    /// The background color of the drawer backdrop (the area behind the page when drawer opens).
+    required this.drawerBackgroundColor,
+
     super.key,
   });
 
@@ -41,6 +44,9 @@ class LayrzLayoutDrawerScaffold extends StatefulWidget {
 
   /// The background color of the page layer.
   final Color backgroundColor;
+
+  /// The background color of the drawer backdrop (the area behind the page when drawer opens).
+  final Color drawerBackgroundColor;
 
   @override
   State<LayrzLayoutDrawerScaffold> createState() => _LayrzLayoutDrawerScaffoldState();
@@ -190,7 +196,7 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
         }
       },
       child: ColoredBox(
-        color: widget.backgroundColor,
+        color: widget.drawerBackgroundColor,
         child: AnimatedBuilder(
           animation: _isDragging ? _controller : _curvedAnimation,
           child: drawerWidget,

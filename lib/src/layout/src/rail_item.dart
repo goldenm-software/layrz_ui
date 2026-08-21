@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'navigator_item.dart';
@@ -46,6 +47,12 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
   @override
   Widget build(BuildContext context) {
     final tokens = widget.tokens;
+    final isCompact = context.isCompact;
+    final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
+    final fontSize = isCompact ? tokens.typography.body.fontSize : tokens.typography.label.fontSize;
+    final itemPadding = isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2;
+    final countFontSize = isCompact ? tokens.typography.body.fontSize : tokens.typography.label.fontSize;
+
     final backgroundColor = widget.isSelected
         ? tokens.colors.primary.withValues(alpha: kLayrzLayoutItemSelectedBackgroundOpacity)
         : _isHovered
@@ -58,56 +65,59 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
         : kLayrzLayoutItemLabelUnselectedFontWeight;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: kLayrzLayoutItemMarginBottom),
+      margin: EdgeInsets.only(bottom: kLayrzLayoutItemMarginBottom),
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
           onTap: widget.onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: kLayrzLayoutItemPaddingVertical,
-              horizontal: kLayrzLayoutItemPaddingHorizontal,
-            ),
+            padding: itemPadding,
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: BorderRadius.circular(kLayrzLayoutItemRadius),
+              borderRadius: BorderRadius.circular(tokens.radius.r2),
             ),
             child: Row(
               children: [
-                // Icon
-                if (widget.page.icon != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: kLayrzLayoutItemGap),
-                    child: Icon(
-                      widget.page.icon,
-                      size: kLayrzLayoutItemIconSize,
-                      color: widget.isSelected ? tokens.colors.primary : tokens.colors.fg3,
-                    ),
-                  ),
-
-                // Label
+                // Icon + label as RichText, count badge and active indicator in outer Row
                 Expanded(
-                  child: Text(
-                    widget.page.labelText,
-                    style: TextStyle(
-                      fontSize: kLayrzLayoutItemLabelFontSize,
-                      fontWeight: labelWeight,
-                      color: labelColor,
-                    ),
+                  child: RichText(
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      children: [
+                        if (widget.page.icon != null) ...[
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Icon(
+                              widget.page.icon,
+                              size: iconSize,
+                              color: widget.isSelected ? tokens.colors.primary : tokens.colors.fg3,
+                            ),
+                          ),
+                          WidgetSpan(child: SizedBox(width: tokens.spacing.sp2)),
+                        ],
+                        TextSpan(
+                          text: widget.page.labelText,
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: labelWeight,
+                            color: labelColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
                 // Count badge
                 if (widget.page.count != null)
                   Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
+                    padding: EdgeInsets.only(left: tokens.spacing.sp2),
                     child: Text(
                       widget.page.count.toString(),
                       style: TextStyle(
-                        fontSize: kLayrzLayoutItemCountFontSize,
+                        fontSize: countFontSize,
                         fontWeight: FontWeight.w500,
                         color: tokens.colors.fg2,
                       ),
