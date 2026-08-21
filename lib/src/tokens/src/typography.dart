@@ -15,32 +15,41 @@ import 'package:layrz_ui/src/fonts/fonts.dart';
 /// - [body]: 16px, w400 — for body text and reading passages (web-equivalent to 1em)
 /// - [label]: 14px, w400 — for labels, buttons, tooltips, and badges
 ///
+/// All styles carry no [TextStyle.overflow] property; text wraps by default. Components that
+/// require truncation due to fixed height constraints must set [overflow] and [maxLines]
+/// explicitly. This is a layout property, not a typography property.
+///
 /// All styles use the font families provided to [LayrzTextTheme.defaults].
 @immutable
 class LayrzTextTheme {
   /// Display style for hero text and splash screens.
   ///
   /// Characteristics: 40px, w700, title font family.
+  /// No [overflow] is set; text wraps by default.
   final TextStyle display;
 
   /// Headline style for page-level headings.
   ///
   /// Characteristics: 24px, w600, title font family.
+  /// No [overflow] is set; text wraps by default.
   final TextStyle headline;
 
   /// Title style for dialog and card titles.
   ///
   /// Characteristics: 20px, w600, title font family.
+  /// No [overflow] is set; text wraps by default.
   final TextStyle title;
 
   /// Body style for body text and reading passages.
   ///
   /// Characteristics: 16px, w400, body font family.
+  /// No [overflow] is set; text wraps by default.
   final TextStyle body;
 
   /// Label style for button labels, input labels, tooltips, and badges.
   ///
   /// Characteristics: 14px, w400, body font family.
+  /// No [overflow] is set; text wraps by default.
   final TextStyle label;
 
   /// Creates a new [LayrzTextTheme] with all text styles explicitly set.
@@ -96,7 +105,6 @@ class LayrzTextTheme {
       fontWeight: fontWeight,
       fontFamily: resolveTitleFamily(fontWeight),
       fontFamilyFallback: titleFallbacks,
-      overflow: TextOverflow.ellipsis,
       decoration: TextDecoration.none,
     );
 
@@ -106,7 +114,6 @@ class LayrzTextTheme {
       fontWeight: fontWeight,
       fontFamily: resolveBodyFamily(fontWeight),
       fontFamilyFallback: bodyFallbacks,
-      overflow: TextOverflow.ellipsis,
       decoration: TextDecoration.none,
     );
 

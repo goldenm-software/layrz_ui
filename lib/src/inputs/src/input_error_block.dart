@@ -7,7 +7,9 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// When error messages are present, displays them using `typography.label` text style
 /// with danger color and bold weight (w700). Errors always render below the field
 /// regardless of viewport width. Bold rendering serves as a deliberate visual signal
-/// to direct the user's attention to what went wrong.
+/// to direct the user's attention to what went wrong. Error text is capped at two lines
+/// with ellipsis overflow to prevent a long list of validation messages from growing
+/// the form unboundedly.
 ///
 /// When `maxLength` is set, displays a character counter in the format `"5/50"` (current/max)
 /// aligned to the right. The counter uses `typography.label` in `fg3` color and remains
@@ -69,6 +71,8 @@ class LayrzInputErrorBlock extends StatelessWidget {
         else if (hasErrors)
           Text(
             errors.join(', '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: tokens.typography.label.copyWith(
               fontWeight: FontWeight.w700,
               color: tokens.colors.danger,
@@ -113,6 +117,8 @@ class _ErrorAndCounterRow extends StatelessWidget {
         Expanded(
           child: Text(
             errors.join(', '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: tokens.typography.label.copyWith(
               fontWeight: FontWeight.w700,
               color: tokens.colors.danger,

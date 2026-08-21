@@ -142,6 +142,10 @@ class LayrzTextTheme {
 
 The five-style scale (collapsed from fifteen in decision D23) provides one clear choice per text role. Variants are accessed via `copyWith(fontSize:)` for deliberate deviations. Font family and color are resolved from theme.
 
+#### Text Wrapping and Overflow
+
+The type scale carries **no `overflow` property**. Text wraps by default unless a component has a structural reason it cannot. Components that require truncation (e.g., single-line badges, fixed-height chrome) explicitly set `maxLines: 1` plus `overflow: TextOverflow.ellipsis` at the render site, not at the token level. This separation ensures the type scale defines typography only, while layout constraints (and the decision to truncate) remain with the component that knows its geometry. See decision D51 for the rationale and the three critical facts about `TextPainter`, `RichText`, and measurement painters.
+
 #### Use in Components
 
 ```dart

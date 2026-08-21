@@ -221,5 +221,46 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets('error text has maxLines: 2 and ellipsis overflow when errors only', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzInputErrorBlock(
+          errors: ['Must be at least 8 characters', 'Must contain uppercase letter'],
+          hideDetails: false,
+        ),
+      );
+
+      final errorText = find.text('Must be at least 8 characters, Must contain uppercase letter');
+      expect(errorText, findsOneWidget);
+
+      final text = tester.widget<Text>(errorText);
+      expect(text.maxLines, equals(2));
+      expect(text.overflow, equals(TextOverflow.ellipsis));
+    });
+
+    testWidgets('error text has maxLines: 2 and ellipsis overflow when errors and counter present', (tester) async {
+      const int maxLength = 50;
+      final controller = TextEditingController(text: 'Test');
+
+      await pumpThemed(
+        tester,
+        LayrzInputErrorBlock(
+          errors: ['Must be at least 8 characters', 'Must contain uppercase letter'],
+          hideDetails: false,
+          maxLength: maxLength,
+          controller: controller,
+        ),
+      );
+
+      final errorText = find.text('Must be at least 8 characters, Must contain uppercase letter');
+      expect(errorText, findsOneWidget);
+
+      final text = tester.widget<Text>(errorText);
+      expect(text.maxLines, equals(2));
+      expect(text.overflow, equals(TextOverflow.ellipsis));
+
+      controller.dispose();
+    });
   });
 }

@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+**Text wrapping by default — no silent truncation.** The type scale (`LayrzTextTheme`) no longer bakes `overflow: TextOverflow.ellipsis` into text styles. Text now wraps by default in unbounded space. Components that require fixed-height rendering (buttons, badges, fields, chrome elements) explicitly set `maxLines: 1` and `overflow: TextOverflow.ellipsis` at the render site. This is a **behavioural breaking change**: code that was previously silent-truncating with an ellipsis will now wrap, potentially growing layouts.
+
+The change improves correctness by refusing to hide layout bugs. When a button label is too long, it previously rendered as "Long Label…" silently, hiding the problem. Now it wraps to two lines, alerting the developer to either re-size the button, re-word the label, or explicitly add truncation. See decision D51 for the rationale and three critical facts about how Flutter's text rendering (TextPainter, RichText, Text) actually works — removing the silent truncation from the type scale was essential to correct them.
+
+### Breaking
+
+**Text overflow behaviour** (no API change, no compile-time failure):
+- `Text` widgets with no explicit `overflow` that sit in height-constrained space now wrap instead of truncating. Examples: alert titles, tooltip content.
+- Components that already set `overflow` explicitly are unchanged (button labels, chip labels, and navigator items all use `RichText` with explicit truncation set).
+- **Input error text is now capped at `maxLines: 2` with `overflow: TextOverflow.ellipsis`.** Previously treated as wrappable, device testing revealed that unbounded error text growth reflows the form below. Two lines of validation messaging is legible and useful (e.g., "Must be at least 8 characters, Must contain uppercase letter"), while unlimited growth degrades UX. Consumers relying on longer error messages rendering in full must truncate at the call site or refactor error display.
+- Call sites do NOT fail at compile time; the layout simply grows or overflows visibly.
+- Wrapped text may push parent layouts, causing reflow of pages. Callers must verify their layouts still fit and re-size or explicitly truncate where space is genuinely limited.
+- Migration: No code changes required for text that was already wrapping. For text that grows unexpectedly, add `maxLines: 1, overflow: TextOverflow.ellipsis` to the `Text()` call, or wrap it in a constrained container.
+
+---
+
 ## 0.0.12
 
 **Text selection actions and page-wide toolbar.** `LayrzTextInput` adds an `actions` parameter to customize the text selection toolbar actions (copy, cut, paste, select all). Pass `null` for all four built-in actions, `const {}` to suppress the toolbar, or a custom set of `LayrzSelectableAction` instances. Page-wide text selection (via `SelectableRegion` under `LayrzLayout`) now displays a copy-only toolbar. The field automatically filters actions based on state (obscured fields never offer copy/cut; read-only fields never offer cut/paste). See decision D50 for design details and the five Flutter text selection traps encountered.
