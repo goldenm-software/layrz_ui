@@ -19,3 +19,5 @@ Se espera para mañana:
 * `LayrzDialog`
 * `LayrzBottomSheet`
 * `LayrzAdaptativeModal`
+
+M4 como depende de `LayrzAdaptativeModal`, deberá esperar a que estos estén estables para poder atenderse
