@@ -17,6 +17,7 @@ import 'namespaces/required_fields.dart';
 import 'namespaces/select.dart';
 import 'namespaces/selection.dart';
 import 'namespaces/sheets.dart';
+import 'namespaces/steppers.dart';
 import 'namespaces/table.dart';
 import 'namespaces/taskbar.dart';
 import 'namespaces/weekdays.dart';
@@ -107,6 +108,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nSelectMixin,
         LayrzUiL10nSelectionMixin,
         LayrzUiL10nSheetsMixin,
+        LayrzUiL10nSteppersMixin,
         LayrzUiL10nTableMixin,
         LayrzUiL10nTaskbarMixin,
         LayrzUiL10nWeekdaysMixin {

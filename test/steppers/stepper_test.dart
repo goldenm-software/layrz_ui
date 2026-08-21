@@ -8,15 +8,15 @@ void main() {
   group('LayrzStepper', () {
     final testSteps = [
       const LayrzStep(
-        label: 'Personal',
+        labelText: 'Personal',
         body: SizedBox(child: Text('Personal Info')),
       ),
       const LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: SizedBox(child: Text('Shipping Address')),
       ),
       const LayrzStep(
-        label: 'Review',
+        labelText: 'Review',
         body: SizedBox(child: Text('Review Order')),
       ),
     ];
@@ -206,11 +206,11 @@ void main() {
     testWidgets('step with explicit error state shows error icon', (WidgetTester tester) async {
       final errorSteps = [
         const LayrzStep(
-          label: 'Step 1',
+          labelText: 'Step 1',
           body: SizedBox(child: Text('Content')),
         ),
         LayrzStep(
-          label: 'Step 2',
+          labelText: 'Step 2',
           body: const SizedBox(child: Text('Content')),
           state: LayrzStepperState.error,
         ),
@@ -264,7 +264,7 @@ void main() {
     testWidgets('handles empty body gracefully', (WidgetTester tester) async {
       final emptySteps = [
         const LayrzStep(
-          label: 'Empty',
+          labelText: 'Empty',
           body: SizedBox.shrink(),
         ),
       ];
