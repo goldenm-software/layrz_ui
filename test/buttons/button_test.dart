@@ -768,6 +768,11 @@ void main() {
       });
 
       testWidgets('regression: Fab button is square (width == height)', (tester) async {
+        // Set to non-compact viewport to use regular button height (45)
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1200, 800);
+
         await pumpThemed(
           tester,
           LayrzButton(

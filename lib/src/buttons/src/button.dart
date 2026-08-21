@@ -507,6 +507,30 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
     }
   }
 
+  /// Resolves the button's height, font size, and icon size based on viewport compactness.
+  ///
+  /// Returns a record containing:
+  /// - height: 50 on compact viewports, 45 on regular viewports
+  /// - fontSize: 16 on compact viewports, 14 on regular viewports
+  /// - iconSize: 24 on compact viewports, 22 on regular viewports
+  ///
+  /// This keeps the three values coordinated and ensures they scale together
+  /// as the button adapts to mobile vs desktop viewports.
+  ({double height, double fontSize, double iconSize}) _resolveDimensions(BuildContext context) {
+    if (context.isCompact) {
+      return (
+        height: kLayrzButtonCompactHeight,
+        fontSize: kLayrzButtonCompactFontSize,
+        iconSize: kLayrzButtonCompactIconSize,
+      );
+    }
+    return (
+      height: kLayrzButtonHeight,
+      fontSize: kLayrzButtonFontSize,
+      iconSize: kLayrzButtonIconSize,
+    );
+  }
+
   /// Resolves the accent color from the button's type and optional color override.
   Color _resolveAccent(LayrzTokens tokens) {
     switch (widget.type) {
@@ -529,6 +553,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final accent = _resolveAccent(tokens);
+    final dimensions = _resolveDimensions(context);
 
     final states = _statesController.value;
     if (_effectivelyDisabled && !states.contains(WidgetState.disabled)) {
@@ -552,7 +577,14 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
     final buttonContent = LayoutBuilder(
       builder: (context, constraints) {
-        final buttonWidth = _computeButtonWidth(context, tokens, constraints, spec);
+        final buttonWidth = _computeButtonWidth(
+          context,
+          tokens,
+          constraints,
+          spec,
+          dimensions.fontSize,
+          dimensions.iconSize,
+        );
 
         return FocusableActionDetector(
           onShowHoverHighlight: (show) {
@@ -582,7 +614,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                   duration: tokens.motion.dHover,
                   curve: tokens.motion.easing,
                   width: buttonWidth,
-                  height: kLayrzButtonHeight,
+                  height: dimensions.height,
                   decoration: BoxDecoration(
                     color: spec.backgroundColor,
                     border: Border.all(
@@ -603,18 +635,21 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
                           spec: spec,
                           tokens: tokens,
                           textScaler: MediaQuery.textScalerOf(context),
+                          buttonFontSize: dimensions.fontSize,
+                          buttonIconSize: dimensions.iconSize,
                         )
                       else
                         buildFabContent(
                           icon: widget.icon,
                           spec: spec,
+                          buttonIconSize: dimensions.iconSize,
                         ),
 
                       // Indicator overlay (loading or cooldown).
                       if (isLoading || hasCooldown)
                         Positioned(
-                          left: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
-                          right: spec.borderWidth + kLayrzButtonIndicatorInsetHorizontal,
+                          left: spec.borderWidth + tokens.spacing.sp2,
+                          right: spec.borderWidth + tokens.spacing.sp2,
                           bottom: spec.borderWidth + kLayrzButtonIndicatorInsetBottom,
                           height: kLayrzButtonIndicatorHeight,
                           child: ValueListenableBuilder<double>(
@@ -666,12 +701,24 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   /// This uses the exact same span that [buildButtonContent] renders, ensuring
   /// consistent width calculation without hand-summing icon, separator, and label widths.
   /// Returns the width in logical pixels, accounting for text scaling.
-  double _measureButtonContentWidth(BuildContext context, LayrzTokens tokens, LayrzButtonStyleSpec spec) {
+  ///
+  /// **Parameters**:
+  /// - [buttonFontSize]: The resolved font size for consistent TextPainter measurement.
+  /// - [buttonIconSize]: The resolved icon size for consistent placeholder dimensions.
+  double _measureButtonContentWidth(
+    BuildContext context,
+    LayrzTokens tokens,
+    LayrzButtonStyleSpec spec,
+    double buttonFontSize,
+    double buttonIconSize,
+  ) {
     final span = buildButtonContentSpan(
       labelText: widget.labelText,
       icon: widget.icon,
       spec: spec,
       tokens: tokens,
+      buttonFontSize: buttonFontSize,
+      buttonIconSize: buttonIconSize,
     );
 
     final painter = TextPainter(
@@ -684,9 +731,9 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
     // If the span contains a WidgetSpan (for icon), notify TextPainter of placeholder dimensions.
     if (widget.icon != null) {
       painter.setPlaceholderDimensions(
-        const [
+        [
           PlaceholderDimensions(
-            size: Size(kLayrzButtonIconSize + kLayrzButtonIconSeparator, kLayrzButtonIconSize),
+            size: Size(buttonIconSize + tokens.spacing.sp2, buttonIconSize),
             alignment: PlaceholderAlignment.middle,
           ),
         ],
@@ -699,7 +746,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
 
   /// Computes the button width based on content and constraints.
   ///
-  /// For Fab buttons: returns [kLayrzButtonHeight] (square).
+  /// For Fab buttons: returns the button height (square).
   ///
   /// For non-Fab buttons:
   /// - Measures the shared content span (icon + label) directly via TextPainter
@@ -713,22 +760,36 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
   /// unbounded, the full computed width is used. When bounded, it is clamped
   /// to [maxWidth]. This allows callers to constrain the button via parent
   /// (e.g. `SizedBox(width: 120)`) while still using intrinsic sizing by default.
+  ///
+  /// **Parameters**:
+  /// - [buttonFontSize]: The resolved font size for proper TextPainter measurement.
+  /// - [buttonIconSize]: The resolved icon size for proper placeholder dimensions.
+  /// - [buttonHeight]: The resolved button height for Fab sizing.
   double _computeButtonWidth(
     BuildContext context,
     LayrzTokens tokens,
     BoxConstraints constraints,
     LayrzButtonStyleSpec spec,
+    double buttonFontSize,
+    double buttonIconSize,
   ) {
     final isFab = widget.style.isFab;
+    final dimensions = _resolveDimensions(context);
 
     // Fab is always square.
-    if (isFab) return kLayrzButtonHeight;
+    if (isFab) return dimensions.height;
 
     // Measure content span (icon + label together) — single source of truth.
-    final contentWidth = _measureButtonContentWidth(context, tokens, spec);
+    final contentWidth = _measureButtonContentWidth(
+      context,
+      tokens,
+      spec,
+      buttonFontSize,
+      buttonIconSize,
+    );
 
     // Horizontal padding
-    double computed = contentWidth + (kLayrzButtonHorizontalPadding * 2);
+    double computed = contentWidth + (tokens.spacing.sp3 * 2);
 
     // Border width — all buttons have a Border.all() applied, regardless of color.
     // The border always insets the child, so we must account for it in width computation.

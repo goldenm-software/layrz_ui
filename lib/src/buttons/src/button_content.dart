@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'button_style_spec.dart';
@@ -16,14 +15,20 @@ import 'button_style_spec.dart';
 ///
 /// **Separator**: The gap between icon and label is implemented via `Padding(right:)` on the icon,
 /// keeping placeholder dimensions predictable for measurement.
+///
+/// **Parameters**:
+/// - [buttonFontSize]: The font size for the label text, allowing for responsive sizing on compact viewports.
+/// - [buttonIconSize]: The icon size, allowing for responsive sizing on compact viewports.
 InlineSpan buildButtonContentSpan({
   required String labelText,
   required IconData? icon,
   required LayrzButtonStyleSpec spec,
   required LayrzTokens tokens,
+  required double buttonFontSize,
+  required double buttonIconSize,
 }) {
   final labelStyle = tokens.typography.label.copyWith(
-    fontSize: kLayrzButtonFontSize,
+    fontSize: buttonFontSize,
     color: spec.contentColor,
   );
 
@@ -42,10 +47,10 @@ InlineSpan buildButtonContentSpan({
       WidgetSpan(
         alignment: PlaceholderAlignment.middle,
         child: Padding(
-          padding: const EdgeInsets.only(right: kLayrzButtonIconSeparator),
+          padding: EdgeInsets.only(right: tokens.spacing.sp2),
           child: Icon(
             icon,
-            size: kLayrzButtonIconSize,
+            size: buttonIconSize,
             color: spec.contentColor,
           ),
         ),
@@ -68,23 +73,31 @@ InlineSpan buildButtonContentSpan({
 /// consistently with how it was measured in [_measureButtonContentWidth].
 /// Both paths must use the same scaler to prevent width mismatches at non-standard
 /// text scales.
+///
+/// **Parameters**:
+/// - [buttonFontSize]: The font size for the label text, allowing for responsive sizing on compact viewports.
+/// - [buttonIconSize]: The icon size, allowing for responsive sizing on compact viewports.
 Widget buildButtonContent({
   required String labelText,
   required IconData? icon,
   required LayrzButtonStyleSpec spec,
   required LayrzTokens tokens,
   required TextScaler textScaler,
+  required double buttonFontSize,
+  required double buttonIconSize,
 }) {
   final span = buildButtonContentSpan(
     labelText: labelText,
     icon: icon,
     spec: spec,
     tokens: tokens,
+    buttonFontSize: buttonFontSize,
+    buttonIconSize: buttonIconSize,
   );
 
   return Padding(
-    padding: const EdgeInsets.symmetric(
-      horizontal: kLayrzButtonHorizontalPadding,
+    padding: EdgeInsets.symmetric(
+      horizontal: tokens.spacing.sp3,
     ),
     child: RichText(
       text: span,
@@ -98,9 +111,13 @@ Widget buildButtonContent({
 /// Builds the content layer (centered icon) for a Fab [LayrzButton] using RichText.
 ///
 /// Renders only the icon widget, centered, via RichText with a single WidgetSpan.
+///
+/// **Parameters**:
+/// - [buttonIconSize]: The icon size, allowing for responsive sizing on compact viewports.
 Widget buildFabContent({
   required IconData? icon,
   required LayrzButtonStyleSpec spec,
+  required double buttonIconSize,
 }) {
   if (icon == null) {
     return const SizedBox.shrink();
@@ -111,7 +128,7 @@ Widget buildFabContent({
       alignment: PlaceholderAlignment.middle,
       child: Icon(
         icon,
-        size: kLayrzButtonIconSize,
+        size: buttonIconSize,
         color: spec.contentColor,
       ),
     ),

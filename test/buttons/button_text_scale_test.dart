@@ -69,8 +69,9 @@ void main() {
         final borderWidth = getBorderWidth(tester);
 
         // Expected available width for content = buttonWidth - borders - padding
-        const double kHorizontalPadding = 16; // kLayrzButtonHorizontalPadding
-        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * kHorizontalPadding);
+        final buttonElement = buttonFinder.evaluate().first;
+        final tokens = LayrzTheme.of(buttonElement).tokens;
+        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * tokens.spacing.sp3);
 
         final richTextActualWidth = getRichTextActualWidth(tester);
 
@@ -97,8 +98,9 @@ void main() {
 
         final borderWidth = getBorderWidth(tester);
 
-        const double kHorizontalPadding = 16;
-        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * kHorizontalPadding);
+        final buttonElement = buttonFinder.evaluate().first;
+        final tokens = LayrzTheme.of(buttonElement).tokens;
+        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * tokens.spacing.sp3);
 
         final richTextActualWidth = getRichTextActualWidth(tester);
 
@@ -125,8 +127,9 @@ void main() {
 
         final borderWidth = getBorderWidth(tester);
 
-        const double kHorizontalPadding = 16;
-        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * kHorizontalPadding);
+        final buttonElement = buttonFinder.evaluate().first;
+        final tokens = LayrzTheme.of(buttonElement).tokens;
+        final expectedContentWidth = buttonWidth - (2 * borderWidth) - (2 * tokens.spacing.sp3);
 
         final richTextActualWidth = getRichTextActualWidth(tester);
 
