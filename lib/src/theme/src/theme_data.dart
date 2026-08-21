@@ -108,8 +108,8 @@ class LayrzThemeData {
 
   /// Surface color used for cards, dialogs, and elevated containers.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.sf2].
-  Color get surfaceColor => tokens.colors.sf2;
+  /// Backwards-compatible shorthand for [tokens.colors.sf1].
+  Color get surfaceColor => tokens.colors.sf1;
 
   /// Default text color drawn on [backgroundColor].
   ///

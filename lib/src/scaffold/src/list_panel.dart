@@ -62,7 +62,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
 
     return Container(
       width: 250,
-      color: tokens.colors.sf2,
+      color: tokens.colors.sf1,
       child: Column(
         children: [
           ListHeader(

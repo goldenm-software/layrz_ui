@@ -60,8 +60,8 @@
 - **Added as final fields** (in `copyWith`, `==`, `hashCode`): `sf1` (#FCFCFC), `sf2` (#F7F7F7), `sf3` (#F0F0F0), `sf4` (#E8E8E8). All surfaces now use numbered ramp logic.
 - **Migration table** (all 4 old members):
   - `background` → `sf1` (#FCFCFC) — canvas/scaffold background
-  - `surface` → `sf2` (#F7F7F7) for on-canvas fills (cards, dialogs, panels, alerts), or `sf1` for overlay fills (dropdown menus)
-  - `surface2` → `sf2` (#F7F7F7)
+  - `surface` → `sf1` (#FCFCFC) — on-canvas fills (cards, dialogs, panels, alerts); elevation shadows separate layers
+  - `surface2` → `sf1` (#FCFCFC)
   - `surface3` → `sf3` (#F0F0F0)
 - **New step**: `sf4` (#E8E8E8) added for deepest nesting with maximum contrast.
 - **Rendering change**: Pure white (#FFFFFF) is no longer used anywhere. All elevation shadows and backgrounds now render against the light gray (#FCFCFC) canvas, improving consistency. Default `LayrzShadowTokens.surfaceColor` updated from white to #FCFCFC; `LayrzAvatar` background updated similarly.

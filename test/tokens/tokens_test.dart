@@ -16,10 +16,10 @@ void main() {
       expect(tokens.motion, isA<LayrzMotionTokens>());
     });
 
-    test('light factory wires shadow.surfaceColor to colors.sf2', () {
+    test('light factory wires shadow.surfaceColor to colors.sf1', () {
       final tokens = LayrzTokens.light();
 
-      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf2));
+      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf1));
     });
 
     test('light factory wires border.dividerColor to colors.divider', () {
@@ -107,7 +107,7 @@ void main() {
       final tokens = LayrzTokens.light();
 
       // Verify the key wiring relationships
-      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf2));
+      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf1));
       expect(tokens.border.dividerColor, equals(tokens.colors.divider));
       expect(tokens.shadow.baseRadius, equals(tokens.radius.r2));
 

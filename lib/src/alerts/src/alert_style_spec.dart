@@ -125,9 +125,9 @@ class LayrzAlertStyleSpec {
         // Icon is accent at full strength for severity signal.
         // For interactive alerts, flatten the tonal left panel to prevent shadows
         // from bleeding through the translucent fill.
-        final leftPanel = isInteractive ? tonal.flattenOn(tokens.colors.sf2) : tonal;
+        final leftPanel = isInteractive ? tonal.flattenOn(tokens.colors.sf1) : tonal;
         return LayrzAlertStyleSpec(
-          backgroundColor: tokens.colors.sf2,
+          backgroundColor: tokens.colors.sf1,
           borderColor: accent,
           borderWidth: tokens.border.base,
           iconChipBackground: const Color(0x00000000),
@@ -141,7 +141,7 @@ class LayrzAlertStyleSpec {
         // Split-panel layout: solid accent left panel with solid accent border.
         // Icon uses contrast color for high visibility on the strong background.
         return LayrzAlertStyleSpec(
-          backgroundColor: tokens.colors.sf2,
+          backgroundColor: tokens.colors.sf1,
           borderColor: accent,
           borderWidth: tokens.border.base,
           iconChipBackground: const Color(0x00000000),

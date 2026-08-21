@@ -102,8 +102,8 @@ void main() {
         expect(data.backgroundColor, equals(data.tokens.colors.sf1));
       });
 
-      test('surfaceColor delegates to tokens.colors.sf2', () {
-        expect(data.surfaceColor, equals(data.tokens.colors.sf2));
+      test('surfaceColor delegates to tokens.colors.sf1', () {
+        expect(data.surfaceColor, equals(data.tokens.colors.sf1));
       });
 
       test('textColor delegates to tokens.colors.fg1', () {

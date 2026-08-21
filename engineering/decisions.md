@@ -2862,6 +2862,29 @@ The naming is ad-hoc (no semantic pattern), and the use of pure white (#FFFFFF) 
 
 **Shadow seeding**: `LayrzTokens.light()` factory wires shadow `surfaceColor` to `colors.sf2` (the new on-canvas fill), ensuring shadow calculations are consistent with the surfaces they shade.
 
+### Revert — 2026-08-20
+
+The promotion of on-canvas fills to `sf2` (option c, above) was implemented in DESIGN-111 but reverted immediately. The decision to elevate surface colors was reversed because **elevation shadows provide sufficient visual separation without a colour step**.
+
+**What was reverted**:
+- Cards, panels, alerts, and dialogs: `sf2` → `sf1`
+- `LayrzThemeData.surfaceColor`: returns `sf1` (was `sf2`)
+- `LayrzTokens.light()` shadow seeding: `surfaceColor` wired to `sf1` (was `sf2`)
+- All `flattenOn()` bases in interactive alert styling: `sf2` → `sf1`
+
+**Why the revert**:
+1. **Elevation is a sufficient separator.** Testing showed that elevation shadow (blur, opacity, offset) alone distinguishes cards/panels from the `sf1` canvas. The intermediate step (`sf2`) was redundant.
+2. **Reduces visual complexity.** Using `sf1` for both canvas and on-canvas fills simplifies the palette: fewer distinct grays, fewer cognitive categories.
+3. **Maintains semantic clarity.** On-canvas elements still have distinct shadow tokens; shadow is the elevation cue, not color.
+
+**Correct migration table** (replacing the one above):
+- `colors.background` → `colors.sf1`
+- `colors.surface` → `colors.sf1` (all on-canvas fills now; elevation shadows provide separation)
+- `colors.surface2` → `colors.sf1`
+- `colors.surface3` → `colors.sf3`
+
+**Shadow seeding** (corrected): `LayrzTokens.light()` factory wires shadow `surfaceColor` to `colors.sf1` (the canvas color), not `sf2`.
+
 ### Review Trigger
 
 **Revisit if**:

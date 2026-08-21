@@ -244,7 +244,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
 
     return LayrzLayoutDrawerScaffold(
       backgroundColor: backgroundColor,
-      drawerBackgroundColor: tokens.colors.sf2,
+      drawerBackgroundColor: tokens.colors.sf1,
       topBarBuilder: (openDrawer) => LayrzLayoutTopBar(
         tokens: tokens,
         logo: widget.logo,
