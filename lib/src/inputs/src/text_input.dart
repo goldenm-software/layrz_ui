@@ -172,6 +172,12 @@ class LayrzTextInput extends StatefulWidget {
   /// field never offers copy or cut regardless of what is passed here.
   final Set<LayrzSelectableAction>? actions;
 
+  /// Library-private: Whether to suppress the read-only lock icon.
+  ///
+  /// Used by picker-style inputs that want to be read-only but display their own
+  /// affordance (e.g., a dropdown chevron) instead of a lock icon.
+  final bool _suppressReadOnlyLock;
+
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -211,7 +217,10 @@ class LayrzTextInput extends StatefulWidget {
     this.enableSuggestions = true,
     this.shortcut,
     this.actions,
-  }) : assert(
+    bool suppressReadOnlyLock = false,
+    // ignore: prefer_initializing_formals
+  }) : _suppressReadOnlyLock = suppressReadOnlyLock,
+       assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
        ),
@@ -500,6 +509,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
+      suppressReadOnlyLock: widget._suppressReadOnlyLock,
       child: Listener(
         onPointerDown: widget.disabled ? null : _updateStates,
         onPointerUp: widget.disabled ? null : _updateStates,
