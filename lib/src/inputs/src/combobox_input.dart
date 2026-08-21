@@ -3,8 +3,9 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
 
+import 'combobox_layout.dart';
+import 'combobox_surface.dart';
 import 'text_input.dart';
 
 /// A Material-free combobox input in the layrz_ui design system.
@@ -347,7 +348,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     final filtered = _getFilteredOptions();
     final selected = await LayrzBottomSheet.show<String?>(
       context,
-      builder: (context) => _BottomSheetContent(
+      builder: (context) => BottomSheetContent(
         options: filtered,
         onSelected: _commitValue,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
@@ -393,7 +394,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   ///
   /// On mobile, the overlay is not shown; the bottom sheet is used instead.
   /// This is a no-op builder that returns an empty container.
-  Widget _buildEmptyOverlay(BuildContext context, RawMenuOverlayInfo info) {
+  Widget buildEmptyOverlay(BuildContext context, RawMenuOverlayInfo info) {
     return const SizedBox.shrink();
   }
 
@@ -408,13 +409,13 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
         MenuController.maybeOf(context)?.close();
       },
       child: CustomSingleChildLayout(
-        delegate: _ComboBoxLayoutDelegate(
+        delegate: ComboBoxLayoutDelegate(
           anchorRect: info.anchorRect,
           overlaySize: info.overlaySize,
           tokens: tokens,
           maxHeight: widget.maxOptionsToDisplay * 48.0,
         ),
-        child: _DesktopOverlay(
+        child: DesktopOverlay(
           options: filtered,
           highlightedIndex: _highlightedIndex,
           onSelected: _commitValue,
@@ -476,7 +477,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
         useRootOverlay: true,
         consumeOutsideTaps: false,
         childFocusNode: isCompact ? null : _fieldFocusNode,
-        overlayBuilder: isCompact ? _buildEmptyOverlay : _buildMenuOverlay,
+        overlayBuilder: isCompact ? buildEmptyOverlay : _buildMenuOverlay,
         builder: (context, menuController, child) {
           return LayrzTextInput(
             labelText: widget.labelText,
@@ -519,209 +520,3 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
 ///
 /// Positions the panel below or above the anchor, matching the anchor's width,
 /// and clamping to overlay bounds.
-class _ComboBoxLayoutDelegate extends SingleChildLayoutDelegate {
-  /// The anchor widget's position and size.
-  final Rect anchorRect;
-
-  /// The overlay's full size.
-  final Size overlaySize;
-
-  /// Design tokens for spacing.
-  final LayrzTokens tokens;
-
-  /// Maximum height of the overlay.
-  final double maxHeight;
-
-  /// Creates a new [_ComboBoxLayoutDelegate].
-  _ComboBoxLayoutDelegate({
-    required this.anchorRect,
-    required this.overlaySize,
-    required this.tokens,
-    required this.maxHeight,
-  });
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    // Width matches the anchor, height constrained by max
-    return BoxConstraints(
-      minWidth: anchorRect.width,
-      maxWidth: anchorRect.width,
-      maxHeight: (overlaySize.height - 2 * tokens.spacing.sp2).clamp(0.0, maxHeight),
-    );
-  }
-
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    const gap = 4.0;
-
-    // Calculate Y position: try below, fall back to above
-    final belowY = anchorRect.bottom + gap;
-    final aboveY = anchorRect.top - childSize.height - gap;
-
-    final y = (belowY + childSize.height <= size.height)
-        ? belowY
-        : (aboveY >= 0 ? aboveY : belowY); // If neither fits, prefer below
-
-    // Clamp to overlay bounds
-    final clampedY = y.clamp(0.0, (size.height - childSize.height).clamp(0.0, double.infinity));
-
-    // X matches anchor's left edge
-    return Offset(anchorRect.left, clampedY);
-  }
-
-  @override
-  bool shouldRelayout(_ComboBoxLayoutDelegate oldDelegate) {
-    return oldDelegate.anchorRect != anchorRect ||
-        oldDelegate.overlaySize != overlaySize ||
-        oldDelegate.tokens != tokens ||
-        oldDelegate.maxHeight != maxHeight;
-  }
-}
-
-class _DesktopOverlay extends StatelessWidget {
-  final List<String> options;
-  final int highlightedIndex;
-  final ValueChanged<String> onSelected;
-  final double maxHeight;
-  final String emptyText;
-
-  const _DesktopOverlay({
-    required this.options,
-    required this.highlightedIndex,
-    required this.onSelected,
-    required this.maxHeight,
-    required this.emptyText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    if (options.isEmpty) {
-      return Padding(
-        padding: EdgeInsets.all(tokens.spacing.sp2),
-        child: Text(
-          emptyText,
-          style: tokens.typography.label.copyWith(
-            color: tokens.colors.fg3,
-          ),
-        ),
-      );
-    }
-
-    return SingleChildScrollView(
-      child: Container(
-        decoration: BoxDecoration(
-          color: tokens.colors.sf1,
-          borderRadius: tokens.radius.br3,
-          boxShadow: tokens.shadow.elevation3,
-        ),
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            options.length,
-            (index) => _OptionItem(
-              option: options[index],
-              isHighlighted: index == highlightedIndex,
-              onTap: () => onSelected(options[index]),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OptionItem extends StatelessWidget {
-  final String option;
-  final bool isHighlighted;
-  final VoidCallback onTap;
-
-  const _OptionItem({
-    required this.option,
-    required this.isHighlighted,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        color: isHighlighted ? tokens.colors.sf2 : tokens.colors.sf1,
-        padding: EdgeInsets.symmetric(
-          vertical: tokens.spacing.sp2,
-          horizontal: tokens.spacing.sp3,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                option,
-                style: tokens.typography.body.copyWith(
-                  color: tokens.colors.fg1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomSheetContent extends StatelessWidget {
-  final List<String> options;
-  final ValueChanged<String> onSelected;
-  final String emptyText;
-
-  const _BottomSheetContent({
-    required this.options,
-    required this.onSelected,
-    required this.emptyText,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    if (options.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(tokens.spacing.sp4),
-          child: Text(
-            emptyText,
-            style: tokens.typography.label.copyWith(
-              color: tokens.colors.fg3,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: options.length,
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () {
-          onSelected(options[index]);
-          Navigator.of(context, rootNavigator: true).pop(options[index]);
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: tokens.spacing.sp3,
-            horizontal: tokens.spacing.sp4,
-          ),
-          child: Text(
-            options[index],
-            style: tokens.typography.body.copyWith(
-              color: tokens.colors.fg1,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
