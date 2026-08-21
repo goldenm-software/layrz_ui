@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
+import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/preview.dart';
 
@@ -120,12 +121,13 @@ class LayrzLayout extends StatefulWidget {
   /// content within this layout. The selection region is entirely absent from the widget
   /// tree, not merely inert.
   ///
-  /// **Desktop behavior**: [SelectableRegion] uses [emptyTextSelectionControls],
-  /// so Ctrl+C and Ctrl+A work on pointer platforms (desktop/web), but the selection
-  /// has no visual handles or toolbar.
+  /// **Desktop behavior**: [SelectableRegion] uses [LayrzTextSelectionControls]
+  /// with a Copy-only toolbar. Text can be selected with click-drag, Ctrl+A, and
+  /// copied with Ctrl+C or the toolbar button.
   ///
-  /// **Touch behavior**: On mobile platforms, selection works but has no handles or
-  /// toolbar, limiting adjustment and copy operations to keyboard shortcuts.
+  /// **Touch behavior**: On mobile platforms, selection works with long-press magnifier,
+  /// selection handles, and a Copy-only toolbar — cut and paste are excluded to keep
+  /// the read-only page focused.
   ///
   /// **Scope**: The region encompasses the layout's body and all widgets mounted within it.
   /// Overlays (dialogs, bottom sheets, menus, tooltips) mounted into the app's Overlay
@@ -205,7 +207,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: emptyTextSelectionControls,
+            selectionControls: LayrzTextSelectionControls(tokens: tokens),
             child: widget.body,
           )
         : widget.body;
@@ -237,7 +239,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: emptyTextSelectionControls,
+            selectionControls: LayrzTextSelectionControls(tokens: tokens),
             child: widget.body,
           )
         : widget.body;
