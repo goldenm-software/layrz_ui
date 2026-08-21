@@ -95,7 +95,7 @@ class _BorderSample extends StatelessWidget {
         Container(
           height: tokens.spacing.sp5,
           decoration: BoxDecoration(
-            color: tokens.colors.surface,
+            color: tokens.colors.sf2,
             border: Border(bottom: side),
           ),
         ),

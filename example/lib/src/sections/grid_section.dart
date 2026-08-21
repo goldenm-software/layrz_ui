@@ -26,7 +26,7 @@ class GridSection extends StatelessWidget {
           // Unit explanation
           Container(
             decoration: BoxDecoration(
-              color: tokens.colors.surface2,
+              color: tokens.colors.sf2,
               borderRadius: tokens.radius.br2,
               border: Border.all(color: tokens.colors.divider, width: 1),
             ),

@@ -65,7 +65,7 @@ class Showroom extends StatelessWidget {
     final tokens = context.tokens;
 
     return ColoredBox(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
       child: SafeArea(
         child: CustomScrollView(
           slivers: [

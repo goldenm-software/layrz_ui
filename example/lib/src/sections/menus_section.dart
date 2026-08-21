@@ -280,7 +280,7 @@ class _MenuShowcaseCard extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(tokens.spacing.sp3),
             decoration: BoxDecoration(
-              color: tokens.colors.surface2,
+              color: tokens.colors.sf2,
               borderRadius: tokens.radius.br2,
             ),
             child: child,

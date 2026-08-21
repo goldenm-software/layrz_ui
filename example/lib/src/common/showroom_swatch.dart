@@ -37,7 +37,7 @@ class ShowroomSwatch extends StatelessWidget {
     final tokens = context.tokens;
 
     // Determine the fill color for text contrast calculation
-    final fillColor = color ?? decoration?.color ?? tokens.colors.surface;
+    final fillColor = color ?? decoration?.color ?? tokens.colors.sf2;
 
     // Auto-select text color based on contrast
     final textColor = fillColor.contrastColor;

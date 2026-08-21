@@ -733,7 +733,7 @@ class _WidgetSlotsShowcase extends StatelessWidget {
                       width: 64,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: tokens.colors.surface2,
+                        color: tokens.colors.sf2,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Center(

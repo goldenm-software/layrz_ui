@@ -400,7 +400,7 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
                           },
                           child: Container(
                             decoration: BoxDecoration(
-                              color: widget.tokens.colors.surface2,
+                              color: widget.tokens.colors.sf2,
                               border: Border.all(
                                 color: widget.tokens.colors.divider,
                                 width: 1,
@@ -455,7 +455,7 @@ class _AnchorBox extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border.all(color: tokens.colors.divider, width: 1),
         borderRadius: tokens.radius.br2,
-        color: tokens.colors.surface2,
+        color: tokens.colors.sf2,
       ),
       padding: EdgeInsets.all(tokens.spacing.sp2),
       child: tooltip,

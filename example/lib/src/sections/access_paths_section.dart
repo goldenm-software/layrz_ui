@@ -151,7 +151,7 @@ class _AccessPathComparison extends StatelessWidget {
                   child: Text(
                     match ? '✓' : '✗',
                     style: tokens.typography.label.copyWith(
-                      color: tokens.colors.surface,
+                      color: tokens.colors.sf2,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -192,7 +192,7 @@ class _AccessPathRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: tokens.colors.surface3, borderRadius: tokens.radius.br2),
+      decoration: BoxDecoration(color: tokens.colors.sf3, borderRadius: tokens.radius.br2),
       padding: tokens.spacing.pd2,
       child: Row(
         children: [

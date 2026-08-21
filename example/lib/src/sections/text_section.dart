@@ -275,7 +275,7 @@ class _SelectionDemo extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(tokens.spacing.sp3),
                   decoration: BoxDecoration(
-                    color: tokens.colors.surface2,
+                    color: tokens.colors.sf2,
                     borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
@@ -297,7 +297,7 @@ class _SelectionDemo extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(tokens.spacing.sp3),
                   decoration: BoxDecoration(
-                    color: tokens.colors.surface2,
+                    color: tokens.colors.sf2,
                     borderRadius: tokens.radius.br2,
                     border: Border.all(color: tokens.colors.divider),
                   ),
@@ -344,7 +344,7 @@ class _ParagraphDemo extends StatelessWidget {
         Container(
           padding: EdgeInsets.all(tokens.spacing.sp3),
           decoration: BoxDecoration(
-            color: tokens.colors.surface2,
+            color: tokens.colors.sf2,
             borderRadius: tokens.radius.br3,
             border: Border.all(color: tokens.colors.divider),
           ),

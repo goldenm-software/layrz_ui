@@ -174,7 +174,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
             duration: tokens.motion.dHover,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
-              color: _isHovered ? tokens.colors.primary : tokens.colors.surface,
+              color: _isHovered ? tokens.colors.primary : tokens.colors.sf2,
               borderRadius: tokens.radius.br2,
               border: Border.all(
                 color: _isHovered ? tokens.colors.primary : tokens.colors.divider,
@@ -186,7 +186,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
               style: tokens.typography.label.copyWith(
-                color: _isHovered ? tokens.colors.surface : tokens.colors.fg1,
+                color: _isHovered ? tokens.colors.sf2 : tokens.colors.fg1,
               ),
               child: Text('Hover me (${tokens.motion.dHover.inMilliseconds}ms)'),
             ),
@@ -231,7 +231,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
             duration: tokens.motion.dPress,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
-              color: _isPressed ? tokens.colors.primary : tokens.colors.surface,
+              color: _isPressed ? tokens.colors.primary : tokens.colors.sf2,
               borderRadius: tokens.radius.br2,
               border: Border.all(
                 color: _isPressed ? tokens.colors.primary : tokens.colors.divider,
@@ -243,7 +243,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
               duration: tokens.motion.dPress,
               curve: tokens.motion.easing,
               style: tokens.typography.label.copyWith(
-                color: _isPressed ? tokens.colors.surface : tokens.colors.fg1,
+                color: _isPressed ? tokens.colors.sf2 : tokens.colors.fg1,
               ),
               child: Text('Press me (${tokens.motion.dPress.inMilliseconds}ms)'),
             ),

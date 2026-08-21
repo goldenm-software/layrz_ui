@@ -87,7 +87,7 @@ class _SpacingRuler extends StatelessWidget {
                       child: Container(
                         height: tokens.spacing.sp2,
                         decoration: BoxDecoration(
-                          color: tokens.colors.surface2,
+                          color: tokens.colors.sf2,
                           borderRadius: tokens.radius.br2,
                         ),
                         alignment: Alignment.centerLeft,

@@ -34,10 +34,10 @@ class ColorsSection extends StatelessWidget {
           _ColorCategory(
             title: 'Surface',
             colors: [
-              _ColorSample('background', tokens.colors.background),
-              _ColorSample('surface', tokens.colors.surface),
-              _ColorSample('surface2', tokens.colors.surface2),
-              _ColorSample('surface3', tokens.colors.surface3),
+              _ColorSample('sf1', tokens.colors.sf1),
+              _ColorSample('sf2', tokens.colors.sf2),
+              _ColorSample('sf3', tokens.colors.sf3),
+              _ColorSample('sf4', tokens.colors.sf4),
             ],
           ),
 
@@ -175,7 +175,7 @@ class _OverlaySwatch extends StatelessWidget {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: tokens.colors.surface,
+            color: tokens.colors.sf2,
             borderRadius: tokens.radius.br2,
           ),
           alignment: Alignment.center,
