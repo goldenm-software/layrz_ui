@@ -7,13 +7,18 @@ import 'selectable_action.dart';
 /// A Material-free text selection toolbar displaying action buttons.
 ///
 /// [LayrzSelectionToolbar] renders a horizontal list of action buttons for text selection
-/// operations (copy, cut, paste, select all, and custom actions). The toolbar
-/// is styled using design system tokens and positioned via [Offset] anchors.
+/// operations (copy, cut, paste, select all, and custom actions).
 ///
-/// **Usage** typically occurs via [EditableText.contextMenuBuilder], which provides
-/// the toolbar anchor positions and selection state. The toolbar is NOT positioned
-/// automatically; the caller (TextSelectionOverlay) is responsible for wrapping it
-/// in a [Positioned] widget or similar layout mechanism.
+/// **Surface treatment**: The toolbar uses the dark surface treatment (matching [LayrzTooltip]):
+/// - Background fill: `tokens.colors.fg1` (dark foreground)
+/// - Content color: `tokens.colors.sf1` (light surface text)
+/// - Text style: `tokens.typography.label`
+/// - Border radius: `tokens.radius.r2`
+///
+/// **Sizing and positioning**: The toolbar sizes to its content rather than the overlay width.
+/// Horizontal scrolling is enabled only when content exceeds available width. Positioning is
+/// handled via [CustomSingleChildLayout] with [TextSelectionToolbarLayoutDelegate] to
+/// automatically position above the selection and flip below when necessary.
 class LayrzSelectionToolbar extends StatelessWidget {
   /// The set of actions to display as buttons in the toolbar.
   final Set<LayrzSelectableAction> actions;
@@ -56,9 +61,9 @@ class LayrzSelectionToolbar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: tokens.colors.sf1,
+        color: tokens.colors.fg1,
         borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
-        boxShadow: tokens.shadow.elevation1,
+        boxShadow: tokens.shadow.elevation2,
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -103,13 +108,13 @@ class LayrzSelectionToolbar extends StatelessWidget {
                 Icon(
                   action.icon,
                   size: 18.0,
-                  color: tokens.colors.fg1,
+                  color: tokens.colors.sf1,
                 ),
               if (action.icon != null) SizedBox(width: tokens.spacing.sp2),
               Text(
                 label,
                 style: tokens.typography.label.copyWith(
-                  color: tokens.colors.fg1,
+                  color: tokens.colors.sf1,
                 ),
               ),
             ],

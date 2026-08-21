@@ -380,11 +380,15 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       return true;
     }).toSet();
 
-    // Wire selection toolbar with actual clipboard/selection handling
-    // The TextSelectionOverlay handles positioning of the toolbar automatically.
-    return LayrzSelectionToolbar(
+    // Get the toolbar anchor positions from the editable text state
+    // These provide both above and below positions for automatic flip logic
+    final anchors = editableTextState.contextMenuAnchors;
+
+    // Build the toolbar widget
+    final toolbar = LayrzSelectionToolbar(
       actions: resolvedActions,
-      anchorAbove: Offset.zero,
+      anchorAbove: anchors.primaryAnchor,
+      anchorBelow: anchors.secondaryAnchor,
       tokens: tokens,
       onActionPressed: (actionType) {
         switch (actionType) {
@@ -405,6 +409,17 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
             customAction.onPressed();
         }
       },
+    );
+
+    // Wrap the toolbar with CustomSingleChildLayout to handle positioning
+    // The TextSelectionToolbarLayoutDelegate automatically positions above the selection
+    // and flips below when there is not enough room above
+    return CustomSingleChildLayout(
+      delegate: TextSelectionToolbarLayoutDelegate(
+        anchorAbove: anchors.primaryAnchor,
+        anchorBelow: anchors.secondaryAnchor ?? Offset.zero,
+      ),
+      child: toolbar,
     );
   }
 

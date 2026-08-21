@@ -118,5 +118,78 @@ void main() {
       expect(find.byType(Container), findsWidgets);
       expect(find.byType(Text), findsOneWidget);
     });
+
+    testWidgets('toolbar fill is fg1 (dark surface)', (WidgetTester tester) async {
+      final toolbar = LayrzSelectionToolbar(
+        actions: {LayrzSelectableAction.copy},
+        anchorAbove: Offset.zero,
+        tokens: tokens,
+        onActionPressed: (_) {},
+      );
+
+      await _pumpToolbar(tester, toolbar);
+
+      // Find the Container with the toolbar decoration
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      // Verify the container has dark surface treatment (fg1 background)
+      final containerWidget = containerFinder.first.evaluate().single.widget as Container;
+      final decoration = containerWidget.decoration as BoxDecoration?;
+      expect(decoration, isNotNull);
+      expect(decoration!.color, tokens.colors.fg1);
+    });
+
+    testWidgets('toolbar content color is sf1 (light text)', (WidgetTester tester) async {
+      final toolbar = LayrzSelectionToolbar(
+        actions: {LayrzSelectableAction.copy},
+        anchorAbove: Offset.zero,
+        tokens: tokens,
+        onActionPressed: (_) {},
+      );
+
+      await _pumpToolbar(tester, toolbar);
+
+      // Find the Text widget
+      final textFinder = find.byType(Text);
+      expect(textFinder, findsOneWidget);
+
+      // Verify the text color is sf1 (light surface)
+      final textWidget = textFinder.evaluate().single.widget as Text;
+      expect(textWidget.style?.color, tokens.colors.sf1);
+    });
+
+    testWidgets('toolbar sizes to content rather than full width', (WidgetTester tester) async {
+      final toolbar = LayrzSelectionToolbar(
+        actions: {LayrzSelectableAction.copy},
+        anchorAbove: Offset.zero,
+        tokens: tokens,
+        onActionPressed: (_) {},
+      );
+
+      // Pump with a wide constraint to verify it doesn't expand to fill
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+          home: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 800),
+              child: toolbar,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Get the toolbar's actual size
+      final toolbarSize = tester.getSize(find.byType(LayrzSelectionToolbar));
+
+      // Verify the toolbar's width is less than the maximum constraint (it sizes to content)
+      expect(toolbarSize.width, lessThan(800));
+
+      // The toolbar should be small enough to fit its buttons
+      expect(toolbarSize.width, greaterThan(0));
+      expect(toolbarSize.height, greaterThan(0));
+    });
   });
 }
