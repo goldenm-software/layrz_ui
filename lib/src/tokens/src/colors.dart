@@ -8,7 +8,7 @@ import 'palette.dart';
 /// Immutable semantic color tokens for the layrz_ui design system.
 ///
 /// All colors are defined for light mode only. Colors are organized by purpose:
-/// brand colors ([primary]), surface colors ([surface], [surface2], [surface3]),
+/// brand colors ([primary]), surface ramp ([sf1]–[sf4]),
 /// foreground/text colors ([fg1]–[fg4]), semantic status colors ([danger], [success],
 /// [warning], [info]), and structural colors ([divider], [overlay]).
 ///
@@ -19,17 +19,17 @@ class LayrzColorTokens {
   /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
   final LayrzColorSwatch primary;
 
-  /// The scaffold / canvas background color drawn behind all surfaces.
-  final Color background;
+  /// The lightest surface step — the page canvas and the default fill for cards and panels.
+  final Color sf1;
 
-  /// The main surface color used for cards, dialogs, and elevated containers.
-  final Color surface;
+  /// The second surface step — used for raised containers on the canvas background.
+  final Color sf2;
 
-  /// A secondary surface color for nested containers and popovers.
-  final Color surface2;
+  /// The third surface step — used for nested containers and secondary elevations.
+  final Color sf3;
 
-  /// The deepest nesting surface color for multi-level nested components.
-  final Color surface3;
+  /// The darkest surface step — used for deepest nesting and maximum contrast surfaces.
+  final Color sf4;
 
   /// The highest-contrast text color for labels and body text.
   final Color fg1;
@@ -76,10 +76,10 @@ class LayrzColorTokens {
   /// Creates a new [LayrzColorTokens].
   const LayrzColorTokens({
     required this.primary,
-    required this.background,
-    required this.surface,
-    required this.surface2,
-    required this.surface3,
+    required this.sf1,
+    required this.sf2,
+    required this.sf3,
+    required this.sf4,
     required this.fg1,
     required this.fg2,
     required this.fg3,
@@ -104,10 +104,10 @@ class LayrzColorTokens {
   }) {
     return LayrzColorTokens(
       primary: LayrzColorSwatch.fromColor(primary),
-      background: kLightBackgroundColor,
-      surface: const Color(0xFFFFFFFF),
-      surface2: const Color(0xFFF7F7F7),
-      surface3: const Color(0xFFF0F0F0),
+      sf1: const Color(0xFFFCFCFC),
+      sf2: const Color(0xFFF7F7F7),
+      sf3: const Color(0xFFF0F0F0),
+      sf4: const Color(0xFFE8E8E8),
       fg1: const Color(0xFF1A1A2E),
       fg2: const Color(0xFF4A4A5A),
       fg3: const Color(0xFF9E9E9E),
@@ -129,10 +129,10 @@ class LayrzColorTokens {
   /// Returns a copy of this color tokens object with the given fields replaced.
   LayrzColorTokens copyWith({
     Color? primary,
-    Color? background,
-    Color? surface,
-    Color? surface2,
-    Color? surface3,
+    Color? sf1,
+    Color? sf2,
+    Color? sf3,
+    Color? sf4,
     Color? fg1,
     Color? fg2,
     Color? fg3,
@@ -150,10 +150,10 @@ class LayrzColorTokens {
       primary: primary == null
           ? this.primary
           : (primary is LayrzColorSwatch ? primary : LayrzColorSwatch.fromColor(primary)),
-      background: background ?? this.background,
-      surface: surface ?? this.surface,
-      surface2: surface2 ?? this.surface2,
-      surface3: surface3 ?? this.surface3,
+      sf1: sf1 ?? this.sf1,
+      sf2: sf2 ?? this.sf2,
+      sf3: sf3 ?? this.sf3,
+      sf4: sf4 ?? this.sf4,
       fg1: fg1 ?? this.fg1,
       fg2: fg2 ?? this.fg2,
       fg3: fg3 ?? this.fg3,
@@ -185,10 +185,10 @@ class LayrzColorTokens {
       other is LayrzColorTokens &&
           runtimeType == other.runtimeType &&
           primary == other.primary &&
-          background == other.background &&
-          surface == other.surface &&
-          surface2 == other.surface2 &&
-          surface3 == other.surface3 &&
+          sf1 == other.sf1 &&
+          sf2 == other.sf2 &&
+          sf3 == other.sf3 &&
+          sf4 == other.sf4 &&
           fg1 == other.fg1 &&
           fg2 == other.fg2 &&
           fg3 == other.fg3 &&
@@ -205,10 +205,10 @@ class LayrzColorTokens {
   @override
   int get hashCode => Object.hash(
     primary,
-    background,
-    surface,
-    surface2,
-    surface3,
+    sf1,
+    sf2,
+    sf3,
+    sf4,
     fg1,
     fg2,
     fg3,

@@ -4,8 +4,8 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/src/avatar_source.dart';
 import 'package:layrz_ui/src/images/src/image.dart';
 
-/// Private: opaque white background for images and emojis.
-const Color _kWhiteBackground = Color(0xFFFFFFFF);
+/// Private: opaque light gray background for images and emojis.
+const Color _kWhiteBackground = Color(0xFFFCFCFC);
 
 /// A static avatar display widget for the layrz_ui design system.
 ///

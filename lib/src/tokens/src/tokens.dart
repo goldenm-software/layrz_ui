@@ -20,7 +20,7 @@ import 'typography.dart';
 /// integration is complete.
 ///
 /// The [LayrzTokens.light] factory is the single wiring point where derived tokens
-/// are seeded consistently: [LayrzShadowTokens] is seeded with [LayrzColorTokens.surface]
+/// are seeded consistently: [LayrzShadowTokens] is seeded with [LayrzColorTokens.sf2]
 /// and [LayrzRadiusTokens.base], [LayrzBorderTokens] is seeded with [LayrzColorTokens.divider],
 /// and [LayrzTextTheme] is constructed with [LayrzColorTokens.fg1] as the text color.
 @immutable
@@ -65,7 +65,7 @@ class LayrzTokens {
   ///
   /// Wires all derived tokens consistently:
   /// - [LayrzColorTokens.light] is seeded with [primaryColor]
-  /// - [LayrzShadowTokens] is seeded with the resulting [colors.surface] and [radius.r2]
+  /// - [LayrzShadowTokens] is seeded with the resulting [colors.sf2] and [radius.r2]
   /// - [LayrzBorderTokens] is seeded with [colors.divider]
   /// - [LayrzTextTheme.defaults] is constructed with [colors.fg1] as the text color
   ///   and the provided font specifications
@@ -100,7 +100,7 @@ class LayrzTokens {
 
     // Build derived tokens seeded from colors and radius
     final shadowTokens = LayrzShadowTokens(
-      surfaceColor: colorTokens.surface,
+      surfaceColor: colorTokens.sf2,
       baseRadius: radiusTokens.r2,
     );
 

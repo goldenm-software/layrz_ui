@@ -103,13 +103,13 @@ class LayrzThemeData {
 
   /// Canvas / scaffold background color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.background].
-  Color get backgroundColor => tokens.colors.background;
+  /// Backwards-compatible shorthand for [tokens.colors.sf1].
+  Color get backgroundColor => tokens.colors.sf1;
 
   /// Surface color used for cards, dialogs, and elevated containers.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.surface].
-  Color get surfaceColor => tokens.colors.surface;
+  /// Backwards-compatible shorthand for [tokens.colors.sf2].
+  Color get surfaceColor => tokens.colors.sf2;
 
   /// Default text color drawn on [backgroundColor].
   ///

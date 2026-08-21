@@ -18,7 +18,7 @@ import 'package:flutter/widgets.dart';
 class LayrzShadowTokens {
   /// Surface color (card background) used in shadow calculations.
   ///
-  /// Defaults to white (#FFFFFF). Used as the base surface color for the
+  /// Defaults to #FCFCFC (light gray). Used as the base surface color for the
   /// elevation algorithm.
   final Color surfaceColor;
 
@@ -41,7 +41,7 @@ class LayrzShadowTokens {
 
   /// Creates a new [LayrzShadowTokens].
   const LayrzShadowTokens({
-    this.surfaceColor = const Color(0xFFFFFFFF),
+    this.surfaceColor = const Color(0xFFFCFCFC),
     this.baseRadius = 8.0,
     this.shadowColor = const Color(0xFF000000),
     this.outlineColor = const Color.fromRGBO(0, 0, 0, 0.1),
