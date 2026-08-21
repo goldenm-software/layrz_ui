@@ -221,15 +221,43 @@ void main() {
 
         // RawRadio exposes checked/unchecked state via semantics flags, not through colour alone.
         // This satisfies WCAG 1.4.1: information must not be conveyed by colour alone.
-        // Find both radio buttons to verify they exist and render.
-        expect(find.byWidgetPredicate((w) => w is RawRadio), findsWidgets);
+        final radioFinder = find.byWidgetPredicate((w) => w is RawRadio);
+        expect(radioFinder, findsWidgets);
 
-        // The semantics tree is built (ensureSemantics() above), enabling
-        // screen readers to perceive the selected/unselected distinction.
-        // Verify the widget renders without error with value='a' indicating
-        // the selection is encoded in the widget state, accessible to AT.
+        // Verify the two options are in the semantics tree with their labels.
         expect(find.text('Option A'), findsOneWidget);
         expect(find.text('Option B'), findsOneWidget);
+
+        // Verify the RawRadio widgets expose checked state via semantics.
+        // The first radio (Option A, value='a') is selected.
+        expect(
+          tester.getSemantics(find.byWidgetPredicate((w) => w is RawRadio).at(0)),
+          matchesSemantics(
+            hasCheckedState: true,
+            isChecked: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            isInMutuallyExclusiveGroup: true,
+            isFocusable: true,
+            hasTapAction: true,
+            hasFocusAction: true,
+          ),
+        );
+
+        // The second radio (Option B, value='b') is unselected.
+        expect(
+          tester.getSemantics(find.byWidgetPredicate((w) => w is RawRadio).at(1)),
+          matchesSemantics(
+            hasCheckedState: true,
+            isChecked: false,
+            hasEnabledState: true,
+            isEnabled: true,
+            isInMutuallyExclusiveGroup: true,
+            isFocusable: true,
+            hasTapAction: true,
+            hasFocusAction: true,
+          ),
+        );
       } finally {
         handle.dispose();
       }
