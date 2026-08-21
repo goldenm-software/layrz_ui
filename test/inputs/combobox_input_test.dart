@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/combobox_surface.dart';
 
 import '../helpers/pump_themed_app.dart';
 
@@ -262,6 +263,78 @@ void main() {
       expect(controller.text, 'Valid1');
 
       controller.dispose();
+    });
+
+    testWidgets('flips above when there is no room below', (tester) async {
+      tester.view.physicalSize = const Size(1600, 400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Column(
+          children: const [
+            Spacer(),
+            LayrzComboBoxInput(
+              labelText: 'TZ',
+              options: ['America/Panama', 'America/Peru'],
+            ),
+          ],
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzComboBoxInput));
+      await tester.pumpAndSettle();
+
+      final field = tester.getRect(find.byType(LayrzComboBoxInput));
+      final panel = tester.getRect(find.byWidgetPredicate((w) => w is DesktopOverlay));
+
+      expect(
+        panel.bottom,
+        lessThanOrEqualTo(field.top),
+        reason: 'panel must sit above the field when there is no room below',
+      );
+      expect(
+        panel.width,
+        closeTo(field.width, 0.5),
+        reason: 'a web-style combobox list matches its field width',
+      );
+    });
+
+    testWidgets('opens below when there is room', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Column(
+          children: [
+            const LayrzComboBoxInput(
+              labelText: 'TZ',
+              options: ['America/Panama', 'America/Peru'],
+            ),
+            const Spacer(),
+          ],
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzComboBoxInput));
+      await tester.pumpAndSettle();
+
+      final field = tester.getRect(find.byType(LayrzComboBoxInput));
+      final panel = tester.getRect(find.byWidgetPredicate((w) => w is DesktopOverlay));
+
+      expect(
+        panel.top,
+        greaterThanOrEqualTo(field.bottom),
+        reason: 'panel must sit below the field when there is room',
+      );
+      expect(
+        panel.width,
+        closeTo(field.width, 0.5),
+        reason: 'a web-style combobox list matches its field width',
+      );
     });
   });
 }
