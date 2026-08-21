@@ -63,9 +63,6 @@ class LayrzBottomSheet {
   /// - [showDragHandle]: whether to render a visual drag handle above the content.
   ///   Defaults to `true`. When true, the entire header region is draggable
   ///   (more forgiving than handle-only drag, which is easy to miss on touch).
-  ///   to a full-screen presentation. The drag handle remains visible for dismissal.
-  ///   Defaults to `false`. This parameter is out of scope for the current implementation;
-  ///   setting it to `true` is accepted but the feature may be added in a future release.
   /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
   ///   Defaults to `false`. Set to `true` when showing from a context that does not have
   ///   its own navigator (e.g. a nested route on desktop).
