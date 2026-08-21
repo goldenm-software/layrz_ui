@@ -7,6 +7,7 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
+import 'input_chrome.dart';
 import 'input_slot.dart';
 import 'select_input_surface.dart';
 
@@ -195,6 +196,7 @@ class LayrzSelectInput<T> extends StatefulWidget {
 class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   late FocusNode _focusNode;
   late TextEditingController _controller;
+  final Set<WidgetState> _states = {};
 
   @override
   void initState() {
@@ -300,6 +302,16 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    // Resolve slots
+    final prefixSlot = resolvePrefixSlot(
+      prefixIcon: widget.prefixIcon,
+      prefix: widget.prefix,
+      prefixText: widget.prefixText,
+      onPrefixTap: widget.onPrefixTap,
+    );
+
     final suffixSlot = resolveSuffixSlot(
       suffixIcon: widget.suffixIcon,
       suffix: widget.suffix,
@@ -307,36 +319,62 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       onSuffixTap: widget.onSuffixTap,
     );
 
-    // Add dropdown chevron to the suffix slot
+    // Add dropdown chevron to the suffix slot if not provided
     final finalSuffixSlot = suffixSlot.hasContent
         ? suffixSlot
         : LayrzInputSuffixSlot(
             icon: MdiIcons.chevronDown,
           );
 
-    return LayrzTextInput(
+    // Compute states
+    if (widget.disabled) {
+      _states.add(WidgetState.disabled);
+    } else {
+      _states.remove(WidgetState.disabled);
+    }
+
+    // Find the selected item's label text
+    String? selectedLabel;
+    if (widget.value != null) {
+      for (final item in widget.items) {
+        if (item.value == widget.value) {
+          selectedLabel = item.labelText;
+          break;
+        }
+      }
+    }
+
+    // Build the content display widget
+    final contentChild = Padding(
+      padding: tokens.spacing.pd2,
+      child: Text(
+        selectedLabel ?? '',
+        style: tokens.typography.body,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+
+    return LayrzInputChrome(
       labelText: widget.labelText,
       hintText: widget.hintText,
       isRequired: widget.isRequired,
-      prefixIcon: widget.prefixIcon,
-      prefix: widget.prefix,
-      prefixText: widget.prefixText,
-      onPrefixTap: widget.onPrefixTap,
-      suffixIcon: finalSuffixSlot.icon,
-      suffix: finalSuffixSlot.widget,
-      suffixText: finalSuffixSlot.text,
-      onSuffixTap: finalSuffixSlot.onTap,
-      helpTitleText: widget.helpTitleText,
-      helpContentText: widget.helpContentText,
+      prefixSlot: prefixSlot,
+      suffixSlot: finalSuffixSlot,
       disabled: widget.disabled,
       readOnly: true,
       errors: widget.errors,
       hideDetails: widget.hideDetails,
+      states: _states,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
       controller: _controller,
-      focusNode: _focusNode,
       padding: widget.padding,
-      onTap: widget.disabled ? null : _openSurface,
       suppressReadOnlyLock: true,
+      child: GestureDetector(
+        onTap: widget.disabled ? null : _openSurface,
+        child: contentChild,
+      ),
     );
   }
 }

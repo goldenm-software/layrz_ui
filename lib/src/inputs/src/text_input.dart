@@ -171,12 +171,6 @@ class LayrzTextInput extends StatefulWidget {
   /// field never offers copy or cut regardless of what is passed here.
   final Set<LayrzSelectableAction>? actions;
 
-  /// Library-private: Whether to suppress the read-only lock icon.
-  ///
-  /// Used by picker-style inputs that want to be read-only but display their own
-  /// affordance (e.g., a dropdown chevron) instead of a lock icon.
-  final bool _suppressReadOnlyLock;
-
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -216,10 +210,7 @@ class LayrzTextInput extends StatefulWidget {
     this.enableSuggestions = true,
     this.shortcut,
     this.actions,
-    bool suppressReadOnlyLock = false,
-    // ignore: prefer_initializing_formals
-  }) : _suppressReadOnlyLock = suppressReadOnlyLock,
-       assert(
+  }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
        ),
@@ -364,51 +355,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
-      suppressReadOnlyLock: widget._suppressReadOnlyLock,
-      child: Listener(
-        onPointerDown: widget.disabled ? null : _updateStates,
-        onPointerUp: widget.disabled ? null : _updateStates,
-        onPointerCancel: widget.disabled ? null : _updateStates,
-        child: MouseRegion(
-          onEnter: widget.disabled ? null : (_) => setState(() => _states.add(WidgetState.hovered)),
-          onExit: widget.disabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
-          child: gestureDetectorBuilder.buildGestureDetector(
-            child: EditableText(
-              key: _editableTextKey,
-              rendererIgnoresPointer: true,
-              controller: _controller,
-              focusNode: _focusNode,
-              style: tokens.typography.body.copyWith(
-                color: spec.textColor,
-              ),
-              cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.fg3,
-              selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              inputFormatters: formatters,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmit,
-              onSelectionChanged: _handleSelectionChanged,
-              readOnly: widget.readOnly || widget.disabled,
-              textCapitalization: widget.textCapitalization,
-              autocorrect: widget.autocorrect,
-              enableSuggestions: widget.enableSuggestions,
-              obscureText: widget.obscureText,
-              autofocus: widget.autofocus,
-              autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
-              paintCursorAboveText: true,
-              showSelectionHandles: _showSelectionHandles,
-              selectionControls: LayrzTextSelectionControls.instance,
-              contextMenuBuilder: _cachedContextMenuBuilder,
-              magnifierConfiguration: _cachedMagnifierConfiguration ?? const TextMagnifierConfiguration(),
-              maxLines: 1,
-              minLines: 1,
-              expands: false,
-            ),
-          ),
-        ),
-      ),
+      child: LayrzEditableField(config: fieldConfig),
     );
   }
 }
