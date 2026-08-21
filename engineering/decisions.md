@@ -2891,3 +2891,110 @@ The promotion of on-canvas fills to `sf2` (option c, above) was implemented in D
 - Adopters report that `sf1` (light gray overlay on light gray canvas) reads as insufficient visual separation for persistent overlay panels (dropdowns, popovers). Contingency: add an `sf0` (#FAFAFA) or shift overlay fills to `sf2`.
 - The ramp is too shallow (4 steps) and components need intermediate nesting levels. Contingency: expand to 5–6 steps.
 
+
+---
+
+## D50: Material-Free Text Selection — Field Actions, Page Toolbar, Flutter Traps
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design / Selection Framework
+
+### Context
+
+Text selection in Flutter's `EditableText` and `SelectableRegion` is deeply coupled to Material Design conventions. layrz_ui, being Material-free, needed to:
+1. Customize the selection toolbar in text fields to show configurable actions (copy, cut, paste, select all)
+2. Provide toolbar for page-wide text selection (under `SelectableRegion` in `LayrzLayout`)
+3. Understand and work around five non-obvious Flutter defaults that silently break selection if left unchecked
+
+### Design
+
+**Field selection toolbar**: `LayrzTextInput` adds an `actions` parameter:
+- When `null`, the field offers all four built-in actions (copy, cut, paste, select all) as permitted by field state
+- When `const {}`, the toolbar is suppressed entirely
+- When populated with a set of `LayrzSelectableAction` instances, those actions appear in the toolbar
+- The set is intersected with what the field's state permits: obscured fields never offer copy/cut; read-only fields never offer cut/paste
+
+**Built-in actions**: Exposed as static methods on `LayrzSelectableAction`:
+- `copy()`, `cut()`, `paste()`, `selectAll()`
+
+**Custom actions**: Callers create `LayrzSelectableAction(label: (context) => '...', onPressed: () => ...)`
+
+**Important constraint**: Custom actions cannot be const. The type overrides `operator==`, making const instances non-hashable (Dart error). Workaround: use `static final` instead.
+
+**Page-wide selection**: `SelectableRegion` under `LayrzLayout` now displays a copy-only toolbar when text is selected. This is hardcoded and non-customizable.
+
+### Rejected Options
+
+**`LayrzSelectableTools` shared provider**: A previous draft proposed a shared context-scoped controller/provider that both field and page region would read to determine available actions. This was rejected because:
+1. The field carries its own `Set<LayrzSelectableAction>`, which is the source of truth
+2. A shared provider conflates field-level and page-level concerns, mixing two independent selection contexts
+3. It adds unnecessary indirection without solving a real problem (both can independently resolve their actions)
+
+**Android ProcessTextService extras**: Android has a built-in mechanism to pass action intents to custom apps (e.g., "share to Twitter"). We deliberately exclude this from the toolbar because:
+1. It is Android-only and not portable to iOS/web
+2. layrz_ui does not target that use case; the toolbar is lightweight
+3. Integrating it would complicate the toolbar builder significantly
+
+### The Five Flutter Traps
+
+During implementation, five silent-failure defaults were discovered:
+
+#### Trap 1: `rendererIgnoresPointer` defaults to false
+
+`EditableText.rendererIgnoresPointer` defaults to `false`. When false, `RenderEditable` claims pointer events and wins the gesture arena, so a fully-wired `TextSelectionGestureDetectorBuilder` never fires.
+
+**Fix**: Set `rendererIgnoresPointer: true`. Material does this at `text_field.dart:1726`.
+
+**Why silent**: The gesture detector is wired correctly; it's just never invoked because the renderer blocks it first.
+
+#### Trap 2: `selectionControls` and `magnifierConfiguration` must be stable instances
+
+`EditableText.didUpdateWidget()` disposes and recreates the selection overlay whenever `selectionControls` or `magnifierConfiguration` differs (lines 3464–3473). Showing the toolbar itself triggers a rebuild of the parent, which creates a new set of these objects, which disposes the overlay mid-display, which crashes.
+
+**Fix**: Cache both as instance variables, initialized once in `initState()`, and reuse the same reference across rebuilds.
+
+**Why silent**: The overlay shows momentarily, then vanishes. If the tap happens to be captured before disposal completes, no crash is visible. The behavior looks like a tap not opening the toolbar.
+
+#### Trap 3: `TextSelectionControls` must mix in `TextSelectionHandleControls`
+
+`TextSelectionControls` alone is insufficient. The `contextMenuBuilder` parameter is ignored in favour of the deprecated `buildToolbar()` method unless the controls mix in `TextSelectionHandleControls` (text_selection.dart:472–481, documented at `:74-85`).
+
+**Fix**: Use `class LayrzTextSelectionControls extends TextSelectionControls with TextSelectionHandleControls`.
+
+**Compounding trap**: Stubbing `buildToolbar()` to return an empty container then yields a toolbar that shows correctly and is blank. This reads like the custom toolbar is working, but `contextMenuBuilder` is never called.
+
+**Why silent**: `buildToolbar()` is deprecated but still invoked. The callback parameter is documented as ignored in the presence of `buildToolbar()`, but the relationship is not obvious in the API.
+
+#### Trap 4: `showSelectionHandles` defaults to false
+
+`EditableText.showSelectionHandles` defaults to `false` (editable_text.dart:862). The overlay builds the handles then hides them (`:4531-4532`).
+
+**Fix**: Drive `showSelectionHandles` per `SelectionChangedCause` in the field's `onSelectionChanged` callback. Material sets it to true for long-press and drag, false for keyboard-driven selection (text_field.dart:1168, `:1424-1426`, `:1692`).
+
+**Why silent**: Without this, selection works (keyboard, toolbar appear), but the draggable handles are invisible. It reads like selection is broken, not that handles are just hidden.
+
+#### Trap 5: Selection overlay is not created eagerly
+
+The selection overlay is created lazily, not eagerly. It requires the field to be **focused** and the selection to have changed **with a cause**. Calling `showToolbar()` on an unfocused field returns `false` silently (editable_text.dart:5184–5212).
+
+**Consequence**: Tests must focus the field and use a real gesture (not a synthetic selection assignment) to trigger the overlay. `controller.selection = TextSelection(...)` alone will not show handles or toolbar.
+
+**Why silent**: The API returns `false`, but callers rarely check. The toolbar never appears, which reads like the implementation is broken.
+
+### Consequences
+
+- All five traps must be addressed in code. Omitting any one of them results in plausible-looking but broken text selection.
+- None of the traps are discoverable from the API surface (no warnings, no errors, no inline documentation).
+- **Lifecycle fact that looks like a bug**: The selection overlay is not created until the field is focused AND the selection changes with a cause. This is intentional for efficiency but counter-intuitive.
+- `LayrzLayout`'s `SelectableRegion` needs its own `contextMenuBuilder` once the text selection controls mix in `TextSelectionHandleControls`, or page selection crashes with a null check (selectable_region.dart:1389).
+
+### Related Decisions
+
+- D32, D33, D34: Text input styling and layout
+- D15: Interaction state affordances (no size/geometry changes on hover/press)
+
+### Review Trigger
+
+If Flutter's text selection API is refactored in a future version, revisit these traps to see if any are no longer necessary.
+

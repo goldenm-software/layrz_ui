@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+**Text selection actions and page-wide toolbar.** `LayrzTextInput` adds an `actions` parameter to customize the text selection toolbar actions (copy, cut, paste, select all). Pass `null` for all four built-in actions, `const {}` to suppress the toolbar, or a custom set of `LayrzSelectableAction` instances. Page-wide text selection (via `SelectableRegion` under `LayrzLayout`) now displays a copy-only toolbar. The field automatically filters actions based on state (obscured fields never offer copy/cut; read-only fields never offer cut/paste). See decision D50 for design details and the five Flutter text selection traps encountered.
+
 **Input family: `dense` parameter removed.** The `dense` parameter is entirely removed from `LayrzTextInput` and all picker-style inputs (`LayrzDateInput`, `LayrzTimeInput`, `LayrzSelectInput`, etc.). Only one density remains: uniform `pd2` (8 logical pixels) padding on all sides. Callers needing tighter geometry use the `padding:` parameter explicitly. This is a **breaking change** for any consumer code using `dense:`. See decision D47 for full context and the removal rationale.
 
 **Token system refactor: spacing and radius to semantic level ramps.** Both `LayrzSpacingTokens` and `LayrzRadiusTokens` move from ad-hoc pixel-named members to five semantic levels (1–5) sharing the value scale 4, 8, 16, 24, 32 — consistent with the pre-existing shadow elevation pattern. This is a **breaking change** requiring migration of every spacing and radius call site. See decision D46 for full context and migration guide.

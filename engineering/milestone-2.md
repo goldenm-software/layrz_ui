@@ -23,7 +23,7 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 10 | LayrzButtonGroup (overflow actions menu) | Done |
 | 11 | LayrzAvatar and LayrzImage | Done |
 | 12 | LayrzText (selectable text) | Done |
-| 13 | Material-free text selection (drag handles, toolbar, magnifier) | Todo |
+| 13 | Material-free text selection (drag handles, toolbar, magnifier) | Done |
 
 **Note**: This table is the authoritative record of M2 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
 
