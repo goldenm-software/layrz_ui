@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 
 /// Widget that displays a magnifier tracking the user's finger during text selection.
@@ -30,7 +31,7 @@ class _LayrzMagnifierWidget extends StatelessWidget {
     return ValueListenableBuilder<MagnifierInfo>(
       valueListenable: magnifierInfo,
       builder: (context, info, child) {
-        return _buildMagnifier(info);
+        return _buildMagnifier(context, info);
       },
     );
   }
@@ -42,7 +43,10 @@ class _LayrzMagnifierWidget extends StatelessWidget {
   /// - Magnifier X position: finger position, clamped to current line boundaries
   /// - Magnifier Y position: based on caret's center, positioned above with fixed offset
   /// - Focal point: calculated relative to magnifier position, shows content under finger
-  Widget _buildMagnifier(MagnifierInfo info) {
+  /// - Returns a Positioned widget to place the magnifier on screen
+  Widget _buildMagnifier(BuildContext context, MagnifierInfo info) {
+    final tokens = context.tokens;
+
     // Material's magnifier dimensions: wide and short (77.37 × 37.9)
     const magnifierSize = Size(77.37, 37.9);
     const magnificationScale = 1.25;
@@ -63,48 +67,60 @@ class _LayrzMagnifierWidget extends StatelessWidget {
 
     // Magnifier Y position: use caret's center, positioned above by the offset
     final caretCenterY = info.caretRect.center.dy;
-    final magnifierTopLeft = Offset(magnifierX, caretCenterY) - basicMagnifierOffset;
+
+    // Unadjusted magnifier position (may be off-screen)
+    final Rect unadjustedMagnifierRect = Offset(magnifierX, caretCenterY) - basicMagnifierOffset & magnifierSize;
+
+    // Clamp magnifier to screen bounds
+    final screenRect = Offset.zero & MediaQuery.sizeOf(context);
+    final Rect screenBoundsAdjustedMagnifierRect = MagnifierController.shiftWithinBounds(
+      bounds: screenRect,
+      rect: unadjustedMagnifierRect,
+    );
+
+    final magnifierPosition = screenBoundsAdjustedMagnifierRect.topLeft;
 
     // Calculate focal point based on finger position relative to magnifier
     // The focal point is what part of the text appears in the magnifier view
     final horizontalMaxFocalPointEdgeInsets = (magnifierSize.width / 2) / magnificationScale;
 
     // Determine the global focal point X position
-    final double focalPointGlobalX;
+    final double newGlobalFocalPointX;
     if (info.fieldBounds.width < horizontalMaxFocalPointEdgeInsets * 2) {
       // Field is narrow: center the focal point in the field
-      focalPointGlobalX = info.fieldBounds.center.dx;
+      newGlobalFocalPointX = info.fieldBounds.center.dx;
     } else {
       // Field is wide: clamp focal point to keep text visible in magnifier
-      focalPointGlobalX = (magnifierTopLeft.dx + magnifierSize.width / 2).clamp(
-        info.fieldBounds.left + horizontalMaxFocalPointEdgeInsets,
-        info.fieldBounds.right - horizontalMaxFocalPointEdgeInsets,
-      );
+      final minX = info.fieldBounds.left + horizontalMaxFocalPointEdgeInsets;
+      final maxX = info.fieldBounds.right - horizontalMaxFocalPointEdgeInsets;
+      newGlobalFocalPointX = screenBoundsAdjustedMagnifierRect.center.dx.clamp(minX, maxX);
     }
 
     // Convert global focal point to magnifier-relative offset
-    final focalPointRelativeX = focalPointGlobalX - magnifierTopLeft.dx;
+    final newRelativeFocalPointX = newGlobalFocalPointX - screenBoundsAdjustedMagnifierRect.center.dx;
 
-    // Vertical focal point: standard offset + half magnifier height
-    final focalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2;
+    // Y component adjustment for screen bounds: if magnifier was shifted up/down,
+    // we need to adjust the focal point to account for that shift
+    final focalPointAdjustmentY = unadjustedMagnifierRect.top - screenBoundsAdjustedMagnifierRect.top;
 
-    return RawMagnifier(
-      size: magnifierSize,
-      magnificationScale: magnificationScale,
-      decoration: MagnifierDecoration(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(magnifierSize.height / 2),
-        ),
-        shadows: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.15),
-            blurRadius: 8.0,
-            offset: Offset(0, 4),
+    // Vertical focal point: standard offset + adjustment for screen bounds
+    final focalPointY = kStandardVerticalFocalPointShift + focalPointAdjustmentY;
+
+    return Positioned(
+      left: magnifierPosition.dx,
+      top: magnifierPosition.dy,
+      child: RawMagnifier(
+        size: magnifierSize,
+        magnificationScale: magnificationScale,
+        decoration: MagnifierDecoration(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(tokens.radius.full),
           ),
-        ],
+          shadows: tokens.shadow.elevation2,
+        ),
+        clipBehavior: Clip.hardEdge,
+        focalPointOffset: Offset(newRelativeFocalPointX, focalPointY),
       ),
-      clipBehavior: Clip.hardEdge,
-      focalPointOffset: Offset(focalPointRelativeX, focalPointY),
     );
   }
 }

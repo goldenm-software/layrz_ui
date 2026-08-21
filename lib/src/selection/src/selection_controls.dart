@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
@@ -53,7 +55,7 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
     // behavior to allow the framework's drag recognizers to work.
     const handleSize = Size(22.0, 22.0);
 
-    return GestureDetector(
+    final handle = GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.translucent,
       child: MouseRegion(
@@ -64,27 +66,44 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
           child: CustomPaint(
             size: handleSize,
             painter: LayrzSelectionHandlePainter(
-              type: type,
               color: tokens.colors.primary,
             ),
           ),
         ),
       ),
     );
+
+    // Rotate the handle based on type to point in the correct direction.
+    // The base teardrop points toward the top-left (up-left for right handle).
+    // We rotate it based on the handle type:
+    // - left: rotate 90° (π/2) to point up-right
+    // - right: no rotation, points up-left
+    // - collapsed: rotate 45° (π/4) to point up
+    return switch (type) {
+      TextSelectionHandleType.left => Transform.rotate(
+        angle: math.pi / 2.0,
+        child: handle,
+      ), // points up-right
+      TextSelectionHandleType.right => handle, // points up-left
+      TextSelectionHandleType.collapsed => Transform.rotate(
+        angle: math.pi / 4.0,
+        child: handle,
+      ), // points up
+    };
   }
 
   @override
   Offset getHandleAnchor(TextSelectionHandleType type, double textLineHeight) {
     // The anchor point determines where the handle's teardrop points attach to the text.
     // Each handle type uses a different anchor to align the square corner with the selection edge.
-    // These anchors match the fixed 22x22 handle size.
+    // These anchors match the fixed 22x22 handle size and Material's implementation.
     const handleSize = 22.0;
     return switch (type) {
-      // Collapsed: anchor at the center-top, with teardrop hanging below
+      // Collapsed: anchor at the center-top, point hanging above (after rotation)
       TextSelectionHandleType.collapsed => Offset(handleSize / 2, -4),
-      // Left: anchor at the right edge, teardrop points up-right
+      // Left: anchor at the right edge (after rotation to point up-right)
       TextSelectionHandleType.left => Offset(handleSize, 0),
-      // Right: anchor at the left edge, teardrop points up-left
+      // Right: anchor at the left edge (base position, points up-left)
       TextSelectionHandleType.right => Offset.zero,
     };
   }
