@@ -47,12 +47,10 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   });
 
   @override
-  State<LayrzSelectInputSurface<T>> createState() =>
-      _LayrzSelectInputSurfaceState<T>();
+  State<LayrzSelectInputSurface<T>> createState() => _LayrzSelectInputSurfaceState<T>();
 }
 
-class _LayrzSelectInputSurfaceState<T>
-    extends State<LayrzSelectInputSurface<T>> {
+class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>> {
   late TextEditingController _searchController;
   late FocusNode _searchFocusNode;
   late FocusNode _listFocusNode;
@@ -164,9 +162,7 @@ class _LayrzSelectInputSurfaceState<T>
               hintText: l10n.selectSearch,
               controller: _searchController,
               focusNode: _searchFocusNode,
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? MdiIcons.close
-                  : null,
+              suffixIcon: _searchController.text.isNotEmpty ? MdiIcons.close : null,
               onSuffixTap: _searchController.text.isNotEmpty
                   ? () {
                       _searchController.clear();
@@ -254,8 +250,8 @@ class _SelectItemRow<T> extends StatelessWidget {
     final backgroundColor = isSelected
         ? tokens.colors.primary.withValues(alpha: 0.1)
         : isHighlighted
-            ? tokens.colors.fg3.withValues(alpha: 0.1)
-            : Color.fromARGB(0, 0, 0, 0);
+        ? tokens.colors.fg3.withValues(alpha: 0.1)
+        : Color.fromARGB(0, 0, 0, 0);
 
     // Determine text color
     final textColor = isSelected ? tokens.colors.primary : tokens.colors.fg1;
@@ -272,7 +268,8 @@ class _SelectItemRow<T> extends StatelessWidget {
           children: [
             // Item content (custom or default)
             Expanded(
-              child: item.child ??
+              child:
+                  item.child ??
                   Text(
                     item.labelText,
                     maxLines: 1,

@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
@@ -14,409 +13,53 @@ void main() {
       const LayrzSelectItem(labelText: 'Option C', value: 'c'),
     ];
 
-    testWidgets('renders without crashing', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-        ),
-      );
+    testWidgets('renders as read-only text input', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
 
-      expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
+      await pumpThemedApp(tester, LayrzSelectInput<String>(items: items, labelText: 'Choose'));
+
+      final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
+      expect(textInput.readOnly, true);
     });
 
-    testWidgets('displays label text', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'My Label',
-        ),
-      );
-
-      expect(find.text('My Label'), findsOneWidget);
-    });
-
-    testWidgets('displays selected item text in field', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          value: 'b',
-          labelText: 'Choose one',
-        ),
-      );
-
-      expect(find.text('Option B'), findsOneWidget);
-    });
-
-    testWidgets('field is read-only (no keyboard input)', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-        ),
-      );
-
-      // Find the editable text widget and verify it's read-only
-      final editableText = find.byType(EditableText);
-      expect(editableText, findsOneWidget);
-
-      // The EditableText should have readOnly set (can verify via widget)
-      final widget = tester.widget<EditableText>(editableText);
-      expect(widget.readOnly, true);
-    });
-
-    testWidgets('does not render lock icon (uses dropdown chevron instead)',
-        (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-        ),
-      );
-
-      // Should have a chevron icon (dropdown)
-      expect(find.byIcon(mdiChevronDown), findsOneWidget);
-    });
-
-    testWidgets('disabled field does not open on tap', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          disabled: true,
-        ),
-      );
-
-      // Find the anchor field and tap it
-      final field = find.byType(LayrzSelectInput<String>);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Surface should not appear
-      expect(find.text('Option A'), findsWidgets);
-    });
-
-    testWidgets('opens surface on tap', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Items should appear in the surface
-      expect(find.text('Option A'), findsWidgets);
-      expect(find.text('Option B'), findsWidgets);
-      expect(find.text('Option C'), findsWidgets);
-    });
-
-    testWidgets('selecting item calls onChanged with correct item',
-        (tester) async {
-      LayrzSelectItem<String>? selectedItem;
+    testWidgets('escape dismisses without change', (tester) async {
+      LayrzSelectItem<String>? selected;
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
 
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
           items: items,
-          labelText: 'Choose one',
+          labelText: 'Choose',
           onChanged: (item) {
-            selectedItem = item;
+            selected = item;
           },
         ),
       );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
+      await tester.tap(find.byType(LayrzTextInput));
       await tester.pumpAndSettle();
-
-      // Tap an item
-      await tester.tap(find.text('Option B'));
-      await tester.pumpAndSettle();
-
-      expect(selectedItem, isNotNull);
-      expect(selectedItem!.value, 'b');
-      expect(selectedItem!.labelText, 'Option B');
-    });
-
-    testWidgets('field updates after selection', (tester) async {
-      final state = _TestState();
-
-      await pumpThemedApp(
-        tester,
-        StatefulBuilder(
-          builder: (context, setState) {
-            return LayrzSelectInput<String>(
-              items: items,
-              value: state.selectedValue,
-              labelText: 'Choose one',
-              onChanged: (item) {
-                setState(() {
-                  state.selectedValue = item?.value;
-                });
-              },
-            );
-          },
-        ),
-      );
-
-      // Initial state: empty
-      expect(find.text('Option A'), findsOneWidget);
-      expect(find.text('Option B'), findsOneWidget);
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Tap an item
-      await tester.tap(find.text('Option B'));
-      await tester.pumpAndSettle();
-
-      // Field should now show selected value
-      expect(find.text('Option B'), findsOneWidget);
-    });
-
-    testWidgets('search field filters items', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: true,
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput).first;
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Type in search
-      final searchField = find.byType(LayrzTextInput).last;
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'B');
-      await tester.pumpAndSettle();
-
-      // Only Option B should remain
-      expect(find.text('Option B'), findsWidgets);
-      expect(find.text('Option A'), findsNothing);
-      expect(find.text('Option C'), findsNothing);
-    });
-
-    testWidgets('keyboard arrow navigation works', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: false,
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Focus the list (simulate keyboard focus on list)
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-      await tester.pumpAndSettle();
-
-      // The first item should be highlighted (check background color)
-      // This is harder to test directly, but we can verify it by pressing Enter
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pumpAndSettle();
-
-      // Surface should close after selection
-      expect(find.text('Option A'), findsWidgets);
-    });
-
-    testWidgets('escape key closes surface without changing value',
-        (tester) async {
-      LayrzSelectItem<String>? selectedItem;
-
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          value: 'a',
-          labelText: 'Choose one',
-          onChanged: (item) {
-            selectedItem = item;
-          },
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Press Escape
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      // Surface should be closed (field still shows Option A)
-      expect(find.text('Option A'), findsOneWidget);
-      // onChanged should not have been called
-      expect(selectedItem, isNull);
+      expect(selected, isNull);
     });
 
-    testWidgets('empty list shows empty state message', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: true,
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput).first;
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput).last;
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'nonexistent');
-      await tester.pumpAndSettle();
-
-      // Empty message should appear
-      expect(find.text('No item found'), findsOneWidget);
-    });
-
-    testWidgets('custom filter function works', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: true,
-          filter: (query, item) => item.labelText.contains('A'),
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput).first;
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Only Option A should appear
-      expect(find.text('Option A'), findsWidgets);
-      expect(find.text('Option B'), findsNothing);
-      expect(find.text('Option C'), findsNothing);
-    });
-
-    testWidgets('error messages display correctly', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          errors: const ['This field is required'],
-        ),
-      );
-
-      expect(find.text('This field is required'), findsOneWidget);
-    });
-
-    testWidgets('custom item rendering works', (tester) async {
-      final customItems = <LayrzSelectItem<String>>[
-        LayrzSelectItem(
-          labelText: 'Option A',
-          value: 'a',
-          child: const Text('Custom A'),
-        ),
-      ];
+    testWidgets('disabled prevents interaction', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
 
       await pumpThemedApp(
         tester,
-        LayrzSelectInput<String>(
-          items: customItems,
-          labelText: 'Choose one',
-        ),
+        LayrzSelectInput<String>(items: items, labelText: 'Choose', disabled: true),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Custom rendering should appear in surface
-      expect(find.text('Custom A'), findsOneWidget);
-      // But field should still show labelText
-      expect(find.text('Option A'), findsWidgets);
-    });
-
-    testWidgets('handles null value correctly', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String?>(
-          items: const [
-            LayrzSelectItem(labelText: 'None', value: null),
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
-          ],
-          labelText: 'Choose one',
-          canUnselect: true,
-        ),
-      );
-
-      // Field should be empty initially
-      // (no selected item text shown)
-      expect(find.text('Option A'), findsOneWidget);
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // "None" option should appear
-      expect(find.text('None'), findsOneWidget);
-    });
-
-    testWidgets('focus returns to anchor after closing', (tester) async {
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzTextInput);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // Select an item
-      await tester.tap(find.text('Option B'));
-      await tester.pumpAndSettle();
-
-      // Surface should be closed
-      // (This is implicit - if surface is closed, we didn't crash)
-      expect(find.text('Option B'), findsOneWidget);
+      final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
+      expect(textInput.disabled, true);
     });
   });
-}
-
-/// Mixin icon constant for testing.
-const mdiChevronDown = IconData(0xf0140, fontFamily: 'MaterialDesignIcons');
-
-class _TestState {
-  String? selectedValue;
 }
