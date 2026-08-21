@@ -131,11 +131,11 @@ class LayrzRadioInput<T> extends StatefulWidget {
     this.md = 4,
     this.lg = 3,
     this.xl = 2,
-  })  : assert(xs > 0 && xs <= 12, 'xs must be between 1 and 12, got $xs'),
-        assert(sm == null || (sm > 0 && sm <= 12), 'sm must be between 1 and 12, got $sm'),
-        assert(md == null || (md > 0 && md <= 12), 'md must be between 1 and 12, got $md'),
-        assert(lg == null || (lg > 0 && lg <= 12), 'lg must be between 1 and 12, got $lg'),
-        assert(xl == null || (xl > 0 && xl <= 12), 'xl must be between 1 and 12, got $xl');
+  }) : assert(xs > 0 && xs <= 12, 'xs must be between 1 and 12, got $xs'),
+       assert(sm == null || (sm > 0 && sm <= 12), 'sm must be between 1 and 12, got $sm'),
+       assert(md == null || (md > 0 && md <= 12), 'md must be between 1 and 12, got $md'),
+       assert(lg == null || (lg > 0 && lg <= 12), 'lg must be between 1 and 12, got $lg'),
+       assert(xl == null || (xl > 0 && xl <= 12), 'xl must be between 1 and 12, got $xl');
 
   @override
   State<LayrzRadioInput<T>> createState() => _LayrzRadioInputState<T>();
@@ -191,24 +191,26 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
           child: RadioGroup<T?>(
             groupValue: widget.value,
             onChanged: _handleChanged,
-            child: Semantics(
-              label: widget.labelText,
-              container: true,
-              enabled: !widget.disabled,
-              child: LayrzRow(
-                children: List.generate(
-                  widget.items.length,
-                  (index) => LayrzCol(
-                    xs: widget.xs,
-                    sm: widget.sm,
-                    md: widget.md,
-                    lg: widget.lg,
-                    xl: widget.xl,
-                    child: _buildRadioOption(
-                      context,
-                      item: widget.items[index],
-                      index: index,
-                      isSelected: widget.value == widget.items[index].value,
+            child: Builder(
+              builder: (context) => Semantics(
+                label: widget.labelText,
+                container: true,
+                enabled: !widget.disabled,
+                child: LayrzRow(
+                  children: List.generate(
+                    widget.items.length,
+                    (index) => LayrzCol(
+                      xs: widget.xs,
+                      sm: widget.sm,
+                      md: widget.md,
+                      lg: widget.lg,
+                      xl: widget.xl,
+                      child: _buildRadioOption(
+                        context,
+                        item: widget.items[index],
+                        index: index,
+                        isSelected: widget.value == widget.items[index].value,
+                      ),
                     ),
                   ),
                 ),
@@ -309,13 +311,12 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
               SizedBox(width: tokens.spacing.sp2),
               // Label (custom or text)
               Expanded(
-                child: item.child ??
+                child:
+                    item.child ??
                     Text(
                       item.labelText,
                       style: tokens.typography.body.copyWith(
-                        color: widget.disabled
-                            ? tokens.colors.fg4.withValues(alpha: 0.5)
-                            : tokens.colors.fg1,
+                        color: widget.disabled ? tokens.colors.fg4.withValues(alpha: 0.5) : tokens.colors.fg1,
                       ),
                     ),
               ),
