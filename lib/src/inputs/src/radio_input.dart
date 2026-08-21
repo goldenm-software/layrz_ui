@@ -49,6 +49,10 @@ class LayrzRadioInput<T> extends StatefulWidget {
   /// and search metadata. The radio group ignores the search metadata (no search in radio).
   /// When [LayrzSelectItem.child] is non-null, that widget is rendered instead of
   /// a default [Text] label; [labelText] is still used by accessibility.
+  ///
+  /// **Important:** Item values must be unique. The underlying [RadioGroup] enforces
+  /// single-selection semantics and cannot handle multiple items with the same value.
+  /// Passing duplicate values will trigger an assertion error at construction time.
   final List<LayrzSelectItem<T>> items;
 
   /// The currently selected value.

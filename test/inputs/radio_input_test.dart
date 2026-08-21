@@ -171,7 +171,7 @@ void main() {
       );
 
       // Tap the first radio button
-      await tester.tap(find.byType(RawRadio).first);
+      await tester.tap(find.byWidgetPredicate((w) => w is RawRadio).first);
       await tester.pump();
 
       expect(selectedValue, 'a');
@@ -293,7 +293,7 @@ void main() {
       );
 
       // No radio button should be selected
-      final radios = find.byType(RawRadio);
+      final radios = find.byWidgetPredicate((w) => w is RawRadio);
       expect(radios, findsWidgets);
 
       // Should not crash
@@ -316,33 +316,20 @@ void main() {
       expect(find.text('Option A'), findsOneWidget);
     });
 
-    testWidgets('duplicate values behave predictably', (tester) async {
-      String? selectedValue;
-
-      await pumpThemed(
-        tester,
+    testWidgets('duplicate values trigger assertion', (tester) async {
+      // Duplicate values are not allowed because RadioGroup enforces single selection.
+      // This test documents the constraint by asserting it fails at construction time.
+      await tester.pumpWidget(
         LayrzRadioInput<String>(
-          value: 'same',
           items: [
             const LayrzSelectItem(labelText: 'Option A', value: 'same'),
             const LayrzSelectItem(labelText: 'Option B', value: 'same'),
           ],
-          onChanged: (value) {
-            selectedValue = value;
-          },
         ),
       );
 
-      // Both radios have the same value, so both should appear selected
-      // (RawRadio compares groupValue == value, so both are true)
-      expect(find.text('Option A'), findsOneWidget);
-      expect(find.text('Option B'), findsOneWidget);
-
-      // Tap the second one
-      await tester.tap(find.text('Option B'));
-      await tester.pump();
-
-      expect(selectedValue, 'same');
+      // The assertion should fire during pumpWidget
+      expect(tester.takeException(), isAssertionError);
     });
 
     testWidgets('errors are rendered below grid', (tester) async {
@@ -545,7 +532,7 @@ void main() {
       );
 
       // Should not crash
-      expect(find.byType(LayrzRadioInput), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is LayrzRadioInput), findsOneWidget);
     });
 
     testWidgets('radio renders without error when enabled', (tester) async {
