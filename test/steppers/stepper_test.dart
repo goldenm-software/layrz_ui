@@ -137,32 +137,38 @@ void main() {
     });
 
     testWidgets('controller is required and cannot be swapped', (WidgetTester tester) async {
-      final controller = LayrzStepperController();
-      controller.setStepCount(3);
+      final first = LayrzStepperController();
+      first.setStepCount(3);
+      addTearDown(first.dispose);
 
       // Verify that a stepper can be created with a supplied controller.
       await pumpThemed(
         tester,
         LayrzStepper(
           steps: testSteps,
-          controller: controller,
+          controller: first,
         ),
       );
 
       expect(find.byType(LayrzStepper), findsOneWidget);
 
       // The controller should be usable after the widget is built.
-      expect(controller.currentStepIndex, 0);
-      await controller.next();
-      expect(controller.currentStepIndex, 1);
-
-      // Note: Swapping controllers via didUpdateWidget is protected by an assertion
-      // in the LayrzStepper implementation. Testing that assertion directly with
-      // the Flutter test framework is complex due to how assertions are handled
-      // during widget rebuilds. The assertion exists in the code and will fire
-      // if someone attempts to pass a different controller instance to the same
-      // widget during a rebuild.
+      expect(first.currentStepIndex, 0);
+      await first.next();
+      expect(first.currentStepIndex, 1);
     });
+
+    // SKIP REASON: LayrzStepper.didUpdateWidget asserts on a controller swap, but
+    // every approach tried (two pumpThemed calls, StatefulBuilder setState,
+    // tap-driven swap) either bypasses didUpdateWidget or trips an unrelated
+    // framework assertion first. The assertion is real and fires in production;
+    // it is unverified by tests. Revisit if pump_themed.dart stops rebuilding
+    // its OverlayEntry subtree.
+    testWidgets(
+      'disallows swapping the controller',
+      (tester) async {},
+      skip: true,
+    );
 
     testWidgets('caller-supplied controller is not disposed', (WidgetTester tester) async {
       final controller = LayrzStepperController();
@@ -280,6 +286,87 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Personal Info'), findsOneWidget);
+    });
+
+    test('next does not notify on no-op', () {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      controller.goTo(2);
+      controller.addListener(() => notifyCount++);
+
+      // Try to move next from the last step (no-op).
+      controller.next();
+      expect(notifyCount, 0);
+
+      controller.dispose();
+    });
+
+    test('previous does not notify on no-op', () {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      // Already at step 0 by default.
+      controller.addListener(() => notifyCount++);
+
+      // Try to move previous from the first step (no-op).
+      controller.previous();
+      expect(notifyCount, 0);
+
+      controller.dispose();
+    });
+
+    test('goTo does not notify when already at index', () {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      controller.goTo(1);
+      var initialNotifyCount = notifyCount;
+
+      controller.addListener(() => notifyCount++);
+
+      // Try to go to the current index (no-op).
+      controller.goTo(1);
+      expect(notifyCount, initialNotifyCount);
+
+      controller.dispose();
+    });
+
+    test('next notifies when advancing', () async {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      controller.addListener(() => notifyCount++);
+
+      await controller.next();
+      expect(notifyCount, 1);
+
+      controller.dispose();
+    });
+
+    test('previous notifies when moving back', () {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      controller.goTo(2);
+      controller.addListener(() => notifyCount++);
+
+      controller.previous();
+      expect(notifyCount, 1);
+
+      controller.dispose();
+    });
+
+    test('goTo notifies when changing to different index', () {
+      var notifyCount = 0;
+      final controller = LayrzStepperController();
+      controller.setStepCount(3);
+      controller.addListener(() => notifyCount++);
+
+      controller.goTo(2);
+      expect(notifyCount, 1);
+
+      controller.dispose();
     });
 
     testWidgets('handles empty body gracefully', (WidgetTester tester) async {
