@@ -48,11 +48,11 @@ class LayrzBottomSheet {
   ///   or modal (barrier present, page not interactive). Defaults to `false` (modal).
   /// - [snapSizes]: optional list of snap point fractions (0.0 to 1.0) in ascending order.
   ///   Constraints are enforced:
+  ///   - List must not be empty
   ///   - All values must be between [minSize] and [maxSize] inclusive
   ///   - Values must be in ascending order
-  ///   - An assertion fires if constraints are violated, failing loudly at the call site
-  ///   rather than deep in the SDK.
-  ///   If null, defaults to [0.5, 0.95] (half-height and full-height-minus-status-bar snap points).
+  ///   - An assertion fires at the call site if constraints are violated
+  ///   If null, defaults to `[0.5, 0.95]` (half-height and near-full-height snap points, respecting the 0.95 maxSize default).
   /// - [initialSize]: the fraction of the screen height the sheet initially occupies.
   ///   Defaults to 0.5 (half the screen). Must be between [minSize] and [maxSize].
   /// - [minSize]: the minimum fraction of screen height the sheet can be dragged down to.
@@ -80,16 +80,34 @@ class LayrzBottomSheet {
     bool showDragHandle = true,
     bool useRootNavigator = false,
   }) {
+    // Validate sizing constraints
+    assert(
+      minSize <= maxSize,
+      'minSize ($minSize) must not exceed maxSize ($maxSize).',
+    );
+
+    assert(
+      initialSize >= minSize && initialSize <= maxSize,
+      'initialSize must be between minSize ($minSize) and maxSize ($maxSize). '
+      'Got $initialSize.',
+    );
+
     // Validate snapSizes constraints
     if (snapSizes != null) {
+      assert(
+        snapSizes.isNotEmpty,
+        'snapSizes must not be empty when supplied.',
+      );
+
       // Check all values are within bounds
       for (final size in snapSizes) {
         assert(
           size >= minSize && size <= maxSize,
-          'All snapSizes must be between minSize ($minSize) and maxSize ($maxSize). '
+          'Every entry in snapSizes must lie within minSize ($minSize)..maxSize ($maxSize). '
           'Got $size.',
         );
       }
+
       // Check ascending order
       for (int i = 1; i < snapSizes.length; i++) {
         assert(
@@ -98,13 +116,6 @@ class LayrzBottomSheet {
         );
       }
     }
-
-    // Validate initialSize
-    assert(
-      initialSize >= minSize && initialSize <= maxSize,
-      'initialSize must be between minSize ($minSize) and maxSize ($maxSize). '
-      'Got $initialSize.',
-    );
 
     // Use default snap sizes if not provided
     final effectiveSnapSizes = snapSizes ?? [0.5, 0.95];

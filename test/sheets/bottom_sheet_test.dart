@@ -177,5 +177,53 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('validates snapSizes within minSize/maxSize bounds', (WidgetTester tester) async {
+      await pumpThemedApp(tester, const SizedBox());
+
+      expect(
+        () {
+          LayrzBottomSheet.show<String>(
+            tester.element(find.byType(SizedBox).first),
+            minSize: 0.25,
+            maxSize: 0.95,
+            snapSizes: [0.1, 0.9],
+            builder: (context) => const SizedBox(),
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('validates snapSizes are in ascending order', (WidgetTester tester) async {
+      await pumpThemedApp(tester, const SizedBox());
+
+      expect(
+        () {
+          LayrzBottomSheet.show<String>(
+            tester.element(find.byType(SizedBox).first),
+            snapSizes: [0.8, 0.5],
+            builder: (context) => const SizedBox(),
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('validates initialSize within minSize/maxSize bounds', (WidgetTester tester) async {
+      await pumpThemedApp(tester, const SizedBox());
+
+      expect(
+        () {
+          LayrzBottomSheet.show<String>(
+            tester.element(find.byType(SizedBox).first),
+            minSize: 0.3,
+            maxSize: 0.8,
+            initialSize: 0.9,
+            builder: (context) => const SizedBox(),
+          );
+        },
+        throwsAssertionError,
+      );
+    });
   });
 }
