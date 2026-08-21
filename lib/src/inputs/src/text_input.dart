@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/selection/selection.dart';
 
 import 'input_chrome.dart';
 import 'input_slot.dart';
@@ -163,8 +164,16 @@ class LayrzTextInput extends StatefulWidget {
   /// Display-only; does not bind any functionality. Automatically hidden on mobile.
   final Set<LogicalKeyboardKey>? shortcut;
 
+  /// The set of text selection actions available in the context menu.
+  ///
+  /// Defaults to all four built-in actions (copy, cut, paste, selectAll).
+  /// Custom actions can be added or standard actions removed.
+  /// Obscured text automatically drops copy and cut, and read-only text drops
+  /// cut and paste, regardless of this set.
+  final Set<LayrzSelectableAction> actions;
+
   /// Creates a new [LayrzTextInput] with the given properties.
-  const LayrzTextInput({
+  LayrzTextInput({
     super.key,
     this.labelText,
     this.hintText,
@@ -201,7 +210,9 @@ class LayrzTextInput extends StatefulWidget {
     this.autocorrect = true,
     this.enableSuggestions = true,
     this.shortcut,
-  }) : assert(
+    Set<LayrzSelectableAction>? actions,
+  }) : actions = actions ?? LayrzSelectableAction.defaults,
+       assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
        ),
@@ -222,10 +233,11 @@ class LayrzTextInput extends StatefulWidget {
   State<LayrzTextInput> createState() => _LayrzTextInputState();
 }
 
-class _LayrzTextInputState extends State<LayrzTextInput> {
+class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectionGestureDetectorBuilderDelegate {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   final Set<WidgetState> _states = {};
+  final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
 
   @override
   void initState() {
@@ -280,6 +292,16 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
     widget.onFocusChanged?.call(_focusNode.hasFocus);
   }
 
+  // TextSelectionGestureDetectorBuilderDelegate implementation
+  @override
+  GlobalKey<EditableTextState> get editableTextKey => _editableTextKey;
+
+  @override
+  bool get forcePressEnabled => true;
+
+  @override
+  bool get selectionEnabled => !widget.disabled;
+
   void _updateStates(PointerEvent event) {
     setState(() {
       if (event is PointerDownEvent) {
@@ -288,6 +310,53 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
         _states.remove(WidgetState.pressed);
       }
     });
+  }
+
+  Widget _buildContextMenu(
+    BuildContext context,
+    EditableTextState editableTextState,
+  ) {
+    // Resolve which actions to display based on editability state
+    final tokens = context.tokens;
+
+    // Filter actions based on field state
+    final resolvedActions = widget.actions.where((action) {
+      // Drop copy and cut for obscured text
+      if (widget.obscureText && (action.type == 'copy' || action.type == 'cut')) {
+        return false;
+      }
+      // Drop cut and paste for read-only text
+      if (widget.readOnly && (action.type == 'cut' || action.type == 'paste')) {
+        return false;
+      }
+      return true;
+    }).toSet();
+
+    // Wire selection toolbar with actual clipboard/selection handling
+    return LayrzSelectionToolbar(
+      actions: resolvedActions,
+      anchorAbove: Offset.zero,
+      tokens: tokens,
+      onActionPressed: (actionType) {
+        switch (actionType) {
+          case 'copy':
+            editableTextState.copySelection(SelectionChangedCause.toolbar);
+          case 'cut':
+            editableTextState.cutSelection(SelectionChangedCause.toolbar);
+          case 'paste':
+            editableTextState.pasteText(SelectionChangedCause.toolbar);
+          case 'selectAll':
+            editableTextState.selectAll(SelectionChangedCause.toolbar);
+          default:
+            // Custom action: find and invoke the callback
+            final customAction = widget.actions.firstWhere(
+              (a) => a.type == actionType,
+              orElse: () => throw StateError('Unknown action: $actionType'),
+            );
+            customAction.onPressed();
+        }
+      },
+    );
   }
 
   @override
@@ -334,6 +403,11 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
     // Format shortcut for display
     final shortcutText = widget.shortcut != null ? formatLayrzShortcut(widget.shortcut) : null;
 
+    // Build gesture detector for selection
+    final gestureDetectorBuilder = TextSelectionGestureDetectorBuilder(
+      delegate: this,
+    );
+
     return LayrzInputChrome(
       labelText: widget.labelText,
       hintText: widget.hintText,
@@ -360,33 +434,38 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
           onExit: widget.disabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
           child: GestureDetector(
             onTap: widget.disabled ? null : (widget.readOnly ? widget.onTap : _handleTap),
-            child: EditableText(
-              controller: _controller,
-              focusNode: _focusNode,
-              style: tokens.typography.body.copyWith(
-                color: spec.textColor,
+            child: gestureDetectorBuilder.buildGestureDetector(
+              child: EditableText(
+                key: _editableTextKey,
+                controller: _controller,
+                focusNode: _focusNode,
+                style: tokens.typography.body.copyWith(
+                  color: spec.textColor,
+                ),
+                cursorColor: tokens.colors.primary,
+                backgroundCursorColor: tokens.colors.fg3,
+                selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
+                keyboardType: widget.keyboardType,
+                textInputAction: widget.textInputAction,
+                inputFormatters: formatters,
+                onChanged: widget.onChanged,
+                onSubmitted: widget.onSubmit,
+                readOnly: widget.readOnly || widget.disabled,
+                textCapitalization: widget.textCapitalization,
+                autocorrect: widget.autocorrect,
+                enableSuggestions: widget.enableSuggestions,
+                obscureText: widget.obscureText,
+                autofocus: widget.autofocus,
+                autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
+                paintCursorAboveText: true,
+                selectionControls: LayrzTextSelectionControls(tokens: tokens),
+                contextMenuBuilder: _buildContextMenu,
+                magnifierConfiguration:
+                    LayrzSelectionMagnifier.magnifierConfigurationFor() ?? const TextMagnifierConfiguration(),
+                maxLines: 1,
+                minLines: 1,
+                expands: false,
               ),
-              cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.fg3,
-              selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              inputFormatters: formatters,
-              onChanged: widget.onChanged,
-              onSubmitted: widget.onSubmit,
-              readOnly: widget.readOnly || widget.disabled,
-              textCapitalization: widget.textCapitalization,
-              autocorrect: widget.autocorrect,
-              enableSuggestions: widget.enableSuggestions,
-              obscureText: widget.obscureText,
-              autofocus: widget.autofocus,
-              autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
-              paintCursorAboveText: true,
-              selectionControls: null,
-              contextMenuBuilder: null,
-              maxLines: 1,
-              minLines: 1,
-              expands: false,
             ),
           ),
         ),

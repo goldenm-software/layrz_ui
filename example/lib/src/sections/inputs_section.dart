@@ -287,7 +287,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('With Label', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Username',
                         hintText: 'Enter your username',
                       ),
@@ -299,7 +299,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Without Label', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         hintText: 'No label here',
                       ),
                     ],
@@ -316,7 +316,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Required Indicator', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Email',
                         isRequired: true,
                         hintText: 'your@email.com',
@@ -329,7 +329,7 @@ class _LabelAndPlaceholderShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('No Placeholder', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Optional field',
                       ),
                     ],
@@ -472,7 +472,7 @@ class _ErrorsShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Single Error', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Email',
                         hintText: 'your@email.com',
                         errors: ['Invalid email format'],
@@ -485,7 +485,7 @@ class _ErrorsShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Multiple Errors', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Password',
                         errors: [
                           'Must be at least 8 characters',
@@ -506,7 +506,7 @@ class _ErrorsShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('hideDetails: true', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Field',
                         hintText: 'Error hidden',
                         errors: ['Error message is suppressed'],
@@ -556,7 +556,7 @@ class _HelpAffordanceShowcase extends StatelessWidget {
           'Hover over the input or the help icon to see the tooltip.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        const LayrzTextInput(
+        LayrzTextInput(
           labelText: 'API Key',
           hintText: 'Enter your API key',
           helpTitleText: 'What is an API Key?',
@@ -855,7 +855,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Password (obscureText)', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Password',
                         hintText: '••••••••',
                         obscureText: true,
@@ -868,7 +868,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Email Keyboard', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Email',
                         hintText: 'user@example.com',
                         keyboardType: TextInputType.emailAddress,
@@ -887,7 +887,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Phone Keyboard', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Phone Number',
                         hintText: '+1 (555) 123-4567',
                         keyboardType: TextInputType.phone,
@@ -900,7 +900,7 @@ class _AdditionalFeaturesShowcase extends StatelessWidget {
                     spacing: tokens.spacing.sp2,
                     children: [
                       Text('Max Length (20 chars)', style: tokens.typography.label),
-                      const LayrzTextInput(
+                      LayrzTextInput(
                         labelText: 'Limited',
                         hintText: 'Type to see counter',
                         maxLength: 20,
@@ -945,7 +945,7 @@ class _CharacterCounterShowcase extends StatelessWidget {
                 spacing: tokens.spacing.sp2,
                 children: [
                   Text('Counter alone (50 chars)', style: tokens.typography.label),
-                  const LayrzTextInput(
+                  LayrzTextInput(
                     labelText: 'Bio',
                     hintText: 'Tell us about yourself',
                     maxLength: 50,
@@ -958,7 +958,7 @@ class _CharacterCounterShowcase extends StatelessWidget {
                 spacing: tokens.spacing.sp2,
                 children: [
                   Text('Counter with error (30 chars)', style: tokens.typography.label),
-                  const LayrzTextInput(
+                  LayrzTextInput(
                     labelText: 'Username',
                     hintText: 'Enter username',
                     maxLength: 30,

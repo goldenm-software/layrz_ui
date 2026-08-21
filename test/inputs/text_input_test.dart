@@ -287,7 +287,7 @@ void main() {
     testWidgets('respects textCapitalization', (tester) async {
       await pumpThemed(
         tester,
-        const LayrzTextInput(
+        LayrzTextInput(
           labelText: 'Input',
           textCapitalization: TextCapitalization.sentences,
         ),
@@ -636,7 +636,7 @@ void main() {
     testWidgets('passes selectionColor to EditableText by default', (tester) async {
       await pumpThemed(
         tester,
-        const LayrzTextInput(
+        LayrzTextInput(
           labelText: 'Test',
         ),
       );
@@ -652,7 +652,7 @@ void main() {
     testWidgets('selectionColor defaults to primary at tonalOpacity', (tester) async {
       await pumpThemed(
         tester,
-        const LayrzTextInput(
+        LayrzTextInput(
           labelText: 'Test',
         ),
       );
