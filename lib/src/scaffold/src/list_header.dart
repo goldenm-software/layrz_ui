@@ -62,7 +62,7 @@ class _ListHeaderState extends State<ListHeader> {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: tokens.colors.surface2,
+        color: tokens.colors.sf2,
         border: Border(
           bottom: BorderSide(
             color: tokens.colors.divider,
@@ -89,7 +89,7 @@ class _ListHeaderState extends State<ListHeader> {
                 color: tokens.colors.fg1,
               ),
               cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.surface2,
+              backgroundCursorColor: tokens.colors.sf2,
             ),
           ),
         ],

@@ -107,7 +107,7 @@ class LayrzLayout extends StatefulWidget {
 
   /// The background color of the layout.
   ///
-  /// Defaults to [LayrzTokens.colors.background].
+  /// Defaults to [LayrzTokens.colors.sf1].
   final Color? backgroundColor;
 
   /// Whether text selection should be enabled within the layout.
@@ -183,7 +183,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.theme.tokens;
-    final backgroundColor = widget.backgroundColor ?? tokens.colors.background;
+    final backgroundColor = widget.backgroundColor ?? tokens.colors.sf1;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -244,7 +244,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
 
     return LayrzLayoutDrawerScaffold(
       backgroundColor: backgroundColor,
-      drawerBackgroundColor: tokens.colors.surface,
+      drawerBackgroundColor: tokens.colors.sf2,
       topBarBuilder: (openDrawer) => LayrzLayoutTopBar(
         tokens: tokens,
         logo: widget.logo,

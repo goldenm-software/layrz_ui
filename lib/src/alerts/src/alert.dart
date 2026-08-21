@@ -255,7 +255,7 @@ class _LayrzAlertState extends State<LayrzAlert> {
             // Right panel: surface background with title and description.
             Expanded(
               child: Container(
-                color: tokens.colors.surface,
+                color: tokens.colors.sf2,
                 padding: EdgeInsets.all(tokens.spacing.sp3),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

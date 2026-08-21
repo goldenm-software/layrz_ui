@@ -239,7 +239,7 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: tokens.colors.surface,
+                color: tokens.colors.sf1,
                 borderRadius: tokens.radius.br3,
                 boxShadow: tokens.shadow.elevation3,
               ),

@@ -21,7 +21,7 @@ import 'tooltip_trigger.dart';
 ///
 /// **Surface styling is fixed** to ensure visual consistency:
 /// - Background color: `tokens.colors.fg1`
-/// - Text color: `tokens.colors.background`
+/// - Text color: `tokens.colors.sf1`
 /// - Text style: `tokens.typography.label`
 /// - Padding: horizontal `sp12`, vertical `sp6`
 /// - Border radius: `r8`
@@ -319,10 +319,10 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   Widget _buildTooltipContent(BuildContext overlayContext) {
     final tokens = overlayContext.tokens;
     final baseStyle = tokens.typography.label.copyWith(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
     );
     final titleStyle = tokens.typography.body.copyWith(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
     );
 
     // Build content widget
@@ -444,7 +444,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     // If there's a title, add its height and the separator gap
     if (widget.titleText != null) {
       final titleStyle = tokens.typography.body.copyWith(
-        color: tokens.colors.background,
+        color: tokens.colors.sf1,
       );
       final titlePainter = TextPainter(
         text: TextSpan(text: widget.titleText, style: titleStyle),

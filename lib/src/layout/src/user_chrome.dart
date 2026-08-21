@@ -62,7 +62,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
 
   /// Builds the shared content for both the static and menu-backed presentations.
   ///
-  /// Renders a [Container] with [tokens.colors.surface3] background, [tokens.radius.r2]
+  /// Renders a [Container] with [tokens.colors.sf3] background, [tokens.radius.r2]
   /// border radius, and [tokens.spacing.sp2] padding on all sides. The container holds
   /// a [Row] displaying the user avatar ([LayrzAvatar]), user name ([Text]), and optionally
   /// a chevron icon when [showChevron] is true. This single implementation is used by both
@@ -87,7 +87,7 @@ class LayrzLayoutUserChrome extends StatelessWidget {
             horizontal: tokens.spacing.sp2,
           ),
           decoration: BoxDecoration(
-            color: tokens.colors.surface3,
+            color: tokens.colors.sf3,
             borderRadius: BorderRadius.circular(tokens.radius.r2),
           ),
           child: Row(

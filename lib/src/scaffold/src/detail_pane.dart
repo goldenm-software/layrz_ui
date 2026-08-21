@@ -39,7 +39,7 @@ class DetailPane<T> extends StatelessWidget {
     final tokens = context.tokens;
 
     return Container(
-      color: tokens.colors.surface,
+      color: tokens.colors.sf2,
       child: Column(
         children: [
           if (showBack)

@@ -134,7 +134,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
     return Container(
       width: widget.width,
       decoration: BoxDecoration(
-        color: tokens.colors.surface,
+        color: tokens.colors.sf2,
         boxShadow: isPersistent ? tokens.shadow.elevation2 : null,
       ),
       child: SafeArea(
@@ -328,7 +328,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
   Widget _buildSectionCaption(LayrzNavigatorLabel label) {
     final tokens = widget.tokens;
     final effectiveColor = label.color ?? tokens.colors.primary;
-    final band = effectiveColor.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
+    final band = effectiveColor.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf2);
 
     return Container(
       margin: EdgeInsets.only(
@@ -370,7 +370,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
         return Container(
           height: rowHeight,
           decoration: BoxDecoration(
-            color: tokens.colors.surface3,
+            color: tokens.colors.sf3,
             borderRadius: BorderRadius.circular(8.0),
           ),
           child: Row(

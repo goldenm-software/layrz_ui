@@ -55,7 +55,7 @@ class LayrzLayoutTopBar extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: tokens.colors.background,
+        color: tokens.colors.sf1,
       ),
       child: SafeArea(
         bottom: false,

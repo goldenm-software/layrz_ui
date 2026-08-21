@@ -85,9 +85,9 @@ class _LayrzLayoutTopBarIconButtonState extends State<LayrzLayoutTopBarIconButto
     // Determine the background color based on interaction state.
     Color? backgroundColor; // null = transparent
     if (states.contains(WidgetState.pressed)) {
-      backgroundColor = tokens.colors.surface2;
+      backgroundColor = tokens.colors.sf2;
     } else if (states.contains(WidgetState.hovered)) {
-      backgroundColor = tokens.colors.surface3;
+      backgroundColor = tokens.colors.sf3;
     }
 
     return FocusableActionDetector(

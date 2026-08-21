@@ -83,7 +83,7 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
 
   /// Optional colour used to tint the label's band.
   ///
-  /// When null, the band keeps the neutral [LayrzColorTokens.surface3] fill, so
+  /// When null, the band keeps the neutral [LayrzColorTokens.sf3] fill, so
   /// menus written before this parameter existed are unchanged. When set, the band
   /// is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened over
   /// the panel surface — the same treatment as [LayrzChipStyle.filledTonal].
@@ -108,8 +108,8 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
     final tokens = context.tokens;
 
     final band = color == null
-        ? tokens.colors.surface3
-        : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
+        ? tokens.colors.sf3
+        : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf1);
 
     return Semantics(
       header: true,

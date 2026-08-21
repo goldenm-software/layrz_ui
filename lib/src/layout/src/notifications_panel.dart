@@ -103,7 +103,7 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
     return Container(
       constraints: const BoxConstraints(minWidth: 280.0, maxWidth: 320.0),
       decoration: BoxDecoration(
-        color: widget.tokens.colors.surface2,
+        color: widget.tokens.colors.sf2,
         borderRadius: BorderRadius.circular(8.0),
         boxShadow: [
           BoxShadow(

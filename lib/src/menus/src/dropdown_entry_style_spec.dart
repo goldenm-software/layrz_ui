@@ -74,7 +74,7 @@ class LayrzDropdownEntryStyleSpec {
     // Disabled takes precedence over all other states
     if (!enabled) {
       return LayrzDropdownEntryStyleSpec(
-        backgroundColor: tokens.colors.surface,
+        backgroundColor: tokens.colors.sf1,
         labelColor: tokens.colors.fg3,
         iconColor: tokens.colors.fg3,
       );
@@ -83,7 +83,7 @@ class LayrzDropdownEntryStyleSpec {
     // Pressed state — uses surface3 for a deeper neutral highlight
     if (states.contains(WidgetState.pressed)) {
       return LayrzDropdownEntryStyleSpec(
-        backgroundColor: tokens.colors.surface3,
+        backgroundColor: tokens.colors.sf3,
         labelColor: tokens.colors.fg1,
         iconColor: tokens.colors.fg1,
       );
@@ -92,7 +92,7 @@ class LayrzDropdownEntryStyleSpec {
     // Hovered or focused state — uses surface2 for a light neutral highlight
     if (states.contains(WidgetState.hovered) || states.contains(WidgetState.focused)) {
       return LayrzDropdownEntryStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         labelColor: tokens.colors.fg1,
         iconColor: tokens.colors.fg1,
       );
@@ -100,7 +100,7 @@ class LayrzDropdownEntryStyleSpec {
 
     // Default state — opaque surface background matches the panel, normal text
     return LayrzDropdownEntryStyleSpec(
-      backgroundColor: tokens.colors.surface,
+      backgroundColor: tokens.colors.sf1,
       labelColor: tokens.colors.fg1,
       iconColor: tokens.colors.fg1,
     );

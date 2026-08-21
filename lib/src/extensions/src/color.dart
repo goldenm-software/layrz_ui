@@ -122,7 +122,7 @@ extension LayrzColorExtensions on Color {
   /// Example: flatten a 20% accent tint onto the surface token:
   /// ```dart
   /// final tonal = accent.withOpacityValue(0.2);
-  /// final opaque = tonal.flattenOn(tokens.colors.surface);
+  /// final opaque = tonal.flattenOn(tokens.colors.sf1);
   /// // opaque is fully opaque and has the same colour as tonal would appear on surface
   /// ```
   Color flattenOn(Color background) => Color.alphaBlend(this, background);

@@ -154,7 +154,7 @@ class _LayrzCardState extends State<LayrzCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final backgroundColor = widget.backgroundColor ?? tokens.colors.surface;
+    final backgroundColor = widget.backgroundColor ?? tokens.colors.sf2;
 
     final content = Container(
       padding: EdgeInsets.all(tokens.spacing.sp3),
