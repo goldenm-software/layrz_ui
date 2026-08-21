@@ -21,3 +21,8 @@ Se espera para mañana:
 * `LayrzAdaptativeModal`
 
 M4 como depende de `LayrzAdaptativeModal`, deberá esperar a que estos estén estables para poder atenderse
+
+Por último, se agregó un nuevo entry para `M9 Quality of Life`:
+
+* Automatic Keyboard adjustment - Esencialmente, cuando el teclado se abre, el espacio que `LayrzLayout` va a otorgar para mostrar cosas cambiará automáticamente al espacio disponible en vez de dejar que queden cosas vivas por detrás.
+* Animation adjustments - Esencialmente, es buscar TODAS las animaciones, y aplicar 2 efectos, la curva y la duración, por norma general, las animaciones *NO* pueden durar más de 250ms, y la curva debe ser cualquiera menos lineal, para nuestro caso usaremos una easeInOutCirc.
