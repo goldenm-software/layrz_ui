@@ -45,6 +45,7 @@ class ShowroomSection extends StatelessWidget {
                 description!,
                 style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                 maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
 
