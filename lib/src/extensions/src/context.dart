@@ -26,6 +26,36 @@ extension LayrzContextExtensions on BuildContext {
   /// [LayrzBreakpoint.lg], or [LayrzBreakpoint.xl].
   LayrzBreakpoint get breakpoint => LayrzTheme.of(this).tokens.breakpoints.bandAt(MediaQuery.sizeOf(this).width);
 
+  /// Whether the current viewport is compact (mobile or small tablet).
+  ///
+  /// Returns `true` if the viewport width falls into the `xs` or `sm` breakpoint bands,
+  /// `false` for `md`, `lg`, or `xl`.
+  ///
+  /// This is the single source of truth for responsive sizing decisions across
+  /// the design system — button heights, layout dimensions, input field heights, and
+  /// other elements that respond to compact/mobile viewports should use this getter.
+  ///
+  /// **Important distinction:** "Compact" is width-based (viewport resolution), not
+  /// OS-based. A narrow desktop window is compact; a landscape tablet is not.
+  /// This is different from [LayrzPlatform.isMobile], which detects the operating
+  /// system (iOS, Android) and is used for things like hiding keyboard shortcuts.
+  /// Do not confuse or substitute one for the other.
+  ///
+  /// See also:
+  ///   - [breakpoint], which returns the specific band the viewport falls into.
+  bool get isCompact {
+    final band = breakpoint;
+    switch (band) {
+      case LayrzBreakpoint.xs:
+      case LayrzBreakpoint.sm:
+        return true;
+      case LayrzBreakpoint.md:
+      case LayrzBreakpoint.lg:
+      case LayrzBreakpoint.xl:
+        return false;
+    }
+  }
+
   /// The tokenizer for convenient access to design tokens via shortcuts.
   ///
   /// Provides both group getters (e.g., [LayrzTokenizer.colors]) and
