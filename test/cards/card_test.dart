@@ -157,10 +157,10 @@ void main() {
     });
 
     group('Padding', () {
-      testWidgets('applies fixed sp16 padding on all sides', (tester) async {
+      testWidgets('applies fixed sp3 padding on all sides', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
         const childSize = Size(40, 40);
-        const expectedPadding = 16.0;
+        const expectedPadding = 14.0;
 
         await pumpThemed(
           tester,

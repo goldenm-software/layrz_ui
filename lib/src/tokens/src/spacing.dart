@@ -38,10 +38,10 @@ class LayrzSpacingTokens {
 
   /// Creates a new [LayrzSpacingTokens] with all spacing levels.
   const LayrzSpacingTokens({
-    this.sp1 = 4.0,
-    this.sp2 = 8.0,
-    this.sp3 = 16.0,
-    this.sp4 = 24.0,
+    this.sp1 = 6.0,
+    this.sp2 = 10.0,
+    this.sp3 = 14.0,
+    this.sp4 = 20.0,
     this.sp5 = 32.0,
   });
 

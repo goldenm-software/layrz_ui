@@ -20,9 +20,6 @@ const double kLayrzScaffoldBodyPadding = 6.0;
 /// List item vertical padding in logical pixels.
 const double kLayrzScaffoldListItemVerticalPadding = 9.0;
 
-/// List item horizontal padding in logical pixels.
-const double kLayrzScaffoldListItemHorizontalPadding = 8.0;
-
 /// List item border radius in logical pixels.
 const double kLayrzScaffoldListItemRadius = 9.0;
 

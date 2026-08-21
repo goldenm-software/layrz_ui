@@ -124,7 +124,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.spacing, equals(tokens.spacing.sp2));
-      expect(tokenizer.spacing, equals(8.0));
+      expect(tokenizer.spacing, equals(10.0));
     });
 
     test('margin shortcut returns spacing.mg2', () {
@@ -132,7 +132,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.margin, equals(tokens.spacing.mg2));
-      expect(tokenizer.margin, equals(EdgeInsets.all(8.0)));
+      expect(tokenizer.margin, equals(EdgeInsets.all(10.0)));
     });
 
     test('reducedMargin shortcut returns spacing.mg1', () {
@@ -140,7 +140,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.reducedMargin, equals(tokens.spacing.mg1));
-      expect(tokenizer.reducedMargin, equals(EdgeInsets.all(4.0)));
+      expect(tokenizer.reducedMargin, equals(EdgeInsets.all(6.0)));
     });
 
     test('padding shortcut returns spacing.pd2', () {
@@ -148,7 +148,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.padding, equals(tokens.spacing.pd2));
-      expect(tokenizer.padding, equals(EdgeInsets.all(8.0)));
+      expect(tokenizer.padding, equals(EdgeInsets.all(10.0)));
     });
 
     test('sizedBox shortcut returns SizedBox with sp2 dimension', () {
@@ -165,7 +165,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.radius, equals(tokens.radius.r2));
-      expect(tokenizer.radius, equals(8.0));
+      expect(tokenizer.radius, equals(10.0));
     });
 
     test('borderRadius shortcut returns radius.br2', () {
@@ -173,7 +173,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.borderRadius, equals(tokens.radius.br2));
-      expect(tokenizer.borderRadius, equals(BorderRadius.circular(8.0)));
+      expect(tokenizer.borderRadius, equals(BorderRadius.circular(10.0)));
     });
 
     test('innerRadius shortcut delegates to tokens.radius.innerRadius', () {

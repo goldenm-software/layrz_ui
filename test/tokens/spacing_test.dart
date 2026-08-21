@@ -7,30 +7,30 @@ void main() {
     test('default constructor uses correct values', () {
       const tokens = LayrzSpacingTokens();
 
-      expect(tokens.sp1, equals(4.0));
-      expect(tokens.sp2, equals(8.0));
-      expect(tokens.sp3, equals(16.0));
-      expect(tokens.sp4, equals(24.0));
+      expect(tokens.sp1, equals(6.0));
+      expect(tokens.sp2, equals(10.0));
+      expect(tokens.sp3, equals(14.0));
+      expect(tokens.sp4, equals(20.0));
       expect(tokens.sp5, equals(32.0));
     });
 
     test('padding getters return EdgeInsets.all with correct values', () {
       const tokens = LayrzSpacingTokens();
 
-      expect(tokens.pd1, equals(EdgeInsets.all(4.0)));
-      expect(tokens.pd2, equals(EdgeInsets.all(8.0)));
-      expect(tokens.pd3, equals(EdgeInsets.all(16.0)));
-      expect(tokens.pd4, equals(EdgeInsets.all(24.0)));
+      expect(tokens.pd1, equals(EdgeInsets.all(6.0)));
+      expect(tokens.pd2, equals(EdgeInsets.all(10.0)));
+      expect(tokens.pd3, equals(EdgeInsets.all(14.0)));
+      expect(tokens.pd4, equals(EdgeInsets.all(20.0)));
       expect(tokens.pd5, equals(EdgeInsets.all(32.0)));
     });
 
     test('margin getters return EdgeInsets.all with correct values', () {
       const tokens = LayrzSpacingTokens();
 
-      expect(tokens.mg1, equals(EdgeInsets.all(4.0)));
-      expect(tokens.mg2, equals(EdgeInsets.all(8.0)));
-      expect(tokens.mg3, equals(EdgeInsets.all(16.0)));
-      expect(tokens.mg4, equals(EdgeInsets.all(24.0)));
+      expect(tokens.mg1, equals(EdgeInsets.all(6.0)));
+      expect(tokens.mg2, equals(EdgeInsets.all(10.0)));
+      expect(tokens.mg3, equals(EdgeInsets.all(14.0)));
+      expect(tokens.mg4, equals(EdgeInsets.all(20.0)));
       expect(tokens.mg5, equals(EdgeInsets.all(32.0)));
     });
 
@@ -53,7 +53,7 @@ void main() {
       expect(modified.sp2, equals(original.sp2));
       expect(modified.sp3, equals(original.sp3));
       expect(modified.sp5, equals(original.sp5));
-      expect(original.sp1, equals(4.0)); // original unchanged
+      expect(original.sp1, equals(6.0)); // original unchanged
     });
 
     test('copyWith with no arguments returns equal instance', () {
@@ -117,17 +117,17 @@ void main() {
       final sb4 = tokens.sb4 as SizedBox;
       final sb5 = tokens.sb5 as SizedBox;
 
-      expect(sb1.width, equals(4.0));
-      expect(sb1.height, equals(4.0));
+      expect(sb1.width, equals(6.0));
+      expect(sb1.height, equals(6.0));
 
-      expect(sb2.width, equals(8.0));
-      expect(sb2.height, equals(8.0));
+      expect(sb2.width, equals(10.0));
+      expect(sb2.height, equals(10.0));
 
-      expect(sb3.width, equals(16.0));
-      expect(sb3.height, equals(16.0));
+      expect(sb3.width, equals(14.0));
+      expect(sb3.height, equals(14.0));
 
-      expect(sb4.width, equals(24.0));
-      expect(sb4.height, equals(24.0));
+      expect(sb4.width, equals(20.0));
+      expect(sb4.height, equals(20.0));
 
       expect(sb5.width, equals(32.0));
       expect(sb5.height, equals(32.0));
@@ -142,16 +142,16 @@ void main() {
       final sb4h = tokens.sb4h as SizedBox;
       final sb5h = tokens.sb5h as SizedBox;
 
-      expect(sb1h.width, equals(4.0));
+      expect(sb1h.width, equals(6.0));
       expect(sb1h.height, isNull);
 
-      expect(sb2h.width, equals(8.0));
+      expect(sb2h.width, equals(10.0));
       expect(sb2h.height, isNull);
 
-      expect(sb3h.width, equals(16.0));
+      expect(sb3h.width, equals(14.0));
       expect(sb3h.height, isNull);
 
-      expect(sb4h.width, equals(24.0));
+      expect(sb4h.width, equals(20.0));
       expect(sb4h.height, isNull);
 
       expect(sb5h.width, equals(32.0));
@@ -168,16 +168,16 @@ void main() {
       final sb5v = tokens.sb5v as SizedBox;
 
       expect(sb1v.width, isNull);
-      expect(sb1v.height, equals(4.0));
+      expect(sb1v.height, equals(6.0));
 
       expect(sb2v.width, isNull);
-      expect(sb2v.height, equals(8.0));
+      expect(sb2v.height, equals(10.0));
 
       expect(sb3v.width, isNull);
-      expect(sb3v.height, equals(16.0));
+      expect(sb3v.height, equals(14.0));
 
       expect(sb4v.width, isNull);
-      expect(sb4v.height, equals(24.0));
+      expect(sb4v.height, equals(20.0));
 
       expect(sb5v.width, isNull);
       expect(sb5v.height, equals(32.0));
@@ -190,8 +190,8 @@ void main() {
       final originalSb3 = original.sb3 as SizedBox;
       final modifiedSb3 = modified.sb3 as SizedBox;
 
-      expect(originalSb3.width, equals(16.0));
-      expect(originalSb3.height, equals(16.0));
+      expect(originalSb3.width, equals(14.0));
+      expect(originalSb3.height, equals(14.0));
 
       expect(modifiedSb3.width, equals(99.0));
       expect(modifiedSb3.height, equals(99.0));
@@ -199,13 +199,13 @@ void main() {
       final originalSb3h = original.sb3h as SizedBox;
       final modifiedSb3h = modified.sb3h as SizedBox;
 
-      expect(originalSb3h.width, equals(16.0));
+      expect(originalSb3h.width, equals(14.0));
       expect(modifiedSb3h.width, equals(99.0));
 
       final originalSb3v = original.sb3v as SizedBox;
       final modifiedSb3v = modified.sb3v as SizedBox;
 
-      expect(originalSb3v.height, equals(16.0));
+      expect(originalSb3v.height, equals(14.0));
       expect(modifiedSb3v.height, equals(99.0));
     });
 

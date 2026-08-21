@@ -37,10 +37,10 @@ class LayrzRadiusTokens {
 
   /// Creates a new [LayrzRadiusTokens] with all border radius levels.
   const LayrzRadiusTokens({
-    this.r1 = 4.0,
-    this.r2 = 8.0,
-    this.r3 = 16.0,
-    this.r4 = 24.0,
+    this.r1 = 6.0,
+    this.r2 = 10.0,
+    this.r3 = 14.0,
+    this.r4 = 20.0,
     this.r5 = 32.0,
     this.full = 999.0,
   });

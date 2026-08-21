@@ -7,10 +7,10 @@ void main() {
     test('default constructor uses correct values', () {
       const tokens = LayrzRadiusTokens();
 
-      expect(tokens.r1, equals(4.0));
-      expect(tokens.r2, equals(8.0));
-      expect(tokens.r3, equals(16.0));
-      expect(tokens.r4, equals(24.0));
+      expect(tokens.r1, equals(6.0));
+      expect(tokens.r2, equals(10.0));
+      expect(tokens.r3, equals(14.0));
+      expect(tokens.r4, equals(20.0));
       expect(tokens.r5, equals(32.0));
       expect(tokens.full, equals(999.0));
     });
@@ -18,10 +18,10 @@ void main() {
     test('border radius getters return BorderRadius.circular with correct values', () {
       const tokens = LayrzRadiusTokens();
 
-      expect(tokens.br1, equals(BorderRadius.circular(4.0)));
-      expect(tokens.br2, equals(BorderRadius.circular(8.0)));
-      expect(tokens.br3, equals(BorderRadius.circular(16.0)));
-      expect(tokens.br4, equals(BorderRadius.circular(24.0)));
+      expect(tokens.br1, equals(BorderRadius.circular(6.0)));
+      expect(tokens.br2, equals(BorderRadius.circular(10.0)));
+      expect(tokens.br3, equals(BorderRadius.circular(14.0)));
+      expect(tokens.br4, equals(BorderRadius.circular(20.0)));
       expect(tokens.br5, equals(BorderRadius.circular(32.0)));
     });
 
@@ -76,7 +76,7 @@ void main() {
       expect(modified.r3, equals(original.r3));
       expect(modified.r5, equals(original.r5));
       expect(modified.full, equals(original.full));
-      expect(original.r1, equals(4.0)); // original unchanged
+      expect(original.r1, equals(6.0)); // original unchanged
     });
 
     test('copyWith with no arguments returns equal instance', () {

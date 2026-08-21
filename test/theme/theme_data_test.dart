@@ -138,8 +138,8 @@ void main() {
         expect(data.textStyle, equals(data.tokens.typography.body));
       });
 
-      test('borderRadius delegates to tokens.radius.r2 (8.0)', () {
-        expect(data.borderRadius, equals(8.0));
+      test('borderRadius delegates to tokens.radius.r2 (10.0)', () {
+        expect(data.borderRadius, equals(10.0));
         expect(data.borderRadius, equals(data.tokens.radius.r2));
       });
     });
