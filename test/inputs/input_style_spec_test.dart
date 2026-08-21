@@ -100,7 +100,7 @@ void main() {
 
       expect(spec.backgroundColor, tokens.colors.surface2);
       expect(spec.borderColor, tokens.colors.primary);
-      expect(spec.textColor, tokens.colors.fg1);
+      expect(spec.textColor, tokens.colors.primary);
     });
 
     test('resolve: pressed state', () {

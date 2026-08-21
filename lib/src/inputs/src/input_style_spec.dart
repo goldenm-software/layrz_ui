@@ -120,7 +120,7 @@ class LayrzInputStyleSpec {
         backgroundColor: tokens.colors.surface2,
         borderColor: tokens.colors.primary,
         borderWidth: tokens.border.base,
-        textColor: tokens.colors.fg1,
+        textColor: tokens.colors.primary,
       );
     }
 

@@ -12,29 +12,51 @@ import 'input_style_spec.dart';
 /// Comfortable (normal) density specification for input fields.
 ///
 /// Encapsulates all dimensions that define the comfortable density mode:
-/// padding (8px all sides), icon size (fontSize + 2px), text style (body),
-/// and content height that accommodates both icons and text.
+/// padding (10px regular / 14px compact on all sides), icon size (fontSize + 6px),
+/// text style (body), and content height that accommodates both icons and text.
+///
+/// Padding and icon size scale on compact viewports (width < 960px) to improve touch targets:
+/// - Padding: pd2 (10px) → pd3 (14px)
+/// - Icon size: grows proportionally with text content
+/// - Text style remains body (16px) in both regular and compact viewports
+///
+/// This ensures input fields on mobile/narrow tablets have larger touch targets comparable
+/// to button sizing (see DESIGN-103 for button compact sizing strategy).
 class _InputComfortableSpec {
   final LayrzTokens tokens;
   final IconThemeData? iconTheme;
+  final bool isCompact;
 
-  _InputComfortableSpec(this.tokens, this.iconTheme);
+  _InputComfortableSpec(this.tokens, this.iconTheme, {required this.isCompact});
 
   /// The padding applied to all sides inside the input field.
-  EdgeInsets get padding => tokens.spacing.pd2;
+  ///
+  /// Returns 10px (pd2) on regular viewports and 14px (pd3) on compact viewports
+  /// (width < 960px) to ensure adequate touch targets on mobile.
+  EdgeInsets get padding => isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2;
 
   /// The size of icons in slots and state indicators.
+  ///
+  /// Scales proportionally with the text content. On compact viewports, if the font
+  /// grows, the icon grows with it. Currently, since font stays at body (16px),
+  /// icon size is 16 + 6 = 22px in both regular and compact viewports.
   double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp1;
 
   /// The text style for input hints and slot text.
+  ///
+  /// Always body (16px) in both regular and compact viewports. This is the largest
+  /// sensible size for body text in an input field; title (20px) would be unusual.
   TextStyle get textStyle => tokens.typography.body;
 
   /// The text style for the editable value itself (EditableText.style).
+  ///
+  /// Always body (16px) in both regular and compact viewports.
   TextStyle get editableTextStyle => tokens.typography.body;
 
   /// The minimum content height to accommodate both icons and text without clipping.
   ///
   /// This is the maximum of [iconSize] and the text line height computed from [editableTextStyle].
+  /// Content height is constant across interaction states per D15 (geometry invariance).
   double get contentHeight {
     final fontSize = editableTextStyle.fontSize ?? 16.0;
     final lineHeightMultiplier = editableTextStyle.height ?? 1.0;
@@ -143,8 +165,12 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
-    // Comfortable density specification — all dimensions for normal field layout
-    final density = _InputComfortableSpec(tokens, context.theme.iconTheme);
+    // Comfortable density specification — all dimensions for field layout (responsive to viewport width)
+    final density = _InputComfortableSpec(
+      tokens,
+      context.theme.iconTheme,
+      isCompact: context.isCompact,
+    );
 
     // Compute padding: explicit caller value wins over comfortable default
     final resolvedPadding = padding ?? density.padding;
@@ -368,7 +394,7 @@ class LayrzInputChrome extends StatelessWidget {
         Icon(
           MdiIcons.lockOutline,
           size: iconSize,
-          color: spec.textColor,
+          color: tokens.colors.fg1,
         ),
       );
     }

@@ -787,7 +787,7 @@ void main() {
       });
 
       /// Verifies that padding is uniform on all four sides and matches the expected token value.
-      testWidgets('padding is uniform (all sides) and equals token default (8px)', (tester) async {
+      testWidgets('padding is uniform (all sides) and equals token default (10px)', (tester) async {
         await tester.pumpWidget(
           Directionality(
             textDirection: TextDirection.ltr,
@@ -835,12 +835,609 @@ void main() {
           reason: 'Horizontal padding should equal vertical padding (uniform all sides)',
         );
 
-        // Verify absolute value: padding should be 8px (pd2 token)
+        // Verify absolute value: padding should be 10px (pd2 token, sp2 spacing value)
         expect(
           padding.left,
-          equals(8.0),
-          reason: 'Padding should equal tokens.spacing.pd2 (8px)',
+          equals(10.0),
+          reason: 'Padding should equal tokens.spacing.pd2 (10px)',
         );
+      });
+
+      group('Focus color behavior (DESIGN-106)', () {
+        testWidgets('focused state: prefix icon uses focus border color', (tester) async {
+          final prefixIcon = MdiIcons.checkCircleOutline;
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Search',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(icon: prefixIcon),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final icon = tester.widget<Icon>(find.byIcon(prefixIcon));
+          final tokens = LayrzTokens.light();
+          expect(
+            icon.color,
+            equals(tokens.colors.primary),
+            reason: 'Prefix icon color should equal focus border color (primary) when focused',
+          );
+        });
+
+        testWidgets('focused state: suffix icon uses focus border color', (tester) async {
+          final suffixIcon = MdiIcons.plusCircleOutline;
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Input',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(icon: suffixIcon),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final icon = tester.widget<Icon>(find.byIcon(suffixIcon));
+          final tokens = LayrzTokens.light();
+          expect(
+            icon.color,
+            equals(tokens.colors.primary),
+            reason: 'Suffix icon color should equal focus border color (primary) when focused',
+          );
+        });
+
+        testWidgets('focused state: prefix text uses focus border color', (tester) async {
+          const prefixText = 'USD';
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Amount',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(text: prefixText),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          // Find the Text widget that contains the prefix text
+          final textWidgets = find.byType(Text);
+          final tokens = LayrzTokens.light();
+          bool found = false;
+          for (int i = 0; i < textWidgets.evaluate().length; i++) {
+            final text = tester.widget<Text>(textWidgets.at(i));
+            if (text.data == prefixText) {
+              expect(
+                text.style?.color,
+                equals(tokens.colors.primary),
+                reason: 'Prefix text color should equal focus border color (primary) when focused',
+              );
+              found = true;
+              break;
+            }
+          }
+          expect(found, true, reason: 'Prefix text widget should be found with correct color');
+        });
+
+        testWidgets('focused state: suffix text uses focus border color', (tester) async {
+          const suffixText = '%';
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Percentage',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(text: suffixText),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final textWidgets = find.byType(Text);
+          // Find the text widget that contains the suffix text
+          bool found = false;
+          for (int i = 0; i < textWidgets.evaluate().length; i++) {
+            final text = tester.widget<Text>(textWidgets.at(i));
+            if (text.data == suffixText) {
+              final textStyle = text.style;
+              final tokens = LayrzTokens.light();
+              expect(
+                textStyle?.color,
+                equals(tokens.colors.primary),
+                reason: 'Suffix text color should equal focus border color (primary) when focused',
+              );
+              found = true;
+              break;
+            }
+          }
+          expect(found, true, reason: 'Suffix text widget should be found with correct color');
+        });
+
+        testWidgets('not focused state: prefix icon keeps resting color', (tester) async {
+          final prefixIcon = MdiIcons.checkCircleOutline;
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Search',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(icon: prefixIcon),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final icon = tester.widget<Icon>(find.byIcon(prefixIcon));
+          final tokens = LayrzTokens.light();
+          expect(
+            icon.color,
+            equals(tokens.colors.fg1),
+            reason: 'Prefix icon color should be fg1 (resting) when not focused',
+          );
+        });
+
+        testWidgets('not focused state: suffix icon keeps resting color', (tester) async {
+          final suffixIcon = MdiIcons.plusCircleOutline;
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Input',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(icon: suffixIcon),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final icon = tester.widget<Icon>(find.byIcon(suffixIcon));
+          final tokens = LayrzTokens.light();
+          expect(
+            icon.color,
+            equals(tokens.colors.fg1),
+            reason: 'Suffix icon color should be fg1 (resting) when not focused',
+          );
+        });
+
+        testWidgets('focused AND error state: error precedence preserved with danger border color', (tester) async {
+          final prefixIcon = MdiIcons.checkCircleOutline;
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Search',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(icon: prefixIcon),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: ['This field has an error'],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          // Verify the error state takes precedence: the spec should use fg1 (error text color), not primary
+          final icon = tester.widget<Icon>(find.byIcon(prefixIcon));
+          final tokens = LayrzTokens.light();
+          expect(
+            icon.color,
+            equals(tokens.colors.fg1),
+            reason: 'Prefix icon should remain fg1 when focused AND in error (error takes precedence)',
+          );
+        });
+
+        testWidgets('focused state: lock icon keeps resting color and does not change on focus', (tester) async {
+          final controller = TextEditingController();
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Read-only Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: true,
+              errors: [],
+              hideDetails: false,
+              states: {WidgetState.focused},
+              controller: controller,
+              child: Container(),
+            ),
+          );
+
+          final lockIcon = tester.widget<Icon>(find.byIcon(MdiIcons.lockOutline));
+          final tokens = LayrzTokens.light();
+          expect(
+            lockIcon.color,
+            equals(tokens.colors.fg1),
+            reason: 'Lock icon should remain fg1 when focused (not affected by focus color change)',
+          );
+        });
+      });
+
+      group('Compact viewport sizing — DESIGN-105', () {
+        /// Verifies that padding grows from pd2 (10px) to pd3 (14px) on compact viewports.
+        /// This increases the field's vertical height from ~42px to ~50px on compact (width < 960px).
+        testWidgets('compact viewport (width 400): padding is pd3 (14px all sides)', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          final tokens = LayrzTokens.light();
+          late EdgeInsets resolvedPadding;
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              child: Builder(
+                builder: (context) {
+                  // Capture the resolved padding by reading the input container's padding
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          );
+
+          // Find the input container (the one with decoration) and extract its padding
+          final containers = find.byType(Container);
+          expect(containers, findsWidgets);
+
+          // The decorated container is among the first few widgets; we're looking for the one with a border
+          for (int i = 0; i < containers.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                resolvedPadding = container.padding as EdgeInsets;
+                break;
+              }
+            }
+          }
+
+          // Verify padding is pd3 on compact
+          expect(resolvedPadding.top, equals(tokens.spacing.sp3));
+          expect(resolvedPadding.bottom, equals(tokens.spacing.sp3));
+          expect(resolvedPadding.left, equals(tokens.spacing.sp3));
+          expect(resolvedPadding.right, equals(tokens.spacing.sp3));
+        });
+
+        /// Verifies that padding remains pd2 (10px) on regular viewports.
+        testWidgets('regular viewport (width 1200): padding is pd2 (10px all sides)', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(1200, 800);
+
+          final tokens = LayrzTokens.light();
+          late EdgeInsets resolvedPadding;
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              child: Container(),
+            ),
+          );
+
+          // Find the input container with decoration and extract its padding
+          final containers = find.byType(Container);
+          for (int i = 0; i < containers.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                resolvedPadding = container.padding as EdgeInsets;
+                break;
+              }
+            }
+          }
+
+          // Verify padding is pd2 on regular viewport
+          expect(resolvedPadding.top, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.bottom, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.left, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.right, equals(tokens.spacing.sp2));
+        });
+
+        /// Verifies the exact boundary: width 959 (sm, compact) vs width 960 (md, regular).
+        testWidgets('compact/regular boundary: 959 is compact (pd3), 960 is regular (pd2)', (tester) async {
+          final tokens = LayrzTokens.light();
+
+          // Test at width 959 (compact)
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(959, 800);
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              child: Container(),
+            ),
+          );
+
+          late EdgeInsets padding959;
+          final containers959 = find.byType(Container);
+          for (int i = 0; i < containers959.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers959.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                padding959 = container.padding as EdgeInsets;
+                break;
+              }
+            }
+          }
+
+          expect(padding959.top, equals(tokens.spacing.sp3), reason: 'Width 959 should be compact (pd3)');
+
+          // Now test at width 960 (regular)
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(960, 800);
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              child: Container(),
+            ),
+          );
+
+          late EdgeInsets padding960;
+          final containers960 = find.byType(Container);
+          for (int i = 0; i < containers960.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers960.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                padding960 = container.padding as EdgeInsets;
+                break;
+              }
+            }
+          }
+
+          expect(padding960.top, equals(tokens.spacing.sp2), reason: 'Width 960 should be regular (pd2)');
+        });
+
+        /// Verifies that padding remains uniform (all four sides equal) on compact viewports.
+        testWidgets('compact viewport: padding is uniform on all four sides', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              child: Container(),
+            ),
+          );
+
+          final containers = find.byType(Container);
+          for (int i = 0; i < containers.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                final padding = container.padding as EdgeInsets;
+                // Verify all sides are equal
+                expect(padding.top, equals(padding.bottom), reason: 'Top should equal bottom');
+                expect(padding.left, equals(padding.right), reason: 'Left should equal right');
+                expect(padding.top, equals(padding.left), reason: 'All sides should be equal');
+                break;
+              }
+            }
+          }
+        });
+
+        /// Verifies that field height remains constant across interaction states on compact viewports.
+        /// This preserves D15 (geometry invariance across states).
+        testWidgets('compact viewport: field height stays constant across interaction states', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          final stateVariants = <String, ({Set<WidgetState> states, bool disabled, bool readOnly})>{
+            'rest': (states: {}, disabled: false, readOnly: false),
+            'hover': (states: {WidgetState.hovered}, disabled: false, readOnly: false),
+            'focus': (states: {WidgetState.focused}, disabled: false, readOnly: false),
+            'error': (states: {}, disabled: false, readOnly: false),
+            'disabled': (states: {WidgetState.disabled}, disabled: true, readOnly: false),
+          };
+
+          final heights = <String, double>{};
+
+          for (final MapEntry(:key, :value) in stateVariants.entries) {
+            await tester.pumpWidget(
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: LayrzTheme(
+                  data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                  child: Overlay(
+                    initialEntries: [
+                      OverlayEntry(
+                        builder: (context) => Center(
+                          child: LayrzInputChrome(
+                            labelText: 'Test Field',
+                            isRequired: false,
+                            prefixSlot: LayrzInputPrefixSlot(),
+                            suffixSlot: LayrzInputSuffixSlot(),
+                            disabled: value.disabled,
+                            readOnly: value.readOnly,
+                            errors: key == 'error' ? ['Error'] : [],
+                            hideDetails: false,
+                            states: value.states,
+                            child: Container(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            await tester.pump();
+
+            // Find the input container with decoration
+            final containers = find.byType(Container);
+            for (int i = 0; i < containers.evaluate().length; i++) {
+              final container = tester.widget<Container>(containers.at(i));
+              if (container.decoration is BoxDecoration) {
+                final dec = container.decoration as BoxDecoration;
+                if (dec.border != null) {
+                  final rect = tester.getRect(containers.at(i));
+                  heights[key] = rect.height;
+                  break;
+                }
+              }
+            }
+          }
+
+          // All states should have identical height
+          final firstHeight = heights.values.first;
+          for (final MapEntry(:key, :value) in heights.entries) {
+            expect(
+              value,
+              firstHeight,
+              reason: 'State "$key" height should equal rest state height',
+            );
+          }
+        });
+
+        /// Verifies that caller-supplied padding parameter overrides the compact-responsive padding.
+        testWidgets('caller-supplied padding parameter overrides compact padding', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          final customPadding = EdgeInsets.all(20.0);
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              padding: customPadding,
+              child: Container(),
+            ),
+          );
+
+          final containers = find.byType(Container);
+          for (int i = 0; i < containers.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                final resolvedPadding = container.padding as EdgeInsets;
+                // Verify that custom padding is used, not the compact responsive one
+                expect(resolvedPadding.top, equals(20.0));
+                expect(resolvedPadding.bottom, equals(20.0));
+                expect(resolvedPadding.left, equals(20.0));
+                expect(resolvedPadding.right, equals(20.0));
+                break;
+              }
+            }
+          }
+        });
       });
     });
   });
