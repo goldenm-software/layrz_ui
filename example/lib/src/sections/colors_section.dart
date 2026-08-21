@@ -28,20 +28,20 @@ class ColorsSection extends StatelessWidget {
             colors: [_ColorSample('primary', tokens.colors.primary)],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Surface colors
           _ColorCategory(
             title: 'Surface',
             colors: [
-              _ColorSample('background', tokens.colors.background),
-              _ColorSample('surface', tokens.colors.surface),
-              _ColorSample('surface2', tokens.colors.surface2),
-              _ColorSample('surface3', tokens.colors.surface3),
+              _ColorSample('sf1', tokens.colors.sf1),
+              _ColorSample('sf2', tokens.colors.sf2),
+              _ColorSample('sf3', tokens.colors.sf3),
+              _ColorSample('sf4', tokens.colors.sf4),
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Foreground colors
           _ColorCategory(
@@ -54,7 +54,7 @@ class ColorsSection extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Semantic colors
           _ColorCategory(
@@ -67,7 +67,7 @@ class ColorsSection extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Structural colors
           _ColorCategory(
@@ -78,14 +78,14 @@ class ColorsSection extends StatelessWidget {
             ],
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Overlay and tonal opacity demonstration
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Overlay & Tonal Opacity', style: tokens.typography.title),
-              SizedBox(height: tokens.spacing.sp12),
+              SizedBox(height: tokens.spacing.sp3),
               Row(
                 children: [
                   Expanded(
@@ -94,7 +94,7 @@ class ColorsSection extends StatelessWidget {
                       child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
                     ),
                   ),
-                  SizedBox(width: tokens.spacing.sp16),
+                  SizedBox(width: tokens.spacing.sp3),
                   Expanded(
                     child: LayrzTooltip(
                       contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
@@ -133,10 +133,10 @@ class _ColorCategory extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Wrap(
-          spacing: tokens.spacing.sp16,
-          runSpacing: tokens.spacing.sp16,
+          spacing: tokens.spacing.sp3,
+          runSpacing: tokens.spacing.sp3,
           children: colors
               .map(
                 (sample) => LayrzTooltip(
@@ -175,19 +175,19 @@ class _OverlaySwatch extends StatelessWidget {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: tokens.colors.surface,
-            borderRadius: BorderRadius.circular(tokens.radius.r8),
+            color: tokens.colors.sf2,
+            borderRadius: tokens.radius.br2,
           ),
           alignment: Alignment.center,
           child: Container(
             width: 60,
             height: 60,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(tokens.radius.r8)),
+            decoration: BoxDecoration(color: color, borderRadius: tokens.radius.br2),
           ),
         ),
 
         // Label
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         Text(label, textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );
@@ -215,7 +215,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
         Container(
           width: 80,
           height: 80,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(tokens.radius.r8)),
+          decoration: BoxDecoration(borderRadius: tokens.radius.br2),
           child: Row(
             children: [
               Expanded(
@@ -223,8 +223,8 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: fullOpacity,
                     borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(tokens.radius.r8),
-                      bottomLeft: Radius.circular(tokens.radius.r8),
+                      topLeft: Radius.circular(tokens.radius.r2),
+                      bottomLeft: Radius.circular(tokens.radius.r2),
                     ),
                   ),
                   alignment: Alignment.center,
@@ -239,8 +239,8 @@ class _TonalOpacitySwatch extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: tonalColor,
                     borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(tokens.radius.r8),
-                      bottomRight: Radius.circular(tokens.radius.r8),
+                      topRight: Radius.circular(tokens.radius.r2),
+                      bottomRight: Radius.circular(tokens.radius.r2),
                     ),
                   ),
                   alignment: Alignment.center,
@@ -255,7 +255,7 @@ class _TonalOpacitySwatch extends StatelessWidget {
         ),
 
         // Label
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         Text('tonalOpacity', textAlign: TextAlign.center, style: tokens.typography.label),
       ],
     );

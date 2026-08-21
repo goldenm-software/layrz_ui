@@ -126,7 +126,7 @@ void main() {
     group('Background color', () {
       testWidgets('null backgroundColor uses surface token', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final expectedColor = themeData.tokens.colors.surface;
+        final expectedColor = themeData.tokens.colors.sf1;
 
         await pumpThemed(
           tester,
@@ -157,10 +157,10 @@ void main() {
     });
 
     group('Padding', () {
-      testWidgets('applies fixed sp16 padding on all sides', (tester) async {
+      testWidgets('applies fixed sp3 padding on all sides', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
         const childSize = Size(40, 40);
-        const expectedPadding = 16.0;
+        const expectedPadding = 14.0;
 
         await pumpThemed(
           tester,
@@ -183,7 +183,7 @@ void main() {
     group('Border radius', () {
       testWidgets('uses r12 radius token', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final expectedRadius = themeData.tokens.radius.r12;
+        final expectedRadius = themeData.tokens.radius.r3;
 
         await pumpThemed(
           tester,

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -48,28 +49,32 @@ class LayrzLayoutTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompact = context.isCompact;
+    final topBarHeight = isCompact ? kLayrzLayoutCompactTopBarHeight : kLayrzLayoutTopBarHeight;
+    final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
+
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: tokens.colors.background,
+        color: tokens.colors.sf1,
       ),
       child: SafeArea(
         bottom: false,
         child: SizedBox(
-          height: kLayrzLayoutTopBarHeight,
+          height: topBarHeight,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kLayrzLayoutTopBarPaddingHorizontal),
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3),
             child: Row(
               children: [
                 // Drawer trigger
                 LayrzLayoutTopBarIconButton(
                   key: const ValueKey('drawer_trigger_button'),
-                  icon: LayrzIcons.solarBoldMenuDots,
+                  icon: MdiIcons.menu,
                   iconColor: tokens.colors.fg2,
-                  iconSize: kLayrzLayoutDrawerTriggerIconSize,
+                  iconSize: iconSize,
                   onTap: onDrawerTap,
                 ),
 
-                SizedBox(width: kLayrzLayoutTopBarGap),
+                SizedBox(width: tokens.spacing.sp3),
 
                 // Logo/mark
                 Expanded(

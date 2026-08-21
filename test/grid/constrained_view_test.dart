@@ -120,7 +120,7 @@ void main() {
         expect(verticalGap, closeTo(20.0, 0.1), reason: 'gap should be exactly 20px');
       });
 
-      testWidgets('spacing=null uses tokens.spacing.base (8.0)', (tester) async {
+      testWidgets('spacing=null uses tokens.spacing.sp2 (10.0)', (tester) async {
         await pumpThemed(
           tester,
           SizedBox(
@@ -141,7 +141,7 @@ void main() {
         final pos2 = tester.getTopLeft(find.byKey(const Key('child2')));
 
         final verticalGap = pos2.dy - (pos1.dy + size1.height);
-        expect(verticalGap, closeTo(8.0, 0.1), reason: 'gap should be default 8.0px');
+        expect(verticalGap, closeTo(10.0, 0.1), reason: 'gap should be default 10.0px');
       });
 
       testWidgets('spacing=0 gives no gaps between children', (tester) async {

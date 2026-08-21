@@ -22,16 +22,16 @@ class ElevationSection extends StatelessWidget {
         children: [
           // Main elevation ramp
           Text('Elevation Ramp (0–5)', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Padding(
-              padding: EdgeInsets.all(tokens.spacing.sp8).add(EdgeInsets.only(bottom: tokens.spacing.sp16)),
+              padding: EdgeInsets.all(tokens.spacing.sp2).add(EdgeInsets.only(bottom: tokens.spacing.sp3)),
               child: Row(
                 children: List.generate(
                   6,
                   (index) => Padding(
-                    padding: EdgeInsets.only(right: tokens.spacing.sp12),
+                    padding: EdgeInsets.only(right: tokens.spacing.sp3),
                     child: LayrzTooltip(
                       contentText: 'elevation$index shadow token',
                       child: _ElevationCard(elevation: index.toDouble(), label: 'Elevation $index'),
@@ -42,11 +42,11 @@ class ElevationSection extends StatelessWidget {
             ),
           ),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Special cases
           Text('Special Cases', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           Row(
             children: [
               Expanded(
@@ -57,7 +57,7 @@ class ElevationSection extends StatelessWidget {
                       'Elevation 0 (outline)',
                       style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                     ),
-                    SizedBox(height: tokens.spacing.sp8),
+                    SizedBox(height: tokens.spacing.sp2),
                     LayrzTooltip(
                       contentText: 'elevation0 with outline border',
                       child: _ElevationCard(elevation: 0, label: '0u outline'),
@@ -65,7 +65,7 @@ class ElevationSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp16),
+              SizedBox(width: tokens.spacing.sp3),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,7 +74,7 @@ class ElevationSection extends StatelessWidget {
                       'Reversed (flipped shadow)',
                       style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                     ),
-                    SizedBox(height: tokens.spacing.sp8),
+                    SizedBox(height: tokens.spacing.sp2),
                     LayrzTooltip(
                       contentText: 'elevation2 with shadow flipped downward',
                       child: _ElevationCard(elevation: 2, label: 'Reversed', reverse: true),
@@ -82,7 +82,7 @@ class ElevationSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp16),
+              SizedBox(width: tokens.spacing.sp3),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +91,7 @@ class ElevationSection extends StatelessWidget {
                       'hideOnElevationZero',
                       style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                     ),
-                    SizedBox(height: tokens.spacing.sp8),
+                    SizedBox(height: tokens.spacing.sp2),
                     LayrzTooltip(
                       contentText: 'elevation0 with no outline or shadow',
                       child: _ElevationCard(elevation: 0, label: 'No outline', hideOnElevationZero: true),

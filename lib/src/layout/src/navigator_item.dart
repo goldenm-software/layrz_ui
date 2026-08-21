@@ -48,8 +48,8 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
 
   /// An optional icon to display alongside the label.
   ///
-  /// If null, only the label text is shown. The icon is rendered at
-  /// [kLayrzLayoutItemIconSize] in the rail or drawer item.
+  /// If null, only the label text is shown. The icon is rendered at the same size
+  /// as the label font size (14) in the rail or drawer item.
   final IconData? icon;
 
   /// An optional count badge displayed to the right of the label.
@@ -131,10 +131,9 @@ final class LayrzNavigatorLabel extends LayrzNavigatorItem {
 
   /// Optional colour used to tint the label's band.
   ///
-  /// When null, the band keeps the neutral [LayrzColorTokens.surface3] fill, so
-  /// navigators written before this parameter existed are unchanged. When set, the
-  /// band is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened
-  /// over the panel surface.
+  /// When null, the band defaults to [LayrzColorTokens.primary] at
+  /// [LayrzColorTokens.tonalOpacity], flattened over the panel surface. When set,
+  /// the band is filled with this colour instead, also at tonal opacity.
   final Color? color;
 
   @override

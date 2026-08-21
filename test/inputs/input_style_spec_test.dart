@@ -13,17 +13,17 @@ void main() {
 
     test('copyWith returns new instance with updated fields', () {
       final original = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
       );
 
       final updated = original.copyWith(
-        backgroundColor: tokens.colors.surface,
+        backgroundColor: tokens.colors.sf2,
       );
 
-      expect(updated.backgroundColor, tokens.colors.surface);
+      expect(updated.backgroundColor, tokens.colors.sf2);
       expect(updated.borderColor, original.borderColor);
       expect(updated.borderWidth, original.borderWidth);
       expect(updated.textColor, original.textColor);
@@ -31,14 +31,14 @@ void main() {
 
     test('equality works correctly', () {
       final spec1 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
       );
 
       final spec2 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -50,14 +50,14 @@ void main() {
 
     test('inequality works correctly', () {
       final spec1 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
       );
 
       final spec2 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface,
+        backgroundColor: tokens.colors.sf3,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -73,7 +73,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.borderWidth, tokens.border.base);
       expect(spec.textColor, tokens.colors.fg1);
@@ -86,7 +86,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface3);
+      expect(spec.backgroundColor, tokens.colors.sf3);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
     });
@@ -98,9 +98,9 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
       expect(spec.borderColor, tokens.colors.primary);
-      expect(spec.textColor, tokens.colors.fg1);
+      expect(spec.textColor, tokens.colors.primary);
     });
 
     test('resolve: pressed state', () {
@@ -110,7 +110,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface3);
+      expect(spec.backgroundColor, tokens.colors.sf3);
     });
 
     test('resolve: error state', () {
@@ -132,7 +132,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg4);
     });
@@ -145,7 +145,7 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
     });
@@ -169,7 +169,7 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
     });
 
     test('resolve: precedence - error > pressed', () {

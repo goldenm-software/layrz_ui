@@ -86,7 +86,7 @@ class LayrzInputStyleSpec {
     // Precedence: disabled > readOnly > error > pressed > hover/focused > default
     if (isDisabled) {
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg4,
@@ -95,7 +95,7 @@ class LayrzInputStyleSpec {
 
     if (readOnly) {
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -117,16 +117,16 @@ class LayrzInputStyleSpec {
 
     if (isFocused) {
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface2,
+        backgroundColor: tokens.colors.sf2,
         borderColor: tokens.colors.primary,
         borderWidth: tokens.border.base,
-        textColor: tokens.colors.fg1,
+        textColor: tokens.colors.primary,
       );
     }
 
     if (isPressed || isHovered) {
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.surface3,
+        backgroundColor: tokens.colors.sf3,
         borderColor: const Color(0x00000000),
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -135,7 +135,7 @@ class LayrzInputStyleSpec {
 
     // Default state
     return LayrzInputStyleSpec(
-      backgroundColor: tokens.colors.surface2,
+      backgroundColor: tokens.colors.sf2,
       borderColor: const Color(0x00000000),
       borderWidth: tokens.border.base,
       textColor: tokens.colors.fg1,

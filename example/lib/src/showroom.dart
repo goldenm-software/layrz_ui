@@ -65,24 +65,24 @@ class Showroom extends StatelessWidget {
     final tokens = context.tokens;
 
     return ColoredBox(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
       child: SafeArea(
         child: CustomScrollView(
           slivers: [
             // Header with title and version
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp20, vertical: tokens.spacing.sp20),
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp4, vertical: tokens.spacing.sp4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(kAppTitle, style: tokens.typography.display.copyWith(color: tokens.colors.primary)),
-                    SizedBox(height: tokens.spacing.sp8),
+                    SizedBox(height: tokens.spacing.sp2),
                     Text(
                       'Design System Showroom',
                       style: tokens.typography.title.copyWith(color: tokens.colors.fg2),
                     ),
-                    SizedBox(height: tokens.spacing.sp4),
+                    SizedBox(height: tokens.spacing.sp1),
                     Text(
                       'All design tokens in one place — explore the foundation',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -94,7 +94,7 @@ class Showroom extends StatelessWidget {
 
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.only(bottom: tokens.spacing.sp16),
+                padding: EdgeInsets.only(bottom: tokens.spacing.sp3),
                 child: Container(height: 1, color: tokens.colors.divider),
               ),
             ),
@@ -102,7 +102,7 @@ class Showroom extends StatelessWidget {
             // Sections
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp20, vertical: tokens.spacing.sp20),
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp4, vertical: tokens.spacing.sp4),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
                   child: Column(children: _sections),
@@ -113,12 +113,12 @@ class Showroom extends StatelessWidget {
             // Footer
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp20, vertical: tokens.spacing.sp20),
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp4, vertical: tokens.spacing.sp4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(height: 1, color: tokens.colors.divider),
-                    SizedBox(height: tokens.spacing.sp16),
+                    SizedBox(height: tokens.spacing.sp3),
                     Text(
                       'Built with layrz_ui — a Material-free Flutter design system',
                       style: tokens.typography.body.copyWith(color: tokens.colors.fg3),

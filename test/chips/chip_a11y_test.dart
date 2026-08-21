@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
@@ -52,7 +52,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(LayrzIcons.solarBoldCloseCircle));
+      await tester.tap(find.byIcon(MdiIcons.closeCircle));
       expect(deleted, isTrue);
     });
 
@@ -61,14 +61,14 @@ void main() {
         tester,
         LayrzChip(
           labelText: 'With Icon',
-          leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+          leadingIcon: MdiIcons.checkCircleOutline,
         ),
       );
 
       // Verify the chip, label text, and icon are rendered
       expect(find.byType(LayrzChip), findsOneWidget);
       expect(find.text('With Icon'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineCheckCircle), findsOneWidget);
+      expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
     });
 
     testWidgets('chip group items are all accessible', (tester) async {
@@ -117,7 +117,7 @@ void main() {
       );
 
       // Find all close icons and tap them
-      final closeIcons = find.byIcon(LayrzIcons.solarBoldCloseCircle);
+      final closeIcons = find.byIcon(MdiIcons.closeCircle);
       expect(closeIcons, findsWidgets);
 
       // Tap first delete icon

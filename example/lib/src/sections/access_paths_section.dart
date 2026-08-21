@@ -28,7 +28,7 @@ class AccessPathsSection extends StatelessWidget {
             'Both access paths must return the same values',
             style: tokens.typography.body.copyWith(color: tokens.colors.fg2),
           ),
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
 
           // Primary color
           _AccessPathComparison(
@@ -40,31 +40,31 @@ class AccessPathsSection extends StatelessWidget {
             match: tokens.colors.primary == tokenizer.primary,
           ),
 
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
 
           // Spacing base
           _AccessPathComparison(
             label: 'spacing (base)',
-            path1: 'context.tokens.spacing.base',
-            value1: '${tokens.spacing.base}',
+            path1: 'context.tokens.spacing.sp2',
+            value1: '${tokens.spacing.sp2}',
             path2: 'LayrzTokenizer.of(context).spacing',
             value2: '${tokenizer.spacing}',
-            match: tokens.spacing.base == tokenizer.spacing,
+            match: tokens.spacing.sp2 == tokenizer.spacing,
           ),
 
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
 
           // Radius base
           _AccessPathComparison(
             label: 'radius (base)',
-            path1: 'context.tokens.radius.base',
-            value1: '${tokens.radius.base}',
+            path1: 'context.tokens.radius.r2',
+            value1: '${tokens.radius.r2}',
             path2: 'LayrzTokenizer.of(context).radius',
             value2: '${tokenizer.radius}',
-            match: tokens.radius.base == tokenizer.radius,
+            match: tokens.radius.r2 == tokenizer.radius,
           ),
 
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
 
           // Border width
           _AccessPathComparison(
@@ -76,7 +76,7 @@ class AccessPathsSection extends StatelessWidget {
             match: tokens.border.base == tokenizer.borderWidth,
           ),
 
-          SizedBox(height: tokens.spacing.sp16),
+          SizedBox(height: tokens.spacing.sp3),
 
           // Success color
           _AccessPathComparison(
@@ -141,8 +141,8 @@ class _AccessPathComparison extends StatelessWidget {
                 Expanded(child: Text(label, style: tokens.typography.title)),
                 // Match indicator
                 Container(
-                  width: tokens.spacing.sp32,
-                  height: tokens.spacing.sp32,
+                  width: tokens.spacing.sp5,
+                  height: tokens.spacing.sp5,
                   decoration: BoxDecoration(
                     color: match ? tokens.colors.success : tokens.colors.danger,
                     borderRadius: BorderRadius.circular(tokens.radius.full),
@@ -151,7 +151,7 @@ class _AccessPathComparison extends StatelessWidget {
                   child: Text(
                     match ? '✓' : '✗',
                     style: tokens.typography.label.copyWith(
-                      color: tokens.colors.surface,
+                      color: tokens.colors.sf2,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -159,12 +159,12 @@ class _AccessPathComparison extends StatelessWidget {
               ],
             ),
 
-            SizedBox(height: tokens.spacing.sp12),
+            SizedBox(height: tokens.spacing.sp3),
 
             // Path 1
             _AccessPathRow(path: path1, value: value1, tokens: tokens),
 
-            SizedBox(height: tokens.spacing.sp8),
+            SizedBox(height: tokens.spacing.sp2),
 
             // Path 2
             _AccessPathRow(path: path2, value: value2, tokens: tokens),
@@ -192,8 +192,8 @@ class _AccessPathRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: tokens.colors.surface3, borderRadius: BorderRadius.circular(tokens.radius.r8)),
-      padding: tokens.spacing.padding,
+      decoration: BoxDecoration(color: tokens.colors.sf3, borderRadius: tokens.radius.br2),
+      padding: tokens.spacing.pd2,
       child: Row(
         children: [
           Expanded(
@@ -203,7 +203,7 @@ class _AccessPathRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          SizedBox(width: tokens.spacing.sp12),
+          SizedBox(width: tokens.spacing.sp3),
           Text(
             '→ $value',
             style: tokens.typography.label.copyWith(

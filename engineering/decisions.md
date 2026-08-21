@@ -2497,6 +2497,210 @@ This constraint is encoded in the implementation (`Transform.translate` inside `
 
 ---
 
+## D45: Icon Set Migration — Solar (layrz_icons) to Material Design Icons (flutter_material_design_icons)
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Dependency Policy / Design System
+
+### Context
+
+layrz_ui initially planned to use the Solar icon set via `layrz_icons` (1.1.1 and 2.0.0) as the system-wide icon source. On 2026-08-20, the maintainer directed the design system to migrate to Material Design Icons (`flutter_material_design_icons`). This was a product/design direction, not a decision derived from technical evaluation of alternatives.
+
+### Decision
+
+**Chose: Material Design Icons via `flutter_material_design_icons` (^3.1.0+7447).**
+
+### Rationale
+
+This was directed by the maintainer as a design-language change; no comparative technical evaluation was performed.
+
+However, several properties of the chosen package are worth recording:
+
+- **Material-free package**: `flutter_material_design_icons` is a pure font + constants library importing only `package:flutter/widgets.dart`. It has zero Material coupling, despite its name. This preserves layrz_ui's design-system-agnostic foundation.
+- **Const-preserving**: All members are `static const IconData`, so call sites retain `const` semantics — no change to component API const-ness. `layrz_icons` by contrast exposes `static IconData get`, which is not const; only `flutter_material_design_icons` constants are usable in const contexts (e.g., const default parameter values).
+- **Icon coverage**: The package provides 7,447 icon constants. This is comparable in scale to the Solar set (which layrz_icons bundles along with Material Design Icons and Font Awesome); it is not a smaller catalogue, despite its name suggesting a Material-specific set. A name-by-name mapping verified that all required icons had MDI equivalents or close substitutes.
+- **Semantic factories parity**: All semantic factories (LayrzButton.save, .cancel, .info, .show, .edit, .delete; LayrzDropdownEntry equivalents; LayrzAlert types) use identical icons across all components. Each semantic factory has a deliberate icon mapping (e.g., `.save` → `contentSaveOutline`, `.cancel` → `closeCircleOutline`, `.info` → `informationOutline`, `.show` → `eyeOutline`, `.edit` → `pencilOutline`, `.delete` → `trashCanOutline`). Note: `LayrzAlert`'s info icon is `informationBoxOutline` (boxed), which is intentionally *different* from the `.info` factory icon (`informationOutline`, bare).
+- **layrz_icons retention**: `layrz_icons` is **retained** in `pubspec.yaml` exclusively for the planned `LayrzIconInput` widget. This picker widget browses the Solar catalogue, which is its intended use case. The system-wide icon source is MDI only; `layrz_icons` is no longer used in components.
+
+### Consequences
+
+**Immediate**:
+- All components using `LayrzIcons.solarOutlineXxx` migrate to `MdiIcons.xxx` (e.g., `MdiIcons.informationBoxOutline`, `MdiIcons.checkCircleOutline`).
+- Every wiki widget page, engineering doc, and code example listing icon names must be updated.
+- The mapping from Solar → MDI is recorded in a canonical table in the migration commit.
+
+**Visual appearance change**: Where a Solar icon had no exact MDI counterpart, the closest substitute was chosen, so some icons changed appearance beyond a like-for-like swap.
+
+**Dependency graph**:
+- `flutter_material_design_icons: ^3.1.0+7447` is added to `pubspec.yaml`.
+- `layrz_icons: ^1.1.1` remains (for future LayrzIconInput) and is no longer the system-wide icon source. Note: `layrz_icons` 1.1.1 itself depends on `flutter_material_design_icons: ^3.1.0+7447`, so adding it to layrz_ui's pubspec promotes a transitive dependency to a direct one, adding no new font asset to the bundle. Both packages expose the same font family and code points (7,447 MDI members).
+
+**Future components**: Components that need icons not in MDI must either use a reasonable MDI substitute, add a new icon to a custom icon font, or defer implementation.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports that a critical UI icon is missing from MDI and no reasonable substitute exists, necessitating a custom icon font or package replacement.
+- The Material Design Icons package is discontinued or significantly degraded in maintenance, requiring evaluation of alternatives.
+
+---
+
+## D46: Spacing and Radius Token Refactor — Semantic Level Ramps
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design System / Token Architecture
+
+### Context
+
+Both spacing and radius tokens had grown ad-hoc collections of pixel-named members (e.g., `sp4`, `sp6`, `sp8`… `sp48` for spacing; `r8`, `r10`, `r12`… `r24` for radius). The shadow token system already exposed five semantic elevation levels (`elevation1`…`elevation5`), providing a unified mental model. On 2026-08-20, the maintainer directed a refactor to align spacing and radius with the pre-existing shadow pattern.
+
+### Decision
+
+**Chose: Replace pixel-named members with five semantic levels using a shared value scale (4, 8, 16, 24, 32).**
+
+Both `LayrzSpacingTokens` and `LayrzRadiusTokens` now expose:
+- Five final `double` fields: `sp1`/`r1` (4), `sp2`/`r2` (8), `sp3`/`r3` (16), `sp4`/`r4` (24), `sp5`/`r5` (32)
+- Derived getters (not in `copyWith`/`==`/`hashCode`): `pdN`/`mgN` returning `EdgeInsets.all(spN)` for spacing clarity; `brN` returning `BorderRadius.circular(rN)` for radius clarity
+- For radius only: `full` = 999 (pill shape, retained), `innerRadius()` and `innerRadiusValue()` (nested container math)
+
+### Rationale
+
+- **Unification**: One value scale (4, 8, 16, 24, 32) across spacing, radius, and shadow (elevation) eliminates memorization and makes design system choices faster.
+- **Semantic clarity**: Named levels (sp1–5) replace pixel names, aligning intent with the shadow pattern already in use.
+- **API simplification**: Fewer members (5 vs. 15+ in spacing; 5 + 1 vs. 8 + 1 in radius) reduce cognitive load and discovery burden.
+- **Accessibility**: Derived getters (`pdN`, `mgN`, `brN`) make call sites read as intent-driven rather than shape-driven, improving code clarity without additional tokens.
+
+### Consequences
+
+**Breaking API change**: All consuming code must migrate from pixel-named members to level-based ones.
+
+**Silent failure hazard**: `sp4` existed in both schemes with *different* values (4.0 → 24.0). Stale code using the old `sp4` would compile and render six times the intended spacing. The mitigation adopted was **complete removal with no deprecation aliases or `@deprecated` annotations**, forcing every stale call site to fail at compile time rather than silently. This is a one-time safety trade-off (clean break) over ongoing technical debt (dual API surface).
+
+**Safe migration order** (applied to this codebase):
+1. Rewrite all old `sp4` references to `sp1` *first*, verify zero `sp4` remains.
+2. *Then* introduce the new `sp4` definition.
+3. Generalize: whenever a rename reuses an existing identifier with a new value, delete before re-adding.
+
+**Call-site migration (spacing)**:
+
+| Old | New | Justification |
+|-----|-----|---|
+| `sp4` (4.0) | `sp1` | Exact; level 1 is 4 |
+| `sp6` (6.0) | `sp2` | Round up to 8 |
+| `sp8` (8.0) | `sp2` | Exact; level 2 is 8 |
+| `sp10` (10.0) | `sp2` | Nearest (8) |
+| `sp12` (12.0) | `sp3` | Round up to 16 |
+| `sp14`–`sp16` (14–16) | `sp3` | Exact or near; level 3 is 16 |
+| `sp20` (20.0) | `sp4` | Round up to 24 |
+| `sp24` (24.0) | `sp4` | Exact; level 4 is 24 |
+| `sp28` (28.0) | `sp5` | Round up to 32 |
+| `sp32` (32.0) | `sp5` | Exact; level 5 is 32 |
+| `sp36`, `sp40`, `sp44`, `sp48` (36–48) | `sp5` | Clamp to 32 (23 call sites lose ~1/3 spacing) |
+| `base` | `sp2` | Base was 8.0; level 2 is 8 |
+| `padding`, `margin` | `pd2`, `mg2` | Base-derived; 8.0 values |
+| `reducedMargin` | `mg1` | Was `base / 2` = 4.0; level 1 is 4 |
+| `spacingSize`, `sizedBox` | Inline `Size(sp2, sp2)` / `SizedBox.square(dimension: sp2)` | No longer convenience members |
+
+**Call-site migration (radius)**:
+
+| Old | New | Justification |
+|-----|-----|---|
+| `r8`, `r10` | `r2` | Both ≤ 8; level 2 is 8 |
+| `r12`–`r16` | `r3` | 12–16 range; level 3 is 16 (16 sites see visibly rounder corners) |
+| `r20`, `r24` | `r4` | 20–24 range; level 4 is 24 |
+| `base` | `r2` | Base was 8.0; level 2 is 8 |
+| `borderRadius` | `br2` | Was `BorderRadius.circular(base)` = 8.0 |
+
+**Visual consequences** (accepted):
+- 23 old `sp48` (48.0) call sites now render at `sp5` (32.0) — a 33% tightening. This tightens spacing on some large containers but is preferable to overriding the entire ramp.
+- 16 old `r12` (12.0) call sites now render at `r3` (16.0) — corners are visibly rounder.
+- Consumers migrating incrementally must ensure all sites are updated together to avoid visual inconsistency.
+
+**`full` and `innerRadius` retained** on assumption: The ramp does not express a pill shape; removing `full` would force 3 call sites to hardcode 999 (a functional regression). Keeping one extra member is trivially reversible; re-deriving pill shapes is not. If the maintainer confirms pill shapes should be removed, this is a one-line field deletion plus 3 call-site updates.
+
+### Review Trigger
+
+**Revisit if**:
+- Consuming apps report that the ramp is too coarse (e.g., 24 is too large and 16 is too small) — revisit the five-level scale.
+- The visual tightening of the 23 `sp48` → `sp5` sites is confirmed to be a problem — consider aliasing the old `sp48` as `sp5 + 8` or reverting to a six-level ramp.
+- Pill shapes should be removed entirely — this is a one-line change once confirmed.
+
+---
+
+## D47: Dense Parameter Removed from the Input Family
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: API Design / Feature Scope
+
+### Context
+
+The `dense` parameter was introduced as a public boolean on `LayrzTextInput` and inherited by all input-family components. Its purported purpose was to enable compact rendering with tighter padding. However, analysis of production usage showed:
+
+1. **Two call sites only** in the codebase itself: the navigation search field in the drawer and the search field in the rail.
+2. **Both call sites also pass an explicit `padding:` parameter** that overrides the default, making `dense` ineffective for padding control.
+3. **The parameter adds friction**: threaded through two public widgets (LayrzTextInput and picker wrappers), documented across ~31 references, and maintained through 91 lines of code (InputDensitySpec abstraction and related logic).
+
+The cost of maintaining the parameter significantly outweighed its utility.
+
+### Decision
+
+**Remove the `dense` parameter and the `InputDensitySpec` abstraction entirely.**
+
+All inputs now use a single, uniform default: `pd2` (8 logical pixels) on all four sides. The `padding` parameter survives as an escape hatch for callers who need non-standard padding.
+
+### Rationale
+
+**Usage data**: Two call sites in the entire codebase, both with overriding `padding:` parameters, means `dense` is not earning its API surface. Removing it eliminates:
+- A boolean with unclear semantics (what is "dense" without measuring the actual reduction?)
+- A parameter that silently had no effect on its two production consumers
+- 91 lines of abstraction code and ~31 wiki/engineering doc references
+
+**Future extensibility**: If a future use case genuinely needs tighter geometry, it can be addressed by:
+1. Passing an explicit `padding:` parameter (already available).
+2. Creating a purpose-built, compact-input component with its own name and contract (e.g., `LayrzCompactTextInput`), rather than resurrecting a confusing boolean.
+
+**Breaking-change timing**: The parameter was public from 0.0.9 onward, but production consumers of layrz_ui are zero at removal time (2026-08-20); the breaking change is free to execute now.
+
+### Consequences
+
+**Removed entirely**:
+- `dense: bool` parameter from `LayrzTextInput` and all picker-style inputs
+- `InputDensitySpec` abstraction file (`lib/src/inputs/src/input_density.dart`, 91 lines)
+- All references in wiki and engineering documentation
+
+**Retained**:
+- The `padding: EdgeInsets?` parameter on `LayrzTextInput`, defaulting to `pd2` (8px uniform)
+- Two constants that were unused: `kLayrzLayoutSearchFieldPaddingHorizontal` (10.0, not on token ramp) and `kLayrzTextInputDenseIconSize` (14.0)
+
+**Visual change**: Two production call sites (drawer and rail search fields) now render with `body` (16px) text and 8px uniform padding (vs. 14px text and 10px horizontal / 8px vertical under the old dense rendering). The change is intentional and aligns with the single-density design.
+
+### Removal Strategy
+
+When removing a parameter or abstraction:
+1. **Delete the parameter entirely** (not `@deprecated`) — forces all call sites to fail at compile time.
+2. **Search for references** beyond the parameter itself (e.g., constants used only by that feature).
+3. **Clean up orphaned code** (the abstraction file, derived getters, helper methods).
+
+This is preferred over deprecation cycles because:
+- Dart has no feature flags; deprecation leaves dead code in production binaries.
+- layrz_ui is 0.0.x (pre-release); clean breaks are expected and free.
+- Forcing compile-time failure ensures no code silently uses a removed feature and behaves incorrectly.
+
+### Related Decisions
+
+- **D32** (Filled Visual Language) — established the input interaction matrix and padding as a design token.
+- **D33** (Read-Only as Rest + Lock Icon) — part of the same M3 input family contract.
+
+### Review Trigger
+
+**Revisit if**:
+- A consuming app reports that the removal of `dense` blocks a critical workflow, requiring a purpose-built compact-input component be created instead.
+
+---
+
 ## How to Add a Decision
 
 When a significant decision is made during layrz_ui development, follow this format:
@@ -2516,3 +2720,281 @@ When a significant decision is made during layrz_ui development, follow this for
 6. **Example PR**: Link the PR in which the decision was documented so that decision history is tied to code history.
 
 Keep decisions concise (300-500 words) but complete. Future maintainers should be able to understand the context and rationale without reading external documents.
+
+---
+
+## D48: Navigation Panel Unification and Logo/Search Field Refactor
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Code Refactoring / Design System
+
+### Context
+
+The navigation panel appeared twice in `LayrzLayout`:
+- `LayrzLayoutRail` (386 lines) in `lib/src/layout/src/rail.dart` — persistent sidebar on desktop (md, lg, xl breakpoints)
+- `LayrzLayoutDrawer` (385 lines) in `lib/src/layout/src/drawer.dart` — off-canvas drawer on mobile (sm, xs breakpoints)
+
+The two widgets were ~91% identical in structure, differing only in two behavioural axes:
+1. Width: 178px (rail) vs. 260px (drawer)
+2. Closure mode: no close affordance (rail) vs. callback-driven closure on navigation item tap (drawer)
+
+Both rendered the same internal structure: logo block, search field, navigation items, user chrome, notifications footer. The duplication introduced:
+- Risk of divergent behaviour between presentations (e.g., search filtering differently, logo sizing inconsistently)
+- 69 lines of actual code difference across ~770 lines total — roughly 9% divergence, or about 91% duplication
+- Maintenance burden: a change to logo rendering or search filtering required edits in two places
+
+Additionally, the logo block carried six hardcoded constants (`kLayrzLayoutLogoWidthFactor`, `kLayrzLayoutLogoHeight`, etc.), and the search field carried four more (`kLayrzLayoutSearchFieldHeight`, etc.). Analysis showed these constants were used nowhere else and were not consumed by external packages.
+
+### Decision
+
+**Chose: Merge into a single internal widget, `LayrzLayoutNavigatorPanel`, parameterised on width and closure mode.**
+
+The merged widget:
+- Takes `width: double` (caller passes 178 or 260)
+- Takes `onClose: VoidCallback?` — **null means persistent (rail) mode; non-null means drawer mode**
+- Derives shadow rendering from the `onClose` flag: shadow (`elevation2`) only when persistent; no shadow in drawer mode (sits on backdrop)
+- Renders a unified logo block and search field
+
+### Rationale
+
+**Deduplication**: Eliminating duplication reduces defect risk and maintenance cost. A single implementation path for logo and search ensures both presentations behave consistently.
+
+**Parameterisation strategy**: The two axes of variance (width and closure behaviour) map cleanly to constructor parameters. The choice to derive shadow from `onClose` is semantic: a persistent panel needs visual separation from the body; a drawer is a floating overlay on a backdrop and reads correctly without shadow.
+
+**Constant removal**: The ten deleted constants were examined for external use (grep across `lib/`, `test/`, `example/`) and found to be unused outside their definition within this repository. Removing them simplifies the token landscape. This is a genuine breaking change: the constants were public via `lib/src/constants/src/layout.dart` → `lib/src/constants/constants.dart` → `lib/layrz_ui.dart`, and the impact on consuming packages is unknown. External consumers may reference them at upgrade time and will need to migrate their code.
+
+**Two normalisations applied during merge**:
+1. Logo block now guarded by `logo.isNotEmpty` in both modes (drawer previously rendered an empty `LayrzImage` for empty logo, rail omitted it)
+2. Logo block made edge-to-edge via `LayoutBuilder` + symmetric `kLayrzLayoutItemPaddingHorizontal` on left/right, with `maxHeight` ceiling at 100px allowing aspect-ratio scaling via `BoxFit.contain`
+
+### Consequences
+
+**Code removed**:
+- `lib/src/layout/src/rail.dart` (386 lines)
+- `lib/src/layout/src/drawer.dart` (385 lines)
+- Ten public constants from `lib/src/constants/src/layout.dart`:
+  - Logo: `kLayrzLayoutLogoTileSize`, `kLayrzLayoutLogoTileRadius`, `kLayrzLayoutLogoGap`, `kLayrzLayoutLogoWidthFactor`, `kLayrzLayoutLogoHeight`, `kLayrzLayoutLogoLeftPadding`
+  - Search: `kLayrzLayoutSearchFieldHeight`, `kLayrzLayoutSearchFieldInternalPaddingHorizontal`, `kLayrzLayoutSearchFieldFontSize`, `kLayrzLayoutSearchFieldIconSize`
+
+**Public API impact**: `LayrzLayoutRail` and `LayrzLayoutDrawer` were **never exported** from `lib/src/layout/layout.dart`, so their removal is not a public breaking change. However, the ten constants *were* public, making their removal a **genuine breaking change** for any consumer code referencing them by name.
+
+**Known wart**: `kLayrzLayoutRailPaddingHorizontal` and `kLayrzLayoutRailPaddingVertical` retain the `Rail` prefix despite applying to both presentations. Renaming would introduce a second breaking change. These constants are candidates for a future breaking release.
+
+### Review Trigger
+
+**Revisit if**:
+- Drawer and rail presentations show visual divergence in logo rendering or search filtering, indicating the merged implementation is insufficient for future variance.
+- A consuming app reports that removal of the ten constants blocks critical custom styling, requiring a feature-flag constant restoration strategy.
+
+---
+
+## D49: Surface Color Tokens — Collapse to Numbered Ramp `sf1`–`sf4`, Remove Pure White
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design Tokens / Breaking Change
+
+### Context
+
+layrz_ui currently has four surface color tokens with inconsistent naming:
+- `background` (#FCFCFC) — canvas/scaffold color
+- `surface` (#FFFFFF) — card/dialog color
+- `surface2` (#F7F7F7) — nested container color
+- `surface3` (#F0F0F0) — deepest nesting color
+
+The naming is ad-hoc (no semantic pattern), and the use of pure white (#FFFFFF) for `surface` is problematic:
+1. **Rendering contrast**: All elevation shadows are calculated assuming the card sits on a #FCFCFC canvas. A white card on a light-gray canvas has no visual elevation separation, requiring shadow to do all the visual work.
+2. **Inconsistency with ramp logic**: The spacing and radius token refactors (D46) introduced semantic level ramps (1–5). Surfaces should follow the same pattern for consistency.
+3. **Naming confusion**: Neither `background` nor `surface` clearly communicates the ramp structure or values. A numbered sequence is unambiguous.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep as-is | No breaking change | Inconsistent naming; pure white causes visual flattening; not aligned with D46 ramp pattern |
+| (b) Rename to `surface1`–`surface4` | Clearer numbering | Still `surface` prefix; does not address white issue |
+| (c) Use `sf1`–`sf4` numbered ramp and promote on-canvas fills to #F7F7F7 (chosen) | Aligns with D46 ramp pattern; removes pure white; improves elevation shadow contrast; clear 1–4 ordering | Breaking change affecting ~108 call sites across lib/, test/, example/ |
+
+### Decision
+
+**Chose (c): Collapse to `sf1`–`sf4` numbered ramp, promote on-canvas fills to #F7F7F7, remove pure white.**
+
+### Token Values
+
+| New | Value | Replaces | Usage |
+|-----|-------|----------|-------|
+| `sf1` | #FCFCFC | `background` | Canvas/scaffold background, overlay fills (dropdowns) |
+| `sf2` | #F7F7F7 | `surface` (promoted) | On-canvas fills: cards, dialogs, panels, alerts |
+| `sf3` | #F0F0F0 | `surface2` | Nested containers, secondary elevations |
+| `sf4` | #E8E8E8 | — (new) | Deepest nesting, maximum contrast |
+
+### Rationale
+
+**Ramp consistency**: Spacing (D46) and radius (D46) now use semantic level ramps (1–5). Surfaces follow the same pattern for mental coherence. The prefix `sf` (surface fill) is unambiguous and compact.
+
+**Contrast improvement**: Promoting on-canvas fills from white (#FFFFFF) to #F7F7F7 (old `surface2`) creates visual separation from the #FCFCFC canvas, reducing reliance on shadow alone. Shadows are now computed with `surfaceColor: #F7F7F7` (instead of #FFFFFF), making them calibrated to the actual background they appear on.
+
+**Removal of pure white**: Pure white has no place in a light-mode system with a light-gray canvas. It reads as "too bright" and forces surfaces to rely entirely on shadow or border for elevation cues. The ramp is now a true grayscale progression: #FCFCFC → #F7F7F7 → #F0F0F0 → #E8E8E8.
+
+**New `sf4` step**: Adds a fourth step for cases requiring maximum contrast (e.g., deepest nested panels, edge cases). Currently unused in shipped components, but available for future expansions.
+
+### Consequences
+
+**Breaking changes**:
+- Removed: `LayrzColorTokens.background`, `.surface`, `.surface2`, `.surface3` (all four fields).
+- Removed: constant `kLightBackgroundColor` from `lib/src/constants/src/colors.dart`.
+- Added: `LayrzColorTokens.sf1`, `.sf2`, `.sf3`, `.sf4` (all in `copyWith`, `==`, `hashCode`).
+- Updated: `LayrzThemeData.backgroundColor` getter now returns `.sf1` (was `.background`); `surfaceColor` returns `.sf2` (was `.surface`).
+
+**Call-site count**: ~108 across lib/ (~40), test/ (~33), example/ (~35).
+
+**Migration table**:
+- `colors.background` → `colors.sf1`
+- `colors.surface` → `colors.sf2` (on-canvas fills) or `colors.sf1` (overlays)
+- `colors.surface2` → `colors.sf2`
+- `colors.surface3` → `colors.sf3`
+
+**Rendering changes**:
+- `LayrzShadowTokens` default `surfaceColor` updated from #FFFFFF to #FCFCFC.
+- `LayrzAvatar` private background constant `_kWhiteBackground` updated from #FFFFFF to #FCFCFC.
+- All elevation shadows now render against light gray, improving visual separation.
+
+**Shadow seeding**: `LayrzTokens.light()` factory wires shadow `surfaceColor` to `colors.sf2` (the new on-canvas fill), ensuring shadow calculations are consistent with the surfaces they shade.
+
+### Revert — 2026-08-20
+
+The promotion of on-canvas fills to `sf2` (option c, above) was implemented in DESIGN-111 but reverted immediately. The decision to elevate surface colors was reversed because **elevation shadows provide sufficient visual separation without a colour step**.
+
+**What was reverted**:
+- Cards, panels, alerts, and dialogs: `sf2` → `sf1`
+- `LayrzThemeData.surfaceColor`: returns `sf1` (was `sf2`)
+- `LayrzTokens.light()` shadow seeding: `surfaceColor` wired to `sf1` (was `sf2`)
+- All `flattenOn()` bases in interactive alert styling: `sf2` → `sf1`
+
+**Why the revert**:
+1. **Elevation is a sufficient separator.** Testing showed that elevation shadow (blur, opacity, offset) alone distinguishes cards/panels from the `sf1` canvas. The intermediate step (`sf2`) was redundant.
+2. **Reduces visual complexity.** Using `sf1` for both canvas and on-canvas fills simplifies the palette: fewer distinct grays, fewer cognitive categories.
+3. **Maintains semantic clarity.** On-canvas elements still have distinct shadow tokens; shadow is the elevation cue, not color.
+
+**Correct migration table** (replacing the one above):
+- `colors.background` → `colors.sf1`
+- `colors.surface` → `colors.sf1` (all on-canvas fills now; elevation shadows provide separation)
+- `colors.surface2` → `colors.sf1`
+- `colors.surface3` → `colors.sf3`
+
+**Shadow seeding** (corrected): `LayrzTokens.light()` factory wires shadow `surfaceColor` to `colors.sf1` (the canvas color), not `sf2`.
+
+### Review Trigger
+
+**Revisit if**:
+- Adopters report that `sf1` (light gray overlay on light gray canvas) reads as insufficient visual separation for persistent overlay panels (dropdowns, popovers). Contingency: add an `sf0` (#FAFAFA) or shift overlay fills to `sf2`.
+- The ramp is too shallow (4 steps) and components need intermediate nesting levels. Contingency: expand to 5–6 steps.
+
+
+---
+
+## D50: Material-Free Text Selection — Field Actions, Page Toolbar, Flutter Traps
+
+**Date**: 2026-08-20  
+**Status**: Decided  
+**Category**: Design / Selection Framework
+
+### Context
+
+Text selection in Flutter's `EditableText` and `SelectableRegion` is deeply coupled to Material Design conventions. layrz_ui, being Material-free, needed to:
+1. Customize the selection toolbar in text fields to show configurable actions (copy, cut, paste, select all)
+2. Provide toolbar for page-wide text selection (under `SelectableRegion` in `LayrzLayout`)
+3. Understand and work around five non-obvious Flutter defaults that silently break selection if left unchecked
+
+### Design
+
+**Field selection toolbar**: `LayrzTextInput` adds an `actions` parameter:
+- When `null`, the field offers all four built-in actions (copy, cut, paste, select all) as permitted by field state
+- When `const {}`, the toolbar is suppressed entirely
+- When populated with a set of `LayrzSelectableAction` instances, those actions appear in the toolbar
+- The set is intersected with what the field's state permits: obscured fields never offer copy/cut; read-only fields never offer cut/paste
+
+**Built-in actions**: Exposed as static methods on `LayrzSelectableAction`:
+- `copy()`, `cut()`, `paste()`, `selectAll()`
+
+**Custom actions**: Callers create `LayrzSelectableAction(label: (context) => '...', onPressed: () => ...)`
+
+**Important constraint**: Custom actions cannot be const. The type overrides `operator==`, making const instances non-hashable (Dart error). Workaround: use `static final` instead.
+
+**Page-wide selection**: `SelectableRegion` under `LayrzLayout` now displays a copy-only toolbar when text is selected. This is hardcoded and non-customizable.
+
+### Rejected Options
+
+**`LayrzSelectableTools` shared provider**: A previous draft proposed a shared context-scoped controller/provider that both field and page region would read to determine available actions. This was rejected because:
+1. The field carries its own `Set<LayrzSelectableAction>`, which is the source of truth
+2. A shared provider conflates field-level and page-level concerns, mixing two independent selection contexts
+3. It adds unnecessary indirection without solving a real problem (both can independently resolve their actions)
+
+**Android ProcessTextService extras**: Android has a built-in mechanism to pass action intents to custom apps (e.g., "share to Twitter"). We deliberately exclude this from the toolbar because:
+1. It is Android-only and not portable to iOS/web
+2. layrz_ui does not target that use case; the toolbar is lightweight
+3. Integrating it would complicate the toolbar builder significantly
+
+### The Five Flutter Traps
+
+During implementation, five silent-failure defaults were discovered:
+
+#### Trap 1: `rendererIgnoresPointer` defaults to false
+
+`EditableText.rendererIgnoresPointer` defaults to `false`. When false, `RenderEditable` claims pointer events and wins the gesture arena, so a fully-wired `TextSelectionGestureDetectorBuilder` never fires.
+
+**Fix**: Set `rendererIgnoresPointer: true`. Material does this at `text_field.dart:1726`.
+
+**Why silent**: The gesture detector is wired correctly; it's just never invoked because the renderer blocks it first.
+
+#### Trap 2: `selectionControls` and `magnifierConfiguration` must be stable instances
+
+`EditableText.didUpdateWidget()` disposes and recreates the selection overlay whenever `selectionControls` or `magnifierConfiguration` differs (lines 3464–3473). Showing the toolbar itself triggers a rebuild of the parent, which creates a new set of these objects, which disposes the overlay mid-display, which crashes.
+
+**Fix**: Cache both as instance variables, initialized once in `initState()`, and reuse the same reference across rebuilds.
+
+**Why silent**: The overlay shows momentarily, then vanishes. If the tap happens to be captured before disposal completes, no crash is visible. The behavior looks like a tap not opening the toolbar.
+
+#### Trap 3: `TextSelectionControls` must mix in `TextSelectionHandleControls`
+
+`TextSelectionControls` alone is insufficient. The `contextMenuBuilder` parameter is ignored in favour of the deprecated `buildToolbar()` method unless the controls mix in `TextSelectionHandleControls` (text_selection.dart:472–481, documented at `:74-85`).
+
+**Fix**: Use `class LayrzTextSelectionControls extends TextSelectionControls with TextSelectionHandleControls`.
+
+**Compounding trap**: Stubbing `buildToolbar()` to return an empty container then yields a toolbar that shows correctly and is blank. This reads like the custom toolbar is working, but `contextMenuBuilder` is never called.
+
+**Why silent**: `buildToolbar()` is deprecated but still invoked. The callback parameter is documented as ignored in the presence of `buildToolbar()`, but the relationship is not obvious in the API.
+
+#### Trap 4: `showSelectionHandles` defaults to false
+
+`EditableText.showSelectionHandles` defaults to `false` (editable_text.dart:862). The overlay builds the handles then hides them (`:4531-4532`).
+
+**Fix**: Drive `showSelectionHandles` per `SelectionChangedCause` in the field's `onSelectionChanged` callback. Material sets it to true for long-press and drag, false for keyboard-driven selection (text_field.dart:1168, `:1424-1426`, `:1692`).
+
+**Why silent**: Without this, selection works (keyboard, toolbar appear), but the draggable handles are invisible. It reads like selection is broken, not that handles are just hidden.
+
+#### Trap 5: Selection overlay is not created eagerly
+
+The selection overlay is created lazily, not eagerly. It requires the field to be **focused** and the selection to have changed **with a cause**. Calling `showToolbar()` on an unfocused field returns `false` silently (editable_text.dart:5184–5212).
+
+**Consequence**: Tests must focus the field and use a real gesture (not a synthetic selection assignment) to trigger the overlay. `controller.selection = TextSelection(...)` alone will not show handles or toolbar.
+
+**Why silent**: The API returns `false`, but callers rarely check. The toolbar never appears, which reads like the implementation is broken.
+
+### Consequences
+
+- All five traps must be addressed in code. Omitting any one of them results in plausible-looking but broken text selection.
+- None of the traps are discoverable from the API surface (no warnings, no errors, no inline documentation).
+- **Lifecycle fact that looks like a bug**: The selection overlay is not created until the field is focused AND the selection changes with a cause. This is intentional for efficiency but counter-intuitive.
+- `LayrzLayout`'s `SelectableRegion` needs its own `contextMenuBuilder` once the text selection controls mix in `TextSelectionHandleControls`, or page selection crashes with a null check (selectable_region.dart:1389).
+
+### Related Decisions
+
+- D32, D33, D34: Text input styling and layout
+- D15: Interaction state affordances (no size/geometry changes on hover/press)
+
+### Review Trigger
+
+If Flutter's text selection API is refactored in a future version, revisit these traps to see if any are no longer necessary.
+

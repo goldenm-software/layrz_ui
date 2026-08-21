@@ -27,7 +27,6 @@ clean:
 
 .PHONY: build-android
 build-android: clean
-	@rm -rf com.layrz.ui.apk
 	flutter build apk --release --no-tree-shake-icons
-	mv build/app/outputs/flutter-apk/app-release.apk com.layrz.ui.apk
+	mv build/app/outputs/flutter-apk/app-release.apk ../com.layrz.ui.apk
 

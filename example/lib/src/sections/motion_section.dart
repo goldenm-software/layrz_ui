@@ -23,18 +23,18 @@ class MotionSection extends StatelessWidget {
         children: [
           // Motion values reference
           Text('Motion Token Values', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           _MotionValuesTable(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp24),
+          SizedBox(height: tokens.spacing.sp4),
 
           // Interactive demonstrations
           Text('Interactive Demonstrations', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           Row(
             children: [
               Expanded(child: _HoverAnimationDemo(tokens: tokens)),
-              SizedBox(width: tokens.spacing.sp16),
+              SizedBox(width: tokens.spacing.sp3),
               Expanded(child: _PressAnimationDemo(tokens: tokens)),
             ],
           ),
@@ -58,24 +58,24 @@ class _MotionValuesTable extends StatelessWidget {
       children: [
         // Durations
         _MotionValueRow(label: 'dHover', value: '${tokens.motion.dHover.inMilliseconds} ms', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(label: 'dPress', value: '${tokens.motion.dPress.inMilliseconds} ms', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(label: 'dTransition', value: '${tokens.motion.dTransition.inMilliseconds} ms', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(
           label: 'dPageTransition',
           value: '${tokens.motion.dPageTransition.inMilliseconds} ms',
           tokens: tokens,
         ),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(label: 'dDialog', value: '${tokens.motion.dDialog.inMilliseconds} ms', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         // Easing curves
         _MotionValueRow(label: 'easing', value: 'easeInOut', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(label: 'easingEnter', value: 'easeOut', tokens: tokens),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         _MotionValueRow(label: 'easingExit', value: 'easeIn', tokens: tokens),
       ],
     );
@@ -105,7 +105,7 @@ class _MotionValueRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: tokens.spacing.sp48 * 2,
+            width: tokens.spacing.sp5 * 2,
             child: Text(label, style: tokens.typography.label),
           ),
           Expanded(
@@ -165,7 +165,7 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Hover Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
           onExit: (_) => setState(() => _isHovered = false),
@@ -174,19 +174,19 @@ class _HoverAnimationDemoState extends State<_HoverAnimationDemo> {
             duration: tokens.motion.dHover,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
-              color: _isHovered ? tokens.colors.primary : tokens.colors.surface,
-              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              color: _isHovered ? tokens.colors.primary : tokens.colors.sf2,
+              borderRadius: tokens.radius.br2,
               border: Border.all(
                 color: _isHovered ? tokens.colors.primary : tokens.colors.divider,
                 width: tokens.border.stroke1,
               ),
             ),
-            padding: EdgeInsets.all(tokens.spacing.sp16),
+            padding: EdgeInsets.all(tokens.spacing.sp3),
             child: AnimatedDefaultTextStyle(
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
               style: tokens.typography.label.copyWith(
-                color: _isHovered ? tokens.colors.surface : tokens.colors.fg1,
+                color: _isHovered ? tokens.colors.sf2 : tokens.colors.fg1,
               ),
               child: Text('Hover me (${tokens.motion.dHover.inMilliseconds}ms)'),
             ),
@@ -221,7 +221,7 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Press Animation', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
-        SizedBox(height: tokens.spacing.sp8),
+        SizedBox(height: tokens.spacing.sp2),
         GestureDetector(
           onTapDown: (_) => setState(() => _isPressed = true),
           onTapUp: (_) => setState(() => _isPressed = false),
@@ -231,19 +231,19 @@ class _PressAnimationDemoState extends State<_PressAnimationDemo> {
             duration: tokens.motion.dPress,
             curve: tokens.motion.easing,
             decoration: BoxDecoration(
-              color: _isPressed ? tokens.colors.primary : tokens.colors.surface,
-              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              color: _isPressed ? tokens.colors.primary : tokens.colors.sf2,
+              borderRadius: tokens.radius.br2,
               border: Border.all(
                 color: _isPressed ? tokens.colors.primary : tokens.colors.divider,
                 width: tokens.border.stroke1,
               ),
             ),
-            padding: EdgeInsets.all(tokens.spacing.sp16),
+            padding: EdgeInsets.all(tokens.spacing.sp3),
             child: AnimatedDefaultTextStyle(
               duration: tokens.motion.dPress,
               curve: tokens.motion.easing,
               style: tokens.typography.label.copyWith(
-                color: _isPressed ? tokens.colors.surface : tokens.colors.fg1,
+                color: _isPressed ? tokens.colors.sf2 : tokens.colors.fg1,
               ),
               child: Text('Press me (${tokens.motion.dPress.inMilliseconds}ms)'),
             ),

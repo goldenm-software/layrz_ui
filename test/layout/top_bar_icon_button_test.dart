@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/layout/src/top_bar_icon_button.dart';
 
 import '../helpers/pump_themed.dart';
@@ -16,9 +18,9 @@ void main() {
         Center(
           child: LayrzLayoutTopBarIconButton(
             key: const ValueKey('test_button'),
-            icon: IconData(0xe900, fontFamily: 'layrz_icons'),
+            icon: MdiIcons.viewDashboardOutline,
             iconColor: const Color(0xFF000000),
-            iconSize: 24,
+            iconSize: kLayrzLayoutIconSize,
             onTap: onTap,
           ),
         ),

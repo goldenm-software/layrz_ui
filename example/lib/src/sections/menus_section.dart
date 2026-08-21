@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
@@ -28,17 +28,17 @@ class MenusSection extends StatelessWidget {
                   LayrzDropdownEntry(
                     labelText: 'New Item',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineAddCircle,
+                    icon: MdiIcons.plusCircleOutline,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'Edit',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlinePenNewSquare,
+                    icon: MdiIcons.pencilOutline,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'View',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineEyeScan,
+                    icon: MdiIcons.eyeOutline,
                   ),
                 ],
                 builder: (context, controller) => LayrzButton(
@@ -59,23 +59,23 @@ class MenusSection extends StatelessWidget {
                   LayrzDropdownEntry(
                     labelText: 'Create',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineAddCircle,
+                    icon: MdiIcons.plusCircleOutline,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'Edit',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlinePenNewSquare,
+                    icon: MdiIcons.pencilOutline,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'Duplicate',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineClipboardList,
+                    icon: MdiIcons.clipboardListOutline,
                   ),
                   LayrzDropdownLabel(labelText: 'Danger'),
                   LayrzDropdownEntry(
                     labelText: 'Delete',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+                    icon: MdiIcons.trashCanOutline,
                   ),
                 ],
                 builder: (context, controller) => LayrzButton(
@@ -95,18 +95,18 @@ class MenusSection extends StatelessWidget {
                   LayrzDropdownEntry(
                     labelText: 'Available',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineAddCircle,
+                    icon: MdiIcons.plusCircleOutline,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'Not Available',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineCloseCircle,
+                    icon: MdiIcons.closeCircleOutline,
                     enabled: false,
                   ),
                   LayrzDropdownEntry(
                     labelText: 'Also Available',
                     onTap: () {},
-                    icon: LayrzIcons.solarOutlineCheckCircle,
+                    icon: MdiIcons.checkCircleOutline,
                   ),
                 ],
                 builder: (context, controller) => LayrzButton(
@@ -213,14 +213,14 @@ class MenusSection extends StatelessWidget {
                       LayrzDropdownEntry(
                         labelText: 'Create',
                         onTap: () {},
-                        icon: LayrzIcons.solarOutlineAddCircle,
+                        icon: MdiIcons.plusCircleOutline,
                         color: tokens.colors.primary,
                         shortcut: {LogicalKeyboardKey.control, LogicalKeyboardKey.keyN},
                       ),
                       LayrzDropdownEntry(
                         labelText: 'Edit',
                         onTap: () {},
-                        icon: LayrzIcons.solarOutlinePenNewSquare,
+                        icon: MdiIcons.pencilOutline,
                         color: tokens.colors.primary,
                         shortcut: {LogicalKeyboardKey.control, LogicalKeyboardKey.keyE},
                       ),
@@ -228,7 +228,7 @@ class MenusSection extends StatelessWidget {
                       LayrzDropdownEntry(
                         labelText: 'Delete',
                         onTap: () {},
-                        icon: LayrzIcons.solarOutlineTrashBinMinimalistic,
+                        icon: MdiIcons.trashCanOutline,
                         color: tokens.colors.danger,
                         shortcut: {
                           LogicalKeyboardKey.control,
@@ -271,17 +271,17 @@ class _MenuShowcaseCard extends StatelessWidget {
     final tokens = context.tokens;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: tokens.spacing.sp16),
+      padding: EdgeInsets.only(bottom: tokens.spacing.sp3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: tokens.typography.label),
-          SizedBox(height: tokens.spacing.sp12),
+          SizedBox(height: tokens.spacing.sp3),
           Container(
-            padding: EdgeInsets.all(tokens.spacing.sp16),
+            padding: EdgeInsets.all(tokens.spacing.sp3),
             decoration: BoxDecoration(
-              color: tokens.colors.surface2,
-              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              color: tokens.colors.sf2,
+              borderRadius: tokens.radius.br2,
             ),
             child: child,
           ),

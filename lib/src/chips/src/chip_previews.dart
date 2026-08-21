@@ -1,6 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -106,7 +106,7 @@ class _PreviewChipFeatures extends StatelessWidget {
             children: [
               LayrzChip(
                 labelText: 'With Icon',
-                leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+                leadingIcon: MdiIcons.checkCircleOutline,
                 type: LayrzChipType.success,
               ),
               LayrzChip(
@@ -122,7 +122,7 @@ class _PreviewChipFeatures extends StatelessWidget {
             children: [
               LayrzChip(
                 labelText: 'Both',
-                leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+                leadingIcon: MdiIcons.checkCircleOutline,
                 onDelete: () {},
                 type: LayrzChipType.info,
               ),

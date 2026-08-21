@@ -16,10 +16,10 @@ void main() {
       expect(tokens.motion, isA<LayrzMotionTokens>());
     });
 
-    test('light factory wires shadow.surfaceColor to colors.surface', () {
+    test('light factory wires shadow.surfaceColor to colors.sf1', () {
       final tokens = LayrzTokens.light();
 
-      expect(tokens.shadow.surfaceColor, equals(tokens.colors.surface));
+      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf1));
     });
 
     test('light factory wires border.dividerColor to colors.divider', () {
@@ -50,10 +50,10 @@ void main() {
       expect(tokens.colors.primary.shade500, equals(kPrimaryColor));
     });
 
-    test('light factory wires shadow.baseRadius to radius.base', () {
+    test('light factory wires shadow.baseRadius to radius.r2', () {
       final tokens = LayrzTokens.light();
 
-      expect(tokens.shadow.baseRadius, equals(tokens.radius.base));
+      expect(tokens.shadow.baseRadius, equals(tokens.radius.r2));
     });
 
     test('copyWith creates new instance with replaced categories', () {
@@ -107,9 +107,9 @@ void main() {
       final tokens = LayrzTokens.light();
 
       // Verify the key wiring relationships
-      expect(tokens.shadow.surfaceColor, equals(tokens.colors.surface));
+      expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf1));
       expect(tokens.border.dividerColor, equals(tokens.colors.divider));
-      expect(tokens.shadow.baseRadius, equals(tokens.radius.base));
+      expect(tokens.shadow.baseRadius, equals(tokens.radius.r2));
 
       // Typography should use fg1 for text color
       final bodyStyle = tokens.typography.body;

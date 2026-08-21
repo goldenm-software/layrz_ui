@@ -1,7 +1,7 @@
-import "package:flutter/widgets.dart";
-import "package:layrz_icons/layrz_icons.dart";
-import "package:layrz_ui/src/extensions/extensions.dart";
-import "package:layrz_ui/src/tokens/tokens.dart";
+import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The right detail pane of the scaffold shell.
 ///
@@ -39,7 +39,7 @@ class DetailPane<T> extends StatelessWidget {
     final tokens = context.tokens;
 
     return Container(
-      color: tokens.colors.surface,
+      color: tokens.colors.sf1,
       child: Column(
         children: [
           if (showBack)
@@ -59,7 +59,7 @@ class DetailPane<T> extends StatelessWidget {
                   GestureDetector(
                     onTap: onClose,
                     child: Icon(
-                      LayrzIcons.solarOutlineArrowLeft,
+                      MdiIcons.arrowLeft,
                       size: 20,
                       color: tokens.colors.fg1,
                     ),

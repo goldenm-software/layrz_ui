@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
@@ -30,7 +30,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Test Button',
-            icon: LayrzIcons.solarOutlineCheckCircle,
+            icon: MdiIcons.checkCircleOutline,
             onTap: () {},
           ),
         );
@@ -47,7 +47,7 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Test Fab',
-            icon: LayrzIcons.solarOutlineCheckCircle,
+            icon: MdiIcons.checkCircleOutline,
             style: LayrzButtonStyle.outlinedTonalFab,
             onTap: () {},
           ),
@@ -746,7 +746,7 @@ void main() {
               ),
               LayrzButton(
                 labelText: 'OK',
-                icon: LayrzIcons.solarOutlineCheckCircle,
+                icon: MdiIcons.checkCircleOutline,
                 onTap: () {},
               ),
             ],
@@ -768,6 +768,11 @@ void main() {
       });
 
       testWidgets('regression: Fab button is square (width == height)', (tester) async {
+        // Set to non-compact viewport to use regular button height (45)
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1200, 800);
+
         await pumpThemed(
           tester,
           LayrzButton(

@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/src/menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
@@ -83,7 +83,7 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
 
   /// Optional colour used to tint the label's band.
   ///
-  /// When null, the band keeps the neutral [LayrzColorTokens.surface3] fill, so
+  /// When null, the band keeps the neutral [LayrzColorTokens.sf3] fill, so
   /// menus written before this parameter existed are unchanged. When set, the band
   /// is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened over
   /// the panel surface — the same treatment as [LayrzChipStyle.filledTonal].
@@ -108,8 +108,8 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
     final tokens = context.tokens;
 
     final band = color == null
-        ? tokens.colors.surface3
-        : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.surface);
+        ? tokens.colors.sf3
+        : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf1);
 
     return Semantics(
       header: true,
@@ -117,8 +117,8 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
       child: Container(
         color: band,
         padding: EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp12,
-          vertical: tokens.spacing.sp8,
+          horizontal: tokens.spacing.sp3,
+          vertical: tokens.spacing.sp2,
         ),
         child: Align(
           alignment: Alignment.centerLeft,
@@ -236,7 +236,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates a save entry with success accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlineInboxIn]
+  /// - Icon: [MdiIcons.contentSaveOutline]
   /// - Color: [LayrzTokens.colors.success]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -254,7 +254,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlineInboxIn,
+      icon: icon ?? MdiIcons.contentSaveOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -266,7 +266,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates a cancel entry with danger accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlineCloseSquare]
+  /// - Icon: [MdiIcons.closeCircleOutline]
   /// - Color: [LayrzTokens.colors.danger]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -284,7 +284,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlineCloseSquare,
+      icon: icon ?? MdiIcons.closeCircleOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -296,7 +296,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates an info entry with info accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlineInfoSquare]
+  /// - Icon: [MdiIcons.informationOutline]
   /// - Color: [LayrzTokens.colors.info]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -314,7 +314,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlineInfoSquare,
+      icon: icon ?? MdiIcons.informationOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -326,7 +326,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates a show entry with info accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlineEyeScan]
+  /// - Icon: [MdiIcons.eyeOutline]
   /// - Color: [LayrzTokens.colors.info]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -344,7 +344,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlineEyeScan,
+      icon: icon ?? MdiIcons.eyeOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -356,7 +356,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates an edit entry with warning accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlinePenNewSquare]
+  /// - Icon: [MdiIcons.pencilOutline]
   /// - Color: [LayrzTokens.colors.warning]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -374,7 +374,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlinePenNewSquare,
+      icon: icon ?? MdiIcons.pencilOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -386,7 +386,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// Creates a delete entry with danger accent and icon.
   ///
   /// The entry is preset with:
-  /// - Icon: [LayrzIcons.solarOutlineTrashBinMinimalisticN2]
+  /// - Icon: [MdiIcons.trashCanOutline]
   /// - Color: [LayrzTokens.colors.danger]
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
@@ -404,7 +404,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     return LayrzDropdownEntry._semantic(
       key: key,
       labelText: labelText,
-      icon: icon ?? LayrzIcons.solarOutlineTrashBinMinimalisticN2,
+      icon: icon ?? MdiIcons.trashCanOutline,
       onTap: onTap,
       enabled: enabled,
       color: color,
@@ -571,7 +571,7 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                   color: spec.backgroundColor,
                 ),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp12),
+                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -585,7 +585,7 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                             shape: BoxShape.circle,
                           ),
                         ),
-                        SizedBox(width: tokens.spacing.sp8),
+                        SizedBox(width: tokens.spacing.sp2),
                       ],
                       // Icon (when present)
                       if (widget.icon != null) ...[
@@ -598,7 +598,7 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                             color: spec.iconColor,
                           ),
                         ),
-                        SizedBox(width: tokens.spacing.sp8),
+                        SizedBox(width: tokens.spacing.sp2),
                       ],
                       // Label (expanded to fill available space)
                       Expanded(
@@ -613,7 +613,7 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                       ),
                       // Shortcut (right-aligned, hidden on mobile)
                       if (widget.shortcut != null && !LayrzPlatform.isMobile) ...[
-                        SizedBox(width: tokens.spacing.sp8),
+                        SizedBox(width: tokens.spacing.sp2),
                         Text(
                           formatLayrzShortcut(widget.shortcut),
                           style: tokens.typography.label.copyWith(

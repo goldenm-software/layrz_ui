@@ -31,7 +31,7 @@ class LayrzChipGroup extends StatelessWidget {
 
   /// The space between each chip in logical pixels.
   ///
-  /// When null, defaults to [LayrzTokens.spacing.base].
+  /// When null, defaults to [LayrzTokens.spacing.sp2].
   final double? spacing;
 
   /// The alignment of the chips within their container.
@@ -52,7 +52,7 @@ class LayrzChipGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = LayrzTheme.of(context).tokens;
-    final resolvedSpacing = spacing ?? tokens.spacing.base;
+    final resolvedSpacing = spacing ?? tokens.spacing.sp2;
 
     if (behavior == LayrzChipGroupBehavior.none) {
       return Align(

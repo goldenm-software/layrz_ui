@@ -24,17 +24,17 @@ class TooltipsSection extends StatelessWidget {
           // 1. All four positions with clear layout
           _PositionsDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 2. Plain text vs. rich text
           _TextVariantsDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 3. Edge flip behavior
           _EdgeFlipDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 4. Pass-through interactivity
           _PassThroughDemo(tokens: tokens),
@@ -61,12 +61,12 @@ class _PositionsDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('All Four Positions', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Hover or long-press each anchor to see the tooltip appear in its position.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         // Grid layout with 4 anchors: top-left, top-right, bottom-left, bottom-right
         LayrzRow(
           children: [
@@ -75,7 +75,7 @@ class _PositionsDemo extends StatelessWidget {
               sm: 6,
               lg: 3,
               child: Column(
-                spacing: tokens.spacing.sp12,
+                spacing: tokens.spacing.sp3,
                 children: [
                   Text('Top', style: tokens.typography.label),
                   _AnchorBox(
@@ -99,7 +99,7 @@ class _PositionsDemo extends StatelessWidget {
               sm: 6,
               lg: 3,
               child: Column(
-                spacing: tokens.spacing.sp12,
+                spacing: tokens.spacing.sp3,
                 children: [
                   Text('Bottom', style: tokens.typography.label),
                   _AnchorBox(
@@ -123,7 +123,7 @@ class _PositionsDemo extends StatelessWidget {
               sm: 6,
               lg: 3,
               child: Column(
-                spacing: tokens.spacing.sp12,
+                spacing: tokens.spacing.sp3,
                 children: [
                   Text('Left', style: tokens.typography.label),
                   _AnchorBox(
@@ -147,7 +147,7 @@ class _PositionsDemo extends StatelessWidget {
               sm: 6,
               lg: 3,
               child: Column(
-                spacing: tokens.spacing.sp12,
+                spacing: tokens.spacing.sp3,
                 children: [
                   Text('Right', style: tokens.typography.label),
                   _AnchorBox(
@@ -190,19 +190,19 @@ class _TextVariantsDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Text Variants', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Left: plain text. Right: rich text with bold and colored spans.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         Row(
-          spacing: tokens.spacing.sp32,
+          spacing: tokens.spacing.sp5,
           children: [
             // Plain text
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 Text('contentText', style: tokens.typography.label),
                 _AnchorBox(
@@ -222,7 +222,7 @@ class _TextVariantsDemo extends StatelessWidget {
             // Rich text
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: tokens.spacing.sp8,
+              spacing: tokens.spacing.sp2,
               children: [
                 Text('contentRichText', style: tokens.typography.label),
                 _AnchorBox(
@@ -277,19 +277,19 @@ class _EdgeFlipDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Edge Flip Behavior', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Anchors at the viewport edges flip the tooltip to the opposite side when overflow is detected.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp16),
+        SizedBox(height: tokens.spacing.sp3),
         // Constrain horizontally to force edge positioning
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: tokens.colors.divider, width: 1),
-            borderRadius: BorderRadius.circular(tokens.radius.r8),
+            borderRadius: tokens.radius.br2,
           ),
-          padding: EdgeInsets.all(tokens.spacing.sp24),
+          padding: EdgeInsets.all(tokens.spacing.sp4),
           constraints: const BoxConstraints(maxWidth: 600),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -357,23 +357,23 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Pass-Through Interactivity', style: widget.tokens.typography.title),
-        SizedBox(height: widget.tokens.spacing.sp12),
+        SizedBox(height: widget.tokens.spacing.sp3),
         Text(
           'The tooltip surface does not block pointer events. Hover or long-press the anchor '
           'at the top to show the tooltip, then tap the targets beneath it. Taps pass through '
           'the tooltip to the targets and increment the counter.',
           style: widget.tokens.typography.body.copyWith(color: widget.tokens.colors.fg3),
         ),
-        SizedBox(height: widget.tokens.spacing.sp16),
+        SizedBox(height: widget.tokens.spacing.sp3),
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: widget.tokens.colors.divider, width: 1),
-            borderRadius: BorderRadius.circular(widget.tokens.radius.r8),
+            borderRadius: BorderRadius.circular(widget.tokens.radius.r2),
           ),
-          padding: EdgeInsets.all(widget.tokens.spacing.sp16),
+          padding: EdgeInsets.all(widget.tokens.spacing.sp3),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: widget.tokens.spacing.sp12,
+            spacing: widget.tokens.spacing.sp3,
             children: [
               Text(
                 'Tap count: $_tapCount',
@@ -381,12 +381,12 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
                   color: widget.tokens.colors.success[500],
                 ),
               ),
-              SizedBox(height: widget.tokens.spacing.sp8),
+              SizedBox(height: widget.tokens.spacing.sp2),
               // Stack: anchor at top, targets positioned to overlap with tooltip surface
               SizedBox(
                 height: 50,
                 child: Row(
-                  spacing: widget.tokens.spacing.sp8,
+                  spacing: widget.tokens.spacing.sp2,
                   children: List.generate(
                     5,
                     (index) => Expanded(
@@ -400,12 +400,12 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
                           },
                           child: Container(
                             decoration: BoxDecoration(
-                              color: widget.tokens.colors.surface2,
+                              color: widget.tokens.colors.sf2,
                               border: Border.all(
                                 color: widget.tokens.colors.divider,
                                 width: 1,
                               ),
-                              borderRadius: BorderRadius.circular(widget.tokens.radius.r8),
+                              borderRadius: BorderRadius.circular(widget.tokens.radius.r2),
                             ),
                             alignment: Alignment.center,
                             child: Text(
@@ -454,10 +454,10 @@ class _AnchorBox extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: tokens.colors.divider, width: 1),
-        borderRadius: BorderRadius.circular(tokens.radius.r8),
-        color: tokens.colors.surface2,
+        borderRadius: tokens.radius.br2,
+        color: tokens.colors.sf2,
       ),
-      padding: EdgeInsets.all(tokens.spacing.sp8),
+      padding: EdgeInsets.all(tokens.spacing.sp2),
       child: tooltip,
     );
   }

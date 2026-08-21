@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
@@ -43,7 +43,7 @@ class _ChipsSectionState extends State<ChipsSection> {
       description: 'Static labels with optional icons and delete affordance',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: tokens.spacing.sp20,
+        spacing: tokens.spacing.sp4,
         children: [
           // Styles showcase
           _ChipsStylesShowcase(tokens: tokens),
@@ -86,14 +86,14 @@ class _ChipsStylesShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Style Variants',
           style: tokens.typography.title,
         ),
         Row(
-          spacing: tokens.spacing.sp8,
+          spacing: tokens.spacing.sp2,
           children: [
             const LayrzChip(
               labelText: 'Filled',
@@ -127,15 +127,15 @@ class _ChipsTypesShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Semantic Types',
           style: tokens.typography.title,
         ),
         Wrap(
-          spacing: tokens.spacing.sp8,
-          runSpacing: tokens.spacing.sp8,
+          spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: const [
             LayrzChip(labelText: 'Info', type: LayrzChipType.info),
             LayrzChip(labelText: 'Success', type: LayrzChipType.success),
@@ -160,19 +160,19 @@ class _ChipsFeatureShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Features: Leading Icon & Delete',
           style: tokens.typography.title,
         ),
         Wrap(
-          spacing: tokens.spacing.sp8,
-          runSpacing: tokens.spacing.sp8,
+          spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzChip(
               labelText: 'With Icon',
-              leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+              leadingIcon: MdiIcons.checkCircleOutline,
               type: LayrzChipType.success,
             ),
             LayrzChip(
@@ -182,7 +182,7 @@ class _ChipsFeatureShowcase extends StatelessWidget {
             ),
             LayrzChip(
               labelText: 'Both',
-              leadingIcon: LayrzIcons.solarOutlineCheckCircle,
+              leadingIcon: MdiIcons.checkCircleOutline,
               onDelete: () {},
               type: LayrzChipType.info,
             ),
@@ -209,15 +209,15 @@ class _ChipsDeleteShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Interactive Delete (Click to Remove)',
           style: tokens.typography.title,
         ),
         Wrap(
-          spacing: tokens.spacing.sp8,
-          runSpacing: tokens.spacing.sp8,
+          spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: chips
               .map(
                 (chip) => LayrzChip(
@@ -243,7 +243,7 @@ class _ChipsScrollableGroupShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Scrollable Group (.none behavior)',
@@ -275,7 +275,7 @@ class _ChipsCompactGroupShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: tokens.spacing.sp8,
+      spacing: tokens.spacing.sp2,
       children: [
         Text(
           'Compact Group (.compact behavior - Resize to see +N)',
@@ -284,9 +284,9 @@ class _ChipsCompactGroupShowcase extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: tokens.colors.fg3),
-            borderRadius: BorderRadius.circular(tokens.radius.r8),
+            borderRadius: tokens.radius.br2,
           ),
-          padding: EdgeInsets.all(tokens.spacing.sp12),
+          padding: EdgeInsets.all(tokens.spacing.sp3),
           child: SizedBox(
             width: 300,
             child: const LayrzChipGroup(

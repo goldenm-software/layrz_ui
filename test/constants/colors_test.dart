@@ -7,9 +7,5 @@ void main() {
     test('kPrimaryColor is deep navy blue', () {
       expect(kPrimaryColor, equals(const Color(0xFF001E60)));
     });
-
-    test('kLightBackgroundColor is light gray', () {
-      expect(kLightBackgroundColor, equals(const Color(0xFFFCFCFC)));
-    });
   });
 }

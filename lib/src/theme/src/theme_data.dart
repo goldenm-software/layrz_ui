@@ -103,13 +103,13 @@ class LayrzThemeData {
 
   /// Canvas / scaffold background color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.background].
-  Color get backgroundColor => tokens.colors.background;
+  /// Backwards-compatible shorthand for [tokens.colors.sf1].
+  Color get backgroundColor => tokens.colors.sf1;
 
   /// Surface color used for cards, dialogs, and elevated containers.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.surface].
-  Color get surfaceColor => tokens.colors.surface;
+  /// Backwards-compatible shorthand for [tokens.colors.sf1].
+  Color get surfaceColor => tokens.colors.sf1;
 
   /// Default text color drawn on [backgroundColor].
   ///
@@ -155,10 +155,10 @@ class LayrzThemeData {
 
   /// Border radius used consistently for rounded corners across all widgets.
   ///
-  /// Returns [tokens.radius.base] (default 8.0 pixels).
+  /// Returns [tokens.radius.r2] (default 8.0 pixels).
   /// Note: This is a behaviour change from layrz_theme, which defaulted to 10.0.
   /// The layrz_ui design system aligns on 8.0 as the base.
-  double get borderRadius => tokens.radius.base;
+  double get borderRadius => tokens.radius.r2;
 
   /// Light theme using Layrz brand defaults.
   ///

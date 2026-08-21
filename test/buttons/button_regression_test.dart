@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
@@ -68,14 +68,14 @@ void main() {
           tester,
           LayrzButton(
             labelText: 'Save Button',
-            icon: LayrzIcons.solarOutlineCheckCircle,
+            icon: MdiIcons.checkCircleOutline,
             style: LayrzButtonStyle.outlined,
             onTap: () {},
           ),
         );
 
         expect(findButtonLabel('Save Button'), findsOneWidget);
-        expect(find.byIcon(LayrzIcons.solarOutlineCheckCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
       });
     });
 

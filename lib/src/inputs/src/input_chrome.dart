@@ -1,14 +1,69 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
-import 'input_density.dart';
 import 'input_error_block.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
+
+/// Comfortable (normal) density specification for input fields.
+///
+/// Encapsulates all dimensions that define the comfortable density mode:
+/// padding (10px regular / 14px compact on all sides), icon size (fontSize + 6px),
+/// text style (body), and content height that accommodates both icons and text.
+///
+/// Padding and icon size scale on compact viewports (width < 960px) to improve touch targets:
+/// - Padding: pd2 (10px) → pd3 (14px)
+/// - Icon size: grows proportionally with text content
+/// - Text style remains body (16px) in both regular and compact viewports
+///
+/// This ensures input fields on mobile/narrow tablets have larger touch targets comparable
+/// to button sizing (see DESIGN-103 for button compact sizing strategy).
+class _InputComfortableSpec {
+  final LayrzTokens tokens;
+  final IconThemeData? iconTheme;
+  final bool isCompact;
+
+  _InputComfortableSpec(this.tokens, this.iconTheme, {required this.isCompact});
+
+  /// The padding applied to all sides inside the input field.
+  ///
+  /// Returns 10px (pd2) on regular viewports and 14px (pd3) on compact viewports
+  /// (width < 960px) to ensure adequate touch targets on mobile.
+  EdgeInsets get padding => isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2;
+
+  /// The size of icons in slots and state indicators.
+  ///
+  /// Scales proportionally with the text content. On compact viewports, if the font
+  /// grows, the icon grows with it. Currently, since font stays at body (16px),
+  /// icon size is 16 + 6 = 22px in both regular and compact viewports.
+  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp1;
+
+  /// The text style for input hints and slot text.
+  ///
+  /// Always body (16px) in both regular and compact viewports. This is the largest
+  /// sensible size for body text in an input field; title (20px) would be unusual.
+  TextStyle get textStyle => tokens.typography.body;
+
+  /// The text style for the editable value itself (EditableText.style).
+  ///
+  /// Always body (16px) in both regular and compact viewports.
+  TextStyle get editableTextStyle => tokens.typography.body;
+
+  /// The minimum content height to accommodate both icons and text without clipping.
+  ///
+  /// This is the maximum of [iconSize] and the text line height computed from [editableTextStyle].
+  /// Content height is constant across interaction states per D15 (geometry invariance).
+  double get contentHeight {
+    final fontSize = editableTextStyle.fontSize ?? 16.0;
+    final lineHeightMultiplier = editableTextStyle.height ?? 1.0;
+    final textLineHeight = fontSize * lineHeightMultiplier;
+    return textLineHeight > iconSize ? textLineHeight : iconSize;
+  }
+}
 
 /// Library-private chrome widget that wraps an input field with label, border, and error handling.
 ///
@@ -68,18 +123,8 @@ class LayrzInputChrome extends StatelessWidget {
 
   /// The padding applied inside the input field.
   ///
-  /// If provided, this padding is used as-is and [dense] is ignored.
-  /// If null, padding is derived from tokens: sp10 horizontal and sp10 vertical when normal,
-  /// or sp10 horizontal with sp6 vertical when [dense] is true.
-  ///
-  /// Explicit padding takes precedence over [dense] to prevent silent geometry
-  /// mutations when a caller provides an exact layout requirement.
+  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
   final EdgeInsets? padding;
-
-  /// Whether the input field uses a compact (dense) layout.
-  ///
-  /// Ignored when [padding] is non-null.
-  final bool dense;
 
   /// Maximum length of the input text.
   ///
@@ -106,7 +151,6 @@ class LayrzInputChrome extends StatelessWidget {
     this.helpContentText,
     this.controller,
     this.padding,
-    this.dense = false,
     this.maxLength,
   });
 
@@ -121,20 +165,15 @@ class LayrzInputChrome extends StatelessWidget {
       readOnly: readOnly,
     );
 
-    // Centralized density specification — all dimensions that change with dense mode
-    final density = InputDensitySpec(
-      dense: dense,
-      tokens: tokens,
-      iconTheme: context.theme.iconTheme,
+    // Comfortable density specification — all dimensions for field layout (responsive to viewport width)
+    final density = _InputComfortableSpec(
+      tokens,
+      context.theme.iconTheme,
+      isCompact: context.isCompact,
     );
 
-    // Compute padding: explicit caller value wins over dense mode
-    final resolvedPadding =
-        padding ??
-        EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp10,
-          vertical: density.verticalPadding,
-        );
+    // Compute padding: explicit caller value wins over comfortable default
+    final resolvedPadding = padding ?? density.padding;
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. The height accommodates both
@@ -148,7 +187,7 @@ class LayrzInputChrome extends StatelessWidget {
         // Label row
         if (labelText != null)
           Padding(
-            padding: EdgeInsets.only(bottom: tokens.spacing.sp8),
+            padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
             child: RichText(
               text: TextSpan(
                 children: [
@@ -178,7 +217,7 @@ class LayrzInputChrome extends StatelessWidget {
               color: spec.borderColor,
               width: spec.borderWidth,
             ),
-            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r10)),
+            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
           ),
           padding: resolvedPadding,
           child: SizedBox(
@@ -196,7 +235,7 @@ class LayrzInputChrome extends StatelessWidget {
                     iconSize: density.iconSize,
                     density: density,
                   ),
-                  SizedBox(width: tokens.spacing.sp8),
+                  SizedBox(width: tokens.spacing.sp2),
                 ],
 
                 // Child (the actual input field) with optional hint text overlay
@@ -263,35 +302,11 @@ class LayrzInputChrome extends StatelessWidget {
         LayrzInputErrorBlock(
           errors: errors,
           hideDetails: hideDetails,
-          showErrorsInline: !_isCompactWidth(context),
           maxLength: maxLength,
           controller: controller,
         ),
       ],
     );
-  }
-
-  /// Checks if the current viewport is at a compact width (xs or sm breakpoint).
-  ///
-  /// Returns true when [breakpoint] is [LayrzBreakpoint.xs] or [LayrzBreakpoint.sm]
-  /// (viewport width < 960px), which indicates a mobile or narrow tablet layout.
-  bool _isCompactWidth(BuildContext context) {
-    final breakpoint = context.breakpoint;
-    return breakpoint == LayrzBreakpoint.xs || breakpoint == LayrzBreakpoint.sm;
-  }
-
-  /// Builds a rich text span with one error per line for the error tooltip.
-  ///
-  /// Each error is separated by a newline character. If there are no errors,
-  /// returns an empty TextSpan.
-  TextSpan _buildErrorRichText(List<String> errorList) {
-    if (errorList.isEmpty) {
-      return const TextSpan(text: '');
-    }
-
-    // Build a single text string with errors separated by newlines for direct rendering
-    final errorText = errorList.join('\n');
-    return TextSpan(text: errorText);
   }
 
   /// Builds the trailing elements in a fixed, canonical order.
@@ -315,7 +330,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required InputDensitySpec density,
+    required _InputComfortableSpec density,
   }) {
     final trailing = <Widget>[];
 
@@ -353,9 +368,9 @@ class LayrzInputChrome extends StatelessWidget {
     if (readOnly && !disabled) {
       trailing.add(
         Icon(
-          LayrzIcons.solarOutlineLockKeyhole,
+          MdiIcons.lockOutline,
           size: iconSize,
-          color: spec.textColor,
+          color: tokens.colors.fg1,
         ),
       );
     }
@@ -374,25 +389,13 @@ class LayrzInputChrome extends StatelessWidget {
 
     // Error icon (always last/rightmost — error state is critical)
     if (errors.isNotEmpty) {
-      final errorIcon = Icon(
-        LayrzIcons.solarOutlineDangerTriangle,
-        size: iconSize,
-        color: tokens.colors.danger,
+      trailing.add(
+        Icon(
+          MdiIcons.alertOutline,
+          size: iconSize,
+          color: tokens.colors.danger,
+        ),
       );
-
-      // On compact widths, wrap the error icon in a tooltip to show all errors
-      if (_isCompactWidth(context)) {
-        trailing.add(
-          LayrzTooltip(
-            trigger: LayrzTooltipTrigger.tap,
-            position: LayrzTooltipPosition.left,
-            contentRichText: _buildErrorRichText(errors),
-            child: errorIcon,
-          ),
-        );
-      } else {
-        trailing.add(errorIcon);
-      }
     }
 
     // If no trailing elements, return empty list
@@ -402,10 +405,10 @@ class LayrzInputChrome extends StatelessWidget {
 
     // Return inner gap + row of trailing elements with inter-element spacing
     return [
-      SizedBox(width: tokens.spacing.sp8),
+      SizedBox(width: tokens.spacing.sp2),
       Row(
         mainAxisSize: MainAxisSize.min,
-        spacing: tokens.spacing.sp8,
+        spacing: tokens.spacing.sp2,
         children: trailing,
       ),
     ];
@@ -427,7 +430,7 @@ class LayrzInputChrome extends StatelessWidget {
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
-    required InputDensitySpec density,
+    required _InputComfortableSpec density,
   }) {
     final hasCallback = slot.onTap != null;
 
@@ -583,7 +586,7 @@ class _HelpAffordanceState extends State<_HelpAffordance> {
           child: Opacity(
             opacity: _isPressed ? 0.7 : 1.0,
             child: Icon(
-              LayrzIcons.solarOutlineHelp,
+              MdiIcons.helpCircleOutline,
               size: widget.iconSize,
               color: widget.iconColor,
             ),

@@ -1,5 +1,7 @@
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'notification_item.dart';
@@ -82,11 +84,14 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
       onCloseRequested: _handleCloseRequested,
       overlayBuilder: _buildOverlay,
       builder: (context, controller, child) {
+        final isCompact = context.isCompact;
+        final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
+
         return GestureDetector(
           onTap: controller.isOpen ? controller.close : controller.open,
           child: Icon(
-            LayrzIcons.solarOutlineBell,
-            size: 20.0,
+            MdiIcons.bellRingOutline,
+            size: iconSize,
             color: widget.tokens.colors.fg2,
           ),
         );
@@ -98,7 +103,7 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
     return Container(
       constraints: const BoxConstraints(minWidth: 280.0, maxWidth: 320.0),
       decoration: BoxDecoration(
-        color: widget.tokens.colors.surface2,
+        color: widget.tokens.colors.sf2,
         borderRadius: BorderRadius.circular(8.0),
         boxShadow: [
           BoxShadow(
@@ -126,6 +131,9 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
     BuildContext context,
     LayrzNotificationItem notification,
   ) {
+    final isCompact = context.isCompact;
+    final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
+
     return GestureDetector(
       onTap: () {
         notification.onTap?.call();
@@ -154,7 +162,7 @@ class _LayrzLayoutNotificationsPanelState extends State<LayrzLayoutNotifications
                 padding: const EdgeInsets.only(right: 8.0, top: 2.0),
                 child: Icon(
                   notification.icon,
-                  size: 16.0,
+                  size: iconSize,
                   color: widget.tokens.colors.fg2,
                 ),
               ),

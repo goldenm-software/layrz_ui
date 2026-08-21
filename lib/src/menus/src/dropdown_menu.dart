@@ -239,14 +239,14 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
             ),
             child: Container(
               decoration: BoxDecoration(
-                color: tokens.colors.surface,
-                borderRadius: BorderRadius.circular(tokens.radius.r12),
+                color: tokens.colors.sf1,
+                borderRadius: tokens.radius.br3,
                 boxShadow: tokens.shadow.elevation3,
               ),
               child: Focus(
                 focusNode: _menuFocusNode,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(tokens.radius.r12),
+                  borderRadius: tokens.radius.br3,
                   child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -315,7 +315,7 @@ class _DropdownMenuLayoutDelegate extends SingleChildLayoutDelegate {
     return BoxConstraints(
       minWidth: kLayrzDropdownMenuMinWidth,
       maxWidth: kLayrzDropdownMenuMaxWidth,
-      maxHeight: (overlaySize.height - 2 * tokens.spacing.sp8).clamp(0.0, double.infinity),
+      maxHeight: (overlaySize.height - 2 * tokens.spacing.sp2).clamp(0.0, double.infinity),
     );
   }
 

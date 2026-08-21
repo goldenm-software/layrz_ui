@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 /// The search field header for the list panel.
@@ -62,7 +62,7 @@ class _ListHeaderState extends State<ListHeader> {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: tokens.colors.surface2,
+        color: tokens.colors.sf2,
         border: Border(
           bottom: BorderSide(
             color: tokens.colors.divider,
@@ -75,7 +75,7 @@ class _ListHeaderState extends State<ListHeader> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: Icon(
-              LayrzIcons.solarOutlineMagnifer,
+              MdiIcons.magnify,
               size: 12,
               color: tokens.colors.fg3,
             ),
@@ -89,7 +89,7 @@ class _ListHeaderState extends State<ListHeader> {
                 color: tokens.colors.fg1,
               ),
               cursorColor: tokens.colors.primary,
-              backgroundCursorColor: tokens.colors.surface2,
+              backgroundCursorColor: tokens.colors.sf2,
             ),
           ),
         ],

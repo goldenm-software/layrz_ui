@@ -26,12 +26,12 @@ class GridSection extends StatelessWidget {
           // Unit explanation
           Container(
             decoration: BoxDecoration(
-              color: tokens.colors.surface2,
-              borderRadius: BorderRadius.circular(tokens.radius.r8),
+              color: tokens.colors.sf2,
+              borderRadius: tokens.radius.br2,
               border: Border.all(color: tokens.colors.divider, width: 1),
             ),
-            padding: EdgeInsets.all(tokens.spacing.sp12),
-            margin: EdgeInsets.only(bottom: tokens.spacing.sp16),
+            padding: EdgeInsets.all(tokens.spacing.sp3),
+            margin: EdgeInsets.only(bottom: tokens.spacing.sp3),
             child: Text(
               'All values are shown in logical units (u). Flutter measures layout in device-independent logical pixels, not physical device pixels. '
               'Hover over any value to see its physical-pixel equivalent on the current display.',
@@ -42,17 +42,17 @@ class GridSection extends StatelessWidget {
           // 1. Breakpoint readout
           _BreakpointReadout(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 2. Responsive columns demo
           _ResponsiveColumnsDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 3. Wrapping example
           _WrappingDemo(tokens: tokens),
 
-          SizedBox(height: tokens.spacing.sp32),
+          SizedBox(height: tokens.spacing.sp5),
 
           // 4. Constrained view demo
           _ConstrainedViewDemo(tokens: tokens),
@@ -84,18 +84,18 @@ class _BreakpointReadout extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Live Width & Breakpoint Readout', style: tokens.typography.title),
-            SizedBox(height: tokens.spacing.sp12),
+            SizedBox(height: tokens.spacing.sp3),
             Text(
               'Resize the window to see breakpoints transition. The grid responds to viewport width.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
-            SizedBox(height: tokens.spacing.sp12),
+            SizedBox(height: tokens.spacing.sp3),
             Container(
               decoration: tokens.shadow.elevation(elevation: 0),
-              padding: EdgeInsets.all(tokens.spacing.sp16),
+              padding: EdgeInsets.all(tokens.spacing.sp3),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: tokens.spacing.sp8,
+                spacing: tokens.spacing.sp2,
                 children: [
                   Row(
                     children: [
@@ -149,14 +149,14 @@ class _ResponsiveColumnsDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Responsive Columns (Varying Spans Per Breakpoint)', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Each column has different span values (xs, sm, md, lg). Watch them reflow as viewport changes.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzRow(
-          spacing: tokens.spacing.sp12,
+          spacing: tokens.spacing.sp3,
           children: [
             LayrzCol(
               xs: 12,
@@ -210,15 +210,15 @@ class _WrappingDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Wrapping Example (Uneven Spans)', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Five columns with spans [6, 5, 4, 4, 4] wrap into two visual rows. '
           'The greedy algorithm starts a new row when sum exceeds 12.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         LayrzRow(
-          spacing: tokens.spacing.sp12,
+          spacing: tokens.spacing.sp3,
           children: [
             LayrzCol(
               xs: 6,
@@ -264,22 +264,22 @@ class _ConstrainedViewDemo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Constrained View (max-width: 600u)', style: tokens.typography.title),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Text(
           'Content is centered horizontally and constrained to max-width. '
           'Useful for landing pages and article layouts.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
-        SizedBox(height: tokens.spacing.sp12),
+        SizedBox(height: tokens.spacing.sp3),
         Container(
           decoration: BoxDecoration(
             border: Border.all(color: tokens.colors.divider, width: 1),
-            borderRadius: BorderRadius.circular(tokens.radius.r8),
+            borderRadius: tokens.radius.br2,
           ),
-          padding: EdgeInsets.all(tokens.spacing.sp16),
+          padding: EdgeInsets.all(tokens.spacing.sp3),
           child: LayrzConstrainedView(
             maxWidth: 600,
-            spacing: tokens.spacing.sp12,
+            spacing: tokens.spacing.sp3,
             children: [
               _ColumnBox(label: 'Child 1', tokens: tokens, color: tokens.colors.primary[500]!),
               _ColumnBox(label: 'Child 2', tokens: tokens, color: tokens.colors.success[500]!),
@@ -319,7 +319,7 @@ class _ColumnBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.2),
         border: Border.all(color: color, width: 2),
-        borderRadius: BorderRadius.circular(tokens.radius.r8),
+        borderRadius: tokens.radius.br2,
       ),
       alignment: Alignment.center,
       child: Text(

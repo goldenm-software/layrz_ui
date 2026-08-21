@@ -331,7 +331,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // The Positioned widget applies the inset via left and right properties
-      // (borderWidth + kLayrzButtonIndicatorInsetHorizontal) on each side.
+      // (borderWidth + tokens.spacing.sp2) on each side.
       // The indicator renders with pill-shaped ends (borderRadius = height/2),
       // and inset positioning keeps it clear of the button's rounded corners.
       final indicatorFinder = find.byType(LayrzButtonIndicator);
@@ -360,9 +360,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Verify that the bottom inset constant is the smaller value
+      final buttonElement = find.byType(LayrzButton).evaluate().first;
+      final tokens = LayrzTheme.of(buttonElement).tokens;
       expect(
         kLayrzButtonIndicatorInsetBottom,
-        lessThan(kLayrzButtonIndicatorInsetHorizontal),
+        lessThan(tokens.spacing.sp2),
         reason: 'bottom inset should be smaller to keep bar close to bottom edge',
       );
 

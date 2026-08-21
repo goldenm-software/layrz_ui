@@ -290,6 +290,422 @@ void main() {
       expect(resolved!.md, equals(1200.0));
       expect(resolved!.lg, equals(1800.0));
     });
+
+    testWidgets('breakpoint resolves to xs band at width 400', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(400, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(LayrzBreakpoint.xs));
+    });
+
+    testWidgets('breakpoint resolves to sm band at width 700', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(700, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(LayrzBreakpoint.sm));
+    });
+
+    testWidgets('breakpoint resolves to md band at width 1000', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1000, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(LayrzBreakpoint.md));
+    });
+
+    testWidgets('breakpoint resolves to lg band at width 1400', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(LayrzBreakpoint.lg));
+    });
+
+    testWidgets('breakpoint resolves to xl band at width 2000', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(2000, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, equals(LayrzBreakpoint.xl));
+    });
+
+    testWidgets('isCompact is true for xs band', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(400, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isCompact;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isTrue);
+    });
+
+    testWidgets('isCompact is true for sm band', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(700, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isCompact;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isTrue);
+    });
+
+    testWidgets('isCompact is false for md band', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1000, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isCompact;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isFalse);
+    });
+
+    testWidgets('isCompact is false for lg band', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1400, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isCompact;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isFalse);
+    });
+
+    testWidgets('isCompact is false for xl band', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(2000, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isCompact;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isFalse);
+    });
+
+    testWidgets('breakpoint boundary: width exactly at xs threshold (600)', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(600, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // At exactly 600, should be sm (xs is < 600)
+      expect(resolved, equals(LayrzBreakpoint.sm));
+    });
+
+    testWidgets('breakpoint boundary: width exactly at sm threshold (960)', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(960, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // At exactly 960, should be md (sm is < 960)
+      expect(resolved, equals(LayrzBreakpoint.md));
+    });
+
+    testWidgets('breakpoint boundary: width exactly at md threshold (1264)', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1264, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // At exactly 1264, should be lg (md is < 1264)
+      expect(resolved, equals(LayrzBreakpoint.lg));
+    });
+
+    testWidgets('breakpoint boundary: width exactly at lg threshold (1904)', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1904, 800);
+
+      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      late LayrzBreakpoint resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.breakpoint;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      // At exactly 1904, should be xl (lg is < 1904)
+      expect(resolved, equals(LayrzBreakpoint.xl));
+    });
+
+    testWidgets(
+      'isCompact boundary: true at width 599 (xs), false at width 600 (sm)',
+      (tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(599, 800);
+
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        late bool resolved599;
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved599 = context.isCompact;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved599, isTrue); // xs band
+
+        // Now test at 600
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(600, 800);
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved599 = context.isCompact;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved599, isTrue); // sm band is still compact
+      },
+    );
+
+    testWidgets(
+      'isCompact boundary: true at width 959 (sm), false at width 960 (md)',
+      (tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(959, 800);
+
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        late bool resolved959;
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved959 = context.isCompact;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved959, isTrue); // sm band
+
+        // Now test at 960
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(960, 800);
+
+        await tester.pumpWidget(
+          LayrzTheme(
+            data: themeData,
+            child: Builder(
+              builder: (context) {
+                resolved959 = context.isCompact;
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved959, isFalse); // md band is not compact
+      },
+    );
   });
 }
 

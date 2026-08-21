@@ -1,5 +1,12 @@
-/// Height of a standard [LayrzButton] in logical pixels.
+/// Height of a standard [LayrzButton] in logical pixels on regular (non-compact) viewports.
 const double kLayrzButtonHeight = 45.0;
+
+/// Height of a standard [LayrzButton] on compact (mobile/small tablet) viewports.
+///
+/// When [LayrzContextExtensions.isCompact] is true (viewport width < 960), the button
+/// height increases to 50 logical pixels to improve touch target size. The font size
+/// and icon size scale proportionally with the height change.
+const double kLayrzButtonCompactHeight = 50.0;
 
 /// Height of the progress indicator bar in [LayrzButton] (loading or cooldown state).
 ///
@@ -7,17 +14,6 @@ const double kLayrzButtonHeight = 45.0;
 /// the bar remains visible without obscuring the button label or icon. The bar is inset
 /// by the button's border width to stay inside the button's outline.
 const double kLayrzButtonIndicatorHeight = 3.0;
-
-/// Horizontal inset applied to the progress indicator bar in [LayrzButton].
-///
-/// The indicator is positioned inset from the button's left and right edges by this amount
-/// to maintain visual clearance from the button's rounded corners. This inset is applied in addition
-/// to the button's border width.
-///
-/// Set to 8.0 to match the button's base corner radius ([tokens.radius.base]), ensuring the
-/// progress bar's pill-shaped ends remain visually distinct and do not clash with the
-/// button's corner curve.
-const double kLayrzButtonIndicatorInsetHorizontal = 8.0;
 
 /// Bottom inset applied to the progress indicator bar in [LayrzButton].
 ///
@@ -28,14 +24,26 @@ const double kLayrzButtonIndicatorInsetHorizontal = 8.0;
 /// Set to 1.0 logical pixel to keep the bar near the bottom edge while avoiding the very edge.
 const double kLayrzButtonIndicatorInsetBottom = 1.0;
 
-/// Size of the icon within a [LayrzButton] in logical pixels.
+/// Size of the icon within a [LayrzButton] in logical pixels on regular viewports.
 const double kLayrzButtonIconSize = 22.0;
 
-/// Spacing between the icon and label in a [LayrzButton] when both are present.
-const double kLayrzButtonIconSeparator = 8.0;
+/// Size of the icon within a [LayrzButton] on compact viewports.
+///
+/// When [LayrzContextExtensions.isCompact] is true (viewport width < 960), the icon
+/// size increases to 24.0 logical pixels to maintain visual proportion as the button
+/// height grows from 45 to 50 (a 1.11x scale). The icon size is scaled proportionally:
+/// 22 * (50 / 45) ≈ 24.44, rounded to 24.
+const double kLayrzButtonCompactIconSize = 24.0;
 
-/// Font size of the [LayrzButton] label text.
+/// Font size of the [LayrzButton] label text on regular viewports.
 const double kLayrzButtonFontSize = 14.0;
+
+/// Font size of the [LayrzButton] label text on compact viewports.
+///
+/// When [LayrzContextExtensions.isCompact] is true (viewport width < 960), the button
+/// font size increases to 16.0 logical pixels (matching the body typography token)
+/// to improve readability and maintain visual hierarchy as the button height grows to 50.
+const double kLayrzButtonCompactFontSize = 16.0;
 
 /// Opacity applied to outlined tonal button backgrounds.
 ///
@@ -83,11 +91,6 @@ const double kLayrzButtonOutlinedTonalHoveredDelta = 0.17;
 /// OutlinedTonal buttons reach solid (1.0) when pressed.
 /// This is the delta added to base opacity to compute the pressed opacity.
 const double kLayrzButtonOutlinedTonalPressedDelta = 0.85;
-
-/// Horizontal padding applied to [LayrzButton] non-Fab variants.
-///
-/// Controls the spacing between button edges and internal content (icon and label).
-const double kLayrzButtonHorizontalPadding = 16.0;
 
 /// Minimum duration a busy state (loading or cooldown) remains visible on [LayrzButton].
 ///

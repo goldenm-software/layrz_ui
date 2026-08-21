@@ -19,10 +19,10 @@ void main() {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
       expect(theme.display.fontSize, equals(40));
-      expect(theme.headline.fontSize, equals(28));
-      expect(theme.title.fontSize, equals(16));
-      expect(theme.body.fontSize, equals(14));
-      expect(theme.label.fontSize, equals(12));
+      expect(theme.headline.fontSize, equals(24));
+      expect(theme.title.fontSize, equals(20));
+      expect(theme.body.fontSize, equals(16));
+      expect(theme.label.fontSize, equals(14));
     });
 
     test('defaults factory uses correct font weights', () {
@@ -79,7 +79,7 @@ void main() {
 
       expect(modified.body.fontSize, equals(20));
       expect(modified.display, equals(original.display));
-      expect(original.body.fontSize, equals(14)); // original unchanged
+      expect(original.body.fontSize, equals(16)); // original unchanged
     });
 
     test('equality works for identical factories', () {
@@ -128,6 +128,21 @@ void main() {
         textColor: const Color(0xFFFFFFFF),
       );
       expect(theme1.hashCode, isNot(equals(theme2.hashCode)));
+    });
+
+    test('font sizes are monotonically increasing from label to display', () {
+      final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+
+      final labelSize = theme.label.fontSize ?? 0;
+      final bodySize = theme.body.fontSize ?? 0;
+      final titleSize = theme.title.fontSize ?? 0;
+      final headlineSize = theme.headline.fontSize ?? 0;
+      final displaySize = theme.display.fontSize ?? 0;
+
+      expect(labelSize, lessThan(bodySize));
+      expect(bodySize, lessThan(titleSize));
+      expect(titleSize, lessThan(headlineSize));
+      expect(headlineSize, lessThanOrEqualTo(displaySize));
     });
   });
 }

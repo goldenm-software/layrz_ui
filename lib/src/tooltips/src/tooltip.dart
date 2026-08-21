@@ -21,7 +21,7 @@ import 'tooltip_trigger.dart';
 ///
 /// **Surface styling is fixed** to ensure visual consistency:
 /// - Background color: `tokens.colors.fg1`
-/// - Text color: `tokens.colors.background`
+/// - Text color: `tokens.colors.sf1`
 /// - Text style: `tokens.typography.label`
 /// - Padding: horizontal `sp12`, vertical `sp6`
 /// - Border radius: `r8`
@@ -319,10 +319,10 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
   Widget _buildTooltipContent(BuildContext overlayContext) {
     final tokens = overlayContext.tokens;
     final baseStyle = tokens.typography.label.copyWith(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
     );
     final titleStyle = tokens.typography.body.copyWith(
-      color: tokens.colors.background,
+      color: tokens.colors.sf1,
     );
 
     // Build content widget
@@ -339,12 +339,12 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     // Build the surface widget
     final surface = Container(
       padding: EdgeInsets.symmetric(
-        horizontal: tokens.spacing.sp12,
-        vertical: tokens.spacing.sp6,
+        horizontal: tokens.spacing.sp3,
+        vertical: tokens.spacing.sp2,
       ),
       decoration: BoxDecoration(
         color: tokens.colors.fg1,
-        borderRadius: BorderRadius.circular(tokens.radius.r8),
+        borderRadius: tokens.radius.br2,
       ),
       child: widget.titleText != null
           ? Column(
@@ -355,7 +355,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
                   widget.titleText!,
                   style: titleStyle,
                 ),
-                SizedBox(height: tokens.spacing.sp4),
+                SizedBox(height: tokens.spacing.sp1),
                 contentWidget,
               ],
             )
@@ -444,7 +444,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
     // If there's a title, add its height and the separator gap
     if (widget.titleText != null) {
       final titleStyle = tokens.typography.body.copyWith(
-        color: tokens.colors.background,
+        color: tokens.colors.sf1,
       );
       final titlePainter = TextPainter(
         text: TextSpan(text: widget.titleText, style: titleStyle),
@@ -452,13 +452,13 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       );
       titlePainter.layout(maxWidth: maxWidth);
 
-      contentHeight = titlePainter.height + tokens.spacing.sp4 + painter.height;
+      contentHeight = titlePainter.height + tokens.spacing.sp1 + painter.height;
       contentWidth = [titlePainter.width, painter.width].reduce((a, b) => a > b ? a : b);
     }
 
     return Size(
-      contentWidth + tokens.spacing.sp12 * 2,
-      contentHeight + tokens.spacing.sp6 * 2,
+      contentWidth + tokens.spacing.sp3 * 2,
+      contentHeight + tokens.spacing.sp2 * 2,
     );
   }
 

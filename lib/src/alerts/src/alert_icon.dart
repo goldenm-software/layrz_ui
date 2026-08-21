@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
@@ -45,7 +45,7 @@ class LayrzAlertIcon extends StatelessWidget {
   /// The icon glyph, used only when [type] is [LayrzAlertType.custom].
   ///
   /// If null and [type] is [LayrzAlertType.custom], defaults to
-  /// [LayrzIcons.solarOutlineInfoSquare]. Ignored for non-custom types.
+  /// [MdiIcons.informationBoxOutline]. Ignored for non-custom types.
   final IconData? icon;
 
   /// Creates a [LayrzAlertIcon].
@@ -74,12 +74,12 @@ class LayrzAlertIcon extends StatelessWidget {
     // Resolve icon.
     IconData resolvedIcon;
     if (type == LayrzAlertType.custom) {
-      resolvedIcon = icon ?? LayrzIcons.solarOutlineInfoSquare;
+      resolvedIcon = icon ?? MdiIcons.informationBoxOutline;
     } else {
-      resolvedIcon = type.icon ?? LayrzIcons.solarOutlineInfoSquare;
+      resolvedIcon = type.icon ?? MdiIcons.informationBoxOutline;
     }
 
-    final effectivePadding = padding ?? EdgeInsets.all(tokens.spacing.sp4);
+    final effectivePadding = padding ?? EdgeInsets.all(tokens.spacing.sp1);
 
     return Container(
       width: size,
@@ -87,7 +87,7 @@ class LayrzAlertIcon extends StatelessWidget {
       padding: effectivePadding,
       decoration: BoxDecoration(
         color: accentColor.withOpacityValue(tokens.colors.tonalOpacity),
-        borderRadius: BorderRadius.circular(tokens.radius.r10),
+        borderRadius: tokens.radius.br2,
       ),
       child: Center(
         child: Icon(

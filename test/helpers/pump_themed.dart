@@ -4,10 +4,11 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import 'fake_font_handler.dart';
 
-/// Pumps a widget into a themed [Directionality] + [LayrzTheme] + [Overlay] hierarchy.
+/// Pumps a widget into a themed [Localizations] + [LayrzTheme] + [Overlay] hierarchy.
 ///
 /// This helper wraps [child] with the minimal tree needed for widget testing:
-/// 1. **[Directionality]**: provides text direction (LTR by default).
+/// 1. **[Localizations]**: provides localization support via [DefaultWidgetsLocalizations] and [LayrzUiL10nDelegate].
+///    This widget also provides [Directionality] (LTR) based on the locale.
 /// 2. **[LayrzTheme]**: provides design tokens and theming context.
 /// 3. **[Overlay]**: MANDATORY for widgets that use [RawTooltip], which asserts
 ///    an [Overlay] ancestor via [debugCheckHasOverlay]. Without this, Fab tests
@@ -34,8 +35,12 @@ Future<void> pumpThemed(
   LayrzThemeData? theme,
 }) async {
   await tester.pumpWidget(
-    Directionality(
-      textDirection: TextDirection.ltr,
+    Localizations(
+      locale: const Locale('en'),
+      delegates: const [
+        DefaultWidgetsLocalizations.delegate,
+        LayrzUiL10nDelegate(),
+      ],
       child: LayrzTheme(
         data: theme ?? LayrzThemeData.light(fontHandler: const FakeFontHandler()),
         child: Overlay(

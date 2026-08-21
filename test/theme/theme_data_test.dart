@@ -14,7 +14,7 @@ void main() {
 
       test('uses default background color', () {
         final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        expect(data.backgroundColor, equals(kLightBackgroundColor));
+        expect(data.backgroundColor, equals(const Color(0xFFFCFCFC)));
       });
 
       test('accepts custom primary color', () {
@@ -98,12 +98,12 @@ void main() {
         expect(data.primaryColor, equals(data.tokens.colors.primary.shade500));
       });
 
-      test('backgroundColor delegates to tokens.colors.background', () {
-        expect(data.backgroundColor, equals(data.tokens.colors.background));
+      test('backgroundColor delegates to tokens.colors.sf1', () {
+        expect(data.backgroundColor, equals(data.tokens.colors.sf1));
       });
 
-      test('surfaceColor delegates to tokens.colors.surface', () {
-        expect(data.surfaceColor, equals(data.tokens.colors.surface));
+      test('surfaceColor delegates to tokens.colors.sf1', () {
+        expect(data.surfaceColor, equals(data.tokens.colors.sf1));
       });
 
       test('textColor delegates to tokens.colors.fg1', () {
@@ -138,9 +138,9 @@ void main() {
         expect(data.textStyle, equals(data.tokens.typography.body));
       });
 
-      test('borderRadius delegates to tokens.radius.base (8.0)', () {
-        expect(data.borderRadius, equals(8.0));
-        expect(data.borderRadius, equals(data.tokens.radius.base));
+      test('borderRadius delegates to tokens.radius.r2 (10.0)', () {
+        expect(data.borderRadius, equals(10.0));
+        expect(data.borderRadius, equals(data.tokens.radius.r2));
       });
     });
 

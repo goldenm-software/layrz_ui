@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
@@ -19,7 +19,7 @@ void main() {
       );
 
       expect(findButtonLabel('Save'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
+      expect(find.byIcon(MdiIcons.contentSaveOutline), findsOneWidget);
     });
 
     testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -61,7 +61,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
+      expect(find.byIcon(MdiIcons.contentSaveOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -75,7 +75,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineInboxIn), findsOneWidget);
+      expect(find.byIcon(MdiIcons.contentSaveOutline), findsOneWidget);
     });
 
     testWidgets('save resolves to success color', (tester) async {
@@ -160,7 +160,7 @@ void main() {
       );
 
       expect(findButtonLabel('Cancel'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.closeCircleOutline), findsOneWidget);
     });
 
     testWidgets('isFab: false, style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -202,7 +202,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.closeCircleOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -216,7 +216,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineCloseSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.closeCircleOutline), findsOneWidget);
     });
 
     testWidgets('cancel resolves to danger color', (tester) async {
@@ -246,7 +246,7 @@ void main() {
       );
 
       expect(findButtonLabel('Info'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.informationOutline), findsOneWidget);
     });
 
     testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -288,7 +288,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.informationOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -302,7 +302,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineInfoSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.informationOutline), findsOneWidget);
     });
 
     testWidgets('info resolves to info color', (tester) async {
@@ -332,7 +332,7 @@ void main() {
       );
 
       expect(findButtonLabel('Show'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
+      expect(find.byIcon(MdiIcons.eyeOutline), findsOneWidget);
     });
 
     testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -374,7 +374,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
+      expect(find.byIcon(MdiIcons.eyeOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -388,7 +388,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineEyeScan), findsOneWidget);
+      expect(find.byIcon(MdiIcons.eyeOutline), findsOneWidget);
     });
 
     testWidgets('show resolves to info color', (tester) async {
@@ -418,7 +418,7 @@ void main() {
       );
 
       expect(findButtonLabel('Edit'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.pencilOutline), findsOneWidget);
     });
 
     testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -460,7 +460,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.pencilOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -474,7 +474,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlinePenNewSquare), findsOneWidget);
+      expect(find.byIcon(MdiIcons.pencilOutline), findsOneWidget);
     });
 
     testWidgets('edit resolves to warning color', (tester) async {
@@ -504,7 +504,7 @@ void main() {
       );
 
       expect(findButtonLabel('Delete'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
+      expect(find.byIcon(MdiIcons.trashCanOutline), findsOneWidget);
     });
 
     testWidgets('style: LayrzButtonStyle.elevated (default) uses elevated style', (tester) async {
@@ -546,7 +546,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
+      expect(find.byIcon(MdiIcons.trashCanOutline), findsOneWidget);
     });
 
     testWidgets('isFab: true, style: LayrzButtonStyle.outlined uses outlinedFab style', (tester) async {
@@ -560,7 +560,7 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
+      expect(find.byIcon(MdiIcons.trashCanOutline), findsOneWidget);
     });
 
     testWidgets('delete resolves to danger color', (tester) async {
@@ -588,7 +588,7 @@ void main() {
         tester,
         LayrzButton(
           labelText: 'Custom Color Button',
-          icon: LayrzIcons.solarOutlineTrashBinMinimalisticN2,
+          icon: MdiIcons.trashCanOutline,
           onTap: () {},
           color: customColor,
         ),
@@ -596,7 +596,7 @@ void main() {
 
       // The button should render with the custom color, not the danger color.
       expect(findButtonLabel('Custom Color Button'), findsOneWidget);
-      expect(find.byIcon(LayrzIcons.solarOutlineTrashBinMinimalisticN2), findsOneWidget);
+      expect(find.byIcon(MdiIcons.trashCanOutline), findsOneWidget);
     });
 
     testWidgets('public constructor without semantic marker uses primary color by default', (tester) async {
@@ -607,7 +607,7 @@ void main() {
         tester,
         LayrzButton(
           labelText: 'Primary Button',
-          icon: LayrzIcons.solarOutlineCheckCircle,
+          icon: MdiIcons.checkCircleOutline,
           onTap: () {},
           // No semantic factory, no custom color specified.
         ),

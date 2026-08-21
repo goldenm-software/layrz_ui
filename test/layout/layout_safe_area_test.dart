@@ -141,7 +141,9 @@ void main() {
         WidgetTester tester,
       ) async {
         /// Tests that the decorated surface of the top bar is taller when there is a top inset,
-        /// while the SafeArea-wrapped content remains at kLayrzLayoutTopBarHeight.
+        /// while the SafeArea-wrapped content remains at its base height (64 in compact mode).
+        /// DESIGN-104: compact viewports (xs/sm bands, width < 960) use a 64px top bar height
+        /// instead of the regular 56px.
 
         const topInset = 24.0;
 
@@ -184,13 +186,15 @@ void main() {
 
         expect(surfaceRect, isNotNull, reason: 'Top bar surface must exist');
 
-        /// The surface height should be approximately kLayrzLayoutTopBarHeight (56) + inset (24) = ~80.
+        /// The surface height should be approximately kLayrzLayoutCompactTopBarHeight (64) + inset (24) = 88.
+        /// This invariant holds: surface.height = base.height + inset.
         /// This proves the surface extends behind the status bar.
         expect(
           surfaceRect!.height,
-          closeTo(kLayrzLayoutTopBarHeight + topInset, 1.0),
+          closeTo(kLayrzLayoutCompactTopBarHeight + topInset, 1.0),
           reason:
-              'Top bar surface height must be ~${kLayrzLayoutTopBarHeight + topInset} (base 56 + inset $topInset). '
+              'Top bar surface height must be ~${kLayrzLayoutCompactTopBarHeight + topInset} '
+              '(compact base ${kLayrzLayoutCompactTopBarHeight.toInt()} + inset $topInset). '
               'This proves the surface extends behind the status bar.',
         );
       });
@@ -252,7 +256,8 @@ void main() {
     group('Zero-inset baseline — safe area is a no-op without insets', () {
       testWidgets('with no insets, surface and content coincide', (WidgetTester tester) async {
         /// Tests that when there are no device insets, SafeArea does not affect layout.
-        /// Surface and content tops should be equal (or nearly equal).
+        /// The invariant is: surface.height = base.height + inset, where inset = 0.
+        /// The default test viewport is compact (width < 960), so the base height is 64px per DESIGN-104.
 
         await pumpThemedApp(
           tester,
@@ -281,13 +286,13 @@ void main() {
 
         expect(surfaceRect, isNotNull, reason: 'Top bar surface must exist');
 
-        /// With no insets, the surface height should be approximately kLayrzLayoutTopBarHeight.
-        /// This confirms SafeArea is a no-op when there are no insets.
+        /// With zero insets, the surface height should be approximately the base height (64 in compact mode).
+        /// This invariant confirms SafeArea has no effect when insets are zero.
         expect(
           surfaceRect!.height,
-          closeTo(kLayrzLayoutTopBarHeight, 1.0),
+          closeTo(kLayrzLayoutCompactTopBarHeight, 1.0),
           reason:
-              'With zero insets, top bar surface height must equal kLayrzLayoutTopBarHeight. '
+              'With zero insets, top bar surface height must equal the base height (${kLayrzLayoutCompactTopBarHeight.toInt()}px in compact). '
               'This confirms SafeArea has no effect when insets are zero.',
         );
       });

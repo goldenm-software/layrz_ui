@@ -154,13 +154,13 @@ class _LayrzCardState extends State<LayrzCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final backgroundColor = widget.backgroundColor ?? tokens.colors.surface;
+    final backgroundColor = widget.backgroundColor ?? tokens.colors.sf1;
 
     final content = Container(
-      padding: EdgeInsets.all(tokens.spacing.sp16),
+      padding: EdgeInsets.all(tokens.spacing.sp3),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(tokens.radius.r12),
+        borderRadius: tokens.radius.br3,
         boxShadow: _resolveShadow(tokens),
       ),
       child: widget.child,
@@ -206,10 +206,10 @@ class _LayrzCardState extends State<LayrzCard> {
               curve: tokens.motion.easing,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(tokens.radius.r12),
+                borderRadius: tokens.radius.br3,
                 boxShadow: _resolveShadow(tokens),
               ),
-              padding: EdgeInsets.all(tokens.spacing.sp16),
+              padding: EdgeInsets.all(tokens.spacing.sp3),
               child: widget.child,
             ),
           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/preview/preview.dart';
 
@@ -20,7 +20,7 @@ Widget previewLayrzAvatarInitials() {
 Widget previewLayrzAvatarIcon() {
   return Center(
     child: LayrzAvatar.icon(
-      icon: LayrzIcons.solarOutlineCheckCircle,
+      icon: MdiIcons.checkCircleOutline,
       size: 48,
     ),
   );

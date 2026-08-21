@@ -1,17 +1,19 @@
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
+import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/preview.dart';
 
-import 'drawer.dart';
 import 'drawer_scaffold.dart';
 import 'navigator_item.dart';
+import 'navigator_panel.dart';
 import 'notification_item.dart';
 import 'presentation.dart';
-import 'rail.dart';
 import 'top_bar.dart';
 
 /// An opinionated application shell layout for layrz_ui apps.
@@ -40,7 +42,8 @@ class LayrzLayout extends StatefulWidget {
   /// Creates a responsive application shell layout.
   ///
   /// The [body] and [items] parameters are required. All other parameters
-  /// are optional and default to null or empty collections.
+  /// are optional and default to null or empty collections. The [selectableContent]
+  /// parameter defaults to `true`, enabling text selection within the layout's body.
   const LayrzLayout({
     required this.body,
     required this.items,
@@ -51,6 +54,7 @@ class LayrzLayout extends StatefulWidget {
     this.notifications = const [],
     this.onNotificationTap,
     this.backgroundColor,
+    this.selectableContent = true,
     super.key,
   });
 
@@ -104,14 +108,75 @@ class LayrzLayout extends StatefulWidget {
 
   /// The background color of the layout.
   ///
-  /// Defaults to [LayrzTokens.colors.background].
+  /// Defaults to [LayrzTokens.colors.sf1].
   final Color? backgroundColor;
+
+  /// Whether text selection should be enabled within the layout.
+  ///
+  /// When `true` (the default), a single [SelectableRegion] wraps the layout's body,
+  /// allowing users to select and copy text across the page content with drag selection
+  /// and Ctrl+A / Ctrl+C keyboard shortcuts.
+  ///
+  /// When `false`, no [SelectableRegion] is present and text selection is disabled for
+  /// content within this layout. The selection region is entirely absent from the widget
+  /// tree, not merely inert.
+  ///
+  /// **Toolbar behavior**: When text is selected, a Copy-only toolbar appears above
+  /// the selection (or below if insufficient space above). The toolbar contains only
+  /// the Copy action; cut, paste, and select all are hidden to keep the read-only
+  /// page focused. The copy action wires directly to the system clipboard.
+  ///
+  /// **Desktop behavior**: Text can be selected with click-drag and Ctrl+A, and
+  /// copied with Ctrl+C or the toolbar Copy button.
+  ///
+  /// **Touch behavior**: Selection works with long-press magnifier and selection handles.
+  /// The same Copy-only toolbar appears above the selection.
+  ///
+  /// **Scope**: The region encompasses the layout's body and all widgets mounted within it.
+  /// Overlays (dialogs, bottom sheets, menus, tooltips) mounted into the app's Overlay
+  /// are outside this region and cannot be selected.
+  final bool selectableContent;
 
   @override
   State<LayrzLayout> createState() => _LayrzLayoutState();
 }
 
 class _LayrzLayoutState extends State<LayrzLayout> {
+  /// The long-lived [FocusNode] for text selection within the layout.
+  ///
+  /// Created once when the state is initialized and reused across all rebuilds.
+  /// Disposed when the state is disposed. Only created if [selectableContent] is true.
+  late FocusNode _selectableFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectableContent) {
+      _selectableFocusNode = FocusNode();
+    }
+  }
+
+  @override
+  void didUpdateWidget(LayrzLayout oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If selectableContent changed from false to true, create the node
+    if (!oldWidget.selectableContent && widget.selectableContent) {
+      _selectableFocusNode = FocusNode();
+    }
+    // If selectableContent changed from true to false, dispose the node
+    if (oldWidget.selectableContent && !widget.selectableContent) {
+      _selectableFocusNode.dispose();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.selectableContent) {
+      _selectableFocusNode.dispose();
+    }
+    super.dispose();
+  }
+
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return '?';
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -120,10 +185,50 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
   }
 
+  /// Builds the context menu for text selection, displaying a Copy-only toolbar.
+  ///
+  /// This builder is passed to [SelectableRegion] to render a toolbar when the user
+  /// triggers a selection context menu (long-press or right-click). The toolbar is
+  /// positioned automatically above or below the selection using the standard
+  /// [TextSelectionToolbarLayoutDelegate].
+  ///
+  /// The toolbar displays only the Copy action (no cut, paste, or select all),
+  /// keeping the read-only page-wide selection focused on copying selected text.
+  /// The copy action invokes the selection state's clipboard copy handler, which
+  /// handles clipboard transfer via the platform channels.
+  Widget _buildContextMenu(
+    BuildContext context,
+    SelectableRegionState state,
+  ) {
+    final tokens = context.theme.tokens;
+    final anchors = state.contextMenuAnchors;
+
+    final toolbar = LayrzSelectionToolbar(
+      actions: {LayrzSelectableAction.copy},
+      anchorAbove: anchors.primaryAnchor,
+      anchorBelow: anchors.secondaryAnchor,
+      tokens: tokens,
+      onActionPressed: (actionType) {
+        if (actionType == 'copy') {
+          // ignore: deprecated_member_use
+          state.copySelection(SelectionChangedCause.toolbar);
+        }
+      },
+    );
+
+    return CustomSingleChildLayout(
+      delegate: TextSelectionToolbarLayoutDelegate(
+        anchorAbove: anchors.primaryAnchor,
+        anchorBelow: anchors.secondaryAnchor ?? Offset.zero,
+      ),
+      child: toolbar,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.theme.tokens;
-    final backgroundColor = widget.backgroundColor ?? tokens.colors.background;
+    final backgroundColor = widget.backgroundColor ?? tokens.colors.sf1;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -142,12 +247,22 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   }
 
   Widget _buildExpanded(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
+    final bodyWidget = widget.selectableContent
+        ? SelectableRegion(
+            focusNode: _selectableFocusNode,
+            selectionControls: LayrzTextSelectionControls.instance,
+            contextMenuBuilder: _buildContextMenu,
+            child: widget.body,
+          )
+        : widget.body;
+
     return Container(
       color: backgroundColor,
       child: Row(
         children: [
-          LayrzLayoutRail(
+          LayrzLayoutNavigatorPanel(
             tokens: tokens,
+            width: kLayrzLayoutRailWidth,
             items: widget.items,
             logo: widget.logo,
             userName: widget.userName,
@@ -155,17 +270,28 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             userMenuItems: widget.userMenuItems,
             notifications: widget.notifications,
             onNotificationTap: widget.onNotificationTap,
+            onClose: null,
             getInitials: _getInitials,
           ),
-          Expanded(child: widget.body),
+          Expanded(child: bodyWidget),
         ],
       ),
     );
   }
 
   Widget _buildDrawer(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
+    final bodyWidget = widget.selectableContent
+        ? SelectableRegion(
+            focusNode: _selectableFocusNode,
+            selectionControls: LayrzTextSelectionControls.instance,
+            contextMenuBuilder: _buildContextMenu,
+            child: widget.body,
+          )
+        : widget.body;
+
     return LayrzLayoutDrawerScaffold(
       backgroundColor: backgroundColor,
+      drawerBackgroundColor: tokens.colors.sf1,
       topBarBuilder: (openDrawer) => LayrzLayoutTopBar(
         tokens: tokens,
         logo: widget.logo,
@@ -173,9 +299,10 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         onNotificationTap: widget.onNotificationTap,
         onDrawerTap: openDrawer,
       ),
-      body: widget.body,
-      drawerBuilder: (closeDrawer) => LayrzLayoutDrawer(
+      body: bodyWidget,
+      drawerBuilder: (closeDrawer) => LayrzLayoutNavigatorPanel(
         tokens: tokens,
+        width: kLayrzLayoutDrawerWidth,
         items: widget.items,
         logo: widget.logo,
         userName: widget.userName,
@@ -201,19 +328,19 @@ Widget previewLayrzLayout() => LayrzLayout(
   items: [
     LayrzNavigatorPage(
       id: 'dashboard',
-      icon: IconData(0xe900, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.viewDashboardOutline,
       labelText: 'Dashboard',
       isSelected: true,
     ),
     LayrzNavigatorPage(
       id: 'devices',
-      icon: IconData(0xe901, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cellphoneLink,
       labelText: 'Devices',
     ),
     LayrzNavigatorLabel('Settings'),
     LayrzNavigatorPage(
       id: 'config',
-      icon: IconData(0xe902, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cogOutline,
       labelText: 'Configuration',
     ),
   ],
@@ -221,15 +348,16 @@ Widget previewLayrzLayout() => LayrzLayout(
   userMenuItems: [
     LayrzDropdownEntry(
       labelText: 'Profile',
-      icon: IconData(0xe903, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.accountOutline,
       onTap: () {},
     ),
     LayrzDropdownEntry(
       labelText: 'Settings',
-      icon: IconData(0xe904, fontFamily: 'layrz_icons'),
+      icon: MdiIcons.cogOutline,
       onTap: () {},
     ),
   ],
+  selectableContent: true,
   body: Center(
     child: Text('Body content goes here'),
   ),

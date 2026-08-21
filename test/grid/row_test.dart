@@ -187,7 +187,7 @@ void main() {
     });
 
     group('spacing', () {
-      testWidgets('spacing=null uses tokens.spacing.base (8.0)', (tester) async {
+      testWidgets('spacing=null uses tokens.spacing.sp2 (10.0)', (tester) async {
         await pumpThemed(
           tester,
           SizedBox(
@@ -207,7 +207,7 @@ void main() {
         final pos2 = tester.getTopLeft(find.byKey(const Key('col2')));
 
         final gap = pos2.dx - (pos1.dx + size1.width);
-        expect(gap, closeTo(8.0, 0.1), reason: 'gap should be default 8.0px');
+        expect(gap, closeTo(10.0, 0.1), reason: 'gap should be default 10.0px');
       });
 
       testWidgets('spacing=0 gives flush adjacent columns', (tester) async {

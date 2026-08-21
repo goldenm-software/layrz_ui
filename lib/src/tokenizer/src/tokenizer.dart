@@ -111,29 +111,29 @@ class LayrzTokenizer {
   /// Base spacing unit (default 8 pixels).
   ///
   /// Use [spacingTokens] to access all spacing values (sp4, sp8, sp16, etc.).
-  double get spacing => tokens.spacing.base;
+  double get spacing => tokens.spacing.sp2;
 
   /// [EdgeInsets] with all sides set to [spacing].
-  EdgeInsets get margin => tokens.spacing.margin;
+  EdgeInsets get margin => tokens.spacing.mg2;
 
   /// [EdgeInsets] with all sides set to half of [spacing].
-  EdgeInsets get reducedMargin => tokens.spacing.reducedMargin;
+  EdgeInsets get reducedMargin => tokens.spacing.mg1;
 
   /// [EdgeInsets] with all sides set to [spacing].
-  EdgeInsets get padding => tokens.spacing.padding;
+  EdgeInsets get padding => tokens.spacing.pd2;
 
-  /// A [SizedBox] with width and height set to [spacing].
-  Widget get sizedBox => tokens.spacing.sizedBox;
+  /// A [SizedBox] with width and height set to spacing level 2 (8 pixels).
+  Widget get sizedBox => SizedBox.square(dimension: tokens.spacing.sp2);
 
   // ===== FLAT SHORTCUTS FOR RADIUS TOKENS =====
 
   /// Base radius value (default 8 pixels).
   ///
   /// Use [radiusTokens] to access all radius values (r8, r12, r16, etc.).
-  double get radius => tokens.radius.base;
+  double get radius => tokens.radius.r2;
 
   /// [BorderRadius] with all corners set to [radius].
-  BorderRadius get borderRadius => tokens.radius.borderRadius;
+  BorderRadius get borderRadius => tokens.radius.br2;
 
   /// Computes a visually consistent inner radius for nested borders.
   ///

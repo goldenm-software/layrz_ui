@@ -30,7 +30,7 @@ class ShowroomSection extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.all(context.tokens.spacing.sp16),
+        padding: EdgeInsets.all(context.tokens.spacing.sp3),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
@@ -40,7 +40,7 @@ class ShowroomSection extends StatelessWidget {
 
             // Description (if provided)
             if (description != null) ...[
-              SizedBox(height: tokens.spacing.sp8),
+              SizedBox(height: tokens.spacing.sp2),
               Text(
                 description!,
                 style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
@@ -49,7 +49,7 @@ class ShowroomSection extends StatelessWidget {
             ],
 
             // Content area with LayrzCard for elevation and surface styling
-            SizedBox(height: tokens.spacing.sp16),
+            SizedBox(height: tokens.spacing.sp3),
             LayrzCard(
               elevation: 1,
               child: child,

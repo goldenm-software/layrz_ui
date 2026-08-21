@@ -24,13 +24,13 @@ class TypographySection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _StyleRow(sample: _StyleSample('display', tokens.typography.display)),
-              SizedBox(height: tokens.spacing.sp16),
+              SizedBox(height: tokens.spacing.sp3),
               _StyleRow(sample: _StyleSample('headline', tokens.typography.headline)),
-              SizedBox(height: tokens.spacing.sp16),
+              SizedBox(height: tokens.spacing.sp3),
               _StyleRow(sample: _StyleSample('title', tokens.typography.title)),
-              SizedBox(height: tokens.spacing.sp16),
+              SizedBox(height: tokens.spacing.sp3),
               _StyleRow(sample: _StyleSample('body', tokens.typography.body)),
-              SizedBox(height: tokens.spacing.sp16),
+              SizedBox(height: tokens.spacing.sp3),
               _StyleRow(sample: _StyleSample('label', tokens.typography.label)),
             ],
           ),
@@ -58,7 +58,7 @@ class _StyleRow extends StatelessWidget {
       children: [
         // Style name label
         SizedBox(
-          width: tokens.spacing.sp48 * 2,
+          width: tokens.spacing.sp5 * 2,
           child: Text(sample.name, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
         ),
 
@@ -67,7 +67,7 @@ class _StyleRow extends StatelessWidget {
 
         // Font size value
         SizedBox(
-          width: tokens.spacing.sp48,
+          width: tokens.spacing.sp5,
           child: Align(
             alignment: Alignment.centerRight,
             child: UnitDisplay(

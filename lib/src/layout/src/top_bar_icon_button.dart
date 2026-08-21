@@ -78,14 +78,16 @@ class _LayrzLayoutTopBarIconButtonState extends State<LayrzLayoutTopBarIconButto
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final isCompact = context.isCompact;
     final states = _statesController.value;
+    final buttonSize = isCompact ? kLayrzLayoutCompactTopBarIconButtonSize : kLayrzLayoutTopBarIconButtonSize;
 
     // Determine the background color based on interaction state.
     Color? backgroundColor; // null = transparent
     if (states.contains(WidgetState.pressed)) {
-      backgroundColor = tokens.colors.surface2;
+      backgroundColor = tokens.colors.sf2;
     } else if (states.contains(WidgetState.hovered)) {
-      backgroundColor = tokens.colors.surface3;
+      backgroundColor = tokens.colors.sf3;
     }
 
     return FocusableActionDetector(
@@ -109,11 +111,11 @@ class _LayrzLayoutTopBarIconButtonState extends State<LayrzLayoutTopBarIconButto
             child: AnimatedContainer(
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
-              width: kLayrzLayoutTopBarIconButtonSize,
-              height: kLayrzLayoutTopBarIconButtonSize,
+              width: buttonSize,
+              height: buttonSize,
               decoration: BoxDecoration(
                 color: backgroundColor,
-                borderRadius: BorderRadius.circular(kLayrzLayoutItemRadius),
+                borderRadius: BorderRadius.circular(tokens.radius.r2),
               ),
               child: Center(
                 child: Icon(

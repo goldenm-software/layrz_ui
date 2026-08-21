@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/fake_font_handler.dart';
@@ -32,7 +32,7 @@ void main() {
       });
 
       testWidgets('renders icon from IconData', (tester) async {
-        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
 
         await pumpThemed(
           tester,
@@ -85,7 +85,7 @@ void main() {
       });
 
       testWidgets('LayrzAvatarIcon renders icon', (tester) async {
-        final source = LayrzAvatarIcon(LayrzIcons.solarOutlineCheckCircle);
+        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
 
         await pumpThemed(
           tester,
@@ -194,7 +194,7 @@ void main() {
       testWidgets('LayrzAvatar.icon renders icon from IconData', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline),
         );
 
         expect(find.byType(Icon), findsOneWidget);
@@ -220,7 +220,7 @@ void main() {
     });
 
     group('Shape and radius', () {
-      testWidgets('renders with r12 corner radius from tokens', (tester) async {
+      testWidgets('renders with r3 corner radius from tokens by default', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
 
         await pumpThemed(
@@ -230,8 +230,141 @@ void main() {
         );
 
         final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
-        // Avatar should use r12 radius, which is a circular BorderRadius
-        final expectedRadius = BorderRadius.circular(themeData.tokens.radius.r12);
+        final expectedRadius = BorderRadius.circular(themeData.tokens.radius.r3);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('applies custom borderRadius when provided', (tester) async {
+        const customRadius = 8.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test User', borderRadius: customRadius),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('custom borderRadius replaces (not augments) token value', (tester) async {
+        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        const customRadius = 4.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test User', borderRadius: customRadius),
+          theme: themeData,
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        // Verify it is exactly the custom value, not combined with token
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+        expect(clipRRect.borderRadius, isNot(equals(BorderRadius.circular(themeData.tokens.radius.r3 + customRadius))));
+      });
+
+      testWidgets('borderRadius is applied to outer decoration', (tester) async {
+        const customRadius = 12.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test User', borderRadius: customRadius),
+        );
+
+        final outerContainer = _findOuterContainer(tester);
+        final outerDecoration = outerContainer.decoration as BoxDecoration;
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(outerDecoration.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('borderRadius is applied to inner decoration', (tester) async {
+        const customRadius = 12.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test User', borderRadius: customRadius),
+        );
+
+        final innerContainer = _findColoredContainer(tester);
+        final innerDecoration = innerContainer.decoration as BoxDecoration;
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(innerDecoration.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('borderRadius works with LayrzAvatar.image constructor', (tester) async {
+        const customRadius = 6.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.image(
+            imageSource: 'https://example.com/avatar.png',
+            borderRadius: customRadius,
+          ),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('borderRadius works with LayrzAvatar.icon constructor', (tester) async {
+        const customRadius = 6.0;
+
+        await pumpThemed(
+          tester,
+          LayrzAvatar.icon(
+            icon: MdiIcons.checkCircleOutline,
+            borderRadius: customRadius,
+          ),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('borderRadius works with LayrzAvatar.emoji constructor', (tester) async {
+        const customRadius = 6.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.emoji(emoji: '🎉', borderRadius: customRadius),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('borderRadius works with LayrzAvatar.initials constructor', (tester) async {
+        const customRadius = 6.0;
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar.initials(nameText: 'Test User', borderRadius: customRadius),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(customRadius);
+        expect(clipRRect.borderRadius, equals(expectedRadius));
+      });
+
+      testWidgets('large borderRadius values render circle-like shape', (tester) async {
+        const size = 40.0;
+        const largeRadius = 25.0; // Greater than size / 2
+
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(
+            nameText: 'Test User',
+            size: size,
+            borderRadius: largeRadius,
+          ),
+        );
+
+        final clipRRect = tester.widget<ClipRRect>(find.byType(ClipRRect));
+        final expectedRadius = BorderRadius.circular(largeRadius);
         expect(clipRRect.borderRadius, equals(expectedRadius));
       });
     });
@@ -325,7 +458,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
 
       testWidgets('renders LayrzAvatarUrl on white background', (tester) async {
@@ -339,7 +472,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
 
       testWidgets('renders LayrzAvatarBase64 on white background', (tester) async {
@@ -353,7 +486,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
     });
 
@@ -383,7 +516,7 @@ void main() {
       testWidgets('renders icon at 70% of avatar size', (tester) async {
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle, size: 100),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline, size: 100),
         );
 
         final iconWidget = tester.widget<Icon>(find.byType(Icon));
@@ -453,7 +586,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar.icon(icon: LayrzIcons.solarOutlineCheckCircle),
+          LayrzAvatar.icon(icon: MdiIcons.checkCircleOutline),
           theme: themeData,
         );
 

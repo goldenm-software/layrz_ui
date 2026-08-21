@@ -10,7 +10,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 ///
 /// ## Visual Behavior
 /// - Thumb: always visible, rounded to [kLayrzScrollbarRadius], colored with [LayrzTokens.colors.fg4]
-/// - Track: hidden at rest, visible on hover and while dragging, colored with [LayrzTokens.colors.surface3]
+/// - Track: hidden at rest, visible on hover and while dragging, colored with [LayrzTokens.colors.sf3]
 /// - Thickness: [kLayrzScrollbarThickness] logical pixels
 /// - Hover effect: thumb darkens to [LayrzTokens.colors.fg3] and track becomes visible
 ///
@@ -65,7 +65,7 @@ class _LayrzScrollbarState extends State<LayrzScrollbar> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final thumbColor = _isHovering ? tokens.colors.fg3 : tokens.colors.fg4;
-    final trackColor = tokens.colors.surface3;
+    final trackColor = tokens.colors.sf3;
 
     return MouseRegion(
       onEnter: (_) {

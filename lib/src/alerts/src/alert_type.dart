@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_icons/layrz_icons.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Semantic type classification for [LayrzAlert] accent colors and icons.
@@ -10,33 +10,33 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 enum LayrzAlertType {
   /// Informational semantic type — use `LayrzTokens.colors.info` for neutral messages.
   ///
-  /// Associated icon: [LayrzIcons.solarOutlineInfoSquare].
+  /// Associated icon: [MdiIcons.informationBoxOutline].
   info,
 
   /// Success semantic type — use `LayrzTokens.colors.success` for positive/affirmative messages.
   ///
-  /// Associated icon: [LayrzIcons.solarOutlineCheckSquare].
+  /// Associated icon: [MdiIcons.checkboxOutline].
   success,
 
   /// Warning semantic type — use `LayrzTokens.colors.warning` for cautionary messages.
   ///
-  /// Associated icon: [LayrzIcons.solarOutlineDangerSquare].
+  /// Associated icon: [MdiIcons.alertBoxOutline].
   warning,
 
   /// Danger semantic type — use `LayrzTokens.colors.danger` for destructive/critical messages.
   ///
-  /// Associated icon: [LayrzIcons.solarOutlineCloseSquare].
+  /// Associated icon: [MdiIcons.closeBoxOutline].
   danger,
 
   /// Contextual semantic type — use `LayrzTokens.colors.contextual` for context-dependent messages.
   ///
-  /// Associated icon: [LayrzIcons.solarOutlineMenuDotsSquare].
+  /// Associated icon: [MdiIcons.dotsSquare].
   context,
 
   /// Custom type — use explicit `icon` and `color` values from the [LayrzAlert] constructor.
   ///
   /// The `color` and `icon` parameters are only honoured when `type == custom`.
-  /// Defaults to `LayrzTokens.colors.primary` and [LayrzIcons.solarOutlineInfoSquare] if
+  /// Defaults to `LayrzTokens.colors.primary` and [MdiIcons.informationBoxOutline] if
   /// `color` and `icon` are null, respectively.
   custom;
 
@@ -47,15 +47,15 @@ enum LayrzAlertType {
   IconData? get icon {
     switch (this) {
       case LayrzAlertType.info:
-        return LayrzIcons.solarOutlineInfoSquare;
+        return MdiIcons.informationBoxOutline;
       case LayrzAlertType.success:
-        return LayrzIcons.solarOutlineCheckSquare;
+        return MdiIcons.checkboxOutline;
       case LayrzAlertType.warning:
-        return LayrzIcons.solarOutlineDangerSquare;
+        return MdiIcons.alertBoxOutline;
       case LayrzAlertType.danger:
-        return LayrzIcons.solarOutlineCloseSquare;
+        return MdiIcons.closeBoxOutline;
       case LayrzAlertType.context:
-        return LayrzIcons.solarOutlineMenuDotsSquare;
+        return MdiIcons.dotsSquare;
       case LayrzAlertType.custom:
         return null;
     }
