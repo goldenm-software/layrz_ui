@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 
-import '_layrzeditable_field.dart';
+import 'editable_field.dart';
 import 'input_chrome.dart';
 import 'input_slot.dart';
 
