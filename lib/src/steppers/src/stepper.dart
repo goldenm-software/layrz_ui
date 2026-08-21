@@ -4,6 +4,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/preview.dart';
 
@@ -63,14 +64,14 @@ class LayrzStepper extends StatefulWidget {
     required this.steps,
     this.controller,
     this.onStepChanged,
-    this.backButtonLabel = 'Back',
-    this.nextButtonLabel = 'Next',
+    this.backButtonLabel,
+    this.nextButtonLabel,
     super.key,
   }) : assert(steps.length > 0, 'At least one step is required');
 
   /// The list of steps to display.
   ///
-  /// Must contain at least one step. Each step includes a label and a body widget.
+  /// Must contain at least one step. Each step includes a labelText and a body widget.
   final List<LayrzStep> steps;
 
   /// Optional controller for programmatic navigation.
@@ -87,15 +88,15 @@ class LayrzStepper extends StatefulWidget {
   /// Useful for side effects like saving state or analytics.
   final void Function(int stepIndex)? onStepChanged;
 
-  /// Label text for the "Back" button.
+  /// Optional override for the "Back" button label.
   ///
-  /// Defaults to "Back".
-  final String backButtonLabel;
+  /// If null, defaults to the localized value from [LayrzUiL10n.steppersPreviousButtonLabel].
+  final String? backButtonLabel;
 
-  /// Label text for the "Next" button.
+  /// Optional override for the "Next" button label.
   ///
-  /// Defaults to "Next".
-  final String nextButtonLabel;
+  /// If null, defaults to the localized value from [LayrzUiL10n.steppersNextButtonLabel].
+  final String? nextButtonLabel;
 
   @override
   State<LayrzStepper> createState() => _LayrzStepperState();
@@ -223,7 +224,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
         ),
         child: Semantics(
           label:
-              'Step ${currentIndex + 1} of $stepCount. ${widget.steps[currentIndex].label}.',
+              'Step ${currentIndex + 1} of $stepCount. ${widget.steps[currentIndex].labelText}.',
           child: Text(
             'Step ${currentIndex + 1} of $stepCount',
             style: tokens.typography.label,
@@ -343,7 +344,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
         cursor: cursor,
         child: Semantics(
           label:
-              'Step ${index + 1} of ${widget.steps.length}, ${step.label}. ${_semanticsStateLabel(state)}.',
+              'Step ${index + 1} of ${widget.steps.length}, ${step.labelText}. ${_semanticsStateLabel(state)}.',
           enabled: isTappable,
           child: Column(
             children: [
@@ -369,7 +370,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
               SizedBox(
                 width: 60,
                 child: Text(
-                  step.label,
+                  step.labelText,
                   textAlign: TextAlign.center,
                   style: tokens.typography.label.copyWith(
                     color: isUpcoming ? tokens.colors.fg2 : tokens.colors.fg1,
@@ -448,6 +449,10 @@ class _LayrzStepperState extends State<LayrzStepper> {
   ) {
     final canGoBack = currentIndex > 0;
     final canGoNext = currentIndex < stepCount - 1;
+    final l10n = LayrzUiL10n.of(context);
+
+    final backLabel = widget.backButtonLabel ?? l10n.steppersPreviousButtonLabel;
+    final nextLabel = widget.nextButtonLabel ?? l10n.steppersNextButtonLabel;
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -459,9 +464,9 @@ class _LayrzStepperState extends State<LayrzStepper> {
           // Back button
           Expanded(
             child: Semantics(
-              label: widget.backButtonLabel,
+              label: backLabel,
               child: LayrzButton(
-                labelText: widget.backButtonLabel,
+                labelText: backLabel,
                 onTap: canGoBack ? _handlePrevious : null,
                 type: LayrzButtonType.info,
               ),
@@ -471,9 +476,9 @@ class _LayrzStepperState extends State<LayrzStepper> {
           // Next button
           Expanded(
             child: Semantics(
-              label: widget.nextButtonLabel,
+              label: nextLabel,
               child: LayrzButton(
-                labelText: widget.nextButtonLabel,
+                labelText: nextLabel,
                 onTap: canGoNext ? _handleNext : null,
               ),
             ),
@@ -493,15 +498,15 @@ Widget previewLayrzStepperMultiStep() {
   return LayrzStepper(
     steps: [
       LayrzStep(
-        label: 'Personal',
+        labelText: 'Personal',
         body: _PreviewStepContent(title: 'Personal Information'),
       ),
       LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: _PreviewStepContent(title: 'Shipping Address'),
       ),
       LayrzStep(
-        label: 'Review',
+        labelText: 'Review',
         body: _PreviewStepContent(title: 'Review & Confirm'),
       ),
     ],
@@ -517,17 +522,17 @@ Widget previewLayrzStepperWithError() {
   return LayrzStepper(
     steps: [
       LayrzStep(
-        label: 'Personal',
+        labelText: 'Personal',
         body: _PreviewStepContent(title: 'Personal Information'),
         state: LayrzStepperState.completed,
       ),
       LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: _PreviewStepContent(title: 'Shipping Address'),
         state: LayrzStepperState.error,
       ),
       LayrzStep(
-        label: 'Review',
+        labelText: 'Review',
         body: _PreviewStepContent(title: 'Review & Confirm'),
       ),
     ],

@@ -7,53 +7,53 @@ void main() {
   group('LayrzStep', () {
     test('creates with all fields', () {
       const step = LayrzStep(
-        label: 'Personal Info',
+        labelText: 'Personal Info',
         body: Text('content'),
         state: LayrzStepperState.completed,
       );
 
-      expect(step.label, 'Personal Info');
+      expect(step.labelText, 'Personal Info');
       expect(step.state, LayrzStepperState.completed);
     });
 
     test('creates with null state', () {
       const step = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: Text('content'),
       );
 
-      expect(step.label, 'Shipping');
+      expect(step.labelText, 'Shipping');
       expect(step.state, isNull);
     });
 
     test('copyWith replaces all fields', () {
       const original = LayrzStep(
-        label: 'Step 1',
+        labelText: 'Step 1',
         body: Text('original'),
         state: LayrzStepperState.upcoming,
       );
 
       final updated = original.copyWith(
-        label: 'Step 1 Modified',
+        labelText: 'Step 1 Modified',
         body: const Text('modified'),
         state: LayrzStepperState.completed,
       );
 
-      expect(updated.label, 'Step 1 Modified');
+      expect(updated.labelText, 'Step 1 Modified');
       expect(updated.state, LayrzStepperState.completed);
-      expect(original.label, 'Step 1');
+      expect(original.labelText, 'Step 1');
     });
 
     test('copyWith preserves omitted fields', () {
       const original = LayrzStep(
-        label: 'Step 1',
+        labelText: 'Step 1',
         body: Text('content'),
         state: LayrzStepperState.active,
       );
 
-      final updated = original.copyWith(label: 'Modified');
+      final updated = original.copyWith(labelText: 'Modified');
 
-      expect(updated.label, 'Modified');
+      expect(updated.labelText, 'Modified');
       expect(updated.state, LayrzStepperState.active);
     });
 
@@ -61,19 +61,19 @@ void main() {
       final widget1 = const Text('address');
 
       final step1 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: widget1,
         state: LayrzStepperState.completed,
       );
 
       final step2 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: widget1, // Same instance
         state: LayrzStepperState.completed,
       );
 
       final step3 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: widget1,
         state: LayrzStepperState.upcoming,
       );
@@ -86,13 +86,13 @@ void main() {
       final widget = const Text('address');
 
       final step1 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: widget,
         state: LayrzStepperState.completed,
       );
 
       final step2 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: widget, // Same instance
         state: LayrzStepperState.completed,
       );
@@ -102,12 +102,12 @@ void main() {
 
     test('hashCode differs for different steps', () {
       const step1 = LayrzStep(
-        label: 'Shipping',
+        labelText: 'Shipping',
         body: Text('address'),
       );
 
       const step2 = LayrzStep(
-        label: 'Billing',
+        labelText: 'Billing',
         body: Text('address'),
       );
 

@@ -4,14 +4,21 @@ import 'stepper_state.dart';
 
 /// An immutable data class representing a single step in a [LayrzStepper].
 ///
-/// Each step carries a label, a body widget, and an optional state override.
+/// Each step carries a labelText, a body widget, and an optional state override.
 /// The stepper drives the state automatically; pass a state here only to override
 /// the default progression logic (e.g. to mark a step as error after validation).
+///
+/// **Equality and hashing caveat**: [LayrzStep] equality and [hashCode] depend on
+/// [body], which is a [Widget]. Widget instances are compared by identity, not by
+/// structure. Two [LayrzStep] instances are only equal if their [body] fields are
+/// the exact same widget instance (e.g. both reference `const MyWidget()` or the
+/// same variable). Creating two structurally identical widgets will produce unequal
+/// steps: `LayrzStep(..., body: const Text('x'))` != `LayrzStep(..., body: const Text('x'))`.
 @immutable
 class LayrzStep {
   /// Creates a [LayrzStep].
   const LayrzStep({
-    required this.label,
+    required this.labelText,
     required this.body,
     this.state,
   });
@@ -19,7 +26,7 @@ class LayrzStep {
   /// The step's display label.
   ///
   /// Shown in the step header/circle. Short and descriptive, e.g. "Shipping", "Review".
-  final String label;
+  final String labelText;
 
   /// The widget body displayed when this step is active.
   ///
@@ -41,12 +48,12 @@ class LayrzStep {
   ///
   /// All parameters are optional; omitted fields retain their original values.
   LayrzStep copyWith({
-    String? label,
+    String? labelText,
     Widget? body,
     LayrzStepperState? state,
   }) {
     return LayrzStep(
-      label: label ?? this.label,
+      labelText: labelText ?? this.labelText,
       body: body ?? this.body,
       state: state ?? this.state,
     );
@@ -57,10 +64,10 @@ class LayrzStep {
       identical(this, other) ||
       other is LayrzStep &&
           runtimeType == other.runtimeType &&
-          label == other.label &&
+          labelText == other.labelText &&
           body == other.body &&
           state == other.state;
 
   @override
-  int get hashCode => Object.hash(label, body, state);
+  int get hashCode => Object.hash(labelText, body, state);
 }
