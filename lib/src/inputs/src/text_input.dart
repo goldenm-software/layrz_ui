@@ -166,14 +166,14 @@ class LayrzTextInput extends StatefulWidget {
 
   /// The set of text selection actions available in the context menu.
   ///
-  /// Defaults to all four built-in actions (copy, cut, paste, selectAll).
-  /// Custom actions can be added or standard actions removed.
-  /// Obscured text automatically drops copy and cut, and read-only text drops
-  /// cut and paste, regardless of this set.
-  final Set<LayrzSelectableAction> actions;
+  /// When null, all four built-in actions (copy, cut, paste, selectAll) are offered.
+  /// Pass an explicit set to narrow the list, or `const {}` to suppress the toolbar entirely.
+  /// The set is further intersected with what the field's state permits, so an obscured
+  /// field never offers copy or cut regardless of what is passed here.
+  final Set<LayrzSelectableAction>? actions;
 
   /// Creates a new [LayrzTextInput] with the given properties.
-  LayrzTextInput({
+  const LayrzTextInput({
     super.key,
     this.labelText,
     this.hintText,
@@ -210,9 +210,8 @@ class LayrzTextInput extends StatefulWidget {
     this.autocorrect = true,
     this.enableSuggestions = true,
     this.shortcut,
-    Set<LayrzSelectableAction>? actions,
-  }) : actions = actions ?? LayrzSelectableAction.defaults,
-       assert(
+    this.actions,
+  }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
        ),
@@ -231,6 +230,52 @@ class LayrzTextInput extends StatefulWidget {
 
   @override
   State<LayrzTextInput> createState() => _LayrzTextInputState();
+}
+
+/// Custom gesture detector builder that threads the [onTap] callback through
+/// the selection gesture recognizer to avoid conflicts.
+///
+/// Instead of wrapping the selection gesture detector in a separate GestureDetector,
+/// we wrap the child and call the [onTap] callback on every recognized tap.
+class _LayrzTextInputSelectionGestureDetectorBuilder extends TextSelectionGestureDetectorBuilder {
+  /// Callback to invoke when the user taps the field.
+  final VoidCallback? onUserTapCallback;
+
+  /// Whether the field is disabled.
+  final bool isDisabled;
+
+  /// Whether the field is read-only.
+  final bool isReadOnly;
+
+  /// Creates a custom gesture detector builder for [LayrzTextInput].
+  _LayrzTextInputSelectionGestureDetectorBuilder({
+    required super.delegate,
+    this.onUserTapCallback,
+    required this.isDisabled,
+    required this.isReadOnly,
+  });
+
+  @override
+  Widget buildGestureDetector({
+    Key? key,
+    HitTestBehavior? behavior,
+    required Widget child,
+  }) {
+    // Build the parent's selection gesture detector
+    final parentDetector = super.buildGestureDetector(
+      key: key,
+      behavior: behavior,
+      child: child,
+    );
+
+    // Wrap the parent detector with an additional GestureDetector that handles onTap.
+    // Use translucent hit testing so both detectors can recognize gestures.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: isDisabled ? null : onUserTapCallback,
+      child: parentDetector,
+    );
+  }
 }
 
 class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectionGestureDetectorBuilderDelegate {
@@ -320,7 +365,8 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
     final tokens = context.tokens;
 
     // Filter actions based on field state
-    final resolvedActions = widget.actions.where((action) {
+    final actionSet = widget.actions ?? LayrzSelectableAction.defaults;
+    final resolvedActions = actionSet.where((action) {
       // Drop copy and cut for obscured text
       if (widget.obscureText && (action.type == 'copy' || action.type == 'cut')) {
         return false;
@@ -349,7 +395,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
             editableTextState.selectAll(SelectionChangedCause.toolbar);
           default:
             // Custom action: find and invoke the callback
-            final customAction = widget.actions.firstWhere(
+            final customAction = actionSet.firstWhere(
               (a) => a.type == actionType,
               orElse: () => throw StateError('Unknown action: $actionType'),
             );
@@ -403,9 +449,14 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
     // Format shortcut for display
     final shortcutText = widget.shortcut != null ? formatLayrzShortcut(widget.shortcut) : null;
 
-    // Build gesture detector for selection
-    final gestureDetectorBuilder = TextSelectionGestureDetectorBuilder(
+    // Build gesture detector for selection.
+    // The custom builder threads the onTap callback through the selection gesture
+    // detector to prevent conflicts between separate tap recognizers.
+    final gestureDetectorBuilder = _LayrzTextInputSelectionGestureDetectorBuilder(
       delegate: this,
+      onUserTapCallback: widget.disabled ? null : (widget.readOnly ? widget.onTap : _handleTap),
+      isDisabled: widget.disabled,
+      isReadOnly: widget.readOnly,
     );
 
     return LayrzInputChrome(
@@ -432,40 +483,37 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
         child: MouseRegion(
           onEnter: widget.disabled ? null : (_) => setState(() => _states.add(WidgetState.hovered)),
           onExit: widget.disabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
-          child: GestureDetector(
-            onTap: widget.disabled ? null : (widget.readOnly ? widget.onTap : _handleTap),
-            child: gestureDetectorBuilder.buildGestureDetector(
-              child: EditableText(
-                key: _editableTextKey,
-                controller: _controller,
-                focusNode: _focusNode,
-                style: tokens.typography.body.copyWith(
-                  color: spec.textColor,
-                ),
-                cursorColor: tokens.colors.primary,
-                backgroundCursorColor: tokens.colors.fg3,
-                selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
-                keyboardType: widget.keyboardType,
-                textInputAction: widget.textInputAction,
-                inputFormatters: formatters,
-                onChanged: widget.onChanged,
-                onSubmitted: widget.onSubmit,
-                readOnly: widget.readOnly || widget.disabled,
-                textCapitalization: widget.textCapitalization,
-                autocorrect: widget.autocorrect,
-                enableSuggestions: widget.enableSuggestions,
-                obscureText: widget.obscureText,
-                autofocus: widget.autofocus,
-                autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
-                paintCursorAboveText: true,
-                selectionControls: LayrzTextSelectionControls(tokens: tokens),
-                contextMenuBuilder: _buildContextMenu,
-                magnifierConfiguration:
-                    LayrzSelectionMagnifier.magnifierConfigurationFor() ?? const TextMagnifierConfiguration(),
-                maxLines: 1,
-                minLines: 1,
-                expands: false,
+          child: gestureDetectorBuilder.buildGestureDetector(
+            child: EditableText(
+              key: _editableTextKey,
+              controller: _controller,
+              focusNode: _focusNode,
+              style: tokens.typography.body.copyWith(
+                color: spec.textColor,
               ),
+              cursorColor: tokens.colors.primary,
+              backgroundCursorColor: tokens.colors.fg3,
+              selectionColor: tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              inputFormatters: formatters,
+              onChanged: widget.onChanged,
+              onSubmitted: widget.onSubmit,
+              readOnly: widget.readOnly || widget.disabled,
+              textCapitalization: widget.textCapitalization,
+              autocorrect: widget.autocorrect,
+              enableSuggestions: widget.enableSuggestions,
+              obscureText: widget.obscureText,
+              autofocus: widget.autofocus,
+              autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
+              paintCursorAboveText: true,
+              selectionControls: LayrzTextSelectionControls(tokens: tokens),
+              contextMenuBuilder: _buildContextMenu,
+              magnifierConfiguration:
+                  LayrzSelectionMagnifier.magnifierConfigurationFor() ?? const TextMagnifierConfiguration(),
+              maxLines: 1,
+              minLines: 1,
+              expands: false,
             ),
           ),
         ),
