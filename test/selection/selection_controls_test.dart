@@ -94,5 +94,69 @@ void main() {
       final rightAnchor = controls.getHandleAnchor(TextSelectionHandleType.right, 16.0);
       expect(rightAnchor, Offset.zero);
     });
+
+    testWidgets(
+      'buildHandle GestureDetector uses translucent hit test behavior to allow drag gestures',
+      (WidgetTester tester) async {
+        final controls = LayrzTextSelectionControls.instance;
+
+        // Build the handle widget
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              return controls.buildHandle(
+                context,
+                TextSelectionHandleType.collapsed,
+                16.0,
+                () {},
+              );
+            },
+          ),
+        );
+
+        // Verify the GestureDetector has translucent behavior
+        final gestureDetectorFinder = find.byType(GestureDetector);
+        expect(gestureDetectorFinder, findsOneWidget);
+
+        final gestureDetector = tester.firstWidget<GestureDetector>(gestureDetectorFinder);
+        expect(
+          gestureDetector.behavior,
+          HitTestBehavior.translucent,
+          reason: 'GestureDetector must use translucent hit test behavior to allow framework drag recognizers to work',
+        );
+      },
+    );
+
+    testWidgets(
+      'buildHandle widget size matches getHandleSize to ensure proper hit area alignment',
+      (WidgetTester tester) async {
+        final controls = LayrzTextSelectionControls.instance;
+        final expectedSize = controls.getHandleSize(16.0);
+
+        // Build the handle widget
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) {
+              return controls.buildHandle(
+                context,
+                TextSelectionHandleType.collapsed,
+                16.0,
+                () {},
+              );
+            },
+          ),
+        );
+
+        // The handle should be a SizedBox with size matching getHandleSize
+        final sizedBoxFinder = find.byType(SizedBox);
+        expect(sizedBoxFinder, findsOneWidget);
+
+        final sizedBox = tester.firstWidget<SizedBox>(sizedBoxFinder);
+        expect(sizedBox.width, expectedSize.width);
+        expect(sizedBox.height, expectedSize.height);
+      },
+    );
   });
 }

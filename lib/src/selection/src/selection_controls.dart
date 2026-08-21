@@ -48,25 +48,24 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
     final tokens = context.tokens;
 
     // The handle is a fixed-size teardrop (22x22) that points toward the text.
-    // A larger hit area (48x48) is provided for comfortable dragging without
-    // affecting the visual size.
+    // The hit area is sized to match getHandleSize to ensure draggable region
+    // aligns with the visual handle. GestureDetector uses translucent hit test
+    // behavior to allow the framework's drag recognizers to work.
     const handleSize = Size(22.0, 22.0);
-    const hitAreaSize = Size(48.0, 48.0);
 
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.translucent,
       child: MouseRegion(
         cursor: SystemMouseCursors.text,
         child: SizedBox(
-          width: hitAreaSize.width,
-          height: hitAreaSize.height,
-          child: Center(
-            child: CustomPaint(
-              size: handleSize,
-              painter: LayrzSelectionHandlePainter(
-                type: type,
-                color: tokens.colors.primary,
-              ),
+          width: handleSize.width,
+          height: handleSize.height,
+          child: CustomPaint(
+            size: handleSize,
+            painter: LayrzSelectionHandlePainter(
+              type: type,
+              color: tokens.colors.primary,
             ),
           ),
         ),
