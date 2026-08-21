@@ -11,6 +11,7 @@ The change improves correctness by refusing to hide layout bugs. When a button l
 **Text overflow behaviour** (no API change, no compile-time failure):
 - `Text` widgets with no explicit `overflow` that sit in height-constrained space now wrap instead of truncating. Examples: alert titles, tooltip content.
 - Components that already set `overflow` explicitly are unchanged (button labels, chip labels, and navigator items all use `RichText` with explicit truncation set).
+- **Input error text is now capped at `maxLines: 2` with `overflow: TextOverflow.ellipsis`.** Previously treated as wrappable, device testing revealed that unbounded error text growth reflows the form below. Two lines of validation messaging is legible and useful (e.g., "Must be at least 8 characters, Must contain uppercase letter"), while unlimited growth degrades UX. Consumers relying on longer error messages rendering in full must truncate at the call site or refactor error display.
 - Call sites do NOT fail at compile time; the layout simply grows or overflows visibly.
 - Wrapped text may push parent layouts, causing reflow of pages. Callers must verify their layouts still fit and re-size or explicitly truncate where space is genuinely limited.
 - Migration: No code changes required for text that was already wrapping. For text that grows unexpectedly, add `maxLines: 1, overflow: TextOverflow.ellipsis` to the `Text()` call, or wrap it in a constrained container.

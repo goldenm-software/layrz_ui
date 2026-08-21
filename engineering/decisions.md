@@ -3045,13 +3045,14 @@ The assumption also masked a shipped bug. `LayrzButton` rendered labels at fixed
 
 - **Behavioural breaking change** (no API change). `Text` widgets with no explicit `overflow` that sit in height-constrained space now wrap instead of truncating. Examples: alert titles, tooltip content/title. Components that already set `overflow` explicitly are unchanged (button labels, chip labels, navigator rail items all use `RichText` with explicit truncation). Code that was silently truncating may now wrap and grow layouts. Callers must verify their layouts still fit or explicitly add `maxLines: 1` + `overflow: TextOverflow.ellipsis` where space is genuinely limited.
 - **No compile-time failure.** Existing `Text(label)` calls compile and render unchanged unless the new wrapping causes layout overflow. This silence is intentional and the trade-off of a behavioural change: the alternative (always truncate) masks bugs like DESIGN-78.
-- **Nine sites across five files** now explicitly set `maxLines: 1` + `overflow: TextOverflow.ellipsis` where text was previously truncated by the type scale:
-  - Avatar emoji/initials/fallback: three sites in `lib/src/images/src/avatar.dart` (emoji in `.emoji()`, initials in fallback, emoji in `_buildFromSource()`)
-  - Selection-toolbar action labels: one site in `lib/src/selection/src/selection_toolbar.dart` (`LayrzSelectionToolbar`)
-  - Input shortcut badge and slot text: two sites in `lib/src/inputs/src/input_chrome.dart`
-  - Dropdown plain label and shortcut badge: two sites in `lib/src/menus/src/dropdown_items.dart` (`LayrzDropdownLabel` and `LayrzDropdownEntry`)
-  - Navigator section caption: one site in `lib/src/layout/src/navigator_panel.dart` (uppercase section caption)
-- **Text in wrappable slots** (alert titles, tooltip content/title, empty-state literals, input error text, input field label) is left unchanged and wraps freely. No `maxLines: 1` was added to them.
+- **Eleven sites across six files** now explicitly set truncation where text was previously truncated by the type scale:
+  - Avatar emoji/initials/fallback: three sites in `lib/src/images/src/avatar.dart` (emoji in `.emoji()`, initials in fallback, emoji in `_buildFromSource()`) — all use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Selection-toolbar action labels: one site in `lib/src/selection/src/selection_toolbar.dart` (`LayrzSelectionToolbar`) — uses `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Input shortcut badge and slot text: two sites in `lib/src/inputs/src/input_chrome.dart` — both use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Input error text: two sites in `lib/src/inputs/src/input_error_block.dart` (one in the errors-only branch, one in `_ErrorAndCounterRow`) — both use `maxLines: 2` + `overflow: TextOverflow.ellipsis` for legible multi-line error messages
+  - Dropdown plain label and shortcut badge: two sites in `lib/src/menus/src/dropdown_items.dart` (`LayrzDropdownLabel` and `LayrzDropdownEntry`) — both use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Navigator section caption: one site in `lib/src/layout/src/navigator_panel.dart` (uppercase section caption) — uses `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+- **Text in wrappable slots** (alert titles, tooltip content/title, empty-state literals, input field label) is left unchanged and wraps freely. No `maxLines` was added to them.
 - **No `DefaultTextStyle` safety net.** Setting `overflow` on `DefaultTextStyle` would re-apply ellipsis to every `Text` in the tree, re-creating DESIGN-78. Setting `maxLines` on `DefaultTextStyle` would cap all text globally. Both are rejected.
 
 ### Related Decisions
@@ -3063,4 +3064,14 @@ The assumption also masked a shipped bug. `LayrzButton` rendered labels at fixed
 ### Review Trigger
 
 If consuming apps report a pattern of needing `maxLines: 1` in many call sites, consider a wrapper component or extension to reduce boilerplate. Do NOT add overflow back to the type scale.
+
+### Amendment (2026-08-21) — Input Error Text Capped at Two Lines
+
+**What changed**: Input error text is now capped at `maxLines: 2` with `overflow: TextOverflow.ellipsis`. The original task description stated errors "have no `maxLines` and no `overflow`, so they already wrap freely — correct as-is; leave alone", and this was accepted at plan time. Device testing disproved it: when two validation errors were joined into one string ("Must be at least 8 characters, Must contain uppercase letter"), the error text wrapped to two lines and pushed the form downward, reflowing the page.
+
+**General lesson**: A slot being _unbounded_ is not the same as it being _safe to grow_. Input error text is attached to a field in a form, so its vertical growth reflows everything below it. While single-line errors are rare enough that unbounded wrapping was acceptable when combined with field-level rules, real-world validation messages are often compound, and letting them grow without limit degrades the UX. The fix is a deliberate middle position: capped multi-line (`maxLines: 2`) rather than either extreme (no cap / silent truncation).
+
+**This is the fourth error found in the task description** — the first three are recorded in "Three Critical Facts". But they are not the same kind. The first three were **factually wrong about the code and SDK** (TextPainter's behaviour, the field layout distinction, RichText's overflow handling) and were caught by reading the source. This fourth is **factually correct about the code but wrong about the consequence** — the code was right that errors had no `maxLines`, but the inference that unbounded therefore meant safe was wrong. Only running the app on a device surfaced it. The lesson: reading source catches errors about implementation; consequence-finding requires testing.
+
+**Why this is no longer an exception**: A slot with `maxLines: N` + explicit `overflow` is no longer a special case — it is now an instance of the Rule's "Deliberate multi-line caps" bullet, which already covers the pattern. The change makes error text consistent with the system's architecture.
 
