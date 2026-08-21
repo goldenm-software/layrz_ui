@@ -36,25 +36,75 @@ class _LayrzMagnifierWidget extends StatelessWidget {
   }
 
   /// Builds the magnifier widget with position and focal point updates.
+  ///
+  /// Implements Material's magnifier positioning and focal point algorithm:
+  /// - The magnifier size is 77.37 × 37.9 (wide and short)
+  /// - Magnifier X position: finger position, clamped to current line boundaries
+  /// - Magnifier Y position: based on caret's center, positioned above with fixed offset
+  /// - Focal point: calculated relative to magnifier position, shows content under finger
   Widget _buildMagnifier(MagnifierInfo info) {
-    const magnifierSize = Size(128.0, 160.0);
+    // Material's magnifier dimensions: wide and short (77.37 × 37.9)
+    const magnifierSize = Size(77.37, 37.9);
+    const magnificationScale = 1.25;
+    const kStandardVerticalFocalPointShift = 22.0;
 
-    // Calculate the focal point offset within the magnifier.
-    // This offset determines which part of the text is shown magnified.
-    // We position it so the text under the finger appears at the center of the magnifier.
+    // Basic magnifier offset: half width horizontally, height + shift vertically
+    final basicMagnifierOffset = Offset(
+      magnifierSize.width / 2,
+      magnifierSize.height + kStandardVerticalFocalPointShift,
+    );
+
+    // Magnifier X position: finger position, clamped to current line boundaries
     final fingerX = info.globalGesturePosition.dx;
-    final fingerY = info.globalGesturePosition.dy;
+    final magnifierX = fingerX.clamp(
+      info.currentLineBoundaries.left,
+      info.currentLineBoundaries.right,
+    );
 
-    // The focal point offset is relative to the magnifier's center
-    // X: distance from finger to magnifier center
-    final focalPointDx = fingerX - (magnifierSize.width / 2);
-    // Y: distance from finger to magnifier center
-    final focalPointDy = fingerY - (magnifierSize.height / 2);
+    // Magnifier Y position: use caret's center, positioned above by the offset
+    final caretCenterY = info.caretRect.center.dy;
+    final magnifierTopLeft = Offset(magnifierX, caretCenterY) - basicMagnifierOffset;
+
+    // Calculate focal point based on finger position relative to magnifier
+    // The focal point is what part of the text appears in the magnifier view
+    final horizontalMaxFocalPointEdgeInsets = (magnifierSize.width / 2) / magnificationScale;
+
+    // Determine the global focal point X position
+    final double focalPointGlobalX;
+    if (info.fieldBounds.width < horizontalMaxFocalPointEdgeInsets * 2) {
+      // Field is narrow: center the focal point in the field
+      focalPointGlobalX = info.fieldBounds.center.dx;
+    } else {
+      // Field is wide: clamp focal point to keep text visible in magnifier
+      focalPointGlobalX = (magnifierTopLeft.dx + magnifierSize.width / 2).clamp(
+        info.fieldBounds.left + horizontalMaxFocalPointEdgeInsets,
+        info.fieldBounds.right - horizontalMaxFocalPointEdgeInsets,
+      );
+    }
+
+    // Convert global focal point to magnifier-relative offset
+    final focalPointRelativeX = focalPointGlobalX - magnifierTopLeft.dx;
+
+    // Vertical focal point: standard offset + half magnifier height
+    final focalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2;
 
     return RawMagnifier(
       size: magnifierSize,
-      magnificationScale: scale,
-      focalPointOffset: Offset(focalPointDx, focalPointDy),
+      magnificationScale: magnificationScale,
+      decoration: MagnifierDecoration(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(magnifierSize.height / 2),
+        ),
+        shadows: const [
+          BoxShadow(
+            color: Color.fromRGBO(0, 0, 0, 0.15),
+            blurRadius: 8.0,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      focalPointOffset: Offset(focalPointRelativeX, focalPointY),
     );
   }
 }

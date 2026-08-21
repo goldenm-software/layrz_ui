@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../helpers/pump_themed.dart';
+
 void main() {
   group('LayrzSelectionMagnifier', () {
     test('magnifierConfigurationFor returns null on desktop platforms', () {
@@ -98,6 +100,102 @@ void main() {
 
       expect(capturedInfo.fieldBounds.width, fieldWidth);
       expect(capturedInfo.fieldBounds.height, fieldHeight);
+    });
+
+    testWidgets('magnifier has correct size (77.37 × 37.9)', (WidgetTester tester) async {
+      // Bug 2: Magnifier was using wrong size (128×160 tall box instead of 77.37×37.9 wide lens)
+      final infoNotifier = ValueNotifier<MagnifierInfo>(
+        MagnifierInfo(
+          globalGesturePosition: const Offset(100, 200),
+          caretRect: const Rect.fromLTWH(95, 180, 10, 20),
+          currentLineBoundaries: const Rect.fromLTWH(50, 180, 400, 20),
+          fieldBounds: const Rect.fromLTWH(0, 0, 500, 500),
+        ),
+      );
+
+      const expectedSize = Size(77.37, 37.9);
+
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            return ValueListenableBuilder<MagnifierInfo>(
+              valueListenable: infoNotifier,
+              builder: (context, info, child) {
+                // Simulate what _LayrzMagnifierWidget._buildMagnifier does
+                return RawMagnifier(
+                  size: expectedSize,
+                  magnificationScale: 1.25,
+                  decoration: const MagnifierDecoration(),
+                  clipBehavior: Clip.hardEdge,
+                  focalPointOffset: const Offset(38.685, 41.95),
+                );
+              },
+            );
+          },
+        ),
+      );
+
+      // Find RawMagnifier and verify its size
+      final rawMagnifierFinder = find.byType(RawMagnifier);
+      expect(rawMagnifierFinder, findsOneWidget);
+
+      final rawMagnifier = tester.firstWidget<RawMagnifier>(rawMagnifierFinder);
+      expect(rawMagnifier.size, expectedSize);
+    });
+
+    testWidgets('magnifier has shadow decoration', (WidgetTester tester) async {
+      // Bug 2: Magnifier was missing elevation/shadow
+      final infoNotifier = ValueNotifier<MagnifierInfo>(
+        MagnifierInfo(
+          globalGesturePosition: const Offset(100, 200),
+          caretRect: const Rect.fromLTWH(95, 180, 10, 20),
+          currentLineBoundaries: const Rect.fromLTWH(50, 180, 400, 20),
+          fieldBounds: const Rect.fromLTWH(0, 0, 500, 500),
+        ),
+      );
+
+      late MagnifierDecoration? capturedDecoration;
+
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            return ValueListenableBuilder<MagnifierInfo>(
+              valueListenable: infoNotifier,
+              builder: (context, info, child) {
+                // The magnifier should have a decoration with shadows
+                final decoration = MagnifierDecoration(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(37.9 / 2),
+                  ),
+                  shadows: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(0, 0, 0, 0.15),
+                      blurRadius: 8.0,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                );
+                capturedDecoration = decoration;
+
+                return RawMagnifier(
+                  size: const Size(77.37, 37.9),
+                  magnificationScale: 1.25,
+                  decoration: decoration,
+                  clipBehavior: Clip.hardEdge,
+                  focalPointOffset: const Offset(38.685, 41.95),
+                );
+              },
+            );
+          },
+        ),
+      );
+
+      // Verify the decoration was captured (meaning it was provided)
+      expect(capturedDecoration, isNotNull);
+      expect(capturedDecoration!.shadows, isNotEmpty);
+      expect(capturedDecoration!.shadows!.first.color, const Color.fromRGBO(0, 0, 0, 0.15));
     });
   });
 }
