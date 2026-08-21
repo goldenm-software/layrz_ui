@@ -302,35 +302,11 @@ class LayrzInputChrome extends StatelessWidget {
         LayrzInputErrorBlock(
           errors: errors,
           hideDetails: hideDetails,
-          showErrorsInline: !_isCompactWidth(context),
           maxLength: maxLength,
           controller: controller,
         ),
       ],
     );
-  }
-
-  /// Checks if the current viewport is at a compact width (xs or sm breakpoint).
-  ///
-  /// Returns true when [breakpoint] is [LayrzBreakpoint.xs] or [LayrzBreakpoint.sm]
-  /// (viewport width < 960px), which indicates a mobile or narrow tablet layout.
-  bool _isCompactWidth(BuildContext context) {
-    final breakpoint = context.breakpoint;
-    return breakpoint == LayrzBreakpoint.xs || breakpoint == LayrzBreakpoint.sm;
-  }
-
-  /// Builds a rich text span with one error per line for the error tooltip.
-  ///
-  /// Each error is separated by a newline character. If there are no errors,
-  /// returns an empty TextSpan.
-  TextSpan _buildErrorRichText(List<String> errorList) {
-    if (errorList.isEmpty) {
-      return const TextSpan(text: '');
-    }
-
-    // Build a single text string with errors separated by newlines for direct rendering
-    final errorText = errorList.join('\n');
-    return TextSpan(text: errorText);
   }
 
   /// Builds the trailing elements in a fixed, canonical order.
@@ -413,25 +389,13 @@ class LayrzInputChrome extends StatelessWidget {
 
     // Error icon (always last/rightmost — error state is critical)
     if (errors.isNotEmpty) {
-      final errorIcon = Icon(
-        MdiIcons.alertOutline,
-        size: iconSize,
-        color: tokens.colors.danger,
+      trailing.add(
+        Icon(
+          MdiIcons.alertOutline,
+          size: iconSize,
+          color: tokens.colors.danger,
+        ),
       );
-
-      // On compact widths, wrap the error icon in a tooltip to show all errors
-      if (_isCompactWidth(context)) {
-        trailing.add(
-          LayrzTooltip(
-            trigger: LayrzTooltipTrigger.tap,
-            position: LayrzTooltipPosition.left,
-            contentRichText: _buildErrorRichText(errors),
-            child: errorIcon,
-          ),
-        );
-      } else {
-        trailing.add(errorIcon);
-      }
     }
 
     // If no trailing elements, return empty list
