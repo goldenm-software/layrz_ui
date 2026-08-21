@@ -6,7 +6,7 @@ import '../helpers/fake_font_handler.dart';
 
 Future<void> _pumpToolbar(
   WidgetTester tester,
-  SelectionToolbar toolbar,
+  LayrzSelectionToolbar toolbar,
 ) async {
   await tester.pumpWidget(
     LayrzApp(
@@ -18,7 +18,7 @@ Future<void> _pumpToolbar(
 }
 
 void main() {
-  group('SelectionToolbar', () {
+  group('LayrzSelectionToolbar', () {
     late LayrzTokens tokens;
 
     setUp(() {
@@ -26,7 +26,7 @@ void main() {
     });
 
     testWidgets('renders toolbar with action buttons', (WidgetTester tester) async {
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {LayrzSelectableAction.copy, LayrzSelectableAction.cut},
         anchorAbove: Offset.zero,
         tokens: tokens,
@@ -34,12 +34,12 @@ void main() {
       );
 
       await _pumpToolbar(tester, toolbar);
-      expect(find.byType(SelectionToolbar), findsOneWidget);
+      expect(find.byType(LayrzSelectionToolbar), findsOneWidget);
       expect(find.byType(GestureDetector), findsWidgets);
     });
 
     testWidgets('displays action label text', (WidgetTester tester) async {
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {LayrzSelectableAction.copy},
         anchorAbove: Offset.zero,
         tokens: tokens,
@@ -54,7 +54,7 @@ void main() {
     testWidgets('calls onActionPressed when button is tapped', (WidgetTester tester) async {
       String? pressedAction;
 
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {LayrzSelectableAction.copy},
         anchorAbove: Offset.zero,
         tokens: tokens,
@@ -77,7 +77,7 @@ void main() {
         icon: testIcon,
       );
 
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {customAction},
         anchorAbove: Offset.zero,
         tokens: tokens,
@@ -90,7 +90,7 @@ void main() {
     });
 
     testWidgets('displays correct number of buttons for actions', (WidgetTester tester) async {
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {
           LayrzSelectableAction.copy,
           LayrzSelectableAction.cut,
@@ -107,7 +107,7 @@ void main() {
     });
 
     testWidgets('renders with proper styling from tokens', (WidgetTester tester) async {
-      final toolbar = SelectionToolbar(
+      final toolbar = LayrzSelectionToolbar(
         actions: {LayrzSelectableAction.copy},
         anchorAbove: Offset.zero,
         tokens: tokens,

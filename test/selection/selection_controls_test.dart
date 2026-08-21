@@ -58,6 +58,5 @@ void main() {
       expect(anchor.dx, size.width / 2);
       expect(anchor.dy, size.height);
     });
-
   });
 }

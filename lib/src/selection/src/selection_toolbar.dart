@@ -6,7 +6,7 @@ import 'selectable_action.dart';
 
 /// A Material-free text selection toolbar displaying action buttons.
 ///
-/// [SelectionToolbar] renders a horizontal list of action buttons for text selection
+/// [LayrzSelectionToolbar] renders a horizontal list of action buttons for text selection
 /// operations (copy, cut, paste, select all, and custom actions). The toolbar
 /// is styled using design system tokens and positioned via [Offset] anchors.
 ///
@@ -14,7 +14,7 @@ import 'selectable_action.dart';
 /// the toolbar anchor position and selection state. The toolbar is NOT positioned
 /// automatically; the caller is responsible for wrapping it in a [Positioned] widget
 /// or similar layout mechanism.
-class SelectionToolbar extends StatelessWidget {
+class LayrzSelectionToolbar extends StatelessWidget {
   /// The set of actions to display as buttons in the toolbar.
   final Set<LayrzSelectableAction> actions;
 
@@ -27,7 +27,7 @@ class SelectionToolbar extends StatelessWidget {
   /// Callback to invoke when a button action is pressed.
   final Function(String actionType) onActionPressed;
 
-  /// Creates a new [SelectionToolbar].
+  /// Creates a new [LayrzSelectionToolbar].
   ///
   /// Parameters:
   ///   - [key]: Optional widget key for identification.
@@ -35,7 +35,7 @@ class SelectionToolbar extends StatelessWidget {
   ///   - [anchorAbove]: The offset where the toolbar should appear above the selection.
   ///   - [tokens]: Design system tokens for styling.
   ///   - [onActionPressed]: Callback invoked with the action type when a button is pressed.
-  const SelectionToolbar({
+  const LayrzSelectionToolbar({
     super.key,
     required this.actions,
     required this.anchorAbove,
@@ -50,7 +50,7 @@ class SelectionToolbar extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: tokens.colors.sf2,
+        color: tokens.colors.sf1,
         borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
         boxShadow: tokens.shadow.elevation1,
       ),
@@ -99,8 +99,7 @@ class SelectionToolbar extends StatelessWidget {
                   size: 18.0,
                   color: tokens.colors.fg1,
                 ),
-              if (action.icon != null)
-                SizedBox(width: tokens.spacing.sp2),
+              if (action.icon != null) SizedBox(width: tokens.spacing.sp2),
               Text(
                 label,
                 style: tokens.typography.label.copyWith(

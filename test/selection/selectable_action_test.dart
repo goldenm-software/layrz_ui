@@ -60,7 +60,7 @@ void main() {
       expect(LayrzSelectableAction.defaults.contains(LayrzSelectableAction.selectAll), true);
     });
 
-    test('custom action with same type is not deduped', () {
+    test('distinct custom actions coexist in a Set', () {
       final action1 = LayrzSelectableAction(
         label: (l10n) => 'Custom 1',
         onPressed: () {},
@@ -69,11 +69,23 @@ void main() {
         label: (l10n) => 'Custom 2',
         onPressed: () {},
       );
-      // Custom actions all have type 'custom', so they should be equal
-      expect(action1 == action2, true);
+      // Custom actions deduplicate only by reference identity, not by type
+      expect(action1 == action2, false);
 
-      // In a set, duplicates are removed
+      // In a set, both distinct custom actions survive
       final set = {action1, action2};
+      expect(set.length, 2);
+      expect(set.contains(action1), true);
+      expect(set.contains(action2), true);
+    });
+
+    test('same custom action instance dedupes in a Set', () {
+      final action = LayrzSelectableAction(
+        label: (l10n) => 'Custom',
+        onPressed: () {},
+      );
+      // Adding the same instance twice dedupes
+      final set = {action, action};
       expect(set.length, 1);
     });
 

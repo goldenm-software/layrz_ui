@@ -42,7 +42,7 @@ class LayrzTextSelectionControls extends TextSelectionControls {
         cursor: SystemMouseCursors.text,
         child: CustomPaint(
           size: Size(handleWidth, handleHeight),
-          painter: SelectionHandlePainter(
+          painter: LayrzSelectionHandlePainter(
             color: tokens.colors.primary,
             borderRadius: BorderRadius.all(
               Radius.circular(tokens.radius.r2),

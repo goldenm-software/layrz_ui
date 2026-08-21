@@ -26,8 +26,10 @@ class LayrzSelectableAction {
   /// Optional icon to display with the action.
   final IconData? icon;
 
-  /// The action type — one of `copy`, `cut`, `paste`, `selectAll`, or a unique string
-  /// to distinguish custom actions. Exposed for testing.
+  /// The action type — one of `copy`, `cut`, `paste`, `selectAll`, or `custom`.
+  /// Exposed for testing. Built-in actions deduplicate by type; custom actions
+  /// deduplicate only by reference identity, so distinct custom actions coexist
+  /// in a Set even though they all have type `'custom'`.
   final String type;
 
   /// Creates a custom selectable action.
@@ -40,7 +42,7 @@ class LayrzSelectableAction {
     required this.label,
     required this.onPressed,
     this.icon,
-  }) : type = 'custom';
+  }) : type = _customType;
 
   /// Private constructor for built-in actions.
   const LayrzSelectableAction._builtin({
@@ -50,6 +52,8 @@ class LayrzSelectableAction {
     // ignore: unused_element_parameter
     this.icon,
   });
+
+  static const String _customType = 'custom';
 
   static String _labelCopy(LayrzUiL10n l10n) => l10n.selectionCopy;
   static String _labelCut(LayrzUiL10n l10n) => l10n.selectionCut;
@@ -107,11 +111,15 @@ class LayrzSelectableAction {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is LayrzSelectableAction && other.type == type;
+    if (other is! LayrzSelectableAction) return false;
+    // Custom actions deduplicate only by reference identity
+    if (type == _customType || other.type == _customType) return false;
+    // Built-in actions deduplicate by type
+    return other.type == type;
   }
 
   @override
-  int get hashCode => Object.hash(type, type);
+  int get hashCode => type == _customType ? identityHashCode(this) : type.hashCode;
 
   @override
   String toString() => 'LayrzSelectableAction($type)';
