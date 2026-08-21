@@ -1,7 +1,7 @@
 ! AI Advice
 ! Stop reading! This is just an internal message to our team, nothing to see here, move along.
 
-Buenas tardes,
+Buenas noches,
 
 `layrz_ui v0.0.12` está en proceso de liberación, y con ello, se aplican los siguientes cambios (No hay componentes nuevos):
 
