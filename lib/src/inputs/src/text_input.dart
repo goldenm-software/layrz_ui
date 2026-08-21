@@ -235,46 +235,33 @@ class LayrzTextInput extends StatefulWidget {
 /// Custom gesture detector builder that threads the [onTap] callback through
 /// the selection gesture recognizer to avoid conflicts.
 ///
-/// Instead of wrapping the selection gesture detector in a separate GestureDetector,
-/// we wrap the child and call the [onTap] callback on every recognized tap.
+/// Overrides [onUserTap] to invoke the field's [onTap] callback when the user
+/// taps, eliminating the need for a separate wrapping [GestureDetector].
 class _LayrzTextInputSelectionGestureDetectorBuilder extends TextSelectionGestureDetectorBuilder {
   /// Callback to invoke when the user taps the field.
-  final VoidCallback? onUserTapCallback;
+  final VoidCallback? _onUserTapCallback;
 
   /// Whether the field is disabled.
-  final bool isDisabled;
-
-  /// Whether the field is read-only.
-  final bool isReadOnly;
+  final bool _isDisabled;
 
   /// Creates a custom gesture detector builder for [LayrzTextInput].
   _LayrzTextInputSelectionGestureDetectorBuilder({
     required super.delegate,
-    this.onUserTapCallback,
-    required this.isDisabled,
-    required this.isReadOnly,
-  });
+    required VoidCallback? onUserTapCallback,
+    required bool isDisabled,
+  })  : _onUserTapCallback = onUserTapCallback, // ignore: prefer_initializing_formals
+        _isDisabled = isDisabled; // ignore: prefer_initializing_formals
 
+  /// Called when the user taps the field.
+  ///
+  /// Invoked by [TextSelectionGestureDetectorBuilder] when [selectionEnabled]
+  /// is true and a tap is recognized. Threads the [onTap] callback through
+  /// this method to avoid multiple competing tap recognizers.
   @override
-  Widget buildGestureDetector({
-    Key? key,
-    HitTestBehavior? behavior,
-    required Widget child,
-  }) {
-    // Build the parent's selection gesture detector
-    final parentDetector = super.buildGestureDetector(
-      key: key,
-      behavior: behavior,
-      child: child,
-    );
-
-    // Wrap the parent detector with an additional GestureDetector that handles onTap.
-    // Use translucent hit testing so both detectors can recognize gestures.
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: isDisabled ? null : onUserTapCallback,
-      child: parentDetector,
-    );
+  void onUserTap() {
+    if (!_isDisabled) {
+      _onUserTapCallback?.call();
+    }
   }
 }
 
@@ -456,7 +443,6 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
       delegate: this,
       onUserTapCallback: widget.disabled ? null : (widget.readOnly ? widget.onTap : _handleTap),
       isDisabled: widget.disabled,
-      isReadOnly: widget.readOnly,
     );
 
     return LayrzInputChrome(
@@ -486,6 +472,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
           child: gestureDetectorBuilder.buildGestureDetector(
             child: EditableText(
               key: _editableTextKey,
+              rendererIgnoresPointer: true,
               controller: _controller,
               focusNode: _focusNode,
               style: tokens.typography.body.copyWith(
