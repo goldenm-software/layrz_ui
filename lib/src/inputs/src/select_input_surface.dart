@@ -34,6 +34,12 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// Callback when an item is selected or cleared.
   final void Function(LayrzSelectItem<T>?) onItemSelected;
 
+  /// Optional menu controller to close the panel after selection.
+  ///
+  /// When provided, the surface will call [controller.close()] after an item is selected.
+  /// This is used when the surface is displayed in an anchored panel on desktop.
+  final MenuController? panelController;
+
   /// Creates a new [LayrzSelectInputSurface].
   const LayrzSelectInputSurface({
     super.key,
@@ -44,6 +50,7 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
     this.filter,
     this.emptyListText,
     required this.onItemSelected,
+    this.panelController,
   });
 
   @override
@@ -140,9 +147,14 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     } else if (key == LogicalKeyboardKey.enter) {
       if (_highlightedIndex >= 0 && _highlightedIndex < _filteredItems.length) {
         widget.onItemSelected(_filteredItems[_highlightedIndex]);
+        widget.panelController?.close();
       }
     } else if (key == LogicalKeyboardKey.escape) {
-      Navigator.pop(context);
+      if (widget.panelController != null) {
+        widget.panelController!.close();
+      } else {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -213,6 +225,7 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
                       isSelected: isSelected,
                       onTap: () {
                         widget.onItemSelected(item);
+                        widget.panelController?.close();
                       },
                     );
                   }),
