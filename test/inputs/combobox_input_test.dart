@@ -283,11 +283,22 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(LayrzComboBoxInput));
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
       final field = tester.getRect(find.byType(LayrzComboBoxInput));
-      final panel = tester.getRect(find.byWidgetPredicate((w) => w is DesktopOverlay));
+
+      // Get the bounds of all option items to compute the panel rect
+      final optionRects = find
+          .byType(OptionItem)
+          .evaluate()
+          .map((e) => tester.getRect(find.byElementPredicate((element) => element == e)))
+          .toList();
+      final panelLeft = optionRects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
+      final panelTop = optionRects.map((r) => r.top).reduce((a, b) => a < b ? a : b);
+      final panelRight = optionRects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
+      final panelBottom = optionRects.map((r) => r.bottom).reduce((a, b) => a > b ? a : b);
+      final panel = Rect.fromLTRB(panelLeft, panelTop, panelRight, panelBottom);
 
       expect(
         panel.bottom,
@@ -319,11 +330,22 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(LayrzComboBoxInput));
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
       final field = tester.getRect(find.byType(LayrzComboBoxInput));
-      final panel = tester.getRect(find.byWidgetPredicate((w) => w is DesktopOverlay));
+
+      // Get the bounds of all option items to compute the panel rect
+      final optionRects = find
+          .byType(OptionItem)
+          .evaluate()
+          .map((e) => tester.getRect(find.byElementPredicate((element) => element == e)))
+          .toList();
+      final panelLeft = optionRects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
+      final panelTop = optionRects.map((r) => r.top).reduce((a, b) => a < b ? a : b);
+      final panelRight = optionRects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
+      final panelBottom = optionRects.map((r) => r.bottom).reduce((a, b) => a > b ? a : b);
+      final panel = Rect.fromLTRB(panelLeft, panelTop, panelRight, panelBottom);
 
       expect(
         panel.top,
