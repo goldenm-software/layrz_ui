@@ -208,9 +208,7 @@ void main() {
       const magnifierSize = Size(77.37, 37.9);
       const focalPointAdjustmentY = 0.0; // No screen bounds shift in this case
 
-      final expectedFocalPointY = kStandardVerticalFocalPointShift
-          + magnifierSize.height / 2
-          + focalPointAdjustmentY;
+      final expectedFocalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2 + focalPointAdjustmentY;
 
       expect(expectedFocalPointY, 40.95);
     });

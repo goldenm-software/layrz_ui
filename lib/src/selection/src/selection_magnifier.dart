@@ -110,9 +110,7 @@ class _LayrzMagnifierWidget extends StatelessWidget {
     // Vertical focal point: standard offset + half magnifier height + adjustment for screen bounds
     // Material's geometry constants (22.0 shift, 77.37×37.9 lens) require the focal point
     // to be at the center of the magnifier vertically (standard shift + height/2 = 22.0 + 18.95 = 40.95)
-    final focalPointY = kStandardVerticalFocalPointShift
-        + magnifierSize.height / 2
-        + focalPointAdjustmentY;
+    final focalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2 + focalPointAdjustmentY;
 
     return Positioned(
       left: magnifierPosition.dx,
