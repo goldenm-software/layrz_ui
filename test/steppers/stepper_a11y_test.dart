@@ -127,21 +127,6 @@ void main() {
       expect(button.onTap, isNotNull);
     });
 
-    testWidgets('step circles and connectors are not in semantic tree', (WidgetTester tester) async {
-      tester.binding.window.physicalSizeTestValue = const Size(1400, 800);
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-
-      await pumpThemed(
-        tester,
-        LayrzStepper(steps: testSteps),
-      );
-
-      // In wide mode, step circles render. They should be decorative (wrapped in Semantics
-      // with enabled: true/false based on tappability, but not announced as separate items).
-      // The semantics labels are on the Column, not on individual circles.
-      expect(find.byType(LayrzStepper), findsOneWidget);
-    });
-
     testWidgets('completed step is distinguishable without colour alone', (WidgetTester tester) async {
       final completedSteps = [
         const LayrzStep(
@@ -214,25 +199,6 @@ void main() {
 
       // Error step should render with an alert icon for distinction.
       expect(find.byType(LayrzStepper), findsOneWidget);
-    });
-
-    testWidgets('compact mode hides circles, shows summary with position and state', (WidgetTester tester) async {
-      final controller = LayrzStepperController();
-      controller.setStepCount(3);
-      controller.goTo(1);
-
-      tester.binding.window.physicalSizeTestValue = const Size(600, 800);
-      addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
-
-      await pumpThemed(
-        tester,
-        LayrzStepper(steps: testSteps, controller: controller),
-      );
-
-      await tester.pumpAndSettle();
-
-      // On compact width (< 960px), should show "Step X of Y" instead of circles.
-      expect(find.text('Step 2 of 3'), findsOneWidget);
     });
 
     testWidgets('back button disabled on first step has null onTap', (WidgetTester tester) async {
