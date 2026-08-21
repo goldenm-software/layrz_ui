@@ -10,7 +10,11 @@ import 'package:layrz_ui/src/platform/platform.dart';
 /// - Sits vertically above the current line of text
 /// - Sets [RawMagnifier.focalPointOffset] to magnify the text under the finger
 class _LayrzMagnifierWidget extends StatelessWidget {
-  /// The magnification scale factor (e.g., 1.5 for 1.5x magnification).
+  /// The magnification scale factor applied to the magnified view.
+  ///
+  /// Drives both the [RawMagnifier.magnificationScale] and the focal point edge insets.
+  /// This value determines how much content is magnified and must match the geometry
+  /// constants (22.0 shift, 77.37×37.9 lens) for correct focal point positioning.
   final double scale;
 
   /// The [ValueNotifier] containing current magnifier information.
@@ -19,7 +23,7 @@ class _LayrzMagnifierWidget extends StatelessWidget {
   /// Creates a new [_LayrzMagnifierWidget].
   ///
   /// Parameters:
-  ///   - [scale]: The magnification scale factor.
+  ///   - [scale]: The magnification scale factor applied to magnified content.
   ///   - [magnifierInfo]: The [ValueNotifier] containing [MagnifierInfo] updates.
   const _LayrzMagnifierWidget({
     required this.scale,
@@ -49,7 +53,7 @@ class _LayrzMagnifierWidget extends StatelessWidget {
 
     // Material's magnifier dimensions: wide and short (77.37 × 37.9)
     const magnifierSize = Size(77.37, 37.9);
-    const magnificationScale = 1.25;
+    final magnificationScale = scale;
     const kStandardVerticalFocalPointShift = 22.0;
 
     // Basic magnifier offset: half width horizontally, height + shift vertically
@@ -103,8 +107,12 @@ class _LayrzMagnifierWidget extends StatelessWidget {
     // we need to adjust the focal point to account for that shift
     final focalPointAdjustmentY = unadjustedMagnifierRect.top - screenBoundsAdjustedMagnifierRect.top;
 
-    // Vertical focal point: standard offset + adjustment for screen bounds
-    final focalPointY = kStandardVerticalFocalPointShift + focalPointAdjustmentY;
+    // Vertical focal point: standard offset + half magnifier height + adjustment for screen bounds
+    // Material's geometry constants (22.0 shift, 77.37×37.9 lens) require the focal point
+    // to be at the center of the magnifier vertically (standard shift + height/2 = 22.0 + 18.95 = 40.95)
+    final focalPointY = kStandardVerticalFocalPointShift
+        + magnifierSize.height / 2
+        + focalPointAdjustmentY;
 
     return Positioned(
       left: magnifierPosition.dx,
@@ -138,18 +146,20 @@ class _LayrzMagnifierWidget extends StatelessWidget {
 /// On desktop platforms (Windows, macOS, Linux) and web, the configuration
 /// will be null.
 class LayrzSelectionMagnifier extends StatelessWidget {
-  /// The magnification scale factor (e.g., 1.5 for 1.5x magnification).
+  /// The magnification scale factor applied to the magnified view.
   ///
-  /// Defaults to 1.5 if not specified.
+  /// Determines how much the content is magnified. Must align with the geometry
+  /// constants (22.0 vertical shift, 77.37×37.9 lens size) for correct focal point
+  /// positioning. Defaults to 1.25.
   final double scale;
 
   /// Creates a new [LayrzSelectionMagnifier].
   ///
   /// Parameters:
-  ///   - [scale]: The magnification scale factor. Defaults to 1.5.
+  ///   - [scale]: The magnification scale factor. Defaults to 1.25.
   const LayrzSelectionMagnifier({
     super.key,
-    this.scale = 1.5,
+    this.scale = 1.25,
   });
 
   /// Returns a [TextMagnifierConfiguration] suitable for touch platforms, or null
@@ -162,7 +172,7 @@ class LayrzSelectionMagnifier extends StatelessWidget {
   /// - Positions vertically above the current line
   /// - Sets the focal point offset to magnify text under the finger
   static TextMagnifierConfiguration? magnifierConfigurationFor({
-    double scale = 1.5,
+    double scale = 1.25,
   }) {
     // Magnifier is only enabled on touch platforms
     if (!LayrzPlatform.isMobile) {

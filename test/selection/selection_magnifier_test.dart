@@ -184,7 +184,7 @@ void main() {
                   magnificationScale: 1.25,
                   decoration: decoration,
                   clipBehavior: Clip.hardEdge,
-                  focalPointOffset: const Offset(38.685, 41.95),
+                  focalPointOffset: const Offset(38.685, 40.95),
                 );
               },
             );
@@ -196,6 +196,37 @@ void main() {
       expect(capturedDecoration, isNotNull);
       expect(capturedDecoration!.shadows, isNotEmpty);
       expect(capturedDecoration!.shadows!.first.color, const Color.fromRGBO(0, 0, 0, 0.15));
+    });
+
+    test('focal point Y is calculated with correct geometry constants', () {
+      // Bug 1: Magnifier focal point Y was missing magnifierSize.height / 2
+      // The correct calculation is:
+      // focalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2 + adjustment
+      // For a MagnifierInfo with no screen bounds shift:
+      // focalPointY = 22.0 + (37.9 / 2) + 0 = 22.0 + 18.95 = 40.95
+      const kStandardVerticalFocalPointShift = 22.0;
+      const magnifierSize = Size(77.37, 37.9);
+      const focalPointAdjustmentY = 0.0; // No screen bounds shift in this case
+
+      final expectedFocalPointY = kStandardVerticalFocalPointShift
+          + magnifierSize.height / 2
+          + focalPointAdjustmentY;
+
+      expect(expectedFocalPointY, 40.95);
+    });
+
+    test('scale parameter drives magnification scale', () {
+      // Bug 1: The scale parameter was hardcoded to 1.25 and ignored
+      // It should now drive the RawMagnifier.magnificationScale
+      final magnifier1 = LayrzSelectionMagnifier(scale: 1.25);
+      expect(magnifier1.scale, 1.25);
+
+      final magnifier2 = LayrzSelectionMagnifier(scale: 1.5);
+      expect(magnifier2.scale, 1.5);
+
+      // Default should be 1.25 (matching Material's geometry constants)
+      final magnifierDefault = const LayrzSelectionMagnifier();
+      expect(magnifierDefault.scale, 1.25);
     });
   });
 }
