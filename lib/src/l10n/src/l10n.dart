@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'namespaces/actions.dart';
 import 'namespaces/about.dart';
 import 'namespaces/calendar.dart';
+import 'namespaces/combobox.dart';
 import 'namespaces/date_time_pickers.dart';
 import 'namespaces/dual_list.dart';
 import 'namespaces/dynamic_avatar.dart';
@@ -94,6 +95,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nActionsMixin,
         LayrzUiL10nAboutMixin,
         LayrzUiL10nCalendarMixin,
+        LayrzUiL10nComboboxMixin,
         LayrzUiL10nDateTimePickersMixin,
         LayrzUiL10nDualListMixin,
         LayrzUiL10nDynamicAvatarMixin,
