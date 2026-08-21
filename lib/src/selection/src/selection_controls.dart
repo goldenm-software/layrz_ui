@@ -74,17 +74,19 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
     );
 
     // Rotate the handle based on type to point in the correct direction.
-    // The base teardrop points toward the top-left (up-left for right handle).
-    // We rotate it based on the handle type:
-    // - left: rotate 90° (π/2) to point up-right
-    // - right: no rotation, points up-left
-    // - collapsed: rotate 45° (π/4) to point up
+    // The unrotated teardrop (circle with top-left quadrant removed) has its
+    // square corner pointing toward the top-right (NE).
+    //
+    // Rotations move the corner counterclockwise from this base:
+    // - left: no rotation (0°) → corner points up-right, touching selection start
+    // - right: rotate 90° (π/2) → corner points up-left, touching selection end
+    // - collapsed: rotate 45° (π/4) → corner points up, marking caret position
     return switch (type) {
-      TextSelectionHandleType.left => Transform.rotate(
+      TextSelectionHandleType.left => handle, // points up-right (no rotation)
+      TextSelectionHandleType.right => Transform.rotate(
         angle: math.pi / 2.0,
         child: handle,
-      ), // points up-right
-      TextSelectionHandleType.right => handle, // points up-left
+      ), // points up-left
       TextSelectionHandleType.collapsed => Transform.rotate(
         angle: math.pi / 4.0,
         child: handle,
@@ -94,16 +96,16 @@ class LayrzTextSelectionControls extends TextSelectionControls with TextSelectio
 
   @override
   Offset getHandleAnchor(TextSelectionHandleType type, double textLineHeight) {
-    // The anchor point determines where the handle's teardrop points attach to the text.
-    // Each handle type uses a different anchor to align the square corner with the selection edge.
-    // These anchors match the fixed 22x22 handle size and Material's implementation.
+    // The anchor point determines where the handle's teardrop corner attaches to the text.
+    // It's specified relative to the handle's top-left (0, 0) in the 22×22 bounding box.
+    // Each handle type uses a different anchor to align the corner with the selection edge.
     const handleSize = 22.0;
     return switch (type) {
-      // Collapsed: anchor at the center-top, point hanging above (after rotation)
+      // Collapsed: anchor at center-top, corner points up above the text
       TextSelectionHandleType.collapsed => Offset(handleSize / 2, -4),
-      // Left: anchor at the right edge (after rotation to point up-right)
+      // Left: anchor at right edge, corner points up-right at selection start
       TextSelectionHandleType.left => Offset(handleSize, 0),
-      // Right: anchor at the left edge (base position, points up-left)
+      // Right: anchor at left edge, corner points up-left at selection end (after π/2 rotation)
       TextSelectionHandleType.right => Offset.zero,
     };
   }

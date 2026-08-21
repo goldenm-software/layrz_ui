@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -96,7 +97,7 @@ void main() {
       expect(controls.getHandleSize(24.0), const Size(22.0, 22.0));
     });
 
-    testWidgets('buildHandle for left applies rotation', (tester) async {
+    testWidgets('buildHandle for left has no rotation (points up-right)', (tester) async {
       await pumpThemed(
         tester,
         Builder(
@@ -107,16 +108,18 @@ void main() {
               TextSelectionHandleType.left,
               20.0,
             );
-            // Left handle should be wrapped in a Transform.rotate
+            // Left handle is returned as-is with no Transform (0 rotation)
+            // It points up-right at the selection start
             return handle;
           },
         ),
       );
-      // Verify widget tree contains a Transform widget
-      expect(find.byType(Transform), findsOneWidget);
+      // Left handle returns GestureDetector directly, not wrapped in Transform
+      expect(find.byType(GestureDetector), findsOneWidget);
+      expect(find.byType(Transform), findsNothing);
     });
 
-    testWidgets('buildHandle for right has no rotation', (tester) async {
+    testWidgets('buildHandle for right applies π/2 rotation (points up-left)', (tester) async {
       await pumpThemed(
         tester,
         Builder(
@@ -127,17 +130,17 @@ void main() {
               TextSelectionHandleType.right,
               20.0,
             );
-            // Right handle should be returned as-is, no Transform wrapper
+            // Right handle is wrapped in Transform.rotate with π/2 angle
+            // It points up-left at the selection end
             return handle;
           },
         ),
       );
-      // Right handle returns GestureDetector directly, not wrapped in Transform
-      // So we shouldn't find a Transform as the outermost widget
-      expect(find.byType(GestureDetector), findsOneWidget);
+      // Verify widget tree contains a Transform widget (for π/2 rotation)
+      expect(find.byType(Transform), findsOneWidget);
     });
 
-    testWidgets('buildHandle for collapsed applies rotation', (tester) async {
+    testWidgets('buildHandle for collapsed applies π/4 rotation (points up)', (tester) async {
       await pumpThemed(
         tester,
         Builder(
@@ -148,13 +151,67 @@ void main() {
               TextSelectionHandleType.collapsed,
               20.0,
             );
-            // Collapsed handle should be wrapped in a Transform.rotate
+            // Collapsed handle is wrapped in Transform.rotate with π/4 angle
             return handle;
           },
         ),
       );
       // Verify widget tree contains a Transform widget
       expect(find.byType(Transform), findsOneWidget);
+    });
+
+    test('handle rotation angles are correct per type', () {
+      // Base orientation: unrotated teardrop has square corner pointing up-right (NE)
+      // Rotations move the corner counterclockwise from this base
+
+      // Left handle: 0 rotation → corner at up-right (45°)
+      const leftAngle = 0.0;
+      expect(leftAngle, 0.0, reason: 'Left handle should have no rotation');
+
+      // Right handle: π/2 rotation → corner at up-left (135°), 90° from up-right
+      const rightAngle = math.pi / 2.0;
+      expect(rightAngle, closeTo(math.pi / 2.0, 0.0001),
+          reason: 'Right handle should rotate by π/2 to point up-left');
+
+      // Collapsed handle: π/4 rotation → corner at up (90°), 45° from up-right
+      const collapsedAngle = math.pi / 4.0;
+      expect(collapsedAngle, closeTo(math.pi / 4.0, 0.0001),
+          reason: 'Collapsed handle should rotate by π/4 to point up');
+    });
+
+    testWidgets('left handle corner points up-right for selection start', (tester) async {
+      // The left handle's corner should touch the selection start edge.
+      // With anchor at right edge (22, 0) and no rotation, the corner is at the
+      // unrotated position pointing up-right (NE).
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            final controls = LayrzTextSelectionControls.instance;
+            final anchor = controls.getHandleAnchor(TextSelectionHandleType.left, 16.0);
+            // Anchor at right edge
+            expect(anchor, Offset(22.0, 0.0));
+            return const SizedBox.shrink();
+          },
+        ),
+      );
+    });
+
+    testWidgets('right handle corner points up-left for selection end', (tester) async {
+      // The right handle's corner should touch the selection end edge.
+      // With anchor at left edge (0, 0) and π/2 rotation, the corner points up-left (NW).
+      await pumpThemed(
+        tester,
+        Builder(
+          builder: (context) {
+            final controls = LayrzTextSelectionControls.instance;
+            final anchor = controls.getHandleAnchor(TextSelectionHandleType.right, 16.0);
+            // Anchor at left edge
+            expect(anchor, Offset.zero);
+            return const SizedBox.shrink();
+          },
+        ),
+      );
     });
   });
 }

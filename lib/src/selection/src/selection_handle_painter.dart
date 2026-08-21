@@ -5,12 +5,13 @@ import 'package:flutter/widgets.dart';
 /// [LayrzSelectionHandlePainter] renders a teardrop-shaped handle that marks the
 /// start/end position of a text selection or the position of a collapsed caret.
 ///
-/// The teardrop is a circle with one square corner cut out from the top-left quadrant,
-/// creating a circular shape with a sharp "point". The point orientation changes based
-/// on the handle type, controlled via Transform.rotate in [LayrzTextSelectionControls.buildHandle]:
-/// - **left**: rotated 90° to point up-right
-/// - **right**: not rotated, points up-left
-/// - **collapsed**: rotated 45° to point up
+/// The teardrop is a circle with the top-left quadrant removed, creating a circular
+/// bulge with a square corner / point. Unrotated, the square corner points up-right (NE).
+/// The point orientation for each handle type is controlled via Transform.rotate in
+/// [LayrzTextSelectionControls.buildHandle]:
+/// - **left**: no rotation (0°) → square corner points up-right, touching selection start
+/// - **right**: rotated 90° (π/2) → square corner points up-left, touching selection end
+/// - **collapsed**: rotated 45° (π/4) → square corner points up, marking caret position
 ///
 /// This matches Material Design's text selection handle pattern.
 class LayrzSelectionHandlePainter extends CustomPainter {
