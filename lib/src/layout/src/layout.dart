@@ -121,13 +121,16 @@ class LayrzLayout extends StatefulWidget {
   /// content within this layout. The selection region is entirely absent from the widget
   /// tree, not merely inert.
   ///
-  /// **Desktop behavior**: [SelectableRegion] uses [LayrzTextSelectionControls]
-  /// with a Copy-only toolbar. Text can be selected with click-drag, Ctrl+A, and
-  /// copied with Ctrl+C or the toolbar button.
+  /// **Toolbar behavior**: When text is selected, a Copy-only toolbar appears above
+  /// the selection (or below if insufficient space above). The toolbar contains only
+  /// the Copy action; cut, paste, and select all are hidden to keep the read-only
+  /// page focused. The copy action wires directly to the system clipboard.
   ///
-  /// **Touch behavior**: On mobile platforms, selection works with long-press magnifier,
-  /// selection handles, and a Copy-only toolbar — cut and paste are excluded to keep
-  /// the read-only page focused.
+  /// **Desktop behavior**: Text can be selected with click-drag and Ctrl+A, and
+  /// copied with Ctrl+C or the toolbar Copy button.
+  ///
+  /// **Touch behavior**: Selection works with long-press magnifier and selection handles.
+  /// The same Copy-only toolbar appears above the selection.
   ///
   /// **Scope**: The region encompasses the layout's body and all widgets mounted within it.
   /// Overlays (dialogs, bottom sheets, menus, tooltips) mounted into the app's Overlay
@@ -182,6 +185,46 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
   }
 
+  /// Builds the context menu for text selection, displaying a Copy-only toolbar.
+  ///
+  /// This builder is passed to [SelectableRegion] to render a toolbar when the user
+  /// triggers a selection context menu (long-press or right-click). The toolbar is
+  /// positioned automatically above or below the selection using the standard
+  /// [TextSelectionToolbarLayoutDelegate].
+  ///
+  /// The toolbar displays only the Copy action (no cut, paste, or select all),
+  /// keeping the read-only page-wide selection focused on copying selected text.
+  /// The copy action invokes the selection state's clipboard copy handler, which
+  /// handles clipboard transfer via the platform channels.
+  Widget _buildContextMenu(
+    BuildContext context,
+    SelectableRegionState state,
+  ) {
+    final tokens = context.theme.tokens;
+    final anchors = state.contextMenuAnchors;
+
+    final toolbar = LayrzSelectionToolbar(
+      actions: {LayrzSelectableAction.copy},
+      anchorAbove: anchors.primaryAnchor,
+      anchorBelow: anchors.secondaryAnchor,
+      tokens: tokens,
+      onActionPressed: (actionType) {
+        if (actionType == 'copy') {
+          // ignore: deprecated_member_use
+          state.copySelection(SelectionChangedCause.toolbar);
+        }
+      },
+    );
+
+    return CustomSingleChildLayout(
+      delegate: TextSelectionToolbarLayoutDelegate(
+        anchorAbove: anchors.primaryAnchor,
+        anchorBelow: anchors.secondaryAnchor ?? Offset.zero,
+      ),
+      child: toolbar,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.theme.tokens;
@@ -208,6 +251,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
             selectionControls: LayrzTextSelectionControls.instance,
+            contextMenuBuilder: _buildContextMenu,
             child: widget.body,
           )
         : widget.body;
@@ -240,6 +284,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
             selectionControls: LayrzTextSelectionControls.instance,
+            contextMenuBuilder: _buildContextMenu,
             child: widget.body,
           )
         : widget.body;
