@@ -272,6 +272,13 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
   final Set<WidgetState> _states = {};
   final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
 
+  /// Whether to show text selection handles (left/right/collapsed cursors).
+  ///
+  /// Handles are shown for touch-driven selection (longPress, drag) but not
+  /// for keyboard-driven selection. This field is updated by [_handleSelectionChanged]
+  /// and passed to [EditableText.showSelectionHandles].
+  bool _showSelectionHandles = false;
+
   /// Cached magnifier configuration to prevent overlay disposal on every rebuild.
   /// Initialized once in initState.
   late TextMagnifierConfiguration? _cachedMagnifierConfiguration;
@@ -517,6 +524,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
               inputFormatters: formatters,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmit,
+              onSelectionChanged: _handleSelectionChanged,
               readOnly: widget.readOnly || widget.disabled,
               textCapitalization: widget.textCapitalization,
               autocorrect: widget.autocorrect,
@@ -525,6 +533,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
               autofocus: widget.autofocus,
               autofillHints: widget.autofillHints.isNotEmpty ? widget.autofillHints : null,
               paintCursorAboveText: true,
+              showSelectionHandles: _showSelectionHandles,
               selectionControls: LayrzTextSelectionControls.instance,
               contextMenuBuilder: _cachedContextMenuBuilder,
               magnifierConfiguration: _cachedMagnifierConfiguration ?? const TextMagnifierConfiguration(),
@@ -542,6 +551,58 @@ class _LayrzTextInputState extends State<LayrzTextInput> implements TextSelectio
     widget.onTap?.call();
     if (!widget.disabled && !widget.readOnly) {
       _focusNode.requestFocus();
+    }
+  }
+
+  /// Determines whether selection handles should be displayed based on the selection cause.
+  ///
+  /// Handles are shown for touch-driven selection causes (longPress, drag) but not for
+  /// keyboard-driven selection. Follows Material Design patterns:
+  /// - longPress and drag: show handles (user is interacting directly)
+  /// - keyboard: hide handles (selection is driven by software keyboard)
+  /// - readOnly + collapsed: hide handles (no editing possible)
+  /// - disabled: hide handles (field is not editable)
+  bool _shouldShowSelectionHandles(SelectionChangedCause? cause) {
+    // Don't show handles if field is disabled
+    if (widget.disabled) {
+      return false;
+    }
+
+    // Don't show handles for keyboard-driven selection
+    if (cause == SelectionChangedCause.keyboard) {
+      return false;
+    }
+
+    // Don't show handles if read-only and selection is collapsed (just a cursor)
+    if (widget.readOnly && _controller.selection.isCollapsed) {
+      return false;
+    }
+
+    // Show handles for touch-driven causes: long press, drag, force press
+    if (cause == SelectionChangedCause.longPress ||
+        cause == SelectionChangedCause.drag ||
+        cause == SelectionChangedCause.forcePress) {
+      return true;
+    }
+
+    // For other causes (tap), only show if there's text to select
+    if (_controller.text.isNotEmpty) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /// Called when the text selection changes.
+  ///
+  /// Updates [_showSelectionHandles] based on the [cause] and rebuilds
+  /// if the visibility changed. Also invokes the user's [onChanged] callback.
+  void _handleSelectionChanged(TextSelection selection, SelectionChangedCause? cause) {
+    final bool willShowSelectionHandles = _shouldShowSelectionHandles(cause);
+    if (willShowSelectionHandles != _showSelectionHandles) {
+      setState(() {
+        _showSelectionHandles = willShowSelectionHandles;
+      });
     }
   }
 }
