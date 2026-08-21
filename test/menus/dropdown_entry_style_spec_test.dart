@@ -20,7 +20,7 @@ void main() {
         tokens: tokens,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface);
+      expect(spec.backgroundColor, tokens.colors.sf1);
       expect(spec.labelColor, tokens.colors.fg1);
       expect(spec.iconColor, tokens.colors.fg1);
     });
@@ -32,7 +32,7 @@ void main() {
         tokens: tokens,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface2);
+      expect(spec.backgroundColor, tokens.colors.sf2);
       expect(spec.labelColor, tokens.colors.fg1);
       expect(spec.iconColor, tokens.colors.fg1);
     });
@@ -44,7 +44,7 @@ void main() {
         tokens: tokens,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface3);
+      expect(spec.backgroundColor, tokens.colors.sf3);
       expect(spec.labelColor, tokens.colors.fg1);
       expect(spec.iconColor, tokens.colors.fg1);
     });
@@ -56,7 +56,7 @@ void main() {
         tokens: tokens,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface);
+      expect(spec.backgroundColor, tokens.colors.sf1);
       expect(spec.labelColor, tokens.colors.fg3);
       expect(spec.iconColor, tokens.colors.fg3);
     });
@@ -78,7 +78,7 @@ void main() {
         tokens: tokens,
       );
 
-      expect(spec.backgroundColor, tokens.colors.surface3);
+      expect(spec.backgroundColor, tokens.colors.sf3);
       expect(spec.labelColor, tokens.colors.fg1);
     });
 

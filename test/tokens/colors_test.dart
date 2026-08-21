@@ -9,7 +9,7 @@ void main() {
 
       expect(tokens.primary, isA<LayrzColorSwatch>());
       expect(tokens.primary.shade500, equals(const Color(0xFF001E60)));
-      expect(tokens.background, equals(const Color(0xFFFCFCFC)));
+      expect(tokens.sf1, equals(const Color(0xFFFCFCFC)));
       expect(tokens.tonalOpacity, equals(0.2));
     });
 
@@ -20,11 +20,12 @@ void main() {
       expect(tokens.primary.shade500, equals(customPrimary));
     });
 
-    test('light theme has correct surface colors', () {
+    test('light theme has correct surface ramp', () {
       final tokens = LayrzColorTokens.light();
-      expect(tokens.surface, equals(const Color(0xFFFFFFFF)));
-      expect(tokens.surface2, equals(const Color(0xFFF7F7F7)));
-      expect(tokens.surface3, equals(const Color(0xFFF0F0F0)));
+      expect(tokens.sf1, equals(const Color(0xFFFCFCFC)));
+      expect(tokens.sf2, equals(const Color(0xFFF7F7F7)));
+      expect(tokens.sf3, equals(const Color(0xFFF0F0F0)));
+      expect(tokens.sf4, equals(const Color(0xFFE8E8E8)));
     });
 
     test('light theme has correct foreground text colors', () {
@@ -63,7 +64,7 @@ void main() {
 
       expect(modified.primary, isA<LayrzColorSwatch>());
       expect(modified.primary.shade500, equals(newPrimary));
-      expect(modified.background, equals(original.background));
+      expect(modified.sf1, equals(original.sf1));
       expect(original.primary.shade500, equals(const Color(0xFF001E60))); // original unchanged
     });
 

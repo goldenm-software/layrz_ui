@@ -7,7 +7,7 @@ void main() {
     test('default constructor uses correct defaults', () {
       const tokens = LayrzShadowTokens();
 
-      expect(tokens.surfaceColor, equals(const Color(0xFFFFFFFF)));
+      expect(tokens.surfaceColor, equals(const Color(0xFFFCFCFC)));
       expect(tokens.baseRadius, equals(8.0));
       expect(tokens.shadowColor, equals(const Color(0xFF000000)));
       expect(tokens.outlineColor, equals(const Color.fromRGBO(0, 0, 0, 0.1)));
@@ -131,7 +131,7 @@ void main() {
       expect(modified.shadowColor, equals(original.shadowColor));
       expect(
         original.surfaceColor,
-        equals(const Color(0xFFFFFFFF)),
+        equals(const Color(0xFFFCFCFC)),
       ); // original unchanged
     });
 

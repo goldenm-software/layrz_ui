@@ -126,7 +126,7 @@ void main() {
     group('Background color', () {
       testWidgets('null backgroundColor uses surface token', (tester) async {
         final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final expectedColor = themeData.tokens.colors.surface;
+        final expectedColor = themeData.tokens.colors.sf2;
 
         await pumpThemed(
           tester,

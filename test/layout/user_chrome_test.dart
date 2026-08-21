@@ -270,7 +270,7 @@ void main() {
         final noMenuContainer = find.byType(Container).first.evaluate().first.widget as Container;
         final noMenuDecoration = noMenuContainer.decoration as BoxDecoration;
 
-        expect(noMenuDecoration.color, equals(themeData.tokens.colors.surface3));
+        expect(noMenuDecoration.color, equals(themeData.tokens.colors.sf3));
 
         // The borderRadius should be r2 (8.0)
         noMenuDecoration.borderRadius as BorderRadius;

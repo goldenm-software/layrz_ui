@@ -331,14 +331,14 @@ void main() {
       });
 
       test('alert real case: tonal at 20% flattened onto surface', () {
-        // Simulate the alert case: accent at tonalOpacity onto tokens.colors.surface
+        // Simulate the alert case: accent at tonalOpacity onto tokens.colors.sf2
         final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
         final accent = tokens.colors.info.shade500;
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
 
         // Both methods should produce the same result
-        final viaFlattenOn = tonal.flattenOn(tokens.colors.surface);
-        final viaAlphaBlend = Color.alphaBlend(tonal, tokens.colors.surface);
+        final viaFlattenOn = tonal.flattenOn(tokens.colors.sf2);
+        final viaAlphaBlend = Color.alphaBlend(tonal, tokens.colors.sf2);
 
         expect(viaFlattenOn, equals(viaAlphaBlend));
       });

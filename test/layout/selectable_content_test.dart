@@ -246,8 +246,7 @@ void main() {
       expect(find.text('Show Dialog'), findsOneWidget);
     });
 
-    testWidgets('region switches correctly when selectableContent changes at runtime',
-        (tester) async {
+    testWidgets('region switches correctly when selectableContent changes at runtime', (tester) async {
       late StateSetter setLayoutState;
 
       bool selectableContent = true;

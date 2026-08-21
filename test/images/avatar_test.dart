@@ -458,7 +458,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
 
       testWidgets('renders LayrzAvatarUrl on white background', (tester) async {
@@ -472,7 +472,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
 
       testWidgets('renders LayrzAvatarBase64 on white background', (tester) async {
@@ -486,7 +486,7 @@ void main() {
         final container = _findColoredContainer(tester);
         final decoration = container.decoration as BoxDecoration;
         // Image background must be opaque white, not transparent
-        expect(decoration.color, equals(const Color(0xFFFFFFFF)));
+        expect(decoration.color, equals(const Color(0xFFFCFCFC)));
       });
     });
 

@@ -326,7 +326,7 @@ void main() {
       );
 
       final container = tester.widget<Container>(find.byType(Container).first);
-      expect(container.color, themeData.tokens.colors.surface3);
+      expect(container.color, themeData.tokens.colors.sf3);
     });
 
     testWidgets('label with color uses flattened tonal fill', (tester) async {
@@ -348,7 +348,7 @@ void main() {
       // The exact colour is the flattened result of the tonal blend
       final expectedBand = customColor
           .withOpacityValue(themeData.tokens.colors.tonalOpacity)
-          .flattenOn(themeData.tokens.colors.surface);
+          .flattenOn(themeData.tokens.colors.sf1);
       expect(bandColor, expectedBand);
     });
 
@@ -635,8 +635,8 @@ void main() {
       await gesture.moveTo(tester.getCenter(find.text('Hover Me')));
       await tester.pumpAndSettle();
 
-      expect(resting, equals(themeData.tokens.colors.surface));
-      expect(colorOf(), equals(themeData.tokens.colors.surface2));
+      expect(resting, equals(themeData.tokens.colors.sf1));
+      expect(colorOf(), equals(themeData.tokens.colors.sf2));
       expect(colorOf(), isNot(equals(resting)));
     });
 
@@ -656,8 +656,8 @@ void main() {
       final gesture = await tester.startGesture(tester.getCenter(find.text('Press Me')));
       await tester.pumpAndSettle();
 
-      expect(resting, equals(themeData.tokens.colors.surface));
-      expect(colorOf(), equals(themeData.tokens.colors.surface3));
+      expect(resting, equals(themeData.tokens.colors.sf1));
+      expect(colorOf(), equals(themeData.tokens.colors.sf3));
       expect(colorOf(), isNot(equals(resting)));
 
       await gesture.up();

@@ -23,7 +23,7 @@ void main() {
         );
 
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
-        expect(spec.backgroundColor, equals(tokens.colors.surface));
+        expect(spec.backgroundColor, equals(tokens.colors.sf2));
         expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
         expect(spec.leftPanelColor, equals(tonal));
@@ -54,7 +54,7 @@ void main() {
         );
 
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
-        final expectedFlattenedPanel = tonal.flattenOn(tokens.colors.surface);
+        final expectedFlattenedPanel = tonal.flattenOn(tokens.colors.sf2);
         expect(spec.leftPanelColor, equals(expectedFlattenedPanel));
         expect(spec.leftPanelColor.isOpaque, isTrue);
       });
@@ -120,7 +120,7 @@ void main() {
           isInteractive: false,
         );
 
-        expect(spec.backgroundColor, equals(tokens.colors.surface));
+        expect(spec.backgroundColor, equals(tokens.colors.sf2));
         expect(spec.borderColor, equals(accent));
         expect(spec.borderWidth, equals(tokens.border.base));
         expect(spec.leftPanelColor, equals(accent));
