@@ -2998,3 +2998,69 @@ The selection overlay is created lazily, not eagerly. It requires the field to b
 
 If Flutter's text selection API is refactored in a future version, revisit these traps to see if any are no longer necessary.
 
+---
+
+## D51: Text Wraps by Default — Component Structural Limits Own Truncation
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Design System / Typography
+
+### Context
+
+`LayrzTextTheme` in the type scale historically included `overflow: TextOverflow.ellipsis` in two places: the `titleStyle` builder (feeding `display`, `headline`, and `title` styles) and the `bodyStyle` builder (feeding `body` and `label` styles). This assumption was that all text should truncate with an ellipsis when it did not fit.
+
+This conflates two concerns: **typography** (how text looks) and **layout** (whether text may wrap or must truncate). A type scale defines semantic roles and visual appearance, not layout constraints. Whether text wraps depends entirely on the container's dimensions and layout rules — which the type scale has no visibility into. Additionally, the implementation created a hidden API contract: developers wanting wrapped text had to pass `overflow: TextOverflow.visible` at every `Text()` call site, overriding the type scale's default. This was inverted and unintuitive.
+
+The assumption also masked a shipped bug. `LayrzButton` rendered labels at fixed size with `TextOverflow.ellipsis` inside the button's chrome, so buttons with long labels silently truncated instead of alerting the developer to a layout problem (DESIGN-78).
+
+### Decision
+
+**Text wraps by default. Truncation is an explicit decision, owned by the component.**
+
+### Rule
+
+- **Text in unbounded space** needs no special handling — wrapping is the default and sufficient.
+- **Height-locked containers, single-line badges, fixed-geometry chrome** take explicit `maxLines: 1` plus explicit `overflow: TextOverflow.ellipsis`.
+- **Deliberate multi-line caps** take `maxLines: N` plus explicit `overflow`.
+- **`RichText` must set `overflow` on its own constructor**, because it ignores `style.overflow`. The `RichText.overflow` parameter defaults to `TextOverflow.clip`; callers pass `overflow: TextOverflow.ellipsis` explicitly if they need a three-dot truncation.
+- **Measurement-only `TextPainter`s take neither.** `TextPainter` never reads `TextStyle.overflow`; it exposes an `ellipsis` field on the painter itself. Measurement painters (used for intrinsic-width calculations) should not set ellipsis.
+
+### Three Critical Facts (do not re-litigate)
+
+1. **`TextPainter` ignores `TextStyle.overflow` entirely.** `RenderParagraph` translates `overflow == TextOverflow.ellipsis` into `textPainter.ellipsis = '…'` (`packages/flutter/lib/src/rendering/paragraph.dart:377,633`); the painter honours only its own `ellipsis` field. Measurement-only painters (e.g., at `lib/src/buttons/src/button.dart:728` and `lib/src/chips/src/chip.dart:81` for intrinsic-width calculation) are unaffected by `TextStyle.overflow` and should not be given an ellipsis value.
+
+2. **`RichText` never reads `TextStyle.overflow`.** `RichText.overflow` is its own constructor parameter defaulting to `TextOverflow.clip`. Only `Text` / `Text.rich` fall back to reading `style.overflow`. So no `RichText` site in layrz_ui was ever affected by the type scale's ellipsis, and none need it.
+
+3. **Field label is unbounded; hint/placeholder is layout-locked.** The field label is the `RichText` at `input_chrome.dart:191`, sets neither `maxLines` nor `overflow`, and already wrapped freely. The hint/placeholder is at `input_chrome.dart:260-261` and `:274-275`, renders in a fixed-height chrome row, and takes `maxLines: 1` + `overflow: TextOverflow.ellipsis` because the row height is locked to `density.contentHeight`. These are different layout concerns.
+
+### Rationale
+
+- **Ownership**: Components know their layout constraints; type scales do not. A component that renders text in a constrained geometry should own the decision to truncate.
+- **Correctness**: Silent truncation masks layout bugs. Wrapped text that grows the layout alerts developers to re-size containers or re-word labels. This is better than invisible `…` that hides the problem (DESIGN-78).
+- **Simplicity**: Removing `overflow` from the type scale means `Text` calls in unbounded slots (paragraphs, descriptions, alert content, tooltips) need no overrides. This is the common case, so the default should be the simplest one.
+- **Measured containers**: Components that measure text for intrinsic sizing (buttons, chips) cannot use `ellipsis` in the painter without corrupting width calculations. Ownership at the render site (not in the type scale) ensures painters are clean.
+
+### Consequences
+
+- **Behavioural breaking change** (no API change). `Text` widgets with no explicit `overflow` that sit in height-constrained space now wrap instead of truncating. Examples: alert titles, tooltip content/title. Components that already set `overflow` explicitly are unchanged (button labels, chip labels, navigator rail items all use `RichText` with explicit truncation). Code that was silently truncating may now wrap and grow layouts. Callers must verify their layouts still fit or explicitly add `maxLines: 1` + `overflow: TextOverflow.ellipsis` where space is genuinely limited.
+- **No compile-time failure.** Existing `Text(label)` calls compile and render unchanged unless the new wrapping causes layout overflow. This silence is intentional and the trade-off of a behavioural change: the alternative (always truncate) masks bugs like DESIGN-78.
+- **Nine sites across five files** now explicitly set `maxLines: 1` + `overflow: TextOverflow.ellipsis` where text was previously truncated by the type scale:
+  - Avatar emoji/initials/fallback: three sites in `lib/src/images/src/avatar.dart` (emoji in `.emoji()`, initials in fallback, emoji in `_buildFromSource()`)
+  - Selection-toolbar action labels: one site in `lib/src/selection/src/selection_toolbar.dart` (`LayrzSelectionToolbar`)
+  - Input shortcut badge and slot text: two sites in `lib/src/inputs/src/input_chrome.dart`
+  - Dropdown plain label and shortcut badge: two sites in `lib/src/menus/src/dropdown_items.dart` (`LayrzDropdownLabel` and `LayrzDropdownEntry`)
+  - Navigator section caption: one site in `lib/src/layout/src/navigator_panel.dart` (uppercase section caption)
+- **Text in wrappable slots** (alert titles, tooltip content/title, empty-state literals, input error text, input field label) is left unchanged and wraps freely. No `maxLines: 1` was added to them.
+- **No `DefaultTextStyle` safety net.** Setting `overflow` on `DefaultTextStyle` would re-apply ellipsis to every `Text` in the tree, re-creating DESIGN-78. Setting `maxLines` on `DefaultTextStyle` would cap all text globally. Both are rejected.
+
+### Related Decisions
+
+- **D27** (Component Enum Trims): Records the design rule that `LayrzButton` continues to render labels with `TextOverflow.ellipsis` / `maxLines: 1` (line 1705). This now lives at the render site (`lib/src/buttons/src/button_content.dart:104-105`) rather than inherited from the type scale.
+- **D23** (Five-Style Type Scale): Established the scope of `LayrzTextTheme` as five semantic roles. D51 removes a detail (overflow) that never belonged in the type scale.
+- **D50** (Text Selection): Affects the same text-rendering layer; both decisions honor correct Flutter semantics.
+
+### Review Trigger
+
+If consuming apps report a pattern of needing `maxLines: 1` in many call sites, consider a wrapper component or extension to reduce boilerplate. Do NOT add overflow back to the type scale.
+
