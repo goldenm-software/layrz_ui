@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import 'duration_picker_panel.dart';
@@ -18,8 +19,8 @@ const _kDefaultVisibleUnits = {
 ///
 /// [LayrzDurationInput] captures a [Duration] value through a configurable picker
 /// showing day, hour, minute, and second fields. The picker adapts to screen size:
-/// - **Desktop/wide** (>= 960px, `!context.isCompact`): modal dialog (bottom sheet with no barrier)
-/// - **Mobile/compact** (< 960px, `context.isCompact`): bottom sheet
+/// - **Desktop/wide** (>= 960px, `!context.isCompact`): anchored panel positioned below the field
+/// - **Mobile/compact** (< 960px, `context.isCompact`): bottom sheet covering the lower screen
 ///
 /// **Unit bounds and capping:**
 /// - **Day**: no upper bound (0 to infinity)
@@ -49,8 +50,8 @@ const _kDefaultVisibleUnits = {
 /// creates and disposes its own instances. Caller-supplied instances are never disposed.
 ///
 /// **Read-only anchor:** The summary is shown in a read-only text input that opens
-/// the picker on tap. The input does not show a lock icon (via a private prefix
-/// workaround) because the picker is interactive, not locked.
+/// the picker on tap. The input does not show a lock icon because the picker is
+/// interactive, not locked.
 class LayrzDurationInput extends StatefulWidget {
   /// The currently selected duration.
   ///
@@ -232,13 +233,26 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     _controller.text = parts.isEmpty ? '' : parts.join(', ');
   }
 
-  void _handleOpenPicker() {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
-    _showBottomSheet();
+
+    final isCompact = context.isCompact;
+    Duration? result;
+
+    if (isCompact) {
+      result = await _showBottomSheet();
+    } else {
+      result = await _showAnchoredPanel();
+    }
+
+    if (result != null && mounted) {
+      widget.onChanged?.call(result);
+      _updateSummary();
+    }
   }
 
-  Future<void> _showBottomSheet() async {
-    final result = await LayrzBottomSheet.show<Duration?>(
+  Future<Duration?> _showBottomSheet() async {
+    return LayrzBottomSheet.show<Duration?>(
       context,
       builder: (context) => LayrzDurationPickerPanel(
         initialValue: widget.value,
@@ -250,11 +264,38 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       initialSize: 0.5,
       maxSize: 0.9,
     );
+  }
 
-    if (result != null && mounted) {
-      widget.onChanged?.call(result);
-      _updateSummary();
-    }
+  Future<Duration?> _showAnchoredPanel() async {
+    final controller = MenuController();
+    Duration? result;
+
+    if (!mounted) return null;
+
+    await Navigator.of(context).push(
+      _DurationPickerDialogRoute(
+        builder: (context) => LayrzAnchoredPanel(
+          controller: controller,
+          widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
+          widthBounds: const LayrzAnchoredPanelWidthBounds(
+            minWidth: 320.0,
+            maxWidth: 400.0,
+          ),
+          maxHeight: 400.0,
+          builder: (context, panelController) => const SizedBox.shrink(),
+          child: LayrzDurationPickerPanel(
+            initialValue: widget.value,
+            visibleUnits: widget.visibleUnits,
+            onChanged: (duration) {
+              result = duration;
+              controller.close();
+            },
+          ),
+        ),
+      ),
+    );
+
+    return result;
   }
 
   @override
@@ -277,8 +318,46 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       padding: widget.padding,
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
-      onTap: widget.disabled ? null : _handleOpenPicker,
-      prefix: SizedBox.shrink(), // Suppress lock icon by using prefix slot
+      onTap: widget.disabled ? null : _openPicker,
+      suppressReadOnlyLock: true,
     );
+  }
+}
+
+/// Internal route for displaying the duration picker panel without a barrier.
+class _DurationPickerDialogRoute extends Route<void> {
+  /// Builds the picker panel content.
+  final WidgetBuilder builder;
+
+  /// Creates a new [_DurationPickerDialogRoute].
+  _DurationPickerDialogRoute({
+    required this.builder,
+  });
+
+  Color? get barrierColor => null;
+
+  bool get barrierDismissible => true;
+
+  bool get maintainState => true;
+
+  bool get opaque => false;
+
+  Duration get transitionDuration => Duration.zero;
+
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return builder(context);
+  }
+
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return child;
   }
 }

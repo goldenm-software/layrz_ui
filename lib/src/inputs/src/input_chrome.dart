@@ -148,6 +148,13 @@ class LayrzInputChrome extends StatelessWidget {
   /// scrolling is enabled. If null, no maximum is enforced.
   final double? _maxContentHeight;
 
+  /// Whether to suppress the read-only lock icon.
+  ///
+  /// When `readOnly` is true and this is false (default), a lock icon is rendered.
+  /// Set this to true to hide the lock icon, useful for picker-style inputs where
+  /// the read-only semantics are conveyed by the interaction model.
+  final bool suppressReadOnlyLock;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -172,6 +179,7 @@ class LayrzInputChrome extends StatelessWidget {
     bool expandHeight = false,
     double? minContentHeight,
     double? maxContentHeight,
+    this.suppressReadOnlyLock = false,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = expandHeight,
        // ignore: prefer_initializing_formals
@@ -205,6 +213,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.maxLength,
     required double minContentHeight,
     double? maxContentHeight,
+    this.suppressReadOnlyLock = false,
     super.key,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = true,
@@ -464,8 +473,8 @@ class LayrzInputChrome extends StatelessWidget {
       );
     }
 
-    // Lock icon (read-only state icon)
-    if (readOnly && !disabled) {
+    // Lock icon (read-only state icon) — suppressed if suppressReadOnlyLock is true
+    if (readOnly && !disabled && !suppressReadOnlyLock) {
       trailing.add(
         Icon(
           MdiIcons.lockOutline,

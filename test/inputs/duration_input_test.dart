@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -123,11 +124,11 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzBottomSheet), findsNothing);
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
       await tester.tap(find.byType(LayrzTextInput));
       await tester.pumpAndSettle();
 
-      expect(find.byType(LayrzBottomSheet), findsWidgets);
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
     });
 
     testWidgets('closes picker and fires onChanged when bottom sheet returns value', (WidgetTester tester) async {
@@ -148,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify the bottom sheet is visible with number inputs
-      expect(find.byType(LayrzBottomSheet), findsWidgets);
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
       expect(find.byType(LayrzNumberInput), findsWidgets);
     });
 
@@ -171,7 +172,7 @@ void main() {
       await tester.tap(inputFinder);
       await tester.pumpAndSettle();
 
-      expect(find.byType(LayrzBottomSheet), findsNothing);
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
 
     testWidgets('displays errors when provided', (WidgetTester tester) async {
@@ -453,6 +454,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LayrzNumberInput), findsNWidgets(2));
+    });
+
+    testWidgets('does not render read-only lock icon', (WidgetTester tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+        ),
+      );
+
+      expect(find.byIcon(MdiIcons.lockOutline), findsNothing);
     });
   });
 }

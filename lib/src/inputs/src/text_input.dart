@@ -171,6 +171,17 @@ class LayrzTextInput extends StatefulWidget {
   /// field never offers copy or cut regardless of what is passed here.
   final Set<LayrzSelectableAction>? actions;
 
+  /// Whether to suppress the read-only lock icon when [readOnly] is true.
+  ///
+  /// When `readOnly` is true, a lock icon is normally rendered in the trailing
+  /// cluster to indicate the field is read-only. Set this to `true` to hide the
+  /// icon, useful for picker-style inputs where read-only semantics are conveyed
+  /// by the interaction model (tapping opens a picker) rather than a visual lock.
+  ///
+  /// Defaults to `false` (lock icon is shown). Ignored when [readOnly] is `false`
+  /// or when [disabled] is `true`.
+  final bool suppressReadOnlyLock;
+
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -210,6 +221,7 @@ class LayrzTextInput extends StatefulWidget {
     this.enableSuggestions = true,
     this.shortcut,
     this.actions,
+    this.suppressReadOnlyLock = false,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -355,6 +367,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
+      suppressReadOnlyLock: widget.suppressReadOnlyLock,
       child: LayrzEditableField(config: fieldConfig),
     );
   }
