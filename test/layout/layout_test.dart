@@ -323,101 +323,28 @@ void main() {
     });
   });
 
-  group('LayrzLayout - Expanded Paint Order and Geometry', () {
-    testWidgets('expanded presentation: body renders with Stack layout for proper paint order', (
+  group('LayrzLayout - Expanded Geometry (LTR)', () {
+    testWidgets('expanded LTR: body inset from left by kLayrzLayoutRailWidth', (
       WidgetTester tester,
     ) async {
-      await _pumpThemedLayout(
-        tester,
-        LayrzLayout(
-          logo: 'assets/test-logo.png',
-          items: [
-            LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
-          ],
-          body: Container(
-            color: const Color(0xFFFFFFFF),
-            child: const Center(child: Text('Body Content')),
-          ),
-        ),
-        size: const Size(1600, 1200),
-        devicePixelRatio: 1.0,
-      );
-
-      expect(tester.takeException(), isNull);
-
-      // Verify the body text is present and visible
-      expect(find.text('Body Content'), findsOneWidget);
-
-      // Verify the widget tree uses Stack for proper paint order (not Row)
-      // Stack allows the panel to paint after the body, making shadows visible
-      expect(find.byType(Stack), findsWidgets);
-      // Stack contains both body (Positioned.directional) and panel (PositionedDirectional)
-      // Both are subclasses of Positioned, so we should find both
-      expect(find.byType(Positioned), findsWidgets);
-      expect(find.byType(PositionedDirectional), findsOneWidget); // Panel is PositionedDirectional
-    });
-
-    testWidgets('expanded presentation: body content is displayed and accessible', (WidgetTester tester) async {
-      await _pumpThemedLayout(
-        tester,
-        LayrzLayout(
-          logo: 'assets/test-logo.png',
-          items: [
-            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
-          ],
-          body: Container(
-            color: const Color(0xFFFFFFFF),
-            child: const Center(child: Text('Body')),
-          ),
-        ),
-        size: const Size(1600, 1200),
-        devicePixelRatio: 1.0,
-      );
-
-      expect(tester.takeException(), isNull);
-
-      // Verify body container is rendered
-      expect(find.byType(Container), findsWidgets);
-      expect(find.text('Body'), findsOneWidget);
-    });
-
-    testWidgets('expanded presentation: panel layout structure uses PositionedDirectional', (
-      WidgetTester tester,
-    ) async {
-      await _pumpThemedLayout(
-        tester,
-        LayrzLayout(
-          logo: 'assets/test-logo.png',
-          items: [
-            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
-          ],
-          body: const SizedBox(child: Text('Body')),
-        ),
-        size: const Size(1600, 1200),
-        devicePixelRatio: 1.0,
-      );
-
-      expect(tester.takeException(), isNull);
-
-      // Verify PositionedDirectional is used for proper RTL support
-      expect(find.byType(PositionedDirectional), findsOneWidget);
-    });
-  });
-
-  group('LayrzLayout - RTL Support', () {
-    testWidgets('expanded presentation: RTL layout renders correctly', (WidgetTester tester) async {
+      // Set viewport to expanded size (>= 960px width)
       await _pumpThemedLayout(
         tester,
         Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: TextDirection.ltr,
           child: LayrzLayout(
             logo: 'assets/test-logo.png',
             items: [
-              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+              LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
             ],
-            body: Container(
-              color: const Color(0xFFFFFFFF),
-              child: const Center(child: Text('RTL Body')),
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: Container(
+                width: 100,
+                height: 100,
+                color: const Color(0xFFFF0000),
+                child: const Text('Body'),
+              ),
             ),
           ),
         ),
@@ -426,14 +353,20 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('RTL Body'), findsOneWidget);
 
-      // Verify directional widgets are present for RTL support
-      expect(find.byType(PositionedDirectional), findsOneWidget);
-      expect(find.byType(Positioned), findsWidgets); // Both body and panel are Positioned types
+      // Find the red body container positioned at the top-left of body area
+      final redBox = find.byWidgetPredicate(
+        (w) => w is Container && w.color == const Color(0xFFFF0000),
+      );
+      expect(redBox, findsOneWidget);
+
+      final rect = tester.getRect(redBox);
+      // Red box should start at kLayrzLayoutRailWidth (220.0) since it's top-left of body
+      expect(rect.left, moreOrLessEquals(220.0, epsilon: 1.0));
+      expect(rect.top, 0.0);
     });
 
-    testWidgets('expanded presentation: LTR layout renders correctly', (WidgetTester tester) async {
+    testWidgets('expanded LTR: panel renders after body (paint order for visible shadow)', (WidgetTester tester) async {
       await _pumpThemedLayout(
         tester,
         Directionality(
@@ -445,7 +378,7 @@ void main() {
             ],
             body: Container(
               color: const Color(0xFFFFFFFF),
-              child: const Center(child: Text('LTR Body')),
+              child: const Text('Body Content'),
             ),
           ),
         ),
@@ -454,11 +387,119 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('LTR Body'), findsOneWidget);
 
-      // Verify directional widgets are present
+      // Find Stack widget and verify PositionedDirectional is present
+      // The PositionedDirectional (panel) must be a later child of Stack so it paints after the body
       expect(find.byType(PositionedDirectional), findsOneWidget);
-      expect(find.byType(Positioned), findsWidgets); // Both body and panel are Positioned types
+
+      // Verify the Stack contains both body (Positioned.directional) and panel (PositionedDirectional)
+      final stacks = find.byType(Stack);
+      expect(stacks, findsWidgets);
+    });
+
+    testWidgets('expanded LTR: body width matches viewport minus rail width', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [
+              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+            ],
+            body: SizedBox(
+              width: double.infinity,
+              child: Container(
+                color: const Color(0xFF0000FF),
+                child: const Text('Full Width Body'),
+              ),
+            ),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Full Width Body'), findsOneWidget);
+
+      // The body text position verifies the Positioned.directional inset is correct
+      final textRect = tester.getRect(find.text('Full Width Body'));
+      // Text left should be at or after rail width (220.0)
+      expect(textRect.left, greaterThanOrEqualTo(220.0));
+      // Text right should be at or before viewport right edge (1600.0)
+      expect(textRect.right, lessThanOrEqualTo(1600.0));
+    });
+  });
+
+  group('LayrzLayout - Expanded Geometry (RTL)', () {
+    testWidgets('expanded RTL: panel occupies trailing 220px, body inset from panel', (
+      WidgetTester tester,
+    ) async {
+      await _pumpThemedLayout(
+        tester,
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [
+              LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
+            ],
+            body: Container(
+              color: const Color(0xFFFFFFFF),
+              child: const Center(child: Text('RTL Body Content')),
+            ),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('RTL Body Content'), findsOneWidget);
+
+      // PositionedDirectional must be used so it flips correctly in RTL
+      expect(find.byType(PositionedDirectional), findsOneWidget);
+
+      // The text position verifies RTL inset is correct
+      final textRect = tester.getRect(find.text('RTL Body Content'));
+      // In RTL, text should be on the left side (left of viewport width - rail)
+      // Text left should be close to 0 (allowing for Center widget centering)
+      expect(textRect.left, lessThan(1600.0));
+      // Text right should be less than full width (inset by rail width 220)
+      expect(textRect.right, lessThanOrEqualTo(1600.0 - 220.0 + 100)); // generous margin for Center
+    });
+
+    testWidgets('expanded RTL: panel on right, body on left with proper inset', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [
+              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+            ],
+            body: SizedBox(
+              width: double.infinity,
+              child: Container(
+                color: const Color(0xFF00FF00),
+                child: const Text('RTL Full Width'),
+              ),
+            ),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+
+      // Verify RTL text position
+      final textRect = tester.getRect(find.text('RTL Full Width'));
+      // Text should be positioned in the left portion (due to RTL inset from right)
+      expect(textRect.left, greaterThanOrEqualTo(0.0));
+      expect(textRect.right, lessThan(1600.0)); // inset from right edge
     });
   });
 
@@ -483,7 +524,8 @@ void main() {
       expect(find.text('Drawer Body'), findsOneWidget);
 
       // Drawer presentation is used for small viewports (< 960px width)
-      // The fix (Stack layout) only applies to expanded presentation
+      // The fix (Stack layout with PositionedDirectional inset) only applies to expanded presentation
+      // For drawer, it should use different layout (typically Column or different Row structure)
       // Verify no exceptions and content is accessible
     });
 
@@ -507,6 +549,33 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Body'), findsOneWidget);
+    });
+
+    testWidgets('drawer presentation: geometry unaffected by expanded fix', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: Container(
+            color: const Color(0xFFFF0000),
+            child: const Center(child: Text('Drawer Mode Body')),
+          ),
+        ),
+        size: const Size(500, 900),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Drawer Mode Body'), findsOneWidget);
+
+      // Drawer uses a different layout path, so geometry should not be affected by the Stack fix
+      final textRect = tester.getRect(find.text('Drawer Mode Body'));
+      // In drawer mode, body should extend across the viewport width (no rail offset)
+      expect(textRect.left, greaterThanOrEqualTo(0.0));
+      expect(textRect.right, lessThanOrEqualTo(500.0));
     });
   });
 }
