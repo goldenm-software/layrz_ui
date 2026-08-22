@@ -100,7 +100,6 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.addListener(_handleFocusChange);
   }
 
   @override
@@ -115,24 +114,13 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
   void dispose() {
     if (widget.focusNode == null) {
       _focusNode.dispose();
-    } else {
-      _focusNode.removeListener(_handleFocusChange);
     }
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() {
-      if (_focusNode.hasFocus) {
-        _states.add(WidgetState.focused);
-      } else {
-        _states.remove(WidgetState.focused);
-      }
-    });
-  }
-
   void _toggleCheckbox() {
     if (widget.disabled || widget.onChanged == null) return;
+    _focusNode.requestFocus();
     widget.onChanged!(!widget.value);
   }
 
@@ -149,8 +137,12 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
           padding: widget.padding ?? tokens.spacing.pd2,
           child: GestureDetector(
             onTap: isDisabled ? null : _toggleCheckbox,
+            onTapDown: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.pressed)),
+            onTapUp: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.pressed)),
+            onTapCancel: isDisabled ? null : () => setState(() => _states.remove(WidgetState.pressed)),
             child: Focus(
               onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
                 if (event.logicalKey == LogicalKeyboardKey.space || event.logicalKey == LogicalKeyboardKey.enter) {
                   _toggleCheckbox();
                   return KeyEventResult.handled;
@@ -169,8 +161,8 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
               },
               child: MouseRegion(
                 cursor: isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
-                onEnter: (_) => setState(() => _states.add(WidgetState.hovered)),
-                onExit: (_) => setState(() => _states.remove(WidgetState.hovered)),
+                onEnter: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.hovered)),
+                onExit: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
                 child: Semantics(
                   checked: widget.value,
                   enabled: !isDisabled,
@@ -186,10 +178,12 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
                       if (widget.labelText != null) ...[
                         SizedBox(width: tokens.spacing.sp2),
                         Expanded(
-                          child: Text(
-                            widget.labelText!,
-                            style: tokens.typography.body.copyWith(
-                              color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                          child: ExcludeSemantics(
+                            child: Text(
+                              widget.labelText!,
+                              style: tokens.typography.body.copyWith(
+                                color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                              ),
                             ),
                           ),
                         ),
@@ -213,7 +207,7 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
     final size = 20.0;
     final animationProgress = position.value;
 
-    // State precedence: disabled > error > hover/focused > default
+    // State precedence: disabled > error > hover/focused/pressed > default
     late Color backgroundColor;
     late Color borderColor;
 
@@ -225,7 +219,9 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
       final checkedBackground = tokens.colors.danger;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.danger;
-    } else if (_states.contains(WidgetState.hovered) || _states.contains(WidgetState.focused)) {
+    } else if (_states.contains(WidgetState.hovered) ||
+        _states.contains(WidgetState.focused) ||
+        _states.contains(WidgetState.pressed)) {
       final uncheckedBackground = tokens.colors.sf3;
       final checkedBackground = tokens.colors.primary;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
