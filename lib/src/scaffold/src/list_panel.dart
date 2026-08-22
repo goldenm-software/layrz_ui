@@ -156,12 +156,12 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     final isSelected = item.key == widget.openedKey;
 
     return Container(
-      color: isSelected ? tokens.colors.sf3 : tokens.colors.sf1,
       margin: EdgeInsets.only(bottom: tokens.spacing.sp1),
       child: LayrzTappable(
         disabled: isSelected,
         onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
-        borderRadius: tokens.radius.br1,
+        borderRadius: tokens.radius.br2,
+        color: isSelected ? tokens.colors.sf4 : tokens.colors.sf1,
         child: Padding(
           padding: tokens.spacing.pd2,
           child: Row(
@@ -176,7 +176,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
                   height: double.infinity,
                   decoration: BoxDecoration(
                     color: tokens.colors.primary,
-                    borderRadius: tokens.radius.br1,
+                    borderRadius: tokens.radius.br3,
                   ),
                 ),
               ],
