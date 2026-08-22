@@ -81,11 +81,17 @@ void main() {
       // Correct case uses: outerRadius = r4, spacer = sp3
       final expectedOuterRadius = tokens.radius.r4;
       final expectedSpacer = tokens.spacing.sp3;
-      final expectedInnerRadius = tokens.radius.innerRadiusValue(outerRadius: expectedOuterRadius, spacer: expectedSpacer);
+      final expectedInnerRadius = tokens.radius.innerRadiusValue(
+        outerRadius: expectedOuterRadius,
+        spacer: expectedSpacer,
+      );
 
       // Clamp case uses: outerRadius = r2, spacer = sp3
       final clampOuterRadius = tokens.radius.r2;
-      final clampExpectedInnerRadius = tokens.radius.innerRadiusValue(outerRadius: clampOuterRadius, spacer: expectedSpacer);
+      final clampExpectedInnerRadius = tokens.radius.innerRadiusValue(
+        outerRadius: clampOuterRadius,
+        spacer: expectedSpacer,
+      );
 
       // Naive case reuses the outer radius directly
       final naiveExpectedInnerRadius = expectedOuterRadius;
@@ -141,6 +147,14 @@ void main() {
     testWidgets('hover animation does not change container size', (WidgetTester tester) async {
       // Test that hovering over the demo container does not change its size.
       // The border width must remain constant to prevent geometry shifts.
+
+      // Set a larger explicit viewport so the target lands on-screen with room to spare.
+      // The default 800×600 is too small for the long Showroom page; widgets can end up
+      // partially off-screen after ensureVisible, preventing mouse events from firing.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(LayrzApp(title: kAppTitle, theme: LayrzThemeData.light(), home: const Showroom()));
 
       final hoverDemoFinder = find.byKey(const Key('hover-demo-container'));
@@ -200,6 +214,14 @@ void main() {
     testWidgets('press animation does not change container size', (WidgetTester tester) async {
       // Test that pressing the demo container does not change its size.
       // The border width must remain constant to prevent geometry shifts.
+
+      // Set a larger explicit viewport so the target lands on-screen with room to spare.
+      // The default 800×600 is too small for the long Showroom page; widgets can end up
+      // partially off-screen after ensureVisible, preventing tap events from firing.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
       await tester.pumpWidget(LayrzApp(title: kAppTitle, theme: LayrzThemeData.light(), home: const Showroom()));
 
       final pressDemoFinder = find.byKey(const Key('press-demo-container'));
@@ -220,7 +242,8 @@ void main() {
 
       // Start a tap gesture (hold down) — startGesture delivers a real PointerDownEvent
       // which fires onTapDown. Do not release before asserting the pressed state.
-      final gesture = await tester.startGesture(tester.getCenter(pressDemoFinder));
+      final pressCenter = tester.getCenter(pressDemoFinder);
+      final gesture = await tester.startGesture(pressCenter);
       addTearDown(gesture.removePointer);
 
       // Wait for animation during press to complete
