@@ -322,4 +322,191 @@ void main() {
       expect(find.text('Empty'), findsOneWidget);
     });
   });
+
+  group('LayrzLayout - Expanded Paint Order and Geometry', () {
+    testWidgets('expanded presentation: body renders with Stack layout for proper paint order', (
+      WidgetTester tester,
+    ) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
+          ],
+          body: Container(
+            color: const Color(0xFFFFFFFF),
+            child: const Center(child: Text('Body Content')),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+
+      // Verify the body text is present and visible
+      expect(find.text('Body Content'), findsOneWidget);
+
+      // Verify the widget tree uses Stack for proper paint order (not Row)
+      // Stack allows the panel to paint after the body, making shadows visible
+      expect(find.byType(Stack), findsWidgets);
+      // Stack contains both body (Positioned.directional) and panel (PositionedDirectional)
+      // Both are subclasses of Positioned, so we should find both
+      expect(find.byType(Positioned), findsWidgets);
+      expect(find.byType(PositionedDirectional), findsOneWidget); // Panel is PositionedDirectional
+    });
+
+    testWidgets('expanded presentation: body content is displayed and accessible', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: Container(
+            color: const Color(0xFFFFFFFF),
+            child: const Center(child: Text('Body')),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+
+      // Verify body container is rendered
+      expect(find.byType(Container), findsWidgets);
+      expect(find.text('Body'), findsOneWidget);
+    });
+
+    testWidgets('expanded presentation: panel layout structure uses PositionedDirectional', (
+      WidgetTester tester,
+    ) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+
+      // Verify PositionedDirectional is used for proper RTL support
+      expect(find.byType(PositionedDirectional), findsOneWidget);
+    });
+  });
+
+  group('LayrzLayout - RTL Support', () {
+    testWidgets('expanded presentation: RTL layout renders correctly', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [
+              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+            ],
+            body: Container(
+              color: const Color(0xFFFFFFFF),
+              child: const Center(child: Text('RTL Body')),
+            ),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('RTL Body'), findsOneWidget);
+
+      // Verify directional widgets are present for RTL support
+      expect(find.byType(PositionedDirectional), findsOneWidget);
+      expect(find.byType(Positioned), findsWidgets); // Both body and panel are Positioned types
+    });
+
+    testWidgets('expanded presentation: LTR layout renders correctly', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [
+              LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+            ],
+            body: Container(
+              color: const Color(0xFFFFFFFF),
+              child: const Center(child: Text('LTR Body')),
+            ),
+          ),
+        ),
+        size: const Size(1600, 1200),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('LTR Body'), findsOneWidget);
+
+      // Verify directional widgets are present
+      expect(find.byType(PositionedDirectional), findsOneWidget);
+      expect(find.byType(Positioned), findsWidgets); // Both body and panel are Positioned types
+    });
+  });
+
+  group('LayrzLayout - Drawer Presentation Unaffected', () {
+    testWidgets('drawer presentation: compact viewport uses drawer layout, not expanded stack', (
+      WidgetTester tester,
+    ) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Drawer Body')),
+        ),
+        size: const Size(500, 900),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Drawer Body'), findsOneWidget);
+
+      // Drawer presentation is used for small viewports (< 960px width)
+      // The fix (Stack layout) only applies to expanded presentation
+      // Verify no exceptions and content is accessible
+    });
+
+    testWidgets('drawer presentation: renders with notifications', (WidgetTester tester) async {
+      await _pumpThemedLayout(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+          notifications: [
+            LayrzNotificationItem(id: '1', title: 'Test', content: 'Msg'),
+          ],
+          onNotificationTap: (_) {},
+        ),
+        size: const Size(500, 900),
+        devicePixelRatio: 1.0,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Body'), findsOneWidget);
+    });
+  });
 }
