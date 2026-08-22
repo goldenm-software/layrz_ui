@@ -272,41 +272,47 @@ class _SelectItemRow<T> extends StatelessWidget {
     // Determine text color
     final textColor = isSelected ? tokens.colors.primary : tokens.colors.fg1;
 
-    return GestureDetector(
+    return Semantics(
+      label: item.labelText,
+      button: true,
+      selected: isSelected,
       onTap: onTap,
-      child: Container(
-        color: backgroundColor,
-        padding: EdgeInsets.symmetric(
-          horizontal: tokens.spacing.sp2,
-          vertical: tokens.spacing.sp1,
-        ),
-        child: Row(
-          children: [
-            // Item content (custom or default)
-            Expanded(
-              child:
-                  item.child ??
-                  Text(
-                    item.labelText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: tokens.typography.body.copyWith(
-                      color: textColor,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          color: backgroundColor,
+          padding: EdgeInsets.symmetric(
+            horizontal: tokens.spacing.sp2,
+            vertical: tokens.spacing.sp1,
+          ),
+          child: Row(
+            children: [
+              // Item content (custom or default)
+              Expanded(
+                child:
+                    item.child ??
+                    Text(
+                      item.labelText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tokens.typography.body.copyWith(
+                        color: textColor,
+                      ),
                     ),
-                  ),
-            ),
-
-            // Selection indicator
-            if (isSelected)
-              Padding(
-                padding: EdgeInsets.only(left: tokens.spacing.sp2),
-                child: Icon(
-                  MdiIcons.check,
-                  size: 20,
-                  color: tokens.colors.primary,
-                ),
               ),
-          ],
+
+              // Selection indicator
+              if (isSelected)
+                Padding(
+                  padding: EdgeInsets.only(left: tokens.spacing.sp2),
+                  child: Icon(
+                    MdiIcons.check,
+                    size: 20,
+                    color: tokens.colors.primary,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
