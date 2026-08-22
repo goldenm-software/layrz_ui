@@ -138,16 +138,20 @@ class _TestInputsSectionState extends State<TestInputsSection> {
     final tokens = context.tokens;
 
     return LayrzScaffoldValueTile(
-      titleRichText: TextSpan(
-        text: demo.name,
-        style: tokens.typography.body.copyWith(
-          color: tokens.colors.fg1,
+      title: RichText(
+        text: TextSpan(
+          text: demo.name,
+          style: tokens.typography.body.copyWith(
+            color: tokens.colors.fg1,
+          ),
         ),
       ),
-      subtitleRichText: TextSpan(
-        text: demo.category,
-        style: tokens.typography.label.copyWith(
-          color: tokens.colors.fg3,
+      subtitle: RichText(
+        text: TextSpan(
+          text: demo.category,
+          style: tokens.typography.label.copyWith(
+            color: tokens.colors.fg3,
+          ),
         ),
       ),
     );

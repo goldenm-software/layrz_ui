@@ -57,43 +57,40 @@ class _TextInputDemoState extends State<_TextInputDemo> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(tokens.spacing.sp3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: tokens.spacing.sp5,
-        children: [
-          // 1. Field states
-          _buildFieldStates(tokens),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp5,
+      children: [
+        // 1. Field states
+        _buildFieldStates(tokens),
 
-          // 2. Label and placeholder variations
-          _buildLabelAndPlaceholder(tokens),
+        // 2. Label and placeholder variations
+        _buildLabelAndPlaceholder(tokens),
 
-          // 3. Prefix and suffix slot forms
-          _buildPrefixSuffixSlots(tokens),
+        // 3. Prefix and suffix slot forms
+        _buildPrefixSuffixSlots(tokens),
 
-          // 4. Error display
-          _buildErrorsShowcase(tokens),
+        // 4. Error display
+        _buildErrorsShowcase(tokens),
 
-          // 5. Help affordance
-          _buildHelpAffordance(tokens),
+        // 5. Help affordance
+        _buildHelpAffordance(tokens),
 
-          // 6. ReadOnly vs Disabled behavior
-          _buildReadOnlyVsDisabled(tokens),
+        // 6. ReadOnly vs Disabled behavior
+        _buildReadOnlyVsDisabled(tokens),
 
-          // 7. Widget slot variants
-          _buildWidgetSlots(tokens),
+        // 7. Widget slot variants
+        _buildWidgetSlots(tokens),
 
-          // 8. Shortcut badge
-          _buildShortcutBadge(tokens),
+        // 8. Shortcut badge
+        _buildShortcutBadge(tokens),
 
-          // 9. Additional features
-          _buildAdditionalFeatures(tokens),
+        // 9. Additional features
+        _buildAdditionalFeatures(tokens),
 
-          // 10. Character counter
-          _buildCharacterCounter(tokens),
-        ],
-      ),
+        // 10. Character counter
+        _buildCharacterCounter(tokens),
+      ],
     );
   }
 

@@ -149,7 +149,15 @@ class _InputsSectionState extends State<InputsSection> {
   @override
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
-      items: _filteredDemos,
+      title: Text('Inputs Showcase', style: context.tokens.typography.title),
+      itemExtent: 56.0,
+      items: _allDemos.map((demo) {
+        return LayrzScaffoldItem<InputDemo>(
+          item: demo,
+          tile: _buildTile(demo),
+          searchableStrings: {demo.name, demo.category},
+        );
+      }).toList(),
       controller: _controller,
       searchable: true,
       onSearch: _updateSearch,
@@ -160,28 +168,24 @@ class _InputsSectionState extends State<InputsSection> {
 
   /// Builds a tile for a single input component in the list.
   /// Title is the component name, subtitle is the category.
-  LayrzScaffoldTile _buildTile(BuildContext context, InputDemo demo) {
+  Widget _buildTile(InputDemo demo) {
     final tokens = context.tokens;
-
-    return LayrzScaffoldValueTile(
-      titleRichText: TextSpan(
-        text: demo.name,
-        style: tokens.typography.body.copyWith(
-          color: tokens.colors.fg1,
+    return Column(
+      crossAxisAlignment: .start,
+      mainAxisAlignment: .start,
+      children: [
+        Text(demo.name, style: tokens.typography.body.copyWith(fontWeight: .bold)),
+        LayrzChip(
+          labelText: demo.category,
+          color: LayrzColors.blue,
         ),
-      ),
-      subtitleRichText: TextSpan(
-        text: demo.category,
-        style: tokens.typography.label.copyWith(
-          color: tokens.colors.fg3,
-        ),
-      ),
+      ],
     );
   }
 
   /// Builds the detail pane content for a selected input component.
   /// Renders all meaningful variants of that component.
-  Widget _buildDetails(BuildContext context, InputDemo demo) {
+  Widget _buildDetails(InputDemo demo) {
     return demo.detailsBuilder(context);
   }
 }

@@ -21,80 +21,77 @@ class _CheckboxInputDemoState extends State<_CheckboxInputDemo> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.all(tokens.spacing.sp3),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: tokens.spacing.sp5,
-        children: [
-          // Basic states
-          Text('Checkbox States', style: tokens.typography.title),
-          Column(
-            spacing: tokens.spacing.sp2,
-            children: [
-              LayrzCheckboxInput(
-                value: _unchecked,
-                onChanged: (v) {
-                  setState(() {
-                    _unchecked = v;
-                  });
-                },
-                labelText: 'Unchecked checkbox',
-              ),
-              LayrzCheckboxInput(
-                value: _checked,
-                onChanged: (v) {
-                  setState(() {
-                    _checked = v;
-                  });
-                },
-                labelText: 'Checked checkbox',
-              ),
-              const LayrzCheckboxInput(
-                value: false,
-                disabled: true,
-                labelText: 'Disabled checkbox',
-              ),
-            ],
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp5,
+      children: [
+        // Basic states
+        Text('Checkbox States', style: tokens.typography.title),
+        Column(
+          spacing: tokens.spacing.sp2,
+          children: [
+            LayrzCheckboxInput(
+              value: _unchecked,
+              onChanged: (v) {
+                setState(() {
+                  _unchecked = v;
+                });
+              },
+              labelText: 'Unchecked checkbox',
+            ),
+            LayrzCheckboxInput(
+              value: _checked,
+              onChanged: (v) {
+                setState(() {
+                  _checked = v;
+                });
+              },
+              labelText: 'Checked checkbox',
+            ),
+            const LayrzCheckboxInput(
+              value: false,
+              disabled: true,
+              labelText: 'Disabled checkbox',
+            ),
+          ],
+        ),
 
-          // With errors
-          SizedBox(height: tokens.spacing.sp3),
-          Text('Error State', style: tokens.typography.title),
-          Column(
-            spacing: tokens.spacing.sp2,
-            children: [
-              const LayrzCheckboxInput(
-                value: false,
-                labelText: 'Required field',
-                errors: ['You must accept this'],
-              ),
-            ],
-          ),
+        // With errors
+        SizedBox(height: tokens.spacing.sp3),
+        Text('Error State', style: tokens.typography.title),
+        Column(
+          spacing: tokens.spacing.sp2,
+          children: [
+            const LayrzCheckboxInput(
+              value: false,
+              labelText: 'Required field',
+              errors: ['You must accept this'],
+            ),
+          ],
+        ),
 
-          // Different states
-          SizedBox(height: tokens.spacing.sp3),
-          Text('Various States', style: tokens.typography.title),
-          Column(
-            spacing: tokens.spacing.sp2,
-            children: [
-              const LayrzCheckboxInput(
-                value: true,
-                labelText: 'Feature enabled',
-              ),
-              const LayrzCheckboxInput(
-                value: false,
-                labelText: 'Feature disabled',
-              ),
-              const LayrzCheckboxInput(
-                value: false,
-                disabled: true,
-                labelText: 'Cannot toggle',
-              ),
-            ],
-          ),
-        ],
-      ),
+        // Different states
+        SizedBox(height: tokens.spacing.sp3),
+        Text('Various States', style: tokens.typography.title),
+        Column(
+          spacing: tokens.spacing.sp2,
+          children: [
+            const LayrzCheckboxInput(
+              value: true,
+              labelText: 'Feature enabled',
+            ),
+            const LayrzCheckboxInput(
+              value: false,
+              labelText: 'Feature disabled',
+            ),
+            const LayrzCheckboxInput(
+              value: false,
+              disabled: true,
+              labelText: 'Cannot toggle',
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

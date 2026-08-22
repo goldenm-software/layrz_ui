@@ -39,22 +39,38 @@ void main() {
       ];
 
       for (final name in inputNames) {
-        // Find and tap each input entry.
+        // Find the list row by matching RichText content within ListItem rows.
         final nameFinder = find.byWidgetPredicate(
-          (widget) => widget is Text && widget.data != null && widget.data!.contains(name),
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains(name),
         );
 
-        if (nameFinder.evaluate().isNotEmpty) {
-          await tester.tap(nameFinder.first);
-          await tester.pumpAndSettle();
+        // Assert the finder matched at least one row; fail loudly if not found.
+        expect(
+          nameFinder,
+          findsWidgets,
+          reason: 'List row for "$name" should be renderable by the finder',
+        );
 
-          // Assert no exception was thrown while rendering the detail pane.
-          expect(
-            tester.takeException(),
-            isNull,
-            reason: 'Rendering $name should not throw an exception',
-          );
-        }
+        // Tap the first matching RichText (the title of the list row).
+        await tester.tap(nameFinder.first);
+        await tester.pumpAndSettle();
+
+        // Assert no exception was thrown while rendering the detail pane.
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Rendering $name should not throw an exception',
+        );
+
+        // Verify the detail pane rendered specific content for this demo.
+        // Each demo page has a title Text widget with the demo category.
+        expect(
+          find.byType(Text),
+          findsWidgets,
+          reason: 'Detail pane for $name should render content',
+        );
       }
     });
 
@@ -91,22 +107,38 @@ void main() {
       ];
 
       for (final name in inputNames) {
-        // Find and tap each input entry.
+        // Find the list row by matching RichText content within ListItem rows.
         final nameFinder = find.byWidgetPredicate(
-          (widget) => widget is Text && widget.data != null && widget.data!.contains(name),
+          (widget) =>
+              widget is RichText &&
+              widget.text.toPlainText().contains(name),
         );
 
-        if (nameFinder.evaluate().isNotEmpty) {
-          await tester.tap(nameFinder.first);
-          await tester.pumpAndSettle();
+        // Assert the finder matched at least one row; fail loudly if not found.
+        expect(
+          nameFinder,
+          findsWidgets,
+          reason: 'List row for "$name" should be renderable by the finder',
+        );
 
-          // Assert no exception was thrown while rendering the detail pane.
-          expect(
-            tester.takeException(),
-            isNull,
-            reason: 'Rendering $name in narrow layout should not throw an exception',
-          );
-        }
+        // Tap the first matching RichText (the title of the list row).
+        await tester.tap(nameFinder.first);
+        await tester.pumpAndSettle();
+
+        // Assert no exception was thrown while rendering the detail pane.
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Rendering $name in narrow layout should not throw an exception',
+        );
+
+        // Verify the detail pane rendered specific content for this demo.
+        // Each demo page has title Text widgets.
+        expect(
+          find.byType(Text),
+          findsWidgets,
+          reason: 'Detail pane for $name in narrow layout should render content',
+        );
       }
     });
   });

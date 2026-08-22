@@ -12,7 +12,7 @@ class DetailPane<T> extends StatelessWidget {
   final T? opened;
 
   /// Callback to build the detail content.
-  final Widget Function(BuildContext, T)? contentBuilder;
+  final Widget Function(T)? contentBuilder;
 
   /// Callback to close the detail pane.
   final VoidCallback? onClose;
@@ -83,7 +83,7 @@ class DetailPane<T> extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(26),
                       constraints: const BoxConstraints(maxWidth: 1080),
-                      child: contentBuilder?.call(context, opened as T),
+                      child: contentBuilder?.call(opened as T),
                     ),
                   ),
           ),

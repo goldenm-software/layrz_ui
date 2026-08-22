@@ -1,20 +1,19 @@
 import "package:flutter/widgets.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
-import "package:layrz_ui/src/tokens/tokens.dart";
+import "package:layrz_ui/src/inputs/inputs.dart";
+import "package:layrz_ui/src/tokens/src/tokens.dart";
 
-import "list_header.dart";
-import "list_item.dart";
-import "scaffold_tile.dart";
+import "scaffold_item.dart";
 
 /// The left list panel of the scaffold shell.
 ///
 /// Renders the search header, list of items, footer, and empty states.
 class ListPanel<T> extends StatefulWidget {
   /// The items to display.
-  final List<T> items;
+  final List<LayrzScaffoldItem<T>> items;
 
   /// Callback to build a tile for each item.
-  final LayrzScaffoldTile Function(BuildContext, T) onBuild;
+  final Widget Function(T) onBuild;
 
   /// The currently opened item, or null.
   final T? opened;
@@ -31,6 +30,12 @@ class ListPanel<T> extends StatefulWidget {
   /// Optional footer widget.
   final Widget? footer;
 
+  /// Optional title
+  final Widget? title;
+
+  /// Item extent for the list panel.
+  final double itemExtent;
+
   /// Creates a new [ListPanel].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -40,6 +45,8 @@ class ListPanel<T> extends StatefulWidget {
   /// - [onSearch]: Callback when the search query changes, or null. Defaults to null.
   /// - [searchable]: Whether to show the search field. Defaults to true.
   /// - [footer]: Optional footer widget. Defaults to null.
+  /// - [title]: Optional title widget rendered above the search field. Defaults to null.
+  /// - [itemExtent]: The item extent for the list panel. Required.
   const ListPanel({
     super.key,
     required this.items,
@@ -49,6 +56,8 @@ class ListPanel<T> extends StatefulWidget {
     this.onSearch,
     this.searchable = true,
     this.footer,
+    this.title,
+    required this.itemExtent,
   });
 
   @override
@@ -57,30 +66,40 @@ class ListPanel<T> extends StatefulWidget {
 
 class _ListPanelState<T> extends State<ListPanel<T>> {
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
     return Container(
-      width: 250,
+      width: 300,
+      margin: EdgeInsets.only(top: tokens.spacing.sp1),
+      padding: tokens.spacing.pd1,
       color: tokens.colors.sf1,
       child: Column(
+        mainAxisAlignment: .start,
+        crossAxisAlignment: .start,
+        spacing: tokens.spacing.sp1,
         children: [
-          ListHeader(
-            searchable: widget.searchable,
-            onSearch: widget.onSearch,
-          ),
+          if (widget.title != null) widget.title!,
+          if (widget.searchable) LayrzSearchInput(),
           Expanded(
             child: widget.items.isEmpty
                 ? _buildEmptyState(tokens)
-                : SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Column(
-                        children: [
-                          for (int i = 0; i < widget.items.length; i++) _buildListItem(context, tokens, i),
-                        ],
-                      ),
-                    ),
+                : ListView.builder(
+                    itemCount: widget.items.length,
+                    itemExtent: widget.itemExtent,
+                    itemBuilder: (context, index) {
+                      return _buildListItem(context, tokens, index);
+                    },
                   ),
           ),
           if (widget.footer != null) ...[
@@ -97,16 +116,12 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
 
   Widget _buildListItem(BuildContext context, LayrzTokens tokens, int index) {
     final item = widget.items[index];
-    final tile = widget.onBuild(context, item);
-    final isSelected = identical(widget.opened, item);
+    final isSelected = identical(widget.opened, item.item);
+    final tile = widget.onBuild(item.item);
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 1),
-      child: ListItem(
-        tile: tile,
-        isSelected: isSelected,
-        onTap: () => widget.onTap?.call(item),
-      ),
+    return Container(
+      padding: EdgeInsets.only(bottom: tokens.spacing.sp1),
+      child: tile,
     );
   }
 

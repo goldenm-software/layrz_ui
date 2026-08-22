@@ -1,11 +1,11 @@
 import "package:flutter/widgets.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
+import "package:layrz_ui/src/scaffold/src/scaffold_item.dart";
 import "package:layrz_ui/src/tokens/tokens.dart";
 
 import "detail_pane.dart";
 import "list_panel.dart";
 import "scaffold_controller.dart";
-import "scaffold_tile.dart";
 
 /// An adaptive list-detail shell widget in the layrz_ui design system.
 ///
@@ -18,13 +18,13 @@ import "scaffold_tile.dart";
 /// The consuming app passes items and owns the controller; the shell owns the layout.
 class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The items to display in the list.
-  final List<T> items;
+  final List<LayrzScaffoldItem<T>> items;
 
   /// Callback to build a tile for each item.
-  final LayrzScaffoldTile Function(BuildContext, T) onBuild;
+  final Widget Function(T) onBuild;
 
   /// Callback to build the detail content for an opened item.
-  final Widget Function(BuildContext, T) onDetailsBuild;
+  final Widget Function(T) onDetailsBuild;
 
   /// Controller for managing the opened item.
   final LayrzScaffoldController<T> controller;
@@ -38,6 +38,12 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// Callback when the search query changes.
   final ValueChanged<String>? onSearch;
 
+  /// Optional title widget rendered above the search field in the list panel.
+  final Widget? title;
+
+  /// The item extent for the list panel.
+  final double itemExtent;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -47,6 +53,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// - [footer]: Optional footer widget for the list panel. Defaults to null.
   /// - [searchable]: Whether the search field is visible. Defaults to true.
   /// - [onSearch]: Callback when the search query changes, or null. Defaults to null.
+  /// - [title]: Optional title widget rendered above the search field. Defaults to null.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -56,6 +63,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     this.footer,
     this.searchable = true,
     this.onSearch,
+    this.title,
+    required this.itemExtent,
   });
 
   @override
@@ -63,7 +72,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
 }
 
 class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
-  late void Function() _controllerListener;
+  late VoidCallback _controllerListener;
 
   @override
   void initState() {
@@ -114,9 +123,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   bool _isOpenedTileInList(BuildContext context, T? opened) {
     if (opened == null) return false;
     if (widget.items.contains(opened)) return true;
-    final openedTile = widget.onBuild(context, opened);
+    final openedTile = widget.onBuild(opened);
     for (final item in widget.items) {
-      final itemTile = widget.onBuild(context, item);
+      final itemTile = widget.onBuild(item.item);
       if (itemTile == openedTile) return true;
     }
     return false;
@@ -138,6 +147,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           onSearch: widget.onSearch,
           searchable: widget.searchable,
           footer: widget.footer,
+          title: widget.title,
+          itemExtent: widget.itemExtent,
         ),
         Container(
           width: 1,
@@ -178,6 +189,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         onSearch: widget.onSearch,
         searchable: widget.searchable,
         footer: widget.footer,
+        title: widget.title,
+        itemExtent: widget.itemExtent,
       );
     }
   }
