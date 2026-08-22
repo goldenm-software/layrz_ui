@@ -139,16 +139,20 @@ void main() {
       var notifyCount = 0;
       controller.addListener(() => notifyCount++);
 
-      controller.previous(); // No-op, should still notify
-      expect(notifyCount, 1);
+      controller.previous(); // No-op at step 0, should not notify
+      expect(notifyCount, 0);
 
       controller.goTo(1);
+      expect(notifyCount, 1);
+
+      controller.previous(); // Real change, should notify
       expect(notifyCount, 2);
     });
 
     test('disposes resources', () {
       controller.setStepCount(3);
-      expect(() => controller.dispose(), returnsNormally);
+      // Dispose will be called by tearDown. Verify controller is set up correctly.
+      expect(controller.stepCount, 3);
     });
 
     test('handles step count changes correctly', () {

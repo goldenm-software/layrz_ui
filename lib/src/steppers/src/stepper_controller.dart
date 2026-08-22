@@ -45,9 +45,6 @@ class LayrzStepperController extends ChangeNotifier {
   /// The callback can return a [Future] for async validation (e.g. server checks).
   Future<bool> Function()? _canAdvance;
 
-  /// Tracks whether this controller has been disposed.
-  bool _disposed = false;
-
   /// Gets the zero-based index of the currently active step.
   int get currentStepIndex => _currentStepIndex;
 
@@ -85,21 +82,22 @@ class LayrzStepperController extends ChangeNotifier {
   /// Moves to the previous step without validation.
   ///
   /// Unlike [next], this does not check [canAdvance].
-  /// Calling [previous] when already on the first step is a no-op, but still notifies listeners.
+  /// Calling [previous] when already on the first step is a no-op and does not notify listeners.
   void previous() {
-    if (canMovePrevious) {
-      _currentStepIndex--;
-    }
+    if (!canMovePrevious) return;
+    _currentStepIndex--;
     notifyListeners();
   }
 
   /// Jumps directly to the step at the given [index].
   ///
   /// The index must be in [0, stepCount). If out of bounds, this is a no-op.
+  /// If [index] is the current step, this is a no-op and does not notify listeners.
   /// This does not check [canAdvance]; it allows jumping backward to review
   /// completed steps without validation.
   void goTo(int index) {
     if (index < 0 || index >= _stepCount) return;
+    if (index == _currentStepIndex) return;
 
     _currentStepIndex = index;
     notifyListeners();
@@ -137,11 +135,15 @@ class LayrzStepperController extends ChangeNotifier {
 
   /// Disposes the controller and releases resources.
   ///
-  /// Safe to call multiple times. Subsequent calls are no-ops.
+  /// This must be called exactly once. If the controller was supplied by the caller
+  /// (via [LayrzStepper.controller]), the caller is responsible for disposal.
+  /// If the controller was created internally by the stepper, the stepper disposes it.
+  ///
+  /// Calling dispose more than once is an error and will trigger an assertion.
+  /// Double-disposal typically indicates a lifecycle bug in the consumer code and should
+  /// be fixed rather than silently ignored.
   @override
   void dispose() {
-    if (_disposed) return;
-    _disposed = true;
     super.dispose();
   }
 }
