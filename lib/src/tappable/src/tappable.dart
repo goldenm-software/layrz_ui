@@ -198,26 +198,20 @@ class _LayrzTappableState extends State<LayrzTappable> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final borderRadius = widget.borderRadius ?? BorderRadius.zero;
-
-    // Resolve the surface color.
     final surfaceColor = _resolveColor(tokens);
 
-    // Wrap the child with a decorated surface.
-    final surfaceChild = DecoratedBox(
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: borderRadius,
-      ),
-      child: widget.child,
-    );
-
-    // Build the interactive layer (mouse region + gesture detector).
-    // Note: we do NOT use focus here, per the design.
+    // Inert path: no gestures, no hover feedback.
     if (widget.disabled || (widget.onTap == null && widget.onLongPress == null && widget.onSecondaryTap == null)) {
-      // Inert: no gestures, no hover feedback, return the surface as-is.
-      return surfaceChild;
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: borderRadius,
+        ),
+        child: widget.child,
+      );
     }
 
+    // Interactive path: wrap with mouse region, listeners, and animated decoration.
     return MouseRegion(
       cursor: _resolveCursor(tokens),
       onEnter: _onEnter,
