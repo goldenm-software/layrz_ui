@@ -21,6 +21,7 @@ export 'src/selection/selection.dart';
 export 'src/sheets/sheets.dart';
 export 'src/state/state.dart';
 export 'src/steppers/steppers.dart';
+export 'src/tappable/tappable.dart';
 export 'src/theme/theme.dart';
 export 'src/tokenizer/tokenizer.dart';
 export 'src/tokens/tokens.dart';
