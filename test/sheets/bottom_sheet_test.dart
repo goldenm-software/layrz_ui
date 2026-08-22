@@ -225,5 +225,42 @@ void main() {
         throwsAssertionError,
       );
     });
+
+    testWidgets('pops with result without re-entrant assertion', (WidgetTester tester) async {
+      String? result;
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () async {
+              result = await LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context, 'test-result');
+                  },
+                  child: const SizedBox(
+                    height: 200,
+                    child: Text('Dismiss'),
+                  ),
+                ),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      // Pop the sheet with a result via direct Navigator.pop
+      await tester.tap(find.text('Dismiss'));
+      await tester.pumpAndSettle();
+
+      // Verify the result was returned without any assertion errors
+      expect(result, equals('test-result'));
+    });
   });
 }
