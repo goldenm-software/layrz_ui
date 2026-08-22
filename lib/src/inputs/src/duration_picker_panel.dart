@@ -92,19 +92,17 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.day)) {
       fields.add(
-        Flexible(
-          child: LayrzNumberInput(
-            hintText: l10n.durationFieldDay,
-            value: _day.toDouble(),
-            onChanged: (v) {
-              setState(() => _day = v?.toInt() ?? 0);
-              _handleValueChanged();
-            },
-            decimalSeparator: LayrzDecimalSeparator.dot,
-            minimum: 0,
-            step: 1,
-            hideStepButtons: false,
-          ),
+        LayrzNumberInput(
+          hintText: l10n.durationFieldDay,
+          value: _day.toDouble(),
+          onChanged: (v) {
+            setState(() => _day = v?.toInt() ?? 0);
+            _handleValueChanged();
+          },
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          minimum: 0,
+          step: 1,
+          hideStepButtons: false,
         ),
       );
       fields.add(
@@ -118,21 +116,19 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.hour)) {
       fields.add(
-        Flexible(
-          child: LayrzNumberInput(
-            hintText: l10n.durationFieldHour,
-            value: _hour.toDouble(),
-            onChanged: (v) {
-              final newVal = v?.toInt() ?? 0;
-              setState(() => _hour = newVal.clamp(0, 23));
-              _handleValueChanged();
-            },
-            decimalSeparator: LayrzDecimalSeparator.dot,
-            minimum: 0,
-            maximum: 23,
-            step: 1,
-            hideStepButtons: false,
-          ),
+        LayrzNumberInput(
+          hintText: l10n.durationFieldHour,
+          value: _hour.toDouble(),
+          onChanged: (v) {
+            final newVal = v?.toInt() ?? 0;
+            setState(() => _hour = newVal.clamp(0, 23));
+            _handleValueChanged();
+          },
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          minimum: 0,
+          maximum: 23,
+          step: 1,
+          hideStepButtons: false,
         ),
       );
       fields.add(
@@ -146,21 +142,19 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.minute)) {
       fields.add(
-        Flexible(
-          child: LayrzNumberInput(
-            hintText: l10n.durationFieldMinute,
-            value: _minute.toDouble(),
-            onChanged: (v) {
-              final newVal = v?.toInt() ?? 0;
-              setState(() => _minute = newVal.clamp(0, 59));
-              _handleValueChanged();
-            },
-            decimalSeparator: LayrzDecimalSeparator.dot,
-            minimum: 0,
-            maximum: 59,
-            step: 1,
-            hideStepButtons: false,
-          ),
+        LayrzNumberInput(
+          hintText: l10n.durationFieldMinute,
+          value: _minute.toDouble(),
+          onChanged: (v) {
+            final newVal = v?.toInt() ?? 0;
+            setState(() => _minute = newVal.clamp(0, 59));
+            _handleValueChanged();
+          },
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          minimum: 0,
+          maximum: 59,
+          step: 1,
+          hideStepButtons: false,
         ),
       );
       fields.add(
@@ -174,21 +168,19 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.second)) {
       fields.add(
-        Flexible(
-          child: LayrzNumberInput(
-            hintText: l10n.durationFieldSecond,
-            value: _second.toDouble(),
-            onChanged: (v) {
-              final newVal = v?.toInt() ?? 0;
-              setState(() => _second = newVal.clamp(0, 59));
-              _handleValueChanged();
-            },
-            decimalSeparator: LayrzDecimalSeparator.dot,
-            minimum: 0,
-            maximum: 59,
-            step: 1,
-            hideStepButtons: false,
-          ),
+        LayrzNumberInput(
+          hintText: l10n.durationFieldSecond,
+          value: _second.toDouble(),
+          onChanged: (v) {
+            final newVal = v?.toInt() ?? 0;
+            setState(() => _second = newVal.clamp(0, 59));
+            _handleValueChanged();
+          },
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          minimum: 0,
+          maximum: 59,
+          step: 1,
+          hideStepButtons: false,
         ),
       );
       fields.add(
