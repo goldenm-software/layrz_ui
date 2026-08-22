@@ -1,8 +1,6 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:layrz_ui/preview.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -95,16 +93,6 @@ class LayrzTappable extends StatefulWidget {
   /// When null, defaults to transparent (no tint applied while idle).
   final Color? color;
 
-  /// The surface color when hovered.
-  ///
-  /// When null, defaults to [LayrzTokens.colors.sf2] (the second surface level).
-  final Color? hoverColor;
-
-  /// The surface color when pressed.
-  ///
-  /// When null, defaults to [LayrzTokens.colors.sf3] (the third surface level).
-  final Color? pressedColor;
-
   /// Creates a new [LayrzTappable].
   ///
   /// All parameters except [child] are optional.
@@ -117,8 +105,6 @@ class LayrzTappable extends StatefulWidget {
     this.disabled = false,
     this.borderRadius,
     this.color,
-    this.hoverColor,
-    this.pressedColor,
   });
 
   @override
@@ -142,12 +128,12 @@ class _LayrzTappableState extends State<LayrzTappable> {
 
     // Pressed state takes priority over hover.
     if (_isPressed) {
-      return widget.pressedColor ?? tokens.colors.sf3;
+      return tokens.colors.sf4;
     }
 
     // Hover state.
     if (_isHovered) {
-      return widget.hoverColor ?? tokens.colors.sf2;
+      return tokens.colors.sf3;
     }
 
     // Idle state: use the explicit color or transparent.
@@ -191,6 +177,23 @@ class _LayrzTappableState extends State<LayrzTappable> {
     if (widget.disabled) return;
     setState(() {
       _isPressed = false;
+    });
+  }
+
+  @override
+  @override
+  void didUpdateWidget(covariant LayrzTappable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() {
+        // Reset hover and press states if the widget becomes disabled or loses all gestures.
+        if (widget.disabled || (widget.onTap == null && widget.onLongPress == null && widget.onSecondaryTap == null)) {
+          _isHovered = false;
+          _isPressed = false;
+        }
+      });
     });
   }
 
@@ -239,78 +242,3 @@ class _LayrzTappableState extends State<LayrzTappable> {
     );
   }
 }
-
-// Previews for the Flutter widget preview system (Flutter 3.47+).
-
-/// Preview of [LayrzTappable] in idle state.
-@Preview(
-  name: 'Light — Idle',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzTappableIdle() => Padding(
-  padding: const EdgeInsets.all(16),
-  child: LayrzTappable(
-    borderRadius: BorderRadius.circular(8),
-    onTap: () {},
-    child: Container(
-      width: 200,
-      height: 50,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8E8E8),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Text('Tap me'),
-    ),
-  ),
-);
-
-/// Preview of [LayrzTappable] in disabled state.
-@Preview(
-  name: 'Light — Disabled',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzTappableDisabled() => Padding(
-  padding: const EdgeInsets.all(16),
-  child: LayrzTappable(
-    borderRadius: BorderRadius.circular(8),
-    disabled: true,
-    onTap: () {},
-    child: Container(
-      width: 200,
-      height: 50,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8E8E8),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Text('Disabled'),
-    ),
-  ),
-);
-
-/// Preview of [LayrzTappable] with custom colors.
-@Preview(
-  name: 'Light — Custom Colors',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzTappableCustom() => Padding(
-  padding: const EdgeInsets.all(16),
-  child: LayrzTappable(
-    borderRadius: BorderRadius.circular(8),
-    onTap: () {},
-    color: const Color(0xFFF0F0F0),
-    hoverColor: const Color(0xFFE0E0E0),
-    pressedColor: const Color(0xFFD0D0D0),
-    child: Container(
-      width: 200,
-      height: 50,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8E8E8),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Text('Custom Colors'),
-    ),
-  ),
-);

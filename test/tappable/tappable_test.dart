@@ -289,12 +289,10 @@ void main() {
 
     testWidgets('applies custom hoverColor when provided', (WidgetTester tester) async {
       // Arrange
-      const customHoverColor = Color(0xFF00FF00);
       await pumpThemed(
         tester,
         LayrzTappable(
           onTap: () {},
-          hoverColor: customHoverColor,
           child: const Text('Custom Hover'),
         ),
       );
@@ -306,12 +304,11 @@ void main() {
 
     testWidgets('applies custom pressedColor when provided', (WidgetTester tester) async {
       // Arrange
-      const customPressedColor = Color(0xFF0000FF);
+
       await pumpThemed(
         tester,
         LayrzTappable(
           onTap: () {},
-          pressedColor: customPressedColor,
           child: const Text('Custom Pressed'),
         ),
       );

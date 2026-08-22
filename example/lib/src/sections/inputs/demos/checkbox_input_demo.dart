@@ -33,6 +33,7 @@ class _CheckboxInputDemoState extends State<_CheckboxInputDemo> {
             LayrzCheckboxInput(
               value: _unchecked,
               onChanged: (v) {
+                debugPrint('Unchecked checkbox changed to: $v');
                 setState(() {
                   _unchecked = v;
                 });
