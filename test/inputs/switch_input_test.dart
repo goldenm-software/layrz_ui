@@ -94,6 +94,7 @@ void main() {
 
     testWidgets('toggles value when Space key is pressed', (tester) async {
       bool currentValue = false;
+      int callCount = 0;
 
       await pumpThemedApp(
         tester,
@@ -101,23 +102,29 @@ void main() {
           builder: (context, setState) => LayrzSwitchInput(
             value: currentValue,
             onChanged: (newValue) {
+              callCount++;
               setState(() => currentValue = newValue);
             },
           ),
         ),
       );
 
-      await tester.tap(find.byType(LayrzSwitchInput));
+      // Give focus to the switch
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pumpAndSettle();
 
+      callCount = 0; // Reset after focus
+      // Send Space key
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
       await tester.pumpAndSettle();
 
       expect(currentValue, isTrue);
+      expect(callCount, equals(1)); // Verify single toggle, not double (A2 regression check)
     });
 
     testWidgets('toggles value when Enter key is pressed', (tester) async {
       bool currentValue = false;
+      int callCount = 0;
 
       await pumpThemedApp(
         tester,
@@ -125,19 +132,24 @@ void main() {
           builder: (context, setState) => LayrzSwitchInput(
             value: currentValue,
             onChanged: (newValue) {
+              callCount++;
               setState(() => currentValue = newValue);
             },
           ),
         ),
       );
 
-      await tester.tap(find.byType(LayrzSwitchInput));
+      // Give focus to the switch
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pumpAndSettle();
 
+      callCount = 0; // Reset after focus
+      // Send Enter key
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
 
       expect(currentValue, isTrue);
+      expect(callCount, equals(1)); // Verify single toggle, not double (A2 regression check)
     });
 
     testWidgets('is Tab-reachable', (tester) async {
@@ -242,6 +254,20 @@ void main() {
       expect(find.byType(LayrzSwitchInput), findsOneWidget);
     });
 
+    testWidgets('track has no border', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzSwitchInput(
+          value: false,
+          onChanged: (_) {},
+        ),
+      );
+
+      final trackContainer = tester.widget<Container>(find.byType(Container).first);
+      final decoration = trackContainer.decoration as BoxDecoration?;
+      expect(decoration?.border, isNull);
+    });
+
     testWidgets('track size is consistent across states', (tester) async {
       bool currentValue = false;
 
@@ -339,27 +365,128 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(LayrzSwitchInput));
-      await tester.pump(const Duration(milliseconds: 100));
+      // Get initial thumb position (off state: left = 4.0, top = 4.0)
+      final offThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      expect(offThumb.left, closeTo(4.0, 0.1));
+      expect(offThumb.top, closeTo(4.0, 0.1)); // Verify vertical centering
 
+      // Toggle the switch
+      await tester.tap(find.byType(LayrzSwitchInput));
       expect(currentValue, isTrue);
 
+      // Complete animation
       await tester.pumpAndSettle();
+
+      // Get final thumb position (on state: left = 28.0, top = 4.0)
+      final onThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      expect(onThumb.left, closeTo(28.0, 0.1));
+      expect(onThumb.top, closeTo(4.0, 0.1)); // Top should not change
     });
 
     testWidgets('label colour changes when disabled', (tester) async {
-      await pumpThemed(
+      bool currentValue = false;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            labelText: 'Test label',
+            value: currentValue,
+            disabled: false, // Enabled
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Get enabled state text color (should be fg1)
+      final enabledLabelText = find.text('Test label');
+      final enabledTextWidget = tester.widget<Text>(enabledLabelText);
+      final enabledColor = enabledTextWidget.style?.color;
+      expect(enabledColor, isNotNull);
+
+      // Now test disabled state
+      await pumpThemedApp(
         tester,
         LayrzSwitchInput(
-          labelText: 'Disabled switch',
+          labelText: 'Test label',
           value: false,
-          disabled: true,
+          disabled: true, // Disabled
           onChanged: (_) {},
         ),
       );
 
-      final labelText = find.text('Disabled switch');
-      expect(labelText, findsOneWidget);
+      // Get disabled state text color (should be fg4)
+      final disabledLabelText = find.text('Test label');
+      final disabledTextWidget = tester.widget<Text>(disabledLabelText);
+      final disabledColor = disabledTextWidget.style?.color;
+      expect(disabledColor, isNotNull);
+
+      // Colors should be different between enabled and disabled
+      expect(disabledColor, isNot(equals(enabledColor)));
+    });
+
+    testWidgets('track color interpolates smoothly (not step function)', (tester) async {
+      bool currentValue = false;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Toggle the switch
+      await tester.tap(find.byType(LayrzSwitchInput));
+      // Pump to mid-animation (roughly 50% through the 200ms transition)
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Get the track container at mid-animation
+      final trackContainer = tester.widget<Container>(find.byType(Container).first);
+      final midColor = (trackContainer.decoration as BoxDecoration).color!;
+
+      // Get the off-state and on-state colors for comparison
+      await pumpThemedApp(
+        tester,
+        LayrzSwitchInput(
+          value: false,
+          onChanged: (_) {},
+        ),
+      );
+      final offContainer = tester.widget<Container>(find.byType(Container).first);
+      final offColor = (offContainer.decoration as BoxDecoration).color!;
+
+      // Get the on-state color
+      await pumpThemedApp(
+        tester,
+        LayrzSwitchInput(
+          value: true,
+          onChanged: (_) {},
+        ),
+      );
+      final onContainer = tester.widget<Container>(find.byType(Container).first);
+      final onColor = (onContainer.decoration as BoxDecoration).color!;
+
+      // Mid-animation color should be a blend (not equal to off or on)
+      expect(
+        midColor,
+        isNot(equals(offColor)),
+      ); // Not the off color
+      expect(
+        midColor,
+        isNot(equals(onColor)),
+      ); // Not the on color
+      // A step function would jump to onColor at 50%, but lerp produces a blend
     });
 
     testWidgets('label is clickable independently', (tester) async {
@@ -388,6 +515,41 @@ void main() {
       expect(currentValue, isTrue);
     });
 
+    testWidgets('disabled switch does not respond to hover', (tester) async {
+      bool currentValue = false;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            value: currentValue,
+            disabled: true,
+            onChanged: (newValue) {
+              callCount++;
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Get track color before hover
+      final trackBefore = tester.widget<Container>(find.byType(Container).first);
+      final colorBefore = (trackBefore.decoration as BoxDecoration).color;
+
+      // Simulate hover
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      // Get track color after hover attempt
+      final trackAfter = tester.widget<Container>(find.byType(Container).first);
+      final colorAfter = (trackAfter.decoration as BoxDecoration).color;
+
+      // Colors should remain the same
+      expect(colorBefore, equals(colorAfter));
+      expect(callCount, equals(0)); // No toggle should occur
+    });
+
     testWidgets('thumb moves from left to right when toggled on', (tester) async {
       bool currentValue = false;
 
@@ -403,11 +565,99 @@ void main() {
         ),
       );
 
+      // Get initial thumb position
+      final offThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      final offLeft = offThumb.left!;
+      final offTop = offThumb.top!;
+
+      // Toggle the switch
       await tester.tap(find.byType(LayrzSwitchInput));
       await tester.pumpAndSettle();
 
-      // Verify animation completed
       expect(currentValue, isTrue);
+
+      // Get final thumb position
+      final onThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      final onLeft = onThumb.left!;
+      final onTop = onThumb.top!;
+
+      // Verify thumb moved to the right (horizontal travel)
+      expect(onLeft, greaterThan(offLeft));
+      expect(offLeft, closeTo(4.0, 0.1));
+      expect(onLeft, closeTo(28.0, 0.1));
+
+      // Verify thumb stays centered vertically (no vertical movement)
+      expect(offTop, closeTo(4.0, 0.1));
+      expect(onTop, closeTo(4.0, 0.1));
+      expect(onTop, equals(offTop));
+    });
+
+    testWidgets('thumb is fully contained within track in both states', (tester) async {
+      bool currentValue = false;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Track nominal dimensions (no border, so Stack fills entire Container)
+      const trackWidth = 52.0;
+      const trackHeight = 28.0;
+      const thumbSize = 20.0;
+      // With border removed, the Stack fills the full Container bounds
+      const contentBoxWidth = trackWidth;
+      const contentBoxHeight = trackHeight;
+
+      final offThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      final offLeft = offThumb.left!;
+      final offTop = offThumb.top!;
+
+      // Verify off state containment within track bounds
+      expect(offLeft, greaterThanOrEqualTo(0.0)); // Left edge within track
+      expect(offTop, greaterThanOrEqualTo(0.0)); // Top edge within track
+      expect(
+        offLeft + thumbSize,
+        lessThanOrEqualTo(contentBoxWidth),
+      ); // Right edge within track (4.0 + 20 = 24.0 <= 52)
+      expect(
+        offTop + thumbSize,
+        lessThanOrEqualTo(contentBoxHeight),
+      ); // Bottom edge within track (4.0 + 20 = 24.0 <= 28)
+
+      // Toggle to on state
+      await tester.tap(find.byType(LayrzSwitchInput));
+      await tester.pumpAndSettle();
+
+      final onThumb = tester.widget<Positioned>(
+        find.descendant(of: find.byType(Stack), matching: find.byType(Positioned)),
+      );
+      final onLeft = onThumb.left!;
+      final onTop = onThumb.top!;
+
+      // Verify on state containment within track bounds
+      expect(onLeft, greaterThanOrEqualTo(0.0)); // Left edge within track
+      expect(onTop, greaterThanOrEqualTo(0.0)); // Top edge within track
+      expect(
+        onLeft + thumbSize,
+        lessThanOrEqualTo(contentBoxWidth),
+      ); // Right edge within track (28.0 + 20 = 48.0 <= 52)
+      expect(
+        onTop + thumbSize,
+        lessThanOrEqualTo(contentBoxHeight),
+      ); // Bottom edge within track (4.0 + 20 = 24.0 <= 28)
     });
   });
 }

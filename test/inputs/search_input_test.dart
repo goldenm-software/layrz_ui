@@ -19,6 +19,9 @@ void main() {
 
         expect(find.byType(LayrzTextInput), findsOneWidget);
         expect(find.byIcon(MdiIcons.magnify), findsWidgets);
+        // Verify the text input is interactive
+        await tester.tap(find.byType(LayrzTextInput));
+        await tester.pumpAndSettle();
       });
 
       testWidgets('clear suffix is absent when field is empty', (tester) async {
@@ -134,8 +137,8 @@ void main() {
 
         // The anchored panel should have applied contentSized with widthBounds
         // The minimum width should be 280.0 as per the implementation
-        // We can verify this indirectly by checking that the field exists and is usable
-        expect(textInputFinder, findsOneWidget);
+        final textInputSize = tester.getSize(textInputFinder);
+        expect(textInputSize.width, greaterThanOrEqualTo(280.0)); // Minimum width constraint
       });
 
       testWidgets('panel width bounds work on wide surface', (tester) async {
@@ -157,7 +160,14 @@ void main() {
         // The text input should still be present and usable on a wide surface
         // The contentSized policy ensures the panel width is appropriate (280-480px)
         // regardless of available viewport width
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        final textInputFinder = find.byType(LayrzTextInput);
+        expect(textInputFinder, findsOneWidget);
+
+        final textInputSize = tester.getSize(textInputFinder);
+        // Width should be clamped to max 480 even on a 1600px wide surface
+        expect(textInputSize.width, lessThanOrEqualTo(480.0));
+        // Width should still be at least the minimum
+        expect(textInputSize.width, greaterThanOrEqualTo(280.0));
       });
 
       testWidgets('escape key closes panel', (tester) async {
@@ -328,11 +338,15 @@ void main() {
           ),
         );
 
-        // Pump away
+        // Type something to verify the controller works
+        await tester.enterText(find.byType(LayrzTextInput), 'test');
+        await tester.pumpAndSettle();
+
+        // Pump away - should dispose the owned controller
         await tester.pumpWidget(Container());
         await tester.pumpAndSettle();
 
-        // Should not throw
+        // Should not throw when accessing disposed widget
         expect(tester.takeException(), isNull);
       });
 
@@ -365,11 +379,15 @@ void main() {
           ),
         );
 
-        // Pump away
+        // Request focus to verify the focus node works
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+
+        // Pump away - should dispose the owned focus node
         await tester.pumpWidget(Container());
         await tester.pumpAndSettle();
 
-        // Should not throw
+        // Should not throw when accessing disposed widget
         expect(tester.takeException(), isNull);
       });
 
@@ -394,7 +412,21 @@ void main() {
       });
     });
 
-    group('hint text localization', () {
+    group('hint and label text behavior', () {
+      testWidgets('uses labelText fallback when provided', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search products',
+          ),
+        );
+
+        // labelText should be used as the field label
+        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
+        expect(textInput.labelText, equals('Search products'));
+      });
+
       testWidgets('uses default localized hint when hintText is null', (tester) async {
         await pumpThemedApp(
           tester,
@@ -404,7 +436,8 @@ void main() {
         );
 
         // The default hint should come from l10n
-        expect(find.text('Search'), findsWidgets);
+        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
+        expect(textInput.hintText, isNotNull);
       });
 
       testWidgets('uses provided hintText when non-null', (tester) async {
@@ -416,7 +449,33 @@ void main() {
           ),
         );
 
-        expect(find.text('Custom hint'), findsWidgets);
+        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
+        expect(textInput.hintText, equals('Custom hint'));
+      });
+
+      testWidgets('icon mode button gets labelText label', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+            labelText: 'Find items',
+          ),
+        );
+
+        // The button should have the labelText as its label
+        expect(find.bySemanticsLabel('Find items'), findsOneWidget);
+      });
+
+      testWidgets('icon mode button uses l10n default when labelText is null', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+          ),
+        );
+
+        // The button should have the localized default label
+        expect(find.bySemanticsLabel('Search'), findsOneWidget);
       });
     });
 

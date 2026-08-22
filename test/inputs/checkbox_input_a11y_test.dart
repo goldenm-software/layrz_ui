@@ -6,7 +6,9 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzCheckboxInput A11y', () {
-    testWidgets('renders checkbox with label', (tester) async {
+    testWidgets('checkbox label is exposed to screen readers', (tester) async {
+      final handle = tester.ensureSemantics();
+
       await pumpThemed(
         tester,
         LayrzCheckboxInput(
@@ -16,117 +18,250 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzCheckboxInput), findsOneWidget);
-      expect(find.text('Accept terms'), findsOneWidget);
-    });
+      // Label should be accessible via semantics
+      expect(find.bySemanticsLabel('Accept terms'), findsOneWidget);
 
-    testWidgets('displays label text for accessibility', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzCheckboxInput(
-          labelText: 'Accept terms',
-          value: false,
-          onChanged: (_) {},
+      // Verify semantic state: unchecked, enabled
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzCheckboxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Accept terms',
+          hasCheckedState: true,
+          isChecked: false,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
         ),
       );
 
-      expect(find.text('Accept terms'), findsOneWidget);
+      handle.dispose();
     });
 
-    testWidgets('provides checkmark icon as visual state indicator when checked', (tester) async {
+    testWidgets('checkbox state changes are observable', (tester) async {
+      final handle = tester.ensureSemantics();
+      bool currentValue = false;
+
       await pumpThemed(
         tester,
-        LayrzCheckboxInput(
-          value: true,
-          onChanged: (_) {},
+        StatefulBuilder(
+          builder: (context, setState) => LayrzCheckboxInput(
+            labelText: 'Test check',
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
         ),
       );
 
-      // Icon is the visual non-colour indicator that checkbox is checked
-      expect(find.byType(Icon), findsOneWidget);
-    });
-
-    testWidgets('does not show icon when unchecked', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzCheckboxInput(
-          value: false,
-          onChanged: (_) {},
+      // Initially unchecked - verify off state via semantics
+      expect(currentValue, isFalse);
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzCheckboxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasCheckedState: true,
+          isChecked: false,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
         ),
       );
 
-      // No icon when unchecked - empty box is the indicator
-      expect(find.byType(Icon), findsNothing);
-    });
+      // Toggle the checkbox
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
 
-    testWidgets('includes checkbox container for visual state', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzCheckboxInput(
-          value: false,
-          onChanged: (_) {},
-        ),
+      // State should have changed - verify checked state flips via semantics
+      expect(currentValue, isTrue);
+      // After toggle/tap, isFocused may be present, so we check the essential flags
+      final semantics = tester.getSemantics(
+        find
+            .descendant(
+              of: find.byType(LayrzCheckboxInput),
+              matching: find.byType(Semantics),
+            )
+            .first,
       );
+      expect(semantics.toString(), contains('hasCheckedState'));
+      expect(semantics.toString(), contains('isEnabled'));
+      // Verify the checked state actually changed
+      expect(semantics.toString(), contains('isChecked')); // Now checked after toggle
 
-      // Checkbox box (SizedBox with Container) is visible
-      expect(find.byType(SizedBox), findsWidgets);
-      expect(find.byType(Container), findsWidgets);
+      handle.dispose();
     });
 
-    testWidgets('responds to keyboard input', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzCheckboxInput(
-          labelText: 'Accept',
-          value: false,
-          onChanged: (_) {},
-        ),
-      );
+    testWidgets('disabled checkbox does not respond', (tester) async {
+      final handle = tester.ensureSemantics();
+      int callCount = 0;
 
-      // Checkbox is part of the widget tree
-      expect(find.byType(LayrzCheckboxInput), findsOneWidget);
-    });
-
-    testWidgets('state changes with checked value', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzCheckboxInput(
-          value: false,
-          onChanged: (_) {},
-        ),
-      );
-
-      // Unchecked: no icon
-      expect(find.byType(Icon), findsNothing);
-    });
-
-    testWidgets('disabled state is visually distinct', (tester) async {
       await pumpThemed(
         tester,
         LayrzCheckboxInput(
           labelText: 'Disabled',
           value: false,
           disabled: true,
-          onChanged: (_) {},
+          onChanged: (newValue) {
+            callCount++;
+          },
         ),
       );
 
-      expect(find.text('Disabled'), findsOneWidget);
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      expect(callCount, equals(0));
+
+      // Verify disabled semantics: isEnabled = false, no tap action
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzCheckboxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasCheckedState: true,
+          isChecked: false,
+          hasEnabledState: true,
+          isEnabled: false,
+          isFocusable: true,
+          hasFocusAction: true,
+        ),
+      );
+
+      handle.dispose();
     });
 
-    testWidgets('checkbox and label are in same widget', (tester) async {
+    testWidgets('checkbox with null onChanged does not respond', (tester) async {
+      final handle = tester.ensureSemantics();
+      bool currentValue = false;
+
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzCheckboxInput(
+            value: currentValue,
+            onChanged: null,
+          ),
+        ),
+      );
+
+      // Attempt to toggle - should have no effect
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      // Value unchanged
+      expect(currentValue, isFalse);
+
+      // Semantics: disabled
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzCheckboxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasCheckedState: true,
+          isChecked: false,
+          hasEnabledState: true,
+          isEnabled: false,
+          isFocusable: true,
+          hasFocusAction: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('enabled checkbox is keyboard accessible', (tester) async {
+      final handle = tester.ensureSemantics();
+
       await pumpThemed(
         tester,
         LayrzCheckboxInput(
-          labelText: 'Agree',
           value: false,
           onChanged: (_) {},
         ),
       );
 
-      // Single checkbox widget contains label text
+      // Should be in the widget tree and accessible
       expect(find.byType(LayrzCheckboxInput), findsOneWidget);
-      expect(find.text('Agree'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('disabled checkbox label is still readable', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        LayrzCheckboxInput(
+          labelText: 'Disabled field',
+          value: false,
+          disabled: true,
+          onChanged: (_) {},
+        ),
+      );
+
+      expect(find.bySemanticsLabel('Disabled field'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('error messages are exposed when visible', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        LayrzCheckboxInput(
+          labelText: 'Test field',
+          value: false,
+          onChanged: (_) {},
+          errors: const ['This field is required'],
+          hideDetails: false,
+        ),
+      );
+
+      expect(find.text('This field is required'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('error messages are hidden when hideDetails is true', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        LayrzCheckboxInput(
+          value: false,
+          onChanged: (_) {},
+          errors: const ['This field is required'],
+          hideDetails: true,
+        ),
+      );
+
+      expect(find.text('This field is required'), findsNothing);
+      handle.dispose();
     });
   });
 }

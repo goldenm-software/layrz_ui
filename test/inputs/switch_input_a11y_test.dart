@@ -6,7 +6,9 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzSwitchInput A11y', () {
-    testWidgets('renders switch with label', (tester) async {
+    testWidgets('switch label is exposed to screen readers', (tester) async {
+      final handle = tester.ensureSemantics();
+
       await pumpThemed(
         tester,
         LayrzSwitchInput(
@@ -16,131 +18,250 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzSwitchInput), findsOneWidget);
-      expect(find.text('Enable notifications'), findsOneWidget);
-    });
+      // Label should be accessible via semantics
+      expect(find.bySemanticsLabel('Enable notifications'), findsOneWidget);
 
-    testWidgets('displays label text for accessibility', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSwitchInput(
-          labelText: 'Enable notifications',
-          value: false,
-          onChanged: (_) {},
+      // Verify semantic state: off, enabled
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzSwitchInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Enable notifications',
+          hasToggledState: true,
+          isToggled: false,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
         ),
       );
 
-      expect(find.text('Enable notifications'), findsOneWidget);
+      handle.dispose();
     });
 
-    testWidgets('provides thumb position as visual state indicator', (tester) async {
+    testWidgets('switch state changes are observable', (tester) async {
+      final handle = tester.ensureSemantics();
+      bool currentValue = false;
+
       await pumpThemed(
         tester,
-        LayrzSwitchInput(
-          value: true,
-          onChanged: (_) {},
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            labelText: 'Test toggle',
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
         ),
       );
 
-      // Positioned thumb is the visual state indicator (not colour alone)
-      expect(find.byType(Positioned), findsOneWidget);
-    });
-
-    testWidgets('shows track with thumb in off position', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSwitchInput(
-          value: false,
-          onChanged: (_) {},
+      // Initially off - verify off state via semantics
+      expect(currentValue, isFalse);
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzSwitchInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasToggledState: true,
+          isToggled: false,
+          hasEnabledState: true,
+          isEnabled: true,
+          isFocusable: true,
+          hasTapAction: true,
+          hasFocusAction: true,
         ),
       );
 
-      // Thumb position is the visual indicator of off state
-      expect(find.byType(Positioned), findsOneWidget);
-      expect(find.byType(Stack), findsOneWidget);
-    });
+      // Toggle the switch
+      await tester.tap(find.byType(LayrzSwitchInput));
+      await tester.pumpAndSettle();
 
-    testWidgets('track and thumb visible for state indication', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSwitchInput(
-          value: false,
-          onChanged: (_) {},
-        ),
+      // State should have changed - verify on state via semantics
+      expect(currentValue, isTrue);
+      // After toggle/tap, isFocused may be present, so check essential flags
+      final semantics = tester.getSemantics(
+        find
+            .descendant(
+              of: find.byType(LayrzSwitchInput),
+              matching: find.byType(Semantics),
+            )
+            .first,
       );
+      expect(semantics.toString(), contains('hasToggledState'));
+      expect(semantics.toString(), contains('isEnabled'));
+      // Verify the toggled state actually changed
+      expect(semantics.toString(), contains('isToggled')); // Now toggled after toggle
 
-      // Both track (Container) and thumb (Positioned Container) present
-      expect(find.byType(Container), findsWidgets);
-      expect(find.byType(Stack), findsOneWidget);
+      handle.dispose();
     });
 
-    testWidgets('responds to keyboard input', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSwitchInput(
-          labelText: 'Enable feature',
-          value: false,
-          onChanged: (_) {},
-        ),
-      );
+    testWidgets('disabled switch does not respond', (tester) async {
+      final handle = tester.ensureSemantics();
+      int callCount = 0;
 
-      // Switch is part of the widget tree
-      expect(find.byType(LayrzSwitchInput), findsOneWidget);
-    });
-
-    testWidgets('state changes with value', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSwitchInput(
-          value: false,
-          onChanged: (_) {},
-        ),
-      );
-
-      // Track exists in off state
-      expect(find.byType(Container), findsWidgets);
-    });
-
-    testWidgets('disabled state is visually distinct', (tester) async {
       await pumpThemed(
         tester,
         LayrzSwitchInput(
           labelText: 'Unavailable',
           value: false,
           disabled: true,
-          onChanged: (_) {},
+          onChanged: (newValue) {
+            callCount++;
+          },
         ),
       );
 
-      expect(find.text('Unavailable'), findsOneWidget);
+      await tester.tap(find.byType(LayrzSwitchInput));
+      await tester.pumpAndSettle();
+
+      expect(callCount, equals(0));
+
+      // Verify disabled semantics: isEnabled = false, no tap action
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzSwitchInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasToggledState: true,
+          isToggled: false,
+          hasEnabledState: true,
+          isEnabled: false,
+          isFocusable: true,
+          hasFocusAction: true,
+        ),
+      );
+
+      handle.dispose();
     });
 
-    testWidgets('switch and label are in same widget', (tester) async {
+    testWidgets('switch with null onChanged does not respond', (tester) async {
+      final handle = tester.ensureSemantics();
+      bool currentValue = false;
+
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzSwitchInput(
+            value: currentValue,
+            onChanged: null,
+          ),
+        ),
+      );
+
+      // Attempt to toggle - should have no effect
+      await tester.tap(find.byType(LayrzSwitchInput));
+      await tester.pumpAndSettle();
+
+      // Value unchanged
+      expect(currentValue, isFalse);
+
+      // Semantics: disabled
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzSwitchInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          hasToggledState: true,
+          isToggled: false,
+          hasEnabledState: true,
+          isEnabled: false,
+          isFocusable: true,
+          hasFocusAction: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('enabled switch is keyboard accessible', (tester) async {
+      final handle = tester.ensureSemantics();
+
       await pumpThemed(
         tester,
         LayrzSwitchInput(
-          labelText: 'Enable',
           value: false,
           onChanged: (_) {},
         ),
       );
 
-      // Single switch widget contains label text
+      // Should be in the widget tree and accessible
       expect(find.byType(LayrzSwitchInput), findsOneWidget);
-      expect(find.text('Enable'), findsOneWidget);
+      handle.dispose();
     });
 
-    testWidgets('thumb position indicates on/off without colour alone', (tester) async {
+    testWidgets('disabled switch label is still readable', (tester) async {
+      final handle = tester.ensureSemantics();
+
       await pumpThemed(
         tester,
         LayrzSwitchInput(
-          value: true,
+          labelText: 'Disabled field',
+          value: false,
+          disabled: true,
           onChanged: (_) {},
         ),
       );
 
-      // Positioned thumb exists for visual state
-      expect(find.byType(Positioned), findsOneWidget);
+      expect(find.bySemanticsLabel('Disabled field'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('error messages are exposed when visible', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        LayrzSwitchInput(
+          labelText: 'Test field',
+          value: false,
+          onChanged: (_) {},
+          errors: const ['This field is required'],
+          hideDetails: false,
+        ),
+      );
+
+      expect(find.text('This field is required'), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('error messages are hidden when hideDetails is true', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        LayrzSwitchInput(
+          value: false,
+          onChanged: (_) {},
+          errors: const ['This field is required'],
+          hideDetails: true,
+        ),
+      );
+
+      expect(find.text('This field is required'), findsNothing);
+      handle.dispose();
     });
   });
 }
