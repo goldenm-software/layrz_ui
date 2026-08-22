@@ -10,6 +10,7 @@ import 'demos/switch_input_demo.dart';
 import 'demos/radio_input_demo.dart';
 import 'demos/search_input_demo.dart';
 import 'demos/combobox_input_demo.dart';
+import 'demos/select_input_demo.dart';
 import 'demos/stepper_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
@@ -79,21 +80,14 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Choice',
       detailsBuilder: buildComboBoxInputDemo,
     ),
+    InputDemo(
+      id: 'select-input',
+      name: 'Select Input',
+      category: 'Choice',
+      detailsBuilder: buildSelectInputDemo,
+    ),
 
-    // TODO(DESIGN-40/DESIGN-44): SelectInput and DurationInput will be added here
-    // once they land on development:
-    // InputDemo(
-    //   id: 'select-input',
-    //   name: 'Select Input',
-    //   category: 'Choice',
-    //   detailsBuilder: buildSelectInputDemo,
-    // ),
-    // InputDemo(
-    //   id: 'duration-input',
-    //   name: 'Duration Input',
-    //   category: 'Numeric',
-    //   detailsBuilder: buildDurationInputDemo,
-    // ),
+    // TODO(DESIGN-44): DurationInput will be added here once it lands on development
 
     // Search category
     InputDemo(

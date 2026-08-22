@@ -9,6 +9,7 @@ import 'package:example/src/sections/inputs/demos/switch_input_demo.dart';
 import 'package:example/src/sections/inputs/demos/radio_input_demo.dart';
 import 'package:example/src/sections/inputs/demos/search_input_demo.dart';
 import 'package:example/src/sections/inputs/demos/combobox_input_demo.dart';
+import 'package:example/src/sections/inputs/demos/select_input_demo.dart';
 import 'package:example/src/sections/inputs/demos/stepper_demo.dart';
 
 /// A test-friendly wrapper around InputsSection that renders it with proper theming.
@@ -72,6 +73,12 @@ class _TestInputsSectionState extends State<TestInputsSection> {
       name: 'ComboBox Input',
       category: 'Choice',
       detailsBuilder: buildComboBoxInputDemo,
+    ),
+    InputDemo(
+      id: 'select-input',
+      name: 'Select Input',
+      category: 'Choice',
+      detailsBuilder: buildSelectInputDemo,
     ),
 
     // Search category
