@@ -431,6 +431,57 @@ void main() {
       controller.dispose();
     });
 
+    testWidgets('selected row active indicator bar has non-zero height and correct width', (tester) async {
+      final controller = LayrzScaffoldController<_Device>();
+      final items = [
+        const _Device('1', 'Alpha'),
+        const _Device('2', 'Beta'),
+      ];
+
+      await _pumpShell(
+        tester,
+        items: items,
+        controller: controller,
+        size: const Size(1500, 950),
+      );
+
+      // Open the first item to make it selected
+      controller.open(items[0]);
+      await tester.pump();
+
+      // Find the first ListItem (which is now selected)
+      final listItemFinder = find.byType(ListItem).first;
+      expect(listItemFinder, findsOneWidget);
+
+      // The indicator is rendered as a ColoredBox with width 3.0.
+      // Find all ColoredBoxes and locate the one that is exactly 3.0 wide
+      // (the indicator bar), ignoring wider colored boxes like list panel backgrounds.
+      final allColoredBoxes = find.byType(ColoredBox);
+      ColoredBox? indicatorWidget;
+
+      for (final element in allColoredBoxes.evaluate()) {
+        final rect = tester.getRect(find.byWidget(element.widget));
+        // The indicator should be exactly 3.0 wide
+        if ((rect.width - kLayrzLayoutActiveIndicatorWidth).abs() < 0.1) {
+          indicatorWidget = element.widget as ColoredBox;
+          break;
+        }
+      }
+
+      expect(indicatorWidget, isNotNull, reason: 'Should find a ColoredBox with width 3.0 (the indicator)');
+
+      // Get the rect of the indicator
+      final indicatorRect = tester.getRect(find.byWidget(indicatorWidget!));
+
+      // Assert that the indicator has non-zero height
+      expect(indicatorRect.height, greaterThan(0.0), reason: 'Indicator height must be greater than zero');
+
+      // Assert that the indicator width matches the constant
+      expect(indicatorRect.width, closeTo(kLayrzLayoutActiveIndicatorWidth, 0.1), reason: 'Indicator width must equal kLayrzLayoutActiveIndicatorWidth (3.0)');
+
+      controller.dispose();
+    });
+
     testWidgets('empty list shows empty state', (tester) async {
       final controller = LayrzScaffoldController<_Device>();
       final items = <_Device>[];

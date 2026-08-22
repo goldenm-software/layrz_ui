@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 
@@ -83,60 +84,76 @@ class _ListItemState extends State<ListItem> {
             color: backgroundColor,
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        children: [tile.titleRichText],
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: titleColor,
-                        ),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (tile.subtitleRichText != null) ...[
-                      const SizedBox(height: 2),
+          child: IntrinsicHeight(
+            child: Row(
+              children: [
+                // Leading indicator bar area (reserved unconditionally per D15)
+                SizedBox(
+                  width: kLayrzLayoutActiveIndicatorReservedWidth,
+                  child: widget.isSelected
+                      ? Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: SizedBox(
+                            width: kLayrzLayoutActiveIndicatorWidth,
+                            height: double.infinity,
+                            child: ColoredBox(color: tokens.colors.fg1),
+                          ),
+                        )
+                      : null,
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       RichText(
                         text: TextSpan(
-                          children: [tile.subtitleRichText!],
+                          children: [tile.titleRichText],
                           style: TextStyle(
-                            fontSize: 10.5,
+                            fontSize: 13,
                             fontWeight: FontWeight.w400,
-                            color: tokens.colors.fg3,
+                            color: titleColor,
                           ),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (tile.subtitleRichText != null) ...[
+                        const SizedBox(height: 2),
+                        RichText(
+                          text: TextSpan(
+                            children: [tile.subtitleRichText!],
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w400,
+                              color: tokens.colors.fg3,
+                            ),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (tile.actions.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                LayrzDropdownMenu(
-                  items: tile.actions,
-                  builder: (context, controller) {
-                    return GestureDetector(
-                      onTap: controller.open,
-                      child: Icon(
-                        MdiIcons.dotsVertical,
-                        size: 16,
-                        color: tokens.colors.fg3,
-                      ),
-                    );
-                  },
-                ),
+                if (tile.actions.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  LayrzDropdownMenu(
+                    items: tile.actions,
+                    builder: (context, controller) {
+                      return GestureDetector(
+                        onTap: controller.open,
+                        child: Icon(
+                          MdiIcons.dotsVertical,
+                          size: 16,
+                          color: tokens.colors.fg3,
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
