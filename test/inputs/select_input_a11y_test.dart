@@ -1,11 +1,12 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
 import '../helpers/pump_themed_app.dart';
+import '../helpers/find_button_label.dart';
 
 void main() {
   group('LayrzSelectInput Accessibility', () {
@@ -25,7 +26,7 @@ void main() {
       );
 
       // Label should be visible and readable
-      expect(find.text('Choose an option'), findsOneWidget);
+      expect(findButtonLabel('Choose an option'), findsOneWidget);
     });
 
     testWidgets('marks required fields appropriately', (tester) async {
@@ -39,11 +40,10 @@ void main() {
       );
 
       // Required indicator should be present
-      expect(find.text('Required field'), findsOneWidget);
+      expect(findButtonLabel('Required field'), findsOneWidget);
     });
 
-    testWidgets('error messages are announced to screen readers',
-        (tester) async {
+    testWidgets('error messages are announced to screen readers', (tester) async {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -70,7 +70,7 @@ void main() {
       );
 
       // Help affordance should be present
-      expect(find.byIcon(mdiHelpCircleOutline), findsOneWidget);
+      expect(find.byIcon(MdiIcons.helpCircleOutline), findsOneWidget);
     });
 
     testWidgets('disabled state is communicated', (tester) async {
@@ -92,8 +92,11 @@ void main() {
       expect(chrome.disabled, true);
     });
 
-    testWidgets('focus is properly managed in selection surface',
-        (tester) async {
+    testWidgets('focus is properly managed in selection surface', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -121,6 +124,10 @@ void main() {
     });
 
     testWidgets('list items are recognizable as options', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -136,7 +143,7 @@ void main() {
 
       // Each item should have a check icon when selected (visual affordance)
       // But initially, none should be selected so no checks
-      expect(find.byIcon(mdiCheck), findsNothing);
+      expect(find.byIcon(MdiIcons.check), findsNothing);
 
       // Select an item
       await tester.tap(find.text('Option B'));
@@ -147,10 +154,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Now Option B should have a check
-      expect(find.byIcon(mdiCheck), findsOneWidget);
+      expect(find.byIcon(MdiIcons.check), findsOneWidget);
     });
 
     testWidgets('search results are announced as items filter', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -190,6 +201,10 @@ void main() {
     });
 
     testWidgets('keyboard navigation is accessible', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -221,6 +236,10 @@ void main() {
     });
 
     testWidgets('escape closes surface without side effects', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       LayrzSelectItem<String>? selectedItem;
 
       await pumpThemedApp(
@@ -250,8 +269,3 @@ void main() {
     });
   });
 }
-
-/// Icon constants for testing.
-const mdiHelpCircleOutline =
-    IconData(0xf0184, fontFamily: 'MaterialDesignIcons');
-const mdiCheck = IconData(0xf0137, fontFamily: 'MaterialDesignIcons');

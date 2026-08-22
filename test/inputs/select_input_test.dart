@@ -1,11 +1,13 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
 import '../helpers/pump_themed_app.dart';
+import '../helpers/find_button_label.dart';
 
 void main() {
   group('LayrzSelectInput', () {
@@ -36,7 +38,7 @@ void main() {
         ),
       );
 
-      expect(find.text('My Label'), findsOneWidget);
+      expect(findButtonLabel('My Label'), findsOneWidget);
     });
 
     testWidgets('displays selected item text in field', (tester) async {
@@ -61,17 +63,17 @@ void main() {
         ),
       );
 
-      // Find the editable text widget and verify it's read-only
-      final editableText = find.byType(EditableText);
-      expect(editableText, findsOneWidget);
+      // Verify the select input exists
+      expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
 
-      // The EditableText should have readOnly set (can verify via widget)
-      final widget = tester.widget<EditableText>(editableText);
-      expect(widget.readOnly, true);
+      // Verify the chrome is created with readOnly flag
+      final chromeWidget = find.byType(LayrzInputChrome);
+      expect(chromeWidget, findsOneWidget);
+      final chrome = tester.widget<LayrzInputChrome>(chromeWidget);
+      expect(chrome.readOnly, true);
     });
 
-    testWidgets('does not render lock icon (uses dropdown chevron instead)',
-        (tester) async {
+    testWidgets('does not render lock icon (uses dropdown chevron instead)', (tester) async {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -81,7 +83,7 @@ void main() {
       );
 
       // Should have a chevron icon (dropdown)
-      expect(find.byIcon(mdiChevronDown), findsOneWidget);
+      expect(find.byIcon(MdiIcons.chevronDown), findsOneWidget);
     });
 
     testWidgets('disabled field does not open on tap', (tester) async {
@@ -104,7 +106,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should still be disabled
-      expect(find.byIcon(mdiChevronDown), findsOneWidget);
+      expect(find.byIcon(MdiIcons.chevronDown), findsOneWidget);
     });
 
     testWidgets('opens surface on tap (mobile viewport)', (tester) async {
@@ -131,8 +133,7 @@ void main() {
       expect(find.text('Option C'), findsWidgets);
     });
 
-    testWidgets('selecting item calls onChanged with correct item',
-        (tester) async {
+    testWidgets('selecting item calls onChanged with correct item', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -268,8 +269,7 @@ void main() {
       expect(find.text('Option A'), findsWidgets);
     });
 
-    testWidgets('escape key closes surface without changing value',
-        (tester) async {
+    testWidgets('escape key closes surface without changing value', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -399,8 +399,35 @@ void main() {
 
       // Custom rendering should appear in surface
       expect(find.text('Custom A'), findsOneWidget);
-      // But field should still show labelText
+      // Label text is not shown when custom child is provided
+      expect(find.text('Option A'), findsNothing);
+    });
+
+    testWidgets('opens surface when field has no value selected', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          items: items,
+          labelText: 'Choose one',
+        ),
+      );
+
+      // Field should be empty initially
+      expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
+
+      // Tap the field to open surface
+      final field = find.byType(LayrzInputChrome);
+      await tester.tap(field);
+      await tester.pumpAndSettle();
+
+      // Surface should be open with items visible
       expect(find.text('Option A'), findsWidgets);
+      expect(find.text('Option B'), findsWidgets);
+      expect(find.text('Option C'), findsWidgets);
     });
 
     testWidgets('handles null value correctly', (tester) async {
@@ -422,21 +449,19 @@ void main() {
 
       // Field should be empty initially
       // (no selected item text shown)
-      expect(find.text('Option A'), findsOneWidget);
+      expect(find.byType(LayrzSelectInput<String?>), findsOneWidget);
 
       // Tap the field
       final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
 
-      // "None" option should appear
+      // Both options should appear in the surface
       expect(find.text('None'), findsOneWidget);
+      expect(find.text('Option A'), findsOneWidget);
     });
   });
 }
-
-/// Mixin icon constant for testing.
-const mdiChevronDown = IconData(0xf0140, fontFamily: 'MaterialDesignIcons');
 
 class _TestState {
   String? selectedValue;

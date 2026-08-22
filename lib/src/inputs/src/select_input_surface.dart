@@ -98,16 +98,18 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     final query = _searchController.text;
     final filter = widget.filter;
 
-    if (query.isEmpty) {
-      _filteredItems = widget.items;
-    } else {
-      _filteredItems = widget.items.where((item) {
-        if (filter != null) {
-          return filter(query, item);
-        }
-        return item.matches(query);
-      }).toList();
-    }
+    _filteredItems = widget.items.where((item) {
+      // Always apply custom filter if provided
+      if (filter != null) {
+        return filter(query, item);
+      }
+      // If no custom filter and query is empty, show all
+      if (query.isEmpty) {
+        return true;
+      }
+      // Otherwise apply default search filter
+      return item.matches(query);
+    }).toList();
 
     // Reset highlight when filter changes
     _highlightedIndex = -1;

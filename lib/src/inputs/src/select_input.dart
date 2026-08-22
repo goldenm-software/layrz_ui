@@ -254,7 +254,12 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           filter: widget.filter,
           emptyListText: widget.emptyListText,
           onItemSelected: (item) {
-            Navigator.pop(context, item);
+            // Defer the pop until after the gesture is fully processed
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                Navigator.pop(context, item);
+              }
+            });
           },
         ),
       ),
