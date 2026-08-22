@@ -220,7 +220,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
         maxWidth: (widget.maxWidth ?? double.infinity).clamp(0.0, double.infinity),
       ),
       child: LayrzTextInput(
-        labelText: widget.labelText,
+        labelText: widget.labelText ?? context.l10n.helperSearch,
         hintText: hintText,
         controller: _controller,
         focusNode: _focusNode,
@@ -243,7 +243,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       widthBounds: const LayrzAnchoredPanelWidthBounds(minWidth: 280.0, maxWidth: 480.0),
       builder: (context, controller) {
         return LayrzButton(
-          labelText: 'Search',
+          labelText: widget.labelText ?? context.l10n.helperSearch,
           icon: MdiIcons.magnify,
           onTap: widget.disabled ? null : controller.open,
           isDisabled: widget.disabled,
@@ -251,7 +251,6 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
         );
       },
       child: LayrzTextInput(
-        labelText: widget.labelText,
         hintText: hintText,
         controller: _controller,
         focusNode: _focusNode,
