@@ -104,6 +104,14 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
   }
 
   @override
+  void didUpdateWidget(LayrzCheckboxInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      animateToValue();
+    }
+  }
+
+  @override
   void dispose() {
     if (widget.focusNode == null) {
       _focusNode.dispose();
@@ -171,7 +179,10 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildCheckboxBox(tokens, isDisabled),
+                      ListenableBuilder(
+                        listenable: position,
+                        builder: (context, _) => _buildCheckboxBox(tokens, isDisabled),
+                      ),
                       if (widget.labelText != null) ...[
                         SizedBox(width: tokens.spacing.sp2),
                         Expanded(
@@ -210,13 +221,19 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
       backgroundColor = tokens.colors.sf3;
       borderColor = tokens.colors.fg4;
     } else if (widget.errors.isNotEmpty) {
-      backgroundColor = animationProgress > 0.5 ? tokens.colors.danger : tokens.colors.danger.shade50;
+      final uncheckedBackground = tokens.colors.danger.shade50;
+      final checkedBackground = tokens.colors.danger;
+      backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.danger;
     } else if (_states.contains(WidgetState.hovered) || _states.contains(WidgetState.focused)) {
-      backgroundColor = animationProgress > 0.5 ? tokens.colors.primary : tokens.colors.sf3;
+      final uncheckedBackground = tokens.colors.sf3;
+      final checkedBackground = tokens.colors.primary;
+      backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = _states.contains(WidgetState.focused) ? tokens.colors.primary : tokens.colors.fg2;
     } else {
-      backgroundColor = animationProgress > 0.5 ? tokens.colors.primary : tokens.colors.sf2;
+      final uncheckedBackground = tokens.colors.sf2;
+      final checkedBackground = tokens.colors.primary;
+      backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.fg2;
     }
 
@@ -231,12 +248,15 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
           ),
           borderRadius: tokens.radius.br1,
         ),
-        child: widget.value
-            ? Center(
-                child: Icon(
-                  MdiIcons.check,
-                  size: 14,
-                  color: tokens.colors.sf1,
+        child: animationProgress > 0
+            ? Opacity(
+                opacity: animationProgress,
+                child: Center(
+                  child: Icon(
+                    MdiIcons.check,
+                    size: 14,
+                    color: tokens.colors.sf1,
+                  ),
                 ),
               )
             : null,
