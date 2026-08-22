@@ -73,6 +73,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
 class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   late VoidCallback _controllerListener;
 
+  double get _itemExtent => widget.itemExtent + context.tokens.spacing.pd2.vertical;
+
   @override
   void initState() {
     super.initState();
@@ -142,7 +144,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           searchable: widget.searchable,
           footer: widget.footer,
           title: widget.title,
-          itemExtent: widget.itemExtent,
+          itemExtent: _itemExtent,
           emptyState: widget.emptyState,
         ),
         Container(
@@ -182,7 +184,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         searchable: widget.searchable,
         footer: widget.footer,
         title: widget.title,
-        itemExtent: widget.itemExtent,
+        itemExtent: _itemExtent,
         emptyState: widget.emptyState,
       );
     }

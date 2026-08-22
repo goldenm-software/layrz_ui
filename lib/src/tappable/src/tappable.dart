@@ -151,7 +151,7 @@ class _LayrzTappableState extends State<LayrzTappable> {
     }
 
     // Idle state: use the explicit color or transparent.
-    return widget.color ?? const Color(0x00000000);
+    return widget.color ?? context.tokens.colors.sf1;
   }
 
   /// Resolves the cursor based on state and interactivity.

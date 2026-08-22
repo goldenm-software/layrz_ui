@@ -1,5 +1,4 @@
 import "package:flutter/widgets.dart";
-import "package:layrz_ui/src/constants/constants.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/inputs/inputs.dart";
 import "package:layrz_ui/src/tappable/tappable.dart";
@@ -157,36 +156,33 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     final isSelected = item.key == widget.openedKey;
 
     return Container(
+      color: isSelected ? tokens.colors.sf3 : tokens.colors.sf1,
       margin: EdgeInsets.only(bottom: tokens.spacing.sp1),
-      // Selected background is sf3; unselected is transparent (no color property)
-      color: isSelected ? tokens.colors.sf3 : null,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Indicator bar — reserved space always (same width whether selected or not)
-          SizedBox(
-            width: kLayrzLayoutActiveIndicatorReservedWidth,
-            child: isSelected
-                ? Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: SizedBox(
-                      width: kLayrzLayoutActiveIndicatorWidth,
-                      height: double.infinity,
-                      child: ColoredBox(color: tokens.colors.fg1),
-                    ),
-                  )
-                : null,
+      child: LayrzTappable(
+        disabled: isSelected,
+        onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
+        borderRadius: tokens.radius.br1,
+        child: Padding(
+          padding: tokens.spacing.pd2,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // The tappable tile
+              Expanded(child: item.tile),
+              if (isSelected) ...[
+                // Indicator bar — reserved space always (same width whether selected or not)
+                Container(
+                  width: 3,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: tokens.colors.primary,
+                    borderRadius: tokens.radius.br1,
+                  ),
+                ),
+              ],
+            ],
           ),
-          // The tappable tile
-          Expanded(
-            child: LayrzTappable(
-              disabled: isSelected,
-              onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
-              borderRadius: BorderRadius.zero,
-              child: item.tile,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
