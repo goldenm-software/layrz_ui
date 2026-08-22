@@ -100,31 +100,27 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(LayrzSwitchInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      animateToValue();
+    }
   }
 
   @override
   void dispose() {
     if (widget.focusNode == null) {
       _focusNode.dispose();
-    } else {
-      _focusNode.removeListener(_handleFocusChange);
     }
     super.dispose();
   }
 
-  void _handleFocusChange() {
-    setState(() {
-      if (_focusNode.hasFocus) {
-        _states.add(WidgetState.focused);
-      } else {
-        _states.remove(WidgetState.focused);
-      }
-    });
-  }
-
   void _toggleSwitch() {
     if (widget.disabled || widget.onChanged == null) return;
+    _focusNode.requestFocus();
     widget.onChanged!(!widget.value);
   }
 
@@ -141,8 +137,12 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
           padding: widget.padding ?? tokens.spacing.pd2,
           child: GestureDetector(
             onTap: isDisabled ? null : _toggleSwitch,
+            onTapDown: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.pressed)),
+            onTapUp: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.pressed)),
+            onTapCancel: isDisabled ? null : () => setState(() => _states.remove(WidgetState.pressed)),
             child: Focus(
               onKeyEvent: (node, event) {
+                if (event is! KeyDownEvent) return KeyEventResult.ignored;
                 if (event.logicalKey == LogicalKeyboardKey.space || event.logicalKey == LogicalKeyboardKey.enter) {
                   _toggleSwitch();
                   return KeyEventResult.handled;
@@ -161,8 +161,8 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
               },
               child: MouseRegion(
                 cursor: isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
-                onEnter: (_) => setState(() => _states.add(WidgetState.hovered)),
-                onExit: (_) => setState(() => _states.remove(WidgetState.hovered)),
+                onEnter: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.hovered)),
+                onExit: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.hovered)),
                 child: Semantics(
                   toggled: widget.value,
                   enabled: !isDisabled,
@@ -171,14 +171,19 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _buildSwitchTrack(tokens, isDisabled),
+                      ListenableBuilder(
+                        listenable: position,
+                        builder: (context, _) => _buildSwitchTrack(tokens, isDisabled),
+                      ),
                       if (widget.labelText != null) ...[
                         SizedBox(width: tokens.spacing.sp3),
                         Expanded(
-                          child: Text(
-                            widget.labelText!,
-                            style: tokens.typography.body.copyWith(
-                              color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                          child: ExcludeSemantics(
+                            child: Text(
+                              widget.labelText!,
+                              style: tokens.typography.body.copyWith(
+                                color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                              ),
                             ),
                           ),
                         ),
@@ -201,25 +206,36 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
   Widget _buildSwitchTrack(LayrzTokens tokens, bool isDisabled) {
     const trackHeight = 28.0;
     const trackWidth = 52.0;
-    const thumbSize = 24.0;
+    const thumbSize = 20.0;
+    const thumbInset = 4.0;
+    const thumbTravel = 24.0; // trackWidth - thumbSize - (inset * 2) = 52 - 20 - 8 = 24
 
     final animationProgress = position.value;
 
-    // State precedence: disabled > error > hover/focused > default
+    // State precedence: disabled > error > pressed/hover/focused > default
     late Color trackColor;
 
     if (isDisabled) {
       trackColor = tokens.colors.sf3;
     } else if (widget.errors.isNotEmpty) {
-      trackColor = animationProgress > 0.5 ? tokens.colors.danger : tokens.colors.danger.shade50;
-    } else if (_states.contains(WidgetState.hovered) || _states.contains(WidgetState.focused)) {
-      trackColor = animationProgress > 0.5 ? tokens.colors.primary : tokens.colors.sf3;
+      final offColor = tokens.colors.danger.shade50;
+      final onColor = tokens.colors.danger;
+      trackColor = Color.lerp(offColor, onColor, animationProgress)!;
+    } else if (_states.contains(WidgetState.hovered) ||
+        _states.contains(WidgetState.focused) ||
+        _states.contains(WidgetState.pressed)) {
+      final offColor = tokens.colors.sf4;
+      final onColor = tokens.colors.primary;
+      trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     } else {
-      trackColor = animationProgress > 0.5 ? tokens.colors.primary : tokens.colors.sf2;
+      final offColor = tokens.colors.sf3;
+      final onColor = tokens.colors.primary;
+      trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     }
 
-    // Calculate thumb position: slides from left to right as value goes from 0 to 1
-    final thumbX = (trackWidth - thumbSize) * animationProgress;
+    // Calculate thumb position: slides from left to right with uniform inset on all sides
+    final thumbX = thumbInset + (thumbTravel * animationProgress);
+    final thumbY = (trackHeight - thumbSize) / 2; // Genuine vertical centering: (28 - 20) / 2 = 4
 
     return SizedBox(
       width: trackWidth,
@@ -227,33 +243,35 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
       child: Container(
         decoration: BoxDecoration(
           color: trackColor,
-          borderRadius: BorderRadius.circular(tokens.radius.full),
-          border: Border.all(
-            color: isDisabled
-                ? tokens.colors.fg4
-                : widget.errors.isNotEmpty
-                ? tokens.colors.danger
-                : _states.contains(WidgetState.focused)
-                ? tokens.colors.primary
-                : tokens.colors.fg2,
-            width: tokens.border.base,
-          ),
+          borderRadius: tokens.radius.br2,
+          boxShadow: _states.contains(WidgetState.focused)
+              ? [
+                  BoxShadow(
+                    color: tokens.colors.primary.withValues(alpha: 0.25),
+                    spreadRadius: 4.0,
+                    blurRadius: 8.0,
+                  ),
+                ]
+              : null,
         ),
         child: Stack(
           children: [
             // Thumb
             Positioned(
               left: thumbX,
-              top: (trackHeight - thumbSize) / 2,
+              top: thumbY,
               child: Container(
                 width: thumbSize,
                 height: thumbSize,
                 decoration: BoxDecoration(
                   color: isDisabled ? tokens.colors.fg4 : tokens.colors.sf1,
-                  borderRadius: BorderRadius.circular(tokens.radius.full),
+                  borderRadius: tokens.radius.innerRadius(
+                    outerRadius: tokens.radius.r2,
+                    spacer: thumbInset,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: tokens.colors.fg1.withValues(alpha: 0.1),
+                      color: tokens.colors.sf3.withValues(alpha: 0.1),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
