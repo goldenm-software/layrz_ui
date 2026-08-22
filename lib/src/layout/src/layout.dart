@@ -258,22 +258,34 @@ class _LayrzLayoutState extends State<LayrzLayout> {
 
     return Container(
       color: backgroundColor,
-      child: Row(
+      child: Stack(
         children: [
-          LayrzLayoutNavigatorPanel(
-            tokens: tokens,
-            width: kLayrzLayoutRailWidth,
-            items: widget.items,
-            logo: widget.logo,
-            userName: widget.userName,
-            userAvatar: widget.userAvatar,
-            userMenuItems: widget.userMenuItems,
-            notifications: widget.notifications,
-            onNotificationTap: widget.onNotificationTap,
-            onClose: null,
-            getInitials: _getInitials,
+          Positioned.directional(
+            textDirection: Directionality.of(context),
+            start: kLayrzLayoutRailWidth,
+            end: 0,
+            top: 0,
+            bottom: 0,
+            child: bodyWidget,
           ),
-          Expanded(child: bodyWidget),
+          PositionedDirectional(
+            start: 0,
+            top: 0,
+            bottom: 0,
+            child: LayrzLayoutNavigatorPanel(
+              tokens: tokens,
+              width: kLayrzLayoutRailWidth,
+              items: widget.items,
+              logo: widget.logo,
+              userName: widget.userName,
+              userAvatar: widget.userAvatar,
+              userMenuItems: widget.userMenuItems,
+              notifications: widget.notifications,
+              onNotificationTap: widget.onNotificationTap,
+              onClose: null,
+              getInitials: _getInitials,
+            ),
+          ),
         ],
       ),
     );
