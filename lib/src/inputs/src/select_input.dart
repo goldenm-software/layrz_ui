@@ -271,6 +271,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   /// to hide the read-only lock icon and show the dropdown chevron instead.
   Widget _buildAnchor(BuildContext context, MenuController controller) {
     final tokens = context.tokens;
+    final isExpanded = controller.isOpen;
 
     // Resolve slots
     final prefixSlot = resolvePrefixSlot(
@@ -330,6 +331,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       label: widget.labelText,
       button: true,
       enabled: !widget.disabled,
+      expanded: isExpanded,
       onTap: widget.disabled ? null : controller.open,
       child: GestureDetector(
         onTap: widget.disabled ? null : controller.open,
@@ -362,6 +364,9 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
     if (isCompact) {
       // Mobile: build anchor that opens bottom sheet on tap
+      // Note: Mobile bottom sheet does not expose expanded state since it is not
+      // connected to a controller that can be queried. This is acceptable because
+      // the bottom sheet itself is its own modal navigation layer.
       final tokens = context.tokens;
 
       // Resolve slots
