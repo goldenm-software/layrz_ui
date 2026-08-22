@@ -15,28 +15,23 @@ import "scaffold_controller.dart";
 /// is shown: the list by default, and the detail after opening an item.
 ///
 /// The shell is container-driven via [LayoutBuilder] constraints, not viewport-driven.
-/// The consuming app passes items and owns the controller; the shell owns the layout.
+/// The consuming app passes items and owns the controller; the shell owns the layout
+/// and search filtering.
 class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The items to display in the list.
   final List<LayrzScaffoldItem<T>> items;
-
-  /// Callback to build a tile for each item.
-  final Widget Function(T) onBuild;
 
   /// Callback to build the detail content for an opened item.
   final Widget Function(T) onDetailsBuild;
 
   /// Controller for managing the opened item.
-  final LayrzScaffoldController<T> controller;
+  final LayrzScaffoldController controller;
 
   /// Optional footer widget for the list panel.
   final Widget? footer;
 
   /// Whether the search field is visible.
   final bool searchable;
-
-  /// Callback when the search query changes.
-  final ValueChanged<String>? onSearch;
 
   /// Optional title widget rendered above the search field in the list panel.
   final Widget? title;
@@ -47,22 +42,19 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
-  /// - [onBuild]: Callback to build a tile for each item. Required.
   /// - [onDetailsBuild]: Callback to build the detail content for an opened item. Required.
   /// - [controller]: Controller for managing the opened item. Required.
   /// - [footer]: Optional footer widget for the list panel. Defaults to null.
   /// - [searchable]: Whether the search field is visible. Defaults to true.
-  /// - [onSearch]: Callback when the search query changes, or null. Defaults to null.
   /// - [title]: Optional title widget rendered above the search field. Defaults to null.
+  /// - [itemExtent]: The height of each list item. Required.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
-    required this.onBuild,
     required this.onDetailsBuild,
     required this.controller,
     this.footer,
     this.searchable = true,
-    this.onSearch,
     this.title,
     required this.itemExtent,
   });
@@ -115,36 +107,31 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     );
   }
 
-  /// Check if the opened item is present in the current items.
+  /// Find the item with the opened key, or null if not found in the full list.
   ///
-  /// First tries value equality via [contains] (cheap, works when [T] implements [==]).
-  /// Falls back to tile equality only if value equality fails, for cases where the
-  /// consumer has replaced items with equal-but-distinct instances.
-  bool _isOpenedTileInList(BuildContext context, T? opened) {
-    if (opened == null) return false;
-    if (widget.items.contains(opened)) return true;
-    final openedTile = widget.onBuild(opened);
-    for (final item in widget.items) {
-      final itemTile = widget.onBuild(item.item);
-      if (itemTile == openedTile) return true;
+  /// This looks up the opened key in the unfiltered items list, so the detail pane
+  /// can stay open even when its item is filtered out of the search results.
+  LayrzScaffoldItem<T>? _findOpenedItem() {
+    final openedKey = widget.controller.openedKey;
+    if (openedKey == null) return null;
+    try {
+      return widget.items.firstWhere((item) => item.key == openedKey);
+    } catch (e) {
+      return null;
     }
-    return false;
   }
 
   Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
-    final opened = widget.controller.opened;
-    final isOpenedInList = _isOpenedTileInList(context, opened);
+    final openedItem = _findOpenedItem();
 
     return Row(
       children: [
         ListPanel<T>(
           items: widget.items,
-          onBuild: widget.onBuild,
-          opened: opened,
+          openedKey: widget.controller.openedKey,
           onTap: (item) {
-            widget.controller.open(item);
+            widget.controller.open(item.key);
           },
-          onSearch: widget.onSearch,
           searchable: widget.searchable,
           footer: widget.footer,
           title: widget.title,
@@ -156,8 +143,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         ),
         Expanded(
           child: DetailPane<T>(
-            opened: isOpenedInList ? opened : null,
-            contentBuilder: isOpenedInList ? widget.onDetailsBuild : null,
+            opened: openedItem?.item,
+            contentBuilder: openedItem != null ? widget.onDetailsBuild : null,
           ),
         ),
       ],
@@ -165,13 +152,12 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   }
 
   Widget _buildNarrowLayout(BuildContext context, LayrzTokens tokens) {
-    final opened = widget.controller.opened;
-    final isOpenedInList = _isOpenedTileInList(context, opened);
-    final showDetail = widget.controller.isOpen && isOpenedInList;
+    final openedItem = _findOpenedItem();
+    final showDetail = widget.controller.isOpen && openedItem != null;
 
     if (showDetail) {
       return DetailPane<T>(
-        opened: opened,
+        opened: openedItem.item,
         contentBuilder: widget.onDetailsBuild,
         onClose: () {
           widget.controller.close();
@@ -181,12 +167,10 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     } else {
       return ListPanel<T>(
         items: widget.items,
-        onBuild: widget.onBuild,
-        opened: opened,
+        openedKey: widget.controller.openedKey,
         onTap: (item) {
-          widget.controller.open(item);
+          widget.controller.open(item.key);
         },
-        onSearch: widget.onSearch,
         searchable: widget.searchable,
         footer: widget.footer,
         title: widget.title,

@@ -25,7 +25,7 @@ class InputsSection extends StatefulWidget {
 }
 
 class _InputsSectionState extends State<InputsSection> {
-  late LayrzScaffoldController<InputDemo> _controller;
+  late LayrzScaffoldController _controller;
 
   /// The canonical registry of all input component demos.
   /// Ordered by category, then by name within each category.
@@ -112,38 +112,16 @@ class _InputsSectionState extends State<InputsSection> {
     ),
   ];
 
-  /// Filtered list of demos based on the current search query.
-  /// Matches against both component name and category (case-insensitive substring).
-  late List<InputDemo> _filteredDemos = _allDemos;
-
   @override
   void initState() {
     super.initState();
-    _controller = LayrzScaffoldController<InputDemo>();
+    _controller = LayrzScaffoldController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  /// Filter the demos based on the search query.
-  void _updateSearch(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredDemos = _allDemos;
-      } else {
-        final lowercaseQuery = query.toLowerCase();
-        _filteredDemos = _allDemos
-            .where(
-              (demo) =>
-                  demo.name.toLowerCase().contains(lowercaseQuery) ||
-                  demo.category.toLowerCase().contains(lowercaseQuery),
-            )
-            .toList();
-      }
-    });
   }
 
   @override
@@ -153,6 +131,7 @@ class _InputsSectionState extends State<InputsSection> {
       itemExtent: 56.0,
       items: _allDemos.map((demo) {
         return LayrzScaffoldItem<InputDemo>(
+          key: ValueKey(demo.id),
           item: demo,
           tile: _buildTile(demo),
           searchableStrings: {demo.name, demo.category},
@@ -160,8 +139,6 @@ class _InputsSectionState extends State<InputsSection> {
       }).toList(),
       controller: _controller,
       searchable: true,
-      onSearch: _updateSearch,
-      onBuild: _buildTile,
       onDetailsBuild: _buildDetails,
     );
   }

@@ -248,22 +248,22 @@ class _LayrzTappableState extends State<LayrzTappable> {
   theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTappableIdle() => Padding(
-      padding: const EdgeInsets.all(16),
-      child: LayrzTappable(
+  padding: const EdgeInsets.all(16),
+  child: LayrzTappable(
+    borderRadius: BorderRadius.circular(8),
+    onTap: () {},
+    child: Container(
+      width: 200,
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8E8E8),
         borderRadius: BorderRadius.circular(8),
-        onTap: () {},
-        child: Container(
-          width: 200,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8E8E8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('Tap me'),
-        ),
       ),
-    );
+      child: const Text('Tap me'),
+    ),
+  ),
+);
 
 /// Preview of [LayrzTappable] in disabled state.
 @Preview(
@@ -271,23 +271,23 @@ Widget previewLayrzTappableIdle() => Padding(
   theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTappableDisabled() => Padding(
-      padding: const EdgeInsets.all(16),
-      child: LayrzTappable(
+  padding: const EdgeInsets.all(16),
+  child: LayrzTappable(
+    borderRadius: BorderRadius.circular(8),
+    disabled: true,
+    onTap: () {},
+    child: Container(
+      width: 200,
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8E8E8),
         borderRadius: BorderRadius.circular(8),
-        disabled: true,
-        onTap: () {},
-        child: Container(
-          width: 200,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8E8E8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('Disabled'),
-        ),
       ),
-    );
+      child: const Text('Disabled'),
+    ),
+  ),
+);
 
 /// Preview of [LayrzTappable] with custom colors.
 @Preview(
@@ -295,22 +295,22 @@ Widget previewLayrzTappableDisabled() => Padding(
   theme: layrzPreviewLightTheme,
 )
 Widget previewLayrzTappableCustom() => Padding(
-      padding: const EdgeInsets.all(16),
-      child: LayrzTappable(
+  padding: const EdgeInsets.all(16),
+  child: LayrzTappable(
+    borderRadius: BorderRadius.circular(8),
+    onTap: () {},
+    color: const Color(0xFFF0F0F0),
+    hoverColor: const Color(0xFFE0E0E0),
+    pressedColor: const Color(0xFFD0D0D0),
+    child: Container(
+      width: 200,
+      height: 50,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8E8E8),
         borderRadius: BorderRadius.circular(8),
-        onTap: () {},
-        color: const Color(0xFFF0F0F0),
-        hoverColor: const Color(0xFFE0E0E0),
-        pressedColor: const Color(0xFFD0D0D0),
-        child: Container(
-          width: 200,
-          height: 50,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8E8E8),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Text('Custom Colors'),
-        ),
       ),
-    );
+      child: const Text('Custom Colors'),
+    ),
+  ),
+);

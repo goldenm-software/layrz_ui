@@ -20,7 +20,7 @@ class TestInputsSection extends StatefulWidget {
 }
 
 class _TestInputsSectionState extends State<TestInputsSection> {
-  late LayrzScaffoldController<InputDemo> _controller;
+  late LayrzScaffoldController _controller;
 
   /// The canonical registry of all input component demos.
   static const List<InputDemo> _allDemos = [
@@ -91,12 +91,10 @@ class _TestInputsSectionState extends State<TestInputsSection> {
     ),
   ];
 
-  late List<InputDemo> _filteredDemos = _allDemos;
-
   @override
   void initState() {
     super.initState();
-    _controller = LayrzScaffoldController<InputDemo>();
+    _controller = LayrzScaffoldController();
   }
 
   @override
@@ -105,55 +103,47 @@ class _TestInputsSectionState extends State<TestInputsSection> {
     super.dispose();
   }
 
-  void _updateSearch(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredDemos = _allDemos;
-      } else {
-        final lowercaseQuery = query.toLowerCase();
-        _filteredDemos = _allDemos
-            .where(
-              (demo) =>
-                  demo.name.toLowerCase().contains(lowercaseQuery) ||
-                  demo.category.toLowerCase().contains(lowercaseQuery),
-            )
-            .toList();
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
-      items: _filteredDemos,
+      items: _allDemos
+          .map(
+            (demo) => LayrzScaffoldItem(
+              key: ValueKey(demo.id),
+              item: demo,
+              tile: _buildTile(demo),
+              searchableStrings: {demo.name, demo.category},
+            ),
+          )
+          .toList(),
       controller: _controller,
       searchable: true,
-      onSearch: _updateSearch,
-      onBuild: _buildTile,
-      onDetailsBuild: _buildDetails,
+      onDetailsBuild: (demo) => _buildDetails(context, demo),
+      itemExtent: 56.0,
     );
   }
 
-  LayrzScaffoldTile _buildTile(BuildContext context, InputDemo demo) {
+  Widget _buildTile(InputDemo demo) {
     final tokens = context.tokens;
 
-    return LayrzScaffoldValueTile(
-      title: RichText(
-        text: TextSpan(
-          text: demo.name,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Text(
+          demo.name,
           style: tokens.typography.body.copyWith(
             color: tokens.colors.fg1,
+            fontWeight: FontWeight.bold,
           ),
         ),
-      ),
-      subtitle: RichText(
-        text: TextSpan(
-          text: demo.category,
+        Text(
+          demo.category,
           style: tokens.typography.label.copyWith(
             color: tokens.colors.fg3,
           ),
         ),
-      ),
+      ],
     );
   }
 

@@ -41,9 +41,7 @@ void main() {
       for (final name in inputNames) {
         // Find the list row by matching RichText content within ListItem rows.
         final nameFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is RichText &&
-              widget.text.toPlainText().contains(name),
+          (widget) => widget is RichText && widget.text.toPlainText().contains(name),
         );
 
         // Assert the finder matched at least one row; fail loudly if not found.
@@ -109,9 +107,7 @@ void main() {
       for (final name in inputNames) {
         // Find the list row by matching RichText content within ListItem rows.
         final nameFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is RichText &&
-              widget.text.toPlainText().contains(name),
+          (widget) => widget is RichText && widget.text.toPlainText().contains(name),
         );
 
         // Assert the finder matched at least one row; fail loudly if not found.
