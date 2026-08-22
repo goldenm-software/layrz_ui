@@ -48,31 +48,34 @@ class _StepperDemoState extends State<_StepperDemo> {
             style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          LayrzStepper(
-            controller: _controller1,
-            steps: [
-              LayrzStep(
-                labelText: 'Personal Info',
-                body: _buildStepContent(
-                  'Enter your name and email',
-                  tokens,
+          SizedBox(
+            height: 500,
+            child: LayrzStepper(
+              controller: _controller1,
+              steps: [
+                LayrzStep(
+                  labelText: 'Personal Info',
+                  body: _buildStepContent(
+                    'Enter your name and email',
+                    tokens,
+                  ),
                 ),
-              ),
-              LayrzStep(
-                labelText: 'Address',
-                body: _buildStepContent(
-                  'Provide your contact address',
-                  tokens,
+                LayrzStep(
+                  labelText: 'Address',
+                  body: _buildStepContent(
+                    'Provide your contact address',
+                    tokens,
+                  ),
                 ),
-              ),
-              LayrzStep(
-                labelText: 'Confirmation',
-                body: _buildStepContent(
-                  'Review and confirm your information',
-                  tokens,
+                LayrzStep(
+                  labelText: 'Confirmation',
+                  body: _buildStepContent(
+                    'Review and confirm your information',
+                    tokens,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           // Linear stepper with custom labels
@@ -83,33 +86,36 @@ class _StepperDemoState extends State<_StepperDemo> {
             style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          LayrzStepper(
-            controller: _controller2,
-            backButtonLabel: 'Previous',
-            nextButtonLabel: 'Continue',
-            steps: [
-              LayrzStep(
-                labelText: 'Agreement',
-                body: _buildStepContent(
-                  'Read and accept terms of service',
-                  tokens,
+          SizedBox(
+            height: 500,
+            child: LayrzStepper(
+              controller: _controller2,
+              backButtonLabel: 'Previous',
+              nextButtonLabel: 'Continue',
+              steps: [
+                LayrzStep(
+                  labelText: 'Agreement',
+                  body: _buildStepContent(
+                    'Read and accept terms of service',
+                    tokens,
+                  ),
                 ),
-              ),
-              LayrzStep(
-                labelText: 'Setup',
-                body: _buildStepContent(
-                  'Configure your account settings',
-                  tokens,
+                LayrzStep(
+                  labelText: 'Setup',
+                  body: _buildStepContent(
+                    'Configure your account settings',
+                    tokens,
+                  ),
                 ),
-              ),
-              LayrzStep(
-                labelText: 'Done',
-                body: _buildStepContent(
-                  'Your account is ready!',
-                  tokens,
+                LayrzStep(
+                  labelText: 'Done',
+                  body: _buildStepContent(
+                    'Your account is ready!',
+                    tokens,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
