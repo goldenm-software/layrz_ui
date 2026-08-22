@@ -3075,3 +3075,373 @@ If consuming apps report a pattern of needing `maxLines: 1` in many call sites, 
 
 **Why this is no longer an exception**: A slot with `maxLines: N` + explicit `overflow` is no longer a special case — it is now an instance of the Rule's "Deliberate multi-line caps" bullet, which already covers the pattern. The change makes error text consistent with the system's architecture.
 
+---
+
+## D52: Picker Surfaces Are Adaptive — Anchored Overlay on Desktop, Bottom Sheet Below `md`
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Interaction Design
+
+### Context
+
+M3 introduces three picker-style inputs — `LayrzComboBoxInput`, `LayrzSelectInput`, and `LayrzDurationInput` — all of which need to present a list or surface for selection. The question of "desktop popup vs. mobile sheet" affects the implementation and the public API of all three components.
+
+### Decision
+
+**Picker surfaces are adaptive:**
+- **Desktop (md/lg/xl, ≥ 960px)**: Anchored overlay panel that flips up or down based on available vertical space
+- **Mobile (sm/xs, < 960px)**: `LayrzBottomSheet` modal or persistent
+
+The boundary is the `isCompact` breakpoint (< 960px). No dialog primitive is used in M3; desktop uses the anchored overlay, mobile uses the sheet.
+
+### Rationale
+
+**No dialog in M3 scope**. DESIGN-96 `LayrzDialog` and DESIGN-99 `LayrzAdaptiveModal` remain out of scope. Dialogs would require pulling two more rows into M3. The anchored overlay is lighter-weight and appropriate for inline form picking.
+
+**Container-driven flip logic**. The overlay's position is computed from available vertical space, never declared by the caller. A caller cannot know at build time whether a field sits near the bottom of a scrolled viewport. layrz_theme already overrode declared positions that did not fit, making the parameter advisory.
+
+**Width matching on desktop**. The anchored overlay matches its anchor (the field) width — like a classic web combobox. This distinguishes it from `LayrzDropdownMenu`, which clamps to 160–320px.
+
+### Consequences
+
+- All three picker-component APIs are simplified: no `position` or `surface` parameter
+- `LayrzBottomSheet` becomes a required M3 prerequisite (DESIGN-97)
+- DESIGN-96 `LayrzDialog` and DESIGN-99 `LayrzAdaptiveModal` deferred to M4 or later
+
+### Related Decisions
+
+- **D53** (`LayrzSelectItem<T>`): Shared item type across pickers
+- **D59** (ComboBox free-form): Enabled by adaptive surface
+
+---
+
+## D53: `LayrzSelectItem<T>` — Minimal Data Container
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Component Reuse
+
+### Context
+
+Three M3 components need to represent list items: `LayrzRadioInput`, `LayrzComboBoxInput`, and `LayrzSelectInput`. A shared item type would unify the three and simplify documentation.
+
+### Decision
+
+**Introduce `LayrzSelectItem<T>` as a shared container:**
+
+```dart
+class LayrzSelectItem<T> {
+  final String labelText;
+  final T? value;
+  final Widget? child;
+  final Set<String> searchableAttributes;
+}
+```
+
+Consumed by `LayrzRadioInput`, `LayrzComboBoxInput`, and `LayrzSelectInput`.
+
+### Rationale
+
+**Responsibility split: rendering vs. identity**. The design system owns search and the field's display text. The consumer owns row rendering via `child`. If `child` is null, the field renders `labelText` as a fallback.
+
+**`labelText` is always required** because search and the collapsed field display both depend on it, even when `child` is supplied.
+
+**Dropped from layrz_theme:** `icon`, `leading`, `content`, `onTap`, `isRemoved`, and a proposed `Color? color` field. Follows D27/D28 trimming pattern.
+
+**`searchableAttributes`** defaults to `{labelText}`, allowing custom search hints (e.g., a contact item can include a phone number in search even if the row only shows the name).
+
+### Consequences
+
+- New shared type `LayrzSelectItem<T>` exported from `lib/layrz_ui.dart`
+- Three M3 components consume it consistently
+- No per-component item duplication
+
+---
+
+## D54: Checkbox and Switch Are Separate Components
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Code Organization
+
+### Context
+
+`ThemedCheckboxInput` in layrz_theme supported four styles, cramming two semantically different inputs (checkbox vs. toggle) and three style variants into one component.
+
+### Decision
+
+**Implement two separate components**: `LayrzCheckboxInput` and `LayrzSwitchInput`.
+
+**Dropped styles:**
+- `asCheckbox2` (design-refresh duplicate)
+- `asField` (callers use `LayrzSelectInput<bool>` instead)
+
+**Scope:** Boolean only; tristate is not supported. Labels are trailing and tappable.
+
+### Rationale
+
+**One concern per file**. A checkbox and a switch share no paint code. One file holding both violates single-responsibility for no practical gain. Splitting makes each component's intent clear.
+
+**`asField` drops cleanly**. It was `LayrzSelectInput<bool>` with hardcoded Yes/No labels. Callers can compose their own once `LayrzSelectInput` lands.
+
+**Interaction state compliance (D15)**. Both vary only colour and opacity on hover/press/focus; size and padding never change. Tests explicitly assert this.
+
+**Accessibility (WCAG 1.4.1)**. State is not colour-only:
+- Checkbox: checkmark glyph when checked
+- Switch: thumb position (left/right)
+
+### Consequences
+
+- `LayrzCheckboxInput` and `LayrzSwitchInput` are separate exports
+- No tristate checkbox
+- No style variants
+
+---
+
+## D55: Multiline Text Is a Sibling Component Over Shared Chrome
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Component Architecture
+
+### Context
+
+Supporting multiline in `LayrzTextInput` would require either widening its public API (breaking DESIGN-33's review scope) or creating a separate component. `LayrzTextInput` ships in 0.0.12 awaiting team review.
+
+### Decision
+
+**`LayrzTextAreaInput` is a sibling widget over shared input chrome, not a mode of `LayrzTextInput`.**
+
+**`LayrzTextInput`'s public API remains byte-identical to 0.0.12.**
+
+**Shared plumbing extracted into library-private modules:**
+- `LayrzEditableField` (not exported): encapsulates text selection controls and magnifier config
+- `LayrzInputChrome.variableHeight`: aligns the trailing cluster to the **top** of tall fields instead of vertically centring
+
+### Rationale
+
+**Preservation of review scope**. DESIGN-33 is already under review; widening its public surface would change the component being reviewed. Deferring multiline to DESIGN-34 keeps reviews coherent.
+
+**Code reuse without duplication**. Duplicating ~600 lines of text-selection wiring introduces drift risk. Extracting shared plumbing allows both to use it without exposing an intermediate API.
+
+### Consequences
+
+- New `LayrzTextAreaInput` component (DESIGN-34)
+- Defaults: `minLines: 3`, `maxLines: 10`, then scrolls
+- **No change to `LayrzTextInput`'s public API**
+- Two new private types not exported
+
+---
+
+## D56: `LayrzSearchInputMode` — Inline and Overlay Forms
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Responsiveness
+
+### Context
+
+`ThemedSearchInput` supported two presentations via a boolean flag, forcing every consumer to implement responsive logic themselves with `LayoutBuilder`.
+
+### Decision
+
+**Introduce `LayrzSearchInputMode` enum:**
+
+```dart
+enum LayrzSearchInputMode { field, icon, auto }
+```
+
+- `field`: inline `LayrzTextInput` with magnifier prefix, × clear suffix
+- `icon`: magnifier button that opens an anchored overlay
+- `auto`: selects between them based on available space (default)
+
+### Rationale
+
+**Enum over boolean**. Aligns with D27/D28 trimming of style parameters. The `auto` member lets the component decide for the caller.
+
+**Computed from constraints**. Overlay direction is computed from available space, not declared. Like D52, overlay position is flexible.
+
+**Position parameter dropped**. layrz_theme's `position { left, right }` is not ported because direction is computed, and layrz_theme already overrode declared positions that did not fit.
+
+### Consequences
+
+- New `LayrzSearchInputMode` enum exported
+- No `asField` boolean or `position` parameter
+- Icon mode available for dense toolbars
+
+---
+
+## D57: `LayrzStepper` Owns the Whole Flow
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Scope
+
+### Context
+
+This row's spec raised a critical question: does the widget render only the step header or own the whole flow (header + body + actions)?
+
+### Decision
+
+**`LayrzStepper` owns the whole flow** — header, current step body, and back/next actions.
+
+**`LayrzStep` is a data class carrying `label`, `body`, and `state`.**
+
+**Plus a controller**: `LayrzStepperController` allows programmatic navigation. Follows established conventions: never swapped, and disposed only if created by the widget.
+
+### Rationale
+
+**Header-only was the recommendation and was overruled deliberately.** A full stepper is heavier but bakes in navigation layout. Consumers needing custom actions can request escape hatches later.
+
+**Scope trims (D27/D28):**
+- Horizontal only
+- Step states: `upcoming / active / completed / error` (not Material's full set)
+- Below `md` breakpoint, header collapses to *"Step X of Y"* instead of scrolling
+
+**Accessibility (WCAG 1.4.1)**. Completed steps carry `MdiIcons.check`, errors carry `MdiIcons.alertCircle`. State is never colour-only.
+
+### Consequences
+
+- `LayrzStepper` ships with full flow ownership
+- `LayrzStep` is a simple data class
+- `LayrzStepperController` required for navigation
+- Responsive header collapse below `md`
+
+---
+
+## D58: Responsive Option Grids Use `LayrzCol` Integer Spans
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Grid System
+
+### Context
+
+This row's spec defined responsive layout using a `Sizes` enum. However, **decision D9 deleted the `Sizes` enum**, making the spec unbuildable.
+
+### Decision
+
+**Radio/checkbox grid layouts use per-breakpoint `int` spans (1–12), mirroring `LayrzCol`'s API:**
+
+```dart
+LayrzRadioInput<T>(
+  xs: 12,  sm: 6,  md: 4,  lg: 3,  xl: 2,
+  items: [...],
+  onChanged: (v) => …,
+)
+```
+
+Layout uses the real `LayrzRow` + `LayrzCol`, not a reimplementation.
+
+### Rationale
+
+**Vocabulary consistency**. `LayrzCol` already implements cascading fallback. Reusing its parameter names means one concept for developers, not two.
+
+**Avoid boilerplate**. A single `columns: int` parameter forces callers to hand-roll responsiveness. Per-breakpoint spans let the component handle it.
+
+**No new enum**. Introducing a `Columns` enum would duplicate cascade logic and risk divergence.
+
+### Consequences
+
+- `LayrzRadioInput` takes `xs: 12` (non-nullable), `sm/md/lg/xl` (nullable, cascade)
+- Grid layout uses actual `LayrzRow` and `LayrzCol` children
+- Follow-through on D9 (deleting Sizes)
+
+---
+
+## D59: Combobox Free-Form Entry Is Opt-Out
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Feature Scope
+
+### Context
+
+`LayrzComboBoxInput` is editable (unlike `LayrzSelectInput`, which is read-only). Should typed values be valid by default, or should the field lock to the options list?
+
+### Decision
+
+**Free-form entry is the default. Set `allowFreeForm: false` to lock to options.**
+
+When `allowFreeForm: true`: Any typed text is valid, submitted on Enter or blur. Overlay is a suggestion aid.
+
+When `allowFreeForm: false`: Field reverts to the last matching option on blur.
+
+### Rationale
+
+**Free-form is the reason combobox exists separately from select.** If locked-to-options was the design, `LayrzSelectInput` already handles that. Free-text is what combobox adds, so it is the default.
+
+**Opt-out rather than opt-in**. Making free-form require an explicit flag would force the typical case to be opt-in, which is backwards.
+
+### Consequences
+
+- `LayrzComboBoxInput` ships with `allowFreeForm: true` by default
+- Invalid typed values (when `allowFreeForm: false`) revert on blur without error
+
+---
+
+## D60: Duration Units Are Configurable and Capped Per Unit
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Data Modeling
+
+### Context
+
+`LayrzDurationInput` must convert between user-visible UI and Dart's fixed-length `Duration` type. Which units should be visible, how should they map to Duration, and what are the bounds?
+
+### Decision
+
+**Units are configurable:**
+- `visibleUnits: {day, hour, minute, second}` defaults to all four
+- Each unit is **capped to its natural range**: hour 0–23, minute 0–59, second 0–59, day unbounded
+
+**Result: exactly one field representation per `Duration`.**
+
+### Rationale
+
+**Capped ranges give a unique representation**. Uncapped (e.g., allow minute: 90) makes the mapping ambiguous: two different field states represent the same Duration. Capping ensures exactly one representation.
+
+**No year/month/week support**. These are not fixed-length and cannot map onto `Duration`. Callers who want any number of minutes use `LayrzNumberInput` and construct `Duration` themselves.
+
+### Consequences
+
+- New `LayrzDurationInput` component (DESIGN-44)
+- New `LayrzDurationUnit { day, hour, minute, second }` enum
+- Per-unit field capping
+- Surface: anchored overlay on desktop, `LayrzBottomSheet` below `md` (D52)
+
+---
+
+## D61: M3 Scope Trim — MultiSelect and DualList Move to M4
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Release Planning / Scope Management
+
+### Context
+
+The original M3 scope included DESIGN-41 `LayrzMultiSelectInput` and DESIGN-43 `LayrzDualListInput`. Both would consume M3 picker-surface decisions. However, M3 is already at 9 rows + 1 prerequisite, and adding two more risks the release.
+
+### Decision
+
+**Move DESIGN-41 and DESIGN-43 to M4 (Pickers).**
+
+M3 ships with: 8 input components, 1 stepper, and supporting work (bottom sheet, anchored panel, select item).
+
+### Rationale
+
+**M3 scope is at the limit**. 9 components + 1 prerequisite is already substantial. Adding 2 more would stretch testing and review.
+
+**No architectural blocker**. Both would build on top of existing M3 decisions. Deferring them does not require rework.
+
+**Better released than rushed**. M3 ships solid and ready for review; M4 absorbs the pickers without tight deadline.
+
+### Consequences
+
+- DESIGN-41 `LayrzMultiSelectInput` → M4
+- DESIGN-43 `LayrzDualListInput` → M4
+- M3 scope: 9 input/surface rows + 1 prerequisite
+- 0.0.13 does not include multi-selection inputs
+
