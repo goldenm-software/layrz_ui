@@ -1,6 +1,8 @@
 export 'src/checkbox_input.dart';
 export 'src/combobox_input.dart';
 export 'src/decimal_separator.dart';
+export 'src/duration_input.dart';
+export 'src/duration_unit.dart';
 export 'src/number_input.dart';
 export 'src/radio_input.dart';
 export 'src/search_input.dart';
