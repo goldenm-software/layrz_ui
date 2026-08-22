@@ -39,6 +39,11 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The item extent for the list panel.
   final double itemExtent;
 
+  /// Optional widget to display when the list is empty.
+  ///
+  /// If null, a localized default message is displayed.
+  final Widget? emptyState;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -48,6 +53,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// - [searchable]: Whether the search field is visible. Defaults to true.
   /// - [title]: Optional title widget rendered above the search field. Defaults to null.
   /// - [itemExtent]: The height of each list item. Required.
+  /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -57,6 +63,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     this.searchable = true,
     this.title,
     required this.itemExtent,
+    this.emptyState,
   });
 
   @override
@@ -136,6 +143,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           footer: widget.footer,
           title: widget.title,
           itemExtent: widget.itemExtent,
+          emptyState: widget.emptyState,
         ),
         Container(
           width: 1,
@@ -175,6 +183,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         footer: widget.footer,
         title: widget.title,
         itemExtent: widget.itemExtent,
+        emptyState: widget.emptyState,
       );
     }
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -14,8 +15,11 @@ void main() {
       addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
-        const LayrzApp(
-          home: TestInputsSection(),
+        LayrzApp(
+          home: Container(
+            constraints: const BoxConstraints.expand(),
+            child: const TestInputsSection(),
+          ),
         ),
       );
 
@@ -80,8 +84,11 @@ void main() {
       addTearDown(tester.view.reset);
 
       await tester.pumpWidget(
-        const LayrzApp(
-          home: TestInputsSection(),
+        LayrzApp(
+          home: Container(
+            constraints: const BoxConstraints.expand(),
+            child: const TestInputsSection(),
+          ),
         ),
       );
 
@@ -135,6 +142,19 @@ void main() {
           findsWidgets,
           reason: 'Detail pane for $name in narrow layout should render content',
         );
+
+        // In narrow layout, navigate back to the list to tap the next item (except on the last iteration).
+        // Look for the back icon (arrowLeft) at the top of the detail pane.
+        if (name != inputNames.last) {
+          final backIconFinder = find.byIcon(MdiIcons.arrowLeft);
+          expect(
+            backIconFinder,
+            findsWidgets,
+            reason: 'Back icon should be present in narrow layout detail pane',
+          );
+          await tester.tap(backIconFinder.first);
+          await tester.pumpAndSettle();
+        }
       }
     });
   });

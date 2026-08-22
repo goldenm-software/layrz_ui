@@ -15,6 +15,7 @@ import 'namespaces/map.dart';
 import 'namespaces/notifications.dart';
 import 'namespaces/password.dart';
 import 'namespaces/required_fields.dart';
+import 'namespaces/scaffold.dart';
 import 'namespaces/select.dart';
 import 'namespaces/selection.dart';
 import 'namespaces/sheets.dart';
@@ -107,6 +108,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nNotificationsMixin,
         LayrzUiL10nPasswordMixin,
         LayrzUiL10nRequiredFieldsMixin,
+        LayrzUiL10nScaffoldMixin,
         LayrzUiL10nSelectMixin,
         LayrzUiL10nSelectionMixin,
         LayrzUiL10nSheetsMixin,

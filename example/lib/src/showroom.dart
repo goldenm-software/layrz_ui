@@ -11,7 +11,6 @@ import 'sections/colors_section.dart';
 import 'sections/elevation_section.dart';
 import 'sections/grid_section.dart';
 import 'sections/images_section.dart';
-import 'sections/inputs_section.dart';
 import 'sections/menus_section.dart';
 import 'sections/motion_section.dart';
 import 'sections/radius_section.dart';
@@ -50,7 +49,8 @@ class Showroom extends StatelessWidget {
     MenusSection(),
     ChipsSection(),
     TextSection(),
-    InputsSection(),
+    // InputsSection() is omitted — it is a fill-the-box list-detail page requiring bounded height,
+    // and is reached via its own /inputs route instead of scrolling here.
     ColorsSection(),
     SpacingSection(),
     RadiusSection(),

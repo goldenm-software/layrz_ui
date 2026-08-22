@@ -102,6 +102,9 @@ void main() {
         // Notifications (1 key)
         expect(localizations.notificationsEmpty, 'No notifications');
 
+        // Scaffold (1 key)
+        expect(localizations.scaffoldEmpty, 'No items');
+
         // Code Editor (2 keys — out of scope but reserved)
         expect(localizations.editorDocumentation, 'Documentation');
         expect(localizations.editorLintError, 'Lint error');

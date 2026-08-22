@@ -33,6 +33,11 @@ class ListPanel<T> extends StatefulWidget {
   /// Item extent for the list panel.
   final double itemExtent;
 
+  /// Optional widget to display when the list is empty.
+  ///
+  /// If null, a localized default message is displayed.
+  final Widget? emptyState;
+
   /// Creates a new [ListPanel].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -42,6 +47,7 @@ class ListPanel<T> extends StatefulWidget {
   /// - [footer]: Optional footer widget. Defaults to null.
   /// - [title]: Optional title widget rendered above the search field. Defaults to null.
   /// - [itemExtent]: The item extent for the list panel. Required.
+  /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
   const ListPanel({
     super.key,
     required this.items,
@@ -51,6 +57,7 @@ class ListPanel<T> extends StatefulWidget {
     this.footer,
     this.title,
     required this.itemExtent,
+    this.emptyState,
   });
 
   @override
@@ -150,7 +157,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     final isSelected = item.key == widget.openedKey;
 
     return Container(
-      padding: EdgeInsets.only(bottom: tokens.spacing.sp1),
+      margin: EdgeInsets.only(bottom: tokens.spacing.sp1),
       // Selected background is sf3; unselected is transparent (no color property)
       color: isSelected ? tokens.colors.sf3 : null,
       child: Row(
@@ -159,15 +166,19 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
           SizedBox(
             width: kLayrzLayoutActiveIndicatorReservedWidth,
             child: isSelected
-                ? Container(
-                    width: kLayrzLayoutActiveIndicatorWidth,
-                    color: tokens.colors.fg1,
+                ? Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Container(
+                      width: kLayrzLayoutActiveIndicatorWidth,
+                      color: tokens.colors.fg1,
+                    ),
                   )
                 : null,
           ),
           // The tappable tile
           Expanded(
             child: LayrzTappable(
+              disabled: isSelected,
               onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
               borderRadius: BorderRadius.zero,
               child: item.tile,
@@ -179,13 +190,17 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
   }
 
   Widget _buildEmptyState(LayrzTokens tokens) {
+    if (widget.emptyState != null) {
+      return widget.emptyState!;
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
         child: Text(
-          "No items",
+          context.l10n.scaffoldEmpty,
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: tokens.colors.fg3),
+          style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
         ),
       ),
     );
