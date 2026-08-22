@@ -283,57 +283,49 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          Navigator.of(context).pop(result);
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: (node, event) {
+        // Dismiss on Escape (modal mode only)
+        if (!widget.isPersistent && event.logicalKey == LogicalKeyboardKey.escape) {
+          Navigator.of(context).pop();
+          return KeyEventResult.handled;
         }
+        return KeyEventResult.ignored;
       },
-      child: Focus(
-        focusNode: _focusNode,
-        onKeyEvent: (node, event) {
-          // Dismiss on Escape (modal mode only)
-          if (!widget.isPersistent && event.logicalKey == LogicalKeyboardKey.escape) {
-            Navigator.of(context).pop();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: tokens.colors.sf1,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(tokens.radius.r4),
-              topRight: Radius.circular(tokens.radius.r4),
-            ),
-            boxShadow: tokens.shadow.elevation3,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tokens.colors.sf1,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(tokens.radius.r4),
+            topRight: Radius.circular(tokens.radius.r4),
           ),
-          child: DraggableScrollableSheet(
-            snap: true,
-            snapSizes: widget.snapSizes,
-            initialChildSize: widget.initialSize,
-            minChildSize: widget.minSize,
-            maxChildSize: widget.maxSize,
-            builder: (context, scrollController) {
-              return Column(
-                children: [
-                  // Drag handle
-                  if (widget.showDragHandle)
-                    _DragHandle(
-                      draggable: true,
-                    ),
-                  // Content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      child: widget.builder(context),
-                    ),
+          boxShadow: tokens.shadow.elevation3,
+        ),
+        child: DraggableScrollableSheet(
+          snap: true,
+          snapSizes: widget.snapSizes,
+          initialChildSize: widget.initialSize,
+          minChildSize: widget.minSize,
+          maxChildSize: widget.maxSize,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                // Drag handle
+                if (widget.showDragHandle)
+                  _DragHandle(
+                    draggable: true,
                   ),
-                ],
-              );
-            },
-          ),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: widget.builder(context),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
