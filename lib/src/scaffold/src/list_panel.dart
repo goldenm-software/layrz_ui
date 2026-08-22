@@ -161,6 +161,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
       // Selected background is sf3; unselected is transparent (no color property)
       color: isSelected ? tokens.colors.sf3 : null,
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Indicator bar — reserved space always (same width whether selected or not)
           SizedBox(
@@ -168,9 +169,10 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
             child: isSelected
                 ? Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: Container(
+                    child: SizedBox(
                       width: kLayrzLayoutActiveIndicatorWidth,
-                      color: tokens.colors.fg1,
+                      height: double.infinity,
+                      child: ColoredBox(color: tokens.colors.fg1),
                     ),
                   )
                 : null,
