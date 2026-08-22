@@ -1,0 +1,187 @@
+import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+
+import 'input_demo.dart';
+import 'demos/text_input_demo.dart';
+import 'demos/textarea_input_demo.dart';
+import 'demos/number_input_demo.dart';
+import 'demos/checkbox_input_demo.dart';
+import 'demos/switch_input_demo.dart';
+import 'demos/radio_input_demo.dart';
+import 'demos/search_input_demo.dart';
+import 'demos/combobox_input_demo.dart';
+import 'demos/stepper_demo.dart';
+
+/// A list-detail showcase of all input components in the layrz_ui design system.
+///
+/// The left pane displays a searchable list of all input components,
+/// ordered by category. The right pane shows all variants of the selected component.
+/// On narrow screens, panes toggle via a back affordance.
+class InputsSection extends StatefulWidget {
+  const InputsSection({super.key});
+
+  @override
+  State<InputsSection> createState() => _InputsSectionState();
+}
+
+class _InputsSectionState extends State<InputsSection> {
+  late LayrzScaffoldController<InputDemo> _controller;
+
+  /// The canonical registry of all input component demos.
+  /// Ordered by category, then by name within each category.
+  static const List<InputDemo> _allDemos = [
+    // Text category
+    InputDemo(
+      id: 'text-input',
+      name: 'Text Input',
+      category: 'Text',
+      detailsBuilder: buildTextInputDemo,
+    ),
+    InputDemo(
+      id: 'textarea-input',
+      name: 'Text Area Input',
+      category: 'Text',
+      detailsBuilder: buildTextAreaInputDemo,
+    ),
+
+    // Numeric category
+    InputDemo(
+      id: 'number-input',
+      name: 'Number Input',
+      category: 'Numeric',
+      detailsBuilder: buildNumberInputDemo,
+    ),
+
+    // Boolean category
+    InputDemo(
+      id: 'checkbox-input',
+      name: 'Checkbox Input',
+      category: 'Boolean',
+      detailsBuilder: buildCheckboxInputDemo,
+    ),
+    InputDemo(
+      id: 'switch-input',
+      name: 'Switch Input',
+      category: 'Boolean',
+      detailsBuilder: buildSwitchInputDemo,
+    ),
+
+    // Choice category
+    InputDemo(
+      id: 'radio-input',
+      name: 'Radio Input',
+      category: 'Choice',
+      detailsBuilder: buildRadioInputDemo,
+    ),
+    InputDemo(
+      id: 'combobox-input',
+      name: 'ComboBox Input',
+      category: 'Choice',
+      detailsBuilder: buildComboBoxInputDemo,
+    ),
+
+    // TODO(DESIGN-40/DESIGN-44): SelectInput and DurationInput will be added here
+    // once they land on development:
+    // InputDemo(
+    //   id: 'select-input',
+    //   name: 'Select Input',
+    //   category: 'Choice',
+    //   detailsBuilder: buildSelectInputDemo,
+    // ),
+    // InputDemo(
+    //   id: 'duration-input',
+    //   name: 'Duration Input',
+    //   category: 'Numeric',
+    //   detailsBuilder: buildDurationInputDemo,
+    // ),
+
+    // Search category
+    InputDemo(
+      id: 'search-input',
+      name: 'Search Input',
+      category: 'Search',
+      detailsBuilder: buildSearchInputDemo,
+    ),
+
+    // Flow category
+    InputDemo(
+      id: 'stepper',
+      name: 'Stepper',
+      category: 'Flow',
+      detailsBuilder: buildStepperDemo,
+    ),
+  ];
+
+  /// Filtered list of demos based on the current search query.
+  /// Matches against both component name and category (case-insensitive substring).
+  late List<InputDemo> _filteredDemos = _allDemos;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = LayrzScaffoldController<InputDemo>();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Filter the demos based on the search query.
+  void _updateSearch(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredDemos = _allDemos;
+      } else {
+        final lowercaseQuery = query.toLowerCase();
+        _filteredDemos = _allDemos
+            .where(
+              (demo) =>
+                  demo.name.toLowerCase().contains(lowercaseQuery) ||
+                  demo.category.toLowerCase().contains(lowercaseQuery),
+            )
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayrzScaffoldShell<InputDemo>(
+      items: _filteredDemos,
+      controller: _controller,
+      searchable: true,
+      onSearch: _updateSearch,
+      onBuild: _buildTile,
+      onDetailsBuild: _buildDetails,
+    );
+  }
+
+  /// Builds a tile for a single input component in the list.
+  /// Title is the component name, subtitle is the category.
+  LayrzScaffoldTile _buildTile(BuildContext context, InputDemo demo) {
+    final tokens = context.tokens;
+
+    return LayrzScaffoldValueTile(
+      titleRichText: TextSpan(
+        text: demo.name,
+        style: tokens.typography.body.copyWith(
+          color: tokens.colors.fg1,
+        ),
+      ),
+      subtitleRichText: TextSpan(
+        text: demo.category,
+        style: tokens.typography.label.copyWith(
+          color: tokens.colors.fg3,
+        ),
+      ),
+    );
+  }
+
+  /// Builds the detail pane content for a selected input component.
+  /// Renders all meaningful variants of that component.
+  Widget _buildDetails(BuildContext context, InputDemo demo) {
+    return demo.detailsBuilder(context);
+  }
+}
