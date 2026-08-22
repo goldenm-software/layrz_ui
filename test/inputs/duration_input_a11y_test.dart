@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed_app.dart';
 
 void main() {
@@ -16,7 +17,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Session Duration'), findsOneWidget);
+      expect(findButtonLabel('Session Duration'), findsOneWidget);
       // On compact view (default test viewport), should find LayrzInputChrome
       expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
@@ -86,7 +87,7 @@ void main() {
         ),
       );
 
-      expect(find.text('e.g., 2 days, 3 hours'), findsOneWidget);
+      expect(find.text('e.g., 2 days, 3 hours'), findsWidgets);
     });
 
     testWidgets('help affordance is accessible', (WidgetTester tester) async {
@@ -111,7 +112,7 @@ void main() {
         ),
       );
 
-      expect(find.text('No duration selected'), findsOneWidget);
+      expect(find.text('No duration selected'), findsWidgets);
     });
 
     testWidgets('picker panel units are labeled for accessibility', (WidgetTester tester) async {

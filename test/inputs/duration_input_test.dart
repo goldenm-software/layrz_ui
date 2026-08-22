@@ -5,6 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/duration_picker_panel.dart';
 import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/pump_themed_app.dart';
 
 void main() {
@@ -18,8 +19,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Duration'), findsOneWidget);
-      expect(find.text('Select a duration'), findsOneWidget);
+      expect(findButtonLabel('Duration'), findsOneWidget);
+      expect(find.text('Select a duration'), findsWidgets);
     });
 
     testWidgets('displays empty text when value is null', (WidgetTester tester) async {

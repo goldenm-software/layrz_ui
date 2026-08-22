@@ -249,6 +249,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       ),
       initialSize: 0.5,
       maxSize: 0.9,
+      snapSizes: const [0.5, 0.9],
     );
 
     if (result != null && mounted) {
@@ -328,8 +329,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       final tokens = context.tokens;
 
       // Display summary text or placeholder
-      final displayText =
-          _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
+      final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
 
       // Build the content display widget
       final contentChild = Padding(

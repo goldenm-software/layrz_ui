@@ -94,6 +94,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       fields.add(
         Flexible(
           child: LayrzNumberInput(
+            hintText: '',
             value: _day.toDouble(),
             onChanged: (v) {
               setState(() => _day = v?.toInt() ?? 0);
@@ -119,6 +120,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       fields.add(
         Flexible(
           child: LayrzNumberInput(
+            hintText: l10n.durationFieldHour,
             value: _hour.toDouble(),
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
@@ -146,6 +148,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       fields.add(
         Flexible(
           child: LayrzNumberInput(
+            hintText: l10n.durationFieldMinute,
             value: _minute.toDouble(),
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
@@ -173,6 +176,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       fields.add(
         Flexible(
           child: LayrzNumberInput(
+            hintText: l10n.durationFieldSecond,
             value: _second.toDouble(),
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
