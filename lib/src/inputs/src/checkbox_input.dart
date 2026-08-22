@@ -229,7 +229,7 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
             color: borderColor,
             width: tokens.border.base,
           ),
-          borderRadius: tokens.radius.br2,
+          borderRadius: tokens.radius.br1,
         ),
         child: widget.value
             ? Center(
