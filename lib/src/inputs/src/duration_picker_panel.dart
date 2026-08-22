@@ -94,7 +94,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       fields.add(
         Flexible(
           child: LayrzNumberInput(
-            hintText: '',
+            hintText: l10n.durationFieldDay,
             value: _day.toDouble(),
             onChanged: (v) {
               setState(() => _day = v?.toInt() ?? 0);
