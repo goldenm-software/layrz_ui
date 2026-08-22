@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
@@ -7,6 +8,10 @@ import 'package:layrz_ui/src/inputs/src/input_chrome.dart';
 
 import '../helpers/pump_themed_app.dart';
 import '../helpers/find_button_label.dart';
+
+class _TestState {
+  String? selectedValue;
+}
 
 void main() {
   group('LayrzSelectInput Accessibility', () {
@@ -53,9 +58,8 @@ void main() {
         ),
       );
 
-      // All errors should be visible
-      expect(find.text('This field is required'), findsOneWidget);
-      expect(find.text('Value must be valid'), findsOneWidget);
+      // All errors should be visible as a joined string
+      expect(find.text('This field is required, Value must be valid'), findsOneWidget);
     });
 
     testWidgets('help text is accessible', (tester) async {
@@ -128,16 +132,28 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      final state = _TestState();
+
       await pumpThemedApp(
         tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzSelectInput<String>(
+              items: items,
+              value: state.selectedValue,
+              labelText: 'Choose one',
+              onChanged: (item) {
+                setState(() {
+                  state.selectedValue = item?.value;
+                });
+              },
+            );
+          },
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
+      // Tap the field to open the surface
+      final field = find.byType(LayrzInputChrome).first;
       await tester.tap(field);
       await tester.pumpAndSettle();
 

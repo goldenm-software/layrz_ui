@@ -190,14 +190,14 @@ void main() {
         ),
       );
 
-      // Initial state: all options should appear in the list
-      expect(find.text('Option A'), findsOneWidget);
-      expect(find.text('Option B'), findsOneWidget);
-
       // Tap the field
       final field = find.byType(LayrzInputChrome);
       await tester.tap(field);
       await tester.pumpAndSettle();
+
+      // Options should appear in the opened surface
+      expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsOneWidget);
 
       // Tap an item
       await tester.tap(find.text('Option B'));
@@ -243,12 +243,24 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      final state = _TestState();
+
       await pumpThemedApp(
         tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: false,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzSelectInput<String>(
+              items: items,
+              value: state.selectedValue,
+              labelText: 'Choose one',
+              enableSearch: false,
+              onChanged: (item) {
+                setState(() {
+                  state.selectedValue = item?.value;
+                });
+              },
+            );
+          },
         ),
       );
 
@@ -265,8 +277,8 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pumpAndSettle();
 
-      // Surface should close after selection
-      expect(find.text('Option A'), findsWidgets);
+      // Surface should close after selection and field should show selected value
+      expect(find.text('Option A'), findsOneWidget);
     });
 
     testWidgets('escape key closes surface without changing value', (tester) async {
