@@ -346,12 +346,19 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
       ),
     );
 
-    // For modal sheets with a semantic label, wrap with Semantics to expose dialog role.
-    // Persistent sheets never get dialog semantics (they are supplementary UI, not modals).
+    // For modal sheets with a semantic label, wrap with Semantics to expose route semantics.
+    // scopesRoute: announces to screen readers that this subtree is a route/modal context
+    // namesRoute: uses the label to name that route for screen readers
+    // explicitChildNodes: required by Flutter when scopesRoute is true; keeps child nodes
+    //   from merging into the parent, so the label is announced independently
+    // Persistent sheets never get route semantics (they are supplementary UI, not modal routes).
     // If no label is supplied, no dialog semantics are added (prevents focus trap without announcement).
     if (!widget.isPersistent && widget.semanticLabel != null) {
       return Semantics(
         label: widget.semanticLabel,
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
         enabled: true,
         child: focusChild,
       );
