@@ -213,21 +213,25 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   Widget _buildFieldMode(BuildContext context) {
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
 
-    return ConstrainedBox(
-      constraints: BoxConstraints(
-        maxWidth: (widget.maxWidth ?? double.infinity).clamp(0.0, double.infinity),
-      ),
-      child: LayrzTextInput(
-        labelText: widget.labelText ?? context.l10n.helperSearch,
-        hintText: hintText,
-        controller: _controller,
-        focusNode: _focusNode,
-        disabled: widget.disabled,
-        padding: widget.padding,
-        prefixIcon: MdiIcons.magnify,
-        suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
-        onChanged: _handleSearchChanged,
-        onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+    return Semantics(
+      label: widget.labelText,
+      enabled: !widget.disabled,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: (widget.maxWidth ?? double.infinity).clamp(0.0, double.infinity),
+        ),
+        child: LayrzTextInput(
+          labelText: widget.labelText ?? context.l10n.helperSearch,
+          hintText: hintText,
+          controller: _controller,
+          focusNode: _focusNode,
+          disabled: widget.disabled,
+          padding: widget.padding,
+          prefixIcon: MdiIcons.magnify,
+          suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
+          onChanged: _handleSearchChanged,
+          onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+        ),
       ),
     );
   }

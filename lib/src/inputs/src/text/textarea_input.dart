@@ -372,25 +372,31 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
     // Calculate the maximum content height from maxLines
     final maxContentHeight = (lineHeight * widget.maxLines).ceil().toDouble();
 
-    return LayrzInputChrome.variableHeight(
-      labelText: widget.labelText,
-      hintText: widget.hintText,
-      isRequired: widget.isRequired,
-      prefixSlot: prefixSlot,
-      suffixSlot: suffixSlot,
-      disabled: widget.disabled,
-      readOnly: widget.readOnly,
-      errors: widget.errors,
-      hideDetails: widget.hideDetails,
-      states: _states,
-      helpTitleText: widget.helpTitleText,
-      helpContentText: widget.helpContentText,
-      controller: _controller,
-      padding: widget.padding,
-      maxLength: widget.maxLength,
-      minContentHeight: minContentHeight,
-      maxContentHeight: maxContentHeight,
-      child: LayrzEditableField(config: fieldConfig),
+    final isDisabled = widget.disabled || widget.readOnly;
+
+    return Semantics(
+      label: widget.labelText,
+      enabled: !isDisabled,
+      child: LayrzInputChrome.variableHeight(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        isRequired: widget.isRequired,
+        prefixSlot: prefixSlot,
+        suffixSlot: suffixSlot,
+        disabled: widget.disabled,
+        readOnly: widget.readOnly,
+        errors: widget.errors,
+        hideDetails: widget.hideDetails,
+        states: _states,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        controller: _controller,
+        padding: widget.padding,
+        maxLength: widget.maxLength,
+        minContentHeight: minContentHeight,
+        maxContentHeight: maxContentHeight,
+        child: LayrzEditableField(config: fieldConfig),
+      ),
     );
   }
 }

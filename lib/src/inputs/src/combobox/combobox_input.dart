@@ -430,87 +430,94 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   Widget build(BuildContext context) {
     final isCompact = context.isCompact;
 
-    return Focus(
-      onKeyEvent: (node, event) {
-        if (!_menuController.isOpen) {
+    return Semantics(
+      label: widget.labelText,
+      button: true,
+      enabled: !widget.disabled && !widget.readOnly,
+      expanded: _menuController.isOpen,
+      onTap: (widget.disabled || widget.readOnly) ? null : _openOverlay,
+      child: Focus(
+        onKeyEvent: (node, event) {
+          if (!_menuController.isOpen) {
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              if (!isCompact) {
+                _openOverlay();
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          }
+
+          final filtered = _getFilteredOptions();
+          if (filtered.isEmpty) {
+            return KeyEventResult.ignored;
+          }
+
           if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            if (!isCompact) {
-              _openOverlay();
+            setState(() {
+              _highlightedIndex = (_highlightedIndex + 1) % filtered.length;
+            });
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            setState(() {
+              _highlightedIndex = (_highlightedIndex - 1 + filtered.length) % filtered.length;
+            });
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+            if (_highlightedIndex >= 0 && _highlightedIndex < filtered.length) {
+              _commitValue(filtered[_highlightedIndex]);
               return KeyEventResult.handled;
             }
-          }
-          return KeyEventResult.ignored;
-        }
-
-        final filtered = _getFilteredOptions();
-        if (filtered.isEmpty) {
-          return KeyEventResult.ignored;
-        }
-
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-          setState(() {
-            _highlightedIndex = (_highlightedIndex + 1) % filtered.length;
-          });
-          return KeyEventResult.handled;
-        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-          setState(() {
-            _highlightedIndex = (_highlightedIndex - 1 + filtered.length) % filtered.length;
-          });
-          return KeyEventResult.handled;
-        } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-          if (_highlightedIndex >= 0 && _highlightedIndex < filtered.length) {
-            _commitValue(filtered[_highlightedIndex]);
+            return KeyEventResult.ignored;
+          } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+            _menuController.close();
             return KeyEventResult.handled;
           }
-          return KeyEventResult.ignored;
-        } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-          _menuController.close();
-          return KeyEventResult.handled;
-        }
 
-        return KeyEventResult.ignored;
-      },
-      child: RawMenuAnchor(
-        controller: _menuController,
-        onOpenRequested: isCompact ? (offset, callback) {} : _handleMenuOpenRequested,
-        onCloseRequested: isCompact ? (callback) {} : _handleMenuCloseRequested,
-        useRootOverlay: true,
-        consumeOutsideTaps: false,
-        childFocusNode: isCompact ? null : _fieldFocusNode,
-        overlayBuilder: isCompact ? buildEmptyOverlay : _buildMenuOverlay,
-        builder: (context, menuController, child) {
-          return LayrzTextInput(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            prefixIcon: widget.prefixIcon,
-            prefix: widget.prefix,
-            prefixText: widget.prefixText,
-            onPrefixTap: widget.onPrefixTap,
-            suffixIcon: widget.suffixIcon,
-            suffix: widget.suffix,
-            suffixText: widget.suffixText,
-            onSuffixTap: widget.onSuffixTap,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            disabled: widget.disabled,
-            readOnly: widget.readOnly,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            controller: _controller,
-            focusNode: _fieldFocusNode,
-            padding: widget.padding,
-            keyboardType: widget.keyboardType,
-            textInputAction: widget.textInputAction,
-            inputFormatters: widget.inputFormatters,
-            actions: widget.actions,
-            onTap: () {
-              if (!widget.disabled && !widget.readOnly) {
-                _openOverlay();
-              }
-            },
-          );
+          return KeyEventResult.ignored;
         },
+        child: RawMenuAnchor(
+          controller: _menuController,
+          onOpenRequested: isCompact ? (offset, callback) {} : _handleMenuOpenRequested,
+          onCloseRequested: isCompact ? (callback) {} : _handleMenuCloseRequested,
+          useRootOverlay: true,
+          consumeOutsideTaps: false,
+          childFocusNode: isCompact ? null : _fieldFocusNode,
+          overlayBuilder: isCompact ? buildEmptyOverlay : _buildMenuOverlay,
+          builder: (context, menuController, child) {
+            return LayrzTextInput(
+              labelText: widget.labelText,
+              hintText: widget.hintText,
+              isRequired: widget.isRequired,
+              prefixIcon: widget.prefixIcon,
+              prefix: widget.prefix,
+              prefixText: widget.prefixText,
+              onPrefixTap: widget.onPrefixTap,
+              suffixIcon: widget.suffixIcon,
+              suffix: widget.suffix,
+              suffixText: widget.suffixText,
+              onSuffixTap: widget.onSuffixTap,
+              helpTitleText: widget.helpTitleText,
+              helpContentText: widget.helpContentText,
+              disabled: widget.disabled,
+              readOnly: widget.readOnly,
+              errors: widget.errors,
+              hideDetails: widget.hideDetails,
+              controller: _controller,
+              focusNode: _fieldFocusNode,
+              padding: widget.padding,
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              inputFormatters: widget.inputFormatters,
+              actions: widget.actions,
+              onTap: () {
+                if (!widget.disabled && !widget.readOnly) {
+                  _openOverlay();
+                }
+              },
+            );
+          },
+        ),
       ),
     );
   }

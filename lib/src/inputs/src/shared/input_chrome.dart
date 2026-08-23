@@ -5,7 +5,7 @@ import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
-import 'input_error_block.dart';
+import 'input_footer_slot.dart';
 import 'input_slot.dart';
 import 'input_style_spec.dart';
 
@@ -174,15 +174,13 @@ class LayrzInputChrome extends StatelessWidget {
   /// When true (default), the chrome renders the label text above the input field.
   /// When false, the label is not rendered; the caller is responsible for
   /// displaying the label elsewhere (e.g., above a composite control).
-  final bool displayLabel;
 
   /// Whether to display the error message block below the chrome.
   ///
-  /// When true (default), the chrome renders the [LayrzInputErrorBlock] containing
+  /// When true (default), the chrome renders the [LayrzInputFooterSlot] containing
   /// error messages, helper text, and character counter below the input container.
   /// When false, the error block is not rendered; the caller is responsible for
   /// displaying errors elsewhere (e.g., below a composite control).
-  final bool displayError;
 
   /// Whether to display the border around the input container.
   ///
@@ -219,8 +217,7 @@ class LayrzInputChrome extends StatelessWidget {
     double? maxContentHeight,
     bool suppressReadOnlyLock = false,
     this.borderRadius,
-    this.displayLabel = true,
-    this.displayError = true,
+
     this.showBorder = true,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = expandHeight,
@@ -260,8 +257,7 @@ class LayrzInputChrome extends StatelessWidget {
     double? maxContentHeight,
     bool suppressReadOnlyLock = false,
     this.borderRadius,
-    this.displayLabel = true,
-    this.displayError = true,
+
     this.showBorder = true,
     super.key,
     // ignore: prefer_initializing_formals
@@ -303,27 +299,31 @@ class LayrzInputChrome extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label row (conditional on displayLabel)
-        if (displayLabel && labelText != null)
+        // Label row (rendered when labelText is provided)
+        if (labelText != null)
           Padding(
             padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: labelText,
-                    style: tokens.typography.label.copyWith(
-                      color: tokens.colors.fg2,
-                    ),
-                  ),
-                  if (isRequired)
-                    TextSpan(
-                      text: '*',
-                      style: tokens.typography.label.copyWith(
-                        color: tokens.colors.danger,
+            child: ExcludeSemantics(
+              child: SelectionContainer.disabled(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: labelText,
+                        style: tokens.typography.label.copyWith(
+                          color: tokens.colors.fg2,
+                        ),
                       ),
-                    ),
-                ],
+                      if (isRequired)
+                        TextSpan(
+                          text: '*',
+                          style: tokens.typography.label.copyWith(
+                            color: tokens.colors.danger,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -369,15 +369,14 @@ class LayrzInputChrome extends StatelessWidget {
                 ),
         ),
 
-        // Error block and character counter (conditional on displayError)
-        if (displayError)
-          LayrzInputErrorBlock(
-            errors: errors,
-            hideDetails: hideDetails,
-            maxLength: maxLength,
-            controller: controller,
-            helperText: helperText,
-          ),
+        // Error block and character counter
+        LayrzInputFooterSlot(
+          errors: errors,
+          hideDetails: hideDetails,
+          maxLength: maxLength,
+          controller: controller,
+          helperText: helperText,
+        ),
       ],
     );
   }
@@ -426,13 +425,15 @@ class LayrzInputChrome extends StatelessWidget {
                     builder: (context, value, _) => value.text.isEmpty
                         ? Align(
                             alignment: Alignment.centerLeft,
-                            child: Text(
-                              hintText!,
-                              style: density.textStyle.copyWith(
-                                color: tokens.colors.fg3,
+                            child: SelectionContainer.disabled(
+                              child: Text(
+                                hintText!,
+                                style: density.textStyle.copyWith(
+                                  color: tokens.colors.fg3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           )
                         : const SizedBox.shrink(),
@@ -440,13 +441,15 @@ class LayrzInputChrome extends StatelessWidget {
                 else if (hintText != null && hintText!.isNotEmpty && controller == null)
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      hintText!,
-                      style: density.textStyle.copyWith(
-                        color: tokens.colors.fg3,
+                    child: SelectionContainer.disabled(
+                      child: Text(
+                        hintText!,
+                        style: density.textStyle.copyWith(
+                          color: tokens.colors.fg3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 Align(

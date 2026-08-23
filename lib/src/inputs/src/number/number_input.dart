@@ -5,7 +5,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'decimal_separator.dart';
-import '../shared/input_error_block.dart';
+import '../shared/input_footer_slot.dart';
 import '../shared/input_style_spec.dart';
 import 'number_field_edge.dart';
 import '../text/text_input.dart';
@@ -554,7 +554,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
             hasErrors: hasErrors,
           ),
           // Error block and character counter below the entire row
-          LayrzInputErrorBlock(
+          LayrzInputFooterSlot(
             errors: widget.errors,
             hideDetails: widget.hideDetails,
             maxLength: null,
@@ -571,9 +571,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
         isRequired: widget.isRequired,
         disabled: widget.disabled,
         readOnly: widget.readOnly,
-        errors: widget.errors,
         hideDetails: widget.hideDetails,
-        helperText: widget.helperText,
         helpTitleText: widget.helpTitleText,
         helpContentText: widget.helpContentText,
         onChanged: _handleTextChanged,
@@ -616,84 +614,86 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       readOnly: widget.readOnly,
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: spec.backgroundColor,
-        border: Border.all(
-          color: spec.borderColor,
-          width: spec.borderWidth,
+    final isDisabled = widget.disabled || widget.readOnly;
+
+    return Semantics(
+      label: widget.labelText,
+      enabled: !isDisabled,
+      child: Container(
+        decoration: BoxDecoration(
+          color: spec.backgroundColor,
+          border: Border.all(
+            color: spec.borderColor,
+            width: spec.borderWidth,
+          ),
+          borderRadius: tokens.radius.br2,
         ),
-        borderRadius: tokens.radius.br2,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Decrement control (full height, no border/radius)
-            NumberFieldControl(
-              onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
-              isDisabled: widget.readOnly || _isDecrementDisabled(),
-              hasErrors: hasErrors,
-              states: _states,
-              readOnly: widget.readOnly,
-              isLeft: true,
-            ),
-
-            // Chrome (no border/radius, filled by outer container)
-            Expanded(
-              child: LayrzTextInput(
-                labelText: widget.labelText,
-                hintText: widget.hintText,
-                isRequired: widget.isRequired,
-                disabled: widget.disabled,
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Decrement control (full height, no border/radius)
+              NumberFieldControl(
+                onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
+                isDisabled: widget.readOnly || _isDecrementDisabled(),
+                hasErrors: hasErrors,
+                states: _states,
                 readOnly: widget.readOnly,
-                errors: widget.errors,
-                hideDetails: widget.hideDetails,
-                helperText: widget.helperText,
-                helpTitleText: widget.helpTitleText,
-                helpContentText: widget.helpContentText,
-                onChanged: _handleTextChanged,
-                onFocusChanged: (isFocused) {
-                  setState(() {
-                    if (isFocused) {
-                      _states.add(WidgetState.focused);
-                    } else {
-                      _states.remove(WidgetState.focused);
-                    }
-                  });
-                  widget.onFocusChanged?.call(isFocused);
-                },
-                onTap: widget.onTap,
-                onSubmit: widget.onSubmit,
-                controller: _controller,
-                focusNode: _focusNode,
-                padding: widget.padding,
-                keyboardType: TextInputType.number,
-                inputFormatters: formatters,
-                autofocus: widget.autofocus,
-                textAlign: TextAlign.center,
-                prefix: userPrefix,
-                suffix: userSuffix,
-                onPrefixTap: widget.onPrefixTap,
-                onSuffixTap: widget.onSuffixTap,
-                borderRadius: BorderRadius.zero,
-                displayLabel: false,
-                displayError: false,
-                showBorder: false,
+                isLeft: true,
               ),
-            ),
 
-            // Increment control (full height, no border/radius)
-            NumberFieldControl(
-              onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
-              isDisabled: widget.readOnly || _isIncrementDisabled(),
-              hasErrors: hasErrors,
-              states: _states,
-              readOnly: widget.readOnly,
-              isLeft: false,
-            ),
-          ],
+              // Chrome (no border/radius, filled by outer container)
+              Expanded(
+                child: LayrzTextInput(
+                  hintText: widget.hintText,
+                  isRequired: widget.isRequired,
+                  disabled: widget.disabled,
+                  readOnly: widget.readOnly,
+                  hideDetails: widget.hideDetails,
+                  helpTitleText: widget.helpTitleText,
+                  helpContentText: widget.helpContentText,
+                  onChanged: _handleTextChanged,
+                  onFocusChanged: (isFocused) {
+                    setState(() {
+                      if (isFocused) {
+                        _states.add(WidgetState.focused);
+                      } else {
+                        _states.remove(WidgetState.focused);
+                      }
+                    });
+                    widget.onFocusChanged?.call(isFocused);
+                  },
+                  onTap: widget.onTap,
+                  onSubmit: widget.onSubmit,
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  padding: widget.padding,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: formatters,
+                  autofocus: widget.autofocus,
+                  textAlign: TextAlign.center,
+                  prefix: userPrefix,
+                  suffix: userSuffix,
+                  onPrefixTap: widget.onPrefixTap,
+                  onSuffixTap: widget.onSuffixTap,
+                  borderRadius: BorderRadius.zero,
+
+                  showBorder: false,
+                ),
+              ),
+
+              // Increment control (full height, no border/radius)
+              NumberFieldControl(
+                onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
+                isDisabled: widget.readOnly || _isIncrementDisabled(),
+                hasErrors: hasErrors,
+                states: _states,
+                readOnly: widget.readOnly,
+                isLeft: false,
+              ),
+            ],
+          ),
         ),
       ),
     );
