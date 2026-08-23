@@ -654,7 +654,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+      expect(find.byIcon(MdiIcons.magnify), findsOneWidget);
     });
 
     testWidgets('prefix widget renders correctly', (tester) async {
@@ -682,7 +682,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+      expect(find.byIcon(MdiIcons.close), findsOneWidget);
     });
 
     testWidgets('suffix widget renders correctly', (tester) async {
@@ -858,10 +858,13 @@ void main() {
           ),
         );
 
-        // External focusNode should be usable.
-        // BUG: LayrzTextAreaInput does not properly attach external focusNode when swapped from null.
-        // The widget creates an internal focusNode on first build, and does not properly swap to
-        // an external focusNode on subsequent builds.
+        // Known defect, tracked separately: swapping a FocusNode from null to a
+        // caller-supplied instance leaves the new node unattached, so hasFocus stays
+        // false after requestFocus(). Reproduced against unmodified widget code; the
+        // failure is real, not a bad test — the trigger fires (paired pumpThemed with
+        // the same key) and the assertion is correctly positioned after it. Fixing it
+        // requires changing the shared focus-ownership contract in
+        // lib/src/inputs/src/shared/editable_field.dart, which is out of scope here.
         externalFocusNode.requestFocus();
         await tester.pumpAndSettle();
         expect(externalFocusNode.hasFocus, isTrue);
@@ -894,9 +897,10 @@ void main() {
         ),
       );
 
-      // External focusNode should still be usable
-      externalFocusNode.requestFocus();
-      expect(externalFocusNode, isNotNull);
+      // External focusNode should still be usable (not disposed by the widget).
+      // Calling requestFocus() on a disposed FocusNode throws, so if we get here,
+      // the node was not disposed.
+      expect(() => externalFocusNode.requestFocus(), returnsNormally);
 
       addTearDown(externalFocusNode.dispose);
     });
@@ -926,11 +930,11 @@ void main() {
         ),
       );
 
-      // Both should be usable
-      focusNode1.requestFocus();
-      focusNode2.requestFocus();
-      expect(focusNode1, isNotNull);
-      expect(focusNode2, isNotNull);
+      // Both should be usable (not disposed by the widget).
+      // Calling requestFocus() on a disposed FocusNode throws, so if we get here,
+      // neither node was disposed.
+      expect(() => focusNode1.requestFocus(), returnsNormally);
+      expect(() => focusNode2.requestFocus(), returnsNormally);
 
       addTearDown(focusNode1.dispose);
       addTearDown(focusNode2.dispose);
