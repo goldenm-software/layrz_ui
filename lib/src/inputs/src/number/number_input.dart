@@ -643,7 +643,9 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
                   isRequired: widget.isRequired,
                   disabled: widget.disabled,
                   readOnly: widget.readOnly,
-                  hideDetails: widget.hideDetails,
+                  errors: widget.errors,
+                  // Hardcoded to true: the outer footer (LayrzInputFooterSlot) already owns the error message
+                  hideDetails: true,
                   helpTitleText: widget.helpTitleText,
                   helpContentText: widget.helpContentText,
                   onChanged: _handleTextChanged,

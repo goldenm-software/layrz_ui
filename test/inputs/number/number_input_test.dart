@@ -1,8 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/number/number_field_edge.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 
 import '../../helpers/pump_themed.dart';
 import '../../helpers/find_button_label.dart';
@@ -724,6 +726,230 @@ void main() {
       // With the custom formatter, letters are now accepted (no numeric-only enforcement)
       await tester.enterText(find.byType(EditableText), 'abc123xyz');
       expect(controller.text, 'abc123xyz');
+    });
+
+    testWidgets('inner chrome background is danger.shade50 when errors are non-empty', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Price',
+          errors: ['Price is required'],
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final expectedBackgroundColor = tokens.colors.danger.shade50;
+
+      // Find the chrome container inside LayrzTextInput that renders the field background.
+      // The chrome is the first Container descendant of LayrzTextInput with a BoxDecoration.
+      final chromeFinder = find.descendant(
+        of: find.byType(LayrzTextInput),
+        matching: find.byType(Container),
+      );
+
+      // There must be at least one Container inside LayrzTextInput
+      expect(chromeFinder, findsWidgets);
+
+      // Locate the chrome container by examining all Container descendants
+      Container? chromeContainer;
+      for (final element in chromeFinder.evaluate()) {
+        final widget = element.widget as Container;
+        if (widget.decoration is BoxDecoration) {
+          chromeContainer = widget;
+          break;
+        }
+      }
+
+      // Assert the chrome container is found and its decoration is a BoxDecoration
+      expect(chromeContainer, isNotNull, reason: 'Chrome container should be found inside LayrzTextInput');
+      final decoration = chromeContainer!.decoration as BoxDecoration;
+
+      // Assert the chrome's background color is danger.shade50
+      expect(
+        decoration.color,
+        equals(expectedBackgroundColor),
+        reason:
+            'Inner chrome background should be danger.shade50 (${expectedBackgroundColor.toString()}) '
+            'but got ${decoration.color.toString()}',
+      );
+    });
+
+    testWidgets('error text appears exactly once when errors are non-empty', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      const errorMessage = 'Price is required';
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Price',
+          errors: [errorMessage],
+        ),
+      );
+
+      // Error text should appear exactly once (in the outer footer, not duplicated by the inner chrome)
+      expect(find.text(errorMessage), findsOneWidget);
+    });
+
+    testWidgets('trailing error icon is present when errors are non-empty', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Price',
+          errors: ['Price is required'],
+        ),
+      );
+
+      // When errors are present, the trailing error icon should be rendered by the inner chrome
+      // The icon is MdiIcons.alertOutline
+      expect(find.byIcon(MdiIcons.alertOutline), findsOneWidget);
+    });
+
+    testWidgets('trailing error icon is absent when errors are empty', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Price',
+          errors: [],
+        ),
+      );
+
+      // When errors are empty, no error icon should be rendered
+      expect(find.byIcon(MdiIcons.alertOutline), findsNothing);
+    });
+
+    testWidgets('outer container and step buttons are danger-styled when errors are non-empty', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Price',
+          errors: ['Price is required'],
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final expectedBackgroundColor = tokens.colors.danger.shade50;
+      final expectedBorderColor = tokens.colors.danger;
+
+      // Resolve the spec for error state to get the cap's expected background
+      final capSpec = LayrzInputStyleSpec.resolve(
+        states: <WidgetState>{},
+        tokens: tokens,
+        hasErrors: true,
+        readOnly: false,
+      );
+      final expectedCapBackgroundColor = capSpec.backgroundColor;
+
+      // Find the outer row Container (the one in _buildNumberInputRow) by looking for a Container
+      // that is an ancestor of LayrzTextInput
+      final outerRowFinder = find.ancestor(
+        of: find.byType(LayrzTextInput),
+        matching: find.byType(Container),
+      );
+
+      // The outermost Container in the hierarchy should be the row's outer container
+      expect(outerRowFinder, findsWidgets, reason: 'Outer container should exist');
+
+      final elements = outerRowFinder.evaluate().toList();
+      expect(elements, isNotEmpty, reason: 'Outer container must be in the widget tree');
+
+      // Get the outermost container (last in the list of ancestors)
+      final outerContainer = elements.last.widget as Container;
+
+      // Assert outer container's decoration is a BoxDecoration
+      expect(
+        outerContainer.decoration,
+        isA<BoxDecoration>(),
+        reason: 'Outer container decoration must be a BoxDecoration',
+      );
+      final decoration = outerContainer.decoration as BoxDecoration;
+
+      // Assert the outer container's background color is danger.shade50
+      expect(
+        decoration.color,
+        equals(expectedBackgroundColor),
+        reason:
+            'Outer container background should be danger.shade50 (${expectedBackgroundColor.toString()}) '
+            'but got ${decoration.color.toString()}',
+      );
+
+      // Assert the border exists
+      expect(
+        decoration.border,
+        isNotNull,
+        reason: 'Outer container should have a border',
+      );
+
+      // Assert the border is a Border type
+      expect(
+        decoration.border,
+        isA<Border>(),
+        reason: 'Outer container border must be a Border instance',
+      );
+
+      final border = decoration.border as Border;
+
+      // Assert the border color is danger
+      expect(
+        border.top.color,
+        equals(expectedBorderColor),
+        reason:
+            'Outer container border should be danger color (${expectedBorderColor.toString()}) '
+            'but got ${border.top.color.toString()}',
+      );
+
+      // Assert exactly two NumberFieldControl widgets exist (left decrement and right increment)
+      expect(
+        find.byType(NumberFieldControl),
+        findsNWidgets(2),
+        reason: 'Step buttons: exactly one decrement and one increment control should exist',
+      );
+
+      // Verify that the step buttons have danger-styled backgrounds by finding their Container children
+      // Each NumberFieldControl renders: AnimatedOpacity → Container (capWithDivider with spec.backgroundColor)
+      final capContainerFinder = find.descendant(
+        of: find.byType(NumberFieldControl),
+        matching: find.byType(Container),
+      );
+
+      expect(capContainerFinder, findsWidgets, reason: 'Cap containers should exist inside NumberFieldControl');
+
+      int capContainersWithCorrectColor = 0;
+      for (final element in capContainerFinder.evaluate()) {
+        final container = element.widget as Container;
+        if (container.decoration is BoxDecoration) {
+          final capDecoration = container.decoration as BoxDecoration;
+          if (capDecoration.color == expectedCapBackgroundColor) {
+            capContainersWithCorrectColor++;
+          }
+        }
+      }
+
+      // We expect at least 2 cap containers with the correct danger colour (one for decrement, one for increment)
+      expect(
+        capContainersWithCorrectColor,
+        greaterThanOrEqualTo(2),
+        reason:
+            'Both step button caps should have danger-styled background color '
+            '(${expectedCapBackgroundColor.toString()}), but only found $capContainersWithCorrectColor with correct colour',
+      );
     });
   });
 }
