@@ -36,13 +36,9 @@ import '../shared/input_slot.dart';
 /// - **Read-only lock icon**: Appears only in read-only state, never in disabled state.
 class LayrzTextAreaInput extends StatefulWidget {
   /// The label text displayed above the input field.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? labelText;
 
   /// Hint text displayed as placeholder when the field is empty.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? hintText;
 
   /// Whether the field is marked as required.
@@ -224,10 +220,6 @@ class LayrzTextAreaInput extends StatefulWidget {
     this.enableSuggestions = true,
     this.actions,
   }) : assert(
-         labelText != null || hintText != null,
-         'At least one of labelText or hintText must be non-null.',
-       ),
-       assert(
          minLines > 0,
          'minLines must be a positive integer.',
        ),

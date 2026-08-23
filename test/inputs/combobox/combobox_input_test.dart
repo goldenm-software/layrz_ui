@@ -22,11 +22,13 @@ void main() {
       expect(find.byType(LayrzComboBoxInput), findsOneWidget);
     });
 
-    testWidgets('requires at least labelText or hintText', (tester) async {
-      expect(
-        () => LayrzComboBoxInput(options: []),
-        throwsAssertionError,
+    testWidgets('can be created without labelText or hintText', (tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzComboBoxInput(options: []),
       );
+
+      expect(find.byType(LayrzComboBoxInput), findsOneWidget);
     });
 
     testWidgets('calls onChanged when value changes', (tester) async {

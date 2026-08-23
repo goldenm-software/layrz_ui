@@ -245,11 +245,13 @@ void main() {
       expect(() => focusNode.dispose(), returnsNormally);
     });
 
-    testWidgets('asserts at least one of labelText or hintText is non-null', (WidgetTester tester) async {
-      expect(
-        () => LayrzDurationInput(),
-        throwsAssertionError,
+    testWidgets('can be created without labelText or hintText', (WidgetTester tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(),
       );
+
+      expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
 
     testWidgets('asserts visibleUnits is non-empty', (WidgetTester tester) async {

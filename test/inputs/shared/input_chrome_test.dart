@@ -8,7 +8,6 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import '../../helpers/find_button_label.dart';
 import '../../helpers/pump_themed.dart';
-import '../../helpers/fake_font_handler.dart';
 
 void main() {
   group('LayrzInputChrome', () {
@@ -457,7 +456,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: LayrzTheme(
-                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                data: LayrzThemeData.light(),
                 child: Overlay(
                   initialEntries: [
                     OverlayEntry(
@@ -520,7 +519,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: LayrzTheme(
-                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                data: LayrzThemeData.light(),
                 child: Overlay(
                   initialEntries: [
                     OverlayEntry(
@@ -579,7 +578,7 @@ void main() {
             Directionality(
               textDirection: TextDirection.ltr,
               child: LayrzTheme(
-                data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                data: LayrzThemeData.light(),
                 child: Overlay(
                   initialEntries: [
                     OverlayEntry(
@@ -625,7 +624,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              data: LayrzThemeData.light(),
               child: Overlay(
                 initialEntries: [
                   OverlayEntry(
@@ -694,7 +693,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              data: LayrzThemeData.light(),
               child: Overlay(
                 initialEntries: [
                   OverlayEntry(
@@ -853,7 +852,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              data: LayrzThemeData.light(),
               child: Overlay(
                 initialEntries: [
                   OverlayEntry(
@@ -893,7 +892,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+              data: LayrzThemeData.light(),
               child: Overlay(
                 initialEntries: [
                   OverlayEntry(
@@ -1445,7 +1444,7 @@ void main() {
               Directionality(
                 textDirection: TextDirection.ltr,
                 child: LayrzTheme(
-                  data: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+                  data: LayrzThemeData.light(),
                   child: Overlay(
                     initialEntries: [
                       OverlayEntry(

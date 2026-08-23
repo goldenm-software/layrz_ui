@@ -157,13 +157,9 @@ class LayrzNumberInput extends StatefulWidget {
   final VoidCallback? onSuffixTap;
 
   /// The label text displayed above the input field.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? labelText;
 
   /// Hint text displayed as placeholder when the field is empty.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? hintText;
 
   /// Whether the field is marked as required.
@@ -221,7 +217,6 @@ class LayrzNumberInput extends StatefulWidget {
 
   /// Creates a new [LayrzNumberInput] with the given properties.
   ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   /// [maximumDecimalDigits] must be between 0 and 15 inclusive (debug assertion).
   /// At most one of [prefixIcon] / [prefix] / [prefixText] may be non-null (debug assertion).
   /// At most one of [suffixIcon] / [suffix] / [suffixText] may be non-null (debug assertion).
@@ -263,10 +258,6 @@ class LayrzNumberInput extends StatefulWidget {
     this.autofocus = false,
     this.inputFormatters,
   }) : assert(
-         labelText != null || hintText != null,
-         'At least one of labelText or hintText must be non-null.',
-       ),
-       assert(
          maximumDecimalDigits >= 0 && maximumDecimalDigits <= 15,
          'maximumDecimalDigits must be between 0 and 15 inclusive.',
        ),

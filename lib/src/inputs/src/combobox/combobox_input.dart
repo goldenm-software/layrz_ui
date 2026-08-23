@@ -76,13 +76,9 @@ class LayrzComboBoxInput extends StatefulWidget {
   final bool enableAutocomplete;
 
   /// The label text displayed above the input field.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? labelText;
 
   /// Hint text displayed as placeholder when the field is empty.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? hintText;
 
   /// Whether the field is marked as required.
@@ -212,10 +208,6 @@ class LayrzComboBoxInput extends StatefulWidget {
     this.inputFormatters = const [],
     this.actions,
   }) : assert(
-         labelText != null || hintText != null,
-         'At least one of labelText or hintText must be non-null.',
-       ),
-       assert(
          (prefixIcon == null || prefix == null) &&
              (prefix == null || prefixText == null) &&
              (prefixIcon == null || prefixText == null),

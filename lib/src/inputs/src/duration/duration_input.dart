@@ -76,13 +76,9 @@ class LayrzDurationInput extends StatefulWidget {
   final Set<LayrzDurationUnit> visibleUnits;
 
   /// The label text displayed above the input field.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? labelText;
 
   /// Hint text displayed as placeholder when the field is empty.
-  ///
-  /// At least one of [labelText] or [hintText] must be non-null.
   final String? hintText;
 
   /// Whether the field is marked as required.
@@ -136,10 +132,6 @@ class LayrzDurationInput extends StatefulWidget {
     this.helpTitleText,
     this.helpContentText,
   }) : assert(
-         labelText != null || hintText != null,
-         'At least one of labelText or hintText must be non-null.',
-       ),
-       assert(
          visibleUnits.isNotEmpty,
          'visibleUnits must not be empty.',
        );

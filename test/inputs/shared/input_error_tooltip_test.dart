@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../../helpers/fake_font_handler.dart';
 import '../../helpers/pump_themed_app.dart';
 
 void main() {
@@ -83,9 +82,7 @@ void main() {
       await pumpThemedApp(
         tester,
         widget,
-        theme: LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        ),
+        theme: LayrzThemeData.light(),
       );
 
       // Both errors should be visible below the field
