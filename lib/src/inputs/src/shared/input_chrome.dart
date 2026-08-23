@@ -353,7 +353,7 @@ class LayrzInputChrome extends StatelessWidget {
                     spec: spec,
                     density: density,
                     contentHeight: contentHeight,
-                    alignTrailingTop: true,
+                    isMultiline: true,
                   ),
                 )
               : SizedBox(
@@ -364,7 +364,7 @@ class LayrzInputChrome extends StatelessWidget {
                     spec: spec,
                     density: density,
                     contentHeight: contentHeight,
-                    alignTrailingTop: false,
+                    isMultiline: false,
                   ),
                 ),
         ),
@@ -384,18 +384,26 @@ class LayrzInputChrome extends StatelessWidget {
   /// Builds the Row containing prefix, child content, and trailing elements.
   ///
   /// This is extracted to avoid duplication between fixed-height and variable-height modes.
-  /// The Row's [crossAxisAlignment] and [Align.alignment] for the child depend on whether
-  /// trailing elements should align to the top (multiline) or center (single-line).
+  /// The Row's [crossAxisAlignment] and hint/child alignments depend on whether the content
+  /// box is multiline (variable-height) or single-line (fixed-height).
+  ///
+  /// In multiline mode ([isMultiline] = true):
+  ///   - Hint and content align to the top-left so text starts at the top of the box
+  ///   - Trailing elements align to the start of the Row (top)
+  ///
+  /// In single-line mode ([isMultiline] = false):
+  ///   - Hint and content remain vertically centered
+  ///   - Trailing elements align to the center of the Row
   Widget _buildRowContent({
     required BuildContext context,
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
     required _InputComfortableSpec density,
     required double contentHeight,
-    required bool alignTrailingTop,
+    required bool isMultiline,
   }) {
     return Row(
-      crossAxisAlignment: alignTrailingTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      crossAxisAlignment: isMultiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         // Prefix slot
         if (prefixSlot.hasContent) ...[
@@ -424,7 +432,7 @@ class LayrzInputChrome extends StatelessWidget {
                     valueListenable: controller!,
                     builder: (context, value, _) => value.text.isEmpty
                         ? Align(
-                            alignment: Alignment.centerLeft,
+                            alignment: isMultiline ? Alignment.topLeft : Alignment.centerLeft,
                             child: SelectionContainer.disabled(
                               child: Text(
                                 hintText!,
@@ -440,7 +448,7 @@ class LayrzInputChrome extends StatelessWidget {
                   )
                 else if (hintText != null && hintText!.isNotEmpty && controller == null)
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: isMultiline ? Alignment.topLeft : Alignment.centerLeft,
                     child: SelectionContainer.disabled(
                       child: Text(
                         hintText!,
@@ -453,7 +461,7 @@ class LayrzInputChrome extends StatelessWidget {
                     ),
                   ),
                 Align(
-                  alignment: Alignment.center,
+                  alignment: isMultiline ? Alignment.topCenter : Alignment.center,
                   child: child,
                 ),
               ],

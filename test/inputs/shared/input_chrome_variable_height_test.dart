@@ -223,5 +223,152 @@ void main() {
       // The Row should use CrossAxisAlignment.start for variable height
       expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
+
+    testWidgets('hint and content align to top in variable-height mode', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome.variableHeight(
+          labelText: 'Description',
+          hintText: 'Enter text here',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          minContentHeight: 120,
+          maxContentHeight: 300,
+          child: EditableText(
+            controller: controller,
+            focusNode: FocusNode(),
+            style: const TextStyle(fontSize: 16),
+            cursorColor: const Color(0xFF000000),
+            backgroundCursorColor: const Color(0xFFBDBDBD),
+            maxLines: null,
+            minLines: 2,
+            expands: false,
+          ),
+        ),
+      );
+
+      // Verify hint text is rendered
+      expect(find.text('Enter text here'), findsOneWidget);
+
+      // Get the position of the hint text
+      final hintFinder = find.text('Enter text here');
+      expect(hintFinder, findsOneWidget);
+
+      // Get the top-left position of the hint
+      final hintTopLeft = tester.getTopLeft(hintFinder);
+
+      // Get the container that holds the content (the Stack's parent Expanded/DefaultTextStyle)
+      final stackFinder = find.byType(Stack).first;
+      final stackTopLeft = tester.getTopLeft(stackFinder);
+
+      // The hint should be positioned at or very near the top-left of the Stack
+      // Allow a small tolerance for padding/rendering differences
+      expect(
+        hintTopLeft.dy,
+        lessThanOrEqualTo(stackTopLeft.dy + 2),
+        reason: 'Hint should be at top of content area in multiline mode',
+      );
+    });
+
+    testWidgets('hint alignment differs between single-line and multiline modes', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      // Test single-line mode (fixed height)
+      final singleLineController = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Single Line',
+          hintText: 'Single line hint',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: singleLineController,
+          child: EditableText(
+            controller: singleLineController,
+            focusNode: FocusNode(),
+            style: const TextStyle(fontSize: 16),
+            cursorColor: const Color(0xFF000000),
+            backgroundCursorColor: const Color(0xFFBDBDBD),
+          ),
+        ),
+      );
+
+      expect(find.text('Single line hint'), findsOneWidget);
+      final singleLineHintY = tester.getCenter(find.text('Single line hint')).dy;
+
+      // Get the center Y of the container
+      final singleLineContainerY = tester.getCenter(find.byType(Row).first).dy;
+
+      // In single-line mode, hint should be roughly centered vertically
+      expect(
+        (singleLineHintY - singleLineContainerY).abs(),
+        lessThan(20),
+        reason: 'Hint should be vertically centered in single-line mode',
+      );
+
+      await tester.pumpWidget(Container());
+
+      // Test multiline mode (variable height)
+      final multiLineController = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome.variableHeight(
+          labelText: 'Multi Line',
+          hintText: 'Multi line hint',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: multiLineController,
+          minContentHeight: 120,
+          maxContentHeight: 300,
+          child: EditableText(
+            controller: multiLineController,
+            focusNode: FocusNode(),
+            style: const TextStyle(fontSize: 16),
+            cursorColor: const Color(0xFF000000),
+            backgroundCursorColor: const Color(0xFFBDBDBD),
+            maxLines: null,
+            minLines: 2,
+            expands: false,
+          ),
+        ),
+      );
+
+      expect(find.text('Multi line hint'), findsOneWidget);
+      final multiLineHintTop = tester.getTopLeft(find.text('Multi line hint')).dy;
+      final multiLineStackTop = tester.getTopLeft(find.byType(Stack).first).dy;
+
+      // In multiline mode, hint should be at the top
+      expect(
+        multiLineHintTop,
+        lessThanOrEqualTo(multiLineStackTop + 2),
+        reason: 'Hint should be at top in multiline mode',
+      );
+    });
   });
 }

@@ -291,5 +291,86 @@ void main() {
 
       expect(find.byType(LayrzTextAreaInput), findsOneWidget);
     });
+
+    testWidgets('hint position matches EditableText first line when typing', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Description',
+          hintText: 'Enter text here',
+          controller: controller,
+          minLines: 3,
+        ),
+      );
+
+      // Verify hint is visible initially
+      expect(find.text('Enter text here'), findsOneWidget);
+
+      // Get the hint's top position when empty
+      final hintTopWithoutText = tester.getTopLeft(find.text('Enter text here')).dy;
+
+      // Enter text
+      await tester.enterText(find.byType(EditableText), 'First line of text');
+      await tester.pumpAndSettle();
+
+      // Hint should now be hidden (because text is present)
+      expect(find.text('Enter text here'), findsNothing);
+
+      // Get EditableText bounds
+      final editableTextFinder = find.byType(EditableText);
+      expect(editableTextFinder, findsOneWidget);
+      final editableTextTop = tester.getTopLeft(editableTextFinder).dy;
+
+      // The hint was positioned at the top, and the EditableText should also start near the top
+      // (allowing for small rendering differences)
+      expect(
+        hintTopWithoutText,
+        lessThanOrEqualTo(editableTextTop + 10),
+        reason: 'Hint should align with where typed text starts',
+      );
+    });
+
+    testWidgets('content starts at top of multiline field', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      final controller = TextEditingController(text: 'First line\nSecond line');
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          controller: controller,
+          minLines: 4,
+        ),
+      );
+
+      // Get the container bounds (the input field container)
+      final containerFinder = find.byType(LayrzTextAreaInput);
+      expect(containerFinder, findsOneWidget);
+
+      // Get EditableText top position
+      final editableTextFinder = find.byType(EditableText);
+      expect(editableTextFinder, findsOneWidget);
+      final editableTextTop = tester.getTopLeft(editableTextFinder).dy;
+
+      // The EditableText should be positioned near the top of its parent
+      // (not centered)
+      final stackFinder = find.byType(Stack);
+      expect(stackFinder, findsOneWidget);
+      final stackTop = tester.getTopLeft(stackFinder).dy;
+
+      // EditableText should be at or near the top of the Stack
+      expect(
+        editableTextTop,
+        lessThanOrEqualTo(stackTop + 10),
+        reason: 'Content should start at top of multiline field',
+      );
+    });
   });
 }
