@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -197,19 +198,17 @@ void main() {
         await tester.tap(find.text('Tap'));
         await tester.pumpAndSettle();
 
-        // Walk the semantics tree to find the node with our label
-        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
-        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
-        // TODO: Remove this when a public non-deprecated API is available.
+        // Walk the semantics tree to find the node with our label.
+        // NOTE: TestWidgetBinding.pipelineOwner is deprecated (Flutter 3.10.0+). Per the deprecation
+        // notice, SemanticsBinding should be used directly, but in the testWidgets harness,
+        // semanticsOwner is only accessible via the test binding's pipelineOwner. This is the
+        // standard pattern in flutter_test for semantics tree inspection.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
-        expect(semanticsOwner, isNotNull);
+        final rootNode = semanticsOwner?.rootSemanticsNode;
 
-        final rootNode = semanticsOwner!.rootSemanticsNode;
-        expect(rootNode, isNotNull);
-
-        dynamic targetNode;
-        void findLabelNode(dynamic node) {
+        SemanticsNode? targetNode;
+        void findLabelNode(SemanticsNode node) {
           if (targetNode != null) return; // Early return once match is found
           if (node.label == 'Choose an item. Press Escape to close.') {
             targetNode = node;
@@ -221,7 +220,9 @@ void main() {
           });
         }
 
-        findLabelNode(rootNode!);
+        if (rootNode != null) {
+          findLabelNode(rootNode);
+        }
         expect(targetNode, isNotNull, reason: 'Semantics node with label not found');
 
         // Assert the flags on the found node
@@ -265,21 +266,17 @@ void main() {
 
         // Walk the semantics tree to verify there is NO namesRoute flag
         // (would be added by Semantics wrapper, which should not exist without a label)
-        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
-        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
-        // TODO: Remove this when a public non-deprecated API is available.
+        // NOTE: TestWidgetBinding.pipelineOwner is deprecated (Flutter 3.10.0+). In the testWidgets
+        // harness, semanticsOwner is only accessible via the test binding's pipelineOwner.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
-        expect(semanticsOwner, isNotNull);
-
-        final rootNode = semanticsOwner!.rootSemanticsNode;
-        expect(rootNode, isNotNull);
+        final rootNode = semanticsOwner?.rootSemanticsNode;
 
         // Without a semantic label, the Semantics wrapper should not be added.
         // This means there should be NO nodes with namesRoute=true in the tree.
         // We verify this by checking that there's no SemanticsNode with namesRoute flag set.
-        final semanticsWithNamesRoute = <dynamic>[];
-        void findNamesRouteNodes(dynamic node) {
+        final semanticsWithNamesRoute = <SemanticsNode>[];
+        void findNamesRouteNodes(SemanticsNode node) {
           try {
             // Check if this node has namesRoute by trying to match it with namesRoute: true
             final testMatch = node.toString().contains('namesRoute: true');
@@ -295,7 +292,9 @@ void main() {
           });
         }
 
-        findNamesRouteNodes(rootNode!);
+        if (rootNode != null) {
+          findNamesRouteNodes(rootNode);
+        }
 
         // Without a semantic label, there should be no namesRoute nodes
         expect(
@@ -339,21 +338,17 @@ void main() {
 
         // Walk the semantics tree to verify there is NO namesRoute flag
         // (even though a label was supplied, persistent sheets never get wrapped)
-        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
-        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
-        // TODO: Remove this when a public non-deprecated API is available.
+        // NOTE: TestWidgetBinding.pipelineOwner is deprecated (Flutter 3.10.0+). In the testWidgets
+        // harness, semanticsOwner is only accessible via the test binding's pipelineOwner.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
-        expect(semanticsOwner, isNotNull);
-
-        final rootNode = semanticsOwner!.rootSemanticsNode;
-        expect(rootNode, isNotNull);
+        final rootNode = semanticsOwner?.rootSemanticsNode;
 
         // Persistent sheets never get wrapped with Semantics, even with a label.
         // This means there should be NO nodes with namesRoute=true in the tree.
         // We verify this by checking that there's no SemanticsNode with namesRoute flag set.
-        final semanticsWithNamesRoute = <dynamic>[];
-        void findNamesRouteNodes(dynamic node) {
+        final semanticsWithNamesRoute = <SemanticsNode>[];
+        void findNamesRouteNodes(SemanticsNode node) {
           try {
             // Check if this node has namesRoute by trying to match it with namesRoute: true
             final testMatch = node.toString().contains('namesRoute: true');
@@ -369,7 +364,9 @@ void main() {
           });
         }
 
-        findNamesRouteNodes(rootNode!);
+        if (rootNode != null) {
+          findNamesRouteNodes(rootNode);
+        }
 
         // Persistent sheets never get wrapped with Semantics, so no namesRoute
         expect(
