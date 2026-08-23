@@ -516,23 +516,25 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
           if (widget.labelText != null)
             Padding(
               padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: widget.labelText,
-                      style: tokens.typography.label.copyWith(
-                        color: tokens.colors.fg2,
-                      ),
-                    ),
-                    if (widget.isRequired)
+              child: ExcludeSemantics(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
                       TextSpan(
-                        text: '*',
+                        text: widget.labelText,
                         style: tokens.typography.label.copyWith(
-                          color: tokens.colors.danger,
+                          color: tokens.colors.fg2,
                         ),
                       ),
-                  ],
+                      if (widget.isRequired)
+                        TextSpan(
+                          text: '*',
+                          style: tokens.typography.label.copyWith(
+                            color: tokens.colors.danger,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
