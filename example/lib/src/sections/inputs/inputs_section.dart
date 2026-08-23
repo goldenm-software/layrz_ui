@@ -158,7 +158,8 @@ class _InputsSectionState extends State<InputsSection> {
         LayrzAvatar.icon(
           icon: demo.icon,
           size: 30.0,
-          borderRadius: tokens.radius.r1,
+          borderRadius: tokens.radius.r2,
+          elevation: 0,
         ),
         Column(
           crossAxisAlignment: .start,
