@@ -51,7 +51,6 @@ These are non-blocking for M3 release but represent outstanding accessibility de
 - Coverage floor (90%) not breached (current: 90.44%)
 - Invariant verified: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - All new public code documented per CLAUDE.md rule #1
-- Every visual component has `@Preview` annotations (rule #3)
 - All M3 components integrated with theme system (LayrzTheme, tokens, state resolution)
 - Nine outstanding a11y suites identified and tracked as follow-up rows
 

@@ -265,8 +265,6 @@ testWidgets('Button layout adapts at 2x text scale', (tester) async {
 });
 ```
 
-**Note**: The `@Preview` annotation (used for widget previews) still exposes a field named `textScaleFactor`. The field is deprecated (after v3.12.0-2.0.pre) but not yet removed, creating an inconsistency in the API surface. Do not fix the `@Preview` side; this is a Flutter SDK issue.
-
 ### Golden Files
 
 `matchesGoldenFile(Object key, {int? version})` returns an `AsyncMatcher` (matchers.dart:588), used with `expectLater`. Focus ring visibility cannot be tested programmatically and requires golden comparison.

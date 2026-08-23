@@ -11,13 +11,13 @@ This is a **foundation-only** milestone with **zero components**. Success means 
 | # | Item | Status |
 |---|---|---|
 | 1 | Migrate LayrzTheme to extend InheritedTheme with wrap() | Done |
-| 2 | Correct CLAUDE.md rule #3 to the real `@Preview` API | Done |
+| 2 | Correct CLAUDE.md rule #3 to the real `@Preview` API | Removed (preview system removed per D62) |
 | 3 | Semantic color tokens | Done |
 | 4 | Typography, spacing, radius, shadow, border, motion tokens | Done |
 | 5 | LayrzThemeExtension mechanism | Done |
 | 6 | WidgetState/WidgetStatesController state-resolution layer | Done |
 | 7 | lib/fonts/ with LayrzFontHandler | Done |
-| 8 | LayrzPreviewTheme and Preview support | Done |
+| 8 | LayrzPreviewTheme and Preview support | Removed (preview system removed per D62) |
 | 9 | CI pipeline at .github/workflows | Done |
 | 10 | Enable `public_member_api_docs` | Done |
 | 11 | Close the test gap | Done |

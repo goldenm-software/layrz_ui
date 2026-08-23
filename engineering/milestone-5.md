@@ -30,7 +30,6 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 - Coverage floor (90%) not breached
 - Invariant verified: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - All new public code documented per CLAUDE.md rule #1
-- Every visual component has `@Preview` annotations (rule #3)
 - All M5 components integrated with theme system (LayrzTheme, tokens, state resolution)
 - Wiki pages created/updated for all M5 components
 

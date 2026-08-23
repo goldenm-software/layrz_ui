@@ -3445,3 +3445,50 @@ M3 ships with: 8 input components, 1 stepper, and supporting work (bottom sheet,
 - M3 scope: 9 input/surface rows + 1 prerequisite
 - 0.0.13 does not include multi-selection inputs
 
+---
+
+## D62: Remove Flutter Widget Preview System
+
+**Date**: 2026-08-22  
+**Status**: Decided  
+**Category**: Build System / Developer Experience
+
+### Context
+
+Flutter 3.47 introduced the stable `@Preview` widget-preview API. Early in layrz_ui development, this system was adopted to enable quick preview of widgets without launching a device. However:
+
+1. The preview system adds build complexity (`flutter/widget_previews.dart`, `LayrzPreviewTheme`, `.widget_preview/` project).
+2. Maintenance burden: every visual widget needs a corresponding preview function.
+3. Low adoption: the team rarely uses widget previews during development; device testing is the primary workflow.
+4. Minimal productivity gain: previews save time only for isolated components; most work involves integration testing across the app.
+
+### Decision
+
+**Remove the entire Flutter widget-preview system from layrz_ui.**
+
+- Delete all `@Preview` annotations from widgets
+- Delete all preview functions and dedicated preview files (`*_previews.dart`, `*_preview.dart`)
+- Delete the `lib/src/preview/` module and `lib/preview.dart` barrel
+- Delete the `.widget_preview/` project
+- Remove preview-related imports (`package:flutter/widget_previews.dart`, `package:layrz_ui/preview.dart`)
+- Update documentation (CLAUDE.md, engineering docs)
+
+### Rationale
+
+**Complexity vs. benefit**: The preview system adds real complexity (import decisions, test harnesses, a separate Flutter project) for limited practical return. Development workflow is device-based; static previews do not accelerate that.
+
+**Maintainability**: Removing the system eliminates an entire category of maintenance (keeping `LayrzPreviewTheme` aligned with the real theme, documenting preview patterns, ensuring preview functions are updated when widgets change).
+
+**SDK floor unchanged**: The decision to remove `@Preview` does not affect the Flutter 3.47 floor — `RawTooltip`, `RawMenuAnchor`, and `RawRadio` remain hard requirements that justify staying on 3.47+.
+
+### Consequences
+
+- 10+ preview test files removed (minor coverage reduction; no behavioral tests lost)
+- 14 dedicated preview files deleted
+- 54 `@Preview` annotations and related functions removed
+- CLAUDE.md rule #3 removed entirely
+- Decision D18 (preview.dart placement rationale) remains in history, marked as superseded
+- `.widget_preview/` and all its contents removed from the repository
+- Documentation updated to reflect no preview system
+- SDK constraint section revised (no mention of `@Preview` API requirement)
+

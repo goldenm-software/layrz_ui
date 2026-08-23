@@ -50,7 +50,6 @@ The per-module barrel at `lib/src/<module>/<module>.dart` contains **only** `exp
 - **extensions** — Convenience getters on `Color` and `BuildContext`
 - **grid** — `LayrzRow` (responsive 12-column grid container) and `LayrzCol` (column with responsive spans)
 - **platform** — `LayrzPlatform` enum for runtime platform detection
-- **preview** — `LayrzPreviewTheme` for Flutter 3.47+ widget preview integration
 - **tooltips** — `LayrzTooltip` and positioning types
 
 ### When to Add a New Module
@@ -260,75 +259,6 @@ class LayrzButton extends StatefulWidget {
 
 See [flutter-347-audit.md](flutter-347-audit.md) for details on what's available in the SDK.
 
-## Preview Architecture: LayrzPreviewTheme
-
-**Status**: Implemented in [M1 item 8](milestone-1.md) (`lib/preview/src/preview_theme.dart` with top-level barrel `lib/preview.dart`). Light theme only; dark mode is out of scope per [decision D7](decisions.md).
-
-### The Real API: @Preview and PreviewThemeData
-
-**Milestone 1, item 2** corrected [CLAUDE.md](../CLAUDE.md) rule #3 to document the real widget preview API, which is NOT `@widgetPreview`.
-
-In Flutter 3.47, the preview system is defined in `package:flutter/widget_previews.dart`:
-
-- **Annotation**: `@Preview(name: 'Light', theme: LayrzPreviewTheme.light)`
-- **Theme type**: `PreviewThemeData` (abstract base class, not interface — must be `extends`, not `implements`)
-
-**layrz_ui's contribution** (light theme only):
-
-```dart
-/// Preview theme for light mode. Integrates with Flutter 3.47's @Preview annotation system.
-final class LayrzPreviewTheme extends PreviewThemeData {
-  final LayrzThemeData _themeData;
-  
-  const LayrzPreviewTheme(this._themeData);
-  
-  /// Tear-off for use as @Preview(theme: LayrzPreviewTheme.light).
-  static PreviewThemeData light() => LayrzPreviewTheme(LayrzThemeData.light());
-
-  @override
-  Widget apply(BuildContext context, Widget widget) {
-    // Wrap the widget with the full theme hierarchy.
-    return LayrzTheme(
-      data: _themeData,
-      child: DefaultTextStyle(
-        style: _themeData.typography.body1,
-        child: IconTheme(
-          data: _themeData.iconThemeData,
-          child: ColoredBox(
-            color: _themeData.tokens.colors.background,
-            child: widget,
-          ),
-        ),
-      ),
-    );
-  }
-}
-```
-
-**Component usage:**
-
-```dart
-import 'package:flutter/widget_previews.dart';
-import 'package:layrz_ui/preview.dart';
-
-@Preview(
-  name: 'Light',
-  theme: LayrzPreviewTheme.light,
-)
-Widget previewLayrzButton() {
-  return LayrzButton(
-    onTap: () {},
-    child: const Text('Click me'),
-  );
-}
-```
-
-Previews can be viewed inline in supporting IDEs without launching a device. The `apply()` method reproduces the full theme nesting that `LayrzApp` uses, ensuring previewed widgets see the same design-token context as production code.
-
-### Top-Level Entrypoint Pattern
-
-Every module has a top-level entrypoint at `lib/<module>.dart`. This design follows the Flutter SDK convention of per-domain imports (e.g., `import 'package:flutter/widgets.dart';`). See [decision D19](decisions.md) for the restructure rationale. The `lib/preview.dart` module uses the same pattern for consistency, though it was originally (D18) designed as an exception to keep preview infrastructure opt-in.
-
 ## How Components Consume Theme
 
 **Rule: Never hardcode design values inside widgets.**
@@ -468,7 +398,6 @@ See [flutter-347-audit.md](flutter-347-audit.md) for the complete inventory and 
 ```
 lib/
   layrz_ui.dart                  ← Root barrel — exports all 14 modules [D26]
-  preview.dart                   ← Preview system (deliberate exception; top-level)
   
   src/
     app/
@@ -482,11 +411,6 @@ lib/
         theme.dart               (LayrzTheme extends InheritedTheme)
         theme_data.dart          (LayrzThemeData)
         theme_extension.dart     (LayrzThemeExtension<T> [M1 item 5])
-    
-    preview/                     [M1 item 8]
-      preview.dart               ← Per-module barrel
-      src/
-        preview_theme.dart       (LayrzPreviewTheme extends PreviewThemeData)
     
     state/                       [M1 item 6]
       state.dart                 ← Per-module barrel

@@ -36,7 +36,6 @@ Consumers import the root barrel, e.g., `import 'package:layrz_ui/layrz_ui.dart'
 ```
 lib/
   layrz_ui.dart                  # Root barrel — exports all 14 modules
-  preview.dart                   # Top-level preview entrypoint (deliberate exception; re-exports LayrzPreviewTheme)
   src/
     alerts/
       alerts.dart                # Per-module barrel — re-exports from src/
@@ -82,10 +81,6 @@ lib/
       platform.dart              # Per-module barrel
       src/
         platform.dart            # LayrzPlatform enum
-    preview/
-      preview.dart               # Per-module barrel
-      src/
-        preview_theme.dart       # LayrzPreviewTheme (extends PreviewThemeData)
     state/
       state.dart                 # Per-module barrel
       src/
@@ -267,36 +262,7 @@ The convention of mirroring `lib/src/<module>/` structure under `test/<module>/`
 
 **Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
-### 3. Use @Preview for visual widgets
-
-For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with the `layrzPreviewLightTheme` top-level function.
-
-```dart
-import 'package:flutter/widget_previews.dart';
-import 'package:layrz_ui/preview.dart';
-
-@Preview(
-  name: 'Light',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
-```
-
-The real API in Flutter 3.47:
-- **Import**: `package:flutter/widget_previews.dart` (plural)
-- **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
-- **Theme type**: `PreviewThemeData` (abstract base class in the SDK)
-- **layrz_ui integration**: `LayrzPreviewTheme extends PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface). Light theme only; dark mode is out of scope per decision D7.
-
-**Important**: The `theme:` parameter accepts a tear-off **to a top-level function** (not a static method on a class): `@Preview(theme: layrzPreviewLightTheme)`, not an instance. The widget-preview code generator can only serialize top-level function tear-offs; it cannot resolve static methods on a class. So you **must** use the `layrzPreviewLightTheme` top-level function, not `LayrzPreviewTheme.light`.
-
-Rules:
-- Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Use `layrzPreviewLightTheme` as a tear-off in the `@Preview` annotation (not `LayrzPreviewTheme.light`, which will fail at compile time).
-- Add a single `@Preview` annotation for the light theme.
-- Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
-
-### 4. One concern per file — always split, never pile
+### 3. One concern per file — always split, never pile
 
 **Never put multiple unrelated things in a single file.** When a domain grows, split it.
 
@@ -316,8 +282,6 @@ lib/src/<domain>/src/
 
 The barrel file must contain **only** `export` statements — no logic, no classes. All modules are exported from the root barrel at `lib/layrz_ui.dart`, which is the blessed consumer import.
 
-**Note**: `lib/preview.dart` is a deliberately placed top-level barrel (outside the standard per-module structure) to keep preview infrastructure opt-in. See decision D18 in `engineering/decisions.md` for the original rationale. The preview exception survives the current module restructure as a documented allowance.
-
 ---
 
 ## Coding conventions
@@ -330,7 +294,7 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **Interaction states** — hover, press, focus, and disabled states must vary colour, border colour, shadow, opacity, and cursor only; never size, border width, padding, margin, or scale. Geometry changes cause flicker and reflow. See decision D15 in `engineering/decisions.md`.
 - **Cross-module imports use `package:layrz_ui/src/`** — within `lib/`, use the absolute form `import 'package:layrz_ui/src/constants/constants.dart';` to reach other modules' per-module barrels, never relative paths. Same-module imports within `src/` may remain relative. Consumers in `test/` and `example/lib/` import the root barrel `import 'package:layrz_ui/layrz_ui.dart';`. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.
-- **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, `RawRadio`, and the stable `@Preview` API exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
+- **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, and `RawRadio` exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
 
 ### Light Mode Only
 
@@ -383,7 +347,6 @@ Tests live under `test/` and mirror the structure of `lib/src/`. For example:
 4. Update `lib/layrz_ui.dart` to export the module (if new)
 5. Document every argument (see rule #1)
 6. Write tests in `test/<domain>/<widget_name>_test.dart` (see rule #2)
-7. Add `@Preview` annotations at the bottom of the widget file if applicable (see rule #3)
-8. Run `flutter analyze` — must be clean
-9. Run `flutter test` — must be green
-10. Verify no material/cupertino imports crept in
+7. Run `flutter analyze` — must be clean
+8. Run `flutter test` — must be green
+9. Verify no material/cupertino imports crept in
