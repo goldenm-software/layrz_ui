@@ -28,8 +28,8 @@ void main() {
         ),
       );
 
-      // The increment button should have the + glyph
-      expect(find.text('+'), findsOneWidget);
+      // The increment button should have an icon (rendered by Icon widget)
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('decrement button has accessible label', (tester) async {
@@ -41,8 +41,8 @@ void main() {
         ),
       );
 
-      // The decrement button should have the − glyph
-      expect(find.text('−'), findsOneWidget);
+      // The decrement button should have an icon (rendered by Icon widget)
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('step buttons are focusable with keyboard', (tester) async {
@@ -174,9 +174,8 @@ void main() {
         ),
       );
 
-      // Buttons should be present with their glyphs
-      expect(find.text('+'), findsOneWidget);
-      expect(find.text('−'), findsOneWidget);
+      // Buttons should be present with their icons
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('step buttons receive focus in tab order', (tester) async {

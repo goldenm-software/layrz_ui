@@ -1,6 +1,8 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/number_field_edge.dart';
 
 import '../helpers/pump_themed.dart';
 import '../helpers/find_button_label.dart';
@@ -65,7 +67,10 @@ void main() {
       expect(changedValue, isNull);
     });
 
-    testWidgets('calls onChanged with null for unparseable input', (tester) async {
+    testWidgets('calls onChanged with null when input is cleared', (tester) async {
+      // This test was previously checking that non-numeric input results in onChanged(null).
+      // With the new numeric formatter, non-numeric characters are rejected at the keystroke,
+      // so the field never accepts them. Instead, test that clearing the field fires onChanged(null).
       num? changedValue = 42;
       await pumpThemed(
         tester,
@@ -75,7 +80,11 @@ void main() {
         ),
       );
 
-      await tester.enterText(find.byType(EditableText), 'abc');
+      await tester.enterText(find.byType(EditableText), '123');
+      expect(changedValue, 123);
+
+      // Now clear the field
+      await tester.enterText(find.byType(EditableText), '');
       expect(changedValue, isNull);
     });
 
@@ -91,7 +100,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('+'));
+      await tester.tap(find.byType(NumberFieldControl).last);
       await tester.pumpAndSettle();
 
       expect(changedValue, 7);
@@ -109,7 +118,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('−'));
+      await tester.tap(find.byType(NumberFieldControl).first);
       await tester.pumpAndSettle();
 
       expect(changedValue, 3);
@@ -128,7 +137,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('+'));
+      await tester.tap(find.byType(NumberFieldControl).last);
       await tester.pumpAndSettle();
 
       // Should clamp to 10, not 11
@@ -148,7 +157,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('−'));
+      await tester.tap(find.byType(NumberFieldControl).first);
       await tester.pumpAndSettle();
 
       // Should clamp to 0, not -1 (1 - 2 = -1, clamped to 0)
@@ -165,8 +174,8 @@ void main() {
         ),
       );
 
-      // The increment button should exist (with + glyph) and be disabled when at maximum
-      expect(find.text('+'), findsOneWidget);
+      // The increment button should exist (with + glyph icon) and be disabled when at maximum
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('disables decrement button at minimum', (tester) async {
@@ -179,8 +188,8 @@ void main() {
         ),
       );
 
-      // The decrement button should exist (with − glyph) and be disabled when at minimum
-      expect(find.text('−'), findsOneWidget);
+      // The decrement button should exist (with − glyph icon) and be disabled when at minimum
+      expect(find.byType(Icon), findsWidgets);
     });
 
     testWidgets('hides step buttons when hideStepButtons is true', (tester) async {
@@ -192,8 +201,8 @@ void main() {
         ),
       );
 
-      expect(findButtonLabel('+'), findsNothing);
-      expect(findButtonLabel('−'), findsNothing);
+      // When hideStepButtons is true, there should be no NumberFieldControl icons
+      expect(find.byType(NumberFieldControl), findsNothing);
     });
 
     testWidgets('hides step buttons when disabled is true', (tester) async {
@@ -205,8 +214,8 @@ void main() {
         ),
       );
 
-      expect(findButtonLabel('+'), findsNothing);
-      expect(findButtonLabel('−'), findsNothing);
+      // When disabled is true, there should be no NumberFieldControl icons
+      expect(find.byType(NumberFieldControl), findsNothing);
     });
 
     testWidgets('disables step buttons when readOnly is true', (tester) async {
@@ -219,9 +228,8 @@ void main() {
         ),
       );
 
-      // Buttons should exist (with glyphs) when readOnly is true
-      expect(find.text('+'), findsOneWidget);
-      expect(find.text('−'), findsOneWidget);
+      // Buttons should exist (with icons) when readOnly is true
+      expect(find.byType(NumberFieldControl), findsWidgets);
     });
 
     testWidgets('displays formatted value when format is provided', (tester) async {
@@ -231,29 +239,32 @@ void main() {
           labelText: 'Number',
           value: 3.14159,
           format: (num n) => n.toStringAsFixed(2),
-          inputRegExp: RegExp(r'^[0-9.]*$'),
         ),
       );
 
       expect(find.text('3.14'), findsOneWidget);
     });
 
-    testWidgets('enforces inputRegExp pattern', (tester) async {
+    testWidgets('with inputFormatters null, numeric formatter is applied', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
       await pumpThemed(
         tester,
         LayrzNumberInput(
           labelText: 'Number',
-          inputRegExp: RegExp(r'^[0-9.]*$'),
+          controller: controller,
+          // inputFormatters is null, so numeric formatter applies
         ),
       );
 
+      // Numeric input should work
       await tester.enterText(find.byType(EditableText), '123');
-      expect(find.text('123'), findsOneWidget);
+      expect(controller.text, '123');
 
-      // Try to enter invalid character - should be rejected
+      // Invalid characters should be filtered out
       await tester.enterText(find.byType(EditableText), '123abc');
-      // The formatter should reject it, reverting to previous value
-      expect(find.text('123abc'), findsNothing);
+      expect(controller.text, '123');
     });
 
     testWidgets('creates internal controller when none provided', (tester) async {
@@ -431,7 +442,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('+'));
+      await tester.tap(find.byType(NumberFieldControl).last);
       await tester.pumpAndSettle();
 
       expect(changedValue, 6);
@@ -449,7 +460,7 @@ void main() {
         ),
       );
 
-      await tester.tap(findButtonLabel('+'));
+      await tester.tap(find.byType(NumberFieldControl).last);
       await tester.pumpAndSettle();
 
       expect(changedValue, 5.5);
@@ -525,5 +536,206 @@ void main() {
       expect(findButtonLabel('Price'), findsOneWidget);
       expect(findButtonLabel('Name'), findsOneWidget);
     });
+
+    testWidgets('filters out letters and symbols', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          controller: controller,
+        ),
+      );
+
+      // Enter text with invalid characters; formatter filters them out
+      await tester.enterText(find.byType(EditableText), '123abc!@#');
+      // Only numeric characters should remain
+      expect(controller.text, '123');
+    });
+
+    testWidgets('accepts configured decimal separator (dot)', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), '3.14');
+      expect(controller.text, '3.14');
+    });
+
+    testWidgets('rejects non-configured separator (comma when dot configured)', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          decimalSeparator: LayrzDecimalSeparator.dot,
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), '3,14');
+      // Comma should be rejected, only digits remain
+      expect(controller.text, '314');
+    });
+
+    testWidgets('accepts configured decimal separator (comma)', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          decimalSeparator: LayrzDecimalSeparator.comma,
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), '3,14');
+      expect(controller.text, '3,14');
+    });
+
+    testWidgets('accepts leading minus when minimum is negative', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          minimum: -100,
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), '-42');
+      expect(controller.text, '-42');
+    });
+
+    testWidgets('filters out leading minus when minimum is non-negative', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          minimum: 0,
+          controller: controller,
+        ),
+      );
+
+      // Formatter filters out the minus since negatives are not allowed
+      await tester.enterText(find.byType(EditableText), '-42');
+      expect(controller.text, '42');
+    });
+
+    testWidgets('caps fractional digits at maximumDecimalDigits', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          maximumDecimalDigits: 2,
+          controller: controller,
+        ),
+      );
+
+      // Formatter caps fractional digits at 2, ignoring '159'
+      await tester.enterText(find.byType(EditableText), '3.14159');
+      expect(controller.text, '3.14');
+    });
+
+    testWidgets('rejects separator when maximumDecimalDigits is 0', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          maximumDecimalDigits: 0,
+          controller: controller,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), '3.14');
+      // Separator should be rejected when no decimals allowed
+      expect(controller.text, '314');
+    });
+
+    testWidgets('allows intermediate typing states', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          controller: controller,
+        ),
+      );
+
+      // Empty string should be allowed
+      await tester.enterText(find.byType(EditableText), '');
+      expect(controller.text, '');
+
+      // Lone minus should be allowed
+      await tester.enterText(find.byType(EditableText), '-');
+      expect(controller.text, '-');
+
+      // Trailing separator should be allowed
+      await tester.enterText(find.byType(EditableText), '12.');
+      expect(controller.text, '12.');
+
+      // Complete it
+      await tester.enterText(find.byType(EditableText), '12.34');
+      expect(controller.text, '12.34');
+    });
+
+    testWidgets('caller-supplied inputFormatters replaces numeric formatter completely', (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          // Custom formatter that allows letters (proving we override the numeric formatter)
+          inputFormatters: [_AllowLettersFormatter()],
+          controller: controller,
+        ),
+      );
+
+      // With the custom formatter, letters are now accepted (no numeric-only enforcement)
+      await tester.enterText(find.byType(EditableText), 'abc123xyz');
+      expect(controller.text, 'abc123xyz');
+    });
   });
+}
+
+/// Custom formatter that allows all input (used to test that inputFormatters completely replaces the numeric formatter).
+class _AllowLettersFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // This formatter allows anything (all input accepted)
+    return newValue;
+  }
 }
