@@ -58,9 +58,12 @@ class LayrzAvatar extends StatelessWidget {
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
   }) : _imageSource = null,
        _icon = null,
-       _emoji = null;
+       _emoji = null,
+       assert(elevation == null || elevation >= 0, 'Elevation must be non-negative'),
+       assert(elevation == null || elevation <= 3, 'Elevation must be 0, 1, 2, or 3');
 
   /// Creates an avatar that displays an image from a URL or base64 source.
   ///
@@ -75,6 +78,7 @@ class LayrzAvatar extends StatelessWidget {
     required String imageSource,
     this.size = 40,
     this.borderRadius,
+    this.elevation,
   }) : source = null,
        nameText = null,
        color = null,
@@ -93,6 +97,7 @@ class LayrzAvatar extends StatelessWidget {
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -110,6 +115,7 @@ class LayrzAvatar extends StatelessWidget {
     required String emoji,
     this.size = 40,
     this.borderRadius,
+    this.elevation,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -129,6 +135,7 @@ class LayrzAvatar extends StatelessWidget {
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
   }) : source = null,
        _imageSource = null,
        _icon = null,
@@ -172,6 +179,9 @@ class LayrzAvatar extends StatelessWidget {
 
   /// For named constructors: the emoji to render (used by `.emoji()` constructor).
   final String? _emoji;
+
+  /// Change the elevation of the avatar. Defaults to null, which uses the default compact shadow.
+  final double? elevation;
 
   @override
   Widget build(BuildContext context) {
@@ -304,7 +314,7 @@ class LayrzAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: context.tokens.shadow.compact1,
+        boxShadow: _resolveElevation(context),
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -366,5 +376,25 @@ class LayrzAvatar extends StatelessWidget {
     // Standard relative luminance calculation
     final lum = (0.299 * r + 0.587 * g + 0.114 * b);
     return lum > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  }
+
+  /// Resolves the elevation to a list of box shadows.
+  ///
+  /// If [elevation] is null, uses the default compact shadow from the theme.
+  List<BoxShadow> _resolveElevation(BuildContext context) {
+    if (elevation == null) return context.tokens.shadow.compact1;
+
+    switch (elevation) {
+      case 0:
+        return [];
+      case 1:
+        return context.tokens.shadow.compact1;
+      case 2:
+        return context.tokens.shadow.compact2;
+      case 3:
+        return context.tokens.shadow.compact3;
+      default:
+        return context.tokens.shadow.compact1;
+    }
   }
 }
