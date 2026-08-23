@@ -2210,6 +2210,20 @@ After the first consuming app ships using `LayrzLayout` and `LayrzScaffoldShell`
 
 If feedback indicates a second presentation is essential, revisit in M5.x (post-release patch work).
 
+### Amendment — DESIGN-140 (2026-08-23)
+
+**Lifts the mobile bottom sheet deferral.** The original DESIGN-62 decision deferred the narrow-band presentation on mobile, ruling "Narrow fallback is a single-pane layout with a back affordance; no bottom-sheet modal presentation." This deferral was prudent at the time because `LayrzBottomSheet` did not exist.
+
+`LayrzBottomSheet` now exists at `lib/src/sheets/src/bottom_sheet.dart`, and the mobile experience is refined by DESIGN-140 to use it:
+
+- **Narrow band (sm/xs)** now presents the detail in a `LayrzBottomSheet` layered over the still-visible list (not replaced).
+- **Sheet defaults**: 50% initialSize, snaps to 50% and 95%, maxSize 95%, drag handle on. No public parameters customize the sheet — it is a fixed presentation choice.
+- **Selection persistence**: Selection survives a breakpoint crossing. Crossing from narrow → wide pops the sheet but keeps `openedKey`, so the detail pane shows the same item. Crossing from wide → narrow auto-opens the sheet for the already-selected item.
+- **Dismissal**: Dismissing the sheet (drag-down, barrier tap, Escape, system back) calls `controller.close()`, de-highlighting the list row and returning to list-only view.
+- **Navigator requirement**: The narrow band now pushes a route (`LayrzBottomSheet.show`), so the shell requires a `Navigator` ancestor (e.g. inside `LayrzApp`). A debug assert fires if missing; no release crash.
+
+This amendment also softens the consequence stated in D37's Decision section, "Neither component pushes a Navigator route." That was true of `LayrzLayout` and of the wide band of `LayrzScaffoldShell`, but the narrow band now does push one to show the detail sheet. The amendment records this honestly rather than quietly contradicting the original statement.
+
 ---
 
 ---
