@@ -184,6 +184,14 @@ class LayrzInputChrome extends StatelessWidget {
   /// displaying errors elsewhere (e.g., below a composite control).
   final bool displayError;
 
+  /// Whether to display the border around the input container.
+  ///
+  /// When true (default), the container renders a border around the input field.
+  /// When false, the border is not rendered; the caller is responsible for
+  /// displaying a border elsewhere (e.g., in a composite control wrapper).
+  /// The background fill and all other styling remains unchanged.
+  final bool showBorder;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -213,6 +221,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.borderRadius,
     this.displayLabel = true,
     this.displayError = true,
+    this.showBorder = true,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = expandHeight,
        // ignore: prefer_initializing_formals
@@ -253,6 +262,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.borderRadius,
     this.displayLabel = true,
     this.displayError = true,
+    this.showBorder = true,
     super.key,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = true,
@@ -322,10 +332,12 @@ class LayrzInputChrome extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: spec.backgroundColor,
-            border: Border.all(
-              color: spec.borderColor,
-              width: spec.borderWidth,
-            ),
+            border: showBorder
+                ? Border.all(
+                    color: spec.borderColor,
+                    width: spec.borderWidth,
+                  )
+                : null,
             borderRadius: borderRadius ?? tokens.radius.br2,
           ),
           padding: resolvedPadding,

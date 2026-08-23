@@ -2,9 +2,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'decimal_separator.dart';
 import 'input_error_block.dart';
+import 'input_style_spec.dart';
 import 'number_field_edge.dart';
 import 'text_input.dart';
 
@@ -14,10 +16,15 @@ import 'text_input.dart';
 /// It composes [LayrzTextInput] with flanking increment/decrement buttons (`+`/`−`) and provides:
 ///
 /// - **Decimal separator control**: Caller specifies whether to parse/format with dot or comma
-/// - **Bounds clamping**: Step buttons clamp at [minimum]/[maximum]; typed input is not blocked
+/// - **Numeric input enforcement**: By default, only numeric characters are accepted. Letters,
+///   symbols, and non-configured separators are rejected at the keystroke. When [inputFormatters]
+///   is supplied, it fully replaces the built-in numeric formatter, giving the caller complete
+///   responsibility for keystroke filtering. Bounds ([minimum]/[maximum]) are not enforced on
+///   typing; the step buttons clamp at limits, but the field accepts any numeric value.
 /// - **Decimal precision**: [maximumDecimalDigits] limits precision (default 4, max 15)
 /// - **Number formatting**: Formats values for display with the chosen separator
-/// - **Validation**: Enforces that [inputRegExp] is provided when [format] is non-null (debug assertion)
+/// - **Input filtering**: By default enforces numeric-only input. Supply [inputFormatters] to
+///   override completely and define your own keystroke filtering rules.
 ///
 /// **Disposal contract**: When `controller` or `focusNode` is null, the widget creates and disposes
 /// its own instances. Caller-supplied instances are never disposed.
@@ -62,24 +69,22 @@ class LayrzNumberInput extends StatefulWidget {
   /// parsing is stable across locale changes.
   final LayrzDecimalSeparator decimalSeparator;
 
-  /// Optional regular expression that validates the input text format.
-  ///
-  /// If provided, the input is constrained to match this pattern. Use this to allow
-  /// only certain numeric formats (e.g., scientific notation, currency symbols, etc.).
-  ///
-  /// When [format] is non-null, [inputRegExp] must also be non-null (enforced by debug assertion).
-  final RegExp? inputRegExp;
-
   /// Optional formatter callback for the parsed numeric value.
   ///
   /// If provided, the field calls this function to format the number for display
   /// after parsing. Receive the parsed `num` and return a formatted `String`.
   /// For example: `(num n) => n.toStringAsFixed(2)`.
-  ///
-  /// When non-null, [inputRegExp] must also be non-null (enforced by debug assertion).
-  /// This prevents the formatted string from containing characters the input field
-  /// would reject.
   final String Function(num)? format;
+
+  /// Optional list of input formatters to apply to the input field.
+  ///
+  /// When null (default), the field applies its built-in numeric formatter that enforces
+  /// numeric-only input based on [decimalSeparator], [minimum], and [maximumDecimalDigits].
+  /// When provided, this list **fully replaces** the built-in numeric formatter. The caller
+  /// takes complete responsibility for keystroke filtering and is responsible for their
+  /// interaction with [decimalSeparator] and [maximumDecimalDigits]. The built-in numeric
+  /// constraints are **not** applied when this is non-null.
+  final List<TextInputFormatter>? inputFormatters;
 
   /// The minimum allowed numeric value.
   ///
@@ -217,7 +222,6 @@ class LayrzNumberInput extends StatefulWidget {
   /// Creates a new [LayrzNumberInput] with the given properties.
   ///
   /// At least one of [labelText] or [hintText] must be non-null.
-  /// If [format] is non-null, [inputRegExp] must also be non-null (debug assertion).
   /// [maximumDecimalDigits] must be between 0 and 15 inclusive (debug assertion).
   /// At most one of [prefixIcon] / [prefix] / [prefixText] may be non-null (debug assertion).
   /// At most one of [suffixIcon] / [suffix] / [suffixText] may be non-null (debug assertion).
@@ -226,7 +230,6 @@ class LayrzNumberInput extends StatefulWidget {
     this.value,
     this.onChanged,
     this.decimalSeparator = LayrzDecimalSeparator.dot,
-    this.inputRegExp,
     this.format,
     this.minimum,
     this.maximum,
@@ -258,13 +261,10 @@ class LayrzNumberInput extends StatefulWidget {
     this.focusNode,
     this.padding,
     this.autofocus = false,
+    this.inputFormatters,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
-       ),
-       assert(
-         format == null || inputRegExp != null,
-         'inputRegExp must be non-null when format is non-null.',
        ),
        assert(
          maximumDecimalDigits >= 0 && maximumDecimalDigits <= 15,
@@ -488,10 +488,17 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final tokens = context.tokens;
 
     // Build the input formatters list
-    final formatters = <TextInputFormatter>[
-      // Use the custom inputRegExp if provided
-      if (widget.inputRegExp != null) _RegExpInputFormatter(widget.inputRegExp!),
-    ];
+    // When the caller supplies inputFormatters, use them exclusively (full override).
+    // Otherwise, apply the built-in numeric formatter that enforces numeric-only input.
+    final formatters =
+        widget.inputFormatters ??
+        <TextInputFormatter>[
+          _NumericInputFormatter(
+            decimalSeparator: widget.decimalSeparator,
+            maximumDecimalDigits: widget.maximumDecimalDigits,
+            allowNegative: widget.minimum == null || widget.minimum! < 0,
+          ),
+        ];
 
     // Resolve prefix and suffix from the caller's parameters
     final userPrefix = _resolvePrefix();
@@ -538,84 +545,21 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
                 ),
               ),
             ),
-          // Row with controls and chrome
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Decrement control (full height, left edge rounded)
-                NumberFieldControl(
-                  onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
-                  isDisabled: widget.readOnly || _isDecrementDisabled(),
-                  hasErrors: hasErrors,
-                  states: _states,
-                  readOnly: widget.readOnly,
-                  isLeft: true,
-                ),
-                // Chrome (square corners, no label, no error block)
-                Expanded(
-                  child: LayrzTextInput(
-                    labelText: widget.labelText,
-                    hintText: widget.hintText,
-                    isRequired: widget.isRequired,
-                    disabled: widget.disabled,
-                    readOnly: widget.readOnly,
-                    errors: widget.errors,
-                    hideDetails: widget.hideDetails,
-                    helperText: widget.helperText,
-                    helpTitleText: widget.helpTitleText,
-                    helpContentText: widget.helpContentText,
-                    onChanged: _handleTextChanged,
-                    onFocusChanged: (isFocused) {
-                      setState(() {
-                        if (isFocused) {
-                          _states.add(WidgetState.focused);
-                        } else {
-                          _states.remove(WidgetState.focused);
-                        }
-                      });
-                      widget.onFocusChanged?.call(isFocused);
-                    },
-                    onTap: widget.onTap,
-                    onSubmit: widget.onSubmit,
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    padding: widget.padding,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: formatters,
-                    autofocus: widget.autofocus,
-                    textAlign: TextAlign.center,
-                    prefix: userPrefix,
-                    suffix: userSuffix,
-                    onPrefixTap: widget.onPrefixTap,
-                    onSuffixTap: widget.onSuffixTap,
-                    borderRadius: BorderRadius.zero,
-                    displayLabel: false,
-                    displayError: false,
-                  ),
-                ),
-                // Increment control (full height, right edge rounded)
-                NumberFieldControl(
-                  onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
-                  isDisabled: widget.readOnly || _isIncrementDisabled(),
-                  hasErrors: hasErrors,
-                  states: _states,
-                  readOnly: widget.readOnly,
-                  isLeft: false,
-                ),
-              ],
-            ),
+          // Row with controls and chrome, wrapped in a single-bordered container
+          _buildNumberInputRow(
+            tokens: tokens,
+            formatters: formatters,
+            userPrefix: userPrefix,
+            userSuffix: userSuffix,
+            hasErrors: hasErrors,
           ),
           // Error block and character counter below the entire row
-          Padding(
-            padding: EdgeInsets.only(top: tokens.spacing.sp2),
-            child: LayrzInputErrorBlock(
-              errors: widget.errors,
-              hideDetails: widget.hideDetails,
-              maxLength: null,
-              controller: _controller,
-              helperText: widget.helperText,
-            ),
+          LayrzInputErrorBlock(
+            errors: widget.errors,
+            hideDetails: widget.hideDetails,
+            maxLength: null,
+            controller: _controller,
+            helperText: widget.helperText,
           ),
         ],
       );
@@ -651,6 +595,110 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     }
   }
 
+  /// Builds the number input row with unified border and dividers.
+  ///
+  /// Creates a single [Container] with a unified border wrapping the entire control,
+  /// including decrement cap, chrome, and increment cap. This ensures non-uniform
+  /// borders with rounded corners are drawn with the stroked-RRect path (antialiasing-friendly)
+  /// rather than the non-uniform fill path.
+  Widget _buildNumberInputRow({
+    required LayrzTokens tokens,
+    required List<TextInputFormatter> formatters,
+    required Widget? userPrefix,
+    required Widget? userSuffix,
+    required bool hasErrors,
+  }) {
+    // Resolve the style spec once for the entire control
+    final spec = LayrzInputStyleSpec.resolve(
+      states: _states,
+      tokens: tokens,
+      hasErrors: hasErrors,
+      readOnly: widget.readOnly,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: spec.backgroundColor,
+        border: Border.all(
+          color: spec.borderColor,
+          width: spec.borderWidth,
+        ),
+        borderRadius: tokens.radius.br2,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Decrement control (full height, no border/radius)
+            NumberFieldControl(
+              onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
+              isDisabled: widget.readOnly || _isDecrementDisabled(),
+              hasErrors: hasErrors,
+              states: _states,
+              readOnly: widget.readOnly,
+              isLeft: true,
+            ),
+
+            // Chrome (no border/radius, filled by outer container)
+            Expanded(
+              child: LayrzTextInput(
+                labelText: widget.labelText,
+                hintText: widget.hintText,
+                isRequired: widget.isRequired,
+                disabled: widget.disabled,
+                readOnly: widget.readOnly,
+                errors: widget.errors,
+                hideDetails: widget.hideDetails,
+                helperText: widget.helperText,
+                helpTitleText: widget.helpTitleText,
+                helpContentText: widget.helpContentText,
+                onChanged: _handleTextChanged,
+                onFocusChanged: (isFocused) {
+                  setState(() {
+                    if (isFocused) {
+                      _states.add(WidgetState.focused);
+                    } else {
+                      _states.remove(WidgetState.focused);
+                    }
+                  });
+                  widget.onFocusChanged?.call(isFocused);
+                },
+                onTap: widget.onTap,
+                onSubmit: widget.onSubmit,
+                controller: _controller,
+                focusNode: _focusNode,
+                padding: widget.padding,
+                keyboardType: TextInputType.number,
+                inputFormatters: formatters,
+                autofocus: widget.autofocus,
+                textAlign: TextAlign.center,
+                prefix: userPrefix,
+                suffix: userSuffix,
+                onPrefixTap: widget.onPrefixTap,
+                onSuffixTap: widget.onSuffixTap,
+                borderRadius: BorderRadius.zero,
+                displayLabel: false,
+                displayError: false,
+                showBorder: false,
+              ),
+            ),
+
+            // Increment control (full height, no border/radius)
+            NumberFieldControl(
+              onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
+              isDisabled: widget.readOnly || _isIncrementDisabled(),
+              hasErrors: hasErrors,
+              states: _states,
+              readOnly: widget.readOnly,
+              isLeft: false,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Resolves the caller's prefix (icon/widget/text) into a single widget or null.
   Widget? _resolvePrefix() {
     if (widget.prefixIcon != null) {
@@ -676,25 +724,103 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
   }
 }
 
-/// A custom [TextInputFormatter] that enforces a regex pattern.
+/// A custom [TextInputFormatter] that enforces numeric input based on configuration.
 ///
-/// Rejects any input that doesn't match the provided [pattern].
-class _RegExpInputFormatter extends TextInputFormatter {
-  /// The pattern to enforce.
-  final RegExp pattern;
+/// Restricts input to digits, the configured decimal separator, and (optionally) a leading minus sign.
+/// Enforces [maximumDecimalDigits] limit on the fractional part. Invalid characters are filtered out,
+/// allowing intermediate typing states (empty, lone minus, trailing separator) to work smoothly.
+class _NumericInputFormatter extends TextInputFormatter {
+  /// The decimal separator to accept (`.` or `,`).
+  final LayrzDecimalSeparator decimalSeparator;
 
-  /// Creates a new [_RegExpInputFormatter] with the given pattern.
-  _RegExpInputFormatter(this.pattern);
+  /// The maximum number of decimal digits allowed.
+  final int maximumDecimalDigits;
+
+  /// Whether negative values are allowed (true if minimum is null or < 0).
+  final bool allowNegative;
+
+  /// Creates a new [_NumericInputFormatter] with the given configuration.
+  _NumericInputFormatter({
+    required this.decimalSeparator,
+    required this.maximumDecimalDigits,
+    required this.allowNegative,
+  });
 
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    if (pattern.hasMatch(newValue.text)) {
+    final text = newValue.text;
+
+    // Empty input is always allowed
+    if (text.isEmpty) {
       return newValue;
     }
-    // Return the old value (before the invalid character was typed)
-    return oldValue;
+
+    // Build the separator character
+    final separator = decimalSeparator == LayrzDecimalSeparator.dot ? '.' : ',';
+
+    // Filter the text, keeping only valid characters
+    final buffer = StringBuffer();
+    var hasLeadingMinus = false;
+    var hasSeparator = false;
+    var decimalDigitCount = 0;
+
+    for (int i = 0; i < text.length; i++) {
+      final char = text[i];
+
+      // Minus is allowed only at the start and only if negatives are allowed
+      if (char == '-') {
+        if (i == 0 && allowNegative && !hasLeadingMinus) {
+          buffer.write(char);
+          hasLeadingMinus = true;
+          continue;
+        } else {
+          // Reject any other minus (not at start, or duplicates, or not allowed)
+          continue;
+        }
+      }
+
+      // Digits are always allowed
+      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
+        if (hasSeparator) {
+          // We're in the fractional part
+          if (decimalDigitCount < maximumDecimalDigits) {
+            buffer.write(char);
+            decimalDigitCount++;
+          }
+          // Skip if we exceed the decimal digit limit
+        } else {
+          // Before the separator
+          buffer.write(char);
+        }
+        continue;
+      }
+
+      // The separator is allowed (once, and not if we don't allow decimals)
+      if (char == separator && !hasSeparator && maximumDecimalDigits > 0) {
+        buffer.write(char);
+        hasSeparator = true;
+        decimalDigitCount = 0;
+        continue;
+      }
+
+      // Any other character is skipped (filtered out)
+    }
+
+    final formattedText = buffer.toString();
+
+    // If the formatted text differs from the input, the user tried to enter invalid characters
+    // But we still accept the valid part, so return the formatted text
+    if (formattedText == text) {
+      return newValue;
+    } else {
+      // Return the filtered text with the same selection position (or adjusted if text was shortened)
+      return TextEditingValue(
+        text: formattedText,
+        selection: TextSelection.collapsed(offset: formattedText.length),
+      );
+    }
   }
 }

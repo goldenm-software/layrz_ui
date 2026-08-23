@@ -199,6 +199,12 @@ class LayrzTextInput extends StatefulWidget {
   /// the caller is responsible for displaying errors separately.
   final bool displayError;
 
+  /// Whether to display the border around the input container.
+  ///
+  /// Defaults to true. When false, no border is rendered by the chrome;
+  /// the caller is responsible for displaying a border elsewhere.
+  final bool showBorder;
+
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -243,6 +249,7 @@ class LayrzTextInput extends StatefulWidget {
     this.borderRadius,
     this.displayLabel = true,
     this.displayError = true,
+    this.showBorder = true,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -393,6 +400,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       borderRadius: widget.borderRadius,
       displayLabel: widget.displayLabel,
       displayError: widget.displayError,
+      showBorder: widget.showBorder,
       child: LayrzEditableField(config: fieldConfig),
     );
   }

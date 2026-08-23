@@ -94,16 +94,21 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
       width: tokens.border.stroke2,
     );
 
-    // Compute hover and pressed colors by modulating the spec-derived idle color's opacity.
-    // This preserves the hue and saturation through interaction states (e.g., error shows
-    // pale danger idle, with slightly modulated danger on hover/press rather than jumping
-    // to a neutral surface).
-    final currentAlpha = (spec.backgroundColor.a * 255.0).round();
-    final hoverAlpha = (currentAlpha * 1.1 / 255.0).clamp(0.0, 1.0);
-    final pressedAlpha = (currentAlpha * 0.85 / 255.0).clamp(0.0, 1.0);
+    // Compute hover and pressed colors: use real colour swaps for clear feedback.
+    // On error, stay in the danger family (shade100 hover, shade200 pressed).
+    // On non-error, use LayrzTappable's standard steps (sf3 hover, sf4 pressed).
+    final Color hoverColor;
+    final Color pressedColor;
 
-    final hoverColor = spec.backgroundColor.withValues(alpha: hoverAlpha);
-    final pressedColor = spec.backgroundColor.withValues(alpha: pressedAlpha);
+    if (widget.hasErrors) {
+      // Error state: use darker danger shades for clearly visible feedback
+      hoverColor = tokens.colors.danger.shade100;
+      pressedColor = tokens.colors.danger.shade200;
+    } else {
+      // Non-error states (focused, disabled, default): use neutral surface steps
+      hoverColor = tokens.colors.sf3;
+      pressedColor = tokens.colors.sf4;
+    }
 
     final capContent = Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
@@ -124,7 +129,7 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
       onTap: widget.onTap,
       disabled: widget.isDisabled,
       borderRadius: capRadius,
-      color: null, // Background color is applied to the outer Container
+      color: spec.backgroundColor,
       hoverColor: hoverColor,
       pressedColor: pressedColor,
       child: capContent,
