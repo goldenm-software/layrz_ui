@@ -24,27 +24,18 @@ import 'src/sections/text_section.dart';
 import 'src/sections/tooltips_section.dart';
 import 'src/sections/typography_section.dart';
 
-/// Run the showroom application with mandatory font loading.
+/// Run the showroom application with Open Sans font.
 ///
-/// [LayrzThemeData.light] now requires no configuration — it automatically loads
-/// the default 'Open Sans' font from Google Fonts. The optional preload demonstrates
-/// how to avoid first-frame flashing by eagerly fetching the font before `runApp()`.
-/// If preloading fails (e.g., offline), the app degrades gracefully and opens with
-/// fallback fonts.
+/// The Open Sans font is loaded before the app starts. This demonstrates
+/// the correct startup shape for consumers who use a custom font that
+/// requires loading (e.g., from a network source). In this case, the font
+/// is bundled in assets and loaded immediately by the engine, so [load]
+/// completes without I/O.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Optional: preload the default Layrz font to avoid first-frame flashing.
-  // This is entirely optional — the font will load either way when the theme is constructed.
-  try {
-    await LayrzThemeData.preloadFont();
-  } catch (e) {
-    // Gracefully degrade if preload fails — allow the showroom to open offline
-    debugPrint('Font preload failed (likely offline): $e');
-    debugPrint('Opening showroom with fallback system fonts');
-  }
-
-  runApp(const ShowroomApp());
+  final font = const LayrzOpenSansFont();
+  await font.load();
+  runApp(ShowroomApp(font: font));
 }
 
 /// The singleton go_router instance for the showroom application.
@@ -145,15 +136,26 @@ final _router = GoRouter(
 
 /// Root widget of the showroom application.
 ///
-/// The [LayrzThemeData.light] constructor now automatically loads and resolves
-/// the Open Sans font from Google Fonts. No configuration is needed.
+/// The theme uses the provided custom font (Open Sans from bundled assets).
+/// Consumers can provide any [LayrzFont] implementation — bundled fonts like this
+/// one, fonts fetched from a CDN, or fonts loaded from network sources via
+/// [layrz_ui_extensions].
 ///
 /// Uses [LayrzApp.router] with a go_router [GoRouter] configured with a [ShellRoute],
 /// ensuring the application shell persists across navigation while only the body
 /// content changes.
 class ShowroomApp extends StatelessWidget {
   /// Creates a new [ShowroomApp].
-  const ShowroomApp({super.key});
+  ///
+  /// The [font] parameter specifies which font to use in the theme. It must be
+  /// loaded before this widget is built (typically in [main] before [runApp]).
+  const ShowroomApp({
+    required this.font,
+    super.key,
+  });
+
+  /// The custom font to use in the theme.
+  final LayrzFont font;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +171,7 @@ class ShowroomApp extends StatelessWidget {
     return LayrzApp.router(
       routerConfig: _router,
       title: kAppTitle,
-      theme: LayrzThemeData.light(),
+      theme: LayrzThemeData.light(font: font),
       // To view the original component showroom, uncomment:
       // home: const Showroom(),
     );
