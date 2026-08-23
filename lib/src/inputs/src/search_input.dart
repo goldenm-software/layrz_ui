@@ -1,9 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/preview.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
@@ -264,21 +262,4 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       ),
     );
   }
-}
-
-/// Preview of [LayrzSearchInput] in field mode with empty field.
-@Preview(name: 'Field mode (empty)', theme: layrzPreviewLightTheme)
-Widget previewLayrzSearchInputFieldEmpty() {
-  return LayrzSearchInput(
-    mode: LayrzSearchInputMode.field,
-  );
-}
-
-/// Preview of [LayrzSearchInput] in field mode with text.
-@Preview(name: 'Field mode (with text)', theme: layrzPreviewLightTheme)
-Widget previewLayrzSearchInputFieldWithText() {
-  return LayrzSearchInput(
-    mode: LayrzSearchInputMode.field,
-    value: 'flutter',
-  );
 }

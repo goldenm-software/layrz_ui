@@ -1,8 +1,6 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/preview.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/input_error_block.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -276,37 +274,3 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
     );
   }
 }
-
-/// Preview: unchecked checkbox with label.
-@Preview(
-  name: 'Unchecked',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewCheckboxInputUnchecked() => LayrzCheckboxInput(
-  labelText: 'Accept terms and conditions',
-  value: false,
-  onChanged: (_) {},
-);
-
-/// Preview: checked checkbox with label.
-@Preview(
-  name: 'Checked',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewCheckboxInputChecked() => LayrzCheckboxInput(
-  labelText: 'I agree to the terms',
-  value: true,
-  onChanged: (_) {},
-);
-
-/// Preview: disabled checkbox.
-@Preview(
-  name: 'Disabled',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewCheckboxInputDisabled() => LayrzCheckboxInput(
-  labelText: 'Disabled checkbox',
-  value: false,
-  disabled: true,
-  onChanged: (_) {},
-);

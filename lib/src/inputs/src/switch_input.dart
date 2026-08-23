@@ -1,7 +1,5 @@
 import 'package:flutter/services.dart';
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/preview.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/input_error_block.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -292,37 +290,3 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
     );
   }
 }
-
-/// Preview: switch in off state with label.
-@Preview(
-  name: 'Off',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewSwitchInputOff() => LayrzSwitchInput(
-  labelText: 'Enable notifications',
-  value: false,
-  onChanged: (_) {},
-);
-
-/// Preview: switch in on state with label.
-@Preview(
-  name: 'On',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewSwitchInputOn() => LayrzSwitchInput(
-  labelText: 'Notifications enabled',
-  value: true,
-  onChanged: (_) {},
-);
-
-/// Preview: disabled switch.
-@Preview(
-  name: 'Disabled',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewSwitchInputDisabled() => LayrzSwitchInput(
-  labelText: 'Unavailable feature',
-  value: false,
-  disabled: true,
-  onChanged: (_) {},
-);

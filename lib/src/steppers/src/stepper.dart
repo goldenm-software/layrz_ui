@@ -1,4 +1,3 @@
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
@@ -6,7 +5,6 @@ import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
-import 'package:layrz_ui/preview.dart';
 
 import 'step.dart';
 import 'stepper_controller.dart';
@@ -481,87 +479,6 @@ class _LayrzStepperState extends State<LayrzStepper> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Preview of [LayrzStepper] with multiple steps showing the basic flow.
-@Preview(
-  name: 'Multi-step Flow',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzStepperMultiStep() {
-  return LayrzStepper(
-    steps: [
-      LayrzStep(
-        labelText: 'Personal',
-        body: _PreviewStepContent(title: 'Personal Information'),
-      ),
-      LayrzStep(
-        labelText: 'Shipping',
-        body: _PreviewStepContent(title: 'Shipping Address'),
-      ),
-      LayrzStep(
-        labelText: 'Review',
-        body: _PreviewStepContent(title: 'Review & Confirm'),
-      ),
-    ],
-  );
-}
-
-/// Preview of [LayrzStepper] with one step in an error state.
-@Preview(
-  name: 'With Error State',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzStepperWithError() {
-  return LayrzStepper(
-    steps: [
-      LayrzStep(
-        labelText: 'Personal',
-        body: _PreviewStepContent(title: 'Personal Information'),
-        state: LayrzStepperState.completed,
-      ),
-      LayrzStep(
-        labelText: 'Shipping',
-        body: _PreviewStepContent(title: 'Shipping Address'),
-        state: LayrzStepperState.error,
-      ),
-      LayrzStep(
-        labelText: 'Review',
-        body: _PreviewStepContent(title: 'Review & Confirm'),
-      ),
-    ],
-  );
-}
-
-/// A placeholder step content widget used in previews to show typical step content.
-class _PreviewStepContent extends StatelessWidget {
-  /// The title displayed at the top of the step content.
-  final String title;
-
-  const _PreviewStepContent({
-    required this.title,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: tokens.typography.headline,
-        ),
-        SizedBox(height: tokens.spacing.sp3),
-        Text(
-          'This is the body content for the current step. '
-          'It can contain forms, summaries, or any other widget.',
-          style: tokens.typography.body,
-          maxLines: 3,
-        ),
-      ],
     );
   }
 }

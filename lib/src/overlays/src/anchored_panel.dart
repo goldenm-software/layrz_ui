@@ -1,8 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter/widget_previews.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/preview.dart';
 
 import 'anchored_panel_layout_delegate.dart';
 
@@ -297,50 +294,3 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
     );
   }
 }
-
-/// Preview of [LayrzAnchoredPanel] with a mock anchor and content.
-@Preview(
-  name: 'Light',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzAnchoredPanel() => LayrzAnchoredPanel(
-  builder: (context, controller) => LayrzButton(
-    labelText: 'Open dropdown',
-    onTap: controller.isOpen ? controller.close : controller.open,
-  ),
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      SizedBox(
-        height: 40,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Option 1'),
-          ),
-        ),
-      ),
-      SizedBox(
-        height: 40,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Option 2'),
-          ),
-        ),
-      ),
-      SizedBox(
-        height: 40,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Option 3'),
-          ),
-        ),
-      ),
-    ],
-  ),
-);

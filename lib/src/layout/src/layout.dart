@@ -1,13 +1,10 @@
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
-import 'package:layrz_ui/preview.dart';
 
 import 'drawer_scaffold.dart';
 import 'navigator_item.dart';
@@ -328,49 +325,3 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     );
   }
 }
-
-/// Preview widget for LayrzLayout in expanded presentation mode.
-@Preview(
-  name: 'Light',
-  size: Size(1200, 600),
-  theme: layrzPreviewLightTheme,
-)
-Widget previewLayrzLayout() => LayrzLayout(
-  logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
-  items: [
-    LayrzNavigatorPage(
-      id: 'dashboard',
-      icon: MdiIcons.viewDashboardOutline,
-      labelText: 'Dashboard',
-      isSelected: true,
-    ),
-    LayrzNavigatorPage(
-      id: 'devices',
-      icon: MdiIcons.cellphoneLink,
-      labelText: 'Devices',
-    ),
-    LayrzNavigatorLabel('Settings'),
-    LayrzNavigatorPage(
-      id: 'config',
-      icon: MdiIcons.cogOutline,
-      labelText: 'Configuration',
-    ),
-  ],
-  userName: 'John Doe',
-  userMenuItems: [
-    LayrzDropdownEntry(
-      labelText: 'Profile',
-      icon: MdiIcons.accountOutline,
-      onTap: () {},
-    ),
-    LayrzDropdownEntry(
-      labelText: 'Settings',
-      icon: MdiIcons.cogOutline,
-      onTap: () {},
-    ),
-  ],
-  selectableContent: true,
-  body: Center(
-    child: Text('Body content goes here'),
-  ),
-);
