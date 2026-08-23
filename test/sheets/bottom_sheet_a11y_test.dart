@@ -198,6 +198,9 @@ void main() {
         await tester.pumpAndSettle();
 
         // Walk the semantics tree to find the node with our label
+        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
+        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
+        // TODO: Remove this when a public non-deprecated API is available.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
         expect(semanticsOwner, isNotNull);
@@ -207,6 +210,7 @@ void main() {
 
         dynamic targetNode;
         void findLabelNode(dynamic node) {
+          if (targetNode != null) return; // Early return once match is found
           if (node.label == 'Choose an item. Press Escape to close.') {
             targetNode = node;
             return;
@@ -261,6 +265,9 @@ void main() {
 
         // Walk the semantics tree to verify there is NO namesRoute flag
         // (would be added by Semantics wrapper, which should not exist without a label)
+        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
+        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
+        // TODO: Remove this when a public non-deprecated API is available.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
         expect(semanticsOwner, isNotNull);
@@ -332,6 +339,9 @@ void main() {
 
         // Walk the semantics tree to verify there is NO namesRoute flag
         // (even though a label was supplied, persistent sheets never get wrapped)
+        // NOTE: semanticsOwner is deprecated but there is no non-deprecated accessor for the
+        // semantics owner in Flutter 3.47. Use deprecated_member_use ignore as a placeholder.
+        // TODO: Remove this when a public non-deprecated API is available.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
         expect(semanticsOwner, isNotNull);
