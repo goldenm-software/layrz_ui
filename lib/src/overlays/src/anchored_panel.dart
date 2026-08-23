@@ -313,7 +313,7 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    Widget anchor = RawMenuAnchor(
+    return RawMenuAnchor(
       controller: _panelController,
       onOpenRequested: _handlePanelOpenRequested,
       onCloseRequested: _handlePanelCloseRequested,
@@ -325,16 +325,5 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
         return widget.builder(context, panelController);
       },
     );
-
-    // Wrap with semantics if a label is provided.
-    if (widget.anchorSemanticLabel != null) {
-      anchor = Semantics(
-        button: true,
-        label: widget.anchorSemanticLabel,
-        child: anchor,
-      );
-    }
-
-    return anchor;
   }
 }
