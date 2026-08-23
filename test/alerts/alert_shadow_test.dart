@@ -4,7 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 /// Helper to find the AnimatedContainer inside a LayrzAlert.
@@ -17,7 +16,7 @@ void main() {
   group('LayrzAlert Shadow Behavior', () {
     group('Inert alert (onTap: null)', () {
       testWidgets('inert alert has no shadow at rest', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -47,7 +46,7 @@ void main() {
       });
 
       testWidgets('inert alert has no shadow when hovered (if AnimatedContainer exists)', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -73,7 +72,7 @@ void main() {
 
     group('Interactive alert at rest (onTap non-null)', () {
       testWidgets('interactive alert at rest has no shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -100,7 +99,7 @@ void main() {
       });
 
       testWidgets('hovering produces elevation2 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -143,7 +142,7 @@ void main() {
       });
 
       testWidgets('focus produces elevation2 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await tester.pumpWidget(
           LayrzApp(
             theme: themeData,
@@ -187,7 +186,7 @@ void main() {
       testWidgets('pressing produces elevation1 shadow', (tester) async {
         // Desktop mouse: hover first (same pointer), then button-down on that pointer.
         // This test verifies the press-after-hover behavior (desktop interaction).
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -244,7 +243,7 @@ void main() {
       });
 
       testWidgets('shadow animates during hover transition', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -279,7 +278,7 @@ void main() {
     group('All styles support shadow on hover', () {
       for (final style in LayrzAlertStyle.values) {
         testWidgets('$style style shows shadow on hover', (tester) async {
-          final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+          final themeData = LayrzThemeData.light();
           await pumpThemed(
             tester,
             SizedBox(
@@ -319,7 +318,7 @@ void main() {
 
     group('filledIcon style shadow visibility (ClipRRect test)', () {
       testWidgets('filledIcon style shadow is not clipped by inner ClipRRect', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -370,7 +369,7 @@ void main() {
 
     group('Shadow state transitions', () {
       testWidgets('shadow transitions from none to elevation2 on hover', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -424,7 +423,7 @@ void main() {
       });
 
       testWidgets('shadow transitions from elevation2 (hover) to elevation1 (press)', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -469,7 +468,7 @@ void main() {
 
       testWidgets('touch press without hover shows elevation2 (touchscreen device)', (tester) async {
         // Touchscreen: press with no prior hover — gets elevation2 shadow for feedback.
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -511,7 +510,7 @@ void main() {
 
       testWidgets('shadow transitions none→elevation2→none on touch (DESIGN-79)', (tester) async {
         // Touchscreen: rest → press → release.
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(

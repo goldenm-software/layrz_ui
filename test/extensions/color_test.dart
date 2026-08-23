@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzColorExtensions', () {
     group('toHex / hex', () {
@@ -332,7 +330,7 @@ void main() {
 
       test('alert real case: tonal at 20% flattened onto surface', () {
         // Simulate the alert case: accent at tonalOpacity onto tokens.colors.sf2
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.info.shade500;
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
 

@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import 'fake_font_handler.dart';
-
 /// Pumps a widget into a full [LayrzApp] hierarchy with theme and app infrastructure.
 ///
 /// This helper is used for tests that require full app-level features:
@@ -41,7 +39,7 @@ Future<void> pumpThemedApp(
   await tester.pumpWidget(
     LayrzApp(
       home: Center(child: child),
-      theme: theme ?? LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+      theme: theme ?? LayrzThemeData.light(),
       debugShowCheckedModeBanner: false,
     ),
   );

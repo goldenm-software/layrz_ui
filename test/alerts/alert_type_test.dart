@@ -2,14 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzAlertType', () {
     late LayrzTokens tokens;
 
     setUp(() {
-      tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+      tokens = LayrzTokens.light();
     });
 
     group('icon resolution', () {

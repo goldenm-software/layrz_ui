@@ -5,14 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzDropdownItem types', () {
     group('Semantic factories', () {
       testWidgets('save factory uses correct icon and success color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         var tapped = false;
 
         await pumpThemed(
@@ -54,7 +53,7 @@ void main() {
       });
 
       testWidgets('cancel factory uses correct icon and danger color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -86,7 +85,7 @@ void main() {
       });
 
       testWidgets('info factory uses correct icon and info color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -118,7 +117,7 @@ void main() {
       });
 
       testWidgets('show factory uses correct icon and info color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -150,7 +149,7 @@ void main() {
       });
 
       testWidgets('edit factory uses correct icon and warning color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -182,7 +181,7 @@ void main() {
       });
 
       testWidgets('delete factory uses correct icon and danger color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -214,7 +213,7 @@ void main() {
       });
 
       testWidgets('semantic factory icon can be overridden', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -241,7 +240,7 @@ void main() {
       });
 
       testWidgets('semantic factory color can be overridden', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final customColor = const Color(0xFFFF0000);
 
         await pumpThemed(
@@ -317,7 +316,7 @@ void main() {
     });
 
     testWidgets('label with color: null uses neutral surface3 band', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -330,7 +329,7 @@ void main() {
     });
 
     testWidgets('label with color uses flattened tonal fill', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       final customColor = const Color(0xFFABCDEF);
 
       await pumpThemed(
@@ -410,7 +409,7 @@ void main() {
     });
 
     testWidgets('entry with custom color uses that color', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -463,7 +462,7 @@ void main() {
     });
 
     testWidgets('color dot renders only when color is set', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       // Test with color
       await pumpThemed(
@@ -533,7 +532,7 @@ void main() {
     });
 
     testWidgets('dot and icon can coexist in same entry', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -571,7 +570,7 @@ void main() {
     });
 
     testWidgets('entry height is fixed regardless of dot/icon presence', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       // Test with dot and icon
       await pumpThemed(
@@ -616,7 +615,7 @@ void main() {
         FocusManager.instance.highlightStrategy = FocusHighlightStrategy.automatic;
       });
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       await pumpThemed(
         tester,
         theme: themeData,
@@ -641,7 +640,7 @@ void main() {
     });
 
     testWidgets('press repaints the entry with the surface3 background', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       await pumpThemed(
         tester,
         theme: themeData,
@@ -665,7 +664,7 @@ void main() {
     });
 
     testWidgets('shortcut is rendered in entry', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -700,7 +699,7 @@ void main() {
         onTap: () {},
       );
 
-      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      final tokens = LayrzThemeData.light().tokens;
       expect(entry.resolveAccent(tokens), isNull);
     });
 
@@ -712,7 +711,7 @@ void main() {
         color: customColor,
       );
 
-      final tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      final tokens = LayrzThemeData.light().tokens;
       expect(entry.resolveAccent(tokens), customColor);
     });
 
@@ -722,7 +721,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.success);
     });
 
@@ -732,7 +731,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
     });
 
@@ -742,7 +741,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
     });
 
@@ -752,7 +751,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.info);
     });
 
@@ -762,7 +761,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.warning);
     });
 
@@ -772,7 +771,7 @@ void main() {
         onTap: () {},
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       expect(entry.resolveAccent(themeData.tokens), themeData.tokens.colors.danger);
     });
 
@@ -784,7 +783,7 @@ void main() {
         color: customColor,
       );
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       // Should return the custom color, not the semantic success color
       expect(entry.resolveAccent(themeData.tokens), customColor);
       expect(entry.resolveAccent(themeData.tokens), isNot(themeData.tokens.colors.success));

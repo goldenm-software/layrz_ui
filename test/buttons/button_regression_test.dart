@@ -4,7 +4,6 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -81,7 +80,7 @@ void main() {
 
     group('BUG 2: Border opacity — borderless styles never show visible border', () {
       test('elevated does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         for (final state in [
@@ -106,7 +105,7 @@ void main() {
       });
 
       test('elevatedFab does not show border in any state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         for (final state in [
@@ -131,7 +130,7 @@ void main() {
       });
 
       test('outlined shows visible border in default, hovered, and pressed states', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         for (final state in [
@@ -155,7 +154,7 @@ void main() {
       });
 
       test('outlined shows visible border in disabled state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
@@ -173,7 +172,7 @@ void main() {
       });
 
       test('outlinedFab shows visible border in disabled state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
@@ -191,7 +190,7 @@ void main() {
       });
 
       test('outlinedTonal shows visible border in disabled state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
@@ -209,7 +208,7 @@ void main() {
       });
 
       test('outlinedTonalFab shows visible border in disabled state', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
@@ -229,7 +228,7 @@ void main() {
 
     group('BUG 3: Outlined styles have hover and press feedback', () {
       test('outlined hovered spec differs from default spec', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
@@ -261,7 +260,7 @@ void main() {
       });
 
       test('outlined pressed spec differs from default spec', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
@@ -293,7 +292,7 @@ void main() {
       });
 
       test('outlined pressed background is darker than hovered', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final hoveredSpec = LayrzButtonStyleSpec.resolve(
@@ -319,7 +318,7 @@ void main() {
       });
 
       test('outlinedFab hovered spec differs from default spec', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
@@ -344,7 +343,7 @@ void main() {
       });
 
       test('outlinedFab pressed spec differs from default spec', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
@@ -369,7 +368,7 @@ void main() {
       });
 
       test('all styles have hover feedback', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         for (final style in LayrzButtonStyle.values) {
@@ -396,7 +395,7 @@ void main() {
       });
 
       test('all styles have press feedback', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         for (final style in LayrzButtonStyle.values) {
@@ -425,7 +424,7 @@ void main() {
 
     group('BUG 4: Loading and cooldown preserve button style', () {
       test('disabled and default specs differ', () {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(

@@ -37,23 +37,11 @@ void main() {
       expect(theme.label.fontWeight, equals(FontWeight.w400));
     });
 
-    test('defaults factory with null fontHandler uses font name directly', () {
-      final theme = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-        titleFont: const LayrzFont(
-          source: LayrzFontSource.google,
-          name: 'Open Sans',
-        ),
-        bodyFont: const LayrzFont(
-          source: LayrzFontSource.google,
-          name: 'Roboto',
-        ),
-        fontHandler: null,
-      );
+    test('defaults factory with null font uses LayrzRobotoFont', () {
+      final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.display.fontFamily, equals('Open Sans'));
+      expect(theme.display.fontFamily, equals('Roboto'));
       expect(theme.body.fontFamily, equals('Roboto'));
-      expect(theme.display.fontFamilyFallback, equals(kLayrzFontFallbacks));
     });
 
     test('no style carries an overflow — text wraps by default', () {
@@ -75,9 +63,7 @@ void main() {
     });
 
     test('copyWith creates new instance with replaced styles', () {
-      final original = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
+      final original = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
       final newBody = original.body.copyWith(fontSize: 20);
       final modified = original.copyWith(body: newBody);
 
@@ -87,50 +73,32 @@ void main() {
     });
 
     test('equality works for identical factories', () {
-      final theme1 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
-      final theme2 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
+      final theme1 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+      final theme2 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
       expect(theme1, equals(theme2));
     });
 
     test('equality works for copyWith with same values', () {
-      final original = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
+      final original = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
       final copy = original.copyWith();
       expect(copy, equals(original));
     });
 
     test('inequality works for different colors', () {
-      final theme1 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
-      final theme2 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFFFFFFFF),
-      );
+      final theme1 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+      final theme2 = LayrzTextTheme.defaults(textColor: const Color(0xFFFFFFFF));
       expect(theme1, isNot(equals(theme2)));
     });
 
     test('hashCode is stable for same values', () {
-      final theme1 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
-      final theme2 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
+      final theme1 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+      final theme2 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
       expect(theme1.hashCode, equals(theme2.hashCode));
     });
 
     test('hashCode differs for different colors', () {
-      final theme1 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFF000000),
-      );
-      final theme2 = LayrzTextTheme.defaults(
-        textColor: const Color(0xFFFFFFFF),
-      );
+      final theme1 = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+      final theme2 = LayrzTextTheme.defaults(textColor: const Color(0xFFFFFFFF));
       expect(theme1.hashCode, isNot(equals(theme2.hashCode)));
     });
 
@@ -147,6 +115,34 @@ void main() {
       expect(bodySize, lessThan(titleSize));
       expect(titleSize, lessThan(headlineSize));
       expect(headlineSize, lessThanOrEqualTo(displaySize));
+    });
+
+    test('Roboto font provides correct weights for each role', () {
+      final theme = LayrzTextTheme.defaults(
+        textColor: const Color(0xFF000000),
+        font: const LayrzRobotoFont(),
+      );
+
+      // Roboto has w700/w600/w600/w400/w400
+      expect(theme.display.fontWeight, equals(FontWeight.w700));
+      expect(theme.headline.fontWeight, equals(FontWeight.w600));
+      expect(theme.title.fontWeight, equals(FontWeight.w600));
+      expect(theme.body.fontWeight, equals(FontWeight.w400));
+      expect(theme.label.fontWeight, equals(FontWeight.w400));
+    });
+
+    test('theme applies size and color over font style values', () {
+      const testColor = Color(0xFF123456);
+      final theme = LayrzTextTheme.defaults(
+        textColor: testColor,
+        font: const LayrzRobotoFont(),
+      );
+
+      // Verify that size and color are overridden from the font style
+      expect(theme.display.color, equals(testColor));
+      expect(theme.display.fontSize, equals(40));
+      expect(theme.headline.color, equals(testColor));
+      expect(theme.headline.fontSize, equals(24));
     });
   });
 

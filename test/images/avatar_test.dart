@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -221,7 +220,7 @@ void main() {
 
     group('Shape and radius', () {
       testWidgets('renders with r3 corner radius from tokens by default', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -248,7 +247,7 @@ void main() {
       });
 
       testWidgets('custom borderRadius replaces (not augments) token value', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         const customRadius = 4.0;
 
         await pumpThemed(
@@ -395,7 +394,7 @@ void main() {
 
     group('Color parameter', () {
       testWidgets('defaults to primary token color', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -546,7 +545,7 @@ void main() {
 
     group('Fixed drop shadow', () {
       testWidgets('applies compact level-1 shadow to initials avatar', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -564,7 +563,7 @@ void main() {
       });
 
       testWidgets('applies compact level-1 shadow to image avatar', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -582,7 +581,7 @@ void main() {
       });
 
       testWidgets('applies compact level-1 shadow to icon avatar', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -600,7 +599,7 @@ void main() {
       });
 
       testWidgets('applies compact level-1 shadow to emoji avatar', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,

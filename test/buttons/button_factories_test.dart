@@ -4,7 +4,6 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/find_button_label.dart';
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -79,7 +78,7 @@ void main() {
     });
 
     testWidgets('save resolves to success color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -220,7 +219,7 @@ void main() {
     });
 
     testWidgets('cancel resolves to danger color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -306,7 +305,7 @@ void main() {
     });
 
     testWidgets('info resolves to info color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -392,7 +391,7 @@ void main() {
     });
 
     testWidgets('show resolves to info color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -478,7 +477,7 @@ void main() {
     });
 
     testWidgets('edit resolves to warning color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -564,7 +563,7 @@ void main() {
     });
 
     testWidgets('delete resolves to danger color', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await pumpThemed(
         tester,
@@ -600,7 +599,7 @@ void main() {
     });
 
     testWidgets('public constructor without semantic marker uses primary color by default', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       // Public constructor without semantic should use primary.
       await pumpThemed(

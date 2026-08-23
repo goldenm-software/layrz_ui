@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -125,7 +124,7 @@ void main() {
 
     group('Color application', () {
       testWidgets('layrz style uses split-panel with solid accent border', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(
@@ -242,7 +241,7 @@ void main() {
       });
 
       testWidgets('custom type without explicit color defaults to primary', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(
@@ -324,7 +323,7 @@ void main() {
       });
 
       testWidgets('description uses body style', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(
@@ -343,7 +342,7 @@ void main() {
 
     group('filledIcon border rendering', () {
       testWidgets('inert filledIcon alert renders accent border on foregroundDecoration', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         const accentColor = Color(0xFF2E7D32); // Custom green accent
         await pumpThemed(
           tester,
@@ -385,7 +384,7 @@ void main() {
       });
 
       testWidgets('interactive filledIcon alert renders accent border on foregroundDecoration', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         const accentColor = Color(0xFFD32F2F); // Custom red accent
         await pumpThemed(
           tester,
@@ -428,7 +427,7 @@ void main() {
       });
 
       testWidgets('filledIcon border colour matches accent across severity types', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         const width = 300.0;
 
         final severities = [
@@ -485,7 +484,7 @@ void main() {
       });
 
       testWidgets('split-panel ClipRRect uses outer r12 radius', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(
@@ -505,7 +504,7 @@ void main() {
       });
 
       testWidgets('filledIcon border width matches base border token', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(
@@ -541,7 +540,7 @@ void main() {
 
     group('border styles unchanged assertion', () {
       testWidgets('layrz style renders split-panel with solid accent border', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const SizedBox(

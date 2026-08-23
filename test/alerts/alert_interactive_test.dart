@@ -4,7 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 /// Helper to find the AnimatedContainer inside a LayrzAlert.
@@ -153,7 +152,7 @@ void main() {
 
     group('Hover lift behavior — transform values verified', () {
       testWidgets('interactive alert has AnimatedContainer with transform for lift effect', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -208,7 +207,7 @@ void main() {
           'GestureDetector wiring)', (tester) async {
         var tapped = false;
 
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         await pumpThemed(
           tester,
           SizedBox(
@@ -240,7 +239,7 @@ void main() {
 
     group('Anti-flicker test — hit region invariant (test 6 must catch broken implementations)', () {
       testWidgets('pressing near bottom edge: hit region stays fixed (proves transform is paint-only)', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -300,7 +299,7 @@ void main() {
     group('Layout neutrality (Decision D15) — paint-only proof (test 7 must catch broken '
         'implementations)', () {
       testWidgets('alert size remains constant during interaction', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -342,7 +341,7 @@ void main() {
       });
 
       testWidgets('alert position (layout bounds) remains constant during interaction', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -416,7 +415,7 @@ void main() {
 
     group('Hover lift translation — concrete values verified', () {
       testWidgets('hovering lifts the surface by kLayrzAlertHoverLift', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -478,7 +477,7 @@ void main() {
       });
 
       testWidgets('pressed surface settles back to y=0', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -537,7 +536,7 @@ void main() {
 
         await tester.pumpWidget(
           LayrzApp(
-            theme: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+            theme: LayrzThemeData.light(),
             debugShowCheckedModeBanner: false,
             home: Center(
               child: SizedBox(
@@ -575,7 +574,7 @@ void main() {
     group('Touch press feedback (DESIGN-79)', () {
       testWidgets('touch press without hover lifts surface (touchscreen device)', (tester) async {
         // Touchscreen: press with no prior hover possible — gets hover treatment.
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,
@@ -635,7 +634,7 @@ void main() {
 
       testWidgets('mouse press after hover settles surface (desktop mouse)', (tester) async {
         // Desktop mouse: hover first, then button-down on same pointer — settles.
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,

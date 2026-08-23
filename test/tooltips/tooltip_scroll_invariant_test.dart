@@ -3,8 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 /// Regression tests for the tooltip coordinate-space bug (fixed in 0c645dc).
 ///
 /// **The bug:** Before the fix, `_buildTooltipContent` resolved the anchor's
@@ -43,9 +41,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -194,9 +190,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -309,9 +303,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,

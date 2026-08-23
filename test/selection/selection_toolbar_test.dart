@@ -2,15 +2,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 Future<void> _pumpToolbar(
   WidgetTester tester,
   LayrzSelectionToolbar toolbar,
 ) async {
   await tester.pumpWidget(
     LayrzApp(
-      theme: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+      theme: LayrzThemeData.light(),
       home: Center(child: toolbar),
     ),
   );
@@ -170,7 +168,7 @@ void main() {
       // Pump with a wide constraint to verify it doesn't expand to fill
       await tester.pumpWidget(
         LayrzApp(
-          theme: LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+          theme: LayrzThemeData.light(),
           home: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 800),

@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 // ===== CONCRETE TEST EXTENSIONS =====
 
 /// A concrete extension for testing basic registration and retrieval.
@@ -77,7 +75,6 @@ void main() {
       test('accepts extensions iterable and registers them', () {
         final extA = _TestExtensionA(value: 'hello');
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -89,7 +86,6 @@ void main() {
         final extA = _TestExtensionA(value: 'test');
         final extB = _TestExtensionB(color: const Color(0xFF123456));
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA, extB],
         );
 
@@ -99,9 +95,7 @@ void main() {
       });
 
       test('defaults to empty extensions map when none provided', () {
-        final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        );
+        final theme = LayrzThemeData.light();
 
         expect(theme.extensions, isEmpty);
       });
@@ -111,7 +105,6 @@ void main() {
       test('returns registered extension of correct type', () {
         final extA = _TestExtensionA(value: 'test');
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -121,9 +114,7 @@ void main() {
       });
 
       test('asserts with helpful message when extension not found', () {
-        final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        );
+        final theme = LayrzThemeData.light();
 
         expect(
           () => theme.extension<_TestExtensionA>(),
@@ -135,7 +126,6 @@ void main() {
         final extA = _TestExtensionA(value: 'a');
         final extB = _TestExtensionB(color: const Color(0xFF111111));
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA, extB],
         );
 
@@ -151,7 +141,6 @@ void main() {
       test('returns registered extension of correct type', () {
         final extA = _TestExtensionA(value: 'test');
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -160,9 +149,7 @@ void main() {
       });
 
       test('returns null when extension not found', () {
-        final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        );
+        final theme = LayrzThemeData.light();
 
         final retrieved = theme.maybeExtension<_TestExtensionA>();
         expect(retrieved, isNull);
@@ -172,7 +159,6 @@ void main() {
         final extA = _TestExtensionA(value: 'a');
         final extB = _TestExtensionB(color: const Color(0xFF111111));
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA, extB],
         );
 
@@ -186,7 +172,6 @@ void main() {
       test('returns null for unregistered type when others exist', () {
         final extA = _TestExtensionA(value: 'a');
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -199,7 +184,6 @@ void main() {
       test('replaces extensions when provided', () {
         final extA1 = _TestExtensionA(value: 'original');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA1],
         );
 
@@ -213,7 +197,6 @@ void main() {
       test('preserves extensions when not provided to copyWith', () {
         final extA = _TestExtensionA(value: 'preserved');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -225,7 +208,6 @@ void main() {
       test('clears extensions when empty iterable passed', () {
         final extA = _TestExtensionA(value: 'test');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -239,7 +221,6 @@ void main() {
         final extA1 = _TestExtensionA(value: 'a1');
         final extB1 = _TestExtensionB(color: const Color(0xFF111111));
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA1, extB1],
         );
 
@@ -254,7 +235,6 @@ void main() {
       test('preserves tokens and iconTheme when copyWith with extensions', () {
         final extA = _TestExtensionA(value: 'test');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -305,7 +285,6 @@ void main() {
       test('extensions map is unmodifiable', () {
         final extA = _TestExtensionA(value: 'test');
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -320,11 +299,9 @@ void main() {
       test('two themes with same extensions are equal', () {
         final extA = _TestExtensionA(value: 'test');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
         final theme2 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -335,11 +312,9 @@ void main() {
         final extA1 = _TestExtensionA(value: 'a');
         final extA2 = _TestExtensionA(value: 'b');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA1],
         );
         final theme2 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA2],
         );
 
@@ -349,11 +324,9 @@ void main() {
       test('equal extensions have equal hash codes', () {
         final extA = _TestExtensionA(value: 'test');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
         final theme2 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
 
@@ -363,12 +336,9 @@ void main() {
       test('theme with extensions and theme without are unequal', () {
         final extA = _TestExtensionA(value: 'test');
         final theme1 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA],
         );
-        final theme2 = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        );
+        final theme2 = LayrzThemeData.light();
 
         expect(theme1, isNot(equals(theme2)));
       });
@@ -380,7 +350,6 @@ void main() {
         (WidgetTester tester) async {
           final extA = _TestExtensionA(value: 'overlay-test');
           final themeData = LayrzThemeData.light(
-            fontHandler: const FakeFontHandler(),
             extensions: [extA],
           );
           _TestExtensionA? resolvedInOverlay;
@@ -425,7 +394,6 @@ void main() {
         (WidgetTester tester) async {
           final extA = _TestExtensionA(value: 'context-test');
           final themeData = LayrzThemeData.light(
-            fontHandler: const FakeFontHandler(),
             extensions: [extA],
           );
           _TestExtensionA? resolved;
@@ -452,9 +420,7 @@ void main() {
       testWidgets(
         'context.maybeThemeExtension<T>() returns null when not registered',
         (WidgetTester tester) async {
-          final themeData = LayrzThemeData.light(
-            fontHandler: const FakeFontHandler(),
-          );
+          final themeData = LayrzThemeData.light();
           _TestExtensionA? resolved;
 
           final widget = LayrzTheme(
@@ -480,7 +446,6 @@ void main() {
         (WidgetTester tester) async {
           final extA = _TestExtensionA(value: 'maybe-test');
           final themeData = LayrzThemeData.light(
-            fontHandler: const FakeFontHandler(),
             extensions: [extA],
           );
           _TestExtensionA? resolved;
@@ -509,7 +474,6 @@ void main() {
           final extA = _TestExtensionA(value: 'a');
           final extB = _TestExtensionB(color: const Color(0xFF123456));
           final themeData = LayrzThemeData.light(
-            fontHandler: const FakeFontHandler(),
             extensions: [extA, extB],
           );
           _TestExtensionA? resolvedA;
@@ -549,7 +513,6 @@ void main() {
         final extA = _TestExtensionA(value: 'test');
         final extB = _TestExtensionB(color: const Color(0xFF111111));
         final theme = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [extA, extB],
         );
 

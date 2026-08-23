@@ -2,12 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzContextExtensions', () {
     testWidgets('theme returns the injected LayrzThemeData', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzThemeData resolved;
 
       await tester.pumpWidget(
@@ -26,7 +24,7 @@ void main() {
     });
 
     testWidgets('tokens returns theme.tokens', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzTokens resolved;
 
       await tester.pumpWidget(
@@ -47,7 +45,7 @@ void main() {
     testWidgets('tokenizer returns a LayrzTokenizer wrapping theme.tokens', (
       tester,
     ) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzTokenizer resolved;
 
       await tester.pumpWidget(
@@ -86,7 +84,7 @@ void main() {
     });
 
     testWidgets('titleStyle is 18pt bold text style', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late TextStyle resolved;
 
       await tester.pumpWidget(
@@ -106,7 +104,7 @@ void main() {
     });
 
     testWidgets('subtitleStyle is 16pt bold text style', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late TextStyle resolved;
 
       await tester.pumpWidget(
@@ -126,7 +124,7 @@ void main() {
     });
 
     testWidgets('bodyStyle returns theme.textStyle', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late TextStyle resolved;
 
       await tester.pumpWidget(
@@ -149,7 +147,6 @@ void main() {
       (tester) async {
         final ext = _TestContextExtension(value: 'test');
         final themeData = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [ext],
         );
         late _TestContextExtension resolved;
@@ -174,7 +171,7 @@ void main() {
     testWidgets(
       'maybeThemeExtension<T>() returns null when not registered',
       (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         _TestContextExtension? resolved;
 
         await tester.pumpWidget(
@@ -198,7 +195,6 @@ void main() {
       (tester) async {
         final ext = _TestContextExtension(value: 'maybe-test');
         final themeData = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
           extensions: [ext],
         );
         late _TestContextExtension? resolved;
@@ -220,7 +216,7 @@ void main() {
     );
 
     testWidgets('breakpoint getter exists and returns LayrzBreakpoint', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint? resolved;
 
       await tester.pumpWidget(
@@ -242,7 +238,7 @@ void main() {
     });
 
     testWidgets('context.tokens has breakpoints field', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpointTokens? breakpoints;
 
       await tester.pumpWidget(
@@ -267,7 +263,6 @@ void main() {
     testWidgets('custom breakpoint tokens are used in theme', (tester) async {
       const customBreakpoints = LayrzBreakpointTokens(xs: 500, sm: 900, md: 1200, lg: 1800);
       final customTheme = LayrzThemeData.light(
-        fontHandler: const FakeFontHandler(),
         breakpointTokens: customBreakpoints,
       );
       late LayrzBreakpointTokens? resolved;
@@ -296,7 +291,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(400, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -319,7 +314,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(700, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -342,7 +337,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1000, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -365,7 +360,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1400, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -388,7 +383,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(2000, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -411,7 +406,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(400, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -434,7 +429,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(700, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -457,7 +452,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1000, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -480,7 +475,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1400, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -503,7 +498,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(2000, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -526,7 +521,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(600, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -550,7 +545,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(960, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -574,7 +569,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1264, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -598,7 +593,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1904, 800);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late LayrzBreakpoint resolved;
 
       await tester.pumpWidget(
@@ -624,7 +619,7 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         tester.view.physicalSize = const Size(599, 800);
 
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         late bool resolved599;
 
         await tester.pumpWidget(
@@ -669,7 +664,7 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         tester.view.physicalSize = const Size(959, 800);
 
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         late bool resolved959;
 
         await tester.pumpWidget(
