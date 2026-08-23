@@ -145,13 +145,38 @@ void main() {
     );
 
     testWidgets(
-      'error state is not exposed to semantics',
+      'error state is exposed to semantics',
       (tester) async {
-        // Error messages are rendered visually in the widget tree but cannot be exposed
-        // through the outer Semantics node without localization for framing text.
-        // Errors are already communicated visually; semantic exposure requires localization.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Description',
+            errors: ['This field is required'],
+            controller: controller,
+          ),
+        );
+
+        // Error messages are caller-supplied text (already localized),
+        // exposed through the semantics tree so screen readers can access them.
+        final semanticsNode = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        // Errors are appended to the label in the semantics tree by EditableText
+        expect(
+          semanticsNode.label,
+          contains('This field is required'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
@@ -315,13 +340,11 @@ void main() {
     );
 
     testWidgets(
-      'custom actions are not exposed to semantics',
+      'custom semantic actions for required status are not exposed',
       (tester) async {
-        // Custom semantic actions require callable implementations. No-op actions are worse
-        // than silent gaps—they promise affordances that do nothing, degrading the user experience.
-        // Exposing required, help, and error status requires callable actions backed by real handlers,
-        // which cannot be provided without interaction design beyond the field's scope.
-        // This gap is better left unexposed than advertised as broken.
+        // Required status requires the localized string "required", not available in LayrzUiL10n.
+        // A callable action is not needed for a read-only indicator, but the string is.
+        // This gap is blocked on localization support.
       },
       skip: true,
     );
@@ -341,17 +364,103 @@ void main() {
     });
 
     testWidgets(
-      'help affordance is not exposed to semantics',
+      'help affordance with helpContentText is accessible',
       (tester) async {
-        // Help text requires a callable semantic action to be accessible to screen readers.
-        // Hardcoding English text or providing no-op actions both violate the design rules.
-        // Exposing help affordance semantically requires:
-        // - Localization strings for "show help"
-        // - A callable action handler that opens/focuses the help text
-        // Without both, semantic exposure is a false affordance. This gap is blocked on
-        // interaction design and localization support.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpContentText: 'This field accepts any text',
+            controller: controller,
+          ),
+        );
+
+        // Help content is exposed in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('This field accepts any text'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
+    );
+
+    testWidgets(
+      'help affordance with helpTitleText is accessible',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpTitleText: 'Guidelines',
+            controller: controller,
+          ),
+        );
+
+        // Help title is exposed in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('Guidelines'),
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'help affordance with both title and content is accessible',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpTitleText: 'Guidelines',
+            helpContentText: 'Follow these rules carefully',
+            controller: controller,
+          ),
+        );
+
+        // Both title and content are combined in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('Guidelines. Follow these rules carefully'),
+        );
+
+        handle.dispose();
+      },
     );
 
     testWidgets(

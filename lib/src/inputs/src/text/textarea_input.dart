@@ -366,9 +366,19 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
 
     final isDisabled = widget.disabled || widget.readOnly;
 
+    // Build semantic tooltip from help affordance (caller-supplied text)
+    String? semanticTooltip;
+    if (widget.helpTitleText != null || widget.helpContentText != null) {
+      semanticTooltip = [
+        if (widget.helpTitleText != null) widget.helpTitleText,
+        if (widget.helpContentText != null) widget.helpContentText,
+      ].join('. ');
+    }
+
     return Semantics(
       label: widget.labelText,
       hint: widget.hintText,
+      tooltip: semanticTooltip,
       enabled: !isDisabled,
       child: LayrzInputChrome.variableHeight(
         labelText: widget.labelText,
