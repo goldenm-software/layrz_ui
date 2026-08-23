@@ -13,24 +13,14 @@ class DetailPane<T> extends StatelessWidget {
   /// Callback to build the detail content.
   final Widget Function(T)? contentBuilder;
 
-  /// Callback to close the detail pane.
-  final VoidCallback? onClose;
-
-  /// Whether the detail pane should show a back button.
-  final bool showBack;
-
   /// Creates a new [DetailPane].
   ///
   /// - [opened]: The currently opened item, or null. Defaults to null.
   /// - [contentBuilder]: Callback to build the detail content, or null. Defaults to null.
-  /// - [onClose]: Callback to close the detail pane, or null. Defaults to null.
-  /// - [showBack]: Whether to show a back button. Defaults to false.
   const DetailPane({
     super.key,
     this.opened,
     this.contentBuilder,
-    this.onClose,
-    this.showBack = false,
   });
 
   @override

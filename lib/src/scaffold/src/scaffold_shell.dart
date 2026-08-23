@@ -1,6 +1,7 @@
 import "package:flutter/widgets.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/scaffold/src/scaffold_item.dart";
+import "package:layrz_ui/src/sheets/sheets.dart";
 import "package:layrz_ui/src/tokens/tokens.dart";
 
 import "detail_pane.dart";
@@ -72,6 +73,13 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
 
 class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   late VoidCallback _controllerListener;
+  late ValueNotifier<int> _itemsChangeNotifier;
+
+  /// Flag to prevent double-pushing sheets in rapid rebuilds.
+  bool _isSchedulingNarrowSheet = false;
+
+  /// Reference to the builder context from the narrow sheet, used to pop it specifically.
+  BuildContext? _narrowSheetContext;
 
   double get _itemExtent => widget.itemExtent + context.tokens.spacing.pd2.vertical;
 
@@ -81,6 +89,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     _controllerListener = () {
       setState(() {});
     };
+    _itemsChangeNotifier = ValueNotifier(widget.items.length);
     widget.controller.addListener(_controllerListener);
   }
 
@@ -91,12 +100,26 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       oldWidget.controller.removeListener(_controllerListener);
       widget.controller.addListener(_controllerListener);
     }
+    // Notify when items change
+    if (oldWidget.items.length != widget.items.length || !_itemsEqual(oldWidget.items, widget.items)) {
+      _itemsChangeNotifier.value++;
+    }
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_controllerListener);
+    _itemsChangeNotifier.dispose();
     super.dispose();
+  }
+
+  /// Check if items are equal by comparing their keys.
+  bool _itemsEqual(List<LayrzScaffoldItem<T>> a, List<LayrzScaffoldItem<T>> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i].key != b[i].key) return false;
+    }
+    return true;
   }
 
   @override
@@ -106,6 +129,18 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         final tokens = context.tokens;
         final breakpoint = tokens.breakpoints.bandAt(constraints.maxWidth);
         final isWide = breakpoint.index >= LayrzBreakpoint.md.index;
+
+        // Handle band transitions: close sheet when moving to wide layout
+        if (isWide && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
+          // Schedule the pop for after the build, to avoid modifying the widget
+          // tree during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_narrowSheetContext != null && _narrowSheetContext!.mounted) {
+              Navigator.of(_narrowSheetContext!).pop();
+              _narrowSheetContext = null;
+            }
+          });
+        }
 
         if (isWide) {
           return _buildWideLayout(context, tokens);
@@ -162,31 +197,89 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   }
 
   Widget _buildNarrowLayout(BuildContext context, LayrzTokens tokens) {
-    final openedItem = _findOpenedItem();
-    final showDetail = widget.controller.isOpen && openedItem != null;
+    // Always show the list panel on narrow layouts
+    final panel = ListPanel<T>(
+      items: widget.items,
+      openedKey: widget.controller.openedKey,
+      onTap: (item) {
+        widget.controller.open(item.key);
+      },
+      searchable: widget.searchable,
+      footer: widget.footer,
+      title: widget.title,
+      itemExtent: _itemExtent,
+      emptyState: widget.emptyState,
+    );
 
-    if (showDetail) {
-      return DetailPane<T>(
-        opened: openedItem.item,
-        contentBuilder: widget.onDetailsBuild,
-        onClose: () {
-          widget.controller.close();
-        },
-        showBack: true,
+    // Schedule the sheet presentation in a post-frame callback to avoid building
+    // during the build phase
+    if (widget.controller.isOpen && !_isSchedulingNarrowSheet) {
+      _isSchedulingNarrowSheet = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showNarrowDetailSheet(context);
+        }
+        _isSchedulingNarrowSheet = false;
+      });
+    }
+
+    return panel;
+  }
+
+  /// Shows the detail sheet for narrow layouts.
+  ///
+  /// Opens a LayrzBottomSheet with the detail content. Handles the case where
+  /// the opened item is no longer in the list, and manages dismissal to close
+  /// the controller.
+  Future<void> _showNarrowDetailSheet(BuildContext context) async {
+    // Guard: check if there's a Navigator available
+    final navigator = Navigator.maybeOf(context);
+    if (navigator == null) {
+      assert(
+        false,
+        'LayrzScaffoldShell on narrow breakpoints requires a Navigator ancestor '
+        '(e.g., inside LayrzApp) to present the detail sheet. No Navigator found in context.',
       );
-    } else {
-      return ListPanel<T>(
-        items: widget.items,
-        openedKey: widget.controller.openedKey,
-        onTap: (item) {
-          widget.controller.open(item.key);
-        },
-        searchable: widget.searchable,
-        footer: widget.footer,
-        title: widget.title,
-        itemExtent: _itemExtent,
-        emptyState: widget.emptyState,
-      );
+      return;
+    }
+
+    // If the opened item doesn't exist, close the controller
+    if (_findOpenedItem() == null) {
+      if (mounted) {
+        widget.controller.close();
+      }
+      return;
+    }
+
+    // Show the sheet
+    await LayrzBottomSheet.show<void>(
+      context,
+      builder: (sheetContext) {
+        _narrowSheetContext = sheetContext;
+        return ListenableBuilder(
+          listenable: Listenable.merge([widget.controller, _itemsChangeNotifier]),
+          builder: (context, _) {
+            final openedItem = _findOpenedItem();
+            if (openedItem == null) {
+              // Item was removed from the list; pop the sheet
+              if (mounted && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
+                Navigator.of(_narrowSheetContext!).pop();
+              }
+              return const SizedBox.shrink();
+            }
+            return DetailPane(
+              opened: openedItem.item,
+              contentBuilder: widget.onDetailsBuild,
+            );
+          },
+        );
+      },
+    );
+
+    // When the sheet is dismissed (user dragged down, tapped barrier, etc.),
+    // close the controller to match the screen state
+    if (mounted) {
+      widget.controller.close();
     }
   }
 }
