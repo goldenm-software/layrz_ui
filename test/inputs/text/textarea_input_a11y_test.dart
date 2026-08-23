@@ -375,9 +375,9 @@ void main() {
     testWidgets(
       'custom semantic actions for required status are not exposed',
       (tester) async {
-        // Required status requires the localized string "required", not available in LayrzUiL10n.
-        // A callable action is not needed for a read-only indicator, but the string is.
-        // This gap is blocked on localization support.
+        // CustomSemanticsAction requires a working callable handler to avoid advertising an action
+        // that does nothing when invoked. No handler exists from the outer semantics node without
+        // interaction design beyond the field's scope.
       },
       skip: true,
     );
