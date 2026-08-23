@@ -13,7 +13,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -24,7 +24,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -35,7 +35,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(Icon), findsOneWidget);
@@ -46,7 +46,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.text('😀'), findsOneWidget);
@@ -55,7 +55,7 @@ void main() {
       testWidgets('falls back to initials when source is null', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar(source: null, nameText: 'John Doe'),
+          const LayrzAvatar(source: null, nameText: 'John Doe', semanticLabel: 'Test avatar'),
         );
 
         expect(find.text('JO'), findsOneWidget);
@@ -66,7 +66,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -77,7 +77,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -88,7 +88,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(Icon), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.text('🎉'), findsOneWidget);
@@ -184,7 +184,7 @@ void main() {
       testWidgets('LayrzAvatar.image renders image', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png', semanticLabel: 'Test image'),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -202,7 +202,7 @@ void main() {
       testWidgets('LayrzAvatar.emoji renders emoji', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.emoji(emoji: '🎉'),
+          const LayrzAvatar.emoji(emoji: '🎉', semanticLabel: 'Party'),
         );
 
         expect(find.text('🎉'), findsOneWidget);
@@ -211,7 +211,7 @@ void main() {
       testWidgets('LayrzAvatar.initials renders initials', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.initials(nameText: 'Test User'),
+          const LayrzAvatar.initials(nameText: 'Test User', semanticLabel: 'Test User'),
         );
 
         expect(find.text('TE'), findsOneWidget);
@@ -298,6 +298,7 @@ void main() {
           tester,
           const LayrzAvatar.image(
             imageSource: 'https://example.com/avatar.png',
+            semanticLabel: 'Test image',
             borderRadius: customRadius,
           ),
         );
@@ -356,6 +357,7 @@ void main() {
         await pumpThemed(
           tester,
           const LayrzAvatar(
+            semanticLabel: "test avatar",
             nameText: 'Test User',
             size: size,
             borderRadius: largeRadius,
@@ -383,7 +385,11 @@ void main() {
       testWidgets('applies custom size', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar(nameText: 'Test', size: 60),
+          const LayrzAvatar(
+            nameText: 'Test',
+            size: 60,
+            semanticLabel: 'Test avatar',
+          ),
         );
 
         // Verify the avatar renders successfully with custom size
@@ -427,7 +433,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source, color: customColor),
+          LayrzAvatar(source: source, color: customColor, semanticLabel: "Test avatar"),
         );
 
         // The image should render, but the color should not be applied
@@ -440,7 +446,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source, color: customColor),
+          LayrzAvatar(source: source, color: customColor, semanticLabel: "Test avatar"),
         );
 
         expect(find.byType(LayrzImage), findsOneWidget);
@@ -451,7 +457,7 @@ void main() {
       testWidgets('renders image from .image() constructor on white background', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png', semanticLabel: 'Test image'),
         );
 
         final container = _findColoredContainer(tester);
@@ -465,7 +471,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         final container = _findColoredContainer(tester);
@@ -479,7 +485,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         final container = _findColoredContainer(tester);
@@ -504,7 +510,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzAvatar(source: source),
+          LayrzAvatar(source: source, semanticLabel: "Test avatar"),
         );
 
         expect(find.text('😀'), findsOneWidget);
@@ -535,7 +541,11 @@ void main() {
       testWidgets('renders initials at 40% of avatar size', (tester) async {
         await pumpThemed(
           tester,
-          const LayrzAvatar(nameText: 'Test User', size: 100),
+          const LayrzAvatar(
+            nameText: 'Test User',
+            size: 100,
+            semanticLabel: 'Test avatar',
+          ),
         );
 
         final textWidget = tester.widget<Text>(find.byType(Text).first);
@@ -567,7 +577,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png'),
+          const LayrzAvatar.image(imageSource: 'https://example.com/avatar.png', semanticLabel: 'Test image'),
           theme: themeData,
         );
 

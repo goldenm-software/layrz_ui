@@ -69,6 +69,7 @@ class ImagesSection extends StatelessWidget {
             children: [
               const LayrzAvatar.image(
                 imageSource: 'https://cdn.layrz.com/resources/com.layrz.one/favicon/normal.png',
+                semanticLabel: 'Layrz logo',
                 size: 48,
               ),
               SizedBox(height: tokens.spacing.sp2),

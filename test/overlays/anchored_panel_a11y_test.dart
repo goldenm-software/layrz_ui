@@ -131,5 +131,46 @@ void main() {
       // Verify panel is visible and has focus capability
       expect(find.text('Panel'), findsOneWidget);
     });
+
+    testWidgets('panel semantic label contrast: closed vs open', (tester) async {
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          LayrzAnchoredPanel(
+            panelSemanticLabel: 'Dropdown options',
+            builder: (context, controller) => LayrzButton(
+              labelText: 'Show',
+              onTap: controller.open,
+            ),
+            child: const SizedBox(
+              width: 200,
+              height: 100,
+              child: Text('Option A'),
+            ),
+          ),
+        );
+
+        // When panel is CLOSED, its semantic label should NOT be in the tree.
+        expect(
+          find.bySemanticsLabel('Dropdown options'),
+          findsNothing,
+          reason: 'Panel Semantics should not exist when panel is closed',
+        );
+
+        // Open the panel.
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        // When panel is OPEN, its label should be in the tree.
+        expect(
+          find.bySemanticsLabel('Dropdown options'),
+          findsOneWidget,
+          reason: 'Panel Semantics should exist when panel is open',
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
   });
 }
