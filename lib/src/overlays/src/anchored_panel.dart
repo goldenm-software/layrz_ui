@@ -130,16 +130,6 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// adjacent to the anchor.
   final void Function(bool flippedUp)? onFlipped;
 
-  /// Optional semantic label for the anchor (trigger) widget.
-  ///
-  /// When provided, the anchor is wrapped with a Semantics node labeling it as
-  /// a button with this text. This label is announced to screen readers when
-  /// the anchor receives focus.
-  ///
-  /// Must be caller-supplied for localization support. If null, no semantic
-  /// label is added to the anchor.
-  final String? anchorSemanticLabel;
-
   /// Optional semantic label for the panel overlay.
   ///
   /// When provided, the panel overlay is wrapped with a Semantics node using
@@ -166,7 +156,6 @@ class LayrzAnchoredPanel extends StatefulWidget {
     this.onClose,
     this.childFocusNode,
     this.onFlipped,
-    this.anchorSemanticLabel,
     this.panelSemanticLabel,
     super.key,
   });

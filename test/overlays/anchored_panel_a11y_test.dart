@@ -132,31 +132,6 @@ void main() {
       expect(find.text('Panel'), findsOneWidget);
     });
 
-    testWidgets('anchor semantic label parameter is accepted', (tester) async {
-      // The anchorSemanticLabel parameter is accepted but not currently wrapped.
-      // The anchor's semantics come from the builder widget (e.g., LayrzButton).
-      // This test documents that the parameter exists and is accepted.
-      await pumpThemed(
-        tester,
-        LayrzAnchoredPanel(
-          anchorSemanticLabel: 'Options menu',
-          builder: (context, controller) => LayrzButton(
-            labelText: 'Open',
-            onTap: controller.open,
-          ),
-          child: const SizedBox(
-            width: 200,
-            height: 100,
-            child: Text('Panel content'),
-          ),
-        ),
-      );
-
-      // Verify the widget builds without errors
-      expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
-      expect(find.byType(LayrzButton), findsOneWidget);
-    });
-
     testWidgets('panel semantic label contrast: closed vs open', (tester) async {
       final handle = tester.ensureSemantics();
       try {
