@@ -171,6 +171,16 @@ class LayrzTextInput extends StatefulWidget {
   /// field never offers copy or cut regardless of what is passed here.
   final Set<LayrzSelectableAction>? actions;
 
+  /// The text alignment for the editable value.
+  ///
+  /// Defaults to [TextAlign.start]. Use [TextAlign.center] to center-align the value.
+  final TextAlign textAlign;
+
+  /// Helper text displayed below the field.
+  ///
+  /// When [errors] is non-empty, errors take precedence and helper text is hidden.
+  final String? helperText;
+
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -210,6 +220,8 @@ class LayrzTextInput extends StatefulWidget {
     this.enableSuggestions = true,
     this.shortcut,
     this.actions,
+    this.textAlign = TextAlign.start,
+    this.helperText,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -336,6 +348,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       minLines: 1,
       maxLines: 1,
       expands: false,
+      textAlign: widget.textAlign,
     );
 
     return LayrzInputChrome(
@@ -355,6 +368,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       controller: _controller,
       padding: widget.padding,
       maxLength: widget.maxLength,
+      helperText: widget.helperText,
       child: LayrzEditableField(config: fieldConfig),
     );
   }

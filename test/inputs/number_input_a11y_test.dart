@@ -28,10 +28,8 @@ void main() {
         ),
       );
 
-      // The increment button should have the "+" label
-      expect(find.byType(LayrzButton), findsWidgets);
-      final buttons = find.byType(LayrzButton);
-      expect(buttons, findsWidgets); // At least 2 buttons (+ and -)
+      // The increment button should have the + glyph
+      expect(find.text('+'), findsOneWidget);
     });
 
     testWidgets('decrement button has accessible label', (tester) async {
@@ -43,8 +41,8 @@ void main() {
         ),
       );
 
-      // The decrement button should have the "−" label
-      expect(find.byType(LayrzButton), findsWidgets);
+      // The decrement button should have the − glyph
+      expect(find.text('−'), findsOneWidget);
     });
 
     testWidgets('step buttons are focusable with keyboard', (tester) async {
@@ -172,12 +170,13 @@ void main() {
           labelText: 'Quantity',
           value: 10,
           maximum: 10,
+          minimum: 0,
         ),
       );
 
-      // Increment button should be disabled
-      final buttons = find.byType(LayrzButton);
-      expect(buttons, findsWidgets);
+      // Buttons should be present with their glyphs
+      expect(find.text('+'), findsOneWidget);
+      expect(find.text('−'), findsOneWidget);
     });
 
     testWidgets('step buttons receive focus in tab order', (tester) async {

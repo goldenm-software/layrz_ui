@@ -33,6 +33,12 @@ class LayrzInputErrorBlock extends StatelessWidget {
   /// Required when [maxLength] is non-null.
   final TextEditingController? controller;
 
+  /// Helper text displayed below the field.
+  ///
+  /// When [errors] is non-empty, errors take precedence and helper text is hidden.
+  /// Only displayed when [hideDetails] is false.
+  final String? helperText;
+
   /// Creates a new [LayrzInputErrorBlock] with the given properties.
   const LayrzInputErrorBlock({
     super.key,
@@ -40,15 +46,17 @@ class LayrzInputErrorBlock extends StatelessWidget {
     required this.hideDetails,
     this.maxLength,
     this.controller,
+    this.helperText,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasErrors = errors.isNotEmpty;
     final hasCounter = maxLength != null;
+    final hasHelper = helperText != null && helperText!.isNotEmpty;
 
     // Hide the entire detail block if hideDetails is true, or if there's nothing to show
-    if (hideDetails || (!hasErrors && !hasCounter)) {
+    if (hideDetails || (!hasErrors && !hasCounter && !hasHelper)) {
       return const SizedBox.shrink();
     }
 
@@ -85,6 +93,15 @@ class LayrzInputErrorBlock extends StatelessWidget {
               maxLength: maxLength!,
               controller: controller,
               tokens: tokens,
+            ),
+          )
+        else if (hasHelper)
+          Text(
+            helperText!,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.typography.label.copyWith(
+              color: tokens.colors.fg3,
             ),
           ),
       ],

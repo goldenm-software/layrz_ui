@@ -199,7 +199,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LayrzButton), findsWidgets);
-      expect(find.text('Reset'), findsOneWidget);
+      expect(findButtonLabel('Reset'), findsOneWidget);
     });
   });
 }

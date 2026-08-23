@@ -1,9 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'decimal_separator.dart';
+import 'number_field_edge.dart';
 import 'text_input.dart';
 
 /// A Material-free numeric input field in the layrz_ui design system.
@@ -25,14 +24,18 @@ import 'text_input.dart';
 /// the parsed `num` when parsing succeeds.
 ///
 /// **Step button behavior**:
-/// - The `+` button increments by [step]; the `−` button decrements by [step]
+/// - When [hideStepButtons] is false (default), the `+` and `−` buttons appear inside the field
+///   at the trailing and leading edges respectively
+/// - Buttons are flanked by optional prefix/suffix widgets and vertical dividers
 /// - Buttons clamp at [minimum] (decrement disabled) and [maximum] (increment disabled)
-/// - Buttons are hidden when [hideStepButtons] is true
-/// - Buttons are hidden when [disabled] is true; disabled when [readOnly] is true
+/// - When [hideStepButtons] is true, the field renders as plain text input with prefix/suffix intact
+/// - Buttons are disabled (not hidden) when [readOnly] is true; hidden when [disabled] is true
 ///
-/// **Field alignment**: The field box itself aligns on the same baseline as sibling [LayrzTextInput]
-/// widgets, even though the step buttons flank it. Use `CrossAxisAlignment.start` on rows containing
-/// number inputs and text inputs to avoid misalignment.
+/// **Prefix and suffix**:
+/// - [prefixIcon], [prefix], or [prefixText]: Rendered inside the field after the `−` button and divider
+/// - [suffixIcon], [suffix], or [suffixText]: Rendered inside the field before the `+` button and divider
+/// - Use these for currency symbols, units, or other value context
+/// - At most one prefix and one suffix may be specified (same exclusivity as [LayrzTextInput])
 class LayrzNumberInput extends StatefulWidget {
   /// The current numeric value displayed in the field.
   ///
@@ -101,9 +104,49 @@ class LayrzNumberInput extends StatefulWidget {
 
   /// Whether to hide the increment/decrement buttons.
   ///
-  /// When true, the field renders as a plain text input with no flanking buttons.
-  /// Useful for compact layouts or when manual number entry is preferred.
+  /// When true, the field renders as a plain text input with no step buttons.
+  /// Prefix and suffix are unaffected. Useful for compact layouts or when manual number entry is preferred.
   final bool hideStepButtons;
+
+  /// Icon to render as a prefix (before the value, after the `−` button).
+  ///
+  /// Mutually exclusive with [prefix] and [prefixText].
+  final IconData? prefixIcon;
+
+  /// Widget to render as a prefix (before the value, after the `−` button).
+  ///
+  /// Mutually exclusive with [prefixIcon] and [prefixText].
+  final Widget? prefix;
+
+  /// Text to render as a prefix (before the value, after the `−` button).
+  ///
+  /// Mutually exclusive with [prefixIcon] and [prefix].
+  final String? prefixText;
+
+  /// Callback fired when the prefix is tapped.
+  ///
+  /// Ignored if the field is disabled.
+  final VoidCallback? onPrefixTap;
+
+  /// Icon to render as a suffix (after the value, before the `+` button).
+  ///
+  /// Mutually exclusive with [suffix] and [suffixText].
+  final IconData? suffixIcon;
+
+  /// Widget to render as a suffix (after the value, before the `+` button).
+  ///
+  /// Mutually exclusive with [suffixIcon] and [suffixText].
+  final Widget? suffix;
+
+  /// Text to render as a suffix (after the value, before the `+` button).
+  ///
+  /// Mutually exclusive with [suffixIcon] and [suffix].
+  final String? suffixText;
+
+  /// Callback fired when the suffix is tapped.
+  ///
+  /// Ignored if the field is disabled.
+  final VoidCallback? onSuffixTap;
 
   /// The label text displayed above the input field.
   ///
@@ -129,6 +172,11 @@ class LayrzNumberInput extends StatefulWidget {
 
   /// Whether to hide the error message block and character counter.
   final bool hideDetails;
+
+  /// Helper text displayed below the field.
+  ///
+  /// When [errors] is non-empty, errors take precedence and helper text is hidden.
+  final String? helperText;
 
   /// The title text for the help affordance tooltip.
   final String? helpTitleText;
@@ -168,6 +216,8 @@ class LayrzNumberInput extends StatefulWidget {
   /// At least one of [labelText] or [hintText] must be non-null.
   /// If [format] is non-null, [inputRegExp] must also be non-null (debug assertion).
   /// [maximumDecimalDigits] must be between 0 and 15 inclusive (debug assertion).
+  /// At most one of [prefixIcon] / [prefix] / [prefixText] may be non-null (debug assertion).
+  /// At most one of [suffixIcon] / [suffix] / [suffixText] may be non-null (debug assertion).
   const LayrzNumberInput({
     super.key,
     this.value,
@@ -180,6 +230,14 @@ class LayrzNumberInput extends StatefulWidget {
     this.step = 1,
     this.maximumDecimalDigits = 4,
     this.hideStepButtons = false,
+    this.prefixIcon,
+    this.prefix,
+    this.prefixText,
+    this.onPrefixTap,
+    this.suffixIcon,
+    this.suffix,
+    this.suffixText,
+    this.onSuffixTap,
     this.labelText,
     this.hintText,
     this.isRequired = false,
@@ -187,6 +245,7 @@ class LayrzNumberInput extends StatefulWidget {
     this.readOnly = false,
     this.errors = const [],
     this.hideDetails = false,
+    this.helperText,
     this.helpTitleText,
     this.helpContentText,
     this.onFocusChanged,
@@ -207,6 +266,18 @@ class LayrzNumberInput extends StatefulWidget {
        assert(
          maximumDecimalDigits >= 0 && maximumDecimalDigits <= 15,
          'maximumDecimalDigits must be between 0 and 15 inclusive.',
+       ),
+       assert(
+         (prefixIcon == null || prefix == null) &&
+             (prefix == null || prefixText == null) &&
+             (prefixIcon == null || prefixText == null),
+         'At most one of prefixIcon, prefix, or prefixText may be non-null.',
+       ),
+       assert(
+         (suffixIcon == null || suffix == null) &&
+             (suffix == null || suffixText == null) &&
+             (suffixIcon == null || suffixText == null),
+         'At most one of suffixIcon, suffix, or suffixText may be non-null.',
        );
 
   @override
@@ -223,6 +294,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.onKeyEvent = _handleKeyEvent;
     _updateControllerFromValue(widget.value);
   }
 
@@ -360,81 +432,135 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     return false;
   }
 
+  /// Handles keyboard events for stepping (ArrowUp/Down, PageUp/Down).
+  ///
+  /// Only processes [KeyDownEvent] to prevent double-firing on repeat/up events.
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    // Guard on KeyDownEvent only to prevent double-firing on repeat/up events
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    // Check for arrow keys and page keys
+    if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (!widget.readOnly && !widget.disabled && !_isIncrementDisabled()) {
+        _handleIncrement();
+        return KeyEventResult.handled;
+      }
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (!widget.readOnly && !widget.disabled && !_isDecrementDisabled()) {
+        _handleDecrement();
+        return KeyEventResult.handled;
+      }
+    } else if (event.logicalKey == LogicalKeyboardKey.pageUp) {
+      if (!widget.readOnly && !widget.disabled && !_isIncrementDisabled()) {
+        final currentValue = _parseNumber(_controller.text) ?? 0;
+        num newValue = currentValue + (widget.step * 10);
+        if (widget.maximum != null && newValue > widget.maximum!) {
+          newValue = widget.maximum!;
+        }
+        _updateControllerFromValue(newValue);
+        widget.onChanged?.call(newValue);
+        return KeyEventResult.handled;
+      }
+    } else if (event.logicalKey == LogicalKeyboardKey.pageDown) {
+      if (!widget.readOnly && !widget.disabled && !_isDecrementDisabled()) {
+        final currentValue = _parseNumber(_controller.text) ?? 0;
+        num newValue = currentValue - (widget.step * 10);
+        if (widget.minimum != null && newValue < widget.minimum!) {
+          newValue = widget.minimum!;
+        }
+        _updateControllerFromValue(newValue);
+        widget.onChanged?.call(newValue);
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
     // Build the input formatters list
     final formatters = <TextInputFormatter>[
       // Use the custom inputRegExp if provided
       if (widget.inputRegExp != null) _RegExpInputFormatter(widget.inputRegExp!),
     ];
 
-    // Build the step buttons if not hidden and not disabled
-    // (buttons are hidden when disabled, disabled when readOnly)
+    // Resolve prefix and suffix from the caller's parameters
+    final userPrefix = _resolvePrefix();
+    final userSuffix = _resolveSuffix();
+
+    // Build prefix slot: decrement button + divider + user prefix (if showButtons)
     final showButtons = !widget.hideStepButtons && !widget.disabled;
-
-    final stepMinusButton = showButtons
-        ? LayrzButton(
-            labelText: '−',
-            onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
-            isDisabled: widget.readOnly || _isDecrementDisabled(),
-            style: LayrzButtonStyle.outlinedTonal,
+    final prefixSlot = showButtons
+        ? NumberFieldLeadingEdge(
+            onDecrement: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
+            isDecrementDisabled: widget.readOnly || _isDecrementDisabled(),
+            prefix: userPrefix,
+            onPrefixTap: widget.onPrefixTap,
           )
-        : null;
+        : userPrefix;
 
-    final stepPlusButton = showButtons
-        ? LayrzButton(
-            labelText: '+',
-            onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
-            isDisabled: widget.readOnly || _isIncrementDisabled(),
-            style: LayrzButtonStyle.outlinedTonal,
+    // Build suffix slot: user suffix + divider + increment button (if showButtons)
+    final suffixSlot = showButtons
+        ? NumberFieldTrailingEdge(
+            suffix: userSuffix,
+            onIncrement: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
+            isIncrementDisabled: widget.readOnly || _isIncrementDisabled(),
+            onSuffixTap: widget.onSuffixTap,
           )
-        : null;
+        : userSuffix;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Decrement button
-        if (stepMinusButton != null)
-          Padding(
-            padding: EdgeInsets.only(right: tokens.spacing.sp2),
-            child: stepMinusButton,
-          ),
-
-        // Text input field
-        Expanded(
-          child: LayrzTextInput(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            disabled: widget.disabled,
-            readOnly: widget.readOnly,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            onChanged: _handleTextChanged,
-            onFocusChanged: widget.onFocusChanged,
-            onTap: widget.onTap,
-            onSubmit: widget.onSubmit,
-            controller: _controller,
-            focusNode: _focusNode,
-            padding: widget.padding,
-            keyboardType: TextInputType.number,
-            inputFormatters: formatters,
-            autofocus: widget.autofocus,
-          ),
-        ),
-
-        // Increment button
-        if (stepPlusButton != null)
-          Padding(
-            padding: EdgeInsets.only(left: tokens.spacing.sp2),
-            child: stepPlusButton,
-          ),
-      ],
+    return LayrzTextInput(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      isRequired: widget.isRequired,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      errors: widget.errors,
+      hideDetails: widget.hideDetails,
+      helperText: widget.helperText,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
+      onChanged: _handleTextChanged,
+      onFocusChanged: widget.onFocusChanged,
+      onTap: widget.onTap,
+      onSubmit: widget.onSubmit,
+      controller: _controller,
+      focusNode: _focusNode,
+      padding: widget.padding,
+      keyboardType: TextInputType.number,
+      inputFormatters: formatters,
+      autofocus: widget.autofocus,
+      textAlign: TextAlign.center,
+      prefix: prefixSlot,
+      suffix: suffixSlot,
     );
+  }
+
+  /// Resolves the caller's prefix (icon/widget/text) into a single widget or null.
+  Widget? _resolvePrefix() {
+    if (widget.prefixIcon != null) {
+      return Icon(widget.prefixIcon);
+    } else if (widget.prefix != null) {
+      return widget.prefix;
+    } else if (widget.prefixText != null) {
+      return Text(widget.prefixText!);
+    }
+    return null;
+  }
+
+  /// Resolves the caller's suffix (icon/widget/text) into a single widget or null.
+  Widget? _resolveSuffix() {
+    if (widget.suffixIcon != null) {
+      return Icon(widget.suffixIcon);
+    } else if (widget.suffix != null) {
+      return widget.suffix;
+    } else if (widget.suffixText != null) {
+      return Text(widget.suffixText!);
+    }
+    return null;
   }
 }
 

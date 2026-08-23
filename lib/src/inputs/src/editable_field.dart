@@ -82,6 +82,9 @@ class LayrzEditableFieldConfig {
   /// Whether the field expands to fill the available space.
   final bool expands;
 
+  /// The text alignment for the editable value.
+  final TextAlign textAlign;
+
   /// Creates a new [LayrzEditableFieldConfig].
   const LayrzEditableFieldConfig({
     required this.labelText,
@@ -108,6 +111,7 @@ class LayrzEditableFieldConfig {
     required this.minLines,
     required this.maxLines,
     required this.expands,
+    this.textAlign = TextAlign.start,
   });
 }
 
@@ -364,6 +368,7 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
             minLines: widget.config.minLines,
             maxLines: widget.config.maxLines,
             expands: widget.config.expands,
+            textAlign: widget.config.textAlign,
           ),
         ),
       ),

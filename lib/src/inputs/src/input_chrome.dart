@@ -131,6 +131,11 @@ class LayrzInputChrome extends StatelessWidget {
   /// If provided, a character counter is displayed below the field.
   final int? maxLength;
 
+  /// Helper text displayed below the field.
+  ///
+  /// When [errors] is non-empty, errors take precedence and helper text is hidden.
+  final String? helperText;
+
   /// Library-private: Whether the content box should expand with content (multiline).
   ///
   /// When false (default), the content box has a fixed height equal to a single line.
@@ -177,6 +182,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.controller,
     this.padding,
     this.maxLength,
+    this.helperText,
     bool expandHeight = false,
     double? minContentHeight,
     double? maxContentHeight,
@@ -214,6 +220,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.controller,
     this.padding,
     this.maxLength,
+    this.helperText,
     required double minContentHeight,
     double? maxContentHeight,
     bool suppressReadOnlyLock = false,
@@ -327,6 +334,7 @@ class LayrzInputChrome extends StatelessWidget {
           hideDetails: hideDetails,
           maxLength: maxLength,
           controller: controller,
+          helperText: helperText,
         ),
       ],
     );
