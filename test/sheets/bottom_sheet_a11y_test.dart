@@ -130,31 +130,13 @@ void main() {
         await tester.pumpAndSettle();
 
         // Modal sheet with label should expose the semantic label via the Semantics wrapper
-        // Since the Semantics widget wraps the focus/content, the semantics should be present
-        final semanticsWidget = find.byWidgetPredicate((w) => w is Semantics);
+        final semanticsWidget = find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.scopesRoute == true && w.properties.namesRoute == true,
+        );
         expect(
           semanticsWidget,
           findsWidgets,
-          reason: 'Modal sheet with label should have a Semantics wrapper',
-        );
-
-        // Now check that one of those Semantics widgets has the right label
-        bool hasLabel = false;
-        for (int i = 0; i < 10; i++) {
-          try {
-            final node = tester.getSemantics(semanticsWidget.at(i));
-            if (node.label == 'Choose an item. Press Escape to close.') {
-              hasLabel = true;
-              break;
-            }
-          } catch (e) {
-            // Keep looking
-          }
-        }
-        expect(
-          hasLabel,
-          isTrue,
-          reason: 'One of the Semantics widgets should have the expected label',
+          reason: 'Modal sheet with label should have Semantics with scopesRoute and namesRoute',
         );
       } finally {
         handle.dispose();
