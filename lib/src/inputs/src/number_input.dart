@@ -1,7 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
+
 import 'decimal_separator.dart';
+import 'input_error_block.dart';
 import 'number_field_edge.dart';
 import 'text_input.dart';
 
@@ -288,6 +291,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   bool _isInternalUpdate = false;
+  final Set<WidgetState> _states = {};
 
   @override
   void initState() {
@@ -481,6 +485,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
     // Build the input formatters list
     final formatters = <TextInputFormatter>[
       // Use the custom inputRegExp if provided
@@ -491,52 +497,158 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final userPrefix = _resolvePrefix();
     final userSuffix = _resolveSuffix();
 
-    // Build prefix slot: decrement button + divider + user prefix (if showButtons)
+    // Determine if we should show buttons
     final showButtons = !widget.hideStepButtons && !widget.disabled;
-    final prefixSlot = showButtons
-        ? NumberFieldLeadingEdge(
-            onDecrement: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
-            isDecrementDisabled: widget.readOnly || _isDecrementDisabled(),
-            prefix: userPrefix,
-            onPrefixTap: widget.onPrefixTap,
-          )
-        : userPrefix;
+    final hasErrors = widget.errors.isNotEmpty;
 
-    // Build suffix slot: user suffix + divider + increment button (if showButtons)
-    final suffixSlot = showButtons
-        ? NumberFieldTrailingEdge(
-            suffix: userSuffix,
-            onIncrement: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
-            isIncrementDisabled: widget.readOnly || _isIncrementDisabled(),
-            onSuffixTap: widget.onSuffixTap,
-          )
-        : userSuffix;
+    // Manage states for the edge controls
+    if (widget.disabled) {
+      _states.add(WidgetState.disabled);
+    } else {
+      _states.remove(WidgetState.disabled);
+    }
 
-    return LayrzTextInput(
-      labelText: widget.labelText,
-      hintText: widget.hintText,
-      isRequired: widget.isRequired,
-      disabled: widget.disabled,
-      readOnly: widget.readOnly,
-      errors: widget.errors,
-      hideDetails: widget.hideDetails,
-      helperText: widget.helperText,
-      helpTitleText: widget.helpTitleText,
-      helpContentText: widget.helpContentText,
-      onChanged: _handleTextChanged,
-      onFocusChanged: widget.onFocusChanged,
-      onTap: widget.onTap,
-      onSubmit: widget.onSubmit,
-      controller: _controller,
-      focusNode: _focusNode,
-      padding: widget.padding,
-      keyboardType: TextInputType.number,
-      inputFormatters: formatters,
-      autofocus: widget.autofocus,
-      textAlign: TextAlign.center,
-      prefix: prefixSlot,
-      suffix: suffixSlot,
-    );
+    if (showButtons) {
+      // New layout: label → [−] [chrome] [+] → error block
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label (rendered by number input, not by chrome)
+          if (widget.labelText != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: widget.labelText,
+                      style: tokens.typography.label.copyWith(
+                        color: tokens.colors.fg2,
+                      ),
+                    ),
+                    if (widget.isRequired)
+                      TextSpan(
+                        text: '*',
+                        style: tokens.typography.label.copyWith(
+                          color: tokens.colors.danger,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          // Row with controls and chrome
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Decrement control (full height, left edge rounded)
+                NumberFieldControl(
+                  onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
+                  isDisabled: widget.readOnly || _isDecrementDisabled(),
+                  hasErrors: hasErrors,
+                  states: _states,
+                  readOnly: widget.readOnly,
+                  isLeft: true,
+                ),
+                // Chrome (square corners, no label, no error block)
+                Expanded(
+                  child: LayrzTextInput(
+                    labelText: widget.labelText,
+                    hintText: widget.hintText,
+                    isRequired: widget.isRequired,
+                    disabled: widget.disabled,
+                    readOnly: widget.readOnly,
+                    errors: widget.errors,
+                    hideDetails: widget.hideDetails,
+                    helperText: widget.helperText,
+                    helpTitleText: widget.helpTitleText,
+                    helpContentText: widget.helpContentText,
+                    onChanged: _handleTextChanged,
+                    onFocusChanged: (isFocused) {
+                      setState(() {
+                        if (isFocused) {
+                          _states.add(WidgetState.focused);
+                        } else {
+                          _states.remove(WidgetState.focused);
+                        }
+                      });
+                      widget.onFocusChanged?.call(isFocused);
+                    },
+                    onTap: widget.onTap,
+                    onSubmit: widget.onSubmit,
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    padding: widget.padding,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: formatters,
+                    autofocus: widget.autofocus,
+                    textAlign: TextAlign.center,
+                    prefix: userPrefix,
+                    suffix: userSuffix,
+                    onPrefixTap: widget.onPrefixTap,
+                    onSuffixTap: widget.onSuffixTap,
+                    borderRadius: BorderRadius.zero,
+                    displayLabel: false,
+                    displayError: false,
+                  ),
+                ),
+                // Increment control (full height, right edge rounded)
+                NumberFieldControl(
+                  onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
+                  isDisabled: widget.readOnly || _isIncrementDisabled(),
+                  hasErrors: hasErrors,
+                  states: _states,
+                  readOnly: widget.readOnly,
+                  isLeft: false,
+                ),
+              ],
+            ),
+          ),
+          // Error block and character counter below the entire row
+          Padding(
+            padding: EdgeInsets.only(top: tokens.spacing.sp2),
+            child: LayrzInputErrorBlock(
+              errors: widget.errors,
+              hideDetails: widget.hideDetails,
+              maxLength: null,
+              controller: _controller,
+              helperText: widget.helperText,
+            ),
+          ),
+        ],
+      );
+    } else {
+      // No buttons: render as plain text input (hideStepButtons is true)
+      return LayrzTextInput(
+        labelText: widget.labelText,
+        hintText: widget.hintText,
+        isRequired: widget.isRequired,
+        disabled: widget.disabled,
+        readOnly: widget.readOnly,
+        errors: widget.errors,
+        hideDetails: widget.hideDetails,
+        helperText: widget.helperText,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        onChanged: _handleTextChanged,
+        onFocusChanged: widget.onFocusChanged,
+        onTap: widget.onTap,
+        onSubmit: widget.onSubmit,
+        controller: _controller,
+        focusNode: _focusNode,
+        padding: widget.padding,
+        keyboardType: TextInputType.number,
+        inputFormatters: formatters,
+        autofocus: widget.autofocus,
+        textAlign: TextAlign.center,
+        prefix: userPrefix,
+        suffix: userSuffix,
+        onPrefixTap: widget.onPrefixTap,
+        onSuffixTap: widget.onSuffixTap,
+      );
+    }
   }
 
   /// Resolves the caller's prefix (icon/widget/text) into a single widget or null.

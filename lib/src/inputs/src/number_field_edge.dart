@@ -1,361 +1,124 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
+import 'package:layrz_ui/src/inputs/src/input_style_spec.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
-/// Internal widget that renders the decrement control and optional prefix content for [LayrzNumberInput].
+/// Increment control button (+) for [LayrzNumberInput].
 ///
-/// Composes the decrement button (−), a vertical divider, and the caller's prefix widget
-/// into a single prefix slot. This widget handles the layout and interaction states for
-/// the leading edge of the number field.
+/// Renders as a full-height edge control flanking the input chrome. The control's
+/// outer edge is rounded; the inner edge (adjacent to the chrome) is square to form
+/// a continuous boundary. State changes affect color, opacity, and cursor only, never geometry.
 ///
-/// The decrement button is flat, glyph-only, and disabled when the field is at minimum,
-/// read-only, or disabled. The divider is hairline width and uses the divider token color.
-/// When prefix is null, only the control and divider are rendered.
-class NumberFieldLeadingEdge extends StatelessWidget {
-  /// Callback fired when the decrement button is tapped.
+/// Uses the same [LayrzInputStyleSpec] as the chrome to ensure styling consistency across
+/// the control and field. The control's background, border, and text colors match the
+/// chrome in every interaction state (default, focused, error, disabled, read-only).
+class NumberFieldControl extends StatefulWidget {
+  /// Callback fired when the control is tapped.
   ///
-  /// Ignored if the button is disabled.
-  final VoidCallback? onDecrement;
-
-  /// Whether the decrement button should be disabled.
-  final bool isDecrementDisabled;
-
-  /// The optional prefix widget (e.g., "$" for currency).
-  ///
-  /// When null, only the control and divider are shown.
-  final Widget? prefix;
-
-  /// Callback fired when the prefix is tapped.
-  ///
-  /// Ignored if the field is disabled or if there is no prefix.
-  final VoidCallback? onPrefixTap;
-
-  /// Creates a new [NumberFieldLeadingEdge].
-  const NumberFieldLeadingEdge({
-    super.key,
-    this.onDecrement,
-    required this.isDecrementDisabled,
-    this.prefix,
-    this.onPrefixTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    // Wrap prefix with tap handler if provided and onPrefixTap is set
-    final prefixWidget = prefix != null && onPrefixTap != null
-        ? GestureDetector(
-            onTap: onPrefixTap,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: prefix,
-            ),
-          )
-        : prefix;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Decrement button (−)
-        _DecrementButton(
-          onTap: isDecrementDisabled ? null : onDecrement,
-          isDisabled: isDecrementDisabled,
-        ),
-
-        // Divider between control and prefix/value
-        _FieldDivider(tokens: tokens),
-
-        // Optional prefix content
-        if (prefixWidget != null) ...[prefixWidget],
-      ],
-    );
-  }
-}
-
-/// Internal widget that renders the increment control and optional suffix content for [LayrzNumberInput].
-///
-/// Composes the caller's suffix widget, a vertical divider, and the increment button (+)
-/// into a single suffix slot. This widget handles the layout and interaction states for
-/// the trailing edge of the number field.
-///
-/// The increment button is flat, glyph-only, and disabled when the field is at maximum,
-/// read-only, or disabled. The divider is hairline width and uses the divider token color.
-/// When suffix is null, only the divider and control are rendered.
-class NumberFieldTrailingEdge extends StatelessWidget {
-  /// The optional suffix widget (e.g., "%" for percentage).
-  ///
-  /// When null, only the divider and control are shown.
-  final Widget? suffix;
-
-  /// Callback fired when the increment button is tapped.
-  ///
-  /// Ignored if the button is disabled.
-  final VoidCallback? onIncrement;
-
-  /// Whether the increment button should be disabled.
-  final bool isIncrementDisabled;
-
-  /// Callback fired when the suffix is tapped.
-  ///
-  /// Ignored if the field is disabled or if there is no suffix.
-  final VoidCallback? onSuffixTap;
-
-  /// Creates a new [NumberFieldTrailingEdge].
-  const NumberFieldTrailingEdge({
-    super.key,
-    this.suffix,
-    this.onIncrement,
-    required this.isIncrementDisabled,
-    this.onSuffixTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    // Wrap suffix with tap handler if provided and onSuffixTap is set
-    final suffixWidget = suffix != null && onSuffixTap != null
-        ? GestureDetector(
-            onTap: onSuffixTap,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: suffix,
-            ),
-          )
-        : suffix;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Optional suffix content
-        if (suffixWidget != null) ...[suffixWidget],
-
-        // Divider between value/suffix and control
-        _FieldDivider(tokens: tokens),
-
-        // Increment button (+)
-        _IncrementButton(
-          onTap: isIncrementDisabled ? null : onIncrement,
-          isDisabled: isIncrementDisabled,
-        ),
-      ],
-    );
-  }
-}
-
-/// Flat decrement button for use inside [NumberFieldLeadingEdge].
-///
-/// Renders the glyph "−" as a tap target. When disabled, renders muted.
-/// State changes affect color and cursor only per decision D15.
-class _DecrementButton extends StatefulWidget {
-  /// Callback fired when tapped (ignored if disabled).
+  /// Ignored if the control is disabled.
   final VoidCallback? onTap;
 
-  /// Whether the button is disabled.
+  /// Whether the control is disabled.
   final bool isDisabled;
 
-  /// Creates a new [_DecrementButton].
-  const _DecrementButton({
+  /// Whether the field has errors.
+  ///
+  /// When true, the control resolves to error styling via [LayrzInputStyleSpec].
+  final bool hasErrors;
+
+  /// The widget interaction states (focused, hovered, pressed, disabled).
+  ///
+  /// Used by [LayrzInputStyleSpec.resolve] to determine border color, background,
+  /// and text color in the current state. Must include [WidgetState.disabled] if
+  /// [isDisabled] is true, and [WidgetState.focused] if the field is focused.
+  final Set<WidgetState> states;
+
+  /// Whether the field is read-only.
+  final bool readOnly;
+
+  /// isLeft indicates whether the control is the left (decrement) or right (increment) control.
+  final bool isLeft;
+
+  /// Creates a new [NumberFieldControl].
+  const NumberFieldControl({
+    super.key,
     this.onTap,
     required this.isDisabled,
+    required this.hasErrors,
+    required this.states,
+    required this.readOnly,
+    required this.isLeft,
   });
 
   @override
-  State<_DecrementButton> createState() => _DecrementButtonState();
+  State<NumberFieldControl> createState() => _NumberFieldControlState();
 }
 
-class _DecrementButtonState extends State<_DecrementButton> {
-  bool _isHovered = false;
-  bool _isPressed = false;
-
+class _NumberFieldControlState extends State<NumberFieldControl> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    // Glyph color logic: disabled → fg4, hovered/pressed → primary, default → fg1
-    Color getGlyphColor() {
-      if (widget.isDisabled) {
-        return tokens.colors.fg4;
-      }
-      if (_isPressed || _isHovered) {
-        return tokens.colors.primary;
-      }
-      return tokens.colors.fg1;
+    // Build the current states for style resolution
+
+    // Resolve the style spec from the field's interaction states
+    final spec = LayrzInputStyleSpec.resolve(
+      states: widget.states,
+      tokens: tokens,
+      hasErrors: widget.hasErrors,
+      readOnly: widget.readOnly,
+    );
+
+    // Glyph color: use the spec's text color
+    final glyphColor = spec.textColor;
+
+    BorderRadius borderRadius;
+    if (widget.isLeft) {
+      borderRadius = BorderRadius.only(
+        topLeft: Radius.circular(tokens.radius.r2),
+        bottomLeft: Radius.circular(tokens.radius.r2),
+      );
+    } else {
+      borderRadius = BorderRadius.only(
+        topRight: Radius.circular(tokens.radius.r2),
+        bottomRight: Radius.circular(tokens.radius.r2),
+      );
     }
 
-    // Background fill logic: disabled/rest → transparent, hovered → sf3, pressed → sf4
-    Color getBackgroundColor() {
-      if (widget.isDisabled) {
-        return Color.fromARGB(0, 0, 0, 0);
-      }
-      if (_isPressed) {
-        return tokens.colors.sf4;
-      }
-      if (_isHovered) {
-        return tokens.colors.sf3;
-      }
-      return Color.fromARGB(0, 0, 0, 0);
-    }
+    final borderSpec = BorderSide(
+      color: spec.borderColor,
+      width: spec.borderWidth,
+    );
 
-    final glyphColor = getGlyphColor();
-    final backgroundColor = getBackgroundColor();
-
-    return Semantics(
-      label: 'Decrement',
-      enabled: !widget.isDisabled,
-      onTap: widget.isDisabled ? null : widget.onTap,
-      child: MouseRegion(
-        onEnter: widget.isDisabled ? null : (_) => setState(() => _isHovered = true),
-        onExit: widget.isDisabled ? null : (_) => setState(() => _isHovered = false),
-        cursor: widget.isDisabled ? MouseCursor.defer : SystemMouseCursors.click,
-        child: GestureDetector(
-          onTapDown: widget.isDisabled ? null : (_) => setState(() => _isPressed = true),
-          onTapUp: widget.isDisabled ? null : (_) => setState(() => _isPressed = false),
-          onTapCancel: widget.isDisabled ? null : () => setState(() => _isPressed = false),
-          onTap: widget.isDisabled ? null : widget.onTap,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1 / 6),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(tokens.radius.r5),
-                bottomLeft: Radius.circular(tokens.radius.r5),
-              ),
+    return AnimatedOpacity(
+      duration: tokens.motion.dTransition,
+      opacity: widget.isDisabled ? 0.5 : 1.0,
+      child: LayrzTappable(
+        disabled: widget.isDisabled,
+        onTap: widget.onTap,
+        color: tokens.colors.sf2,
+        borderRadius: borderRadius,
+        child: Container(
+          padding: EdgeInsets.all(tokens.spacing.sp2),
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            border: Border(
+              top: borderSpec,
+              bottom: borderSpec,
+              right: !widget.isLeft ? borderSpec : BorderSide.none,
+              left: !widget.isLeft ? BorderSide.none : borderSpec,
             ),
-            child: Align(
-              alignment: Alignment.center,
-              child: Text(
-                '−',
-                style: tokens.typography.body.copyWith(
-                  color: glyphColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+          ),
+          child: Align(
+            alignment: Alignment.center,
+            child: Icon(
+              widget.isLeft ? MdiIcons.minus : MdiIcons.plus,
+              size: tokens.typography.body.fontSize,
+              color: glyphColor,
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Flat increment button for use inside [NumberFieldTrailingEdge].
-///
-/// Renders the glyph "+" as a tap target. When disabled, renders muted.
-/// State changes affect color and cursor only per decision D15.
-class _IncrementButton extends StatefulWidget {
-  /// Callback fired when tapped (ignored if disabled).
-  final VoidCallback? onTap;
-
-  /// Whether the button is disabled.
-  final bool isDisabled;
-
-  /// Creates a new [_IncrementButton].
-  const _IncrementButton({
-    this.onTap,
-    required this.isDisabled,
-  });
-
-  @override
-  State<_IncrementButton> createState() => _IncrementButtonState();
-}
-
-class _IncrementButtonState extends State<_IncrementButton> {
-  bool _isHovered = false;
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    // Glyph color logic: disabled → fg4, hovered/pressed → primary, default → fg1
-    Color getGlyphColor() {
-      if (widget.isDisabled) {
-        return tokens.colors.fg4;
-      }
-      if (_isPressed || _isHovered) {
-        return tokens.colors.primary;
-      }
-      return tokens.colors.fg1;
-    }
-
-    // Background fill logic: disabled/rest → transparent, hovered → sf3, pressed → sf4
-    Color getBackgroundColor() {
-      if (widget.isDisabled) {
-        return Color.fromARGB(0, 0, 0, 0);
-      }
-      if (_isPressed) {
-        return tokens.colors.sf4;
-      }
-      if (_isHovered) {
-        return tokens.colors.sf3;
-      }
-      return Color.fromARGB(0, 0, 0, 0);
-    }
-
-    final glyphColor = getGlyphColor();
-    final backgroundColor = getBackgroundColor();
-
-    return Semantics(
-      label: 'Increment',
-      enabled: !widget.isDisabled,
-      onTap: widget.isDisabled ? null : widget.onTap,
-      child: MouseRegion(
-        onEnter: widget.isDisabled ? null : (_) => setState(() => _isHovered = true),
-        onExit: widget.isDisabled ? null : (_) => setState(() => _isHovered = false),
-        cursor: widget.isDisabled ? MouseCursor.defer : SystemMouseCursors.click,
-        child: GestureDetector(
-          onTapDown: widget.isDisabled ? null : (_) => setState(() => _isPressed = true),
-          onTapUp: widget.isDisabled ? null : (_) => setState(() => _isPressed = false),
-          onTapCancel: widget.isDisabled ? null : () => setState(() => _isPressed = false),
-          onTap: widget.isDisabled ? null : widget.onTap,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1 / 6),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.only(
-                topRight: Radius.circular(tokens.radius.r5),
-                bottomRight: Radius.circular(tokens.radius.r5),
-              ),
-            ),
-            child: Align(
-              alignment: Alignment.center,
-              child: Text(
-                '+',
-                style: tokens.typography.body.copyWith(
-                  color: glyphColor,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Hairline vertical divider used in number field edges.
-///
-/// Renders as a thin line using the divider token color.
-class _FieldDivider extends StatelessWidget {
-  /// The tokens for styling.
-  final LayrzTokens tokens;
-
-  /// Creates a new [_FieldDivider].
-  const _FieldDivider({
-    required this.tokens,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: tokens.border.stroke1,
-      child: ColoredBox(
-        color: tokens.colors.divider,
       ),
     );
   }

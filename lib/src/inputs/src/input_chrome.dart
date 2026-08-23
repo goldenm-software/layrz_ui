@@ -161,6 +161,29 @@ class LayrzInputChrome extends StatelessWidget {
   /// instead of a lock icon.
   final bool _suppressReadOnlyLock;
 
+  /// Optional border radius override for the input container.
+  ///
+  /// When null (default), the container uses the token radius from [LayrzTokens.radius.r2].
+  /// When provided, applies the specified [BorderRadius] to the container's decoration.
+  /// Used by composite inputs like [LayrzNumberInput] to render square corners when
+  /// edge controls are present.
+  final BorderRadius? borderRadius;
+
+  /// Whether to display the label above the input container.
+  ///
+  /// When true (default), the chrome renders the label text above the input field.
+  /// When false, the label is not rendered; the caller is responsible for
+  /// displaying the label elsewhere (e.g., above a composite control).
+  final bool displayLabel;
+
+  /// Whether to display the error message block below the chrome.
+  ///
+  /// When true (default), the chrome renders the [LayrzInputErrorBlock] containing
+  /// error messages, helper text, and character counter below the input container.
+  /// When false, the error block is not rendered; the caller is responsible for
+  /// displaying errors elsewhere (e.g., below a composite control).
+  final bool displayError;
+
   /// Creates a new [LayrzInputChrome] with the given properties.
   const LayrzInputChrome({
     super.key,
@@ -187,6 +210,9 @@ class LayrzInputChrome extends StatelessWidget {
     double? minContentHeight,
     double? maxContentHeight,
     bool suppressReadOnlyLock = false,
+    this.borderRadius,
+    this.displayLabel = true,
+    this.displayError = true,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = expandHeight,
        // ignore: prefer_initializing_formals
@@ -224,6 +250,9 @@ class LayrzInputChrome extends StatelessWidget {
     required double minContentHeight,
     double? maxContentHeight,
     bool suppressReadOnlyLock = false,
+    this.borderRadius,
+    this.displayLabel = true,
+    this.displayError = true,
     super.key,
     // ignore: prefer_initializing_formals
   }) : _expandHeight = true,
@@ -264,8 +293,8 @@ class LayrzInputChrome extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label row
-        if (labelText != null)
+        // Label row (conditional on displayLabel)
+        if (displayLabel && labelText != null)
           Padding(
             padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
             child: RichText(
@@ -297,7 +326,7 @@ class LayrzInputChrome extends StatelessWidget {
               color: spec.borderColor,
               width: spec.borderWidth,
             ),
-            borderRadius: BorderRadius.all(Radius.circular(tokens.radius.r2)),
+            borderRadius: borderRadius ?? tokens.radius.br2,
           ),
           padding: resolvedPadding,
           child: _expandHeight
@@ -328,14 +357,15 @@ class LayrzInputChrome extends StatelessWidget {
                 ),
         ),
 
-        // Error block and character counter
-        LayrzInputErrorBlock(
-          errors: errors,
-          hideDetails: hideDetails,
-          maxLength: maxLength,
-          controller: controller,
-          helperText: helperText,
-        ),
+        // Error block and character counter (conditional on displayError)
+        if (displayError)
+          LayrzInputErrorBlock(
+            errors: errors,
+            hideDetails: hideDetails,
+            maxLength: maxLength,
+            controller: controller,
+            helperText: helperText,
+          ),
       ],
     );
   }

@@ -181,6 +181,24 @@ class LayrzTextInput extends StatefulWidget {
   /// When [errors] is non-empty, errors take precedence and helper text is hidden.
   final String? helperText;
 
+  /// Optional border radius override for the input chrome.
+  ///
+  /// If null, the chrome uses the default token radius. Used by composite inputs
+  /// like number fields to render square corners when edge controls are present.
+  final BorderRadius? borderRadius;
+
+  /// Whether to display the label above the chrome.
+  ///
+  /// Defaults to true. When false, no label is rendered by the chrome;
+  /// the caller is responsible for displaying the label separately.
+  final bool displayLabel;
+
+  /// Whether to display the error message block below the chrome.
+  ///
+  /// Defaults to true. When false, no error block is rendered by the chrome;
+  /// the caller is responsible for displaying errors separately.
+  final bool displayError;
+
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
@@ -222,6 +240,9 @@ class LayrzTextInput extends StatefulWidget {
     this.actions,
     this.textAlign = TextAlign.start,
     this.helperText,
+    this.borderRadius,
+    this.displayLabel = true,
+    this.displayError = true,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -369,6 +390,9 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       padding: widget.padding,
       maxLength: widget.maxLength,
       helperText: widget.helperText,
+      borderRadius: widget.borderRadius,
+      displayLabel: widget.displayLabel,
+      displayError: widget.displayError,
       child: LayrzEditableField(config: fieldConfig),
     );
   }
