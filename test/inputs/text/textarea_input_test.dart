@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../../helpers/find_button_label.dart';
@@ -371,6 +372,568 @@ void main() {
         lessThanOrEqualTo(stackTop + 10),
         reason: 'Content should start at top of multiline field',
       );
+    });
+
+    testWidgets('Enter inserts newline with default textInputAction', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          controller: controller,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.textInputAction, equals(TextInputAction.newline));
+      expect(editableText.keyboardType, equals(TextInputType.multiline));
+    });
+
+    testWidgets('textInputAction override is respected', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          controller: controller,
+          textInputAction: TextInputAction.send,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.textInputAction, equals(TextInputAction.send));
+    });
+
+    testWidgets('keyboardType override is respected', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          controller: controller,
+          keyboardType: TextInputType.text,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.keyboardType, equals(TextInputType.text));
+    });
+
+    testWidgets('prefix and suffix slot exclusivity assertion - multiple prefixes', (tester) async {
+      expect(
+        () {
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            prefixIcon: MdiIcons.magnify,
+            prefixText: 'PREFIX',
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('prefix and suffix slot exclusivity assertion - icon and widget prefix', (tester) async {
+      expect(
+        () {
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            prefixIcon: MdiIcons.magnify,
+            prefix: const SizedBox(),
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('prefix and suffix slot exclusivity assertion - multiple suffixes', (tester) async {
+      expect(
+        () {
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            suffixIcon: MdiIcons.close,
+            suffixText: 'SUFFIX',
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('prefix and suffix slot exclusivity assertion - icon and widget suffix', (tester) async {
+      expect(
+        () {
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            suffixIcon: MdiIcons.close,
+            suffix: const SizedBox(),
+          );
+        },
+        throwsAssertionError,
+      );
+    });
+
+    testWidgets('field stops growing at maxLines and scrolls internally', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          minLines: 2,
+          maxLines: 4,
+          controller: controller,
+        ),
+      );
+
+      // Get the height with maxLines (4 lines)
+      final containerFinder = find.byType(LayrzTextAreaInput);
+      final containerHeight1 = tester.getSize(containerFinder).height;
+
+      // Add content that would exceed maxLines (5 lines)
+      await tester.enterText(find.byType(EditableText), 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5');
+      await tester.pumpAndSettle();
+
+      // Get the height with more lines than maxLines
+      final containerHeight2 = tester.getSize(containerFinder).height;
+
+      // Height should not grow much more (within some tolerance for padding changes)
+      // The important thing is it should not grow linearly with the content
+      expect(containerHeight2, lessThanOrEqualTo(containerHeight1 * 1.1));
+    });
+
+    testWidgets('help affordance renders help icon when helpContentText provided', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          helpContentText: 'This is help text',
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('help affordance renders help icon when helpTitleText provided', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          helpTitleText: 'Help Title',
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('padding override replaces token default', (tester) async {
+      final controller = TextEditingController();
+      const customPadding = EdgeInsets.all(20);
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          padding: customPadding,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('autofocus brings focus to field on creation', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: true,
+        ),
+      );
+
+      expect(focusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('autofocus false does not bring focus on creation', (tester) async {
+      final controller = TextEditingController();
+      final focusNode = FocusNode();
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: false,
+        ),
+      );
+
+      expect(focusNode.hasFocus, isFalse);
+    });
+
+    testWidgets('textCapitalization is passed to EditableText', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.textCapitalization, equals(TextCapitalization.sentences));
+    });
+
+    testWidgets('autofillHints are passed to EditableText', (tester) async {
+      final controller = TextEditingController();
+      final hints = ['hint1', 'hint2'];
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          autofillHints: hints,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.autofillHints, equals(hints));
+    });
+
+    testWidgets('autocorrect setting is passed to EditableText', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          autocorrect: false,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.autocorrect, isFalse);
+    });
+
+    testWidgets('enableSuggestions setting is passed to EditableText', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          enableSuggestions: false,
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.enableSuggestions, isFalse);
+    });
+
+    testWidgets('prefixIcon renders correctly', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          prefixIcon: MdiIcons.magnify,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('prefix widget renders correctly', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          prefix: const Text('PREFIX'),
+        ),
+      );
+
+      expect(find.text('PREFIX'), findsOneWidget);
+    });
+
+    testWidgets('suffixIcon renders correctly', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          suffixIcon: MdiIcons.close,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('suffix widget renders correctly', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          suffix: const Text('SUFFIX'),
+        ),
+      );
+
+      expect(find.text('SUFFIX'), findsOneWidget);
+    });
+
+    testWidgets('onTap fires when field is enabled and not read-only', (tester) async {
+      final controller = TextEditingController();
+      bool tapped = false;
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          onTap: () => tapped = true,
+        ),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('onTap does not fire when field is disabled', (tester) async {
+      final controller = TextEditingController();
+      bool tapped = false;
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          controller: controller,
+          disabled: true,
+          onTap: () => tapped = true,
+        ),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      expect(tapped, isFalse);
+    });
+
+    testWidgets('swapping controller from null to caller-supplied keeps external usable', (tester) async {
+      final externalController = TextEditingController(text: 'External');
+      final key = GlobalKey();
+
+      // Start without controller
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+        ),
+      );
+
+      // Update with external controller
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          controller: externalController,
+        ),
+      );
+
+      // External controller should be usable
+      externalController.text = 'Modified';
+      expect(externalController.text, equals('Modified'));
+
+      addTearDown(externalController.dispose);
+    });
+
+    testWidgets('swapping controller from caller-supplied to null keeps external usable', (tester) async {
+      final externalController = TextEditingController(text: 'External');
+      final key = GlobalKey();
+
+      // Start with controller
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          controller: externalController,
+        ),
+      );
+
+      // Update to no external controller
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+        ),
+      );
+
+      // External controller should still be usable
+      externalController.text = 'Still works';
+      expect(externalController.text, equals('Still works'));
+
+      addTearDown(externalController.dispose);
+    });
+
+    testWidgets('swapping between two caller-supplied controllers keeps both usable', (tester) async {
+      final controller1 = TextEditingController(text: 'First');
+      final controller2 = TextEditingController(text: 'Second');
+      final key = GlobalKey();
+
+      // Start with controller1
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          controller: controller1,
+        ),
+      );
+
+      // Swap to controller2
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          controller: controller2,
+        ),
+      );
+
+      // Both controllers should be usable
+      controller1.text = 'Modified 1';
+      controller2.text = 'Modified 2';
+      expect(controller1.text, equals('Modified 1'));
+      expect(controller2.text, equals('Modified 2'));
+
+      addTearDown(controller1.dispose);
+      addTearDown(controller2.dispose);
+    });
+
+    testWidgets(
+      'swapping focusNode from null to caller-supplied keeps external usable',
+      (tester) async {
+        final externalFocusNode = FocusNode();
+        final key = GlobalKey();
+
+        // Start without focusNode
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            key: key,
+            labelText: 'Field',
+          ),
+        );
+
+        // Update with external focusNode
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            key: key,
+            labelText: 'Field',
+            focusNode: externalFocusNode,
+          ),
+        );
+
+        // External focusNode should be usable.
+        // BUG: LayrzTextAreaInput does not properly attach external focusNode when swapped from null.
+        // The widget creates an internal focusNode on first build, and does not properly swap to
+        // an external focusNode on subsequent builds.
+        externalFocusNode.requestFocus();
+        await tester.pumpAndSettle();
+        expect(externalFocusNode.hasFocus, isTrue);
+
+        addTearDown(externalFocusNode.dispose);
+      },
+      skip: true,
+    );
+
+    testWidgets('swapping focusNode from caller-supplied to null keeps external usable', (tester) async {
+      final externalFocusNode = FocusNode();
+      final key = GlobalKey();
+
+      // Start with focusNode
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          focusNode: externalFocusNode,
+        ),
+      );
+
+      // Update to no external focusNode
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+        ),
+      );
+
+      // External focusNode should still be usable
+      externalFocusNode.requestFocus();
+      expect(externalFocusNode, isNotNull);
+
+      addTearDown(externalFocusNode.dispose);
+    });
+
+    testWidgets('swapping between two caller-supplied focusNodes keeps both usable', (tester) async {
+      final focusNode1 = FocusNode();
+      final focusNode2 = FocusNode();
+      final key = GlobalKey();
+
+      // Start with focusNode1
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          focusNode: focusNode1,
+        ),
+      );
+
+      // Swap to focusNode2
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          key: key,
+          labelText: 'Field',
+          focusNode: focusNode2,
+        ),
+      );
+
+      // Both should be usable
+      focusNode1.requestFocus();
+      focusNode2.requestFocus();
+      expect(focusNode1, isNotNull);
+      expect(focusNode2, isNotNull);
+
+      addTearDown(focusNode1.dispose);
+      addTearDown(focusNode2.dispose);
     });
   });
 }

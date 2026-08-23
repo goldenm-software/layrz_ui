@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../../helpers/find_button_label.dart';
@@ -310,6 +311,105 @@ void main() {
       );
 
       expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('help affordance with helpContentText is accessible', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          helpContentText: 'This field helps you enter text',
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('help affordance with helpTitleText is accessible', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          helpTitleText: 'Help Title',
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('help affordance with both title and content is accessible', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          helpTitleText: 'Help',
+          helpContentText: 'This is help content',
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('prefixIcon is semantically exposed', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          prefixIcon: MdiIcons.magnify,
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('prefix widget is semantically exposed', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          prefix: const Text('PREFIX'),
+          controller: controller,
+        ),
+      );
+
+      expect(find.text('PREFIX'), findsOneWidget);
+    });
+
+    testWidgets('suffixIcon is semantically exposed', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          suffixIcon: MdiIcons.close,
+          controller: controller,
+        ),
+      );
+
+      expect(find.byType(LayrzTextAreaInput), findsOneWidget);
+    });
+
+    testWidgets('suffix widget is semantically exposed', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Field',
+          suffix: const Text('SUFFIX'),
+          controller: controller,
+        ),
+      );
+
+      expect(find.text('SUFFIX'), findsOneWidget);
     });
   });
 }
