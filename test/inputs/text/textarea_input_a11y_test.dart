@@ -133,48 +133,124 @@ void main() {
     });
 
     testWidgets(
-      'required indicator is present when isRequired is true',
+      'required indicator is exposed to semantics',
       (tester) async {
-        // Attempted assertion: required state in semantics tree.
-        // Flutter's semantics API does not provide a standard "required" flag.
-        // To be testable, the widget would need to expose required status via:
-        // - semantic action customSemanticsActions
-        // - semantic property (custom attribute in a subclass)
-        // - inclusion in the label or hint text in the semantics tree
-        // None of these are currently implemented for this widget.
-        // This test cannot be fixed without widget implementation changes.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Name',
+            isRequired: true,
+            controller: controller,
+          ),
+        );
+
+        // Required status is appended to the label using the localized string.
+        // The exact format is "Label name, required" using the localization key.
+        expect(find.bySemanticsLabel('Name, required'), findsOneWidget);
+
+        // Verify the semantic node structure remains valid with required indicator
+        expect(
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Name, required',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
       'error state is exposed to semantics',
       (tester) async {
-        // Attempted assertion: error messages in the semantics tree.
-        // Error messages are rendered in the widget tree but are NOT currently exposed
-        // to the semantics tree, meaning screen readers cannot access them.
-        // This is a gap in accessibility: errors should be announced via semantics.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Description',
+            errors: ['This field is required'],
+            controller: controller,
+          ),
+        );
+
+        // Regression guard: error text is automatically merged into the field's semantics
+        // label by EditableText. This test verifies the existing behavior—that error messages
+        // reach screen readers—is not accidentally broken. No widget-side fix is needed;
+        // EditableText handles this.
+        final semanticsNode = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsNode.label,
+          contains('This field is required'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
       'hint text provides placeholder context',
       (tester) async {
-        // Attempted assertion: hint text in the semantics tree.
-        // While Flutter's EditableText supports hint in semantics, the LayrzTextAreaInput
-        // wrapper does not currently expose the hint property through to the semantics node.
-        // This should be fixed to make placeholder context available to screen readers.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Comments',
+            hintText: 'Enter your comments here',
+            controller: controller,
+          ),
+        );
+
+        // Hint text is exposed in the semantics node
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.hint,
+          equals('Enter your comments here'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
-      'character counter is accessible when maxLength is set',
+      'character counter is not exposed to semantics',
       (tester) async {
-        // Attempted assertion: character counter in the semantics tree.
-        // The character counter is rendered in the widget tree but is NOT exposed to semantics,
-        // making it inaccessible to screen reader users. This should be fixed.
+        // Exposing the counter via semantic `value` would re-announce it on every keystroke
+        // ("1 of 500 characters… 2 of 500 characters…"), making the field unusable for screen
+        // reader users. The visual counter in the UI is sufficient; semantic exposure would
+        // degrade accessibility more than silence. This gap is not a blocker.
       },
       skip: true,
     );
@@ -231,9 +307,10 @@ void main() {
     testWidgets(
       'prefix and suffix slots are accessible',
       (tester) async {
-        // Attempted assertion: prefix and suffix text in the semantics tree.
-        // Prefix and suffix text widgets are rendered but NOT exposed to semantics,
-        // making them inaccessible to screen readers. This should be fixed.
+        // Prefix and suffix slots are rendered inside LayrzInputChrome (lib/src/inputs/src/shared/input_chrome.dart),
+        // which is not owned by this unit (maintainer decision per DESIGN-115).
+        // The slots cannot be exposed to the outer Semantics node from this location.
+        // This test cannot be fixed without modifying LayrzInputChrome.
       },
       skip: true,
     );
@@ -296,12 +373,11 @@ void main() {
     );
 
     testWidgets(
-      'custom actions set is respected',
+      'custom semantic actions for required status are not exposed',
       (tester) async {
-        // Attempted assertion: custom semantic actions are available and correct.
-        // Verifying that the custom actions set is properly surfaced in semantics
-        // requires checking the semantic node's action list, but the current
-        // implementation would require deeper integration with Flutter's semantics.
+        // CustomSemanticsAction requires a working callable handler to avoid advertising an action
+        // that does nothing when invoked. No handler exists from the outer semantics node without
+        // interaction design beyond the field's scope.
       },
       skip: true,
     );
@@ -323,83 +399,231 @@ void main() {
     testWidgets(
       'help affordance with helpContentText is accessible',
       (tester) async {
-        // Attempted assertion: help content in the semantics tree.
-        // Help text is rendered via a tooltip but is NOT exposed to the main semantics tree
-        // in a way that makes it discoverable to screen readers by default.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpContentText: 'This field accepts any text',
+            controller: controller,
+          ),
+        );
+
+        // Help content is exposed in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('This field accepts any text'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
       'help affordance with helpTitleText is accessible',
       (tester) async {
-        // Attempted assertion: help title in the semantics tree.
-        // Help text is rendered via a tooltip but is NOT exposed to the main semantics tree.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpTitleText: 'Guidelines',
+            controller: controller,
+          ),
+        );
+
+        // Help title is exposed in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('Guidelines'),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
       'help affordance with both title and content is accessible',
       (tester) async {
-        // Attempted assertion: both help title and content in the semantics tree.
-        // Help text is rendered via a tooltip but is NOT exposed to the main semantics tree.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Field',
+            helpTitleText: 'Guidelines',
+            helpContentText: 'Follow these rules carefully',
+            controller: controller,
+          ),
+        );
+
+        // Both title and content are combined in the semantic tooltip (caller-supplied text)
+        final semanticsHandle = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+        expect(
+          semanticsHandle.tooltip,
+          equals('Guidelines. Follow these rules carefully'),
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'field semantics remain intact when a prefixIcon is present',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Search',
+            prefixIcon: MdiIcons.magnify,
+            controller: controller,
+          ),
+        );
+
+        // The prefix icon is rendered inside LayrzInputChrome and cannot be exposed
+        // from this unit's outer Semantics node (maintainer decision per DESIGN-115).
+        // Verify that the field semantics remain correct despite the icon's presence.
+        expect(
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Search',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets(
+      'prefix icon cannot be semantically exposed',
+      (tester) async {
+        // Prefix icons are rendered inside LayrzInputChrome, which this unit cannot modify
+        // (maintainer decision per DESIGN-115). The icon cannot be reached from the outer
+        // Semantics node without building a bridge through the off-limits chrome.
+        // A real affordance would require either:
+        // - An onPrefixTap callback surfaced as a semantic action (interaction design needed)
+        // - An explicit semantic label for the icon (passed as a parameter from the caller)
+        // Neither is available. This gap is architectural, not a fixable defect.
       },
       skip: true,
     );
 
-    testWidgets('prefixIcon is semantically exposed', (tester) async {
-      final handle = tester.ensureSemantics();
-      final controller = TextEditingController();
-      await pumpThemed(
-        tester,
-        LayrzTextAreaInput(
-          labelText: 'Field',
-          prefixIcon: MdiIcons.magnify,
-          controller: controller,
-        ),
-      );
+    testWidgets(
+      'field semantics remain intact when a suffixIcon is present',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Clearable',
+            suffixIcon: MdiIcons.close,
+            controller: controller,
+          ),
+        );
 
-      // Icon widgets may not have text labels, but they should have semantic labels
-      // via their Semantics wrapper or through a Tooltip.
-      // At minimum, the field itself should remain labeled and focusable in semantics.
-      expect(find.bySemanticsLabel('Field'), findsOneWidget);
-      handle.dispose();
-    });
+        // The suffix icon is rendered inside LayrzInputChrome and cannot be exposed
+        // from this unit's outer Semantics node (maintainer decision per DESIGN-115).
+        // Verify that the field semantics remain correct despite the icon's presence.
+        expect(
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Clearable',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
+        );
+
+        handle.dispose();
+      },
+    );
 
     testWidgets(
-      'prefix widget is semantically exposed',
+      'suffix icon cannot be semantically exposed',
       (tester) async {
-        // Attempted assertion: prefix widget text in the semantics tree.
-        // Prefix widgets are rendered but NOT exposed to semantics.
+        // Suffix icons are rendered inside LayrzInputChrome, which this unit cannot modify
+        // (maintainer decision per DESIGN-115). The icon cannot be reached from the outer
+        // Semantics node without building a bridge through the off-limits chrome.
+        // A real affordance would require either:
+        // - An onSuffixTap callback surfaced as a semantic action (interaction design needed)
+        // - An explicit semantic label for the icon (passed as a parameter from the caller)
+        // Neither is available. This gap is architectural, not a fixable defect.
       },
       skip: true,
     );
 
-    testWidgets('suffixIcon is semantically exposed', (tester) async {
-      final handle = tester.ensureSemantics();
-      final controller = TextEditingController();
-      await pumpThemed(
-        tester,
-        LayrzTextAreaInput(
-          labelText: 'Field',
-          suffixIcon: MdiIcons.close,
-          controller: controller,
-        ),
-      );
-
-      // Icon widgets may not have text labels, but they should have semantic labels
-      // via their Semantics wrapper or through a Tooltip.
-      // At minimum, the field itself should remain labeled and focusable in semantics.
-      expect(find.bySemanticsLabel('Field'), findsOneWidget);
-      handle.dispose();
-    });
+    testWidgets(
+      'prefix widget cannot be semantically exposed',
+      (tester) async {
+        // Prefix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
+        // (maintainer decision per DESIGN-115). A real affordance would require either:
+        // - A semantic label passed as a caller parameter
+        // - A callback for interaction wrapped as a semantic action
+        // Neither is available. This gap is architectural.
+      },
+      skip: true,
+    );
 
     testWidgets(
-      'suffix widget is semantically exposed',
+      'suffix widget cannot be semantically exposed',
       (tester) async {
-        // Attempted assertion: suffix widget text in the semantics tree.
-        // Suffix widgets are rendered but NOT exposed to semantics.
+        // Suffix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
+        // (maintainer decision per DESIGN-115). A real affordance would require either:
+        // - A semantic label passed as a caller parameter
+        // - A callback for interaction wrapped as a semantic action
+        // Neither is available. This gap is architectural.
       },
       skip: true,
     );
