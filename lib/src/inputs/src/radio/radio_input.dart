@@ -3,8 +3,10 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/grid/grid.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
-import '../shared/input_footer_slot.dart';
-import '../select/select_item.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
+import 'package:layrz_ui/src/inputs/src/select/select_item.dart';
+
+import 'radio_option.dart';
 
 /// A Material-free radio button group with responsive option grid in the layrz_ui design system.
 ///
@@ -209,11 +211,11 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
                       md: widget.md,
                       lg: widget.lg,
                       xl: widget.xl,
-                      child: _buildRadioOption(
-                        context,
+                      child: LayrzRadioOption(
                         item: widget.items[index],
-                        index: index,
-                        isSelected: widget.value == widget.items[index].value,
+                        groupValue: widget.value,
+                        onChanged: _handleChanged,
+                        disabled: widget.disabled,
                       ),
                     ),
                   ),
@@ -237,97 +239,6 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
             ),
           ),
       ],
-    );
-  }
-
-  /// Builds a single radio option with label.
-  ///
-  /// The option is a tappable row combining [RawRadio] and the item label.
-  /// If the item has a [LayrzSelectItem.child], that is rendered instead of the label text.
-  /// Accessibility: the entire option is merged into a single semantics node with the radio's
-  /// selected state announcement.
-  Widget _buildRadioOption(
-    BuildContext context, {
-    required LayrzSelectItem<T> item,
-    required int index,
-    required bool isSelected,
-  }) {
-    final tokens = context.tokens;
-    final focusNode = FocusNode();
-
-    return Semantics(
-      enabled: !widget.disabled,
-      selected: isSelected,
-      container: true,
-      button: true,
-      label: item.labelText,
-      onTap: widget.disabled ? null : () => _handleChanged(item.value),
-      child: GestureDetector(
-        onTap: widget.disabled ? null : () => _handleChanged(item.value),
-        child: MouseRegion(
-          cursor: widget.disabled ? MouseCursor.defer : SystemMouseCursors.click,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Radio button using RawRadio
-              RawRadio<T?>(
-                value: item.value,
-                focusNode: focusNode,
-                autofocus: false,
-                enabled: !widget.disabled,
-                mouseCursor: WidgetStateMouseCursor.clickable,
-                toggleable: false,
-                groupRegistry: RadioGroup.maybeOf<T?>(context),
-                builder: (context, state) {
-                  // Determine if selected based on animation position
-                  final isSelectedState = state.position.value > 0.5;
-                  final borderColor = widget.disabled
-                      ? tokens.colors.fg4.withValues(alpha: 0.4)
-                      : (isSelectedState ? tokens.colors.primary : tokens.colors.fg3);
-
-                  return Container(
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: borderColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: isSelectedState
-                        ? Center(
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: widget.disabled
-                                    ? tokens.colors.fg4.withValues(alpha: 0.4)
-                                    : tokens.colors.primary,
-                              ),
-                            ),
-                          )
-                        : null,
-                  );
-                },
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              // Label (custom or text)
-              Expanded(
-                child:
-                    item.child ??
-                    Text(
-                      item.labelText,
-                      style: tokens.typography.body.copyWith(
-                        color: widget.disabled ? tokens.colors.fg4.withValues(alpha: 0.5) : tokens.colors.fg1,
-                      ),
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

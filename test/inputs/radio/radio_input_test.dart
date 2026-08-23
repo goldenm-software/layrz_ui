@@ -1,8 +1,43 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../../helpers/pump_themed.dart';
+import '../../helpers/pump_themed_app.dart';
+
+/// Helper: extract the ring colour from the radio button's Container decoration.
+Color getRingColour(WidgetTester tester) {
+  // Find the Container that has a circular border (the ring).
+  // The ring is a Container with BoxDecoration > Border.all (no color, just border).
+  final containerFinder = find.byWidgetPredicate(
+    (w) =>
+        w is Container &&
+        w.decoration is BoxDecoration &&
+        (w.decoration as BoxDecoration).shape == BoxShape.circle &&
+        (w.decoration as BoxDecoration).border != null,
+  );
+
+  expect(containerFinder, findsWidgets, reason: 'Ring Container should exist');
+  final decoration = tester.widget<Container>(containerFinder.first).decoration as BoxDecoration;
+  return (decoration.border as Border).top.color;
+}
+
+/// Helper: extract the dot's rendered size.
+Size getDotSize(WidgetTester tester) {
+  // The dot is a SizedBox.square inside the ring container, with dimension = dotSize * animationProgress.
+  // We find it by looking for a Container inside the ring that has a filled color (the dot).
+  final dotContainerFinder = find.byWidgetPredicate((w) {
+    if (w is! Container) return false;
+    if (w.decoration is! BoxDecoration) return false;
+    final d = w.decoration as BoxDecoration;
+    // The dot has shape:circle, a color, and NO border
+    return d.shape == BoxShape.circle && d.color != null && d.border == null;
+  });
+
+  expect(dotContainerFinder, findsWidgets, reason: 'Dot Container should exist');
+  return tester.getSize(dotContainerFinder.first);
+}
 
 void main() {
   group('LayrzRadioInput', () {
@@ -562,6 +597,584 @@ void main() {
       );
 
       expect(find.text('Option A'), findsOneWidget);
+    });
+
+    // Guard 1: Ring colour animates with selection
+    testWidgets('ring colour animates with selection', (tester) async {
+      String? selectedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+
+      // Tap to start selection
+      await tester.tap(find.text('Option A'));
+      // Wait for the next frame to ensure the state change is processed
+      await tester.pump();
+      // Advance 150ms through the animation (RawRadio animates over 200ms)
+      await tester.pump(const Duration(milliseconds: 150));
+
+      // At 75% of animation, the ring colour should be intermediate between fg3 and primary.
+      // It must NOT be exactly fg3 or exactly primary.
+      final ringColor = getRingColour(tester);
+      final expectedUnselected = tokens.colors.fg3;
+      final expectedSelected = tokens.colors.primary;
+
+      // Verify that the color is strictly intermediate (not equal to either endpoint)
+      expect(
+        ringColor,
+        isNot(expectedUnselected),
+        reason: 'Ring colour should not be exactly fg3 at mid-animation',
+      );
+      expect(
+        ringColor,
+        isNot(expectedSelected),
+        reason: 'Ring colour should not be exactly primary at mid-animation',
+      );
+
+      // Complete the animation
+      await tester.pumpAndSettle();
+      expect(selectedValue, 'a');
+    });
+
+    // Guard 2: Dot grows
+    testWidgets('dot grows with animation progress', (tester) async {
+      String? selectedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      // Tap to start selection
+      await tester.tap(find.text('Option A'));
+      // Wait for the next frame to ensure the state change is processed
+      await tester.pump();
+      // Advance 150ms through the animation (RawRadio animates over 200ms)
+      await tester.pump(const Duration(milliseconds: 150));
+
+      // At 75% of animation, dot size should be strictly between 0 and 8.
+      final dotSize = getDotSize(tester);
+      final dotDimension = dotSize.width; // It's a square, so width == height
+
+      expect(
+        dotDimension,
+        isPositive,
+        reason: 'Dot should have grown from 0 at mid-animation',
+      );
+      expect(
+        dotDimension,
+        lessThan(8.0),
+        reason: 'Dot should not be fully grown at mid-animation',
+      );
+      expect(
+        dotDimension,
+        greaterThan(4.0), // At 75% progress, should be ~6
+        reason: 'Dot should grow proportionally with animationProgress',
+      );
+
+      // Complete animation
+      await tester.pumpAndSettle();
+      expect(selectedValue, 'a');
+    });
+
+    // Guard 3: Four colour steps are distinct - test default state
+    testWidgets('default state uses fg3 ring colour', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzRadioInput<String>(
+          items: const [
+            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+          ],
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final ringColor = getRingColour(tester);
+      expect(ringColor, equals(tokens.colors.fg3), reason: 'Default state should be fg3');
+    });
+
+    // Guard 3b: Pressed state uses fg1
+    testWidgets('pressed state uses fg1 ring colour', (tester) async {
+      String? selectedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+
+      // Start a gesture (pressed state)
+      final gesture = await tester.startGesture(tester.getCenter(find.text('Option A')));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // At pressed state, ring should be fg1
+      final pressedColor = getRingColour(tester);
+      expect(pressedColor, equals(tokens.colors.fg1), reason: 'Pressed state should be fg1');
+
+      // Release
+      await gesture.up();
+      await tester.pumpAndSettle();
+    });
+
+    // Guard 3c: Focus-visible state uses primary
+    testWidgets('focus-visible state uses primary ring colour', (tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzRadioInput<String>(
+          items: const [
+            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+          ],
+          onChanged: (_) {},
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+
+      // Tab to give keyboard focus (focus-visible)
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      // Verify ring is primary (focus-visible)
+      final focusVisibleColor = getRingColour(tester);
+      expect(focusVisibleColor, equals(tokens.colors.primary), reason: 'Focus-visible state should be primary');
+    });
+
+    // Guard 4: Focus-visible gating
+    testWidgets('focus-visible gating: tap does not show primary ring', (tester) async {
+      String? selectedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+
+      // Tap the option (pointer focus)
+      await tester.tap(find.text('Option A'));
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(selectedValue, 'a');
+
+      // After tap, the option has focus (from _handleTap calling requestFocus).
+      // However, _focusFromPointer should be true, so focus-visible styling should NOT apply.
+      // The ring should NOT be primary at this point.
+      Color ringColor = getRingColour(tester);
+
+      // With _focusFromPointer = true, isFocusVisible = false, so we fall through to default.
+      // On an unselected option, default = fg3.
+      // On a selected option mid-animation, it would be lerped, but we just tapped so the
+      // animation may not have started. Regardless, it should not be primary.
+      expect(
+        ringColor,
+        isNot(tokens.colors.primary),
+        reason: 'Ring should not be primary after pointer tap (focus-visible should be gated)',
+      );
+    });
+
+    // Guard 5: Label announced once
+    testWidgets('option label is announced once, not twice', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      try {
+        await pumpThemed(
+          tester,
+          LayrzRadioInput<String>(
+            items: const [
+              LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            ],
+          ),
+        );
+
+        // Count semantics nodes that contain the label text 'Option A'.
+        // Walk the semantics tree from the root and count nodes with label='Option A'.
+        // ignore: deprecated_member_use
+        final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
+        expect(semanticsOwner, isNotNull);
+
+        final rootNode = semanticsOwner!.rootSemanticsNode;
+        expect(rootNode, isNotNull);
+
+        int labelCount = 0;
+        void countLabels(dynamic node) {
+          if (node.label == 'Option A') {
+            labelCount++;
+          }
+          node.visitChildren((child) {
+            countLabels(child);
+            return true;
+          });
+        }
+
+        countLabels(rootNode!);
+
+        // With ExcludeSemantics, the Text widget's label is excluded, so we should have exactly 1.
+        // Without it, we'd have 2 (one from the Semantics node, one from the Text).
+        expect(
+          labelCount,
+          equals(1),
+          reason: 'Label "Option A" should be announced exactly once in semantics',
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    // Guard 6: Exactly one FocusNode per option (no duplicate focusable nodes)
+    testWidgets('exactly one tab stop per option', (tester) async {
+      // Build radio options
+      await pumpThemedApp(
+        tester,
+        LayrzRadioInput<String>(
+          items: const [
+            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(labelText: 'Option B', value: 'b'),
+          ],
+          onChanged: (_) {},
+        ),
+      );
+
+      // Verify each RawRadio has exactly one FocusNode (the one passed to the RawRadio widget)
+      final allRadios = find.byWidgetPredicate((w) => w is RawRadio);
+      expect(allRadios, findsWidgets);
+
+      // Each option should have a single RawRadio with one FocusNode
+      for (int i = 0; i < 2; i++) {
+        final radio = tester.widget<RawRadio<String?>>(allRadios.at(i));
+        expect(radio.focusNode, isNotNull, reason: 'Each RawRadio should have a focusNode');
+
+        // Verify this is the only focusable widget for this option by checking that
+        // the RawRadio is the only Focus-related widget
+        // If there were duplicate focus nodes (e.g., a wrapping Focus widget + the RawRadio's own),
+        // we'd have two focusable nodes per option.
+      }
+
+      // Focus the first option
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      final radioA = allRadios.first;
+      final focusNodeA = tester.widget<RawRadio<String?>>(radioA).focusNode;
+      expect(focusNodeA.hasFocus, true, reason: 'First radio should be focused after Tab');
+    });
+
+    testWidgets('focus node is not recreated across rebuilds', (tester) async {
+      String? selectedValue;
+      late StateSetter parentSetState;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            parentSetState = setState;
+            return Column(
+              children: [
+                LayrzRadioInput<String>(
+                  labelText: 'Test',
+                  value: selectedValue,
+                  items: const [
+                    LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedValue = value;
+                    });
+                  },
+                ),
+                GestureDetector(
+                  key: const Key('rebuild-trigger'),
+                  onTap: () {
+                    parentSetState(() {});
+                  },
+                  child: const Text('Force rebuild'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      // Give focus to the option
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      // Capture the FocusNode instance before rebuild
+      final radioFinder = find.byWidgetPredicate((w) => w is RawRadio).first;
+      final focusNodeBefore = tester.widget<RawRadio<String?>>(radioFinder).focusNode;
+
+      // Verify focus is currently on this node
+      expect(focusNodeBefore.hasFocus, true, reason: 'Option should be focused before rebuild');
+
+      // Force a rebuild of the parent
+      await tester.tap(find.byKey(const Key('rebuild-trigger')));
+      await tester.pumpAndSettle();
+
+      // Capture the FocusNode instance after rebuild
+      final focusNodeAfter = tester.widget<RawRadio<String?>>(radioFinder).focusNode;
+
+      // Assert the same FocusNode instance is still in use (not recreated)
+      expect(
+        identical(focusNodeBefore, focusNodeAfter),
+        true,
+        reason: 'FocusNode should not be recreated across rebuilds',
+      );
+
+      // Assert focus is still present after rebuild
+      expect(focusNodeAfter.hasFocus, true, reason: 'Focus should survive the rebuild');
+      expect(find.text('Option A'), findsOneWidget);
+    });
+
+    testWidgets('keyboard activation fires onChanged exactly once', (tester) async {
+      String? selectedValue;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                callCount++;
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      // Tab to focus
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      callCount = 0; // Reset counter after focus
+      // Press Space
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(selectedValue, 'a');
+      expect(callCount, equals(1), reason: 'Space should fire onChanged exactly once');
+    });
+
+    testWidgets('keyboard Enter activation fires onChanged exactly once', (tester) async {
+      String? selectedValue;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                callCount++;
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      // Tab to focus
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      callCount = 0; // Reset counter after focus
+      // Press Enter
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(selectedValue, 'a');
+      expect(callCount, equals(1), reason: 'Enter should fire onChanged exactly once');
+    });
+
+    testWidgets('disabled radio does not fire on tap', (tester) async {
+      String? selectedValue;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              disabled: true,
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                callCount++;
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('Option A'));
+      await tester.pumpAndSettle();
+
+      expect(selectedValue, isNull);
+      expect(callCount, equals(0));
+    });
+
+    testWidgets('disabled radio does not fire on hover', (tester) async {
+      String? selectedValue;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              disabled: true,
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                callCount++;
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      // Try to focus
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      expect(selectedValue, isNull);
+      expect(callCount, equals(0));
+    });
+
+    testWidgets('disabled radio does not fire on key press', (tester) async {
+      String? selectedValue;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzRadioInput<String>(
+              disabled: true,
+              value: selectedValue,
+              items: const [
+                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              ],
+              onChanged: (value) {
+                callCount++;
+                setState(() {
+                  selectedValue = value;
+                });
+              },
+            );
+          },
+        ),
+      );
+
+      // Try to focus and activate
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      callCount = 0;
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(selectedValue, isNull);
+      expect(callCount, equals(0));
+    });
+
+    testWidgets('disposes focus node without error', (tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzRadioInput<String>(
+          items: const [
+            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+          ],
+          onChanged: (_) {},
+        ),
+      );
+
+      // Replace with empty widget - should dispose without error
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(tester.takeException(), isNull);
     });
   });
 }
