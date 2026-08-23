@@ -605,7 +605,7 @@ void main() {
     );
 
     testWidgets(
-      'prefix widget is semantically exposed',
+      'prefix widget cannot be semantically exposed',
       (tester) async {
         // Prefix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
         // (maintainer decision per DESIGN-115). A real affordance would require either:
@@ -617,7 +617,7 @@ void main() {
     );
 
     testWidgets(
-      'suffix widget is semantically exposed',
+      'suffix widget cannot be semantically exposed',
       (tester) async {
         // Suffix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
         // (maintainer decision per DESIGN-115). A real affordance would require either:
