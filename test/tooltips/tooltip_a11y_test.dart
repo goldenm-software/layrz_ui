@@ -24,8 +24,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip.
-        await tester.longPress(find.byType(Container));
+        // Trigger the tooltip at the center where the Center widget places the container.
+        await tester.longPressAt(const Offset(400, 300));
         await tester.pumpAndSettle();
 
         // The tooltip's semantics should include the tooltip property.
@@ -60,8 +60,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip.
-        await tester.longPress(find.byType(Container));
+        // Trigger the tooltip at the center where the Center widget places the container.
+        await tester.longPressAt(const Offset(400, 300));
         await tester.pumpAndSettle();
 
         // The plain text should be extractable and present.
@@ -88,8 +88,8 @@ void main() {
         ),
       );
 
-      // Trigger the tooltip.
-      await tester.longPress(find.byType(SizedBox));
+      // Trigger the tooltip at the center where the Center widget places the child.
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // The tooltip should render without throwing an exception.
@@ -114,8 +114,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip.
-        await tester.longPress(find.byType(SizedBox));
+        // Trigger the tooltip at the center where the Center widget places the child.
+        await tester.longPressAt(const Offset(400, 300));
         await tester.pumpAndSettle();
 
         // The text should be accessible.
@@ -125,8 +125,8 @@ void main() {
         await tester.tap(find.byType(Directionality));
         await tester.pumpAndSettle();
 
-        // Trigger again.
-        await tester.longPress(find.byType(SizedBox));
+        // Trigger again at the same location.
+        await tester.longPressAt(const Offset(400, 300));
         await tester.pumpAndSettle();
 
         // The text should still be accessible.

@@ -97,8 +97,8 @@ void main() {
         await tester.pumpAndSettle();
 
         // Debug: check if tooltip is showing
-        final tooltipFound = find.text('Tooltip body').evaluate().isNotEmpty;
-        debugPrint('DEBUG: After mouse hover to anchor, tooltip found: $tooltipFound');
+        // final tooltipFound = find.text('Tooltip body').evaluate().isNotEmpty;
+        // debugPrint('DEBUG: After mouse hover to anchor, tooltip found: $tooltipFound');
 
         // Verify the tooltip is now SHOWING due to hover (not long-press)
         expect(

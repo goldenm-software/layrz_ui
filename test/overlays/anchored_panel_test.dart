@@ -170,12 +170,16 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byType(LayrzButton));
+        // Tap the button at its center.
+        final buttonCenter = tester.getCenter(find.byType(LayrzButton));
+        await tester.tapAt(buttonCenter);
         await tester.pumpAndSettle();
 
         expect(find.text('Panel'), findsOneWidget);
 
-        await tester.tap(find.byType(LayrzButton));
+        // Tap the button again to close the panel.
+        final buttonCenterAgain = tester.getCenter(find.byType(LayrzButton));
+        await tester.tapAt(buttonCenterAgain);
         await tester.pumpAndSettle();
       }
     });

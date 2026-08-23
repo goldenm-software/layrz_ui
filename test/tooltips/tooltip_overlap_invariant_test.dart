@@ -77,12 +77,12 @@ void main() {
       final tooltipRect = tester.getRect(find.text('Tooltip text'));
 
       // DEBUG: Print geometry for diagnosis
-      debugPrint(
-        'TEST: $description ($position)\n'
-        '  Anchor rect:  $anchorRect\n'
-        '  Tooltip rect: $tooltipRect\n'
-        '  Overlaps: ${tooltipRect.overlaps(anchorRect)}',
-      );
+      // debugPrint(
+      //   'TEST: $description ($position)\n'
+      //   '  Anchor rect:  $anchorRect\n'
+      //   '  Tooltip rect: $tooltipRect\n'
+      //   '  Overlaps: ${tooltipRect.overlaps(anchorRect)}',
+      // );
 
       // THE CRITICAL INVARIANT
       expect(
