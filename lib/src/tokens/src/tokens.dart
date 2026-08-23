@@ -68,26 +68,21 @@ class LayrzTokens {
   /// - [LayrzShadowTokens] is seeded with the resulting [colors.sf1] and [radius.r2]
   /// - [LayrzBorderTokens] is seeded with [colors.divider]
   /// - [LayrzTextTheme.defaults] is constructed with [colors.fg1] as the text color
-  ///   and the provided font specifications
+  ///   and the provided font
   ///
   /// This factory ensures that color palette, shadows, borders, and typography
   /// are never inconsistent with each other.
   ///
   /// Note: This factory takes [LayrzFont] objects, not string names. For the convenience
-  /// of accepting a string [fontName] and wrapping it into a Google Font, use
+  /// of accepting a string [fontName] and wrapping it into a local font, use
   /// [LayrzThemeData.light] instead, which is the public API entry point.
   ///
   /// Parameters:
   ///   - [primaryColor]: The primary brand color (default: [kPrimaryColor]).
-  ///   - [titleFont]: The font used for display, headline, and title styles.
-  ///   - [bodyFont]: The font used for body and label styles.
-  ///   - [fontHandler]: The handler that resolves fonts and preloads their bytes.
-  ///     Defaults to [LayrzGoogleFontsHandler], ensuring fonts load from Google Fonts.
+  ///   - [font]: The font used for all text styles. If null, defaults to [LayrzRobotoFont].
   factory LayrzTokens.light({
     Color primaryColor = kPrimaryColor,
-    LayrzFont titleFont = kLayrzFont,
-    LayrzFont bodyFont = kLayrzFont,
-    LayrzFontHandler fontHandler = const LayrzGoogleFontsHandler(),
+    LayrzFont? font,
   }) {
     // Build color tokens first — they seed other tokens
     final colorTokens = LayrzColorTokens.light(
@@ -109,9 +104,7 @@ class LayrzTokens {
     // Build typography seeded from colors and font settings
     final typographyTokens = LayrzTextTheme.defaults(
       textColor: colorTokens.fg1,
-      titleFont: titleFont,
-      bodyFont: bodyFont,
-      fontHandler: fontHandler,
+      font: font,
     );
 
     // Motion is independent

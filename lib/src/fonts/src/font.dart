@@ -1,75 +1,121 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
-/// Where the bytes of a [LayrzFont] come from.
-enum LayrzFontSource {
-  /// Fetched from Google Fonts at runtime by family name.
-  google,
-
-  /// Already registered with the engine via the app's pubspec `fonts:` section.
-  local,
-
-  /// Downloaded from an arbitrary URL as a raw font file.
-  uri,
-}
-
-/// An immutable representation of a font resource with its source and identity.
+/// A font, and the styles it supplies for each role in the type scale.
 ///
-/// A font is identified by its [name] (the family name) and [source] (where the bytes come from).
-/// Only fonts with [LayrzFontSource.uri] may have a [uri] set.
-@immutable
-class LayrzFont {
+/// Implementations must provide [TextStyle] instances for each text role:
+/// display, headline, title, body, and label. Size and colour are applied by
+/// the theme; any values set here for those are ignored and will be overwritten
+/// by the theme's [copyWith].
+///
+/// **Why TextStyle and not FontWeight:** Different font sources express weight
+/// differently. A variable CDN font might use `fontVariations: [FontVariation('wght', 700)]`,
+/// while platform Roboto and Google Fonts use `fontWeight: FontWeight.w700`. Only
+/// [TextStyle] can carry either representation, plus family and fallbacks. This
+/// generality allows implementations to choose their own weight-handling mechanism
+/// without constraining the abstract contract. The theme is responsible for
+/// overwriting size and colour, ensuring that font styles cannot override the
+/// type scale.
+abstract class LayrzFont {
   /// Creates a new [LayrzFont].
   ///
-  /// The [uri] parameter is only meaningful when [source] is [LayrzFontSource.uri];
-  /// an assertion will fail if [uri] is null when [source] is [LayrzFontSource.uri].
-  const LayrzFont({required this.source, required this.name, this.uri})
-    : assert(
-        source != LayrzFontSource.uri || uri != null,
-        'uri must be non-null when source is LayrzFontSource.uri',
-      );
+  /// The [name] parameter is the font family name as the engine knows it.
+  const LayrzFont({required this.name});
 
-  /// Where the bytes of this font come from.
-  final LayrzFontSource source;
-
-  /// The font family name.
+  /// The font family name as the engine knows it.
+  ///
+  /// This is the value passed to [TextStyle.fontFamily] and must match
+  /// how the font is registered with the Flutter engine or the underlying
+  /// platform.
   final String name;
 
-  /// The URL to fetch the raw font file from, only set when [source] is [LayrzFontSource.uri].
-  final String? uri;
+  /// Makes this font available to the engine.
+  ///
+  /// Implementations may fetch fonts from local assets, custom URIs, or other sources.
+  /// This method is called to ensure the font's bytes are available before rendering.
+  /// Implementations that need no loading may complete immediately. Implementations that
+  /// fetch fonts from network or disk should do so here, before the font is first rendered.
+  ///
+  /// Returns:
+  ///   A [Future] that completes when the font is ready for use.
+  Future<void> load();
 
-  /// Creates a copy of this [LayrzFont] with the given fields replaced.
-  LayrzFont copyWith({LayrzFontSource? source, String? name, String? uri}) {
-    return LayrzFont(
-      source: source ?? this.source,
-      name: name ?? this.name,
-      uri: uri ?? this.uri,
-    );
+  /// Style for the display role — family, weight, and any variable-font axes.
+  ///
+  /// Size and colour are applied by the theme; any values set here for those
+  /// are ignored.
+  TextStyle get display;
+
+  /// Style for the headline role — family, weight, and any variable-font axes.
+  ///
+  /// Size and colour are applied by the theme; any values set here for those
+  /// are ignored.
+  TextStyle get headline;
+
+  /// Style for the title role — family, weight, and any variable-font axes.
+  ///
+  /// Size and colour are applied by the theme; any values set here for those
+  /// are ignored.
+  TextStyle get title;
+
+  /// Style for the body role — family, weight, and any variable-font axes.
+  ///
+  /// Size and colour are applied by the theme; any values set here for those
+  /// are ignored.
+  TextStyle get body;
+
+  /// Style for the label role — family, weight, and any variable-font axes.
+  ///
+  /// Size and colour are applied by the theme; any values set here for those
+  /// are ignored.
+  TextStyle get label;
+}
+
+/// A Roboto font implementation using platform-provided Roboto.
+///
+/// This concrete font provides the five type-scale roles with weights:
+/// - display: w700
+/// - headline: w600
+/// - title: w600
+/// - body: w400
+/// - label: w400
+///
+/// It relies on platform-provided Roboto, so no loading or network I/O is needed.
+class LayrzRobotoFont extends LayrzFont {
+  /// Creates a new [LayrzRobotoFont].
+  const LayrzRobotoFont() : super(name: 'Roboto');
+
+  @override
+  Future<void> load() async {
+    throw UnsupportedError('LayrzRobotoFont does not require loading; it is provided by the platform.');
   }
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is LayrzFont &&
-          runtimeType == other.runtimeType &&
-          source == other.source &&
-          name == other.name &&
-          uri == other.uri;
+  TextStyle get display => const TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w700,
+  );
 
   @override
-  int get hashCode => Object.hash(source, name, uri);
+  TextStyle get headline => const TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w600,
+  );
 
   @override
-  String toString() => 'LayrzFont(source: $source, name: $name, uri: $uri)';
+  TextStyle get title => const TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w600,
+  );
+
+  @override
+  TextStyle get body => const TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w400,
+  );
+
+  @override
+  TextStyle get label => const TextStyle(
+    fontFamily: 'Roboto',
+    fontWeight: FontWeight.w400,
+  );
 }
-
-/// The default font name for the Layrz design system.
-const String kLayrzFontName = 'Open Sans';
-
-/// The Layrz brand default font.
-const LayrzFont kLayrzFont = LayrzFont(
-  source: LayrzFontSource.google,
-  name: kLayrzFontName,
-);
-
-/// Font families tried in order when the requested family fails to resolve.
-const List<String> kLayrzFontFallbacks = <String>['Ubuntu', 'Roboto'];

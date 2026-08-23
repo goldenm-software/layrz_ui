@@ -61,68 +61,28 @@ class LayrzTextTheme {
     required this.label,
   });
 
-  /// Generates a default text theme using the given [textColor] and font families.
+  /// Generates a default text theme using the given [textColor] and [font].
   ///
   /// [textColor] is applied to every style in the scale.
   ///
-  /// [titleFont] is used for display, headline, and title styles; [bodyFont] is used
-  /// for body and label styles.
+  /// [font] is used for all text styles. The font's style getters are merged with
+  /// the size and colour applied by the theme.
   ///
-  /// [fontHandler] resolves font family names and preloads font bytes. When not null,
-  /// it provides [LayrzFontHandler.resolveFamilyForWeight] to select the correct family
-  /// per weight and [LayrzFontHandler.fallbacks] for the fallback list. When null
-  /// (e.g., in unit tests), uses the font name directly and the layrz fallback constants,
-  /// avoiding network calls. This is useful for tests that need to avoid GoogleFonts
-  /// network calls.
+  /// If [font] is null, defaults to [LayrzRobotoFont].
+  /// This allows tests to pass no font and still get a working theme.
   factory LayrzTextTheme.defaults({
     required Color textColor,
-    LayrzFont titleFont = kLayrzFont,
-    LayrzFont bodyFont = kLayrzFont,
-    LayrzFontHandler? fontHandler,
+    LayrzFont? font,
   }) {
-    final titleFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
-    final bodyFallbacks = fontHandler != null ? fontHandler.fallbacks : kLayrzFontFallbacks;
-
-    /// Helper to resolve the font family for a given font and weight.
-    String resolveTitleFamily(FontWeight weight) {
-      if (fontHandler != null) {
-        return fontHandler.resolveFamilyForWeight(titleFont, weight);
-      }
-      return titleFont.name;
-    }
-
-    /// Helper to resolve the font family for a given font and weight.
-    String resolveBodyFamily(FontWeight weight) {
-      if (fontHandler != null) {
-        return fontHandler.resolveFamilyForWeight(bodyFont, weight);
-      }
-      return bodyFont.name;
-    }
-
-    TextStyle titleStyle(double size, FontWeight fontWeight) => TextStyle(
-      color: textColor,
-      fontSize: size,
-      fontWeight: fontWeight,
-      fontFamily: resolveTitleFamily(fontWeight),
-      fontFamilyFallback: titleFallbacks,
-      decoration: TextDecoration.none,
-    );
-
-    TextStyle bodyStyle(double size, FontWeight fontWeight) => TextStyle(
-      color: textColor,
-      fontSize: size,
-      fontWeight: fontWeight,
-      fontFamily: resolveBodyFamily(fontWeight),
-      fontFamilyFallback: bodyFallbacks,
-      decoration: TextDecoration.none,
-    );
+    // Default to Roboto if no font is provided
+    final fontResolved = font ?? const LayrzRobotoFont();
 
     return LayrzTextTheme(
-      display: titleStyle(40, FontWeight.w700),
-      headline: titleStyle(24, FontWeight.w600),
-      title: titleStyle(20, FontWeight.w600),
-      body: bodyStyle(16, FontWeight.w400),
-      label: bodyStyle(14, FontWeight.w400),
+      display: fontResolved.display.copyWith(fontSize: 40, color: textColor, decoration: TextDecoration.none),
+      headline: fontResolved.headline.copyWith(fontSize: 24, color: textColor, decoration: TextDecoration.none),
+      title: fontResolved.title.copyWith(fontSize: 20, color: textColor, decoration: TextDecoration.none),
+      body: fontResolved.body.copyWith(fontSize: 16, color: textColor, decoration: TextDecoration.none),
+      label: fontResolved.label.copyWith(fontSize: 14, color: textColor, decoration: TextDecoration.none),
     );
   }
 

@@ -24,13 +24,6 @@ jobs:
             exit 1
           fi
 
-      - name: Check for GoogleFonts TextTheme usage
-        run: |
-          if grep -r "GoogleFonts\.[a-zA-Z]*TextTheme" lib/; then
-            echo "FAILED: Found GoogleFonts TextTheme calls in lib/"
-            exit 1
-          fi
-
   coverage:
     needs: [lint-dart]
     if: always() && github.event_name == 'pull_request'
