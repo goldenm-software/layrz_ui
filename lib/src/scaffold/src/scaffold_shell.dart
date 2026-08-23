@@ -226,6 +226,12 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// the opened item is no longer in the list, and manages dismissal to close
   /// the controller (unless the shell initiated the pop via band transition).
   Future<void> _showNarrowDetailSheet(BuildContext context) async {
+    // Guard: if sheet is already open, do not open again (prevents stacking)
+    if (_sheetOpen) return;
+
+    // Reset the shell-dismissal flag so a stale value doesn't leak across presentations
+    _dismissedByShell = false;
+
     // Mark the sheet as open before checking anything else
     _sheetOpen = true;
 

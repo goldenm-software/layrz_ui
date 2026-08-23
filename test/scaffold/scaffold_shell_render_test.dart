@@ -371,5 +371,139 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets("REGRESSION: narrow->wide preserves openedKey (Defect 1)", (tester) async {
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+      ];
+
+      // Start narrow with Navigator
+      await tester.binding.setSurfaceSize(const Size(520, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await _pumpThemedWithNavigator(
+        tester,
+        SizedBox.expand(
+          child: LayrzScaffoldShell<_TestItem>(
+            controller: controller,
+            items: items,
+            onDetailsBuild: (item) => Text("detail:${item.name}"),
+            itemExtent: 56.0,
+          ),
+        ),
+      );
+
+      controller.open(const ValueKey("1"));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text("detail:Alpha"), findsOneWidget);
+      final keyBefore = controller.openedKey;
+
+      // Resize to wide
+      await tester.binding.setSurfaceSize(const Size(1500, 950));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // openedKey must be preserved
+      expect(controller.openedKey, equals(keyBefore));
+      expect(find.text("detail:Alpha"), findsOneWidget);
+
+      controller.dispose();
+    });
+
+    testWidgets("REGRESSION: wide->narrow opens sheet for selected item (Defect 1)", (tester) async {
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+      ];
+
+      // Start wide with Navigator
+      await tester.binding.setSurfaceSize(const Size(1500, 950));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await _pumpThemedWithNavigator(
+        tester,
+        SizedBox.expand(
+          child: LayrzScaffoldShell<_TestItem>(
+            controller: controller,
+            items: items,
+            onDetailsBuild: (item) => Text("detail:${item.name}"),
+            itemExtent: 56.0,
+          ),
+        ),
+      );
+
+      controller.open(const ValueKey("1"));
+      await tester.pump();
+
+      expect(controller.isOpen, isTrue);
+
+      // Resize to narrow
+      await tester.binding.setSurfaceSize(const Size(520, 900));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      // Sheet should open and list should be visible
+      expect(find.text("detail:Alpha"), findsOneWidget);
+      expect(find.text("Alpha"), findsWidgets);
+
+      controller.dispose();
+    });
+
+    testWidgets("REGRESSION: rapid pumps while sheet open don't stack sheets (Defect 2)", (tester) async {
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+      ];
+
+      await tester.binding.setSurfaceSize(const Size(520, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await _pumpThemedWithNavigator(
+        tester,
+        SizedBox.expand(
+          child: LayrzScaffoldShell<_TestItem>(
+            controller: controller,
+            items: items,
+            onDetailsBuild: (item) => Text("detail:${item.name}"),
+            itemExtent: 56.0,
+          ),
+        ),
+      );
+
+      controller.open(const ValueKey("1"));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(find.text("detail:Alpha"), findsOneWidget);
+
+      // Multiple rapid pumps
+      for (int i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      // Still only one sheet
+      expect(find.text("detail:Alpha"), findsOneWidget);
+
+      controller.dispose();
+    });
   });
 }
