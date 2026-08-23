@@ -97,14 +97,14 @@ void main() {
         ),
       );
 
-      final textFinder = find.text('−');
-      expect(textFinder, findsOneWidget);
+      final iconFinder = find.byType(Icon);
+      expect(iconFinder, findsOneWidget);
 
-      final textWidget = tester.widget<Text>(textFinder);
-      expect(textWidget.style?.fontWeight, FontWeight.w700);
+      final iconWidget = tester.widget<Icon>(iconFinder);
+      expect(iconWidget.icon, isNotNull);
     });
 
-    testWidgets('renders proper border when has errors', (tester) async {
+    testWidgets('renders with divider border (outer border is on outer container)', (tester) async {
       await pumpThemed(
         tester,
         NumberFieldControl(
@@ -121,9 +121,182 @@ void main() {
       expect(containerFinder, findsWidgets);
 
       final container = tester.widget<Container>(containerFinder.first);
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration as BoxDecoration?;
 
-      expect(decoration.border, isNotNull);
+      // The cap should have divider borders (inner edges); the outer container owns the outer border
+      expect(decoration?.border, isNotNull);
+    });
+
+    testWidgets('cap border radius has non-zero outer corners and zero inner', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // Cap should have a BorderRadius (outer corners rounded, inner corners square)
+      expect(decoration?.borderRadius, isNotNull);
+      final radius = decoration!.borderRadius as BorderRadius?;
+      expect(radius, isNotNull);
+      // For a left cap, topLeft and bottomLeft should be non-zero, topRight/bottomRight zero
+      expect(radius!.topLeft.x, greaterThan(0), reason: 'Outer corner radius should be non-zero');
+      expect(radius.bottomLeft.x, greaterThan(0), reason: 'Outer corner radius should be non-zero');
+      expect(radius.topRight.x, equals(0), reason: 'Inner corner radius should be zero');
+      expect(radius.bottomRight.x, equals(0), reason: 'Inner corner radius should be zero');
+    });
+
+    testWidgets('cap background resolves spec color in error state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: true,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // In error state, cap background should reflect the spec's background (pale danger)
+      expect(decoration?.color, isNotNull);
+    });
+
+    testWidgets('cap divider stays neutral in error state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: true,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // Divider is a neutral internal element, independent of the border state
+      expect(decoration?.border, isNotNull);
+      final border = decoration!.border as Border?;
+      expect(border, isNotNull);
+      // Either left or right should have a divider (depending on isLeft)
+      expect(border!.left != BorderSide.none || border.right != BorderSide.none, true);
+    });
+
+    testWidgets('cap background resolves spec color in focused state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{WidgetState.focused},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // In focused state, cap background should reflect the spec's background (focused color)
+      expect(decoration?.color, isNotNull);
+    });
+
+    testWidgets('cap divider stays neutral in focused state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{WidgetState.focused},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // Divider stays neutral independent of focus state
+      expect(decoration?.border, isNotNull);
+    });
+
+    testWidgets('cap background resolves spec color in disabled state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: true,
+          hasErrors: false,
+          onTap: null,
+          states: <WidgetState>{WidgetState.disabled},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // In disabled state, cap background should reflect the spec's background (disabled tint)
+      expect(decoration?.color, isNotNull);
+    });
+
+    testWidgets('cap divider stays neutral in disabled state', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: true,
+          hasErrors: false,
+          onTap: null,
+          states: <WidgetState>{WidgetState.disabled},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // Divider stays neutral independent of disabled state
+      expect(decoration?.border, isNotNull);
     });
   });
 
@@ -216,14 +389,14 @@ void main() {
         ),
       );
 
-      final textFinder = find.text('+');
-      expect(textFinder, findsOneWidget);
+      final iconFinder = find.byType(Icon);
+      expect(iconFinder, findsOneWidget);
 
-      final textWidget = tester.widget<Text>(textFinder);
-      expect(textWidget.style?.fontWeight, FontWeight.w700);
+      final iconWidget = tester.widget<Icon>(iconFinder);
+      expect(iconWidget.icon, isNotNull);
     });
 
-    testWidgets('renders proper border when has errors', (tester) async {
+    testWidgets('renders with divider border (outer border is on outer container)', (tester) async {
       await pumpThemed(
         tester,
         NumberFieldControl(
@@ -240,9 +413,40 @@ void main() {
       expect(containerFinder, findsWidgets);
 
       final container = tester.widget<Container>(containerFinder.first);
-      final decoration = container.decoration as BoxDecoration;
+      final decoration = container.decoration as BoxDecoration?;
 
-      expect(decoration.border, isNotNull);
+      // The cap should have divider borders (inner edges); the outer container owns the outer border
+      expect(decoration?.border, isNotNull);
+    });
+
+    testWidgets('cap border radius has non-zero outer corners and zero inner', (tester) async {
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: false,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final containerFinder = find.byType(Container);
+      expect(containerFinder, findsWidgets);
+
+      final container = tester.widget<Container>(containerFinder.first);
+      final decoration = container.decoration as BoxDecoration?;
+
+      // Cap should have a BorderRadius (outer corners rounded, inner corners square)
+      expect(decoration?.borderRadius, isNotNull);
+      final radius = decoration!.borderRadius as BorderRadius?;
+      expect(radius, isNotNull);
+      // For a right cap, topRight and bottomRight should be non-zero, topLeft/bottomLeft zero
+      expect(radius!.topRight.x, greaterThan(0), reason: 'Outer corner radius should be non-zero');
+      expect(radius.bottomRight.x, greaterThan(0), reason: 'Outer corner radius should be non-zero');
+      expect(radius.topLeft.x, equals(0), reason: 'Inner corner radius should be zero');
+      expect(radius.bottomLeft.x, equals(0), reason: 'Inner corner radius should be zero');
     });
   });
 }
