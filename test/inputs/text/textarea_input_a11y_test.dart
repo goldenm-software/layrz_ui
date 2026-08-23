@@ -133,15 +133,46 @@ void main() {
     });
 
     testWidgets(
-      'required indicator is not exposed to semantics',
+      'required indicator is exposed to semantics',
       (tester) async {
-        // Required status requires localized strings ("required") which are not available
-        // in LayrzUiL10n. To expose it, we would need either:
-        // - A caller-supplied parameter for the required indicator text (no default)
-        // - Localization support added to LayrzUiL10n
-        // This gap cannot be fixed without adding localization support.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Name',
+            isRequired: true,
+            controller: controller,
+          ),
+        );
+
+        // Required status is appended to the label using the localized string.
+        // The exact format is "Label name, required" using the localization key.
+        expect(find.bySemanticsLabel('Name, required'), findsOneWidget);
+
+        // Verify the semantic node structure remains valid with required indicator
+        expect(
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Name, required',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets(
@@ -159,8 +190,10 @@ void main() {
           ),
         );
 
-        // Error messages are caller-supplied text (already localized),
-        // exposed through the semantics tree so screen readers can access them.
+        // Regression guard: error text is automatically merged into the field's semantics
+        // label by EditableText. This test verifies the existing behavior—that error messages
+        // reach screen readers—is not accidentally broken. No widget-side fix is needed;
+        // EditableText handles this.
         final semanticsNode = tester.getSemantics(
           find
               .descendant(
@@ -169,7 +202,6 @@ void main() {
               )
               .first,
         );
-        // Errors are appended to the label in the semantics tree by EditableText
         expect(
           semanticsNode.label,
           contains('This field is required'),
@@ -215,9 +247,10 @@ void main() {
     testWidgets(
       'character counter is not exposed to semantics',
       (tester) async {
-        // Character count would require the localized string "of" and "characters",
-        // which are not available in LayrzUiL10n. Adding them requires localization support.
-        // Visual counter in the UI is sufficient for now; semantic exposure is blocked.
+        // Exposing the counter via semantic `value` would re-announce it on every keystroke
+        // ("1 of 500 characters… 2 of 500 characters…"), making the field unusable for screen
+        // reader users. The visual counter in the UI is sufficient; semantic exposure would
+        // degrade accessibility more than silence. This gap is not a blocker.
       },
       skip: true,
     );

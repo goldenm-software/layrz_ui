@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 
 import '../shared/editable_field.dart';
@@ -366,6 +367,12 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
 
     final isDisabled = widget.disabled || widget.readOnly;
 
+    // Build semantic label with required indicator if needed (using localization)
+    final l10n = LayrzUiL10n.of(context);
+    final semanticLabel = widget.isRequired && widget.labelText != null
+        ? '${widget.labelText}, ${l10n.inputsRequiredIndicator}'
+        : widget.labelText;
+
     // Build semantic tooltip from help affordance (caller-supplied text)
     String? semanticTooltip;
     if (widget.helpTitleText != null || widget.helpContentText != null) {
@@ -376,7 +383,7 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
     }
 
     return Semantics(
-      label: widget.labelText,
+      label: semanticLabel,
       hint: widget.hintText,
       tooltip: semanticTooltip,
       enabled: !isDisabled,

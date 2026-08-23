@@ -95,4 +95,28 @@ mixin LayrzUiL10nInputsMixin {
   ///
   /// English default: "Seconds"
   String get durationFieldSecond => 'Seconds';
+
+  /// Indicator suffix appended to field labels when the field is required.
+  ///
+  /// Used in text input semantics to announce that a field must be filled.
+  /// Typically appended to the label: "Field name, required"
+  ///
+  /// English default: "required"
+  String get inputsRequiredIndicator => 'required';
+
+  /// Conjunction word used in character count expressions.
+  ///
+  /// Used in the middle of character counter text: "current of maximum"
+  /// Example: "120 of 500 characters"
+  ///
+  /// English default: "of"
+  String get inputsCharacterCountOf => 'of';
+
+  /// Plural noun for characters in a character counter.
+  ///
+  /// Used at the end of character counter text to label the count.
+  /// Example: "120 of 500 characters"
+  ///
+  /// English default: "characters"
+  String get inputsCharacterCountCharacters => 'characters';
 }
