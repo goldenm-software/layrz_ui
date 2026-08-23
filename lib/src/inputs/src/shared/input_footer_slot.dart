@@ -16,7 +16,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// `fg3` even when errors are present — only the error text turns danger-coloured.
 ///
 /// The detail block (errors + counter row) is hidden when `hideDetails` is true.
-class LayrzInputErrorBlock extends StatelessWidget {
+class LayrzInputFooterSlot extends StatelessWidget {
   /// The list of error messages to display.
   final List<String> errors;
 
@@ -39,8 +39,8 @@ class LayrzInputErrorBlock extends StatelessWidget {
   /// Only displayed when [hideDetails] is false.
   final String? helperText;
 
-  /// Creates a new [LayrzInputErrorBlock] with the given properties.
-  const LayrzInputErrorBlock({
+  /// Creates a new [LayrzInputFooterSlot] with the given properties.
+  const LayrzInputFooterSlot({
     super.key,
     required this.errors,
     required this.hideDetails,

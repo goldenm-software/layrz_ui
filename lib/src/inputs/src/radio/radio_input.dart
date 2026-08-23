@@ -3,7 +3,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/grid/grid.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
-import '../shared/input_error_block.dart';
+import '../shared/input_footer_slot.dart';
 import '../select/select_item.dart';
 
 /// A Material-free radio button group with responsive option grid in the layrz_ui design system.
@@ -26,7 +26,7 @@ import '../select/select_item.dart';
 /// - Arrow keys (Up/Down/Left/Right) move focus within the group.
 /// - Disabled state blocks all interaction; [onChanged] is never fired.
 ///
-/// **Error handling**: Errors and details are rendered via [LayrzInputErrorBlock], which caps
+/// **Error handling**: Errors and details are rendered via [LayrzInputFooterSlot], which caps
 /// error text at two lines with ellipsis to prevent unbounded growth.
 ///
 /// **Accessibility**:
@@ -231,7 +231,7 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
               right: resolvedPadding.right,
               bottom: resolvedPadding.bottom,
             ),
-            child: LayrzInputErrorBlock(
+            child: LayrzInputFooterSlot(
               errors: widget.errors,
               hideDetails: widget.hideDetails,
             ),

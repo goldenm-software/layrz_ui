@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
-import '../shared/input_error_block.dart';
+import '../shared/input_footer_slot.dart';
 
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -210,7 +210,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
             ),
           ),
         ),
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: widget.errors,
           hideDetails: widget.hideDetails,
         ),
