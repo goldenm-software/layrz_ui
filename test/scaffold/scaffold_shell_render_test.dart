@@ -448,6 +448,10 @@ void main() {
         await tester.pump();
       }
       await tester.pumpAndSettle();
+
+      // Verify that rebuilds do not stack duplicate sheets
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+
       controller.dispose();
     });
   });
