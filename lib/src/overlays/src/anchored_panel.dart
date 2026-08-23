@@ -130,6 +130,26 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// adjacent to the anchor.
   final void Function(bool flippedUp)? onFlipped;
 
+  /// Optional semantic label for the anchor (trigger) widget.
+  ///
+  /// When provided, the anchor is wrapped with a Semantics node labeling it as
+  /// a button with this text. This label is announced to screen readers when
+  /// the anchor receives focus.
+  ///
+  /// Must be caller-supplied for localization support. If null, no semantic
+  /// label is added to the anchor.
+  final String? anchorSemanticLabel;
+
+  /// Optional semantic label for the panel overlay.
+  ///
+  /// When provided, the panel overlay is wrapped with a Semantics node using
+  /// this label. This helps screen readers understand the purpose of the
+  /// floating panel.
+  ///
+  /// Must be caller-supplied for localization support. If null, no semantic
+  /// label is added to the panel.
+  final String? panelSemanticLabel;
+
   /// Creates a new [LayrzAnchoredPanel].
   ///
   /// [builder] and [child] are required. All other parameters are optional.
@@ -146,6 +166,8 @@ class LayrzAnchoredPanel extends StatefulWidget {
     this.onClose,
     this.childFocusNode,
     this.onFlipped,
+    this.anchorSemanticLabel,
+    this.panelSemanticLabel,
     super.key,
   });
 
@@ -238,7 +260,7 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
   Widget _buildPanelOverlay(BuildContext context, RawMenuOverlayInfo info) {
     final tokens = context.tokens;
 
-    return TapRegion(
+    Widget panelContent = TapRegion(
       groupId: info.tapRegionGroupId,
       onTapOutside: (PointerDownEvent event) {
         MenuController.maybeOf(context)?.close();
@@ -276,11 +298,22 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
         ),
       ),
     );
+
+    // Wrap with semantics if a label is provided.
+    if (widget.panelSemanticLabel != null) {
+      panelContent = Semantics(
+        label: widget.panelSemanticLabel,
+        container: true,
+        child: panelContent,
+      );
+    }
+
+    return panelContent;
   }
 
   @override
   Widget build(BuildContext context) {
-    return RawMenuAnchor(
+    Widget anchor = RawMenuAnchor(
       controller: _panelController,
       onOpenRequested: _handlePanelOpenRequested,
       onCloseRequested: _handlePanelCloseRequested,
@@ -292,5 +325,16 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
         return widget.builder(context, panelController);
       },
     );
+
+    // Wrap with semantics if a label is provided.
+    if (widget.anchorSemanticLabel != null) {
+      anchor = Semantics(
+        button: true,
+        label: widget.anchorSemanticLabel,
+        child: anchor,
+      );
+    }
+
+    return anchor;
   }
 }
