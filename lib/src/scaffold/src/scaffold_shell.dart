@@ -12,8 +12,15 @@ import "scaffold_controller.dart";
 ///
 /// [LayrzScaffoldShell] provides a responsive container for list-detail navigation.
 /// On wide containers (md, lg, xl breakpoints), the list panel (250px) and detail pane
-/// are displayed side-by-side. On narrow containers (xs, sm breakpoints), a single pane
-/// is shown: the list by default, and the detail after opening an item.
+/// are displayed side-by-side. On narrow containers (xs, sm breakpoints), the list panel
+/// is always shown; opening an item presents the detail content in a modal [LayrzBottomSheet]
+/// layered over the list. Dismissing the sheet closes the controller. A resize from narrow
+/// to wide pops the sheet but preserves the selection, and a resize to narrow auto-opens
+/// the sheet for any already-selected item.
+///
+/// **Narrow layout constraint:** The shell requires a [Navigator] ancestor (e.g. [LayrzApp])
+/// to show the detail sheet on narrow breakpoints. If no Navigator is present, the list
+/// still renders without the detail, and a debug assertion fires on the sheet attempt.
 ///
 /// The shell is container-driven via [LayoutBuilder] constraints, not viewport-driven.
 /// The consuming app passes items and owns the controller; the shell owns the layout
