@@ -32,6 +32,38 @@ void main() {
       expect(findButtonLabel('Test Label'), findsOneWidget);
     });
 
+    testWidgets('label is wrapped in SelectionContainer.disabled', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Test Label',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          child: Container(),
+        ),
+      );
+
+      // Find the label text
+      final labelFinder = findButtonLabel('Test Label');
+      expect(labelFinder, findsOneWidget);
+
+      // Verify the label has a SelectionContainer.disabled ancestor
+      expect(
+        find.ancestor(
+          of: labelFinder,
+          matching: find.byType(SelectionContainer),
+        ),
+        findsOneWidget,
+        reason: 'Label should be wrapped in SelectionContainer.disabled',
+      );
+    });
+
     testWidgets('renders required asterisk', (tester) async {
       await pumpThemed(
         tester,
@@ -236,6 +268,41 @@ void main() {
       expect(find.text('Placeholder text'), findsOneWidget);
     });
 
+    testWidgets('hint text with controller is wrapped in SelectionContainer.disabled', (tester) async {
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          child: Container(),
+        ),
+      );
+
+      // Find the hint text
+      final hintFinder = find.text('Placeholder text');
+      expect(hintFinder, findsOneWidget);
+
+      // Verify the hint has a SelectionContainer.disabled ancestor
+      expect(
+        find.ancestor(
+          of: hintFinder,
+          matching: find.byType(SelectionContainer),
+        ),
+        findsOneWidget,
+        reason: 'Hint text should be wrapped in SelectionContainer.disabled',
+      );
+    });
+
     testWidgets('hint is not visible when field has text', (tester) async {
       final controller = TextEditingController(text: 'Some text');
       await pumpThemed(
@@ -257,6 +324,40 @@ void main() {
       );
 
       expect(find.text('Placeholder text'), findsNothing);
+    });
+
+    testWidgets('hint text without controller is wrapped in SelectionContainer.disabled', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzInputChrome(
+          labelText: 'Field',
+          hintText: 'Placeholder text',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          // No controller provided
+          child: Container(),
+        ),
+      );
+
+      // Find the hint text
+      final hintFinder = find.text('Placeholder text');
+      expect(hintFinder, findsOneWidget);
+
+      // Verify the hint has a SelectionContainer.disabled ancestor
+      expect(
+        find.ancestor(
+          of: hintFinder,
+          matching: find.byType(SelectionContainer),
+        ),
+        findsOneWidget,
+        reason: 'Hint text (without controller) should be wrapped in SelectionContainer.disabled',
+      );
     });
 
     testWidgets('hint remains visible when focused but empty', (tester) async {

@@ -19,6 +19,77 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsOneWidget);
     });
 
+    testWidgets('numeric field label is exposed to screen readers exactly once', (tester) async {
+      final handle = tester.ensureSemantics();
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Amount',
+          value: 42,
+        ),
+      );
+
+      // Label should be accessible via semantics - exactly once
+      expect(find.bySemanticsLabel('Amount'), findsOneWidget);
+
+      // Verify the semantic node
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzNumberInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Amount',
+          hasEnabledState: true,
+          isEnabled: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('disabled numeric field is semantically marked', (tester) async {
+      final handle = tester.ensureSemantics();
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Quantity',
+          disabled: true,
+        ),
+      );
+
+      // Verify disabled semantics
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzNumberInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Quantity',
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+
+      handle.dispose();
+    });
+
     testWidgets('increment button has accessible label', (tester) async {
       await pumpThemedApp(
         tester,

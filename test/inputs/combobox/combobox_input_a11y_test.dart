@@ -23,6 +23,90 @@ void main() {
       expect(find.byType(LayrzTextInput), findsOneWidget);
     });
 
+    testWidgets('combobox label is exposed to screen readers exactly once', (tester) async {
+      final handle = tester.ensureSemantics();
+      final options = ['Option A', 'Option B'];
+
+      await pumpThemedApp(
+        tester,
+        LayrzComboBoxInput(
+          labelText: 'Select item',
+          options: options,
+        ),
+      );
+
+      // Label should be accessible via semantics - exactly once
+      expect(find.bySemanticsLabel('Select item'), findsOneWidget);
+
+      handle.dispose();
+    });
+
+    testWidgets('disabled combobox is semantically marked', (tester) async {
+      final handle = tester.ensureSemantics();
+      final options = ['Option 1'];
+
+      await pumpThemedApp(
+        tester,
+        LayrzComboBoxInput(
+          labelText: 'Disabled combobox',
+          options: options,
+          disabled: true,
+        ),
+      );
+
+      // Verify disabled semantics
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzComboBoxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Disabled combobox',
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('read-only combobox is semantically marked', (tester) async {
+      final handle = tester.ensureSemantics();
+      final options = ['Option 1'];
+
+      await pumpThemedApp(
+        tester,
+        LayrzComboBoxInput(
+          labelText: 'Read-only combobox',
+          options: options,
+          readOnly: true,
+        ),
+      );
+
+      // Verify read-only semantics
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzComboBoxInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Read-only combobox',
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+
+      handle.dispose();
+    });
+
     testWidgets('required indicator is present when isRequired is true', (tester) async {
       final options = ['Option 1'];
 

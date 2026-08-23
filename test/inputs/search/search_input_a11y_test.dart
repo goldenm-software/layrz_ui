@@ -20,7 +20,6 @@ void main() {
         );
 
         expect(find.byType(LayrzTextInput), findsOneWidget);
-        expect(find.bySemanticsLabel('Enter search term'), findsWidgets);
         handle.dispose();
       });
 
@@ -75,6 +74,23 @@ void main() {
         // Should remain unchanged
         expect(controller.text, equals('original'));
         controller.dispose();
+        handle.dispose();
+      });
+
+      testWidgets('search field label is exposed to screen readers exactly once', (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search products',
+          ),
+        );
+
+        // Label should be accessible via semantics - exactly once
+        expect(find.bySemanticsLabel('Search products'), findsOneWidget);
+
         handle.dispose();
       });
     });

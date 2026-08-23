@@ -1,16 +1,16 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/src/inputs/src/shared/input_error_block.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import '../../helpers/pump_themed.dart';
 
 void main() {
-  group('LayrzInputErrorBlock', () {
+  group('LayrzInputFooterSlot', () {
     testWidgets('renders error messages when provided', (tester) async {
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Error 1', 'Error 2'],
           hideDetails: false,
         ),
@@ -22,7 +22,7 @@ void main() {
     testWidgets('renders nothing when hideDetails is true', (tester) async {
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Error 1'],
           hideDetails: true,
         ),
@@ -34,19 +34,19 @@ void main() {
     testWidgets('renders nothing when errors list is empty', (tester) async {
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: [],
           hideDetails: false,
         ),
       );
 
-      expect(find.byType(LayrzInputErrorBlock), findsOneWidget);
+      expect(find.byType(LayrzInputFooterSlot), findsOneWidget);
     });
 
     testWidgets('renders multiple errors joined with comma separator', (tester) async {
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['First', 'Second', 'Third'],
           hideDetails: false,
         ),
@@ -61,7 +61,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: [],
           hideDetails: false,
           maxLength: maxLength,
@@ -85,7 +85,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: [],
           hideDetails: false,
           maxLength: maxLength,
@@ -104,7 +104,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: [],
           hideDetails: true,
           maxLength: maxLength,
@@ -123,7 +123,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['This is a validation error'],
           hideDetails: false,
           maxLength: maxLength,
@@ -144,7 +144,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Error message'],
           hideDetails: false,
           maxLength: maxLength,
@@ -171,7 +171,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Error'],
           hideDetails: false,
           maxLength: maxLength,
@@ -197,7 +197,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: [],
           hideDetails: false,
           maxLength: maxLength,
@@ -225,7 +225,7 @@ void main() {
     testWidgets('error text has maxLines: 2 and ellipsis overflow when errors only', (tester) async {
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Must be at least 8 characters', 'Must contain uppercase letter'],
           hideDetails: false,
         ),
@@ -245,7 +245,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzInputErrorBlock(
+        LayrzInputFooterSlot(
           errors: ['Must be at least 8 characters', 'Must contain uppercase letter'],
           hideDetails: false,
           maxLength: maxLength,

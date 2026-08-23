@@ -20,6 +20,74 @@ void main() {
       expect(findButtonLabel('Description'), findsOneWidget);
     });
 
+    testWidgets('textarea label is exposed to screen readers exactly once', (tester) async {
+      final handle = tester.ensureSemantics();
+      final controller = TextEditingController();
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Message',
+          controller: controller,
+        ),
+      );
+
+      // Label should be accessible via semantics - exactly once
+      expect(find.bySemanticsLabel('Message'), findsOneWidget);
+
+      // Verify the semantic node
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Message',
+          hasEnabledState: true,
+          isEnabled: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('disabled textarea is semantically marked', (tester) async {
+      final handle = tester.ensureSemantics();
+      final controller = TextEditingController();
+
+      await pumpThemed(
+        tester,
+        LayrzTextAreaInput(
+          labelText: 'Disabled textarea',
+          disabled: true,
+          controller: controller,
+        ),
+      );
+
+      // Verify disabled semantics
+      expect(
+        tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzTextAreaInput),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        ),
+        matchesSemantics(
+          label: 'Disabled textarea',
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+
+      handle.dispose();
+    });
+
     testWidgets('multiline nature is exposed to semantics', (tester) async {
       final controller = TextEditingController();
       await pumpThemed(
@@ -49,7 +117,7 @@ void main() {
         ),
       );
 
-      // Widget should render with required indicator (verifying via widget presence)
+      // Widget should render with required indicator
       expect(find.byType(LayrzTextAreaInput), findsOneWidget);
     });
 
