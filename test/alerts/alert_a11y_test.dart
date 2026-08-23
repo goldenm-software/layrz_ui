@@ -6,30 +6,59 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzAlert Accessibility', () {
-    group('Semantics', () {
-      testWidgets('semantics label contains both title and description text', (tester) async {
-        const title = 'Alert Title';
-        const description = 'Alert Description';
+    group('Non-interactive alerts (onTap: null)', () {
+      testWidgets('exposes label as "title. description" in semantics', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          const title = 'Alert Title';
+          const description = 'Alert Description';
 
+          await pumpThemed(
+            tester,
+            const SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: title,
+                description: description,
+              ),
+            ),
+          );
+
+          // Find the Semantics node created by LayrzAlert.
+          // LayrzAlert wraps its content in Semantics(label: 'Title. Description', container: true).
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+
+          // Verify label includes both title and description with the expected format
+          expect(semanticsNode.label, startsWith('$title. $description'));
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets('does not respond to taps when onTap is null', (tester) async {
         await pumpThemed(
           tester,
           const SizedBox(
             width: 300,
             child: LayrzAlert(
-              title: title,
-              description: description,
+              title: 'Title',
+              description: 'Description',
+              onTap: null,
             ),
           ),
         );
 
-        // Verify that the alert's text is accessible semantically
-        expect(find.text(title), findsOneWidget);
-        expect(find.text(description), findsOneWidget);
-      });
-    });
+        // Tap the alert (should be a no-op since onTap is null)
+        await tester.tap(find.byType(LayrzAlert), warnIfMissed: false);
+        await tester.pump();
 
-    group('Text scaling (WCAG 1.4.4)', () {
-      testWidgets('layrz style survives 2x text scale', (tester) async {
+        // No exceptions should be thrown
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('text scale 2x does not crash (layrz style)', (tester) async {
         await pumpThemed(
           tester,
           MediaQuery(
@@ -49,7 +78,7 @@ void main() {
         expect(find.text('Title at 2x scale'), findsOneWidget);
       });
 
-      testWidgets('filledIcon style survives 2x text scale', (tester) async {
+      testWidgets('text scale 2x does not crash (filledIcon style)', (tester) async {
         await pumpThemed(
           tester,
           MediaQuery(
@@ -69,106 +98,230 @@ void main() {
       });
     });
 
-    group('Icon accessibility', () {
-      testWidgets('layrz style excludes icon from semantics tree', (tester) async {
-        await pumpThemed(
-          tester,
-          const SizedBox(
-            width: 300,
-            child: LayrzAlert(
-              title: 'Title',
-              description: 'Description',
-              style: LayrzAlertStyle.layrz,
-            ),
-          ),
-        );
+    group('Interactive alerts (onTap: provided)', () {
+      testWidgets('exposes correct label in semantics when interactive', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          const title = 'Clickable Title';
+          const description = 'Clickable Description';
 
-        // Verify icon is rendered (present visually)
-        expect(find.byType(Icon), findsOneWidget);
-        // Verify text is accessible (icon is excluded from semantics)
-        expect(find.text('Title'), findsOneWidget);
-        expect(find.text('Description'), findsOneWidget);
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: title,
+                description: description,
+                onTap: () {},
+              ),
+            ),
+          );
+
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+
+          // Interactive alert should expose the label with title and description
+          expect(semanticsNode.label, startsWith('$title. $description'));
+        } finally {
+          handle.dispose();
+        }
       });
 
-      testWidgets('filledIcon style excludes icon from semantics tree', (tester) async {
+      testWidgets('responds to taps when onTap is provided', (tester) async {
+        var tapped = false;
+
         await pumpThemed(
           tester,
-          const SizedBox(
+          SizedBox(
             width: 300,
             child: LayrzAlert(
               title: 'Title',
               description: 'Description',
-              style: LayrzAlertStyle.filledIcon,
+              onTap: () {
+                tapped = true;
+              },
             ),
           ),
         );
 
-        // Verify icon is rendered (present visually)
-        expect(find.byType(Icon), findsOneWidget);
-        // Verify text is accessible (icon is excluded from semantics)
-        expect(find.text('Title'), findsOneWidget);
-        expect(find.text('Description'), findsOneWidget);
-      });
-    });
-
-    group('Non-interactive', () {
-      testWidgets('alert wraps content in Semantics container for accessibility', (tester) async {
-        await pumpThemed(
-          tester,
-          const SizedBox(
-            width: 300,
-            child: LayrzAlert(
-              title: 'Title',
-              description: 'Description',
-              style: LayrzAlertStyle.layrz,
-            ),
-          ),
-        );
-
-        // Find the LayrzAlert and verify it's wrapped in a Semantics container
-        final semanticsWidget = find.byWidgetPredicate(
-          (widget) =>
-              widget is Semantics && widget.properties.label == 'Title. Description' && widget.container == true,
-        );
-        expect(semanticsWidget, findsOneWidget);
-      });
-
-      testWidgets('alert is not focusable', (tester) async {
-        await pumpThemed(
-          tester,
-          const SizedBox(
-            width: 300,
-            child: LayrzAlert(
-              title: 'Title',
-              description: 'Description',
-            ),
-          ),
-        );
-
-        // Verify the alert text is rendered and accessible
-        expect(find.text('Title'), findsOneWidget);
-        expect(find.text('Description'), findsOneWidget);
-      });
-
-      testWidgets('alert does not respond to taps', (tester) async {
-        await pumpThemed(
-          tester,
-          const SizedBox(
-            width: 300,
-            child: LayrzAlert(
-              title: 'Title',
-              description: 'Description',
-            ),
-          ),
-        );
-
-        // Tapping the alert should not trigger any callbacks
-        // (LayrzAlert has no onTap or similar)
+        // Verify interactive alert can be tapped
+        expect(tapped, isFalse);
         await tester.tap(find.byType(LayrzAlert));
         await tester.pumpAndSettle();
 
-        // No exceptions should be thrown
-        expect(tester.takeException(), isNull);
+        // After tap, callback should have been invoked
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('interactive alert differs from non-interactive (contrast in behavior)', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          var interactiveAlert = false;
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: 'Interactive',
+                description: 'This has onTap',
+                onTap: () {
+                  interactiveAlert = true;
+                },
+              ),
+            ),
+          );
+
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+
+          // The label should be present (both interactive and non-interactive have labels)
+          expect(semanticsNode.label, contains('Interactive'));
+
+          // The difference is demonstrated by actual tap behavior
+          await tester.tap(find.byType(LayrzAlert));
+          expect(interactiveAlert, isTrue);
+        } finally {
+          handle.dispose();
+        }
+      });
+    });
+
+    group('Icon exclusion from semantics', () {
+      testWidgets('layrz style: icon is visually present but excluded from semantics', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            const SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: 'Title',
+                description: 'Description',
+                style: LayrzAlertStyle.layrz,
+              ),
+            ),
+          );
+
+          // Icon should be rendered visually
+          expect(find.byType(Icon), findsOneWidget);
+
+          // Text should be rendered and accessible
+          expect(find.text('Title'), findsOneWidget);
+          expect(find.text('Description'), findsOneWidget);
+
+          // Verify semantics tree contains the label (text is accessible, icon is excluded)
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+          // The label should contain the title and description, proving icon is not announcing
+          expect(semanticsNode.label, contains('Title'));
+          expect(semanticsNode.label, contains('Description'));
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets('filledIcon style: icon is visually present but excluded from semantics', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            const SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: 'Title',
+                description: 'Description',
+                style: LayrzAlertStyle.filledIcon,
+              ),
+            ),
+          );
+
+          // Icon should be rendered visually
+          expect(find.byType(Icon), findsOneWidget);
+
+          // Text should be rendered and accessible
+          expect(find.text('Title'), findsOneWidget);
+          expect(find.text('Description'), findsOneWidget);
+
+          // Verify semantics tree contains the label (text is accessible, icon is excluded)
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+          // The label should contain the title and description, proving icon is not announcing
+          expect(semanticsNode.label, contains('Title'));
+          expect(semanticsNode.label, contains('Description'));
+        } finally {
+          handle.dispose();
+        }
+      });
+    });
+
+    group('State contrast: interactive vs. non-interactive', () {
+      testWidgets('interactive alert with onTap responds to taps', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          var tapped = false;
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: 'Enabled Alert',
+                description: 'This alert is interactive',
+                onTap: () {
+                  tapped = true;
+                },
+              ),
+            ),
+          );
+
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+
+          // Verify label is present
+          expect(semanticsNode.label, contains('Enabled Alert'));
+
+          // Prove it's interactive by successfully tapping
+          await tester.tap(find.byType(LayrzAlert));
+          expect(tapped, isTrue);
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets('non-interactive alert without onTap does not respond to taps', (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemed(
+            tester,
+            const SizedBox(
+              width: 300,
+              child: LayrzAlert(
+                title: 'Non-interactive Alert',
+                description: 'This alert is static',
+              ),
+            ),
+          );
+
+          final semanticsNode = tester.getSemantics(
+            find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
+          );
+
+          // Non-interactive alert should expose the label
+          expect(semanticsNode.label, contains('Non-interactive Alert'));
+
+          // But it should not respond to taps (no onTap provided)
+          // Tapping silently does nothing, no exception
+          await tester.tap(find.byType(LayrzAlert), warnIfMissed: false);
+          expect(tester.takeException(), isNull);
+        } finally {
+          handle.dispose();
+        }
       });
     });
   });
