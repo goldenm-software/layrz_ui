@@ -12,6 +12,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 |---|---|---|
 | 1 | LayrzLayout (application shell with sidebar/drawer nav, drawer floating-page reveal transition, flat navigator items, user menu, notifications) | Done |
 | 2 | LayrzScaffoldShell<T> (adaptive list-detail shell, container-driven breakpoints) | Done |
+| 2a | DESIGN-140: LayrzScaffoldShell mobile refinement (narrow band detail in modal bottom sheet, selection persistence across breakpoint crossing) | In progress |
 | 3 | LayrzScrollbar (Material-free on RawScrollbar, installed by default in LayrzApp) | Done |
 | 4 | LayrzTabView and LayrzTab (horizontal tabs with Material 3 styling) | Todo |
 | 5 | LayrzSnackbar and LayrzSnackbarMessenger (transient feedback) | Todo |
@@ -69,7 +70,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 - Generic list-detail shell, driven by `onBuild` (returns `LayrzScaffoldTile`) and `onDetailsBuild(T)` (renders detail area)
 - Two presentations resolved by container width:
   - **Expanded** (md/lg/xl): Two panes side-by-side (list left, detail right)
-  - **Narrow** (sm/xs): Single pane with back affordance; consumer toggles between list and detail
+  - **Narrow** (sm/xs): List always visible; detail in modal `LayrzBottomSheet` (DESIGN-140 un-deferred the mobile bottom-sheet presentation)
 - `LayrzScaffoldController<T>` (mandatory) holds opened item for external detail toggle
 - `LayrzScaffoldTile` (abstract base class) enforces `titleRichText`, `subtitleRichText`, `actions` getters; `LayrzScaffoldValueTile` provides value-equality concrete implementation
 - Search reports through `onSearch` callback; consumer owns filtering (shell does not filter)
@@ -77,8 +78,9 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 
 **Constraints**:
 - Rows are NOT keyed by tile; consumer owns key strategy
-- Mobile bottom-sheet presentation deferred; narrow fallback is single-pane + back
-- Mobile deep-linking and restoration are consumer-owned
+- Narrow band requires a `Navigator` ancestor (e.g. inside `LayrzApp`); a debug assert fires if missing
+- Sheet is not customizable: always uses `LayrzBottomSheet` defaults (initialSize 0.5, snaps [0.5, 0.95], maxSize 0.95, drag handle on)
+- Selection persistence survives breakpoint crossing; no new public parameters added to the constructor
 - All state (selected item, search text) driven by `LayrzScaffoldController` and callbacks
 
 **API contract**: See [wiki LayrzScaffoldShell page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzScaffoldShell) for full generic contract and examples.
