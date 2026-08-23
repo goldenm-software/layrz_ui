@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzStepper] variants.
-Widget buildStepperDemo(BuildContext context) {
-  return _StepperDemo();
-}
-
-class _StepperDemo extends StatefulWidget {
-  const _StepperDemo();
+class StepperDemo extends StatefulWidget {
+  const StepperDemo({super.key});
 
   @override
-  State<_StepperDemo> createState() => _StepperDemoState();
+  State<StepperDemo> createState() => _StepperDemoState();
 }
 
-class _StepperDemoState extends State<_StepperDemo> {
+class _StepperDemoState extends State<StepperDemo> {
   late LayrzStepperController _controller1;
   late LayrzStepperController _controller2;
 

@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzNumberInput] variants.
-Widget buildNumberInputDemo(BuildContext context) {
-  return _NumberInputDemo();
-}
-
-class _NumberInputDemo extends StatefulWidget {
-  const _NumberInputDemo();
+class NumberInputDemo extends StatefulWidget {
+  const NumberInputDemo({super.key});
 
   @override
-  State<_NumberInputDemo> createState() => _NumberInputDemoState();
+  State<NumberInputDemo> createState() => _NumberInputDemoState();
 }
 
-class _NumberInputDemoState extends State<_NumberInputDemo> {
+class _NumberInputDemoState extends State<NumberInputDemo> {
   late TextEditingController _intController;
   late TextEditingController _decimalController;
   late TextEditingController _rangeController;

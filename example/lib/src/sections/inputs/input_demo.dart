@@ -22,14 +22,18 @@ final class InputDemo {
   /// Builder for the detail pane content.
   /// Receives the context and is responsible for rendering all meaningful
   /// variants of this input component.
-  final Widget Function(BuildContext) detailsBuilder;
+  final Widget details;
+
+  /// An icon to represent this input component in the list view.
+  final IconData icon;
 
   /// Creates a new [InputDemo].
   const InputDemo({
     required this.id,
     required this.name,
     required this.category,
-    required this.detailsBuilder,
+    required this.details,
+    required this.icon,
   });
 
   @override
@@ -39,8 +43,9 @@ final class InputDemo {
           runtimeType == other.runtimeType &&
           id == other.id &&
           name == other.name &&
-          category == other.category;
+          category == other.category &&
+          icon == other.icon;
 
   @override
-  int get hashCode => Object.hash(id, name, category);
+  int get hashCode => Object.hash(id, name, category, icon);
 }

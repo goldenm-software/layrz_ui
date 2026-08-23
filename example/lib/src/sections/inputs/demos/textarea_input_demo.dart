@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzTextAreaInput] variants.
-Widget buildTextAreaInputDemo(BuildContext context) {
-  return _TextAreaInputDemo();
-}
-
-class _TextAreaInputDemo extends StatefulWidget {
-  const _TextAreaInputDemo();
+class TextAreaInputDemo extends StatefulWidget {
+  const TextAreaInputDemo({super.key});
 
   @override
-  State<_TextAreaInputDemo> createState() => _TextAreaInputDemoState();
+  State<TextAreaInputDemo> createState() => _TextAreaInputDemoState();
 }
 
-class _TextAreaInputDemoState extends State<_TextAreaInputDemo> {
+class _TextAreaInputDemoState extends State<TextAreaInputDemo> {
   late TextEditingController _controller;
 
   @override

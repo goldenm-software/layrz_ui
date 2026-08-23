@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzSwitchInput] variants.
-Widget buildSwitchInputDemo(BuildContext context) {
-  return _SwitchInputDemo();
-}
-
-class _SwitchInputDemo extends StatefulWidget {
-  const _SwitchInputDemo();
+class SwitchInputDemo extends StatefulWidget {
+  const SwitchInputDemo({super.key});
 
   @override
-  State<_SwitchInputDemo> createState() => _SwitchInputDemoState();
+  State<SwitchInputDemo> createState() => _SwitchInputDemoState();
 }
 
-class _SwitchInputDemoState extends State<_SwitchInputDemo> {
+class _SwitchInputDemoState extends State<SwitchInputDemo> {
   bool _notifications = true;
   bool _darkMode = false;
   bool _analytics = true;

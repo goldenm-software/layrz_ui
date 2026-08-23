@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzSelectInput] variants.
-Widget buildSelectInputDemo(BuildContext context) {
-  return _SelectInputDemo();
-}
-
-class _SelectInputDemo extends StatefulWidget {
-  const _SelectInputDemo();
+class SelectInputDemo extends StatefulWidget {
+  const SelectInputDemo({super.key});
 
   @override
-  State<_SelectInputDemo> createState() => _SelectInputDemoState();
+  State<SelectInputDemo> createState() => _SelectInputDemoState();
 }
 
-class _SelectInputDemoState extends State<_SelectInputDemo> {
+class _SelectInputDemoState extends State<SelectInputDemo> {
   String? _selectedCountry;
   String? _selectedSize = 'medium';
   String? _selectedCategory;

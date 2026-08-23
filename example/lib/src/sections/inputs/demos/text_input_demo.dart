@@ -3,19 +3,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzTextInput] variants and states.
-Widget buildTextInputDemo(BuildContext context) {
-  return _TextInputDemo();
-}
-
-class _TextInputDemo extends StatefulWidget {
-  const _TextInputDemo();
+class TextInputDemo extends StatefulWidget {
+  const TextInputDemo({super.key});
 
   @override
-  State<_TextInputDemo> createState() => _TextInputDemoState();
+  State<TextInputDemo> createState() => _TextInputDemoState();
 }
 
-class _TextInputDemoState extends State<_TextInputDemo> {
+class _TextInputDemoState extends State<TextInputDemo> {
   late TextEditingController _restController;
   late TextEditingController _errorController;
   late TextEditingController _disabledController;

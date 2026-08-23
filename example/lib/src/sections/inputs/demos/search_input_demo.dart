@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzSearchInput] variants.
-Widget buildSearchInputDemo(BuildContext context) {
-  return _SearchInputDemo();
-}
-
-class _SearchInputDemo extends StatefulWidget {
-  const _SearchInputDemo();
+class SearchInputDemo extends StatefulWidget {
+  const SearchInputDemo({super.key});
 
   @override
-  State<_SearchInputDemo> createState() => _SearchInputDemoState();
+  State<SearchInputDemo> createState() => _SearchInputDemoState();
 }
 
-class _SearchInputDemoState extends State<_SearchInputDemo> {
+class _SearchInputDemoState extends State<SearchInputDemo> {
   String _searchQuery = '';
 
   @override

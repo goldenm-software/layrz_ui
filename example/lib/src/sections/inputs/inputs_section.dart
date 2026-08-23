@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import 'input_demo.dart';
@@ -36,13 +37,15 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'text-input',
       name: 'Text Input',
       category: 'Text',
-      detailsBuilder: buildTextInputDemo,
+      details: TextInputDemo(),
+      icon: MdiIcons.textBoxOutline,
     ),
     InputDemo(
       id: 'textarea-input',
       name: 'Text Area Input',
       category: 'Text',
-      detailsBuilder: buildTextAreaInputDemo,
+      details: TextAreaInputDemo(),
+      icon: MdiIcons.textBoxMultipleOutline,
     ),
 
     // Numeric category
@@ -50,7 +53,8 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'number-input',
       name: 'Number Input',
       category: 'Numeric',
-      detailsBuilder: buildNumberInputDemo,
+      details: NumberInputDemo(),
+      icon: MdiIcons.numeric,
     ),
 
     // Boolean category
@@ -58,13 +62,15 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'checkbox-input',
       name: 'Checkbox Input',
       category: 'Boolean',
-      detailsBuilder: buildCheckboxInputDemo,
+      details: CheckboxInputDemo(),
+      icon: MdiIcons.checkboxMarkedOutline,
     ),
     InputDemo(
       id: 'switch-input',
       name: 'Switch Input',
       category: 'Boolean',
-      detailsBuilder: buildSwitchInputDemo,
+      details: SwitchInputDemo(),
+      icon: MdiIcons.toggleSwitchOutline,
     ),
 
     // Choice category
@@ -72,19 +78,22 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'radio-input',
       name: 'Radio Input',
       category: 'Choice',
-      detailsBuilder: buildRadioInputDemo,
+      details: RadioInputDemo(),
+      icon: MdiIcons.radioboxMarked,
     ),
     InputDemo(
       id: 'combobox-input',
       name: 'ComboBox Input',
       category: 'Choice',
-      detailsBuilder: buildComboBoxInputDemo,
+      details: ComboBoxInputDemo(),
+      icon: MdiIcons.menuDown,
     ),
     InputDemo(
       id: 'select-input',
       name: 'Select Input',
       category: 'Choice',
-      detailsBuilder: buildSelectInputDemo,
+      details: SelectInputDemo(),
+      icon: MdiIcons.menuDown,
     ),
 
     // TODO(DESIGN-44): DurationInput will be added here once it lands on development
@@ -94,7 +103,8 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'search-input',
       name: 'Search Input',
       category: 'Search',
-      detailsBuilder: buildSearchInputDemo,
+      details: SearchInputDemo(),
+      icon: MdiIcons.magnify,
     ),
 
     // Flow category
@@ -102,7 +112,8 @@ class _InputsSectionState extends State<InputsSection> {
       id: 'stepper',
       name: 'Stepper',
       category: 'Flow',
-      detailsBuilder: buildStepperDemo,
+      details: StepperDemo(),
+      icon: MdiIcons.formatListNumberedRtl,
     ),
   ];
 
@@ -141,14 +152,24 @@ class _InputsSectionState extends State<InputsSection> {
   /// Title is the component name, subtitle is the category.
   Widget _buildTile(InputDemo demo) {
     final tokens = context.tokens;
-    return Column(
-      crossAxisAlignment: .start,
-      mainAxisAlignment: .start,
+    return Row(
+      spacing: tokens.spacing.sp1,
       children: [
-        Text(demo.name, style: tokens.typography.body.copyWith(fontWeight: .bold)),
-        LayrzChip(
-          labelText: demo.category,
-          color: LayrzColors.blue,
+        LayrzAvatar.icon(
+          icon: demo.icon,
+          size: 30.0,
+          borderRadius: tokens.radius.r1,
+        ),
+        Column(
+          crossAxisAlignment: .start,
+          mainAxisAlignment: .start,
+          children: [
+            Text(demo.name, style: tokens.typography.body.copyWith(fontWeight: .bold)),
+            Text(
+              demo.category,
+              style: tokens.typography.label,
+            ),
+          ],
         ),
       ],
     );
@@ -156,7 +177,5 @@ class _InputsSectionState extends State<InputsSection> {
 
   /// Builds the detail pane content for a selected input component.
   /// Renders all meaningful variants of that component.
-  Widget _buildDetails(InputDemo demo) {
-    return demo.detailsBuilder(context);
-  }
+  Widget _buildDetails(InputDemo demo) => demo.details;
 }

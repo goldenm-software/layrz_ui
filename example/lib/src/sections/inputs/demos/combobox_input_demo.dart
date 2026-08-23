@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzComboBoxInput] variants.
-Widget buildComboBoxInputDemo(BuildContext context) {
-  return _ComboBoxInputDemo();
-}
-
-class _ComboBoxInputDemo extends StatefulWidget {
-  const _ComboBoxInputDemo();
+class ComboBoxInputDemo extends StatefulWidget {
+  const ComboBoxInputDemo({super.key});
 
   @override
-  State<_ComboBoxInputDemo> createState() => _ComboBoxInputDemoState();
+  State<ComboBoxInputDemo> createState() => _ComboBoxInputDemoState();
 }
 
-class _ComboBoxInputDemoState extends State<_ComboBoxInputDemo> {
+class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
   late TextEditingController _countryController;
   late TextEditingController _freeFormController;
 

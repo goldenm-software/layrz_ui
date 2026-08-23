@@ -1,19 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-/// Builds a comprehensive showcase of [LayrzRadioInput] variants.
-Widget buildRadioInputDemo(BuildContext context) {
-  return _RadioInputDemo();
-}
-
-class _RadioInputDemo extends StatefulWidget {
-  const _RadioInputDemo();
+class RadioInputDemo extends StatefulWidget {
+  const RadioInputDemo({super.key});
 
   @override
-  State<_RadioInputDemo> createState() => _RadioInputDemoState();
+  State<RadioInputDemo> createState() => _RadioInputDemoState();
 }
 
-class _RadioInputDemoState extends State<_RadioInputDemo> {
+class _RadioInputDemoState extends State<RadioInputDemo> {
   String? _selectedOption;
   String? _selectedSize = 'medium';
   String? _selectedShipping = 'standard';
