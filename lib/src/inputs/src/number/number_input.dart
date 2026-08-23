@@ -671,7 +671,6 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
                   onPrefixTap: widget.onPrefixTap,
                   onSuffixTap: widget.onSuffixTap,
                   borderRadius: BorderRadius.zero,
-
                   showBorder: false,
                 ),
               ),
