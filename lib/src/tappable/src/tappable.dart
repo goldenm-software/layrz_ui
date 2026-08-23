@@ -93,6 +93,18 @@ class LayrzTappable extends StatefulWidget {
   /// When null, defaults to transparent (no tint applied while idle).
   final Color? color;
 
+  /// The surface color when hovered.
+  ///
+  /// Defaults to null, which uses [LayrzTokens.colors.sf2] (the second surface level).
+  /// When non-null, overrides the token-based hover color.
+  final Color? hoverColor;
+
+  /// The surface color when pressed.
+  ///
+  /// Defaults to null, which uses [LayrzTokens.colors.sf4] (the fourth surface level).
+  /// When non-null, overrides the token-based pressed color.
+  final Color? pressedColor;
+
   /// Creates a new [LayrzTappable].
   ///
   /// All parameters except [child] are optional.
@@ -105,6 +117,8 @@ class LayrzTappable extends StatefulWidget {
     this.disabled = false,
     this.borderRadius,
     this.color,
+    this.hoverColor,
+    this.pressedColor,
   });
 
   @override
@@ -128,12 +142,12 @@ class _LayrzTappableState extends State<LayrzTappable> {
 
     // Pressed state takes priority over hover.
     if (_isPressed) {
-      return tokens.colors.sf4;
+      return widget.pressedColor ?? tokens.colors.sf4;
     }
 
     // Hover state.
     if (_isHovered) {
-      return tokens.colors.sf3;
+      return widget.hoverColor ?? tokens.colors.sf3;
     }
 
     // Idle state: use the explicit color or transparent.

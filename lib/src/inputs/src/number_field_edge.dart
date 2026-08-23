@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/input_style_spec.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
 /// Increment control button (+) for [LayrzNumberInput].
 ///
@@ -55,9 +56,6 @@ class NumberFieldControl extends StatefulWidget {
 }
 
 class _NumberFieldControlState extends State<NumberFieldControl> {
-  bool _isHovered = false;
-  bool _isPressed = false;
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -88,98 +86,68 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
         ? BorderRadius.only(topLeft: innerR, bottomLeft: innerR)
         : BorderRadius.only(topRight: innerR, bottomRight: innerR);
 
-    // Divider is a neutral internal visual element, independent of the field's border state
+    // Divider is error-aware: red on error, neutral in all other states (focused, disabled, etc).
+    // This is deliberately independent of focus/disabled states; only error changes it.
+    final dividerColor = widget.hasErrors ? tokens.colors.danger : tokens.colors.divider.withValues(alpha: 0.3);
     final divider = BorderSide(
-      color: tokens.colors.divider.withValues(alpha: 0.3),
+      color: dividerColor,
       width: tokens.border.stroke2,
     );
 
-    /// Computes the cap's background color based on interaction state.
-    ///
-    /// **Design decision: Hand-rolled hover/press instead of LayrzTappable**
-    ///
-    /// This widget uses a custom MouseRegion + Listener + GestureDetector implementation
-    /// rather than LayrzTappable, because LayrzTappable hardcodes hover/press colors to
-    /// its token-based surfaces (sf3/sf4) and cannot preserve the spec-derived tint through
-    /// interaction states.
-    ///
-    /// Requirement: Error state shows pale danger, and hover/press must preserve that
-    /// danger tint (not jump to a neutral surface). This requires deriving hover/press
-    /// fills from a dynamic base color (spec.backgroundColor), which LayrzTappable cannot
-    /// express.
-    ///
-    /// LayrzTappable API limitation (lib/src/tappable/src/tappable.dart, line 122):
-    /// - `_resolveColor()` hardcodes hover → sf3, pressed → sf4
-    /// - No parameter to supply per-state colors or a callback to resolve them
-    /// - Can only accept a single static `color` for the idle state
-    ///
-    /// Solution: Modulate opacity of the spec-derived base color to indicate hover/press
-    /// while maintaining hue and saturation. Idle uses spec.backgroundColor directly,
-    /// hover increases opacity to 1.1x, pressed decreases to 0.85x.
-    ///
-    /// Future: If LayrzTappable is extended to accept a color resolution callback,
-    /// this hand-rolled implementation should be replaced.
-    Color resolveBackgroundColor() {
-      if (widget.isDisabled) {
-        // Disabled uses a tint that's independent of the spec (grey-ish)
-        return tokens.colors.fg3.withValues(alpha: 0.12);
-      }
+    // Compute hover and pressed colors by modulating the spec-derived idle color's opacity.
+    // This preserves the hue and saturation through interaction states (e.g., error shows
+    // pale danger idle, with slightly modulated danger on hover/press rather than jumping
+    // to a neutral surface).
+    final currentAlpha = (spec.backgroundColor.a * 255.0).round();
+    final hoverAlpha = (currentAlpha * 1.1 / 255.0).clamp(0.0, 1.0);
+    final pressedAlpha = (currentAlpha * 0.85 / 255.0).clamp(0.0, 1.0);
 
-      if (_isPressed) {
-        // Pressed: slightly darker than the spec's background, maintaining the tint
-        // Reduce opacity slightly to indicate pressed state
-        final currentAlpha = (spec.backgroundColor.a * 255.0).round();
-        final pressedAlpha = (currentAlpha * 0.85 / 255.0).clamp(0.0, 1.0);
-        return spec.backgroundColor.withValues(alpha: pressedAlpha);
-      }
+    final hoverColor = spec.backgroundColor.withValues(alpha: hoverAlpha);
+    final pressedColor = spec.backgroundColor.withValues(alpha: pressedAlpha);
 
-      if (_isHovered) {
-        // Hover: slightly lighter than the spec's background, maintaining the tint
-        // Increase opacity slightly to indicate hover state
-        final currentAlpha = (spec.backgroundColor.a * 255.0).round();
-        final hoveredAlpha = (currentAlpha * 1.1 / 255.0).clamp(0.0, 1.0);
-        return spec.backgroundColor.withValues(alpha: hoveredAlpha);
-      }
+    final capContent = Padding(
+      padding: EdgeInsets.all(tokens.spacing.sp2),
+      child: Align(
+        alignment: Alignment.center,
+        child: Icon(
+          widget.isLeft ? MdiIcons.minus : MdiIcons.plus,
+          size: tokens.typography.body.fontSize,
+          color: glyphColor,
+        ),
+      ),
+    );
 
-      // Idle: use the spec's background so error state shows pale danger
-      return spec.backgroundColor;
-    }
+    // Build the interactive tappable surface that handles hover/press effects.
+    // The idle color is applied to the outer Container instead, to keep the background
+    // and border together for testing purposes.
+    final tappableSurface = LayrzTappable(
+      onTap: widget.onTap,
+      disabled: widget.isDisabled,
+      borderRadius: capRadius,
+      color: null, // Background color is applied to the outer Container
+      hoverColor: hoverColor,
+      pressedColor: pressedColor,
+      child: capContent,
+    );
+
+    // The outer Container applies both the background color (for idle/disabled states)
+    // and the divider borders on the inner edges. LayrzTappable inside handles hover/press.
+    final capWithDivider = Container(
+      decoration: BoxDecoration(
+        borderRadius: capRadius,
+        color: spec.backgroundColor,
+        border: Border(
+          right: widget.isLeft ? divider : BorderSide.none,
+          left: !widget.isLeft ? divider : BorderSide.none,
+        ),
+      ),
+      child: tappableSurface,
+    );
 
     return AnimatedOpacity(
       duration: tokens.motion.dTransition,
       opacity: widget.isDisabled ? 0.5 : 1.0,
-      child: MouseRegion(
-        onEnter: widget.isDisabled ? null : (_) => setState(() => _isHovered = true),
-        onExit: widget.isDisabled ? null : (_) => setState(() => _isHovered = false),
-        cursor: widget.isDisabled ? MouseCursor.defer : SystemMouseCursors.click,
-        child: Listener(
-          onPointerDown: widget.isDisabled ? null : (_) => setState(() => _isPressed = true),
-          onPointerUp: widget.isDisabled ? null : (_) => setState(() => _isPressed = false),
-          onPointerCancel: widget.isDisabled ? null : (_) => setState(() => _isPressed = false),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: Container(
-              padding: EdgeInsets.all(tokens.spacing.sp2),
-              decoration: BoxDecoration(
-                borderRadius: capRadius,
-                color: resolveBackgroundColor(),
-                border: Border(
-                  right: widget.isLeft ? divider : BorderSide.none,
-                  left: !widget.isLeft ? divider : BorderSide.none,
-                ),
-              ),
-              child: Align(
-                alignment: Alignment.center,
-                child: Icon(
-                  widget.isLeft ? MdiIcons.minus : MdiIcons.plus,
-                  size: tokens.typography.body.fontSize,
-                  color: glyphColor,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: capWithDivider,
     );
   }
 }

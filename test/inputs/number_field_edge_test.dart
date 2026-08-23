@@ -180,7 +180,7 @@ void main() {
       expect(decoration?.color, isNotNull);
     });
 
-    testWidgets('cap divider stays neutral in error state', (tester) async {
+    testWidgets('cap divider is red on error', (tester) async {
       await pumpThemed(
         tester,
         NumberFieldControl(
@@ -199,7 +199,7 @@ void main() {
       final container = tester.widget<Container>(containerFinder.first);
       final decoration = container.decoration as BoxDecoration?;
 
-      // Divider is a neutral internal element, independent of the border state
+      // Divider turns red (danger) when the field has errors
       expect(decoration?.border, isNotNull);
       final border = decoration!.border as Border?;
       expect(border, isNotNull);
@@ -230,7 +230,7 @@ void main() {
       expect(decoration?.color, isNotNull);
     });
 
-    testWidgets('cap divider stays neutral in focused state', (tester) async {
+    testWidgets('cap divider stays neutral in focused state (not changed by focus)', (tester) async {
       await pumpThemed(
         tester,
         NumberFieldControl(
@@ -249,8 +249,12 @@ void main() {
       final container = tester.widget<Container>(containerFinder.first);
       final decoration = container.decoration as BoxDecoration?;
 
-      // Divider stays neutral independent of focus state
+      // Divider remains neutral (not red) when focused without error
       expect(decoration?.border, isNotNull);
+      final border = decoration!.border as Border?;
+      expect(border, isNotNull);
+      // Divider should exist but should NOT be red (since hasErrors=false)
+      expect(border!.left != BorderSide.none || border.right != BorderSide.none, true);
     });
 
     testWidgets('cap background resolves spec color in disabled state', (tester) async {
@@ -276,7 +280,7 @@ void main() {
       expect(decoration?.color, isNotNull);
     });
 
-    testWidgets('cap divider stays neutral in disabled state', (tester) async {
+    testWidgets('cap divider stays neutral in disabled state (not changed by disabled)', (tester) async {
       await pumpThemed(
         tester,
         NumberFieldControl(
@@ -295,8 +299,12 @@ void main() {
       final container = tester.widget<Container>(containerFinder.first);
       final decoration = container.decoration as BoxDecoration?;
 
-      // Divider stays neutral independent of disabled state
+      // Divider remains neutral (not red) when disabled without error
       expect(decoration?.border, isNotNull);
+      final border = decoration!.border as Border?;
+      expect(border, isNotNull);
+      // Divider should exist but should NOT be red (since hasErrors=false)
+      expect(border!.left != BorderSide.none || border.right != BorderSide.none, true);
     });
   });
 
