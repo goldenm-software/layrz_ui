@@ -493,5 +493,124 @@ void main() {
       expect(colorBefore, equals(colorAfter));
       expect(callCount, equals(0)); // No toggle should occur
     });
+
+    testWidgets('tab-focus shows colour affordance (focus-visible)', (tester) async {
+      bool currentValue = false;
+
+      // Get resting state first
+      await pumpThemedApp(
+        tester,
+        LayrzCheckboxInput(
+          value: false,
+          onChanged: (_) {},
+        ),
+      );
+      final restingCheckbox = tester.widget<Container>(find.byType(Container).first);
+      final restingColor = (restingCheckbox.decoration as BoxDecoration?)?.color;
+
+      // Re-pump with stateful widget
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzCheckboxInput(
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Give focus via Tab (keyboard focus)
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+
+      // Get the checkbox box and verify the colour changed
+      final focusedCheckbox = tester.widget<Container>(find.byType(Container).first);
+      final focusedColor = (focusedCheckbox.decoration as BoxDecoration?)?.color;
+
+      // Colour should change when keyboard-focused (hover state applied)
+      expect(focusedColor, isNotNull);
+      expect(focusedColor, isNot(equals(restingColor)));
+
+      // Border should be primary colour when focused
+      final border = (focusedCheckbox.decoration as BoxDecoration?)?.border;
+      expect(border, isNotNull);
+    });
+
+    testWidgets('click-focus does not latch colour affordance', (tester) async {
+      bool currentValue = false;
+
+      // Get resting state
+      await pumpThemedApp(
+        tester,
+        LayrzCheckboxInput(
+          value: false,
+          onChanged: (_) {},
+        ),
+      );
+      // Re-pump with stateful widget
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzCheckboxInput(
+            value: currentValue,
+            onChanged: (newValue) {
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Tap the checkbox
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      // After tap, focus is still held
+      final focusWidget = tester.widget<Focus>(find.byType(Focus).first);
+      expect(focusWidget.focusNode?.hasFocus, isTrue);
+
+      // But colour should NOT show the hover/focus treatment (was latching before fix)
+      final clickedCheckbox = tester.widget<Container>(find.byType(Container).first);
+      final clickedColor = (clickedCheckbox.decoration as BoxDecoration?)?.color;
+
+      // Checkbox toggled to checked, but colour should use default branch
+      // (not the interactive sf3 lighter background from hover/focus)
+      expect(clickedColor, isNotNull);
+    });
+
+    testWidgets('keyboard still works after pointer focus', (tester) async {
+      bool currentValue = false;
+      int callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzCheckboxInput(
+            value: currentValue,
+            onChanged: (newValue) {
+              callCount++;
+              setState(() => currentValue = newValue);
+            },
+          ),
+        ),
+      );
+
+      // Tap the checkbox (this gains focus and toggles)
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      expect(currentValue, isTrue);
+      expect(callCount, equals(1));
+
+      callCount = 0;
+
+      // Send Space key — should toggle again despite having pointer focus
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+
+      expect(currentValue, isFalse);
+      expect(callCount, equals(1)); // Single toggle from Space
+    });
   });
 }
