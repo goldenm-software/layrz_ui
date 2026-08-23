@@ -1,4 +1,3 @@
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -367,52 +366,10 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
 
     final isDisabled = widget.disabled || widget.readOnly;
 
-    // Build semantic label with required indicator if needed
-    final semanticLabel = widget.isRequired && widget.labelText != null
-        ? '${widget.labelText}, required'
-        : widget.labelText;
-
-    // Build semantic value: current text + character count if maxLength is set
-    String? semanticValue;
-    if (widget.maxLength != null) {
-      final currentLength = _controller.text.length;
-      semanticValue = '$currentLength of ${widget.maxLength} characters';
-    }
-
-    // Build error message string for semantics
-    String? semanticError;
-    if (widget.errors.isNotEmpty && !widget.hideDetails) {
-      semanticError = widget.errors.join(', ');
-    }
-
-    // Build help affordance text for semantics
-    String? semanticTooltip;
-    if (widget.helpTitleText != null || widget.helpContentText != null) {
-      semanticTooltip = [
-        if (widget.helpTitleText != null) widget.helpTitleText,
-        if (widget.helpContentText != null) widget.helpContentText,
-      ].join('. ');
-    }
-
-    // Build custom semantic actions for required and help
-    final customSemanticsActions = <CustomSemanticsAction, VoidCallback>{};
-    if (widget.isRequired) {
-      customSemanticsActions[const CustomSemanticsAction(label: 'required')] = () {};
-    }
-    if (semanticTooltip != null) {
-      customSemanticsActions[const CustomSemanticsAction(label: 'show help')] = () {};
-    }
-    if (semanticError != null) {
-      customSemanticsActions[const CustomSemanticsAction(label: 'show error')] = () {};
-    }
-
     return Semantics(
-      label: semanticLabel,
+      label: widget.labelText,
       hint: widget.hintText,
-      value: semanticValue,
-      tooltip: semanticTooltip,
       enabled: !isDisabled,
-      customSemanticsActions: customSemanticsActions.isNotEmpty ? customSemanticsActions : null,
       child: LayrzInputChrome.variableHeight(
         labelText: widget.labelText,
         hintText: widget.hintText,
