@@ -7,7 +7,7 @@ import '../helpers/pump_themed.dart';
 void main() {
   group('LayrzAlert Accessibility', () {
     group('Non-interactive alerts (onTap: null)', () {
-      testWidgets('exposes label and container flag in semantics', (tester) async {
+      testWidgets('exposes label and non-interactive semantics', (tester) async {
         final handle = tester.ensureSemantics();
         try {
           const title = 'Alert Title';
@@ -28,10 +28,12 @@ void main() {
             find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
           );
 
-          // Non-interactive alert exposes label with correct format
+          // Non-interactive: verify label and button semantics separately
           expect(semanticsNode.label, startsWith('$title. $description'));
-          // And is not marked as button in semantics (no button flag)
-          expect(semanticsNode.toString(), isNot(contains('isButton')));
+          expect(
+            semanticsNode,
+            matchesSemantics(isButton: false, hasTapAction: false),
+          );
         } finally {
           handle.dispose();
         }
@@ -56,8 +58,11 @@ void main() {
             find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
           );
 
-          // Semantics confirm no interaction: not marked as button
-          expect(semanticsNode.toString(), isNot(contains('isButton')));
+          // Semantics confirm no interaction: not a button, no tap action
+          expect(
+            semanticsNode,
+            matchesSemantics(isButton: false, hasTapAction: false),
+          );
         } finally {
           handle.dispose();
         }
@@ -153,10 +158,19 @@ void main() {
             find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
           );
 
-          // Interactive alert exposes label with correct format
+          // Interactive: verify label and button semantics separately
           expect(semanticsNode.label, startsWith('$title. $description'));
-          // Verify button semantics: string representation includes "isButton" flag (widget sets button:true at alert.dart:412)
-          expect(semanticsNode.toString(), contains('isButton'));
+          expect(
+            semanticsNode,
+            matchesSemantics(
+              isButton: true,
+              hasEnabledState: true,
+              isEnabled: true,
+              isFocusable: true,
+              hasTapAction: true,
+              hasFocusAction: true,
+            ),
+          );
         } finally {
           handle.dispose();
         }
@@ -205,8 +219,18 @@ void main() {
             find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
           );
 
-          // Interactive alert is a button - verify button flag is set in semantics
-          expect(interactiveNode.toString(), contains('isButton'));
+          // Interactive alert is a button with tap/focus actions
+          expect(
+            interactiveNode,
+            matchesSemantics(
+              isButton: true,
+              hasEnabledState: true,
+              isEnabled: true,
+              isFocusable: true,
+              hasTapAction: true,
+              hasFocusAction: true,
+            ),
+          );
         } finally {
           handle.dispose();
         }
@@ -230,8 +254,11 @@ void main() {
             find.descendant(of: find.byType(LayrzAlert), matching: find.byType(Semantics)).first,
           );
 
-          // Non-interactive alert is not a button - verify button flag is NOT set
-          expect(nonInteractiveNode.toString(), isNot(contains('isButton')));
+          // Non-interactive alert is not a button
+          expect(
+            nonInteractiveNode,
+            matchesSemantics(isButton: false, hasTapAction: false),
+          );
         } finally {
           handle.dispose();
         }
