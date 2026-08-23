@@ -70,20 +70,27 @@ void main() {
         ),
       );
 
-      // Verify disabled semantics
+      // Verify disabled semantics - disabled number input is read-only from the
+      // EditableText perspective, so it has isTextField and isReadOnly flags
+      final semanticsNodes = find.descendant(
+        of: find.byType(LayrzNumberInput),
+        matching: find.byType(Semantics),
+      );
+
+      // There should be at least one Semantics node for the control itself
+      expect(semanticsNodes, findsWidgets);
+
+      // Find the Semantics node that has the label and is disabled
+      final controlSemantics = tester.getSemantics(semanticsNodes.first);
       expect(
-        tester.getSemantics(
-          find
-              .descendant(
-                of: find.byType(LayrzNumberInput),
-                matching: find.byType(Semantics),
-              )
-              .first,
-        ),
+        controlSemantics,
         matchesSemantics(
           label: 'Quantity',
           hasEnabledState: true,
           isEnabled: false,
+          isTextField: true,
+          isReadOnly: true,
+          isFocusable: true,
         ),
       );
 

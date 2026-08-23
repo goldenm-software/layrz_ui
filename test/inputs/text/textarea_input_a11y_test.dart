@@ -35,7 +35,7 @@ void main() {
       // Label should be accessible via semantics - exactly once
       expect(find.bySemanticsLabel('Message'), findsOneWidget);
 
-      // Verify the semantic node
+      // Verify the semantic node - multiline fields have isTextField, isMultiline, isFocusable
       expect(
         tester.getSemantics(
           find
@@ -49,6 +49,9 @@ void main() {
           label: 'Message',
           hasEnabledState: true,
           isEnabled: true,
+          isTextField: true,
+          isMultiline: true,
+          isFocusable: true,
         ),
       );
 
@@ -68,7 +71,7 @@ void main() {
         ),
       );
 
-      // Verify disabled semantics
+      // Verify disabled semantics - disabled textareas are read-only from the EditableText perspective
       expect(
         tester.getSemantics(
           find
@@ -82,6 +85,10 @@ void main() {
           label: 'Disabled textarea',
           hasEnabledState: true,
           isEnabled: false,
+          isTextField: true,
+          isMultiline: true,
+          isReadOnly: true,
+          isFocusable: true,
         ),
       );
 
