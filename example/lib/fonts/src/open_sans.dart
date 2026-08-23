@@ -19,9 +19,9 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// The font uses `fontVariations` to express weights on the `wght` axis,
 /// suitable for variable fonts. Non-variable fonts would use `fontWeight`
 /// instead, but both fit the same [TextStyle] contract.
-class LayrzOpenSansFont extends LayrzFont {
-  /// Creates a new [LayrzOpenSansFont].
-  const LayrzOpenSansFont() : super(name: 'Open Sans');
+class OpenSansFont extends LayrzFont {
+  /// Creates a new [OpenSansFont].
+  const OpenSansFont() : super(name: 'Open Sans');
 
   @override
   Future<void> load() async {

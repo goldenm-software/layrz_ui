@@ -1,3 +1,4 @@
+import 'package:example/fonts/fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -33,7 +34,8 @@ import 'src/sections/typography_section.dart';
 /// completes without I/O.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final font = const LayrzOpenSansFont();
+  final font = const OpenSansFont();
+  // final font = const FiraSansFont();
   await font.load();
   runApp(ShowroomApp(font: font));
 }
