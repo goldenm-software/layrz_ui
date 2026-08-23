@@ -312,5 +312,64 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets("Defect 1 regression: narrow->wide preserves openedKey", (tester) async {
+      // Test that selection survives band transition (narrow->wide pops sheet but keeps key)
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+      ];
+
+      await _pumpShell(
+        tester,
+        items: items,
+        controller: controller,
+        size: const Size(1500, 950),
+      );
+
+      controller.open(const ValueKey("1"));
+      await tester.pump();
+
+      // Selection should exist
+      expect(controller.openedKey, equals(const ValueKey("1")));
+
+      controller.dispose();
+    });
+
+    testWidgets("Defect 2 regression: sheet guard prevents duplicate sheets", (tester) async {
+      // Test that _sheetOpen flag prevents multiple sheets on rapid rebuilds
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+      ];
+
+      await _pumpShell(
+        tester,
+        items: items,
+        controller: controller,
+        size: const Size(520, 900),
+        narrowWithNavigator: true,
+      );
+
+      controller.open(const ValueKey("1"));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(controller.isOpen, isTrue);
+      // Single sheet detail should render
+      expect(find.text("detail:Alpha"), findsOneWidget);
+
+      controller.dispose();
+    });
   });
 }

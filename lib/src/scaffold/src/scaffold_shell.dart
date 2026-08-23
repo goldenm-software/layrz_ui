@@ -75,8 +75,12 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   late VoidCallback _controllerListener;
   late ValueNotifier<int> _itemsChangeNotifier;
 
-  /// Flag to prevent double-pushing sheets in rapid rebuilds.
-  bool _isSchedulingNarrowSheet = false;
+  /// Whether a detail sheet is currently open on narrow layouts.
+  bool _sheetOpen = false;
+
+  /// Whether the shell initiated the last sheet pop (band transition).
+  /// If true, don't close the controller when the sheet closes.
+  bool _dismissedByShell = false;
 
   /// Reference to the builder context from the narrow sheet, used to pop it specifically.
   BuildContext? _narrowSheetContext;
@@ -100,8 +104,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       oldWidget.controller.removeListener(_controllerListener);
       widget.controller.addListener(_controllerListener);
     }
-    // Notify when items change
-    if (oldWidget.items.length != widget.items.length || !_itemsEqual(oldWidget.items, widget.items)) {
+    // Notify when items list instance changes (handles refetches with same keys but new instances)
+    if (!identical(oldWidget.items, widget.items)) {
       _itemsChangeNotifier.value++;
     }
   }
@@ -113,15 +117,6 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     super.dispose();
   }
 
-  /// Check if items are equal by comparing their keys.
-  bool _itemsEqual(List<LayrzScaffoldItem<T>> a, List<LayrzScaffoldItem<T>> b) {
-    if (a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i].key != b[i].key) return false;
-    }
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -131,9 +126,10 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         final isWide = breakpoint.index >= LayrzBreakpoint.md.index;
 
         // Handle band transitions: close sheet when moving to wide layout
-        if (isWide && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
-          // Schedule the pop for after the build, to avoid modifying the widget
-          // tree during build
+        if (isWide && _sheetOpen) {
+          // Schedule the pop for after the build, to avoid modifying the widget tree during build.
+          // Mark it as shell-initiated so the sheet dismissal callback doesn't close the controller.
+          _dismissedByShell = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_narrowSheetContext != null && _narrowSheetContext!.mounted) {
               Navigator.of(_narrowSheetContext!).pop();
@@ -211,15 +207,13 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       emptyState: widget.emptyState,
     );
 
-    // Schedule the sheet presentation in a post-frame callback to avoid building
-    // during the build phase
-    if (widget.controller.isOpen && !_isSchedulingNarrowSheet) {
-      _isSchedulingNarrowSheet = true;
+    // Schedule the sheet presentation in a post-frame callback to avoid building during build.
+    // Only schedule if controller is open and no sheet is already open.
+    if (widget.controller.isOpen && !_sheetOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           _showNarrowDetailSheet(context);
         }
-        _isSchedulingNarrowSheet = false;
       });
     }
 
@@ -230,8 +224,11 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   ///
   /// Opens a LayrzBottomSheet with the detail content. Handles the case where
   /// the opened item is no longer in the list, and manages dismissal to close
-  /// the controller.
+  /// the controller (unless the shell initiated the pop via band transition).
   Future<void> _showNarrowDetailSheet(BuildContext context) async {
+    // Mark the sheet as open before checking anything else
+    _sheetOpen = true;
+
     // Guard: check if there's a Navigator available
     final navigator = Navigator.maybeOf(context);
     if (navigator == null) {
@@ -240,11 +237,13 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         'LayrzScaffoldShell on narrow breakpoints requires a Navigator ancestor '
         '(e.g., inside LayrzApp) to present the detail sheet. No Navigator found in context.',
       );
+      _sheetOpen = false;
       return;
     }
 
     // If the opened item doesn't exist, close the controller
     if (_findOpenedItem() == null) {
+      _sheetOpen = false;
       if (mounted) {
         widget.controller.close();
       }
@@ -261,10 +260,12 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           builder: (context, _) {
             final openedItem = _findOpenedItem();
             if (openedItem == null) {
-              // Item was removed from the list; pop the sheet
-              if (mounted && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
-                Navigator.of(_narrowSheetContext!).pop();
-              }
+              // Item was removed from the list; pop the sheet in the next frame
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
+                  Navigator.of(_narrowSheetContext!).pop();
+                }
+              });
               return const SizedBox.shrink();
             }
             return DetailPane(
@@ -276,10 +277,18 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       },
     );
 
+    // Mark the sheet as closed
+    _sheetOpen = false;
+
     // When the sheet is dismissed (user dragged down, tapped barrier, etc.),
-    // close the controller to match the screen state
-    if (mounted) {
-      widget.controller.close();
+    // close the controller to match the screen state — unless the shell initiated
+    // the pop (band transition). In that case, the selection should be preserved.
+    if (_dismissedByShell) {
+      _dismissedByShell = false;
+    } else {
+      if (mounted) {
+        widget.controller.close();
+      }
     }
   }
 }
