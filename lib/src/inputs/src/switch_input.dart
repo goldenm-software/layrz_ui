@@ -86,6 +86,13 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
   late FocusNode _focusNode;
   final Set<WidgetState> _states = {};
 
+  /// Whether focus was gained from a pointer interaction (tap/click).
+  ///
+  /// Used to implement :focus-visible semantics: focus visual effects (shadow,
+  /// colour) are only shown when focus is gained from the keyboard, not from
+  /// a pointer tap. This prevents the focus ring from appearing stuck after a tap.
+  bool _focusFromPointer = false;
+
   @override
   bool? get value => widget.value;
 
@@ -137,7 +144,14 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
           padding: widget.padding ?? tokens.spacing.pd2,
           child: GestureDetector(
             onTap: isDisabled ? null : _toggleSwitch,
-            onTapDown: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.pressed)),
+            onTapDown: isDisabled
+                ? null
+                : (_) {
+                    setState(() {
+                      _focusFromPointer = true;
+                      _states.add(WidgetState.pressed);
+                    });
+                  },
             onTapUp: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.pressed)),
             onTapCancel: isDisabled ? null : () => setState(() => _states.remove(WidgetState.pressed)),
             child: Focus(
@@ -156,6 +170,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
                     _states.add(WidgetState.focused);
                   } else {
                     _states.remove(WidgetState.focused);
+                    _focusFromPointer = false;
                   }
                 });
               },
@@ -212,6 +227,9 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
 
     final animationProgress = position.value;
 
+    /// Derived focus-visible state: keyboard focus colour treatment shown only for keyboard, not pointer.
+    final isFocusVisible = _states.contains(WidgetState.focused) && !_focusFromPointer;
+
     // State precedence: disabled > error > pressed/hover/focused > default
     late Color trackColor;
 
@@ -221,9 +239,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
       final offColor = tokens.colors.danger.shade50;
       final onColor = tokens.colors.danger;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
-    } else if (_states.contains(WidgetState.hovered) ||
-        _states.contains(WidgetState.focused) ||
-        _states.contains(WidgetState.pressed)) {
+    } else if (_states.contains(WidgetState.hovered) || isFocusVisible || _states.contains(WidgetState.pressed)) {
       final offColor = tokens.colors.sf4;
       final onColor = tokens.colors.primary;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
@@ -244,15 +260,6 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
         decoration: BoxDecoration(
           color: trackColor,
           borderRadius: tokens.radius.br2,
-          boxShadow: _states.contains(WidgetState.focused)
-              ? [
-                  BoxShadow(
-                    color: tokens.colors.primary.withValues(alpha: 0.25),
-                    spreadRadius: 4.0,
-                    blurRadius: 8.0,
-                  ),
-                ]
-              : null,
         ),
         child: Stack(
           children: [

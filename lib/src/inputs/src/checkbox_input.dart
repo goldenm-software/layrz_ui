@@ -86,6 +86,13 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
   late FocusNode _focusNode;
   final Set<WidgetState> _states = {};
 
+  /// Whether focus was gained from a pointer interaction (tap/click).
+  ///
+  /// Used to implement :focus-visible semantics: focus visual effects (colour)
+  /// are only shown when focus is gained from the keyboard, not from a pointer tap.
+  /// This prevents the focus colouring from appearing stuck after a tap.
+  bool _focusFromPointer = false;
+
   @override
   bool? get value => widget.value;
 
@@ -137,7 +144,14 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
           padding: widget.padding ?? tokens.spacing.pd2,
           child: GestureDetector(
             onTap: isDisabled ? null : _toggleCheckbox,
-            onTapDown: isDisabled ? null : (_) => setState(() => _states.add(WidgetState.pressed)),
+            onTapDown: isDisabled
+                ? null
+                : (_) {
+                    setState(() {
+                      _focusFromPointer = true;
+                      _states.add(WidgetState.pressed);
+                    });
+                  },
             onTapUp: isDisabled ? null : (_) => setState(() => _states.remove(WidgetState.pressed)),
             onTapCancel: isDisabled ? null : () => setState(() => _states.remove(WidgetState.pressed)),
             child: Focus(
@@ -156,6 +170,7 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
                     _states.add(WidgetState.focused);
                   } else {
                     _states.remove(WidgetState.focused);
+                    _focusFromPointer = false;
                   }
                 });
               },
@@ -207,6 +222,9 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
     final size = 20.0;
     final animationProgress = position.value;
 
+    /// Derived focus-visible state: border colour shows primary only for keyboard focus, not pointer.
+    final isFocusVisible = _states.contains(WidgetState.focused) && !_focusFromPointer;
+
     // State precedence: disabled > error > hover/focused/pressed > default
     late Color backgroundColor;
     late Color borderColor;
@@ -219,13 +237,11 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
       final checkedBackground = tokens.colors.danger;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.danger;
-    } else if (_states.contains(WidgetState.hovered) ||
-        _states.contains(WidgetState.focused) ||
-        _states.contains(WidgetState.pressed)) {
+    } else if (_states.contains(WidgetState.hovered) || isFocusVisible || _states.contains(WidgetState.pressed)) {
       final uncheckedBackground = tokens.colors.sf3;
       final checkedBackground = tokens.colors.primary;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
-      borderColor = _states.contains(WidgetState.focused) ? tokens.colors.primary : tokens.colors.fg2;
+      borderColor = isFocusVisible ? tokens.colors.primary : tokens.colors.fg2;
     } else {
       final uncheckedBackground = tokens.colors.sf2;
       final checkedBackground = tokens.colors.primary;
