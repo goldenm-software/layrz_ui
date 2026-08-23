@@ -46,6 +46,13 @@ class LayrzBottomSheet {
   ///   receives the sheet context as an argument.
   /// - [isPersistent]: whether the sheet is persistent (no barrier, page stays interactive)
   ///   or modal (barrier present, page not interactive). Defaults to `false` (modal).
+  /// - [semanticLabel]: optional semantic label for screen readers announcing the sheet.
+  ///   For modal sheets, this should describe the purpose and exit mechanism
+  ///   (e.g., "Choose an option. Press Escape to close."). This label is required
+  ///   when [isPersistent] is false to announce the modal dialog role to screen readers
+  ///   and communicate the exit path. Must be localized by the caller. If not provided,
+  ///   no dialog semantics are added, preventing a focus trap without announcement.
+  ///   Ignored for persistent sheets. Defaults to `null`.
   /// - [snapSizes]: optional list of snap point fractions (0.0 to 1.0) in ascending order.
   ///   Constraints are enforced:
   ///   - List must not be empty
@@ -70,6 +77,7 @@ class LayrzBottomSheet {
     BuildContext context, {
     required WidgetBuilder builder,
     bool isPersistent = false,
+    String? semanticLabel,
     List<double>? snapSizes,
     double initialSize = 0.5,
     double minSize = 0.25,
@@ -126,6 +134,7 @@ class LayrzBottomSheet {
       _BottomSheetRoute<T>(
         builder: builder,
         isPersistent: isPersistent,
+        semanticLabel: semanticLabel,
         snapSizes: effectiveSnapSizes,
         initialSize: initialSize,
         minSize: minSize,
@@ -149,10 +158,14 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
   /// Whether the sheet is persistent (no barrier) or modal.
   final bool isPersistent;
 
+  /// Semantic label for screen readers (caller-supplied, optional).
+  final String? semanticLabel;
+
   /// Creates a new bottom sheet route.
   _BottomSheetRoute({
     required WidgetBuilder builder,
     required this.isPersistent,
+    required this.semanticLabel,
     required List<double> snapSizes,
     required double initialSize,
     required double minSize,
@@ -163,6 +176,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
            return _BottomSheetContent(
              builder: builder,
              isPersistent: isPersistent,
+             semanticLabel: semanticLabel,
              snapSizes: snapSizes,
              initialSize: initialSize,
              minSize: minSize,
@@ -227,6 +241,9 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Whether the sheet is persistent (no barrier, page interactive) or modal.
   final bool isPersistent;
 
+  /// Semantic label for screen readers (caller-supplied, optional).
+  final String? semanticLabel;
+
   /// Snap point fractions in ascending order.
   final List<double> snapSizes;
 
@@ -242,12 +259,11 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Whether to show the drag handle.
   final bool showDragHandle;
 
-  /// Whether to expand to full screen when dragged to top.
-
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
     required this.builder,
     required this.isPersistent,
+    required this.semanticLabel,
     required this.snapSizes,
     required this.initialSize,
     required this.minSize,
@@ -283,7 +299,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return Focus(
+    final focusChild = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
         // Dismiss on Escape (modal mode only)
@@ -329,6 +345,19 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
         ),
       ),
     );
+
+    // For modal sheets with a semantic label, wrap with Semantics to expose dialog role.
+    // Persistent sheets never get dialog semantics (they are supplementary UI, not modals).
+    // If no label is supplied, no dialog semantics are added (prevents focus trap without announcement).
+    if (!widget.isPersistent && widget.semanticLabel != null) {
+      return Semantics(
+        label: widget.semanticLabel,
+        enabled: true,
+        child: focusChild,
+      );
+    }
+
+    return focusChild;
   }
 }
 
