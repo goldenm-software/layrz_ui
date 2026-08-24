@@ -711,8 +711,18 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
     final fieldConfig = _buildFieldConfig(formatters);
 
+    // Deliberately unlabelled: unlike build()'s no-step-buttons branch (a
+    // single child, so its own Semantics merges with the field's into one
+    // labelled node), this Row always splits into three separately
+    // focusable/actionable children (decrement cap / field / increment cap),
+    // so this outer node can never merge into any one of them and stays a
+    // pure grouping node. A label here would be announced when focus reaches
+    // this group and then announced again when it reaches the field (see the
+    // inner Semantics below) — one screen-reader-focusable node should own
+    // the label, and that node is the field, the thing the user actually
+    // edits. `enabled` still belongs here so the group's own enabled state is
+    // exposed.
     return Semantics(
-      label: widget.labelText,
       enabled: !isDisabled,
       child: Container(
         decoration: BoxDecoration(

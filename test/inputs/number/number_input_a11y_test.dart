@@ -44,14 +44,27 @@ void main() {
     });
 
     testWidgets(
-      'numeric field label is exposed to screen readers on the outer node and the inner field',
+      "numeric field label is exposed to screen readers on the field's own node, exactly once",
       (tester) async {
         // On the step-buttons branch, the outer Row splits the semantics tree into three
-        // branches (decrement cap / field / increment cap — see decision D-F), so the label
-        // cannot merge into a single node the way it does on LayrzTextInput's healthy baseline.
-        // The fix gives the field's own node the label too (previously empty), so the count is
-        // 2, not 1 — this is the intended outcome of D-F, not a duplicate-announcement defect
-        // (unlike the Search/ComboBox case this differs from).
+        // separately focusable/actionable children (decrement cap / field / increment cap
+        // — see decision D-F). That outer node has no actions and is not itself focusable
+        // ([enabled, hasEnabledState] only) — it is a pure grouping node the user never
+        // lands on — so it must stay unlabelled: a label there would be announced once for
+        // a node the user cannot act on, then announced again once focus reaches the field.
+        //
+        // This is the opposite of LayrzComboBoxInput, whose outer node keeps the label:
+        // ComboBox's outer node IS the focusable, actionable control ([button, focusable],
+        // actions=[tap, focus]) — the trigger the user actually lands on — so the label
+        // belongs there, and its inner (read-only) text field correctly carries `label: ""`.
+        // Same principle both times: the label lives on the one node the user focuses;
+        // Number's and ComboBox's outer nodes just aren't the same kind of node.
+        //
+        // An earlier version of this fix (see git history around this comment) put the
+        // label on both the outer group and the field, trading D-F's empty-label defect
+        // for a duplicate-announcement one and violating the "owns exactly one Semantics
+        // node" acceptance criterion — caught by manuelito's verdict pass, not by this
+        // test, which is why the count and the field's own flags are now asserted here.
         final handle = tester.ensureSemantics();
         addTearDown(tester.view.resetPhysicalSize);
         tester.view.physicalSize = const Size(1200, 800);
@@ -65,24 +78,24 @@ void main() {
           ),
         );
 
-        expect(countSemanticsWithLabel(tester, 'Amount'), 2);
+        expect(countSemanticsWithLabel(tester, 'Amount'), 1);
 
-        // Verify the outer semantic node still carries the label and enabled state
+        // The label lives on the field's own (focusable) node, not the outer group.
         expect(
-          tester.getSemantics(
-            find
-                .descendant(
-                  of: find.byType(LayrzNumberInput),
-                  matching: find.byType(Semantics),
-                )
-                .first,
-          ),
+          tester.getSemantics(find.byType(EditableText)),
           matchesSemantics(
             label: 'Amount',
+            isTextField: true,
             hasEnabledState: true,
             isEnabled: true,
+            isFocusable: true,
           ),
         );
+
+        // The step caps must keep their own distinct labels, unaffected by the outer
+        // group losing its label — proves the fix removed one line, not a cap's node.
+        expect(countSemanticsWithLabel(tester, 'Decrease value'), 1);
+        expect(countSemanticsWithLabel(tester, 'Increase value'), 1);
 
         handle.dispose();
       },
@@ -185,8 +198,9 @@ void main() {
       expect(countSemanticsWithLabel(tester, 'Decrease value'), 1);
       // Increment cap: localized, non-empty, exactly one node
       expect(countSemanticsWithLabel(tester, 'Increase value'), 1);
-      // Inner field: carries the input's own label (in addition to the outer wrapper node)
-      expect(countSemanticsWithLabel(tester, 'Qty'), 2);
+      // Inner field: carries the input's own label, and only there — the outer
+      // grouping node stays unlabelled (see the test above for why).
+      expect(countSemanticsWithLabel(tester, 'Qty'), 1);
 
       handle.dispose();
     });
