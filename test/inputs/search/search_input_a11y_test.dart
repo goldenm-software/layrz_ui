@@ -212,6 +212,38 @@ void main() {
         handle.dispose();
       });
 
+      testWidgets('clear icon appears while typing, without seeding an initial value', (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            controller: controller,
+            debounce: Duration.zero,
+          ),
+        );
+
+        // No initial value seeded: the clear icon must be absent until the user types.
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        await tester.enterText(find.byType(LayrzInputChrome), 'flutter');
+        await tester.pump();
+
+        // D-I: this is the deliberate behavioural fix — the icon now appears while
+        // typing, where it previously only appeared after an unrelated rebuild.
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
+
+        // Clearing hides it again.
+        await tester.enterText(find.byType(LayrzInputChrome), '');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        controller.dispose();
+        handle.dispose();
+      });
+
       testWidgets('clear button clears field', (tester) async {
         final handle = tester.ensureSemantics();
         final controller = TextEditingController(text: 'test');

@@ -162,6 +162,10 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// replicated here.
   final Set<WidgetState> _states = {};
 
+  /// Tracks the controller's emptiness so the clear affordance is only rebuilt
+  /// on an isEmpty transition, not on every keystroke.
+  bool _wasEmpty = true;
+
   @override
   void initState() {
     super.initState();
@@ -173,6 +177,8 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     } else {
       _controller = TextEditingController(text: widget.value);
     }
+    _wasEmpty = _controller.text.isEmpty;
+    _controller.addListener(_handleControllerTextChanged);
     _focusNode = widget.focusNode ?? FocusNode();
   }
 
@@ -187,6 +193,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _controller.removeListener(_handleControllerTextChanged);
     if (widget.controller == null) {
       _controller.dispose();
     }
@@ -194,6 +201,23 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       _focusNode.dispose();
     }
     super.dispose();
+  }
+
+  /// Rebuilds the field only when the controller's emptiness changes.
+  ///
+  /// [_buildFieldMode] and [_buildIconMode] read `_controller.text.isNotEmpty` to
+  /// decide whether to show the clear affordance. Without this listener, that
+  /// affordance never appeared while the user typed — only once the widget was
+  /// rebuilt for an unrelated reason. Guarding on the isEmpty transition, rather
+  /// than calling `setState` on every keystroke, avoids rebuilding the field on
+  /// each character typed.
+  void _handleControllerTextChanged() {
+    final isEmpty = _controller.text.isEmpty;
+    if (isEmpty != _wasEmpty) {
+      setState(() {
+        _wasEmpty = isEmpty;
+      });
+    }
   }
 
   void _handleSearchChanged(String newValue) {

@@ -95,6 +95,33 @@ void main() {
         // Field should still contain original text
         expect(controller.text, 'flutter');
       });
+
+      testWidgets('clear icon appears while typing (D-I fix)', (tester) async {
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            controller: controller,
+            debounce: Duration.zero,
+          ),
+        );
+
+        // No initial value seeded — the clear icon must be absent at first.
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        // Type into the field: the icon must appear as a direct result of typing,
+        // not merely after some unrelated rebuild.
+        await tester.enterText(find.byType(LayrzInputChrome), 'flutter');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
+
+        // Clearing it back down to empty removes the icon again.
+        await tester.enterText(find.byType(LayrzInputChrome), '');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+      });
     });
 
     group('icon mode', () {
