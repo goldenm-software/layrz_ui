@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
@@ -7,7 +8,9 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 
 import 'search_input_mode.dart';
-import '../text/text_input.dart';
+import '../shared/editable_field.dart';
+import '../shared/input_chrome.dart';
+import '../shared/input_slot.dart';
 
 /// A Material-free search input in the layrz_ui design system.
 ///
@@ -31,9 +34,10 @@ import '../text/text_input.dart';
 /// Caller-supplied instances are never disposed by this widget.
 ///
 /// **Accessibility:**
-/// Both presentation forms (field and icon button) provide semantic labels. The field is labelled
-/// via its hintText, and the trigger button provides tooltip and semantic labels via its label.
-/// Focus properly traverses into the panel when it opens.
+/// Both presentation forms (field and icon button) provide semantic labels. In field mode, the
+/// widget owns exactly one [Semantics] node carrying [labelText] (falling back to a localized
+/// default); the trigger button in icon mode provides its own semantic label, and the panel field
+/// it opens is deliberately unlabelled so the button's label is not announced twice.
 class LayrzSearchInput extends StatefulWidget {
   /// The presentation mode for the search input.
   ///
@@ -69,8 +73,37 @@ class LayrzSearchInput extends StatefulWidget {
   /// Defaults to a localized "Search" string if not provided.
   final String? hintText;
 
+  /// Whether the field is marked as required.
+  ///
+  /// When true, a required marker (`*`) is rendered next to [labelText] in field mode.
+  /// Has no visible effect in icon mode, where the panel field renders no label.
+  final bool isRequired;
+
   /// Whether the input field is disabled.
   final bool disabled;
+
+  /// Whether the input field is read-only.
+  ///
+  /// A read-only field is not editable but still fires tap callbacks, and renders a
+  /// lock affordance in the trailing icon cluster. Does not affect the clear button,
+  /// which remains driven solely by whether the field currently has text.
+  final bool readOnly;
+
+  /// The list of error messages to display below the field.
+  ///
+  /// When non-empty, the field renders a danger-colored border, a trailing error icon,
+  /// and the error messages themselves below the field.
+  final List<String> errors;
+
+  /// The title text for the help affordance tooltip.
+  ///
+  /// Ignored unless [helpContentText] is also provided.
+  final String? helpTitleText;
+
+  /// The content text for the help affordance tooltip.
+  ///
+  /// When non-null and non-empty, a help icon is rendered in the trailing icon cluster.
+  final String? helpContentText;
 
   /// The text editing controller for the input field.
   ///
@@ -102,7 +135,12 @@ class LayrzSearchInput extends StatefulWidget {
     this.debounce = const Duration(milliseconds: 300),
     this.labelText,
     this.hintText,
+    this.isRequired = false,
     this.disabled = false,
+    this.readOnly = false,
+    this.errors = const [],
+    this.helpTitleText,
+    this.helpContentText,
     this.controller,
     this.focusNode,
     this.padding,
@@ -117,6 +155,12 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   Timer? _debounceTimer;
+
+  /// The widget states (disabled, focused) fed to [LayrzInputChrome].
+  ///
+  /// Hover and press are owned internally by [LayrzEditableField] and are not
+  /// replicated here.
+  final Set<WidgetState> _states = {};
 
   @override
   void initState() {
@@ -209,28 +253,103 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     return widget.mode;
   }
 
+  /// Updates [_states] for the current disabled state.
+  void _syncDisabledState() {
+    if (widget.disabled) {
+      _states.add(WidgetState.disabled);
+    } else {
+      _states.remove(WidgetState.disabled);
+    }
+  }
+
+  /// Builds the [LayrzEditableFieldConfig] shared by field and icon mode.
+  ///
+  /// [labelText] and [autofocus] differ between the two call sites; every other value
+  /// is identical, so it is factored out to avoid the two modes drifting apart.
+  LayrzEditableFieldConfig _buildFieldConfig({
+    required String? labelText,
+    required String hintText,
+    required bool autofocus,
+  }) {
+    return LayrzEditableFieldConfig(
+      labelText: labelText,
+      hintText: hintText,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      controller: _controller,
+      focusNode: _focusNode,
+      onChanged: _handleSearchChanged,
+      onSubmit: null,
+      onFocusChanged: (isFocused) {
+        setState(() {
+          if (isFocused) {
+            _states.add(WidgetState.focused);
+          } else {
+            _states.remove(WidgetState.focused);
+          }
+        });
+      },
+      onTap: null,
+      keyboardType: TextInputType.text,
+      textInputAction: null,
+      inputFormatters: const [],
+      maxLength: null,
+      autofocus: autofocus,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: true,
+      enableSuggestions: true,
+      actions: null,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+      textAlign: TextAlign.start,
+    );
+  }
+
   /// Builds the field mode: inline text input with magnifier prefix and clear suffix.
   Widget _buildFieldMode(BuildContext context) {
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
+    final resolvedLabel = widget.labelText ?? context.l10n.helperSearch;
+
+    _syncDisabledState();
+
+    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify);
+    final suffixSlot = resolveSuffixSlot(
+      suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
+      onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+    );
+
+    final fieldConfig = _buildFieldConfig(
+      labelText: resolvedLabel,
+      hintText: hintText,
+      autofocus: false,
+    );
 
     return Semantics(
-      label: widget.labelText,
+      label: resolvedLabel,
       enabled: !widget.disabled,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: (widget.maxWidth ?? double.infinity).clamp(0.0, double.infinity),
         ),
-        child: LayrzTextInput(
-          labelText: widget.labelText ?? context.l10n.helperSearch,
+        child: LayrzInputChrome(
+          labelText: resolvedLabel,
           hintText: hintText,
-          controller: _controller,
-          focusNode: _focusNode,
+          isRequired: widget.isRequired,
+          prefixSlot: prefixSlot,
+          suffixSlot: suffixSlot,
           disabled: widget.disabled,
+          readOnly: widget.readOnly,
+          errors: widget.errors,
+          hideDetails: false,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
           padding: widget.padding,
-          prefixIcon: MdiIcons.magnify,
-          suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
-          onChanged: _handleSearchChanged,
-          onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+          child: LayrzEditableField(config: fieldConfig),
         ),
       ),
     );
@@ -239,6 +358,22 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Builds the icon mode: magnifier button that opens a panel with the field.
   Widget _buildIconMode(BuildContext context) {
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
+
+    _syncDisabledState();
+
+    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify);
+    final suffixSlot = resolveSuffixSlot(
+      suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
+      onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+    );
+
+    // No labelText here: the panel field must not inherit the trigger button's
+    // label, or the label would be announced twice (button + panel field).
+    final fieldConfig = _buildFieldConfig(
+      labelText: null,
+      hintText: hintText,
+      autofocus: true,
+    );
 
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
@@ -252,17 +387,21 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           style: LayrzButtonStyle.elevatedFab,
         );
       },
-      child: LayrzTextInput(
-        hintText: hintText,
-        controller: _controller,
-        focusNode: _focusNode,
+      child: LayrzInputChrome(
+        labelText: null,
+        isRequired: widget.isRequired,
+        prefixSlot: prefixSlot,
+        suffixSlot: suffixSlot,
         disabled: widget.disabled,
+        readOnly: widget.readOnly,
+        errors: widget.errors,
+        hideDetails: false,
+        states: _states,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        controller: _controller,
         padding: widget.padding,
-        prefixIcon: MdiIcons.magnify,
-        suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
-        onChanged: _handleSearchChanged,
-        onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
-        autofocus: true,
+        child: LayrzEditableField(config: fieldConfig),
       ),
     );
   }
