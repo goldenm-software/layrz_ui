@@ -200,8 +200,12 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
     if (widget.config.controller == null) {
       _controller.dispose();
     }
+    // The listener must always be removed, regardless of who owns the node:
+    // an externally-supplied focus node outlives this State, so leaving the
+    // listener attached means a later focus change invokes setState on a
+    // disposed State.
+    _focusNode.removeListener(_handleFocusChange);
     if (widget.config.focusNode == null) {
-      _focusNode.removeListener(_handleFocusChange);
       _focusNode.dispose();
     }
     super.dispose();
