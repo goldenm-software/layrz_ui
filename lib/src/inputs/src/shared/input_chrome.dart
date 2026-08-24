@@ -169,19 +169,6 @@ class LayrzInputChrome extends StatelessWidget {
   /// edge controls are present.
   final BorderRadius? borderRadius;
 
-  /// Whether to display the label above the input container.
-  ///
-  /// When true (default), the chrome renders the label text above the input field.
-  /// When false, the label is not rendered; the caller is responsible for
-  /// displaying the label elsewhere (e.g., above a composite control).
-
-  /// Whether to display the error message block below the chrome.
-  ///
-  /// When true (default), the chrome renders the [LayrzInputFooterSlot] containing
-  /// error messages, helper text, and character counter below the input container.
-  /// When false, the error block is not rendered; the caller is responsible for
-  /// displaying errors elsewhere (e.g., below a composite control).
-
   /// Whether to display the border around the input container.
   ///
   /// When true (default), the container renders a border around the input field.
