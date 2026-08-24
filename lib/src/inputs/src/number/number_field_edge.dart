@@ -15,6 +15,10 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 /// Uses the same [LayrzInputStyleSpec] as the chrome to ensure styling consistency across
 /// the control and field. The control's background, border, and text colors match the
 /// chrome in every interaction state (default, focused, error, disabled, read-only).
+///
+/// Carries its own [Semantics] node with a localized `+`/`−` label (via [isLeft]) and
+/// `button: true`, so a screen reader announces the control rather than nothing — the
+/// glyph alone carries no accessible name.
 class NumberFieldControl extends StatefulWidget {
   /// Callback fired when the control is tapped.
   ///
@@ -151,10 +155,15 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
       child: tappableSurface,
     );
 
-    return AnimatedOpacity(
-      duration: tokens.motion.dTransition,
-      opacity: widget.isDisabled ? 0.5 : 1.0,
-      child: capWithDivider,
+    return Semantics(
+      button: true,
+      label: widget.isLeft ? context.l10n.inputsNumberDecrement : context.l10n.inputsNumberIncrement,
+      enabled: !widget.isDisabled,
+      child: AnimatedOpacity(
+        duration: tokens.motion.dTransition,
+        opacity: widget.isDisabled ? 0.5 : 1.0,
+        child: capWithDivider,
+      ),
     );
   }
 }

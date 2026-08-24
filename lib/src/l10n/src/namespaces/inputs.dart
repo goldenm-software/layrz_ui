@@ -119,4 +119,18 @@ mixin LayrzUiL10nInputsMixin {
   ///
   /// English default: "characters"
   String get inputsCharacterCountCharacters => 'characters';
+
+  /// Accessibility label for the increment control of a numeric input.
+  ///
+  /// Announces the button that raises the field's value.
+  ///
+  /// English default: "Increase value"
+  String get inputsNumberIncrement => 'Increase value';
+
+  /// Accessibility label for the decrement control of a numeric input.
+  ///
+  /// Announces the button that lowers the field's value.
+  ///
+  /// English default: "Decrease value"
+  String get inputsNumberDecrement => 'Decrease value';
 }

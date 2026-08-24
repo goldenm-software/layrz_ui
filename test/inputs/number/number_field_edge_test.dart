@@ -280,6 +280,107 @@ void main() {
       expect(decoration?.color, isNotNull);
     });
 
+    testWidgets('decrement cap carries a localized, non-empty semantics label', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final semanticsFinder = find.descendant(
+        of: find.byType(NumberFieldControl),
+        matching: find.byType(Semantics),
+      );
+      expect(semanticsFinder, findsWidgets);
+
+      expect(
+        tester.getSemantics(semanticsFinder.first),
+        matchesSemantics(
+          label: 'Decrease value',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('increment cap carries a localized, non-empty semantics label', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: false,
+          isDisabled: false,
+          hasErrors: false,
+          onTap: () {},
+          states: <WidgetState>{},
+          readOnly: false,
+        ),
+      );
+
+      final semanticsFinder = find.descendant(
+        of: find.byType(NumberFieldControl),
+        matching: find.byType(Semantics),
+      );
+      expect(semanticsFinder, findsWidgets);
+
+      expect(
+        tester.getSemantics(semanticsFinder.first),
+        matchesSemantics(
+          label: 'Increase value',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+
+      handle.dispose();
+    });
+
+    testWidgets('disabled cap semantics reports isEnabled: false', (tester) async {
+      final handle = tester.ensureSemantics();
+      await pumpThemed(
+        tester,
+        NumberFieldControl(
+          isLeft: true,
+          isDisabled: true,
+          hasErrors: false,
+          onTap: null,
+          states: <WidgetState>{WidgetState.disabled},
+          readOnly: false,
+        ),
+      );
+
+      final semanticsFinder = find.descendant(
+        of: find.byType(NumberFieldControl),
+        matching: find.byType(Semantics),
+      );
+      expect(semanticsFinder, findsWidgets);
+
+      expect(
+        tester.getSemantics(semanticsFinder.first),
+        matchesSemantics(
+          label: 'Decrease value',
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+
+      handle.dispose();
+    });
+
     testWidgets('cap divider stays neutral in disabled state (not changed by disabled)', (tester) async {
       await pumpThemed(
         tester,
