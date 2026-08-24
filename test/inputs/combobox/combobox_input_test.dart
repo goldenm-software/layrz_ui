@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
 
@@ -18,7 +19,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
       expect(find.byType(LayrzComboBoxInput), findsOneWidget);
     });
 
@@ -45,7 +46,7 @@ void main() {
       );
 
       // Tap field
-      await tester.tap(find.byType(LayrzTextInput));
+      await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
       // Type text
@@ -68,7 +69,7 @@ void main() {
       );
 
       // Try to tap - should not open
-      await tester.tap(find.byType(LayrzTextInput));
+      await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
       // Field should not be editable
@@ -134,7 +135,7 @@ void main() {
       );
 
       // Tap field
-      await tester.tap(find.byType(LayrzTextInput));
+      await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
       // Type arbitrary text
@@ -173,7 +174,7 @@ void main() {
       );
 
       // Should work without issues
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('creates and disposes focus node when not provided', (tester) async {
@@ -188,7 +189,7 @@ void main() {
       );
 
       // Should work without issues
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('custom emptyOptionsText is used', (tester) async {
@@ -203,7 +204,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('filters options when text is typed', (tester) async {
@@ -221,7 +222,7 @@ void main() {
       );
 
       // Tap field
-      await tester.tap(find.byType(LayrzTextInput));
+      await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
       // Type to filter
@@ -244,7 +245,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('reverts when allowFreeForm is false and text doesn\'t match', (tester) async {
