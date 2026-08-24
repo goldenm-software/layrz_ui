@@ -153,7 +153,7 @@ class LayrzSearchInput extends StatefulWidget {
 
 class _LayrzSearchInputState extends State<LayrzSearchInput> {
   late TextEditingController _controller;
-  late final FocusNode _focusNode;
+  late FocusNode _focusNode;
   Timer? _debounceTimer;
 
   /// The widget states (disabled, focused) fed to [LayrzInputChrome].
@@ -209,6 +209,20 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     if (widget.value != null && widget.value != _controller.text) {
       _controller.text = widget.value!;
+    }
+
+    // Handle focus node identity changes across the same four ownership
+    // transitions as [_controller] above. Unlike [_controller], this state
+    // never attaches its own listener to [_focusNode] -- it only hands the
+    // node to [LayrzEditableFieldConfig.focusNode], and [LayrzEditableField]
+    // manages its own listener on whatever node it is given, independently.
+    // So there is no listener to move here; only the dispose-then-adopt
+    // ownership handling applies.
+    if (widget.focusNode != oldWidget.focusNode) {
+      if (oldWidget.focusNode == null) {
+        _focusNode.dispose();
+      }
+      _focusNode = widget.focusNode ?? FocusNode();
     }
   }
 
