@@ -152,7 +152,7 @@ class LayrzSearchInput extends StatefulWidget {
 }
 
 class _LayrzSearchInputState extends State<LayrzSearchInput> {
-  late final TextEditingController _controller;
+  late TextEditingController _controller;
   late final FocusNode _focusNode;
   Timer? _debounceTimer;
 
@@ -185,6 +185,28 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   @override
   void didUpdateWidget(LayrzSearchInput oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // Handle controller identity changes across all four ownership
+    // transitions (null->null is a no-op since both sides are identical):
+    // - null -> external: the listener must move off the internally-created
+    //   controller before it is disposed, or it leaks onto a controller this
+    //   state no longer tracks.
+    // - external -> null: the outgoing (caller-owned) controller must never
+    //   be disposed here; a fresh internal controller is created instead.
+    // - external -> a different external: neither instance is owned, so
+    //   only the listener moves.
+    // Mirrors [LayrzComboBoxInput]'s reference handling of the same four
+    // transitions.
+    if (widget.controller != oldWidget.controller) {
+      _controller.removeListener(_handleControllerTextChanged);
+      if (oldWidget.controller == null) {
+        _controller.dispose();
+      }
+      _controller = widget.controller ?? TextEditingController();
+      _wasEmpty = _controller.text.isEmpty;
+      _controller.addListener(_handleControllerTextChanged);
+    }
+
     if (widget.value != null && widget.value != _controller.text) {
       _controller.text = widget.value!;
     }
