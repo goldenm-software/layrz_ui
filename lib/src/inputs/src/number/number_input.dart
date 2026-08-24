@@ -5,10 +5,13 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'decimal_separator.dart';
+import '../shared/editable_field.dart';
+import '../shared/input_chrome.dart';
 import '../shared/input_footer_slot.dart';
+import '../shared/input_slot.dart';
 import '../shared/input_style_spec.dart';
 import 'number_field_edge.dart';
-import '../text/text_input.dart';
+import 'numeric_input_formatter.dart';
 
 /// A Material-free numeric input field in the layrz_ui design system.
 ///
@@ -484,7 +487,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final formatters =
         widget.inputFormatters ??
         <TextInputFormatter>[
-          _NumericInputFormatter(
+          NumericInputFormatter(
             decimalSeparator: widget.decimalSeparator,
             maximumDecimalDigits: widget.maximumDecimalDigits,
             allowNegative: widget.minimum == null || widget.minimum! < 0,
@@ -498,6 +501,10 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     // Determine if we should show buttons
     final showButtons = !widget.hideStepButtons && !widget.disabled;
     final hasErrors = widget.errors.isNotEmpty;
+
+    // True on both the "no step buttons" branch and the "disabled" branch, which routes
+    // through the same plain-chrome layout even when hideStepButtons is false.
+    final isDisabledOverall = widget.disabled || widget.readOnly;
 
     // Manage states for the edge controls
     if (widget.disabled) {
@@ -557,33 +564,78 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
         ],
       );
     } else {
-      // No buttons: render as plain text input (hideStepButtons is true)
-      return LayrzTextInput(
+      // No buttons: render the chrome directly (hideStepButtons is true, or disabled is true).
+      // This is the branch that was silently dropping `errors` (see the failing-first tests).
+      final prefixSlot = resolvePrefixSlot(prefix: userPrefix, onPrefixTap: widget.onPrefixTap);
+      final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
+
+      final fieldConfig = LayrzEditableFieldConfig(
         labelText: widget.labelText,
         hintText: widget.hintText,
-        isRequired: widget.isRequired,
         disabled: widget.disabled,
         readOnly: widget.readOnly,
-        hideDetails: widget.hideDetails,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        onChanged: _handleTextChanged,
-        onFocusChanged: widget.onFocusChanged,
-        onTap: widget.onTap,
-        onSubmit: widget.onSubmit,
         controller: _controller,
         focusNode: _focusNode,
-        padding: widget.padding,
+        onChanged: _handleTextChanged,
+        onSubmit: widget.onSubmit,
+        onFocusChanged: _handleFocusChangedForStates,
+        onTap: widget.onTap,
         keyboardType: TextInputType.number,
+        textInputAction: null,
         inputFormatters: formatters,
+        maxLength: null,
         autofocus: widget.autofocus,
+        textCapitalization: TextCapitalization.none,
+        autofillHints: const [],
+        obscureText: false,
+        autocorrect: true,
+        enableSuggestions: true,
+        actions: null,
+        minLines: 1,
+        maxLines: 1,
+        expands: false,
         textAlign: TextAlign.center,
-        prefix: userPrefix,
-        suffix: userSuffix,
-        onPrefixTap: widget.onPrefixTap,
-        onSuffixTap: widget.onSuffixTap,
+      );
+
+      return Semantics(
+        label: widget.labelText,
+        enabled: !isDisabledOverall,
+        child: LayrzInputChrome(
+          labelText: widget.labelText,
+          hintText: widget.hintText,
+          isRequired: widget.isRequired,
+          prefixSlot: prefixSlot,
+          suffixSlot: suffixSlot,
+          disabled: widget.disabled,
+          readOnly: widget.readOnly,
+          errors: widget.errors,
+          hideDetails: widget.hideDetails,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
+          padding: widget.padding,
+          helperText: widget.helperText,
+          child: LayrzEditableField(config: fieldConfig),
+        ),
       );
     }
+  }
+
+  /// Shared focus-change handler that keeps [_states] in sync with [WidgetState.focused]
+  /// before forwarding to [LayrzNumberInput.onFocusChanged].
+  ///
+  /// Used by both chrome configurations (with and without step buttons) so the chrome's
+  /// focus border reacts identically on either branch.
+  void _handleFocusChangedForStates(bool isFocused) {
+    setState(() {
+      if (isFocused) {
+        _states.add(WidgetState.focused);
+      } else {
+        _states.remove(WidgetState.focused);
+      }
+    });
+    widget.onFocusChanged?.call(isFocused);
   }
 
   /// Builds the number input row with unified border and dividers.
@@ -608,6 +660,42 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     );
 
     final isDisabled = widget.disabled || widget.readOnly;
+
+    // Resolve slots and the field config locally for this branch (Trap 2: this branch's
+    // chrome settings differ from the no-step-buttons branch — square corners, no border
+    // of its own, and a suppressed footer — see the class-level comment on the composition).
+    final prefixSlot = resolvePrefixSlot(prefix: userPrefix, onPrefixTap: widget.onPrefixTap);
+    final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
+
+    final fieldConfig = LayrzEditableFieldConfig(
+      // No labelText here: the visual label is already rendered once, above this whole row,
+      // by the Column in build(). The chrome must not render a second one.
+      labelText: null,
+      hintText: widget.hintText,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      controller: _controller,
+      focusNode: _focusNode,
+      onChanged: _handleTextChanged,
+      onSubmit: widget.onSubmit,
+      onFocusChanged: _handleFocusChangedForStates,
+      onTap: widget.onTap,
+      keyboardType: TextInputType.number,
+      textInputAction: null,
+      inputFormatters: formatters,
+      maxLength: null,
+      autofocus: widget.autofocus,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: true,
+      enableSuggestions: true,
+      actions: null,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+      textAlign: TextAlign.center,
+    );
 
     return Semantics(
       label: widget.labelText,
@@ -636,44 +724,34 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
                 isLeft: true,
               ),
 
-              // Chrome (no border/radius, filled by outer container)
+              // Chrome (no border/radius, filled by outer container). Wrapped in its own
+              // Semantics so the field's node carries the input's label (decision D-F) — it
+              // remains a distinct node from the outer one above, since the outer Row already
+              // splits the tree into three branches (decrement cap / field / increment cap).
               Expanded(
-                child: LayrzTextInput(
-                  hintText: widget.hintText,
-                  isRequired: widget.isRequired,
-                  disabled: widget.disabled,
-                  readOnly: widget.readOnly,
-                  errors: widget.errors,
-                  // Hardcoded to true: the outer footer (LayrzInputFooterSlot) already owns the error message
-                  hideDetails: true,
-                  helpTitleText: widget.helpTitleText,
-                  helpContentText: widget.helpContentText,
-                  onChanged: _handleTextChanged,
-                  onFocusChanged: (isFocused) {
-                    setState(() {
-                      if (isFocused) {
-                        _states.add(WidgetState.focused);
-                      } else {
-                        _states.remove(WidgetState.focused);
-                      }
-                    });
-                    widget.onFocusChanged?.call(isFocused);
-                  },
-                  onTap: widget.onTap,
-                  onSubmit: widget.onSubmit,
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  padding: widget.padding,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: formatters,
-                  autofocus: widget.autofocus,
-                  textAlign: TextAlign.center,
-                  prefix: userPrefix,
-                  suffix: userSuffix,
-                  onPrefixTap: widget.onPrefixTap,
-                  onSuffixTap: widget.onSuffixTap,
-                  borderRadius: BorderRadius.zero,
-                  showBorder: false,
+                child: Semantics(
+                  label: widget.labelText,
+                  enabled: !isDisabled,
+                  child: LayrzInputChrome(
+                    labelText: null,
+                    hintText: widget.hintText,
+                    isRequired: widget.isRequired,
+                    prefixSlot: prefixSlot,
+                    suffixSlot: suffixSlot,
+                    disabled: widget.disabled,
+                    readOnly: widget.readOnly,
+                    errors: widget.errors,
+                    // Hardcoded to true: the outer footer (LayrzInputFooterSlot) already owns the error message
+                    hideDetails: true,
+                    states: _states,
+                    helpTitleText: widget.helpTitleText,
+                    helpContentText: widget.helpContentText,
+                    controller: _controller,
+                    padding: widget.padding,
+                    borderRadius: BorderRadius.zero,
+                    showBorder: false,
+                    child: LayrzEditableField(config: fieldConfig),
+                  ),
                 ),
               ),
 
@@ -715,106 +793,5 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       return Text(widget.suffixText!);
     }
     return null;
-  }
-}
-
-/// A custom [TextInputFormatter] that enforces numeric input based on configuration.
-///
-/// Restricts input to digits, the configured decimal separator, and (optionally) a leading minus sign.
-/// Enforces [maximumDecimalDigits] limit on the fractional part. Invalid characters are filtered out,
-/// allowing intermediate typing states (empty, lone minus, trailing separator) to work smoothly.
-class _NumericInputFormatter extends TextInputFormatter {
-  /// The decimal separator to accept (`.` or `,`).
-  final LayrzDecimalSeparator decimalSeparator;
-
-  /// The maximum number of decimal digits allowed.
-  final int maximumDecimalDigits;
-
-  /// Whether negative values are allowed (true if minimum is null or < 0).
-  final bool allowNegative;
-
-  /// Creates a new [_NumericInputFormatter] with the given configuration.
-  _NumericInputFormatter({
-    required this.decimalSeparator,
-    required this.maximumDecimalDigits,
-    required this.allowNegative,
-  });
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final text = newValue.text;
-
-    // Empty input is always allowed
-    if (text.isEmpty) {
-      return newValue;
-    }
-
-    // Build the separator character
-    final separator = decimalSeparator == LayrzDecimalSeparator.dot ? '.' : ',';
-
-    // Filter the text, keeping only valid characters
-    final buffer = StringBuffer();
-    var hasLeadingMinus = false;
-    var hasSeparator = false;
-    var decimalDigitCount = 0;
-
-    for (int i = 0; i < text.length; i++) {
-      final char = text[i];
-
-      // Minus is allowed only at the start and only if negatives are allowed
-      if (char == '-') {
-        if (i == 0 && allowNegative && !hasLeadingMinus) {
-          buffer.write(char);
-          hasLeadingMinus = true;
-          continue;
-        } else {
-          // Reject any other minus (not at start, or duplicates, or not allowed)
-          continue;
-        }
-      }
-
-      // Digits are always allowed
-      if (char.codeUnitAt(0) >= 48 && char.codeUnitAt(0) <= 57) {
-        if (hasSeparator) {
-          // We're in the fractional part
-          if (decimalDigitCount < maximumDecimalDigits) {
-            buffer.write(char);
-            decimalDigitCount++;
-          }
-          // Skip if we exceed the decimal digit limit
-        } else {
-          // Before the separator
-          buffer.write(char);
-        }
-        continue;
-      }
-
-      // The separator is allowed (once, and not if we don't allow decimals)
-      if (char == separator && !hasSeparator && maximumDecimalDigits > 0) {
-        buffer.write(char);
-        hasSeparator = true;
-        decimalDigitCount = 0;
-        continue;
-      }
-
-      // Any other character is skipped (filtered out)
-    }
-
-    final formattedText = buffer.toString();
-
-    // If the formatted text differs from the input, the user tried to enter invalid characters
-    // But we still accept the valid part, so return the formatted text
-    if (formattedText == text) {
-      return newValue;
-    } else {
-      // Return the filtered text with the same selection position (or adjusted if text was shortened)
-      return TextEditingValue(
-        text: formattedText,
-        selection: TextSelection.collapsed(offset: formattedText.length),
-      );
-    }
   }
 }

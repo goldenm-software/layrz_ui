@@ -4,6 +4,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/number/number_field_edge.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 
 import '../../helpers/pump_themed.dart';
@@ -383,7 +384,49 @@ void main() {
         ),
       );
 
+      // Baseline: the default (step-buttons visible) configuration already rendered
+      // errors correctly before this migration — this must not regress. findsOneWidget
+      // also guards against Trap 1 (hideDetails: true on the inner chrome) reappearing
+      // as a duplicated error block.
       expect(find.text('Price is required'), findsOneWidget);
+    });
+
+    testWidgets('shows error messages when hideStepButtons is true (regression, was dropped)', (tester) async {
+      // Failing-first: before the fix, `errors` was never passed on this branch at all,
+      // so this assertion found 0 widgets. See dossier §3.3 / plan Trap 2.
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Qty',
+          hideStepButtons: true,
+          errors: ['Too small'],
+        ),
+      );
+
+      expect(find.text('Too small'), findsOneWidget);
+    });
+
+    testWidgets('shows error messages when disabled is true (regression, was dropped)', (tester) async {
+      // Failing-first: `disabled: true` also routes through the no-step-buttons branch
+      // (the selector is `!hideStepButtons && !disabled`), so it shared the same bug.
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Qty',
+          disabled: true,
+          errors: ['Too small'],
+        ),
+      );
+
+      expect(find.text('Too small'), findsOneWidget);
     });
 
     testWidgets('shows required asterisk when isRequired is true', (tester) async {
@@ -744,14 +787,14 @@ void main() {
       final tokens = LayrzTokens.light();
       final expectedBackgroundColor = tokens.colors.danger.shade50;
 
-      // Find the chrome container inside LayrzTextInput that renders the field background.
-      // The chrome is the first Container descendant of LayrzTextInput with a BoxDecoration.
+      // Find the chrome container inside LayrzInputChrome that renders the field background.
+      // The chrome is the first Container descendant of LayrzInputChrome with a BoxDecoration.
       final chromeFinder = find.descendant(
-        of: find.byType(LayrzTextInput),
+        of: find.byType(LayrzInputChrome),
         matching: find.byType(Container),
       );
 
-      // There must be at least one Container inside LayrzTextInput
+      // There must be at least one Container inside LayrzInputChrome
       expect(chromeFinder, findsWidgets);
 
       // Locate the chrome container by examining all Container descendants
@@ -765,7 +808,7 @@ void main() {
       }
 
       // Assert the chrome container is found and its decoration is a BoxDecoration
-      expect(chromeContainer, isNotNull, reason: 'Chrome container should be found inside LayrzTextInput');
+      expect(chromeContainer, isNotNull, reason: 'Chrome container should be found inside LayrzInputChrome');
       final decoration = chromeContainer!.decoration as BoxDecoration;
 
       // Assert the chrome's background color is danger.shade50
@@ -858,9 +901,9 @@ void main() {
       final expectedCapBackgroundColor = capSpec.backgroundColor;
 
       // Find the outer row Container (the one in _buildNumberInputRow) by looking for a Container
-      // that is an ancestor of LayrzTextInput
+      // that is an ancestor of LayrzInputChrome
       final outerRowFinder = find.ancestor(
-        of: find.byType(LayrzTextInput),
+        of: find.byType(LayrzInputChrome),
         matching: find.byType(Container),
       );
 
