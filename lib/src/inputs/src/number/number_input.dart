@@ -568,34 +568,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       // This is the branch that was silently dropping `errors` (see the failing-first tests).
       final prefixSlot = resolvePrefixSlot(prefix: userPrefix, onPrefixTap: widget.onPrefixTap);
       final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
-
-      final fieldConfig = LayrzEditableFieldConfig(
-        labelText: widget.labelText,
-        hintText: widget.hintText,
-        disabled: widget.disabled,
-        readOnly: widget.readOnly,
-        controller: _controller,
-        focusNode: _focusNode,
-        onChanged: _handleTextChanged,
-        onSubmit: widget.onSubmit,
-        onFocusChanged: _handleFocusChangedForStates,
-        onTap: widget.onTap,
-        keyboardType: TextInputType.number,
-        textInputAction: null,
-        inputFormatters: formatters,
-        maxLength: null,
-        autofocus: widget.autofocus,
-        textCapitalization: TextCapitalization.none,
-        autofillHints: const [],
-        obscureText: false,
-        autocorrect: true,
-        enableSuggestions: true,
-        actions: null,
-        minLines: 1,
-        maxLines: 1,
-        expands: false,
-        textAlign: TextAlign.center,
-      );
+      final fieldConfig = _buildFieldConfig(formatters);
 
       return Semantics(
         label: widget.labelText,
@@ -638,6 +611,47 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     widget.onFocusChanged?.call(isFocused);
   }
 
+  /// Builds the [LayrzEditableFieldConfig] shared by both chrome configurations.
+  ///
+  /// [formatters] is the resolved list built once in [build] (either the caller's
+  /// [LayrzNumberInput.inputFormatters] override or the built-in [NumericInputFormatter]).
+  ///
+  /// [LayrzEditableFieldConfig.labelText] and [.hintText] are metadata carried by the config
+  /// only — [LayrzEditableField] never reads them to render anything; the visual label and
+  /// hint are entirely the chrome's responsibility. Passing [LayrzNumberInput.labelText] and
+  /// [LayrzNumberInput.hintText] here on both branches is therefore harmless even though the
+  /// step-buttons branch's chrome is given `labelText: null` (its visual label is rendered
+  /// once, separately, by the outer [Column] in [build]).
+  LayrzEditableFieldConfig _buildFieldConfig(List<TextInputFormatter> formatters) {
+    return LayrzEditableFieldConfig(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      controller: _controller,
+      focusNode: _focusNode,
+      onChanged: _handleTextChanged,
+      onSubmit: widget.onSubmit,
+      onFocusChanged: _handleFocusChangedForStates,
+      onTap: widget.onTap,
+      keyboardType: TextInputType.number,
+      textInputAction: null,
+      inputFormatters: formatters,
+      maxLength: null,
+      autofocus: widget.autofocus,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: true,
+      enableSuggestions: true,
+      actions: null,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+      textAlign: TextAlign.center,
+    );
+  }
+
   /// Builds the number input row with unified border and dividers.
   ///
   /// Creates a single [Container] with a unified border wrapping the entire control,
@@ -666,36 +680,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     // of its own, and a suppressed footer — see the class-level comment on the composition).
     final prefixSlot = resolvePrefixSlot(prefix: userPrefix, onPrefixTap: widget.onPrefixTap);
     final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
-
-    final fieldConfig = LayrzEditableFieldConfig(
-      // No labelText here: the visual label is already rendered once, above this whole row,
-      // by the Column in build(). The chrome must not render a second one.
-      labelText: null,
-      hintText: widget.hintText,
-      disabled: widget.disabled,
-      readOnly: widget.readOnly,
-      controller: _controller,
-      focusNode: _focusNode,
-      onChanged: _handleTextChanged,
-      onSubmit: widget.onSubmit,
-      onFocusChanged: _handleFocusChangedForStates,
-      onTap: widget.onTap,
-      keyboardType: TextInputType.number,
-      textInputAction: null,
-      inputFormatters: formatters,
-      maxLength: null,
-      autofocus: widget.autofocus,
-      textCapitalization: TextCapitalization.none,
-      autofillHints: const [],
-      obscureText: false,
-      autocorrect: true,
-      enableSuggestions: true,
-      actions: null,
-      minLines: 1,
-      maxLines: 1,
-      expands: false,
-      textAlign: TextAlign.center,
-    );
+    final fieldConfig = _buildFieldConfig(formatters);
 
     return Semantics(
       label: widget.labelText,
