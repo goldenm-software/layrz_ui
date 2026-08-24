@@ -292,7 +292,6 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _focusNode.onKeyEvent = _handleKeyEvent;
     _updateControllerFromValue(widget.value);
   }
 
@@ -432,6 +431,16 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
 
   /// Handles keyboard events for stepping (ArrowUp/Down, PageUp/Down).
   ///
+  /// Installed as the [Focus.onKeyEvent] handler of the ancestor [Focus] widget
+  /// built in [build] — not assigned directly onto [_focusNode]. That ancestor
+  /// wraps whichever [FocusNode] is currently in use (own or hoisted by the
+  /// caller via [LayrzNumberInput.focusNode]) without ever attaching itself to
+  /// that node, so key events bubble up to it from the editable field
+  /// regardless of node swaps, and Flutter tears the handler down automatically
+  /// with the [Focus] widget's own lifecycle — it can never outlive this
+  /// [State], so a caller-hoisted [FocusNode] can never retain a stale
+  /// reference to a disposed [State] after this widget unmounts.
+  ///
   /// Only processes [KeyDownEvent] to prevent double-firing on repeat/up events.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Guard on KeyDownEvent only to prevent double-firing on repeat/up events
@@ -513,9 +522,13 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       _states.remove(WidgetState.disabled);
     }
 
+    // Built by either branch below, then handed to the outer [Focus] wrapper
+    // returned at the end of this method.
+    final Widget content;
+
     if (showButtons) {
       // New layout: label → [−] [chrome] [+] → error block
-      return Column(
+      content = Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -570,7 +583,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       final suffixSlot = resolveSuffixSlot(suffix: userSuffix, onSuffixTap: widget.onSuffixTap);
       final fieldConfig = _buildFieldConfig(formatters);
 
-      return Semantics(
+      content = Semantics(
         label: widget.labelText,
         enabled: !isDisabledOverall,
         child: LayrzInputChrome(
@@ -593,6 +606,22 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
         ),
       );
     }
+
+    // Ancestor [Focus] that intercepts stepping keys for whichever [FocusNode]
+    // is currently focused inside [content] (own or hoisted — see
+    // [_handleKeyEvent]). It never attaches to [_focusNode] itself: doing so
+    // would double-attach the node also passed to the descendant
+    // [LayrzEditableField]/[EditableText], which independently hosts it via
+    // its own internal `Focus(focusNode: ...)`. `skipTraversal` and
+    // `canRequestFocus: false` keep this purely an interception point, so it
+    // is never itself selected by Tab/Shift+Tab traversal and the field
+    // remains the only focus stop this widget contributes.
+    return Focus(
+      onKeyEvent: _handleKeyEvent,
+      skipTraversal: true,
+      canRequestFocus: false,
+      child: content,
+    );
   }
 
   /// Shared focus-change handler that keeps [_states] in sync with [WidgetState.focused]
