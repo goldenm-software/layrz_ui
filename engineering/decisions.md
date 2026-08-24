@@ -3506,3 +3506,65 @@ Flutter 3.47 introduced the stable `@Preview` widget-preview API. Early in layrz
 - Documentation updated to reflect no preview system
 - SDK constraint section revised (no mention of `@Preview` API requirement)
 
+---
+
+## D63: No Input Wraps Another Input — Every Field Composes `LayrzInputChrome` Directly
+
+**Date**: 2026-08-23  
+**Status**: Decided  
+**Category**: API Design / Component Architecture
+
+### Context
+
+An audit of `development` @ `b639d2a` on 2026-08-23 examined how all ten M3 input components obtain their visual chrome (border, label, help text, error state, prefix/suffix slots). Three compositions exist:
+
+- **Uses `LayrzInputChrome` directly (4)**: `LayrzTextInput` (`text_input.dart:375`), `LayrzTextAreaInput` (`textarea_input.dart:390`, `.variableHeight` — see D55), `LayrzSelectInput` (`select_input.dart:331` desktop / `:426` mobile), `LayrzDurationInput` (`duration_input.dart:288` / `:354`).
+- **Wraps another input (3)**: `LayrzSearchInput` (`search_input.dart:223`), `LayrzComboBoxInput` (`combobox_input.dart:480`), `LayrzNumberInput` on its `hideStepButtons=true` path (`number_input.dart:561`).
+- **Neither — control with a label, not a field (3)**: `LayrzRadioInput`, `LayrzCheckboxInput`, `LayrzSwitchInput`.
+
+The wrapping pattern is not hypothetical risk — it has already produced three concrete defects:
+
+1. **`LayrzNumberInput` accepts `errors` and never forwards it** on the `hideStepButtons=true` path (`number_input.dart:561`). The identical defect was already found and fixed on the *other* path of the same `if`, after the maintainer saw it on a physical device: the chrome painted a red border and danger-tinted caps while the field interior stayed neutral grey. One widget, two architectures, and the bug survived in the branch nobody looked at.
+2. **`LayrzSearchInput` cannot show an error at all** — it does not accept `errors`, `isRequired`, or help text, and never sets `readOnly` (`search_input.dart`, constructor).
+3. **`LayrzNumberInput` is the only input that duplicates the chrome's border**, rebuilding it in an outer `Container` (`number_input.dart:618-620`) because it needed step buttons at the sides and wrapping left it no way to place them there. It is the sole real visual duplication in the module — the borders in `checkbox_input.dart:257-260` and `radio_option.dart:202-207` are the *control glyph's* border (the checkbox box, the radio circle), not field chrome, and are not duplication of this kind.
+
+### Decision
+
+**No input widget wraps another input widget. Every input composes its own (editing primitive + `LayrzInputChrome`) pair directly.**
+
+`LayrzInputChrome` is the shared visual layer for inputs that are *fields*. An input must never obtain its chrome by wrapping a sibling input, because the wrapper then inherits chrome it cannot control and must forward every property by hand — and, as the evidence above shows, forwarding is where properties get dropped.
+
+**Explicitly excluded from this rule**: `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput`. These are controls with a label, not bordered fields — they own their visual state deliberately, and forcing them through `LayrzInputChrome` would impose a field shape they do not have. This exclusion is a deliberate part of the decision, not an omission: it exists to be found by whoever later reads "no input wraps another input" as universal and goes looking for a fourth migration.
+
+### Rationale — why now, not later
+
+M3 Inputs is largely built; **M4 Pickers is entirely ahead** (D61). Every picker is field-shaped: a non-editable or semi-editable field with a trailing affordance that opens a panel, and typically wanting both an identifying glyph and a clear action.
+
+The two existing inputs closest to that shape — `LayrzSelectInput` and `LayrzDurationInput` — **already use `LayrzInputChrome` directly, and are the healthy ones.** The one input that needed a control at its side (`LayrzNumberInput`'s step buttons) took the wrapping route instead and had to duplicate the border to place them. M4 is roughly a dozen pickers with that same requirement — an identifying glyph plus a trailing action — so the pattern is worth settling now, on three migrations, rather than discovering it midway through twelve.
+
+Going through the chrome directly keeps its prefix/suffix slots available to each picker and leaves room for a trailing action button — flexibility that wrapping a text input forecloses, because the wrapper only ever sees what the wrapped input's own constructor chose to expose.
+
+### Scope
+
+**In scope — 3 inputs to migrate:**
+- `LayrzSearchInput` (currently wraps, `search_input.dart:223`)
+- `LayrzComboBoxInput` (currently wraps, `combobox_input.dart:480`)
+- `LayrzNumberInput`'s `hideStepButtons=true` path (currently wraps, `number_input.dart:561`)
+
+**Explicitly out of scope — `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput`.** See the exclusion above; do not read this decision as calling for their migration.
+
+### Consequences
+
+- **Known prerequisite**: for `LayrzSearchInput` and `LayrzComboBoxInput` to compose `LayrzInputChrome` directly, the text-editing core of `LayrzTextInput` must be extractable without its chrome. Dart privacy is per-library (per-file, absent `part`), so extracting that core into its own file means it **cannot remain underscore-private** — it becomes public API needing a name and documentation, or the extraction uses `part`. This already cost a round with `NumberFieldControl`; this decision creates that API-surface question for the text core and does not itself settle it.
+- `LayrzNumberInput`'s outer-`Container` border duplication (`number_input.dart:618-620`) is retired once its `hideStepButtons=true` path is migrated; step buttons become a chrome-native affordance instead of an outer wrapper.
+- `LayrzSearchInput` gains `errors`, `isRequired`, help text, and `readOnly` support as a direct consequence of going through the chrome — not as separate follow-up work.
+- Three inputs' migrations are tracked as the concrete deliverable of this decision; see the M4 Pickers milestone for scheduling.
+
+### Open Question
+
+Whether `LayrzInputChrome`'s single `suffixSlot` + `onSuffixTap` can carry **two** trailing affordances at once — a picker's identifying glyph *and* a clear button — or whether the chrome needs an explicit action slot separate from suffix. This is left open, to be settled during the migration rather than during M4 planning.
+
+### Review Trigger
+
+After the three in-scope migrations ship, confirm the open question above is resolved one way or the other before M4 Pickers begins consuming `LayrzInputChrome`, so no picker has to guess at a slot contract still in flux.
+
