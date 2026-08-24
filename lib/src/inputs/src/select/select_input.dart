@@ -202,6 +202,17 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   @override
   void didUpdateWidget(LayrzSelectInput<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // The focus node must be swapped in step with the widget's final
+    // ownership state: `dispose()` decides what to dispose based on the
+    // *current* `widget.focusNode`, so leaving `_focusNode` stale here would
+    // let a later dispose() either leak an internally-created node or
+    // dispose a node the caller still owns.
+    if (widget.focusNode != oldWidget.focusNode) {
+      if (oldWidget.focusNode == null) {
+        _focusNode.dispose();
+      }
+      _focusNode = widget.focusNode ?? FocusNode();
+    }
     if (oldWidget.value != widget.value) {
       _updateControllerText();
     }
