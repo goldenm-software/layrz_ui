@@ -263,6 +263,11 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
 
     // Handle controller changes
     if (widget.controller != oldWidget.controller) {
+      // The listener must always be removed from the outgoing controller,
+      // regardless of ownership: an externally-supplied controller survives
+      // this swap, so leaving the listener attached leaks it onto a
+      // controller this state no longer tracks.
+      _controller.removeListener(_handleTextChange);
       if (oldWidget.controller == null) {
         _controller.dispose();
       }
