@@ -104,6 +104,51 @@ class _SearchInputDemoState extends State<SearchInputDemo> {
                 debugPrint('Search query: $query');
               },
             ),
+
+            // Required, with an error message
+            SizedBox(height: tokens.spacing.sp5),
+            Text('Required with Error', style: tokens.typography.title),
+            Text(
+              'Demonstrates isRequired and errors',
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+            const LayrzSearchInput(
+              mode: LayrzSearchInputMode.field,
+              labelText: 'Search catalog',
+              isRequired: true,
+              errors: ['Enter at least 3 characters'],
+            ),
+
+            // Help affordance
+            SizedBox(height: tokens.spacing.sp5),
+            Text('Help Affordance', style: tokens.typography.title),
+            Text(
+              'Demonstrates helpTitleText and helpContentText',
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+            const LayrzSearchInput(
+              mode: LayrzSearchInputMode.field,
+              labelText: 'Search',
+              helpTitleText: 'About search',
+              helpContentText: 'Searches across every field in the record, not just its name.',
+            ),
+
+            // Read-only
+            SizedBox(height: tokens.spacing.sp5),
+            Text('Read-only', style: tokens.typography.title),
+            Text(
+              'Demonstrates readOnly, which renders a lock affordance',
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+            const LayrzSearchInput(
+              mode: LayrzSearchInputMode.field,
+              labelText: 'Search',
+              value: 'read-only query',
+              readOnly: true,
+            ),
           ],
         ),
       ),

@@ -1,9 +1,33 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
+
+/// Counts semantics nodes whose label contains [needle].
+///
+/// `contains`, not `==` — [LayrzInputChrome] folds the hint into the label
+/// (e.g. `"Find\nSearch"`), which is exactly why `find.bySemanticsLabel` alone
+/// is blind to a duplicated node: an exact match only ever finds one of the two.
+/// Requires [WidgetTester.ensureSemantics] to be active.
+int countSemanticsWithLabel(WidgetTester tester, String needle) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  var count = 0;
+  void walk(SemanticsNode node) {
+    if (node.getSemanticsData().label.contains(needle)) count++;
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return count;
+}
 
 void main() {
   group('LayrzSearchInput A11y', () {
@@ -19,7 +43,7 @@ void main() {
           ),
         );
 
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
         handle.dispose();
       });
 
@@ -34,8 +58,12 @@ void main() {
           ),
         );
 
-        expect(find.byType(LayrzTextInput), findsOneWidget);
-        expect(find.bySemanticsLabel('Search'), findsWidgets);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
+        // The single merged Semantics node folds the hint into the label (the chrome's
+        // own behaviour, see LayrzInputChrome._buildRowContent), so a RegExp match is
+        // used rather than an exact string: the rendered label is "Search\nSearch" here
+        // (labelText "Search" plus the l10n-default hint, which also resolves to "Search").
+        expect(find.bySemanticsLabel(RegExp('Search')), findsWidgets);
         handle.dispose();
       });
 
@@ -49,8 +77,8 @@ void main() {
           ),
         );
 
-        final textInput = find.byType(LayrzTextInput);
-        expect(textInput, findsOneWidget);
+        final chrome = find.byType(LayrzInputChrome);
+        expect(chrome, findsOneWidget);
         handle.dispose();
       });
 
@@ -68,7 +96,7 @@ void main() {
         );
 
         // Try to enter text
-        await tester.enterText(find.byType(LayrzTextInput), 'new text');
+        await tester.enterText(find.byType(LayrzInputChrome), 'new text');
         await tester.pumpAndSettle();
 
         // Should remain unchanged
@@ -88,8 +116,11 @@ void main() {
           ),
         );
 
-        // Label should be accessible via semantics - exactly once
-        expect(find.bySemanticsLabel('Search products'), findsOneWidget);
+        // Field mode must own exactly one Semantics node carrying the label. Before the
+        // chrome migration this widget produced two (the wrapper's plus LayrzTextInput's
+        // own), both carrying a label that contains "Search products" — so this exact
+        // assertion fails against the unmigrated widget and passes after migration.
+        expect(countSemanticsWithLabel(tester, 'Search products'), 1);
 
         handle.dispose();
       });
@@ -107,8 +138,8 @@ void main() {
         );
 
         expect(find.byType(LayrzButton), findsOneWidget);
-        // Text input should not be visible initially
-        expect(find.byType(LayrzTextInput), findsNothing);
+        // The chrome should not be visible initially
+        expect(find.byType(LayrzInputChrome), findsNothing);
         handle.dispose();
       });
 
@@ -125,8 +156,8 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         await tester.pumpAndSettle();
 
-        // Text input should now be visible in the panel
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        // The chrome should now be visible in the panel
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
         handle.dispose();
       });
 
@@ -146,7 +177,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Panel should not open
-        expect(find.byType(LayrzTextInput), findsNothing);
+        expect(find.byType(LayrzInputChrome), findsNothing);
         handle.dispose();
       });
     });
@@ -178,6 +209,38 @@ void main() {
         );
 
         expect(find.byIcon(MdiIcons.close), findsNothing);
+        handle.dispose();
+      });
+
+      testWidgets('clear icon appears while typing, without seeding an initial value', (tester) async {
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            controller: controller,
+            debounce: Duration.zero,
+          ),
+        );
+
+        // No initial value seeded: the clear icon must be absent until the user types.
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        await tester.enterText(find.byType(LayrzInputChrome), 'flutter');
+        await tester.pump();
+
+        // D-I: this is the deliberate behavioural fix — the icon now appears while
+        // typing, where it previously only appeared after an unrelated rebuild.
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
+
+        // Clearing hides it again.
+        await tester.enterText(find.byType(LayrzInputChrome), '');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        controller.dispose();
         handle.dispose();
       });
 
@@ -221,7 +284,9 @@ void main() {
           ),
         );
 
-        expect(find.bySemanticsLabel('Custom search'), findsWidgets);
+        // Substring match — see the comment on 'field mode uses labelText for label'
+        // above: the merged node's label folds the hint text in alongside labelText.
+        expect(find.bySemanticsLabel(RegExp('Custom search')), findsWidgets);
         handle.dispose();
       });
 
@@ -259,12 +324,81 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         await tester.pumpAndSettle();
 
-        // Text input is present
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        // The chrome is present
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
 
         // Button label should still only appear once (on button, not panel)
         expect(find.bySemanticsLabel('Button label'), findsOneWidget);
 
+        handle.dispose();
+      });
+    });
+
+    group('new parameters', () {
+      testWidgets('errors render the message and error styling', (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search',
+            errors: ['Something went wrong'],
+          ),
+        );
+
+        expect(find.text('Something went wrong'), findsOneWidget);
+        expect(find.byIcon(MdiIcons.alertOutline), findsOneWidget);
+        handle.dispose();
+      });
+
+      testWidgets('isRequired renders the required marker', (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search',
+            isRequired: true,
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.isRequired, isTrue);
+        handle.dispose();
+      });
+
+      testWidgets('help text renders the help icon', (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search',
+            helpTitleText: 'Help',
+            helpContentText: 'This searches all products.',
+          ),
+        );
+
+        expect(find.byIcon(MdiIcons.helpCircleOutline), findsOneWidget);
+        handle.dispose();
+      });
+
+      testWidgets('readOnly renders the lock icon', (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search',
+            readOnly: true,
+          ),
+        );
+
+        expect(find.byIcon(MdiIcons.lockOutline), findsOneWidget);
         handle.dispose();
       });
     });

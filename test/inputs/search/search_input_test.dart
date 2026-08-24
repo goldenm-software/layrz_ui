@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
 
@@ -17,10 +18,10 @@ void main() {
           ),
         );
 
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
         expect(find.byIcon(MdiIcons.magnify), findsWidgets);
         // Verify the text input is interactive
-        await tester.tap(find.byType(LayrzTextInput));
+        await tester.tap(find.byType(LayrzInputChrome));
         await tester.pumpAndSettle();
       });
 
@@ -88,11 +89,38 @@ void main() {
         );
 
         // Try to type in the field (should be disabled)
-        await tester.enterText(find.byType(LayrzTextInput), 'new text');
+        await tester.enterText(find.byType(LayrzInputChrome), 'new text');
         await tester.pumpAndSettle();
 
         // Field should still contain original text
         expect(controller.text, 'flutter');
+      });
+
+      testWidgets('clear icon appears while typing (D-I fix)', (tester) async {
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            controller: controller,
+            debounce: Duration.zero,
+          ),
+        );
+
+        // No initial value seeded — the clear icon must be absent at first.
+        expect(find.byIcon(MdiIcons.close), findsNothing);
+
+        // Type into the field: the icon must appear as a direct result of typing,
+        // not merely after some unrelated rebuild.
+        await tester.enterText(find.byType(LayrzInputChrome), 'flutter');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
+
+        // Clearing it back down to empty removes the icon again.
+        await tester.enterText(find.byType(LayrzInputChrome), '');
+        await tester.pump();
+        expect(find.byIcon(MdiIcons.close), findsNothing);
       });
     });
 
@@ -108,15 +136,15 @@ void main() {
         // Button should be present
         expect(find.byType(LayrzButton), findsOneWidget);
 
-        // Text input should not be visible initially
-        expect(find.byType(LayrzTextInput), findsNothing);
+        // Chrome should not be visible initially
+        expect(find.byType(LayrzInputChrome), findsNothing);
 
         // Tap the button to open the panel
         await tester.tap(find.byType(LayrzButton));
         await tester.pumpAndSettle();
 
-        // Now the text input should be visible
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        // Now the chrome should be visible
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
       });
 
       testWidgets('panel has sensible minimum width (not as narrow as button)', (tester) async {
@@ -131,14 +159,14 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         await tester.pumpAndSettle();
 
-        // Find the text input widget and check its constraints
-        final textInputFinder = find.byType(LayrzTextInput);
-        expect(textInputFinder, findsOneWidget);
+        // Find the chrome and check its constraints
+        final chromeFinder = find.byType(LayrzInputChrome);
+        expect(chromeFinder, findsOneWidget);
 
         // The anchored panel should have applied contentSized with widthBounds
         // The minimum width should be 280.0 as per the implementation
-        final textInputSize = tester.getSize(textInputFinder);
-        expect(textInputSize.width, greaterThanOrEqualTo(280.0)); // Minimum width constraint
+        final chromeSize = tester.getSize(chromeFinder);
+        expect(chromeSize.width, greaterThanOrEqualTo(280.0)); // Minimum width constraint
       });
 
       testWidgets('panel width bounds work on wide surface', (tester) async {
@@ -157,17 +185,17 @@ void main() {
         await tester.tap(find.byType(LayrzButton));
         await tester.pumpAndSettle();
 
-        // The text input should still be present and usable on a wide surface
+        // The chrome should still be present and usable on a wide surface
         // The contentSized policy ensures the panel width is appropriate (280-480px)
         // regardless of available viewport width
-        final textInputFinder = find.byType(LayrzTextInput);
-        expect(textInputFinder, findsOneWidget);
+        final chromeFinder = find.byType(LayrzInputChrome);
+        expect(chromeFinder, findsOneWidget);
 
-        final textInputSize = tester.getSize(textInputFinder);
+        final chromeSize = tester.getSize(chromeFinder);
         // Width should be clamped to max 480 even on a 1600px wide surface
-        expect(textInputSize.width, lessThanOrEqualTo(480.0));
+        expect(chromeSize.width, lessThanOrEqualTo(480.0));
         // Width should still be at least the minimum
-        expect(textInputSize.width, greaterThanOrEqualTo(280.0));
+        expect(chromeSize.width, greaterThanOrEqualTo(280.0));
       });
 
       testWidgets('escape key closes panel', (tester) async {
@@ -183,14 +211,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify panel is open
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
 
         // Press Escape
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
 
         // Panel should be closed
-        expect(find.byType(LayrzTextInput), findsNothing);
+        expect(find.byType(LayrzInputChrome), findsNothing);
       });
 
       testWidgets('disabled button does not open panel', (tester) async {
@@ -207,7 +235,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Panel should not be open
-        expect(find.byType(LayrzTextInput), findsNothing);
+        expect(find.byType(LayrzInputChrome), findsNothing);
       });
     });
 
@@ -226,7 +254,7 @@ void main() {
         );
 
         // Field mode should be active on wide surface (>= 960px)
-        expect(find.byType(LayrzTextInput), findsOneWidget);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
         expect(find.byType(LayrzButton), findsNothing);
       });
 
@@ -245,7 +273,7 @@ void main() {
 
         // Icon mode should be active on narrow surface (< 960px)
         expect(find.byType(LayrzButton), findsOneWidget);
-        expect(find.byType(LayrzTextInput), findsNothing);
+        expect(find.byType(LayrzInputChrome), findsNothing);
       });
     });
 
@@ -264,7 +292,7 @@ void main() {
         );
 
         // Type three characters quickly
-        await tester.enterText(find.byType(LayrzTextInput), 'abc');
+        await tester.enterText(find.byType(LayrzInputChrome), 'abc');
         expect(callCount, 0); // Not called yet
 
         // Pump less than debounce duration
@@ -289,15 +317,15 @@ void main() {
         );
 
         // Type one character
-        await tester.enterText(find.byType(LayrzTextInput), 'a');
+        await tester.enterText(find.byType(LayrzInputChrome), 'a');
         expect(callCount, 1);
 
         // Type another character
-        await tester.enterText(find.byType(LayrzTextInput), 'ab');
+        await tester.enterText(find.byType(LayrzInputChrome), 'ab');
         expect(callCount, 2);
 
         // Type another character
-        await tester.enterText(find.byType(LayrzTextInput), 'abc');
+        await tester.enterText(find.byType(LayrzInputChrome), 'abc');
         expect(callCount, 3);
       });
 
@@ -313,7 +341,7 @@ void main() {
         await pumpThemedApp(tester, widget);
 
         // Type something to start debounce
-        await tester.enterText(find.byType(LayrzTextInput), 'test');
+        await tester.enterText(find.byType(LayrzInputChrome), 'test');
         expect(callCount, 0);
 
         // Dispose the widget by pumping a different widget
@@ -339,7 +367,7 @@ void main() {
         );
 
         // Type something to verify the controller works
-        await tester.enterText(find.byType(LayrzTextInput), 'test');
+        await tester.enterText(find.byType(LayrzInputChrome), 'test');
         await tester.pumpAndSettle();
 
         // Pump away - should dispose the owned controller
@@ -423,8 +451,8 @@ void main() {
         );
 
         // labelText should be used as the field label
-        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
-        expect(textInput.labelText, equals('Search products'));
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.labelText, equals('Search products'));
       });
 
       testWidgets('uses default localized hint when hintText is null', (tester) async {
@@ -436,8 +464,8 @@ void main() {
         );
 
         // The default hint should come from l10n
-        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
-        expect(textInput.hintText, isNotNull);
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.hintText, isNotNull);
       });
 
       testWidgets('uses provided hintText when non-null', (tester) async {
@@ -449,8 +477,8 @@ void main() {
           ),
         );
 
-        final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
-        expect(textInput.hintText, equals('Custom hint'));
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.hintText, equals('Custom hint'));
       });
 
       testWidgets('icon mode button gets labelText label', (tester) async {
@@ -493,6 +521,82 @@ void main() {
         );
 
         expect(controller.text, 'initial');
+      });
+    });
+
+    group('new parameters', () {
+      testWidgets('errors are forwarded to the chrome', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            errors: ['Too short'],
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.errors, equals(['Too short']));
+        expect(find.text('Too short'), findsOneWidget);
+      });
+
+      testWidgets('isRequired is forwarded to the chrome', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            labelText: 'Search',
+            isRequired: true,
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.isRequired, isTrue);
+      });
+
+      testWidgets('helpTitleText and helpContentText are forwarded to the chrome', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            helpTitleText: 'About search',
+            helpContentText: 'Searches across all records.',
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.helpTitleText, equals('About search'));
+        expect(chrome.helpContentText, equals('Searches across all records.'));
+        expect(find.byIcon(MdiIcons.helpCircleOutline), findsOneWidget);
+      });
+
+      testWidgets('readOnly is forwarded to the chrome and renders the lock icon', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            readOnly: true,
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.readOnly, isTrue);
+        expect(find.byIcon(MdiIcons.lockOutline), findsOneWidget);
+      });
+
+      testWidgets('defaults are additive and non-breaking', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.errors, isEmpty);
+        expect(chrome.isRequired, isFalse);
+        expect(chrome.helpTitleText, isNull);
+        expect(chrome.helpContentText, isNull);
+        expect(chrome.readOnly, isFalse);
       });
     });
   });
