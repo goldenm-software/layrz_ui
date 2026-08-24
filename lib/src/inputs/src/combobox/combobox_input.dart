@@ -4,15 +4,17 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
+import '../shared/editable_field.dart';
+import '../shared/input_chrome.dart';
+import '../shared/input_slot.dart';
 import 'combobox_layout.dart';
 import 'combobox_surface.dart';
-import '../text/text_input.dart';
 
 /// A Material-free combobox input in the layrz_ui design system.
 ///
 /// [LayrzComboBoxInput] is an editable input field with a dropdown list of options.
-/// It combines the functionality of [LayrzTextInput] with suggestion filtering and
-/// intelligent overlay positioning.
+/// It composes [LayrzInputChrome] and the shared editable field primitive directly,
+/// adding suggestion filtering and intelligent overlay positioning on top.
 ///
 /// **Desktop vs. Mobile behavior**:
 /// - **Desktop (>= 960px)**: Displays a dropdown overlay that flips above/below based on
@@ -230,6 +232,13 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   late MenuController _menuController;
   String? _lastValidOption;
   int _highlightedIndex = -1;
+
+  /// The current interaction states fed to [LayrzInputChrome].
+  ///
+  /// Carries only [WidgetState.disabled] and [WidgetState.focused] — set in [build]
+  /// for disabled, and in the editable field config's `onFocusChanged` callback for
+  /// focused. Hover and press live inside [LayrzEditableField]'s own private state.
+  final Set<WidgetState> _states = {};
 
   @override
   void initState() {
@@ -477,36 +486,88 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
           childFocusNode: isCompact ? null : _fieldFocusNode,
           overlayBuilder: isCompact ? buildEmptyOverlay : _buildMenuOverlay,
           builder: (context, menuController, child) {
-            return LayrzTextInput(
-              labelText: widget.labelText,
-              hintText: widget.hintText,
-              isRequired: widget.isRequired,
+            // Resolve slots
+            final prefixSlot = resolvePrefixSlot(
               prefixIcon: widget.prefixIcon,
               prefix: widget.prefix,
               prefixText: widget.prefixText,
               onPrefixTap: widget.onPrefixTap,
+            );
+
+            final suffixSlot = resolveSuffixSlot(
               suffixIcon: widget.suffixIcon,
               suffix: widget.suffix,
               suffixText: widget.suffixText,
               onSuffixTap: widget.onSuffixTap,
-              helpTitleText: widget.helpTitleText,
-              helpContentText: widget.helpContentText,
+            );
+
+            // Compute states
+            if (widget.disabled) {
+              _states.add(WidgetState.disabled);
+            } else {
+              _states.remove(WidgetState.disabled);
+            }
+
+            // Create the editable field configuration.
+            //
+            // `onChanged` is deliberately null: `_handleTextChange` is already
+            // registered as a listener on `_controller` and wiring `onChanged` too
+            // would fire the callback twice.
+            final fieldConfig = LayrzEditableFieldConfig(
+              labelText: widget.labelText,
+              hintText: widget.hintText,
               disabled: widget.disabled,
               readOnly: widget.readOnly,
-              errors: widget.errors,
-              hideDetails: widget.hideDetails,
               controller: _controller,
               focusNode: _fieldFocusNode,
-              padding: widget.padding,
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              inputFormatters: widget.inputFormatters,
-              actions: widget.actions,
+              onChanged: null,
+              onSubmit: widget.onSubmit,
+              onFocusChanged: (isFocused) {
+                setState(() {
+                  if (isFocused) {
+                    _states.add(WidgetState.focused);
+                  } else {
+                    _states.remove(WidgetState.focused);
+                  }
+                });
+              },
               onTap: () {
                 if (!widget.disabled && !widget.readOnly) {
                   _openOverlay();
                 }
               },
+              keyboardType: widget.keyboardType,
+              textInputAction: widget.textInputAction,
+              inputFormatters: widget.inputFormatters,
+              maxLength: null,
+              autofocus: false,
+              textCapitalization: TextCapitalization.none,
+              autofillHints: const [],
+              obscureText: false,
+              autocorrect: true,
+              enableSuggestions: true,
+              actions: widget.actions,
+              minLines: 1,
+              maxLines: 1,
+              expands: false,
+            );
+
+            return LayrzInputChrome(
+              labelText: widget.labelText,
+              hintText: widget.hintText,
+              isRequired: widget.isRequired,
+              prefixSlot: prefixSlot,
+              suffixSlot: suffixSlot,
+              disabled: widget.disabled,
+              readOnly: widget.readOnly,
+              errors: widget.errors,
+              hideDetails: widget.hideDetails,
+              states: _states,
+              helpTitleText: widget.helpTitleText,
+              helpContentText: widget.helpContentText,
+              controller: _controller,
+              padding: widget.padding,
+              child: LayrzEditableField(config: fieldConfig),
             );
           },
         ),
@@ -514,8 +575,3 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     );
   }
 }
-
-/// Layout delegate for positioning the combobox overlay.
-///
-/// Positions the panel below or above the anchor, matching the anchor's width,
-/// and clamping to overlay bounds.

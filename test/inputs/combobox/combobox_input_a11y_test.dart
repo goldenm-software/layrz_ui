@@ -1,9 +1,28 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
+
+/// Counts semantics nodes whose label contains [needle].
+int countSemanticsWithLabel(WidgetTester tester, String needle) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  var count = 0;
+  void walk(SemanticsNode node) {
+    if (node.getSemanticsData().label.contains(needle)) count++;
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return count;
+}
 
 void main() {
   group('LayrzComboBoxInput - Accessibility', () {
@@ -20,7 +39,7 @@ void main() {
 
       // The combobox and text input should be present
       expect(find.byType(LayrzComboBoxInput), findsOneWidget);
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('combobox label is exposed to screen readers exactly once', (tester) async {
@@ -35,26 +54,11 @@ void main() {
         ),
       );
 
-      // Label should be accessible via semantics - use descendant search to find the primary combobox button
-      // rather than bySemanticsLabel which can pick up multiple Semantics nodes with the same label
-      expect(
-        find.descendant(
-          of: find.byType(LayrzComboBoxInput),
-          matching: find.byType(Semantics),
-        ),
-        findsWidgets,
-      );
-
-      // Verify the primary semantic node has the label
-      final comboboxSemantics = tester.getSemantics(
-        find
-            .descendant(
-              of: find.byType(LayrzComboBoxInput),
-              matching: find.byType(Semantics),
-            )
-            .first,
-      );
-      expect(comboboxSemantics.label, equals('Select item'));
+      // Exactly one semantics node carries the label. Before the LayrzInputChrome
+      // migration, the wrap around LayrzTextInput produced a second, unmerged node
+      // (the inner field's own Semantics), so a screen reader announced the label
+      // twice — this count is what actually catches that regression.
+      expect(countSemanticsWithLabel(tester, 'Select item'), 1);
 
       handle.dispose();
     });
@@ -177,7 +181,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('disabled state is properly announced', (tester) async {
@@ -212,7 +216,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('hint text provides input guidance', (tester) async {
@@ -226,7 +230,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('field has proper semantic label', (tester) async {
@@ -240,7 +244,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
       expect(find.byType(LayrzComboBoxInput), findsOneWidget);
     });
 
@@ -258,7 +262,7 @@ void main() {
       );
 
       // Tap field to enable selection
-      await tester.tap(find.byType(LayrzTextInput));
+      await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
       // Selection operations should be available
@@ -280,7 +284,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
 
     testWidgets('field is focusable via keyboard', (tester) async {
@@ -316,7 +320,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzTextInput), findsOneWidget);
+      expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
   });
 }
