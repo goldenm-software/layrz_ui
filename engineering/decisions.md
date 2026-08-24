@@ -3578,3 +3578,23 @@ Whether `LayrzInputChrome`'s single `suffixSlot` + `onSuffixTap` can carry **two
 
 After the three in-scope migrations ship, confirm the open question above is resolved one way or the other before M4 Pickers begins consuming `LayrzInputChrome`, so no picker has to guess at a slot contract still in flux.
 
+### Amendment (2026-08-24) — NumberInput Scope Corrected; Outer Border Stays; Acceptance Criterion Reworded
+
+Three corrections, found during DESIGN-142 implementation and settled by the maintainer.
+
+**1. Scope was wrong about `LayrzNumberInput`.** The Context and Scope sections above name only the `hideStepButtons=true` path (`number_input.dart:561`) as wrapping, which implies the step-button path (`:641`) already composed the chrome directly. It did not — **both branches wrapped `LayrzTextInput`**, and the selector at `:499` is `!hideStepButtons && !disabled`, so `disabled: true` routed through the `:561` path too, regardless of `hideStepButtons`. That is **three configurations**, not two, and all three wrapped before this migration.
+
+**2. The outer `Container` border does NOT retire — this decision's Consequences was wrong to say it would.** Consequences originally stated: *"`LayrzNumberInput`'s outer-`Container` border duplication (`number_input.dart:618-620`) is retired once its `hideStepButtons=true` path is migrated; step buttons become a chrome-native affordance instead of an outer wrapper."* This was never coherent with Scope as written — the outer `Container` exists only on the step-button path, which the original Scope excluded. Independent of that internal contradiction, **the maintainer ruled during implementation that the outer `Container`, its border, and the full-height step caps are intended design, not duplication, and they stay.** That consequence is **withdrawn**, not deferred. `LayrzNumberInput` migrated all three configurations onto `LayrzInputChrome` directly (`develop` @ `a86644a`), and the outer border and caps render exactly as before.
+
+   One more pre-existing, deliberately-unfixed detail worth recording here so nobody "fixes" it later: the outer `Container` and the chrome it now contains both paint `spec.backgroundColor` — a double *fill*, not a double border. It is invisible (same opaque colour resolved from the same spec) and left alone.
+
+**3. Acceptance criterion 1 was too literal.** As written — *"No widget under `lib/src/inputs/` constructs another `Layrz*Input`"* — it fails a mechanical grep even after a correct migration, because two compositions construct an input from inside another input's **panel surface**, not by wrapping for chrome:
+   - `lib/src/inputs/src/select/select_input_surface.dart:175` — a `LayrzTextInput` used as the search box inside the select picker's panel.
+   - `lib/src/inputs/src/duration/duration_picker_panel.dart:95,119,145,171` — four `LayrzNumberInput`s used as the day/hour/minute/second spinners inside the duration picker's panel.
+
+   Both are the same category of deliberate exclusion this decision already carves out for `LayrzCheckboxInput`/`LayrzSwitchInput`/`LayrzRadioInput`: a control embedded in a panel, not chrome obtained by wrapping. The criterion now reads:
+
+   > No input widget obtains its visual chrome by wrapping another input widget. (Exclusions: `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput` — controls, not fields, per the Decision above; `select_input_surface.dart:175` and `duration_picker_panel.dart:95,119,145,171` — inputs embedded inside a panel surface, not chrome inherited by wrapping.)
+
+   Named explicitly so the next reader does not "find" a fifth or sixth migration that was never in scope.
+
