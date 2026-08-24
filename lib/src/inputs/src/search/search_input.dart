@@ -11,6 +11,7 @@ import 'search_input_mode.dart';
 import '../shared/editable_field.dart';
 import '../shared/input_chrome.dart';
 import '../shared/input_slot.dart';
+import '../shared/input_style_spec.dart';
 
 /// A Material-free search input in the layrz_ui design system.
 ///
@@ -278,6 +279,14 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     }
   }
 
+  /// Clears the search field and returns focus to it.
+  ///
+  /// Focus is always requested after clearing, even if the field was not focused
+  /// beforehand -- clicking "clear" is almost always immediately followed by typing
+  /// a new query, so refocusing regardless of prior state is the more useful default.
+  /// In icon mode this also doubles as the recovery path when the panel's own
+  /// internal focus node ends up holding focus instead of the field (see
+  /// [_handlePanelOpened]).
   void _clearSearch() {
     if (widget.disabled) {
       return;
@@ -285,6 +294,26 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     _controller.clear();
     _handleSearchChanged('');
+    _focusNode.requestFocus();
+  }
+
+  /// Re-requests focus onto the search field once [LayrzAnchoredPanel] has finished opening.
+  ///
+  /// [LayrzAnchoredPanel] moves focus to its own internal node in a post-frame callback
+  /// registered when the panel opens (`anchored_panel.dart`), which runs *after* this
+  /// field's [LayrzEditableFieldConfig.autofocus] has already acted -- overriding it.
+  /// Nesting a second [WidgetsBinding.addPostFrameCallback] defers this request to the
+  /// frame *after* that one, guaranteeing it runs last and wins the race. This mirrors
+  /// the equivalent fix in [LayrzComboBoxInput]'s `_handleMenuOpenRequested`, adapted for
+  /// the extra frame of delay [LayrzAnchoredPanel]'s own focus grab introduces.
+  void _handlePanelOpened() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _focusNode.requestFocus();
+        }
+      });
+    });
   }
 
   @override
@@ -416,8 +445,23 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   }
 
   /// Builds the icon mode: magnifier button that opens a panel with the field.
+  ///
+  /// [LayrzAnchoredPanel] is the single visual container here: it already draws the
+  /// background, shadow, and rounded corners (`tokens.radius.br3`). The chrome is told
+  /// `showBorder: false` and given a matching `borderRadius` so it never draws a second,
+  /// differently-rounded rectangle inside the panel (the "double rounded rectangle" bug).
+  ///
+  /// That removes the chrome's only carrier of the focused/error visual states, so this
+  /// method wraps the chrome in its own [Container] that paints a border -- at the exact
+  /// same radius as the panel -- only while [_states] is focused or [LayrzSearchInput.errors]
+  /// is non-empty. In every other state (rest, hover, disabled, plain read-only) that
+  /// wrapper paints nothing, preserving the "one floating surface" look; the moment the
+  /// field is focused or errored, the whole panel reads as carrying a colored ring instead
+  /// of the field growing a mismatched inner border.
   Widget _buildIconMode(BuildContext context) {
+    final tokens = context.tokens;
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
+    final hasErrors = widget.errors.isNotEmpty;
 
     _syncDisabledState();
 
@@ -435,9 +479,18 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       autofocus: true,
     );
 
+    final spec = LayrzInputStyleSpec.resolve(
+      states: _states,
+      tokens: tokens,
+      hasErrors: hasErrors,
+      readOnly: widget.readOnly,
+    );
+    final showFocusRing = !widget.disabled && (_states.contains(WidgetState.focused) || hasErrors);
+
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
       widthBounds: const LayrzAnchoredPanelWidthBounds(minWidth: 280.0, maxWidth: 480.0),
+      onOpen: _handlePanelOpened,
       builder: (context, controller) {
         return LayrzButton(
           labelText: widget.labelText ?? context.l10n.helperSearch,
@@ -447,21 +500,35 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           style: LayrzButtonStyle.elevatedFab,
         );
       },
-      child: LayrzInputChrome(
-        labelText: null,
-        isRequired: widget.isRequired,
-        prefixSlot: prefixSlot,
-        suffixSlot: suffixSlot,
-        disabled: widget.disabled,
-        readOnly: widget.readOnly,
-        errors: widget.errors,
-        hideDetails: false,
-        states: _states,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        controller: _controller,
-        padding: widget.padding,
-        child: LayrzEditableField(config: fieldConfig),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: tokens.radius.br3,
+          border: showFocusRing
+              ? Border.all(
+                  color: spec.borderColor,
+                  width: spec.borderWidth,
+                )
+              : null,
+        ),
+        child: LayrzInputChrome(
+          labelText: null,
+          hintText: hintText,
+          isRequired: widget.isRequired,
+          prefixSlot: prefixSlot,
+          suffixSlot: suffixSlot,
+          disabled: widget.disabled,
+          readOnly: widget.readOnly,
+          errors: widget.errors,
+          hideDetails: false,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
+          padding: widget.padding,
+          borderRadius: tokens.radius.br3,
+          showBorder: false,
+          child: LayrzEditableField(config: fieldConfig),
+        ),
       ),
     );
   }
