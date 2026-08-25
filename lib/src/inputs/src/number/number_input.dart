@@ -288,12 +288,32 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
   bool _isInternalUpdate = false;
   final Set<WidgetState> _states = {};
 
+  /// The [_isDecrementDisabled] result the most recent [build] actually rendered.
+  ///
+  /// Refreshed **only** inside [build] — never here in the lifecycle methods and never by
+  /// [_handleControllerValueChanged] itself — so it always describes what is on screen,
+  /// including when the predicate changes for a reason other than controller text (a
+  /// [LayrzNumberInput.minimum]/[LayrzNumberInput.maximum] prop change, or a controller
+  /// swap in [didUpdateWidget]). [didUpdateWidget] always triggers a rebuild, and that
+  /// rebuild recomputes and stores this field before [_handleControllerValueChanged] can
+  /// next fire on the new controller, so no re-seed is needed in the controller-swap block
+  /// below — deliberately absent, not an oversight. A cache instead maintained by the
+  /// listener (mirroring `_wasEmpty` in [LayrzSearchInput]) would need exactly such a
+  /// re-seed on every swap, and silently drift without one.
+  bool _lastDecrementDisabled = false;
+
+  /// The [_isIncrementDisabled] result the most recent [build] actually rendered.
+  ///
+  /// See [_lastDecrementDisabled].
+  bool _lastIncrementDisabled = false;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
     _updateControllerFromValue(widget.value);
+    _controller.addListener(_handleControllerValueChanged);
   }
 
   @override
@@ -301,10 +321,20 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     super.didUpdateWidget(oldWidget);
     // If controller changed, update the reference
     if (widget.controller != oldWidget.controller) {
+      // The listener must always come off the outgoing controller, regardless of
+      // ownership: an externally-supplied controller survives this swap, so leaving the
+      // listener attached leaks it onto a controller this state no longer tracks — and it
+      // would then call setState on a defunct State after this widget unmounts.
+      // ChangeNotifier.removeListener is documented safe on a disposed instance.
+      _controller.removeListener(_handleControllerValueChanged);
       if (oldWidget.controller == null) {
         _controller.dispose();
       }
       _controller = widget.controller ?? TextEditingController();
+      _controller.addListener(_handleControllerValueChanged);
+      // No `_last*Disabled` re-seed here, deliberately: this method always ends in a
+      // rebuild, and `build()` recomputes both predicates unconditionally from whichever
+      // controller is now current — see the doc comment on `_lastDecrementDisabled`.
     }
     // If focusNode changed, update the reference
     if (widget.focusNode != oldWidget.focusNode) {
@@ -321,6 +351,9 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
 
   @override
   void dispose() {
+    // Unconditional removal first, then dispose only what this state owns — mirrors the
+    // controller-swap handling in didUpdateWidget above.
+    _controller.removeListener(_handleControllerValueChanged);
     // Only dispose if we created them
     if (widget.controller == null) {
       _controller.dispose();
@@ -329,6 +362,28 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       _focusNode.dispose();
     }
     super.dispose();
+  }
+
+  /// Rebuilds the field when a controller change flips either step cap's disabled state.
+  ///
+  /// Deliberately **not** gated on [_isInternalUpdate]. Every stepping path — both
+  /// [_handleIncrement]/[_handleDecrement] and all four branches of [_handleKeyEvent] —
+  /// writes through [_updateControllerFromValue], which raises that flag for the duration
+  /// of the write. Copying the guard from [_handleTextChanged] (whose job is to suppress a
+  /// re-entrant `onChanged` on internally-driven writes) would make this listener fire on
+  /// typing only and silently skip the keyboard and cap-tap paths — two of the three paths
+  /// it exists to cover. The bug would look fixed and would not be. See DESIGN-150.
+  ///
+  /// The rebuild is gated on an actual flip instead: [TextEditingController] is a
+  /// [ValueNotifier] over [TextEditingValue] and notifies on selection and composing
+  /// changes too, so an unguarded listener would rebuild on every caret move. The
+  /// comparison basis ([_lastDecrementDisabled]/[_lastIncrementDisabled]) is maintained by
+  /// [build], not by this method — see that field's doc comment for why.
+  void _handleControllerValueChanged() {
+    if (_isDecrementDisabled() == _lastDecrementDisabled && _isIncrementDisabled() == _lastIncrementDisabled) {
+      return;
+    }
+    setState(() {});
   }
 
   /// Updates the text controller to display the given numeric value, formatted.
@@ -512,6 +567,17 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final showButtons = !widget.hideStepButtons && !widget.disabled;
     final hasErrors = widget.errors.isNotEmpty;
 
+    // Computed once per build and cached in `_last*Disabled`, so `_handleControllerValueChanged`
+    // has a comparison basis that always describes what is actually rendered — see the doc
+    // comment on `_lastDecrementDisabled`. Computed unconditionally on both branches (the
+    // no-step-buttons branch renders no caps) so the invariant holds with no branch to reason
+    // about. Also removes the double evaluation each cap previously caused (`onTap:` and
+    // `isDisabled:` each called the predicate separately).
+    final decrementDisabled = _isDecrementDisabled();
+    final incrementDisabled = _isIncrementDisabled();
+    _lastDecrementDisabled = decrementDisabled;
+    _lastIncrementDisabled = incrementDisabled;
+
     // True on both the "no step buttons" branch and the "disabled" branch, which routes
     // through the same plain-chrome layout even when hideStepButtons is false.
     final isDisabledOverall = widget.disabled || widget.readOnly;
@@ -608,6 +674,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
             hasErrors: hasErrors,
             semanticLabel: semanticLabel,
             semanticTooltip: semanticTooltip,
+            decrementDisabled: decrementDisabled,
+            incrementDisabled: incrementDisabled,
           ),
           // Error block and character counter below the entire row
           LayrzInputFooterSlot(
@@ -747,6 +815,15 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     /// [LayrzNumberInput.helpTitleText] / [LayrzNumberInput.helpContentText]. Computed once in
     /// [build] for the same reason as [semanticLabel].
     required String? semanticTooltip,
+
+    /// Whether the decrement cap should render disabled, computed once in [build] via
+    /// [_isDecrementDisabled] and passed down rather than called again here — see the doc
+    /// comment on [_lastDecrementDisabled] for why [build] is the single source of this value.
+    required bool decrementDisabled,
+
+    /// Whether the increment cap should render disabled, computed once in [build] via
+    /// [_isIncrementDisabled]. See [decrementDisabled].
+    required bool incrementDisabled,
   }) {
     // Resolve the style spec once for the entire control
     final spec = LayrzInputStyleSpec.resolve(
@@ -794,8 +871,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
             children: [
               // Decrement control (full height, no border/radius)
               NumberFieldControl(
-                onTap: (widget.readOnly || _isDecrementDisabled()) ? null : _handleDecrement,
-                isDisabled: widget.readOnly || _isDecrementDisabled(),
+                onTap: (widget.readOnly || decrementDisabled) ? null : _handleDecrement,
+                isDisabled: widget.readOnly || decrementDisabled,
                 hasErrors: hasErrors,
                 states: _states,
                 readOnly: widget.readOnly,
@@ -836,8 +913,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
 
               // Increment control (full height, no border/radius)
               NumberFieldControl(
-                onTap: (widget.readOnly || _isIncrementDisabled()) ? null : _handleIncrement,
-                isDisabled: widget.readOnly || _isIncrementDisabled(),
+                onTap: (widget.readOnly || incrementDisabled) ? null : _handleIncrement,
+                isDisabled: widget.readOnly || incrementDisabled,
                 hasErrors: hasErrors,
                 states: _states,
                 readOnly: widget.readOnly,

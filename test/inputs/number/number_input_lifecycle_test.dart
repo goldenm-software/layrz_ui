@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/number/number_field_edge.dart';
 
 import '../../helpers/pump_themed_app.dart';
 
@@ -30,6 +31,12 @@ import '../../helpers/pump_themed_app.dart';
 /// torn down automatically and deterministically with [State.dispose], and
 /// it keeps working across a [LayrzNumberInput.focusNode] swap because it
 /// never depended on which specific node is currently focused underneath it.
+///
+/// This file also covers the ownership of the `_controller` listener added for
+/// DESIGN-150 (the step-cap staleness fix): it must move across all four
+/// controller-ownership transitions in `didUpdateWidget`, exactly as the
+/// [FocusNode]-facing key handler above does, and must never be left attached
+/// to a controller this [State] no longer tracks after a swap or an unmount.
 void main() {
   group('LayrzNumberInput keyboard handler lifecycle', () {
     testWidgets(
@@ -168,6 +175,198 @@ void main() {
         editableTextState.widget.focusNode.nextFocus();
         await tester.pumpAndSettle();
         expect(after.hasFocus, isTrue);
+      },
+    );
+  });
+
+  group('LayrzNumberInput controller-value listener lifecycle (DESIGN-150)', () {
+    // The sharp, non-vacuous test for a leaked listener: swap or unmount, then write to
+    // the controller that should no longer be listened to, and assert no exception. A
+    // leaked listener calls `setState` on a defunct [State]; `ChangeNotifier.notifyListeners`
+    // reports that through `FlutterError.onError`, so it surfaces via
+    // `tester.takeException()` after the pump. A leaked listener on a still-mounted state is
+    // merely a redundant rebuild and is not observable -- which is why the unmount step is
+    // required in every one of these tests, not decorative.
+
+    testWidgets(
+      'controller null -> external: the listener moves onto the caller\'s controller and the '
+      'internal one is disposed',
+      (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzNumberInput(value: 5, minimum: 0, maximum: 10),
+        );
+
+        final internal = tester.widget<EditableText>(find.byType(EditableText)).controller;
+
+        final external = TextEditingController(text: '5');
+        addTearDown(external.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: external),
+        );
+
+        external.text = '10';
+        await tester.pump();
+
+        expect(
+          tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+          isTrue,
+          reason: 'the listener must now be driven by the caller\'s controller',
+        );
+
+        // The controller the widget owned before the swap must have been disposed, not
+        // merely abandoned. A disposed ChangeNotifier throws on addListener -- the only
+        // black-box way to observe this from outside the widget.
+        expect(() => internal.addListener(() {}), throwsA(isA<FlutterError>()));
+      },
+    );
+
+    testWidgets(
+      'controller external -> null: nothing is left attached to the caller\'s controller after unmount',
+      (tester) async {
+        final first = TextEditingController(text: '5');
+        addTearDown(first.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: first),
+        );
+
+        await pumpThemedApp(
+          tester,
+          const LayrzNumberInput(value: 5, minimum: 0, maximum: 10),
+        );
+
+        await pumpThemedApp(tester, const SizedBox.shrink());
+
+        first.text = '10';
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        // `first` was never owned by the widget (it was externally supplied throughout),
+        // so it must never have been disposed either.
+        expect(() => first.addListener(() {}), returnsNormally);
+      },
+    );
+
+    testWidgets(
+      'controller external -> a different external: the listener moves on, then off, and '
+      'neither controller is disposed',
+      (tester) async {
+        final first = TextEditingController(text: '5');
+        final second = TextEditingController(text: '5');
+        addTearDown(first.dispose);
+        addTearDown(second.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: first),
+        );
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: second),
+        );
+
+        second.text = '10';
+        await tester.pump();
+
+        expect(
+          tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+          isTrue,
+          reason: 'the listener must have moved onto `second`',
+        );
+
+        await pumpThemedApp(tester, const SizedBox.shrink());
+
+        first.text = '10';
+        await tester.pump();
+
+        expect(tester.takeException(), isNull, reason: 'the listener must have come off `first` on the swap');
+        expect(() => first.addListener(() {}), returnsNormally);
+        expect(() => second.addListener(() {}), returnsNormally);
+      },
+    );
+
+    testWidgets(
+      'plain disposal with an external controller leaves no listener behind',
+      (tester) async {
+        final external = TextEditingController(text: '5');
+        addTearDown(external.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: external),
+        );
+
+        await pumpThemedApp(tester, const SizedBox.shrink());
+
+        external.text = '10';
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(() => external.addListener(() {}), returnsNormally);
+      },
+    );
+
+    testWidgets(
+      'controller swap does not leave the disabled-state comparison basis describing the '
+      'outgoing controller (L5)',
+      (tester) async {
+        // The naive form of this test -- swap, then assert the render right after the swap
+        // -- proves nothing: `didUpdateWidget` always forces a rebuild, and `build()`
+        // recomputes both predicates fresh on every call and passes them straight into
+        // `NumberFieldControl`, regardless of how (or whether) any cache is maintained. So
+        // that first assertion below passes under a correct implementation AND under a
+        // broken one -- it is here only as a sanity check, not the proof.
+        //
+        // The proof is the second step: `value` stays constant across the swap (so the
+        // pre-existing, out-of-scope re-seed gap at didUpdateWidget's value block never
+        // fires -- see the class-level doc comment), `second` starts already at `maximum`,
+        // and only a write to `second` *after* the swap can flip the cap back to enabled.
+        // A comparison basis that was refreshed only by the listener itself (mirroring
+        // `_wasEmpty` in LayrzSearchInput verbatim, with no swap-time reseed) would still be
+        // holding `first`'s pre-swap reading (not at the bound) when this write arrives.
+        // Comparing the new, correct reading (`false`) against that stale basis (also
+        // `false`, coincidentally) finds no flip, skips `setState`, and the cap is left
+        // showing the wrong, stale-disabled state even though the widget already knows
+        // better. The fix in this file computes and stores the comparison basis directly in
+        // `build()` instead, so it is never anything other than what the most recent build
+        // actually rendered -- see `_lastDecrementDisabled`/`_lastIncrementDisabled` in
+        // number_input.dart.
+        final first = TextEditingController(text: '5');
+        final second = TextEditingController(text: '10');
+        addTearDown(first.dispose);
+        addTearDown(second.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: first),
+        );
+
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(value: 5, minimum: 0, maximum: 10, controller: second),
+        );
+
+        expect(
+          tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+          isTrue,
+          reason: 'sanity check only -- true under any implementation, correct or broken',
+        );
+
+        second.text = '9';
+        await tester.pump();
+
+        expect(
+          tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+          isFalse,
+          reason:
+              'a comparison basis still describing `first`\'s pre-swap reading would '
+              'wrongly suppress this rebuild',
+        );
       },
     );
   });

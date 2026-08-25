@@ -298,6 +298,75 @@ void main() {
       }
     });
 
+    testWidgets('increment cap semantics go stale-correct immediately after a tap reaches maximum '
+        '(DESIGN-150, door 2)', (tester) async {
+      // Unlike "step caps report disabled at bounds" above (which pins the shape for a
+      // widget already constructed at its bound), this proves the semantics update
+      // *after* a change made post-render -- the exact staleness this row fixes. No
+      // `onChanged` is supplied, so nothing but the fix's own listener can update this.
+      final handle = tester.ensureSemantics();
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      try {
+        await pumpThemedApp(
+          tester,
+          const LayrzNumberInput(labelText: 'Quantity', value: 9, minimum: 0, maximum: 10, step: 1),
+        );
+
+        await tester.tap(find.bySemanticsLabel('Increase value'));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Increase value')),
+          matchesSemantics(label: 'Increase value', isButton: true, hasEnabledState: true, isEnabled: false),
+        );
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Decrease value')),
+          matchesSemantics(
+            label: 'Decrease value',
+            isButton: true,
+            hasTapAction: true,
+            hasEnabledState: true,
+            isEnabled: true,
+          ),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets(
+      'increment cap semantics go stale-correct after the controller text changes directly '
+      '(DESIGN-150, door 3, typing)',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        final controller = TextEditingController(text: '9');
+        addTearDown(controller.dispose);
+
+        try {
+          await pumpThemedApp(
+            tester,
+            LayrzNumberInput(labelText: 'Quantity', value: 9, minimum: 0, maximum: 10, controller: controller),
+          );
+
+          controller.text = '10';
+          await tester.pump();
+
+          expect(
+            tester.getSemantics(find.bySemanticsLabel('Increase value')),
+            matchesSemantics(label: 'Increase value', isButton: true, hasEnabledState: true, isEnabled: false),
+          );
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
     testWidgets(
       'step controls are reachable by arrow/page keys on the field, clamp at the minimum '
       'bound, and are tap targets rather than focus stops',
@@ -372,20 +441,11 @@ void main() {
           await tester.pumpAndSettle();
           expect(lastValue, 5, reason: 'PageDown steps by `step * 10`');
 
-          // Asserted HERE — at value 5, with neither cap at a bound — rather than after the
-          // final PageDown below. Moving the value to `minimum` with that last PageDown
-          // makes `_isDecrementDisabled()` true, so the field's own semantics update
-          // correctly, but `_handleKeyEvent`'s stepping branches (unlike `_handleIncrement`/
-          // `_handleDecrement`) never call `setState`, so the DECREMENT CAP's own semantics
-          // node goes stale and keeps reporting `isEnabled: true`/`hasTapAction: true` after
-          // the value that should have disabled it. Asserting there would pin that stale
-          // reading as the contract. Proving "the caps are tap-actionable buttons, not focus
-          // stops" only needs a point where the dump-1 shape is actually correct — this one
-          // — not the specific value the keyboard sequence ends on. The staleness itself is
-          // excluded by maintainer decision; tracked as its own row — LayrzNumberInput:
-          // step-button state goes stale when the value changes (DESIGN-150), which also
-          // carries the at-bound assertion moved out of this test — and is not to be papered
-          // over by moving the assertion back once that row lands.
+          // Asserted HERE — at value 5, with neither cap at a bound — as a mid-sequence
+          // checkpoint proving the dump-1 shape (button role, tap action, enabled) holds
+          // while stepping via the keyboard, independent of the at-bound assertion added
+          // below. This is not a workaround for missing coverage: it pins a distinct point
+          // in the sequence that the final at-bound assertion does not.
           expect(
             tester.getSemantics(find.bySemanticsLabel('Decrease value')),
             matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
@@ -398,6 +458,27 @@ void main() {
           await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
           await tester.pumpAndSettle();
           expect(lastValue, 0, reason: 'PageDown clamps at `minimum`, never goes negative');
+
+          // The real at-bound assertion (DESIGN-150): before the controller-value listener
+          // was added, `_handleKeyEvent`'s stepping branches (unlike `_handleIncrement`/
+          // `_handleDecrement`) never called `setState`, so the decrement cap's own
+          // semantics node went stale and kept reporting `isEnabled: true`/`hasTapAction:
+          // true` after this very PageDown drove the value to `minimum`. This is a semantics
+          // read only — no further key is sent (see the note below on why).
+          expect(
+            tester.getSemantics(find.bySemanticsLabel('Decrease value')),
+            matchesSemantics(label: 'Decrease value', isButton: true, hasEnabledState: true, isEnabled: false),
+          );
+          expect(
+            tester.getSemantics(find.bySemanticsLabel('Increase value')),
+            matchesSemantics(
+              label: 'Increase value',
+              isButton: true,
+              hasTapAction: true,
+              hasEnabledState: true,
+              isEnabled: true,
+            ),
+          );
 
           // A further key at the bound is guarded by number_input.dart:463/473
           // (`!_isIncrementDisabled()`/`!_isDecrementDisabled()`) — not re-sent here: a
