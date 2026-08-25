@@ -273,9 +273,19 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           builder: (context, _) {
             final openedItem = _findOpenedItem();
             if (openedItem == null) {
-              // Item was removed from the list; pop the sheet in the next frame
+              // Item was removed from the list while the sheet is genuinely still
+              // open; pop the sheet in the next frame. Guarding on `_sheetOpen` (not
+              // just context-mounted) matters: this `ListenableBuilder` stays mounted
+              // for the sheet route's own exit animation, so a user-initiated dismiss
+              // (barrier tap / drag) reaches here too — via `widget.controller.close()`
+              // notifying this same listenable while the route animates out. At that
+              // point `_sheetOpen` is already false (set right after the dismiss's
+              // `await LayrzBottomSheet.show` resolves, before this rebuild runs), so
+              // it is a clean discriminator between "still open, must pop" and
+              // "already closing, must not pop again" — unlike context.mounted, which
+              // stays true throughout the exit animation either way.
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
+                if (mounted && _sheetOpen && _narrowSheetContext != null && _narrowSheetContext!.mounted) {
                   Navigator.of(_narrowSheetContext!).pop();
                 }
               });
