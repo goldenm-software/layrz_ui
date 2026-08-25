@@ -8,8 +8,11 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 
 /// The selection surface content used by [LayrzSelectInput].
 ///
-/// This widget renders a search field (if enabled) and a scrollable list of items.
-/// It manages keyboard navigation (arrow keys, Enter, Escape) and item selection.
+/// This widget renders a scrollable list of items and manages keyboard navigation
+/// (arrow keys, Enter, Escape) and item selection. It no longer owns a search field of
+/// its own (DESIGN-40/144's redesign): when [enableSearch] is true, the caller's own
+/// field is the searcher, and [query] is fed in from there; when false, this is a pure
+/// picker and [query] is ignored (always treated as empty).
 ///
 /// This is a private implementation detail; consumers use [LayrzSelectInput] instead.
 class LayrzSelectInputSurface<T> extends StatefulWidget {
@@ -19,13 +22,21 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// The currently selected item (for visual highlighting).
   final LayrzSelectItem<T>? selectedItem;
 
-  /// Whether to show the search field.
+  /// Whether the caller's own field is the searcher for this surface.
+  ///
+  /// When true, [query] carries the caller's field's current text and this surface
+  /// never requests keyboard focus for its list on open -- the caller's field keeps
+  /// focus so typing keeps working. When false, this is a pure picker: [query] is
+  /// ignored, and the list requests focus on open so arrow keys/Enter/Escape work.
   final bool enableSearch;
 
   /// Whether an item with `value: null` can be selected.
   final bool canUnselect;
 
   /// Optional custom filter function; if null, uses [LayrzSelectItem.matches].
+  ///
+  /// Applied regardless of whether [query] is empty -- an empty query still runs
+  /// through this callback rather than short-circuiting to "show all".
   final bool Function(String query, LayrzSelectItem<T> item)? filter;
 
   /// Text shown when search finds no matching items.
@@ -40,6 +51,12 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// This is used when the surface is displayed in an anchored panel on desktop.
   final MenuController? panelController;
 
+  /// The current search query, typed into the caller's own field.
+  ///
+  /// Ignored when [enableSearch] is false. Defaults to `''` (show everything, subject
+  /// to [filter] if provided).
+  final String query;
+
   /// Creates a new [LayrzSelectInputSurface].
   const LayrzSelectInputSurface({
     super.key,
@@ -51,6 +68,7 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
     this.emptyListText,
     required this.onItemSelected,
     this.panelController,
+    this.query = '',
   });
 
   @override
@@ -58,8 +76,6 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
 }
 
 class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>> {
-  late TextEditingController _searchController;
-  late FocusNode _searchFocusNode;
   late FocusNode _listFocusNode;
   int _highlightedIndex = -1;
   List<LayrzSelectItem<T>> _filteredItems = [];
@@ -67,35 +83,38 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
-    _searchFocusNode = FocusNode();
     _listFocusNode = FocusNode();
     _updateFilteredItems();
     _setInitialHighlight();
 
-    // Focus search field or list on open
+    // The list only claims focus for itself when it is the sole way to navigate
+    // (no search field, caller's field is not the searcher): with `enableSearch`
+    // true, the caller's own field keeps focus (see `LayrzSelectInput`), and
+    // stealing it here would break typing the moment the surface opens.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        if (widget.enableSearch) {
-          _searchFocusNode.requestFocus();
-        } else {
-          _listFocusNode.requestFocus();
-        }
+      if (context.mounted && !widget.enableSearch) {
+        _listFocusNode.requestFocus();
       }
     });
   }
 
   @override
+  void didUpdateWidget(LayrzSelectInputSurface<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.query != oldWidget.query || widget.items != oldWidget.items || widget.filter != oldWidget.filter) {
+      _updateFilteredItems();
+    }
+  }
+
+  @override
   void dispose() {
-    _searchController.dispose();
-    _searchFocusNode.dispose();
     _listFocusNode.dispose();
     super.dispose();
   }
 
-  /// Updates the filtered items list based on the search query.
+  /// Updates the filtered items list based on [LayrzSelectInputSurface.query].
   void _updateFilteredItems() {
-    final query = _searchController.text;
+    final query = widget.enableSearch ? widget.query : '';
     final filter = widget.filter;
 
     _filteredItems = widget.items.where((item) {
@@ -165,77 +184,46 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     final l10n = LayrzUiL10n.of(context);
     final tokens = context.tokens;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Search field (if enabled)
-        if (widget.enableSearch) ...[
-          Padding(
-            padding: tokens.spacing.pd2,
-            child: LayrzTextInput(
-              hintText: l10n.selectSearch,
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              suffixIcon: _searchController.text.isNotEmpty ? MdiIcons.close : null,
-              onSuffixTap: _searchController.text.isNotEmpty
-                  ? () {
-                      _searchController.clear();
-                      _updateFilteredItems();
-                      setState(() {});
-                    }
-                  : null,
-              onChanged: (_) {
-                _updateFilteredItems();
-                setState(() {});
-              },
-            ),
+    // Items list with keyboard support. No search field here anymore -- see the
+    // class doc: the caller's own field is the searcher when `enableSearch` is true.
+    if (_filteredItems.isEmpty) {
+      return Padding(
+        padding: tokens.spacing.pd3,
+        child: Text(
+          widget.emptyListText ?? l10n.selectEmpty,
+          style: tokens.typography.body.copyWith(
+            color: tokens.colors.fg3,
           ),
-          Container(
-            height: 1,
-            color: tokens.colors.divider,
-          ),
-        ],
+        ),
+      );
+    }
 
-        // Items list with keyboard support
-        if (_filteredItems.isEmpty)
-          Padding(
-            padding: tokens.spacing.pd3,
-            child: Text(
-              widget.emptyListText ?? l10n.selectEmpty,
-              style: tokens.typography.body.copyWith(
-                color: tokens.colors.fg3,
-              ),
-            ),
-          )
-        else
-          // No height cap here: the 300px maximum is applied exactly once,
-          // by the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the
-          // bottom sheet's own scrollable on mobile). A second, disagreeing
-          // cap here is DESIGN-40's root cause -- see `select_input.dart`.
-          KeyboardListener(
-            focusNode: _listFocusNode,
-            onKeyEvent: _handleKeyEvent,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(_filteredItems.length, (index) {
-                final item = _filteredItems[index];
-                final isHighlighted = _highlightedIndex == index;
-                final isSelected = item.value == widget.selectedItem?.value;
+    // No height cap here: the 300px maximum is applied exactly once,
+    // by the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the
+    // bottom sheet's own scrollable on mobile). A second, disagreeing
+    // cap here is DESIGN-40's root cause -- see `select_input.dart`.
+    return KeyboardListener(
+      focusNode: _listFocusNode,
+      onKeyEvent: _handleKeyEvent,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(_filteredItems.length, (index) {
+          final item = _filteredItems[index];
+          final isHighlighted = _highlightedIndex == index;
+          final isSelected = item.value == widget.selectedItem?.value;
 
-                return _SelectItemRow(
-                  key: ValueKey(item.value),
-                  item: item,
-                  isHighlighted: isHighlighted,
-                  isSelected: isSelected,
-                  onTap: () {
-                    widget.onItemSelected(item);
-                    widget.panelController?.close();
-                  },
-                );
-              }),
-            ),
-          ),
-      ],
+          return _SelectItemRow(
+            key: ValueKey(item.value),
+            item: item,
+            isHighlighted: isHighlighted,
+            isSelected: isSelected,
+            onTap: () {
+              widget.onItemSelected(item);
+              widget.panelController?.close();
+            },
+          );
+        }),
+      ),
     );
   }
 }
