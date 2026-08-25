@@ -1,11 +1,125 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/app/app.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
+import 'package:layrz_ui/src/inputs/src/duration/duration_input.dart';
 import 'package:layrz_ui/src/inputs/src/duration/duration_picker_panel.dart';
 import 'package:layrz_ui/src/inputs/src/duration/duration_unit.dart';
 import 'package:layrz_ui/src/inputs/src/number/number_input.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/theme/theme.dart';
 
 import '../../helpers/pump_themed.dart';
+
+/// An [LayrzUiL10n] override that replaces every duration unit field label
+/// with [suffix], a deliberately non-English synthetic string.
+///
+/// Used to prove the picker's layout survives realistic (or worse) locale
+/// lengths, instead of only ever exercising the English default — the
+/// English "Days"/"Hours"/"Minutes"/"Seconds" are not what a Spanish or
+/// Portuguese device renders (`layrz_ui_i18n` supplies those), and a test
+/// that only passes the English case proves the least interesting thing
+/// available.
+class _SyntheticSuffixL10n extends LayrzUiL10n {
+  /// Creates an override that reports [suffix] for every duration field.
+  const _SyntheticSuffixL10n(this.suffix);
+
+  /// The synthetic suffix returned for every duration unit field getter.
+  final String suffix;
+
+  @override
+  String get durationFieldDay => suffix;
+
+  @override
+  String get durationFieldHour => suffix;
+
+  @override
+  String get durationFieldMinute => suffix;
+
+  @override
+  String get durationFieldSecond => suffix;
+}
+
+/// A [LocalizationsDelegate] that always resolves to a [_SyntheticSuffixL10n]
+/// carrying [suffix], regardless of locale.
+class _SyntheticSuffixL10nDelegate extends LocalizationsDelegate<LayrzUiL10n> {
+  /// Creates a delegate that always resolves to [_SyntheticSuffixL10n]([suffix]).
+  const _SyntheticSuffixL10nDelegate(this.suffix);
+
+  /// The synthetic suffix the resolved [LayrzUiL10n] reports for every field.
+  final String suffix;
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<LayrzUiL10n> load(Locale locale) => SynchronousFuture<LayrzUiL10n>(_SyntheticSuffixL10n(suffix));
+
+  @override
+  bool shouldReload(_SyntheticSuffixL10nDelegate old) => old.suffix != suffix;
+}
+
+/// Pumps the real [LayrzDurationInput] at a desktop viewport, with every
+/// duration field's [LayrzNumberInput.suffixText] replaced by [suffix], and
+/// opens its desktop anchored panel.
+///
+/// Deliberately routes through the real [LayrzDurationInput] rather than
+/// pumping [LayrzDurationPickerPanel] bare at the full viewport width, to
+/// reproduce the actual constraint the picker renders under in production:
+/// `LayrzDurationInput`'s anchored panel is `contentSized` with
+/// `maxWidth: 480` (`duration_input.dart`), so the panel's real available
+/// width is capped well below the bare viewport — 227px per field at the
+/// time of writing, not whatever the 1600px test viewport alone would give.
+/// A pin test that skips this indirection risks proving a width the picker
+/// never actually renders at.
+Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix}) async {
+  tester.view.physicalSize = const Size(1200, 800);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    LayrzApp(
+      home: Center(child: LayrzDurationInput(labelText: 'Duration')),
+      theme: LayrzThemeData.light(),
+      localizationsDelegates: [_SyntheticSuffixL10nDelegate(suffix)],
+      debugShowCheckedModeBanner: false,
+    ),
+  );
+  await tester.pump();
+
+  await tester.tap(find.byType(LayrzInputChrome));
+  await tester.pumpAndSettle();
+}
+
+/// Pumps the real [LayrzDurationInput] at a compact (mobile) viewport, with
+/// every duration field's [LayrzNumberInput.suffixText] replaced by
+/// [suffix], and opens its compact bottom-sheet picker.
+///
+/// The compact path routes through `LayrzBottomSheet` rather than the
+/// desktop anchored panel's `maxWidth: 480` cap, so — unlike the desktop
+/// case — this is not expected to be as tight. It still goes through the
+/// real end-to-end flow rather than the bare panel, so that claim rests on
+/// a measurement, not an inference from the desktop finding.
+Future<void> _pumpMobileSheetWithSuffix(WidgetTester tester, {required String suffix}) async {
+  tester.view.physicalSize = const Size(400, 800);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    LayrzApp(
+      home: Center(child: LayrzDurationInput(labelText: 'Duration')),
+      theme: LayrzThemeData.light(),
+      localizationsDelegates: [_SyntheticSuffixL10nDelegate(suffix)],
+      debugShowCheckedModeBanner: false,
+    ),
+  );
+  await tester.pump();
+
+  await tester.tap(find.byType(LayrzInputChrome));
+  await tester.pumpAndSettle();
+}
 
 /// The [ValueKey]s assigned to each unit's [LayrzCol] wrapper inside
 /// [LayrzDurationPickerPanel], mirroring the keys the panel assigns internally.
@@ -381,5 +495,73 @@ void main() {
 
       expect(reported, Duration.zero);
     });
+  });
+
+  group('LayrzDurationPickerPanel locale-length safety', () {
+    // These pin measured character-length thresholds rather than the English
+    // default, per the false-green lesson elsewhere in this run: a test that
+    // only exercises "Days"/"Hours"/"Minutes"/"Seconds" proves nothing about
+    // what a Spanish or Portuguese build actually renders through
+    // `layrz_ui_i18n`, since those keys are translated, not literal in this
+    // repo. Measured directly (temporary probes, deleted): at the real
+    // desktop anchored-panel width (227px, sm: 6, two columns), a 7-char
+    // synthetic suffix fits and an 8-char one ("Segundos", "Secondes",
+    // "Sekunden" among them) overflows. At the real compact width (380px,
+    // xs: 12, one column), 16 characters fit and 18 do not — comfortably
+    // roomy for any real locale.
+
+    testWidgets(
+      'a 7-char synthetic suffix (the measured safe boundary) fits the real compact bottom-sheet flow',
+      (tester) async {
+        await _pumpMobileSheetWithSuffix(tester, suffix: 'Zzzzzzz'); // 7 chars, not the English default
+
+        expect(tester.takeException(), isNull, reason: '7-char labels must fit the compact (xs: 12) column');
+        final dayRect = tester.getRect(find.byKey(_dayKey));
+        final secondRect = tester.getRect(find.byKey(_secondKey));
+        expect(dayRect.width, closeTo(secondRect.width, 0.5));
+      },
+    );
+
+    testWidgets(
+      'a 7-char synthetic suffix (the measured safe boundary) fits the real desktop anchored-panel flow',
+      (tester) async {
+        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzz'); // 7 chars, not the English default
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: '7-char labels must fit the wide (sm: 6) two-column row at the anchor\'s real, capped width',
+        );
+        final dayRect = tester.getRect(find.byKey(_dayKey));
+        final hourRect = tester.getRect(find.byKey(_hourKey));
+        expect(dayRect.top, closeTo(hourRect.top, 0.5), reason: 'still two per row, not forced to wrap');
+      },
+    );
+
+    testWidgets(
+      'KNOWN LIMIT: an 8-char suffix overflows the real desktop anchored-panel flow — matches real words '
+      'like "Segundos"/"Secondes"/"Sekunden"',
+      (tester) async {
+        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzzz'); // 8 chars, one over the safe boundary
+
+        // This assertion is deliberately inverted: it documents a known,
+        // reported limitation rather than a passing behavior, so that fixing
+        // it (via shorter abbreviated suffixText, or a wider anchor cap) is
+        // forced to touch this test rather than silently leaving it stale.
+        // See the DESIGN-44 picker-layout report: a realistic 8-character
+        // locale suffix does not fit the desktop anchored panel's real,
+        // capped width even at the tightest defensible padding/spacing
+        // tokens, and closing that gap is a product decision (abbreviate the
+        // picker's suffixText, or widen the anchor), not a further padding
+        // shave.
+        expect(
+          tester.takeException(),
+          isNotNull,
+          reason:
+              'an 8-char suffix is currently known to overflow the real desktop anchored-panel flow; if '
+              'this starts passing, the fix landed and this test should be inverted back to isNull',
+        );
+      },
+    );
   });
 }
