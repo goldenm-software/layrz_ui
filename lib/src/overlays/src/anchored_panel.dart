@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/positioning/positioning.dart';
 
 import 'anchored_panel_layout_delegate.dart';
 
@@ -27,11 +28,16 @@ typedef LayrzAnchoredPanelBuilder = Widget Function(
 ///   Content overflows are handled via scrolling inside the panel.
 ///
 /// **Positioning:**
-/// - Panel is positioned below the anchor by default, separated by [gap] (default 4.0).
-/// - Panel flips above if insufficient space exists below.
-/// - If neither direction fits, prefers below.
-/// - Horizontal alignment controlled by [alignment] (start, center, end).
-/// - Panel is clamped to overlay bounds on both axes.
+/// - Panel is positioned on [preferredSide] of the anchor (default
+///   [LayrzPreferredSide.bottom] — existing call sites do not move), separated by
+///   [gap] (default 4.0).
+/// - If the panel does not fit on [preferredSide], it flips unconditionally to the
+///   opposite side — there is no second fit test. When neither side fits, the
+///   panel lands on the opposite side and is clamped into the overlay.
+/// - Cross-axis alignment relative to the resolved side is controlled by
+///   [alignment] (start, center, end).
+/// - Panel is clamped to overlay bounds on both axes; its width is additionally
+///   clamped to the space actually available in the overlay.
 ///
 /// **Keyboard and accessibility:**
 /// - Escape key dismisses the panel
@@ -90,12 +96,20 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// (vertical when panel is below/above anchor).
   final double gap;
 
-  /// Horizontal alignment of the panel relative to the anchor.
+  /// Alignment of the panel along the cross axis of its resolved side.
   ///
   /// Defaults to [LayrzAnchoredPanelAlignment.start].
   /// The panel is positioned according to this alignment and then clamped
-  /// into the overlay bounds.
+  /// into the overlay bounds. See [LayrzAnchoredPanelAlignment] for how the
+  /// cross axis is chosen from the resolved side.
   final LayrzAnchoredPanelAlignment alignment;
+
+  /// The preferred side on which the panel is placed relative to the anchor.
+  ///
+  /// Defaults to [LayrzPreferredSide.bottom] — existing call sites do not move.
+  /// If the panel does not fit on this side, it flips unconditionally to
+  /// [LayrzPreferredSideExtension.opposite]; there is no second fit test.
+  final LayrzPreferredSide preferredSide;
 
   /// Optional controller for programmatic control of the panel's open/close state.
   ///
@@ -123,11 +137,14 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// this node outlives the panel widget.
   final FocusNode? childFocusNode;
 
-  /// Optional callback reporting the panel's flip direction.
+  /// Optional callback reporting whether the panel flipped to the side opposite
+  /// [preferredSide].
   ///
-  /// Called with `true` if the panel is positioned above the anchor,
-  /// `false` if positioned below. Useful for adapting corner radius on the side
-  /// adjacent to the anchor.
+  /// Called with `true` when the panel was placed on the side opposite to
+  /// [preferredSide], `false` when it landed on [preferredSide] itself. For the
+  /// default [LayrzPreferredSide.bottom], this is bit-identical to "above" vs
+  /// "below". Useful for adapting corner radius on the side adjacent to the
+  /// anchor.
   final void Function(bool flippedUp)? onFlipped;
 
   /// Optional semantic label for the panel overlay.
@@ -151,6 +168,7 @@ class LayrzAnchoredPanel extends StatefulWidget {
     this.maxHeight,
     this.gap = 4.0,
     this.alignment = LayrzAnchoredPanelAlignment.start,
+    this.preferredSide = LayrzPreferredSide.bottom,
     this.controller,
     this.onOpen,
     this.onClose,
@@ -257,6 +275,7 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
       child: CustomSingleChildLayout(
         delegate: LayrzAnchoredPanelLayoutDelegate(
           anchorRect: info.anchorRect,
+          preferredSide: widget.preferredSide,
           alignment: widget.alignment,
           widthPolicy: widget.widthPolicy,
           widthBounds: widget.widthBounds,

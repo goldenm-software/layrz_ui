@@ -146,7 +146,7 @@ void main() {
       expect(scrollViewRect.height, lessThanOrEqualTo(120.0));
     });
 
-    testWidgets('different alignment options position panel', (tester) async {
+    testWidgets('different alignment options position panel on a vertical side', (tester) async {
       for (final alignment in LayrzAnchoredPanelAlignment.values) {
         addTearDown(tester.view.resetPhysicalSize);
         tester.view.physicalSize = const Size(400, 400);
@@ -164,6 +164,45 @@ void main() {
               child: SizedBox(
                 width: 150,
                 height: 100,
+                child: Text('Panel'),
+              ),
+            ),
+          ),
+        );
+
+        // Tap the button at its center.
+        final buttonCenter = tester.getCenter(find.byType(LayrzButton));
+        await tester.tapAt(buttonCenter);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Panel'), findsOneWidget);
+
+        // Tap the button again to close the panel.
+        final buttonCenterAgain = tester.getCenter(find.byType(LayrzButton));
+        await tester.tapAt(buttonCenterAgain);
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('different alignment options position panel on a horizontal side', (tester) async {
+      for (final alignment in LayrzAnchoredPanelAlignment.values) {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(400, 400);
+
+        await pumpThemed(
+          tester,
+          Align(
+            alignment: Alignment.center,
+            child: LayrzAnchoredPanel(
+              preferredSide: LayrzPreferredSide.right,
+              alignment: alignment,
+              builder: (context, controller) => LayrzButton(
+                labelText: 'Open',
+                onTap: controller.open,
+              ),
+              child: SizedBox(
+                width: 100,
+                height: 60,
                 child: Text('Panel'),
               ),
             ),

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 
+import 'package:layrz_ui/src/positioning/positioning.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Specifies how the anchored panel should size its width.
@@ -40,27 +41,43 @@ class LayrzAnchoredPanelWidthBounds {
        assert(maxWidth >= minWidth, 'maxWidth must be >= minWidth');
 }
 
-/// Positions an anchored panel below or above its anchor with horizontal alignment clamping.
+/// Positions an anchored panel on any of the four sides of its anchor, with
+/// cross-axis alignment and width clamping.
 ///
-/// This delegate computes the overlay-relative position of a panel given the anchor's
-/// position and size. The panel is placed below the anchor by default, but flips above
-/// if insufficient space exists below. If neither fits, the panel prefers below.
+/// This delegate computes the overlay-relative position of a panel given the
+/// anchor's position and size. The panel is placed on [preferredSide] when there
+/// is room, and flips unconditionally to [LayrzPreferredSideExtension.opposite]
+/// when there is not — there is no second fit test and no third fallback. When
+/// neither the preferred side nor its opposite fits, the panel lands on the
+/// opposite side and is clamped into the overlay.
 ///
 /// **Width Policy:**
 /// - [LayrzAnchoredPanelWidthPolicy.matchAnchor]: panel width equals anchor width
 /// - [LayrzAnchoredPanelWidthPolicy.contentSized]: panel width clamped to [widthBounds]
 ///
-/// **Height Policy:** Panel height is constrained by overlay bounds minus padding,
-/// with max height applied as an additional constraint.
+/// In both cases the resulting width is additionally clamped to the space actually
+/// available in the overlay, so a panel never overflows its container horizontally.
 ///
-/// **Flip Detection:** The [flippedUp] callback is invoked with true if the panel
-/// was flipped above the anchor, or false if positioned below. Useful for rounding
-/// corners on the side adjacent to the anchor.
+/// **Height Policy:** Panel height is constrained by overlay bounds minus padding,
+/// with max height applied as an additional constraint. This is deliberately
+/// side-blind — it is not narrowed to the room on the resolved side, to avoid
+/// shrinking panels that already ship clamped to the full overlay height.
+///
+/// **Flip Detection:** The [onFlipped] callback is invoked with `true` if the panel
+/// was placed on the side opposite to [preferredSide], or `false` if it landed on
+/// [preferredSide] itself. Useful for rounding corners on the side adjacent to the
+/// anchor.
 class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
   /// The anchor widget's position and size in overlay coordinates.
   final Rect anchorRect;
 
-  /// Horizontal alignment of the panel relative to the anchor.
+  /// The side of the anchor on which the panel is preferentially placed.
+  ///
+  /// When the panel does not fit on this side, it flips unconditionally to
+  /// [LayrzPreferredSideExtension.opposite].
+  final LayrzPreferredSide preferredSide;
+
+  /// Alignment of the panel along the cross axis of its resolved side.
   final LayrzAnchoredPanelAlignment alignment;
 
   /// Policy for computing panel width.
@@ -81,18 +98,19 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
   /// Design tokens for spacing and radius.
   final LayrzTokens tokens;
 
-  /// Callback to report whether the panel flipped above the anchor.
+  /// Callback reporting whether the panel flipped to the side opposite [preferredSide].
   ///
-  /// Called with `true` if the panel is positioned above the anchor,
-  /// `false` if positioned below.
+  /// Called with `true` when the panel was placed on the side opposite to
+  /// [preferredSide], `false` when it landed on [preferredSide] itself.
   final void Function(bool flippedUp)? onFlipped;
 
   /// Creates a new layout delegate for an anchored panel.
   ///
-  /// [anchorRect], [alignment], [widthPolicy], [widthBounds], [gap], [overlaySize],
-  /// and [tokens] are required. All other parameters are optional.
+  /// [anchorRect], [preferredSide], [alignment], [widthPolicy], [widthBounds], [gap],
+  /// [overlaySize], and [tokens] are required. All other parameters are optional.
   LayrzAnchoredPanelLayoutDelegate({
     required this.anchorRect,
+    required this.preferredSide,
     required this.alignment,
     required this.widthPolicy,
     required this.widthBounds,
@@ -120,48 +138,113 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
         maxWidth = widthBounds.maxWidth;
     }
 
-    // Height constraint: overlay bounds minus padding, with optional max height applied
+    // The overlay's horizontal budget, minus padding on both sides. Applies on
+    // every side — a panel must never be wider than the overlay itself.
+    final horizontalBudget = (overlaySize.width - 2 * tokens.spacing.sp2).clamp(0.0, double.infinity);
+
+    // For a horizontal side, width is the MAIN axis, so it is additionally bounded
+    // by the larger of the two rooms beside the anchor. `getPositionForChild` picks
+    // between them once `childSize` is known; this must not constrain the child
+    // smaller than whichever one it ends up on.
+    final double mainAxisRoom;
+    if (preferredSide.isHorizontal) {
+      final roomLeft = (anchorRect.left - gap).clamp(0.0, double.infinity);
+      final roomRight = (overlaySize.width - anchorRect.right - gap).clamp(0.0, double.infinity);
+      mainAxisRoom = math.max(roomLeft, roomRight);
+    } else {
+      mainAxisRoom = horizontalBudget;
+    }
+
+    final effectiveMaxWidth = math.min(maxWidth, math.min(horizontalBudget, mainAxisRoom));
+    // Never let min exceed max — matchAnchor sets min == max == anchorRect.width,
+    // and contentSized sets a fixed minWidth; both can outgrow a narrow overlay.
+    final effectiveMinWidth = math.min(minWidth, effectiveMaxWidth);
+
+    // Height constraint: overlay bounds minus padding, with optional max height
+    // applied. Deliberately side-blind — see class doc.
     final availableHeight = (overlaySize.height - 2 * tokens.spacing.sp2).clamp(0.0, double.infinity);
     final constrainedHeight = maxHeight != null ? math.min(availableHeight, maxHeight!) : availableHeight;
 
     return BoxConstraints(
-      minWidth: minWidth,
-      maxWidth: maxWidth,
+      minWidth: effectiveMinWidth,
+      maxWidth: effectiveMaxWidth,
       maxHeight: constrainedHeight.clamp(0.0, double.infinity),
     );
   }
 
-  @override
-  Offset getPositionForChild(Size size, Size childSize) {
-    // Calculate Y position: try below first, flip above if no room
-    final belowY = anchorRect.bottom + gap;
-    final aboveY = anchorRect.top - childSize.height - gap;
+  /// Resolves which side the panel actually lands on, given the now-known [childSize].
+  ///
+  /// Flips unconditionally to [LayrzPreferredSideExtension.opposite] of
+  /// [preferredSide] when the preferred side does not fit — there is no second
+  /// fit test against the opposite side.
+  LayrzPreferredSide _resolveSide(Size size, Size childSize) {
+    switch (preferredSide) {
+      case LayrzPreferredSide.bottom:
+        final fits = anchorRect.bottom + gap + childSize.height <= size.height;
+        return fits ? LayrzPreferredSide.bottom : LayrzPreferredSide.top;
+      case LayrzPreferredSide.top:
+        final fits = anchorRect.top - gap - childSize.height >= 0.0;
+        return fits ? LayrzPreferredSide.top : LayrzPreferredSide.bottom;
+      case LayrzPreferredSide.left:
+        final fits = anchorRect.left - gap - childSize.width >= 0.0;
+        return fits ? LayrzPreferredSide.left : LayrzPreferredSide.right;
+      case LayrzPreferredSide.right:
+        final fits = anchorRect.right + gap + childSize.width <= size.width;
+        return fits ? LayrzPreferredSide.right : LayrzPreferredSide.left;
+    }
+  }
 
-    final belowFits = belowY + childSize.height <= size.height;
-    final aboveFits = aboveY >= 0.0;
-
-    final y = belowFits ? belowY : (aboveFits ? aboveY : belowY);
-    final flippedUp = !belowFits && aboveFits;
-
-    // Notify callback of flip decision
-    onFlipped?.call(flippedUp);
-
-    // Clamp to overlay bounds vertically
-    final clampedY = y.clamp(0.0, (size.height - childSize.height).clamp(0.0, double.infinity));
-
-    // Calculate X position based on alignment
-    double x;
+  /// The cross-axis X coordinate for [alignment], used when the resolved side is
+  /// vertical (top or bottom).
+  double _crossAxisX(Size childSize) {
     switch (alignment) {
       case LayrzAnchoredPanelAlignment.start:
-        x = anchorRect.left;
+        return anchorRect.left;
       case LayrzAnchoredPanelAlignment.center:
-        x = anchorRect.center.dx - childSize.width / 2;
+        return anchorRect.center.dx - childSize.width / 2;
       case LayrzAnchoredPanelAlignment.end:
-        x = anchorRect.right - childSize.width;
+        return anchorRect.right - childSize.width;
+    }
+  }
+
+  /// The cross-axis Y coordinate for [alignment], used when the resolved side is
+  /// horizontal (left or right).
+  double _crossAxisY(Size childSize) {
+    switch (alignment) {
+      case LayrzAnchoredPanelAlignment.start:
+        return anchorRect.top;
+      case LayrzAnchoredPanelAlignment.center:
+        return anchorRect.center.dy - childSize.height / 2;
+      case LayrzAnchoredPanelAlignment.end:
+        return anchorRect.bottom - childSize.height;
+    }
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final resolved = _resolveSide(size, childSize);
+    onFlipped?.call(resolved != preferredSide);
+
+    double x;
+    double y;
+    switch (resolved) {
+      case LayrzPreferredSide.bottom:
+        y = anchorRect.bottom + gap;
+        x = _crossAxisX(childSize);
+      case LayrzPreferredSide.top:
+        y = anchorRect.top - childSize.height - gap;
+        x = _crossAxisX(childSize);
+      case LayrzPreferredSide.left:
+        x = anchorRect.left - childSize.width - gap;
+        y = _crossAxisY(childSize);
+      case LayrzPreferredSide.right:
+        x = anchorRect.right + gap;
+        y = _crossAxisY(childSize);
     }
 
-    // Clamp to overlay bounds horizontally
+    // Clamp to overlay bounds on both axes.
     final clampedX = x.clamp(0.0, (size.width - childSize.width).clamp(0.0, double.infinity));
+    final clampedY = y.clamp(0.0, (size.height - childSize.height).clamp(0.0, double.infinity));
 
     return Offset(clampedX, clampedY);
   }
@@ -169,6 +252,7 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
   @override
   bool shouldRelayout(LayrzAnchoredPanelLayoutDelegate oldDelegate) {
     return oldDelegate.anchorRect != anchorRect ||
+        oldDelegate.preferredSide != preferredSide ||
         oldDelegate.alignment != alignment ||
         oldDelegate.widthPolicy != widthPolicy ||
         oldDelegate.widthBounds != widthBounds ||
@@ -179,14 +263,27 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
   }
 }
 
-/// Specifies the horizontal alignment of an anchored panel relative to its anchor.
+/// Specifies the alignment of an anchored panel along the cross axis of its resolved side.
+///
+/// The cross axis is horizontal when the panel is placed above or below the anchor,
+/// and vertical when it is placed to the left or right — the same axis-relative
+/// convention Flutter uses for [CrossAxisAlignment].
 enum LayrzAnchoredPanelAlignment {
-  /// Panel's left edge aligns with the anchor's left edge.
+  /// Panel's leading cross-axis edge aligns with the anchor's leading edge:
+  /// the left edges on a vertical side, the top edges on a horizontal side.
+  ///
+  /// `start` is the leading edge in left-to-right layouts. [Directionality] is not
+  /// yet honoured; in right-to-left layouts this still means the left edge.
   start,
 
-  /// Panel's center aligns with the anchor's center.
+  /// Panel's cross-axis center aligns with the anchor's cross-axis center:
+  /// horizontal centers on a vertical side, vertical centers on a horizontal side.
   center,
 
-  /// Panel's right edge aligns with the anchor's right edge.
+  /// Panel's trailing cross-axis edge aligns with the anchor's trailing edge:
+  /// the right edges on a vertical side, the bottom edges on a horizontal side.
+  ///
+  /// `end` is the trailing edge in left-to-right layouts. [Directionality] is not
+  /// yet honoured; in right-to-left layouts this still means the right edge.
   end,
 }
