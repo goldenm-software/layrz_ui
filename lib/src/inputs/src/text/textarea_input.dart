@@ -382,9 +382,23 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
       ].join('. ');
     }
 
+    // Deliberately NOT setting a `hint:` value here (DESIGN-149). LayrzInputChrome already
+    // renders `hintText` as a plain, non-excluded Text (input_chrome.dart:417/:436) that
+    // Flutter merges straight into this field's own label -- e.g. labelText: 'Comments',
+    // hintText: 'Enter your comments here' announces as a single two-line label
+    // "Comments\nEnter your comments here" (confirmed by a Phase 0 semantics dump; see the
+    // pinned shape in textarea_input_a11y_test.dart's "hint text is exposed to screen
+    // readers exactly once, merged into the label"). This mirrors the fix DESIGN-116 landed
+    // for LayrzNumberInput (number_input.dart:615-621). Re-adding `hint: widget.hintText`
+    // here would announce the hint a second time, once folded into `label` and once again
+    // in `hint` -- that duplication is exactly what this row fixes.
+    //
+    // This does NOT move the hint into the semantically "correct" field (SemanticsNode.hint
+    // is where a placeholder belongs; folding it into the accessible name is the house
+    // convention, not the accessibility ideal). That is a separate, family-wide defect
+    // shared by all seven LayrzInputChrome consumers and is tracked outside this row.
     return Semantics(
       label: semanticLabel,
-      hint: widget.hintText,
       tooltip: semanticTooltip,
       enabled: !isDisabled,
       child: LayrzInputChrome.variableHeight(
