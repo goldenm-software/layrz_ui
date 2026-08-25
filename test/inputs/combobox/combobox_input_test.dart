@@ -361,5 +361,130 @@ void main() {
         reason: 'a web-style combobox list matches its field width',
       );
     });
+
+    testWidgets(
+      'opens the compact bottom sheet and commits a selection exactly once (DESIGN-35)',
+      (tester) async {
+        // This is the gate for DESIGN-35's mobile fix: before it, the compact
+        // combobox was structurally non-functional for any option count (a
+        // ListView nested inside the sheet's own same-axis SingleChildScrollView
+        // asserted with "Vertical viewport was given unbounded height"), yet the
+        // suite stayed green because nothing opened the sheet at all.
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final options = ['Alpha', 'Bravo', 'Charlie'];
+        var changedCount = 0;
+        var submitCount = 0;
+        String? lastChanged;
+        String? lastSubmitted;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: options,
+            onChanged: (value) {
+              changedCount++;
+              lastChanged = value;
+            },
+            onSubmit: (value) {
+              submitCount++;
+              lastSubmitted = value;
+            },
+          ),
+        );
+
+        // Tapping the chrome alone does not open the combobox's overlay/sheet —
+        // only a tap that lands on the EditableText itself does. Verified during
+        // the DESIGN-35 investigation; asserted here so a future regression that
+        // moves the open-trigger back onto the chrome is caught.
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+        expect(
+          find.byType(BottomSheetContent),
+          findsNothing,
+          reason: 'tapping the chrome alone must not open the compact sheet',
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheetContent), findsOneWidget);
+        expect(find.text('Alpha'), findsOneWidget);
+        expect(find.text('Bravo'), findsOneWidget);
+        expect(find.text('Charlie'), findsOneWidget);
+
+        await tester.tap(find.text('Bravo'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byType(BottomSheetContent),
+          findsNothing,
+          reason: 'selecting an option closes the sheet',
+        );
+        expect(
+          changedCount,
+          1,
+          reason:
+              'onChanged must fire exactly once per mobile selection, not twice (the '
+              'BottomSheetContent onSelected callback + Navigator.pop double-commit) and '
+              'not zero times (the sheet never rendering usable content)',
+        );
+        expect(submitCount, 1, reason: 'onSubmit must fire exactly once per mobile selection');
+        expect(lastChanged, 'Bravo');
+        expect(lastSubmitted, 'Bravo');
+      },
+    );
+
+    testWidgets(
+      'reselecting the same option again does not re-fire onChanged, but does re-fire onSubmit',
+      (tester) async {
+        // Pins the contract decided for the onChanged/onSubmit split once selection
+        // commits stopped double-firing onChanged (DESIGN-35): onChanged tracks the
+        // field's *text value* (per its own doc comment, "fired when the input value
+        // changes") and is deliberately silent when a selection does not change the
+        // text — including re-selecting the option already shown. onSubmit tracks the
+        // *user action* of committing a value (per its doc comment, "fired when the
+        // user submits the input") and fires on every commit unconditionally, so a
+        // caller that needs "the user picked something" — even the same something
+        // again — has a callback that never misses one.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var changedCount = 0;
+        var submitCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo', 'Charlie'],
+            onChanged: (_) => changedCount++,
+            onSubmit: (_) => submitCount++,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
+        await tester.pumpAndSettle();
+
+        expect(changedCount, 1);
+        expect(submitCount, 1);
+
+        // Re-open and select the same option again. The field's text already
+        // reads "Bravo", so the option list is filtered down to that single entry.
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
+        await tester.pumpAndSettle();
+
+        expect(changedCount, 1, reason: 'onChanged does not re-fire: the text did not change');
+        expect(submitCount, 2, reason: 'onSubmit fires on every commit, including a repeated selection');
+      },
+    );
   });
 }
