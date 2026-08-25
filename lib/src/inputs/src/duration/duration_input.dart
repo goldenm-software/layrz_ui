@@ -363,23 +363,30 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       child: GestureDetector(
         onTap: widget.disabled ? null : controller.open,
         behavior: HitTestBehavior.opaque,
-        child: LayrzInputChrome(
-          labelText: widget.labelText,
-          hintText: widget.hintText,
-          isRequired: widget.isRequired,
-          prefixSlot: const LayrzInputPrefixSlot(),
-          suffixSlot: const LayrzInputSuffixSlot(),
-          disabled: widget.disabled,
-          readOnly: true,
-          errors: widget.errors,
-          hideDetails: widget.hideDetails,
-          states: states,
-          suppressReadOnlyLock: true,
-          controller: _controller,
-          padding: widget.padding,
-          helpTitleText: widget.helpTitleText,
-          helpContentText: widget.helpContentText,
-          child: contentChild,
+        // Attaches `_focusNode` to the focus tree. `LayrzInputChrome` is
+        // purely visual and never does this itself, and passing the node to
+        // `LayrzAnchoredPanel.childFocusNode` alone only tells the panel where
+        // to restore focus -- it does not attach the node anywhere on its own.
+        child: Focus(
+          focusNode: _focusNode,
+          child: LayrzInputChrome(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            isRequired: widget.isRequired,
+            prefixSlot: const LayrzInputPrefixSlot(),
+            suffixSlot: const LayrzInputSuffixSlot(),
+            disabled: widget.disabled,
+            readOnly: true,
+            errors: widget.errors,
+            hideDetails: widget.hideDetails,
+            states: states,
+            suppressReadOnlyLock: true,
+            controller: _controller,
+            padding: widget.padding,
+            helpTitleText: widget.helpTitleText,
+            helpContentText: widget.helpContentText,
+            child: contentChild,
+          ),
         ),
       ),
     );
@@ -429,23 +436,29 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         child: GestureDetector(
           onTap: widget.disabled ? null : _openMobileSurface,
           behavior: HitTestBehavior.opaque,
-          child: LayrzInputChrome(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            prefixSlot: const LayrzInputPrefixSlot(),
-            suffixSlot: const LayrzInputSuffixSlot(),
-            disabled: widget.disabled,
-            readOnly: true,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            states: states,
-            suppressReadOnlyLock: true,
-            controller: _controller,
-            padding: widget.padding,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            child: contentChild,
+          // Attaches `_focusNode` to the focus tree. The compact path has no
+          // `Focus` widget of its own -- `LayrzInputChrome` is purely visual
+          // -- so nothing ever received the node before this.
+          child: Focus(
+            focusNode: _focusNode,
+            child: LayrzInputChrome(
+              labelText: widget.labelText,
+              hintText: widget.hintText,
+              isRequired: widget.isRequired,
+              prefixSlot: const LayrzInputPrefixSlot(),
+              suffixSlot: const LayrzInputSuffixSlot(),
+              disabled: widget.disabled,
+              readOnly: true,
+              errors: widget.errors,
+              hideDetails: widget.hideDetails,
+              states: states,
+              suppressReadOnlyLock: true,
+              controller: _controller,
+              padding: widget.padding,
+              helpTitleText: widget.helpTitleText,
+              helpContentText: widget.helpContentText,
+              child: contentChild,
+            ),
           ),
         ),
       );
@@ -458,6 +471,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
           maxWidth: 480.0,
         ),
         maxHeight: 400.0,
+        childFocusNode: _focusNode,
         builder: (context, controller) {
           _panelController = controller;
           return _buildAnchor(context, controller);
