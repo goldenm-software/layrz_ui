@@ -177,8 +177,10 @@ void main() {
         ),
       );
 
-      // The increment button should exist (with + glyph icon) and be disabled when at maximum
-      expect(find.byType(Icon), findsWidgets);
+      // The increment button should exist and report disabled via its own prop, not merely
+      // by an Icon existing somewhere in the tree (that would pass even if the disabled
+      // state were wrong).
+      expect(tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled, isTrue);
     });
 
     testWidgets('disables decrement button at minimum', (tester) async {
@@ -191,8 +193,120 @@ void main() {
         ),
       );
 
-      // The decrement button should exist (with − glyph icon) and be disabled when at minimum
-      expect(find.byType(Icon), findsWidgets);
+      // The decrement button should exist and report disabled via its own prop, not merely
+      // by an Icon existing somewhere in the tree (that would pass even if the disabled
+      // state were wrong).
+      expect(tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).first).isDisabled, isTrue);
+    });
+
+    group('LayrzNumberInput step cap staleness (DESIGN-150)', () {
+      // None of these tests supplies `onChanged`, and `pumpThemed` gives no parent that
+      // could rebuild this widget for any external reason. So the only thing in the system
+      // capable of updating a cap's rendered state after the initial build is the
+      // controller-value listener the fix adds -- these are genuine regression tests for
+      // the staleness bug, not incidental passes.
+      testWidgets(
+        'increment cap goes stale-correct immediately after a tap reaches maximum (door 2)',
+        (tester) async {
+          await pumpThemed(
+            tester,
+            const LayrzNumberInput(labelText: 'Quantity', value: 9, minimum: 0, maximum: 10, step: 1),
+          );
+
+          await tester.tap(find.byType(NumberFieldControl).last);
+          await tester.pumpAndSettle();
+
+          final incrementCap = tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last);
+          expect(incrementCap.isDisabled, isTrue);
+          expect(incrementCap.onTap, isNull);
+          expect(
+            tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).first).isDisabled,
+            isFalse,
+            reason: 'the decrement cap is nowhere near its bound and must remain enabled',
+          );
+          expect(
+            tester
+                .widget<AnimatedOpacity>(
+                  find.descendant(
+                    of: find.byType(NumberFieldControl).last,
+                    matching: find.byType(AnimatedOpacity),
+                  ),
+                )
+                .opacity,
+            0.5,
+            reason: 'the rendered treatment, not just the prop, must reflect the new disabled state',
+          );
+        },
+      );
+
+      testWidgets(
+        'decrement cap goes stale-correct immediately after a tap reaches minimum (door 2)',
+        (tester) async {
+          await pumpThemed(
+            tester,
+            const LayrzNumberInput(labelText: 'Quantity', value: 1, minimum: 0, step: 1),
+          );
+
+          await tester.tap(find.byType(NumberFieldControl).first);
+          await tester.pumpAndSettle();
+
+          final decrementCap = tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).first);
+          expect(decrementCap.isDisabled, isTrue);
+          expect(decrementCap.onTap, isNull);
+        },
+      );
+
+      testWidgets(
+        'a cap re-enables immediately after a tap moves the value away from its bound (door 2)',
+        (tester) async {
+          // The re-enabling direction: a fix that only ever disables (e.g. a cache that is
+          // never cleared) would pass every disabling test above and still fail this one.
+          await pumpThemed(
+            tester,
+            const LayrzNumberInput(labelText: 'Quantity', value: 10, minimum: 0, maximum: 10, step: 1),
+          );
+
+          expect(
+            tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+            isTrue,
+            reason: 'sanity check: the widget must start at its upper bound',
+          );
+
+          await tester.tap(find.byType(NumberFieldControl).first);
+          await tester.pumpAndSettle();
+
+          final incrementCap = tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last);
+          expect(incrementCap.isDisabled, isFalse);
+          expect(incrementCap.onTap, isNotNull);
+        },
+      );
+
+      testWidgets(
+        'increment cap goes stale-correct after the controller text changes directly (door 3, typing)',
+        (tester) async {
+          final controller = TextEditingController(text: '9');
+          addTearDown(controller.dispose);
+
+          await pumpThemed(
+            tester,
+            LayrzNumberInput(
+              labelText: 'Quantity',
+              value: 9,
+              minimum: 0,
+              maximum: 10,
+              controller: controller,
+            ),
+          );
+
+          controller.text = '10';
+          await tester.pump();
+
+          expect(
+            tester.widget<NumberFieldControl>(find.byType(NumberFieldControl).last).isDisabled,
+            isTrue,
+          );
+        },
+      );
     });
 
     testWidgets('hides step buttons when hideStepButtons is true', (tester) async {
