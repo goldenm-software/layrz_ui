@@ -582,8 +582,8 @@ class LayrzInputChrome extends StatelessWidget {
   /// Caller-supplied widgets are constrained to [contentHeight] to prevent them
   /// from changing field geometry. This ensures consistent height across all states.
   ///
-  /// Per D64 ("name only when told"), every slot the chrome renders falls into exactly
-  /// one of three semantics categories — nothing is silent by accident:
+  /// Per D64 ("name only when told"), every slot the chrome renders falls into one of
+  /// four semantics categories — nothing is silent by accident:
   ///
   /// - **named**: [LayrzInputSlot.semanticLabel] is non-null. Gets its own
   ///   `Semantics(container: true, ...)` node, with `button: true` when also
@@ -592,14 +592,23 @@ class LayrzInputChrome extends StatelessWidget {
   ///   which sit outside it), so a bare `Semantics(button: true)` would be absorbed
   ///   into the field's node, making the text field itself announce as a button.
   /// - **decorative**: [LayrzInputSlot.isDecorative] is true, or the slot is a
-  ///   non-interactive icon/widget with no label. Wrapped in [ExcludeSemantics].
-  ///   A non-interactive text slot is the one exception: its text merges into the
-  ///   field's own accessible name by design (`'$'`, `'kg'`, `'@'` belong there).
+  ///   non-interactive icon with no label (an `Icon` the chrome itself builds carries
+  ///   no semantics of its own, so there is nothing to protect). Wrapped in
+  ///   [ExcludeSemantics]. A non-interactive text slot is the one exception: its text
+  ///   merges into the field's own accessible name by design (`'$'`, `'kg'`, `'@'`
+  ///   belong there).
   /// - **pointer-only**: interactive ([LayrzInputSlot.onTap] non-null) but nobody
   ///   supplied a [LayrzInputSlot.semanticLabel]. Rendered and tappable, but
   ///   `excludeFromSemantics: true` on the underlying [GestureDetector] means it
   ///   contributes nothing to the semantics tree — the chrome does not infer or
   ///   invent a name the caller did not give it. See D64.
+  /// - **the caller's own responsibility**: a non-interactive, unlabelled, non-decorative
+  ///   *widget* slot is passed through untouched. The widget form is the one slot form
+  ///   where the caller has a seam of their own — they may have already embedded a
+  ///   `Semantics` node in what they passed to `prefix:`/`suffix:` (this is exactly what
+  ///   the wiki's "pass a real, focusable, labelled control" contract depends on). The
+  ///   chrome cannot see inside that subtree, so it must not guess "nothing there" and
+  ///   silence it; only an explicit [LayrzInputSlot.isDecorative] authorizes exclusion.
   Widget _buildSlotContent({
     required BuildContext context,
     required LayrzInputSlot slot,
@@ -675,8 +684,22 @@ class LayrzInputChrome extends StatelessWidget {
       return content;
     }
 
-    // Declared decorative (or simply unnamed): an unnamed, non-interactive icon or
-    // widget is intentionally hidden rather than silently absent. See D64.
+    // Widget slots are the caller's own responsibility: the chrome did not build this
+    // subtree and cannot see whether it already carries its own `Semantics` (e.g. a
+    // focusable, labelled control passed per the wiki's documented contract). Passing
+    // it through untouched is what makes that contract honourable -- excluding it here
+    // would silence semantics the caller deliberately attached at their own call site.
+    // Only an explicit `isDecorative: true` authorizes exclusion.
+    if (slot.widget != null) {
+      if (slot.isDecorative) {
+        return ExcludeSemantics(child: content);
+      }
+      return content;
+    }
+
+    // Remaining case: an unnamed, non-interactive icon the chrome built itself. An
+    // `Icon` carries no semantics of its own, so there is nothing to protect --
+    // declared decorative and excluded, whether or not `isDecorative` was set. See D64.
     return ExcludeSemantics(child: content);
   }
 

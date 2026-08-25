@@ -194,6 +194,46 @@ void main() {
       handle.dispose();
     });
 
+    testWidgets(
+      "a widget slot the caller already labelled is passed through untouched -- it is the caller's "
+      'own responsibility, not the chrome\'s to silence',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+
+        await pumpThemed(
+          tester,
+          _FieldHarness(
+            labelText: 'Amount',
+            // No `onTap`, no `semanticLabel`, no `isDecorative` at the slot level --
+            // the caller instead embedded their own Semantics-carrying control
+            // directly in the widget they handed to `suffix:`. This is exactly the
+            // wiki's documented "pass a real, focusable, labelled control through
+            // prefix:/suffix:" contract, and the chrome must not silence it: it did
+            // not build this subtree and cannot know it carries no meaning.
+            suffixSlot: LayrzInputSuffixSlot(
+              widget: Semantics(
+                container: true,
+                button: true,
+                label: 'Copy to clipboard',
+                child: const Icon(MdiIcons.contentCopy),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.byIcon(MdiIcons.contentCopy), findsOneWidget);
+
+        // The caller's own node must still be reachable -- proving the chrome passed
+        // the subtree through rather than wrapping it in ExcludeSemantics.
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Copy to clipboard')),
+          matchesSemantics(label: 'Copy to clipboard', isButton: true),
+        );
+
+        handle.dispose();
+      },
+    );
+
     testWidgets('labelled non-interactive icon slot: its own node; field node does NOT gain the label', (
       tester,
     ) async {
