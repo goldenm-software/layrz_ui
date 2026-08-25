@@ -1002,6 +1002,107 @@ void main() {
       expect(changed, isFalse);
     });
   });
+
+  // DESIGN-40: the desktop surface previously stacked two disagreeing height
+  // caps (a fixed `SizedBox(height: 300)` around a `LimitedBox(maxHeight:
+  // 300)`-capped list), which both pinned the panel to exactly 300px
+  // regardless of content AND overflowed by the search field's height once
+  // enough items were added. The rule is now: `height = min(content, 300)`,
+  // scroll past 300 -- enforced by `LayrzAnchoredPanel.maxHeight` alone.
+  //
+  // These assertions are measured geometry, not widget presence: presence
+  // assertions are exactly what let the original overflow ship behind a
+  // green suite (only 3-item fixtures existed before this).
+  group('LayrzSelectInput height rule (DESIGN-40)', () {
+    List<LayrzSelectItem<String>> buildItems(int count) => List.generate(
+      count,
+      (i) => LayrzSelectItem(labelText: 'Option $i', value: 'v$i'),
+    );
+
+    testWidgets('desktop panel shrinks to content with 2 items', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: buildItems(2), labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      // Before the fix this measured Size(1580.0, 300.0) -- a fixed height
+      // regardless of content. With 2 items the panel must shrink well
+      // below the 300px cap.
+      final panelSize = tester.getSize(find.byType(SingleChildScrollView));
+      expect(panelSize.height, lessThan(300.0));
+    });
+
+    testWidgets('desktop panel caps at 300 and scrolls past it with 30 items', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: buildItems(30), labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      final panelSize = tester.getSize(find.byType(SingleChildScrollView));
+      expect(panelSize.height, equals(300.0));
+
+      // The cap must be scrollable, not merely clipped: all 30 items are
+      // built (this is a plain `Column`, not a lazy `ListView`), so presence
+      // alone proves nothing -- assert that dragging actually moves content,
+      // i.e. the viewport genuinely scrolls rather than being pinned.
+      final topBefore = tester.getTopLeft(find.text('Option 29')).dy;
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      final topAfter = tester.getTopLeft(find.text('Option 29')).dy;
+      expect(topAfter, lessThan(topBefore));
+    });
+
+    testWidgets('8 items renders with no overflow exception (below the old threshold)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: buildItems(8), labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('12 items renders with no overflow exception (the original repro threshold)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: buildItems(12), labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      // Before the fix this threw `A RenderFlex overflowed by 68 pixels`.
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 class _TestState {

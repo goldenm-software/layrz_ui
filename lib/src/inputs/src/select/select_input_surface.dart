@@ -208,32 +208,31 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
             ),
           )
         else
-          LimitedBox(
-            maxHeight: 300,
-            child: KeyboardListener(
-              focusNode: _listFocusNode,
-              onKeyEvent: _handleKeyEvent,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(_filteredItems.length, (index) {
-                    final item = _filteredItems[index];
-                    final isHighlighted = _highlightedIndex == index;
-                    final isSelected = item.value == widget.selectedItem?.value;
+          // No height cap here: the 300px maximum is applied exactly once,
+          // by the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the
+          // bottom sheet's own scrollable on mobile). A second, disagreeing
+          // cap here is DESIGN-40's root cause -- see `select_input.dart`.
+          KeyboardListener(
+            focusNode: _listFocusNode,
+            onKeyEvent: _handleKeyEvent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(_filteredItems.length, (index) {
+                final item = _filteredItems[index];
+                final isHighlighted = _highlightedIndex == index;
+                final isSelected = item.value == widget.selectedItem?.value;
 
-                    return _SelectItemRow(
-                      key: ValueKey(item.value),
-                      item: item,
-                      isHighlighted: isHighlighted,
-                      isSelected: isSelected,
-                      onTap: () {
-                        widget.onItemSelected(item);
-                        widget.panelController?.close();
-                      },
-                    );
-                  }),
-                ),
-              ),
+                return _SelectItemRow(
+                  key: ValueKey(item.value),
+                  item: item,
+                  isHighlighted: isHighlighted,
+                  isSelected: isSelected,
+                  onTap: () {
+                    widget.onItemSelected(item);
+                    widget.panelController?.close();
+                  },
+                );
+              }),
             ),
           ),
       ],

@@ -340,23 +340,30 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       child: GestureDetector(
         onTap: widget.disabled ? null : controller.open,
         behavior: HitTestBehavior.opaque,
-        child: LayrzInputChrome(
-          labelText: widget.labelText,
-          hintText: widget.hintText,
-          isRequired: widget.isRequired,
-          prefixSlot: prefixSlot,
-          suffixSlot: finalSuffixSlot,
-          disabled: widget.disabled,
-          readOnly: true,
-          errors: widget.errors,
-          hideDetails: widget.hideDetails,
-          states: _states,
-          helpTitleText: widget.helpTitleText,
-          helpContentText: widget.helpContentText,
-          controller: _controller,
-          padding: widget.padding,
-          suppressReadOnlyLock: true,
-          child: contentChild,
+        // Attaches `_focusNode` to the focus tree (DESIGN-144). `LayrzInputChrome`
+        // is purely visual and never does this itself, and passing the node to
+        // `LayrzAnchoredPanel.childFocusNode` alone only tells the panel where to
+        // restore focus -- it does not attach the node anywhere on its own.
+        child: Focus(
+          focusNode: _focusNode,
+          child: LayrzInputChrome(
+            labelText: widget.labelText,
+            hintText: widget.hintText,
+            isRequired: widget.isRequired,
+            prefixSlot: prefixSlot,
+            suffixSlot: finalSuffixSlot,
+            disabled: widget.disabled,
+            readOnly: true,
+            errors: widget.errors,
+            hideDetails: widget.hideDetails,
+            states: _states,
+            helpTitleText: widget.helpTitleText,
+            helpContentText: widget.helpContentText,
+            controller: _controller,
+            padding: widget.padding,
+            suppressReadOnlyLock: true,
+            child: contentChild,
+          ),
         ),
       ),
     );
@@ -436,48 +443,59 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
         child: GestureDetector(
           onTap: widget.disabled ? null : _openMobileSurface,
           behavior: HitTestBehavior.opaque,
-          child: LayrzInputChrome(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            prefixSlot: prefixSlot,
-            suffixSlot: finalSuffixSlot,
-            disabled: widget.disabled,
-            readOnly: true,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            states: _states,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            controller: _controller,
-            padding: widget.padding,
-            suppressReadOnlyLock: true,
-            child: contentChild,
+          // Attaches `_focusNode` to the focus tree (DESIGN-144). The compact
+          // path has no `Focus` widget of its own -- `LayrzInputChrome` is
+          // purely visual -- so nothing ever received the node before this.
+          child: Focus(
+            focusNode: _focusNode,
+            child: LayrzInputChrome(
+              labelText: widget.labelText,
+              hintText: widget.hintText,
+              isRequired: widget.isRequired,
+              prefixSlot: prefixSlot,
+              suffixSlot: finalSuffixSlot,
+              disabled: widget.disabled,
+              readOnly: true,
+              errors: widget.errors,
+              hideDetails: widget.hideDetails,
+              states: _states,
+              helpTitleText: widget.helpTitleText,
+              helpContentText: widget.helpContentText,
+              controller: _controller,
+              padding: widget.padding,
+              suppressReadOnlyLock: true,
+              child: contentChild,
+            ),
           ),
         ),
       );
     } else {
-      // Desktop: return anchored panel with selection surface
+      // Desktop: return anchored panel with selection surface.
+      //
+      // `maxHeight: 300` is the ONLY height cap for this surface (DESIGN-40):
+      // `LayrzAnchoredPanel` already clamps its content to this value and
+      // scrolls past it, while shrinking to content when the list is shorter
+      // than 300 -- so no fixed-height wrapper is needed here, and the
+      // surface itself must not impose a second, disagreeing cap.
       return LayrzAnchoredPanel(
         widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
+        maxHeight: 300.0,
+        childFocusNode: _focusNode,
         builder: (context, controller) {
           _panelController = controller;
           return _buildAnchor(context, controller);
         },
-        child: SizedBox(
-          height: 300,
-          child: LayrzSelectInputSurface(
-            items: widget.items,
-            selectedItem: _findSelectedItem(),
-            enableSearch: widget.enableSearch,
-            canUnselect: widget.canUnselect,
-            filter: widget.filter,
-            emptyListText: widget.emptyListText,
-            panelController: _panelController,
-            onItemSelected: (item) {
-              widget.onChanged?.call(item);
-            },
-          ),
+        child: LayrzSelectInputSurface(
+          items: widget.items,
+          selectedItem: _findSelectedItem(),
+          enableSearch: widget.enableSearch,
+          canUnselect: widget.canUnselect,
+          filter: widget.filter,
+          emptyListText: widget.emptyListText,
+          panelController: _panelController,
+          onItemSelected: (item) {
+            widget.onChanged?.call(item);
+          },
         ),
       );
     }

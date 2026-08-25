@@ -58,4 +58,53 @@ void main() {
       expect(() => external.dispose(), returnsNormally);
     });
   });
+
+  // DESIGN-144: separated from the lifecycle group above on purpose -- this
+  // run also touches the surface's height rule (DESIGN-40), and a red suite
+  // must point unambiguously at which change broke it.
+  group('LayrzSelectInput focus node wiring (DESIGN-144)', () {
+    testWidgets('caller-supplied focusNode is usable via requestFocus on desktop', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          items: const [LayrzSelectItem(labelText: 'Option A', value: 'a')],
+          focusNode: focusNode,
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(focusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('caller-supplied focusNode is usable via requestFocus on mobile', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          items: const [LayrzSelectItem(labelText: 'Option A', value: 'a')],
+          focusNode: focusNode,
+        ),
+      );
+
+      focusNode.requestFocus();
+      await tester.pump();
+
+      expect(focusNode.hasFocus, isTrue);
+    });
+  });
 }
