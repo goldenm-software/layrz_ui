@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/grid/grid.dart';
 
 import '../number/decimal_separator.dart';
 import 'duration_unit.dart';
@@ -9,8 +10,19 @@ import '../number/number_input.dart';
 /// Internal widget that builds the duration picker panel content.
 ///
 /// This widget is shared between the bottom sheet and the anchored panel.
-/// It displays four optional number input fields (day, hour, minute, second)
-/// and a reset button.
+/// It displays up to four optional number input fields (day, hour, minute,
+/// second), each carrying its unit label inside [LayrzNumberInput.suffixText]
+/// rather than as a separate label widget, and a reset button.
+///
+/// The fields are arranged in a responsive [LayrzRow]/[LayrzCol] grid: one
+/// field per visual row on compact (`xs`) viewports, and two per row from
+/// `sm` upward. One-per-row on compact (rather than two) is deliberate: at
+/// the narrowest phone widths, a two-column layout leaves too little room
+/// for [LayrzNumberInput.suffixText] words like "Minutes"/"Seconds" to
+/// render without overflowing, and it also keeps each field's step buttons
+/// far enough apart that a thumb tap cannot land on the wrong field's
+/// stepper — the narrower column, taller-panel trade-off was confirmed
+/// deliberate by the maintainer.
 class LayrzDurationPickerPanel extends StatefulWidget {
   /// The initial duration to populate the fields.
   final Duration? initialValue;
@@ -88,106 +100,102 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
     final l10n = context.l10n;
     final tokens = context.tokens;
 
-    final fields = <Widget>[];
+    final fields = <LayrzCol>[];
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.day)) {
       fields.add(
-        LayrzNumberInput(
-          hintText: l10n.durationFieldDay,
-          value: _day.toDouble(),
-          onChanged: (v) {
-            setState(() => _day = v?.toInt() ?? 0);
-            _handleValueChanged();
-          },
-          decimalSeparator: LayrzDecimalSeparator.dot,
-          minimum: 0,
-          step: 1,
-          hideStepButtons: false,
-        ),
-      );
-      fields.add(
-        Text(
-          l10n.durationFieldDay,
-          style: tokens.typography.label,
-          textAlign: TextAlign.center,
+        LayrzCol(
+          key: const ValueKey('layrz_duration_field_day'),
+          xs: 12,
+          sm: 6,
+          child: LayrzNumberInput(
+            hintText: l10n.durationFieldDay,
+            suffixText: l10n.durationFieldDay,
+            value: _day.toDouble(),
+            onChanged: (v) {
+              setState(() => _day = v?.toInt() ?? 0);
+              _handleValueChanged();
+            },
+            decimalSeparator: LayrzDecimalSeparator.dot,
+            minimum: 0,
+            step: 1,
+            hideStepButtons: false,
+          ),
         ),
       );
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.hour)) {
       fields.add(
-        LayrzNumberInput(
-          hintText: l10n.durationFieldHour,
-          value: _hour.toDouble(),
-          onChanged: (v) {
-            final newVal = v?.toInt() ?? 0;
-            setState(() => _hour = newVal.clamp(0, 23));
-            _handleValueChanged();
-          },
-          decimalSeparator: LayrzDecimalSeparator.dot,
-          minimum: 0,
-          maximum: 23,
-          step: 1,
-          hideStepButtons: false,
-        ),
-      );
-      fields.add(
-        Text(
-          l10n.durationFieldHour,
-          style: tokens.typography.label,
-          textAlign: TextAlign.center,
+        LayrzCol(
+          key: const ValueKey('layrz_duration_field_hour'),
+          xs: 12,
+          sm: 6,
+          child: LayrzNumberInput(
+            hintText: l10n.durationFieldHour,
+            suffixText: l10n.durationFieldHour,
+            value: _hour.toDouble(),
+            onChanged: (v) {
+              final newVal = v?.toInt() ?? 0;
+              setState(() => _hour = newVal.clamp(0, 23));
+              _handleValueChanged();
+            },
+            decimalSeparator: LayrzDecimalSeparator.dot,
+            minimum: 0,
+            maximum: 23,
+            step: 1,
+            hideStepButtons: false,
+          ),
         ),
       );
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.minute)) {
       fields.add(
-        LayrzNumberInput(
-          hintText: l10n.durationFieldMinute,
-          value: _minute.toDouble(),
-          onChanged: (v) {
-            final newVal = v?.toInt() ?? 0;
-            setState(() => _minute = newVal.clamp(0, 59));
-            _handleValueChanged();
-          },
-          decimalSeparator: LayrzDecimalSeparator.dot,
-          minimum: 0,
-          maximum: 59,
-          step: 1,
-          hideStepButtons: false,
-        ),
-      );
-      fields.add(
-        Text(
-          l10n.durationFieldMinute,
-          style: tokens.typography.label,
-          textAlign: TextAlign.center,
+        LayrzCol(
+          key: const ValueKey('layrz_duration_field_minute'),
+          xs: 12,
+          sm: 6,
+          child: LayrzNumberInput(
+            hintText: l10n.durationFieldMinute,
+            suffixText: l10n.durationFieldMinute,
+            value: _minute.toDouble(),
+            onChanged: (v) {
+              final newVal = v?.toInt() ?? 0;
+              setState(() => _minute = newVal.clamp(0, 59));
+              _handleValueChanged();
+            },
+            decimalSeparator: LayrzDecimalSeparator.dot,
+            minimum: 0,
+            maximum: 59,
+            step: 1,
+            hideStepButtons: false,
+          ),
         ),
       );
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.second)) {
       fields.add(
-        LayrzNumberInput(
-          hintText: l10n.durationFieldSecond,
-          value: _second.toDouble(),
-          onChanged: (v) {
-            final newVal = v?.toInt() ?? 0;
-            setState(() => _second = newVal.clamp(0, 59));
-            _handleValueChanged();
-          },
-          decimalSeparator: LayrzDecimalSeparator.dot,
-          minimum: 0,
-          maximum: 59,
-          step: 1,
-          hideStepButtons: false,
-        ),
-      );
-      fields.add(
-        Text(
-          l10n.durationFieldSecond,
-          style: tokens.typography.label,
-          textAlign: TextAlign.center,
+        LayrzCol(
+          key: const ValueKey('layrz_duration_field_second'),
+          xs: 12,
+          sm: 6,
+          child: LayrzNumberInput(
+            hintText: l10n.durationFieldSecond,
+            suffixText: l10n.durationFieldSecond,
+            value: _second.toDouble(),
+            onChanged: (v) {
+              final newVal = v?.toInt() ?? 0;
+              setState(() => _second = newVal.clamp(0, 59));
+              _handleValueChanged();
+            },
+            decimalSeparator: LayrzDecimalSeparator.dot,
+            minimum: 0,
+            maximum: 59,
+            step: 1,
+            hideStepButtons: false,
+          ),
         ),
       );
     }
@@ -197,12 +205,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          GridView.count(
-            crossAxisCount: 4,
-            shrinkWrap: true,
-            childAspectRatio: 1.0,
-            children: fields,
-          ),
+          LayrzRow(children: fields),
           SizedBox(height: tokens.spacing.sp4),
           SizedBox(
             width: double.infinity,
