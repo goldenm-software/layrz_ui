@@ -576,26 +576,39 @@ class LayrzInputChrome extends StatelessWidget {
     ];
   }
 
-  /// Builds the content of a slot (icon, widget, or text).
+  /// Builds the content of a slot (icon, widget, or text), and accounts for it in
+  /// the semantics tree.
   ///
   /// Caller-supplied widgets are constrained to [contentHeight] to prevent them
   /// from changing field geometry. This ensures consistent height across all states.
   ///
-  /// When [slot.onTap] is non-null and the field is not disabled, wraps the content
-  /// in a [MouseRegion] with [SystemMouseCursors.click] cursor and hover/press opacity
-  /// feedback (following D15: state changes only affect colour, opacity, shadow, cursor;
-  /// never size, padding, margin, or scale).
+  /// Per D64 ("name only when told"), every slot the chrome renders falls into exactly
+  /// one of three semantics categories — nothing is silent by accident:
+  ///
+  /// - **named**: [LayrzInputSlot.semanticLabel] is non-null. Gets its own
+  ///   `Semantics(container: true, ...)` node, with `button: true` when also
+  ///   interactive. `container: true` is mandatory here — the slot sits *inside* the
+  ///   field's own `Semantics` ancestor (unlike `number_field_edge.dart`'s ± caps,
+  ///   which sit outside it), so a bare `Semantics(button: true)` would be absorbed
+  ///   into the field's node, making the text field itself announce as a button.
+  /// - **decorative**: [LayrzInputSlot.isDecorative] is true, or the slot is a
+  ///   non-interactive icon/widget with no label. Wrapped in [ExcludeSemantics].
+  ///   A non-interactive text slot is the one exception: its text merges into the
+  ///   field's own accessible name by design (`'$'`, `'kg'`, `'@'` belong there).
+  /// - **pointer-only**: interactive ([LayrzInputSlot.onTap] non-null) but nobody
+  ///   supplied a [LayrzInputSlot.semanticLabel]. Rendered and tappable, but
+  ///   `excludeFromSemantics: true` on the underlying [GestureDetector] means it
+  ///   contributes nothing to the semantics tree — the chrome does not infer or
+  ///   invent a name the caller did not give it. See D64.
   Widget _buildSlotContent({
     required BuildContext context,
-    required dynamic slot,
+    required LayrzInputSlot slot,
     required LayrzTokens tokens,
     required LayrzInputStyleSpec spec,
     required double contentHeight,
     required double iconSize,
     required _InputComfortableSpec density,
   }) {
-    final hasCallback = slot.onTap != null;
-
     Widget content;
     if (slot.icon != null) {
       content = Icon(
@@ -622,27 +635,66 @@ class LayrzInputChrome extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (!hasCallback || disabled) {
+    final isInteractive = slot.onTap != null && !disabled;
+
+    if (isInteractive) {
+      if (slot.semanticLabel != null) {
+        // Named affordance: its own node, so its tap action never absorbs into the
+        // field's. `container: true` is what creates that boundary — without it the
+        // TEXT FIELD itself would announce as a button. See D64.
+        return Semantics(
+          container: true,
+          button: true,
+          enabled: true,
+          label: slot.semanticLabel,
+          child: _buildTappableSlot(onTap: slot.onTap!, child: content),
+        );
+      }
+      // Pointer-only affordance: rendered and tappable, but contributes nothing to
+      // the semantics tree. The chrome does not invent a name the caller did not
+      // supply, and an anonymous tap action would otherwise merge onto the field's
+      // own node. See D64.
+      return _buildTappableSlot(
+        onTap: slot.onTap!,
+        excludeFromSemantics: true,
+        child: content,
+      );
+    }
+
+    if (slot.semanticLabel != null) {
+      return Semantics(
+        container: true, // ← MANDATORY. Without it the label is appended to the FIELD's name.
+        label: slot.semanticLabel,
+        child: content,
+      );
+    }
+
+    // Text slots merge into the field's accessible name by design: '$', 'kg', '@'
+    // belong in the field's name, not in a node of their own. See D64 / dossier §16.2.
+    if (slot.text != null) {
       return content;
     }
 
-    // Tappable slot: wrap with cursor and press feedback (opacity only, per D15)
-    return _buildTappableSlot(
-      onTap: slot.onTap,
-      child: content,
-    );
+    // Declared decorative (or simply unnamed): an unnamed, non-interactive icon or
+    // widget is intentionally hidden rather than silently absent. See D64.
+    return ExcludeSemantics(child: content);
   }
 
   /// Wraps a tappable slot with cursor feedback and press-state opacity change.
   ///
   /// Provides [SystemMouseCursors.click] cursor to indicate interactivity and
   /// opacity feedback on press (no size/padding changes per D15).
+  ///
+  /// [excludeFromSemantics] is forwarded to the underlying [GestureDetector] — see
+  /// [_TappableSlotWidget].
   Widget _buildTappableSlot({
     required VoidCallback onTap,
     required Widget child,
+    bool excludeFromSemantics = false,
   }) {
     return _TappableSlotWidget(
       onTap: onTap,
+      excludeFromSemantics: excludeFromSemantics,
       child: child,
     );
   }
@@ -652,13 +704,31 @@ class LayrzInputChrome extends StatelessWidget {
 ///
 /// Combines [MouseRegion] (for cursor), [Listener] (for press detection),
 /// and [GestureDetector] (for tap handling) with opacity feedback.
+///
+/// Deliberately owns no `Focus` and no `Semantics` of its own: per D64, `Semantics`
+/// describes and `FocusNode` does, and this widget is purely visual. A named slot's
+/// `Semantics` node is built by the caller (`_buildSlotContent`), sitting *above* this
+/// widget, not inside it.
 class _TappableSlotWidget extends StatefulWidget {
+  /// Callback fired when the slot is tapped.
   final VoidCallback onTap;
+
+  /// The content rendered inside the tappable area.
   final Widget child;
 
+  /// Whether the underlying [GestureDetector] excludes itself (and its tap action)
+  /// from the semantics tree.
+  ///
+  /// True for a pointer-only slot (interactive, no [LayrzInputSlot.semanticLabel]):
+  /// the tap remains usable by touch/mouse but is not advertised to assistive
+  /// technology, matching the house precedent at `tooltip.dart:555` and `:573`.
+  final bool excludeFromSemantics;
+
+  /// Creates a new [_TappableSlotWidget] with the given properties.
   const _TappableSlotWidget({
     required this.onTap,
     required this.child,
+    this.excludeFromSemantics = false,
   });
 
   @override
@@ -689,6 +759,7 @@ class _TappableSlotWidgetState extends State<_TappableSlotWidget> {
           });
         },
         child: GestureDetector(
+          excludeFromSemantics: widget.excludeFromSemantics,
           onTap: widget.onTap,
           child: Opacity(
             opacity: _isPressed ? 0.7 : 1.0,
