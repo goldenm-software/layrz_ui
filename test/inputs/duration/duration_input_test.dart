@@ -292,6 +292,41 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('clears the summary back to empty text when value transitions from set to null', (
+      WidgetTester tester,
+    ) async {
+      Duration? currentValue = const Duration(hours: 1);
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              children: [
+                LayrzButton(
+                  labelText: 'Clear',
+                  onTap: () => setState(() => currentValue = null),
+                ),
+                LayrzDurationInput(
+                  labelText: 'Duration',
+                  value: currentValue,
+                  controller: controller,
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      expect(controller.text, isNotEmpty);
+
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pumpAndSettle();
+
+      expect(controller.text, isEmpty);
+    });
+
     testWidgets('handles null onChanged callback', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -470,6 +505,458 @@ void main() {
       );
 
       expect(find.byIcon(MdiIcons.lockOutline), findsNothing);
+    });
+  });
+
+  group('LayrzDurationInput format', () {
+    testWidgets('defaults to LayrzDurationFormat.long, matching pre-format behavior exactly', (
+      WidgetTester tester,
+    ) async {
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 2, minutes: 30),
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, '2 hours, 30 minutes');
+    });
+
+    testWidgets('LayrzDurationFormat.long renders exactly "2 hours, 30 minutes"', (WidgetTester tester) async {
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 2, minutes: 30),
+          format: LayrzDurationFormat.long,
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, '2 hours, 30 minutes');
+    });
+
+    testWidgets('LayrzDurationFormat.short renders exactly "2h 30m" — abbreviated, space-joined', (
+      WidgetTester tester,
+    ) async {
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 2, minutes: 30),
+          format: LayrzDurationFormat.short,
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, '2h 30m');
+    });
+
+    testWidgets('short format reads day abbreviation singular and plural forms from l10n', (
+      WidgetTester tester,
+    ) async {
+      final singularController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(days: 1),
+          visibleUnits: const {LayrzDurationUnit.day},
+          format: LayrzDurationFormat.short,
+          controller: singularController,
+        ),
+      );
+      expect(singularController.text, '1d');
+
+      final pluralController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(days: 3),
+          visibleUnits: const {LayrzDurationUnit.day},
+          format: LayrzDurationFormat.short,
+          controller: pluralController,
+        ),
+      );
+      expect(pluralController.text, '3d');
+    });
+
+    testWidgets('short format reads hour abbreviation singular and plural forms from l10n', (
+      WidgetTester tester,
+    ) async {
+      final singularController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 1),
+          visibleUnits: const {LayrzDurationUnit.hour},
+          format: LayrzDurationFormat.short,
+          controller: singularController,
+        ),
+      );
+      expect(singularController.text, '1h');
+
+      final pluralController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 5),
+          visibleUnits: const {LayrzDurationUnit.hour},
+          format: LayrzDurationFormat.short,
+          controller: pluralController,
+        ),
+      );
+      expect(pluralController.text, '5h');
+    });
+
+    testWidgets('short format reads minute abbreviation singular and plural forms from l10n', (
+      WidgetTester tester,
+    ) async {
+      final singularController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(minutes: 1),
+          visibleUnits: const {LayrzDurationUnit.minute},
+          format: LayrzDurationFormat.short,
+          controller: singularController,
+        ),
+      );
+      expect(singularController.text, '1m');
+
+      final pluralController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(minutes: 45),
+          visibleUnits: const {LayrzDurationUnit.minute},
+          format: LayrzDurationFormat.short,
+          controller: pluralController,
+        ),
+      );
+      expect(pluralController.text, '45m');
+    });
+
+    testWidgets('short format reads second abbreviation singular and plural forms from l10n', (
+      WidgetTester tester,
+    ) async {
+      final singularController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(seconds: 1),
+          visibleUnits: const {LayrzDurationUnit.second},
+          format: LayrzDurationFormat.short,
+          controller: singularController,
+        ),
+      );
+      expect(singularController.text, '1s');
+
+      final pluralController = TextEditingController();
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(seconds: 45),
+          visibleUnits: const {LayrzDurationUnit.second},
+          format: LayrzDurationFormat.short,
+          controller: pluralController,
+        ),
+      );
+      expect(pluralController.text, '45s');
+    });
+
+    testWidgets(
+      'Duration.zero renders the smallest visible unit instead of empty text, '
+      'with visibleUnits declared out of enum order',
+      (WidgetTester tester) async {
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+            // Declared out of enum order (day, hour, minute, second) on
+            // purpose: a set-iteration implementation of "smallest visible
+            // unit" would see `second` first here and might get lucky, but
+            // would fail the {hour, day} case below. Computing by enum
+            // index instead is order-independent by construction.
+            visibleUnits: const {LayrzDurationUnit.second, LayrzDurationUnit.day},
+            value: Duration.zero,
+            controller: controller,
+          ),
+        );
+
+        expect(controller.text, isNot(''));
+        expect(controller.text, '0 seconds');
+      },
+    );
+
+    testWidgets('Duration.zero in short format renders "0s" when seconds are visible, out-of-order set', (
+      WidgetTester tester,
+    ) async {
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          visibleUnits: const {LayrzDurationUnit.second, LayrzDurationUnit.day},
+          value: Duration.zero,
+          format: LayrzDurationFormat.short,
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, '0s');
+    });
+
+    testWidgets(
+      'Duration.zero renders "0h" when only day and hour are visible (seconds hidden), out-of-order set',
+      (WidgetTester tester) async {
+        final controller = TextEditingController();
+
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+            // Out of enum order: hour before day.
+            visibleUnits: const {LayrzDurationUnit.hour, LayrzDurationUnit.day},
+            value: Duration.zero,
+            format: LayrzDurationFormat.short,
+            controller: controller,
+          ),
+        );
+
+        expect(controller.text, '0h');
+      },
+    );
+
+    testWidgets('null value still renders empty text, distinct from an explicit Duration.zero', (
+      WidgetTester tester,
+    ) async {
+      final controller = TextEditingController();
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          controller: controller,
+        ),
+      );
+
+      expect(controller.text, isEmpty);
+    });
+
+    testWidgets('resetting the picker fires onChanged with an all-zero duration and updates the summary', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+      final controller = TextEditingController();
+
+      // A controlled component: onChanged feeds the new value back into
+      // `value`, exactly as a real caller would. Asserting against
+      // `widget.value` without this would only prove `_updateSummary` ran
+      // against the *old* value, not that the round trip actually works.
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 1),
+              format: LayrzDurationFormat.short,
+              controller: controller,
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      await tester.tap(findButtonLabel('Reset'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration());
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
+      expect(controller.text, '0s');
+    });
+  });
+
+  group('LayrzDurationInput desktop anchored panel', () {
+    testWidgets('renders the anchored panel (not the bottom sheet) at a wide viewport', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          hintText: 'Select a duration',
+        ),
+      );
+
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
+      expect(find.text('Select a duration'), findsWidgets);
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+    });
+
+    testWidgets('disabled anchor does not open the panel on tap at a wide viewport', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          disabled: true,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
+    });
+
+    testWidgets('resetting the panel fires onChanged, updates the summary, and closes the panel', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+      final controller = TextEditingController();
+
+      // A controlled component: onChanged feeds the new value back into
+      // `value`, exactly as a real caller would. Asserting against
+      // `widget.value` without this would only prove `_updateSummary` ran
+      // against the *old* value, not that the round trip actually works.
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 2, minutes: 30),
+              format: LayrzDurationFormat.long,
+              controller: controller,
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      await tester.tap(findButtonLabel('Reset'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration());
+      expect(controller.text, '0 seconds');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing);
+    });
+  });
+
+  group('LayrzDurationInput controller/focusNode lifecycle updates', () {
+    testWidgets('adopts a newly-supplied controller and disposes the self-created one it replaces', (
+      WidgetTester tester,
+    ) async {
+      final suppliedController = TextEditingController();
+      addTearDown(suppliedController.dispose);
+      TextEditingController? activeController;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              children: [
+                LayrzButton(
+                  labelText: 'Swap controller',
+                  onTap: () => setState(() => activeController = suppliedController),
+                ),
+                LayrzDurationInput(
+                  labelText: 'Duration',
+                  controller: activeController,
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LayrzDurationInput), findsOneWidget);
+    });
+
+    testWidgets('adopts a newly-supplied focus node and disposes the self-created one it replaces', (
+      WidgetTester tester,
+    ) async {
+      final suppliedFocusNode = FocusNode();
+      addTearDown(suppliedFocusNode.dispose);
+      FocusNode? activeFocusNode;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              children: [
+                LayrzButton(
+                  labelText: 'Swap focus node',
+                  onTap: () => setState(() => activeFocusNode = suppliedFocusNode),
+                ),
+                LayrzDurationInput(
+                  labelText: 'Duration',
+                  focusNode: activeFocusNode,
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
   });
 }

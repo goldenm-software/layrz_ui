@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
+import 'duration_format.dart';
 import 'duration_picker_panel.dart';
 import 'duration_unit.dart';
 import '../shared/input_chrome.dart';
@@ -15,6 +17,61 @@ const _kDefaultVisibleUnits = {
   LayrzDurationUnit.minute,
   LayrzDurationUnit.second,
 };
+
+/// Returns the smallest [LayrzDurationUnit] present in [visibleUnits].
+///
+/// "Smallest" is determined by enum declaration order (day, hour, minute,
+/// second — largest to smallest), never by [Set] iteration order: a `Set`
+/// literal preserves insertion order, so `{second, day}` would iterate
+/// `second` first even though `day` is the larger unit. Walking
+/// [LayrzDurationUnit.values] in its own fixed order and keeping the last
+/// member found in [visibleUnits] sidesteps that entirely — the result never
+/// depends on how [visibleUnits] itself was ordered.
+///
+/// Callers must supply a non-empty [visibleUnits] (enforced by
+/// [LayrzDurationInput]'s constructor assertion); when empty this falls back
+/// to [LayrzDurationUnit.day] rather than returning null, since that case
+/// never occurs in practice.
+LayrzDurationUnit _smallestVisibleUnit(Set<LayrzDurationUnit> visibleUnits) {
+  var smallest = LayrzDurationUnit.values.first;
+  for (final unit in LayrzDurationUnit.values) {
+    if (visibleUnits.contains(unit)) {
+      smallest = unit;
+    }
+  }
+  return smallest;
+}
+
+/// Renders one unit's contribution to the summary text, e.g. `"2 hours"` in
+/// [LayrzDurationFormat.long] or `"2h"` in [LayrzDurationFormat.short].
+///
+/// [count] is the numeric value already extracted for [unit] (day count,
+/// `hour % 24`, etc. — computed by the caller). [l10n] supplies both the
+/// spelled-out word and the abbreviation, plural or singular depending on
+/// [count]; no unit word or abbreviation literal is hardcoded here.
+String _formatUnitPart(LayrzUiL10n l10n, LayrzDurationFormat format, LayrzDurationUnit unit, int count) {
+  final isSingular = count == 1;
+  switch (format) {
+    case LayrzDurationFormat.long:
+      final word = switch (unit) {
+        LayrzDurationUnit.day => isSingular ? l10n.durationUnitDaySingular : l10n.durationUnitDayPlural,
+        LayrzDurationUnit.hour => isSingular ? l10n.durationUnitHourSingular : l10n.durationUnitHourPlural,
+        LayrzDurationUnit.minute => isSingular ? l10n.durationUnitMinuteSingular : l10n.durationUnitMinutePlural,
+        LayrzDurationUnit.second => isSingular ? l10n.durationUnitSecondSingular : l10n.durationUnitSecondPlural,
+      };
+      return '$count $word';
+    case LayrzDurationFormat.short:
+      final abbreviation = switch (unit) {
+        LayrzDurationUnit.day => isSingular ? l10n.durationUnitDayShortSingular : l10n.durationUnitDayShortPlural,
+        LayrzDurationUnit.hour => isSingular ? l10n.durationUnitHourShortSingular : l10n.durationUnitHourShortPlural,
+        LayrzDurationUnit.minute =>
+          isSingular ? l10n.durationUnitMinuteShortSingular : l10n.durationUnitMinuteShortPlural,
+        LayrzDurationUnit.second =>
+          isSingular ? l10n.durationUnitSecondShortSingular : l10n.durationUnitSecondShortPlural,
+      };
+      return '$count$abbreviation';
+  }
+}
 
 /// A Material-free duration input field in the layrz_ui design system.
 ///
@@ -39,9 +96,15 @@ const _kDefaultVisibleUnits = {
 /// must be present (enforced by assertion).
 ///
 /// **Summary display:**
-/// The anchor displays a humanised summary like "2 days, 3 hours" (omitting
-/// zero-valued units and using localized unit names and pluralisation). A null
-/// duration shows empty text.
+/// The anchor displays a humanised summary, formatted per [format]. In
+/// [LayrzDurationFormat.long] (the default) that reads like "2 days, 3 hours"
+/// (zero-valued units omitted, localized unit names and pluralisation); in
+/// [LayrzDurationFormat.short] the same duration reads "2d 3h" (localized unit
+/// abbreviations, no comma). A null [value] shows empty placeholder text. A
+/// non-null [value] equal to [Duration.zero] shows a zero reading of the
+/// smallest unit in [visibleUnits] (e.g. "0s" or, with seconds hidden, "0m")
+/// rather than empty text, so a chosen zero stays visually distinct from no
+/// value at all.
 ///
 /// **Unsupported units:**
 /// Year, month, and week are not supported because they are not fixed-length
@@ -74,6 +137,14 @@ class LayrzDurationInput extends StatefulWidget {
   ///
   /// Units not in the set are omitted from the picker and the summary display.
   final Set<LayrzDurationUnit> visibleUnits;
+
+  /// The format used to render the anchor's summary text.
+  ///
+  /// Defaults to [LayrzDurationFormat.long], which reproduces the summary
+  /// this widget rendered before [LayrzDurationFormat] existed (e.g. "2 days,
+  /// 3 hours") — so existing callers see no behavior change. Pass
+  /// [LayrzDurationFormat.short] for an abbreviated summary (e.g. "2d 3h").
+  final LayrzDurationFormat format;
 
   /// The label text displayed above the input field.
   final String? labelText;
@@ -120,6 +191,7 @@ class LayrzDurationInput extends StatefulWidget {
     this.value,
     this.onChanged,
     this.visibleUnits = _kDefaultVisibleUnits,
+    this.format = LayrzDurationFormat.long,
     this.labelText,
     this.hintText,
     this.isRequired = false,
@@ -195,36 +267,42 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     if (widget.visibleUnits.contains(LayrzDurationUnit.day)) {
       final days = duration.inDays;
       if (days > 0) {
-        final unit = days == 1 ? l10n.durationUnitDaySingular : l10n.durationUnitDayPlural;
-        parts.add('$days $unit');
+        parts.add(_formatUnitPart(l10n, widget.format, LayrzDurationUnit.day, days));
       }
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.hour)) {
       final hours = (duration.inHours % 24);
       if (hours > 0) {
-        final unit = hours == 1 ? l10n.durationUnitHourSingular : l10n.durationUnitHourPlural;
-        parts.add('$hours $unit');
+        parts.add(_formatUnitPart(l10n, widget.format, LayrzDurationUnit.hour, hours));
       }
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.minute)) {
       final minutes = (duration.inMinutes % 60);
       if (minutes > 0) {
-        final unit = minutes == 1 ? l10n.durationUnitMinuteSingular : l10n.durationUnitMinutePlural;
-        parts.add('$minutes $unit');
+        parts.add(_formatUnitPart(l10n, widget.format, LayrzDurationUnit.minute, minutes));
       }
     }
 
     if (widget.visibleUnits.contains(LayrzDurationUnit.second)) {
       final seconds = (duration.inSeconds % 60);
       if (seconds > 0) {
-        final unit = seconds == 1 ? l10n.durationUnitSecondSingular : l10n.durationUnitSecondPlural;
-        parts.add('$seconds $unit');
+        parts.add(_formatUnitPart(l10n, widget.format, LayrzDurationUnit.second, seconds));
       }
     }
 
-    _controller.text = parts.isEmpty ? '' : parts.join(', ');
+    if (parts.isEmpty) {
+      // Every visible unit is zero. Rather than showing empty text — which a
+      // caller cannot distinguish from `value == null` — render a zero
+      // reading of the smallest unit currently visible, so an explicit zero
+      // duration stays visually distinct from "no value set".
+      final zeroUnit = _smallestVisibleUnit(widget.visibleUnits);
+      parts.add(_formatUnitPart(l10n, widget.format, zeroUnit, 0));
+    }
+
+    final separator = widget.format == LayrzDurationFormat.short ? ' ' : ', ';
+    _controller.text = parts.join(separator);
   }
 
   Future<void> _openMobileSurface() async {
