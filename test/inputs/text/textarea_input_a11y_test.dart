@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
@@ -5,6 +6,35 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import '../../helpers/find_button_label.dart';
 import '../../helpers/pump_themed.dart';
+
+/// Counts semantics nodes whose `label`, `hint`, or `value` contains [needle].
+///
+/// Deliberately **not** named `countSemanticsWithLabel` and **not** a copy of the
+/// label-only helper duplicated in the number, search, and combobox a11y suites: that
+/// helper inspects `label` alone, which returns 1 against `LayrzTextAreaInput`'s
+/// duplicate-hint bug (DESIGN-149) because the second copy of the string sits in `hint`,
+/// a field the label-only helper never looks at. Spanning all three string fields is what
+/// makes this helper able to tell "announced once" apart from "announced twice, in two
+/// different fields" — the exact defect this suite pins. Requires
+/// [WidgetTester.ensureSemantics] to be active.
+int countSemanticsOccurrences(WidgetTester tester, String needle) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  var count = 0;
+  void walk(SemanticsNode node) {
+    final data = node.getSemanticsData();
+    if (data.label.contains(needle)) count++;
+    if (data.hint.contains(needle)) count++;
+    if (data.value.contains(needle)) count++;
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return count;
+}
 
 void main() {
   group('LayrzTextAreaInput - Accessibility', () {
@@ -212,8 +242,30 @@ void main() {
     );
 
     testWidgets(
-      'hint text provides placeholder context',
+      'hint text is exposed to screen readers exactly once, merged into the label',
       (tester) async {
+        // Phase 0 dump against this exact fixture (labelText: 'Comments',
+        // hintText: 'Enter your comments here', empty controller), taken before the
+        // DESIGN-149 fix:
+        //
+        //   SemanticsNode
+        //     flags: isTextField, hasEnabledState, isEnabled, isMultiline, isFocusable
+        //     label: "Comments\nEnter your comments here"
+        //     hint:  "Enter your comments here"
+        //
+        // LayrzInputChrome renders `hintText` as a plain, non-excluded Text
+        // (input_chrome.dart :417/:436) that Flutter merges straight into this field's
+        // own label -- exactly the shape DESIGN-116 proved for LayrzNumberInput
+        // ("Amount\nEnter price", number_input_a11y_test.dart:634-670). The textarea
+        // ALSO set `hint: widget.hintText` on its own Semantics annotation, so the same
+        // string landed a second time, in a different field, on the same node -- the
+        // duplicate-announcement bug this test pins shut.
+        //
+        // The regression gate counts across label + hint + value (see
+        // [countSemanticsOccurrences]'s doc comment for why a label-only counter would
+        // pass on both sides of the fix and prove nothing). The shape pin below asserts
+        // an explicit `hint: ''` for the same reason: writing it out makes "no longer
+        // duplicated in `hint`" a visible assertion instead of an accidental default.
         final handle = tester.ensureSemantics();
         final controller = TextEditingController();
 
@@ -226,18 +278,26 @@ void main() {
           ),
         );
 
-        // Hint text is exposed in the semantics node
-        final semanticsHandle = tester.getSemantics(
-          find
-              .descendant(
-                of: find.byType(LayrzTextAreaInput),
-                matching: find.byType(Semantics),
-              )
-              .first,
-        );
+        expect(countSemanticsOccurrences(tester, 'Enter your comments here'), 1);
+
         expect(
-          semanticsHandle.hint,
-          equals('Enter your comments here'),
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Comments\nEnter your comments here',
+            hint: '',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
         );
 
         handle.dispose();
