@@ -339,6 +339,59 @@ void main() {
       );
     });
 
+    testWidgets('dragging the handle upward grows the sheet even when its content is scrollable', (
+      WidgetTester tester,
+    ) async {
+      // Covers the plan's highest-risk scenario: the handle's own drag region and the
+      // content's scrollable sit in the same subtree and could compete in the gesture
+      // arena. This must pass with a genuinely scrollable, over-long content — not just
+      // the short, non-scrolling content the sibling test above uses — or a handle
+      // implementation that only works when content happens not to scroll would slip
+      // through undetected.
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                scrollable: false,
+                builder: (context) => ListView.builder(
+                  itemCount: 50,
+                  itemBuilder: (context, index) => SizedBox(height: 40, child: Text('Item $index')),
+                ),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      final handle = find.byWidgetPredicate(
+        (widget) => widget is Container && widget.constraints?.maxWidth == 40 && widget.constraints?.maxHeight == 4,
+      );
+
+      final before = tester.getRect(find.text('Item 0')).top;
+      await tester.drag(handle, const Offset(0, -250));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.text('Item 0')).top,
+        lessThan(before),
+        reason: 'handle drag upward must grow the sheet even when its content is independently scrollable',
+      );
+      // The handle occupies its own header region, spatially separate from the
+      // content below it, so dragging it must not also move the list's own scroll
+      // offset — Item 0 must still be the first visible item, not scrolled away.
+      expect(find.text('Item 0'), findsOneWidget, reason: 'handle drag must not scroll the content underneath it');
+    });
+
     testWidgets('dragging the handle down past the low snap point dismisses the sheet', (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));

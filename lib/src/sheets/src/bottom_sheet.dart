@@ -89,6 +89,19 @@ class LayrzBottomSheet {
   ///   (`Vertical viewport was given unbounded height`); `scrollable: false` is the
   ///   escape hatch so the next caller that reaches for a lazy list finds this flag
   ///   instead of that crash.
+  ///   The controller is handed down via [PrimaryScrollController], so a **vertical**
+  ///   scrollable in [builder] that sets no `controller` of its own picks it up
+  ///   implicitly — that is what gives it the sheet's drag/scroll handoff without an
+  ///   explicit wire-up. A caller that wants a *different* controller (e.g. to also
+  ///   read its own scroll offset) must pass one explicitly on that scrollable, which
+  ///   opts it out of inheriting this one. A **horizontal** scrollable never inherits
+  ///   it regardless — [PrimaryScrollController.shouldInherit] only matches a
+  ///   [ScrollView] whose `scrollDirection` is [Axis.vertical] — so it keeps its own
+  ///   ordinary controller and does not participate in the handoff. If [builder]
+  ///   nests a second vertical scrollable inside the first, only the outer one
+  ///   inherits (the SDK inserts [PrimaryScrollController.none] below it precisely to
+  ///   prevent a descendant from claiming the same controller); the inner one scrolls
+  ///   independently, with no drag handoff of its own.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
