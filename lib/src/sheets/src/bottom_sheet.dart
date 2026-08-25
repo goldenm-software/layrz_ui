@@ -11,7 +11,9 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 /// - **Persistent** ([isPersistent] = `true`): no barrier, the page remains interactive,
 ///   useful for supplementary UI that coexists with the main content
 ///
-/// The sheet is draggable by the drag handle or (when [showDragHandle] is true) the entire
+/// The sheet is draggable by the drag handle (when [showDragHandle] is true): dragging it
+/// resizes the sheet across [minSize], [snapSizes] and [maxSize] exactly as dragging the
+/// sheet's own content does, and dragging past the lowest snap point dismisses the sheet.
 /// Uses [DraggableScrollableSheet] internally to avoid the classic trap of hand-rolling
 /// the drag/scroll handoff — it solves that problem directly.
 ///
@@ -68,11 +70,25 @@ class LayrzBottomSheet {
   /// - [maxSize]: the maximum fraction of screen height the sheet can occupy.
   ///   Defaults to 0.95 (leaving minimal space for status bar / app bar).
   /// - [showDragHandle]: whether to render a visual drag handle above the content.
-  ///   Defaults to `true`. When true, the entire header region is draggable
-  ///   (more forgiving than handle-only drag, which is easy to miss on touch).
+  ///   Defaults to `true`. When true, the entire header region (not just the visible
+  ///   pill) is draggable, and dragging it resizes the sheet the same way dragging the
+  ///   content does — more forgiving than a handle-only hit target, which is easy to
+  ///   miss on touch.
   /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
   ///   Defaults to `false`. Set to `true` when showing from a context that does not have
   ///   its own navigator (e.g. a nested route on desktop).
+  /// - [scrollable]: whether the sheet wraps [builder]'s content in its own
+  ///   [SingleChildScrollView]. Defaults to `true`, which preserves this method's original
+  ///   behaviour exactly: the content is wrapped and the sheet's drag/scroll-handoff
+  ///   [ScrollController] is attached to that wrapper, so a non-scrolling builder (e.g. a
+  ///   `Column`) needs no changes to work.
+  ///   Set to `false` when [builder] returns its own scrollable (e.g. a `ListView` or
+  ///   `GridView`) — the sheet then hands that [ScrollController] to [builder] instead of
+  ///   wrapping it. This exists because a same-axis scrollable nested inside the sheet's own
+  ///   `SingleChildScrollView` is given unbounded height by its parent and asserts
+  ///   (`Vertical viewport was given unbounded height`); `scrollable: false` is the
+  ///   escape hatch so the next caller that reaches for a lazy list finds this flag
+  ///   instead of that crash.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
@@ -84,6 +100,7 @@ class LayrzBottomSheet {
     double maxSize = 0.95,
     bool showDragHandle = true,
     bool useRootNavigator = false,
+    bool scrollable = true,
   }) {
     // Validate sizing constraints
     assert(
@@ -140,6 +157,7 @@ class LayrzBottomSheet {
         minSize: minSize,
         maxSize: maxSize,
         showDragHandle: showDragHandle,
+        scrollable: scrollable,
       ),
     );
   }
@@ -171,6 +189,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
     required double minSize,
     required double maxSize,
     required bool showDragHandle,
+    required bool scrollable,
   }) : super(
          pageBuilder: (context, animation, secondaryAnimation) {
            return _BottomSheetContent(
@@ -182,6 +201,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
              minSize: minSize,
              maxSize: maxSize,
              showDragHandle: showDragHandle,
+             scrollable: scrollable,
            );
          },
          barrierDismissible: !isPersistent,
@@ -259,6 +279,10 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Whether to show the drag handle.
   final bool showDragHandle;
 
+  /// Whether the sheet wraps [builder]'s content in its own [SingleChildScrollView].
+  /// See [LayrzBottomSheet.show] for the full contract.
+  final bool scrollable;
+
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
     required this.builder,
@@ -269,20 +293,27 @@ class _BottomSheetContent<T> extends StatefulWidget {
     required this.minSize,
     required this.maxSize,
     required this.showDragHandle,
+    required this.scrollable,
   });
 
   @override
   State<_BottomSheetContent<T>> createState() => _BottomSheetContentState<T>();
 }
 
-/// State for [_BottomSheetContent], managing focus and focus scope.
+/// State for [_BottomSheetContent], managing focus, focus scope, and the
+/// [DraggableScrollableController] that lets the drag handle resize the sheet.
 class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
   late FocusNode _focusNode;
+
+  /// Controls the sheet's extent programmatically, so the drag handle can resize
+  /// and dismiss it the same way dragging the sheet's own content does.
+  late DraggableScrollableController _sheetController;
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
+    _sheetController = DraggableScrollableController();
     // Request focus into the sheet on the next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       FocusScope.of(context).autofocus(_focusNode);
@@ -292,12 +323,17 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
   @override
   void dispose() {
     _focusNode.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+
+    // The lowest existing snap point; dragging the handle past it dismisses the sheet
+    // rather than resizing further, matching the natural end of a continuous drag.
+    final lowSnapSize = widget.snapSizes.isNotEmpty ? widget.snapSizes.first : widget.minSize;
 
     final focusChild = Focus(
       focusNode: _focusNode,
@@ -309,40 +345,66 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
         }
         return KeyEventResult.ignored;
       },
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: tokens.colors.sf1,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(tokens.radius.r4),
-            topRight: Radius.circular(tokens.radius.r4),
-          ),
-          boxShadow: tokens.shadow.elevation3,
-        ),
-        child: DraggableScrollableSheet(
-          snap: true,
-          snapSizes: widget.snapSizes,
-          initialChildSize: widget.initialSize,
-          minChildSize: widget.minSize,
-          maxChildSize: widget.maxSize,
-          builder: (context, scrollController) {
-            return Column(
+      child: DraggableScrollableSheet(
+        controller: _sheetController,
+        snap: true,
+        snapSizes: widget.snapSizes,
+        initialChildSize: widget.initialSize,
+        minChildSize: widget.minSize,
+        maxChildSize: widget.maxSize,
+        builder: (context, scrollController) {
+          // The decoration is built here, inside the sheet's own builder, so that it
+          // is sized by the sheet's FractionallySizedBox — i.e. to the sheet's own
+          // extent — rather than by DraggableScrollableSheet's outer SizedBox.expand,
+          // which spans the full viewport. Decorating the outer box (as this used to)
+          // paints the surface across the whole screen and, because DecoratedBox
+          // absorbs any tap within its own bounds, makes the barrier below it in the
+          // transition Stack unreachable no matter how far outside the visible sheet
+          // the tap lands.
+          return DecoratedBox(
+            decoration: BoxDecoration(
+              color: tokens.colors.sf1,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(tokens.radius.r4),
+                topRight: Radius.circular(tokens.radius.r4),
+              ),
+              boxShadow: tokens.shadow.elevation3,
+            ),
+            child: Column(
               children: [
                 // Drag handle
                 if (widget.showDragHandle)
                   _DragHandle(
                     draggable: true,
+                    controller: _sheetController,
+                    snapSizes: widget.snapSizes,
+                    lowSnapSize: lowSnapSize,
                   ),
                 // Content
                 Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: widget.builder(context),
-                  ),
+                  child: widget.scrollable
+                      ? SingleChildScrollView(
+                          controller: scrollController,
+                          child: widget.builder(context),
+                        )
+                      // scrollable: false hands the caller the scrollController via
+                      // PrimaryScrollController instead of wrapping the content: a
+                      // vertical ListView/GridView that sets no controller of its own
+                      // binds to it automatically, giving it the sheet's drag/scroll
+                      // handoff without being nested inside another same-axis scrollable.
+                      // automaticallyInheritForPlatforms covers every platform, not just
+                      // mobile (PrimaryScrollController's own default) — the sheet already
+                      // knows which ScrollController it wants used, on every platform.
+                      : PrimaryScrollController(
+                          controller: scrollController,
+                          automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                          child: widget.builder(context),
+                        ),
                 ),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
 
@@ -371,21 +433,44 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
 /// Visual drag handle widget.
 ///
 /// Renders a centered pill-shaped indicator that signals the sheet is draggable.
-/// The entire handle area (and by extension, the header) is draggable when wrapped
-/// in a [DraggableScrollableSheet].
+/// When [draggable] is true, the entire header region — not just the visible
+/// 40x4 pill — is the drag target: dragging it resizes the attached sheet across
+/// [snapSizes], the same way dragging the sheet's own content does, and dragging
+/// past [lowSnapSize] on release dismisses the sheet. The hit region is a fixed
+/// size regardless of hover/press state (per D15, interaction states never change
+/// geometry); only the pill's colour may vary with theme.
 class _DragHandle extends StatelessWidget {
-  /// Whether this handle is draggable (always true in current implementation,
-  /// kept for future extensibility).
+  /// Whether this handle responds to vertical drag gestures. When false (or when
+  /// [controller] is null), the handle is purely visual.
   final bool draggable;
 
+  /// Controls the sheet this handle drags. Required for [draggable] to have effect.
+  final DraggableScrollableController? controller;
+
+  /// The sheet's snap point fractions, in ascending order. On drag release, the
+  /// sheet animates to whichever of these is nearest its current size. Ignored
+  /// when [draggable] is false.
+  final List<double> snapSizes;
+
+  /// The lowest existing snap point fraction. Releasing the drag with the sheet's
+  /// current size below this dismisses the sheet instead of snapping back to it —
+  /// this is how dismissal "falls out of" dragging past the low end, rather than
+  /// being a separate dismiss-only gesture. Ignored when [draggable] is false.
+  final double lowSnapSize;
+
   /// Creates a drag handle.
-  const _DragHandle({required this.draggable});
+  const _DragHandle({
+    required this.draggable,
+    this.controller,
+    this.snapSizes = const [],
+    this.lowSnapSize = 0.0,
+  });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return Container(
+    final header = Container(
       padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp3),
       alignment: Alignment.center,
       child: Container(
@@ -397,5 +482,58 @@ class _DragHandle extends StatelessWidget {
         ),
       ),
     );
+
+    final sheetController = controller;
+    if (!draggable || sheetController == null) {
+      return header;
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (details) => _onDragUpdate(sheetController, details),
+      onVerticalDragEnd: (details) => _onDragEnd(context, sheetController),
+      child: header,
+    );
+  }
+
+  /// Resizes the sheet by the drag delta. Dragging up (negative `dy`) grows the
+  /// sheet; dragging down shrinks it. [DraggableScrollableController.jumpTo] clamps
+  /// the result to the sheet's own `minSize`/`maxSize`, so no clamping is done here.
+  void _onDragUpdate(DraggableScrollableController sheetController, DragUpdateDetails details) {
+    if (!sheetController.isAttached) {
+      return;
+    }
+    final newSize = sheetController.size - sheetController.pixelsToSize(details.delta.dy);
+    sheetController.jumpTo(newSize);
+  }
+
+  /// On release, either dismisses the sheet (current size below [lowSnapSize]) or
+  /// animates it to the nearest snap point. [DraggableScrollableController.jumpTo]
+  /// does not snap on its own — snapping only happens after a drag through the
+  /// sheet's own [DraggableScrollableSheet.snap], which this handle drives manually
+  /// so it matches what dragging the content already does.
+  void _onDragEnd(BuildContext context, DraggableScrollableController sheetController) {
+    if (!sheetController.isAttached) {
+      return;
+    }
+
+    final currentSize = sheetController.size;
+    if (currentSize < lowSnapSize) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    var nearestSnapSize = snapSizes.isNotEmpty ? snapSizes.first : currentSize;
+    var smallestDiff = (currentSize - nearestSnapSize).abs();
+    for (final snapSize in snapSizes) {
+      final diff = (currentSize - snapSize).abs();
+      if (diff < smallestDiff) {
+        smallestDiff = diff;
+        nearestSnapSize = snapSize;
+      }
+    }
+
+    final motion = context.tokens.motion;
+    sheetController.animateTo(nearestSnapSize, duration: motion.dTransition, curve: motion.easing);
   }
 }

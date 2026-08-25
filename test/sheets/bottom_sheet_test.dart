@@ -14,7 +14,7 @@ void main() {
             onTap: () {
               LayrzBottomSheet.show<String>(
                 context,
-                builder: (context) => const SizedBox(height: 200),
+                builder: (context) => const SizedBox(height: 200, child: Text('body')),
               );
             },
             child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
@@ -24,10 +24,12 @@ void main() {
 
       await tester.tap(find.text('Tap'));
       await tester.pumpAndSettle();
+      expect(find.text('body'), findsOneWidget);
 
-      // Dismiss via barrier tap
+      // Dismiss via barrier tap — a point visibly above the sheet's own content.
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
+      expect(find.text('body'), findsNothing, reason: 'barrier tap must dismiss the sheet');
     });
 
     testWidgets('accepts persistent mode without error', (WidgetTester tester) async {
@@ -261,6 +263,179 @@ void main() {
 
       // Verify the result was returned without any assertion errors
       expect(result, equals('test-result'));
+    });
+
+    testWidgets('sheet surface does not span the full viewport height', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => const SizedBox(height: 200, child: Text('body')),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      // The decorated sheet surface — identified by the drop shadow only it carries
+      // (the drag handle pill is also a DecoratedBox, via Container's borderRadius, but
+      // has no boxShadow) — must be sized to the sheet's own extent, not to the full
+      // viewport it used to paint across when it decorated DraggableScrollableSheet's
+      // own SizedBox.expand.
+      final surface = find.byWidgetPredicate(
+        (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).boxShadow != null,
+      );
+      expect(
+        tester.getSize(surface).height,
+        lessThan(800.0),
+        reason: 'sheet surface must not span the full viewport height',
+      );
+    });
+
+    testWidgets('dragging the handle upward grows the sheet', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => const SizedBox(height: 200, child: Text('body')),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      final handle = find.byWidgetPredicate(
+        (widget) => widget is Container && widget.constraints?.maxWidth == 40 && widget.constraints?.maxHeight == 4,
+      );
+
+      final before = tester.getRect(find.text('body')).top;
+      await tester.drag(handle, const Offset(0, -250));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getRect(find.text('body')).top,
+        lessThan(before),
+        reason: 'handle drag upward must grow the sheet',
+      );
+    });
+
+    testWidgets('dragging the handle down past the low snap point dismisses the sheet', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => const SizedBox(height: 200, child: Text('body')),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+      expect(find.text('body'), findsOneWidget);
+
+      final handle = find.byWidgetPredicate(
+        (widget) => widget is Container && widget.constraints?.maxWidth == 40 && widget.constraints?.maxHeight == 4,
+      );
+
+      // The default snap points are [0.5, 0.95] with minSize 0.25. Dragging well past
+      // the low end (past the 0.5 snap point, toward the 0.25 floor) must dismiss the
+      // sheet on release — dismissal falls out of a continuous drag, it is not a
+      // separate gesture.
+      await tester.drag(handle, const Offset(0, 300));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('body'),
+        findsNothing,
+        reason: 'dragging the handle past the low snap point must dismiss the sheet',
+      );
+    });
+
+    testWidgets('scrollable: false lets the caller provide its own scrolling ListView', (WidgetTester tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                scrollable: false,
+                builder: (context) => ListView.builder(
+                  itemCount: 50,
+                  itemBuilder: (context, index) => SizedBox(height: 40, child: Text('Item $index')),
+                ),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      // The frame must complete with no unbounded-height assertion — the defect this
+      // flag exists to prevent is a ListView nested inside the sheet's own
+      // SingleChildScrollView, which throws "Vertical viewport was given unbounded height".
+      expect(tester.takeException(), isNull);
+      expect(find.text('Item 0'), findsOneWidget);
+      expect(find.text('Item 49'), findsNothing);
+
+      // And the list actually scrolls, using the sheet's own scrollController handed
+      // down via PrimaryScrollController — not merely renders once.
+      //
+      // This must be driven as many small increments rather than one `tester.drag`
+      // call: DraggableScrollableSheet's resize/scroll handoff (`applyUserOffset` in
+      // the SDK's `_DraggableScrollableSheetScrollPosition`) decides per-call whether
+      // a delta resizes the sheet or scrolls its content — it does not split a single
+      // large delta across both. `tester.drag` delivers its whole offset in essentially
+      // one giant `moveBy` (after an initial touch-slop nudge), so the entire gesture
+      // would be consumed growing the sheet to `maxSize`, discarding the remainder and
+      // leaving the list unscrolled — that mirrors a real finger's continuous stream of
+      // small deltas, which is what actually exercises the handoff.
+      final gesture = await tester.startGesture(tester.getCenter(find.byType(ListView)));
+      for (var i = 0; i < 40; i++) {
+        await gesture.moveBy(const Offset(0, -75));
+        await tester.pump();
+      }
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Item 0'), findsNothing);
+      expect(find.text('Item 49'), findsOneWidget, reason: 'scrollable: false must produce a working, scrolling frame');
     });
   });
 }

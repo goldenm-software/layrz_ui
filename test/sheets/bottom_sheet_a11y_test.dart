@@ -66,7 +66,13 @@ void main() {
       expect(find.byType(DraggableScrollableSheet), findsOneWidget);
     }, skip: true);
 
-    testWidgets('modal mode includes draggable barrier', (WidgetTester tester) async {
+    testWidgets('barrier tap dismisses a modal sheet', (WidgetTester tester) async {
+      // Replaces the former 'modal mode includes draggable barrier', which only asserted
+      // that DraggableScrollableSheet and SlideTransition existed in the tree — it never
+      // tapped the barrier, so it tested neither a barrier nor draggability. It passed
+      // while the barrier was provably unreachable (a full-bleed DecoratedBox sat above
+      // it and absorbed every tap). This asserts the actual behaviour: a tap above the
+      // sheet's content region must dismiss it.
       await pumpThemedApp(
         tester,
         Builder(
@@ -75,7 +81,7 @@ void main() {
               LayrzBottomSheet.show<String>(
                 context,
                 isPersistent: false,
-                builder: (context) => const SizedBox(height: 200),
+                builder: (context) => const SizedBox(height: 200, child: Text('modal')),
               );
             },
             child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
@@ -85,41 +91,60 @@ void main() {
 
       await tester.tap(find.text('Tap'));
       await tester.pumpAndSettle();
+      expect(find.text('modal'), findsOneWidget);
 
-      // Modal sheet should exist
-      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+      await tester.tapAt(const Offset(200, 20));
+      await tester.pumpAndSettle();
 
-      // Modal sheets render with a barrier (stack of barrier + sheet)
-      // Verify the sheet is present, indicating the modal structure was built
-      expect(find.byType(SlideTransition), findsOneWidget);
+      expect(find.text('modal'), findsNothing, reason: 'barrier tap must dismiss a MODAL sheet');
     });
 
-    testWidgets('persistent mode has no interactive barrier', (WidgetTester tester) async {
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) => GestureDetector(
-            onTap: () {
-              LayrzBottomSheet.show<String>(
-                context,
-                isPersistent: true,
-                builder: (context) => const SizedBox(height: 200),
-              );
-            },
-            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+    testWidgets('the same outside tap dismisses a modal sheet but not a persistent one', (WidgetTester tester) async {
+      // Repairs the former 'persistent mode has no interactive barrier', which tapped
+      // outside and asserted the sheet survived — correct for persistent mode, but
+      // because the same full-bleed surface made the barrier unreachable in MODAL mode
+      // too, that identical assertion also passed for a modal sheet. It was vacuous:
+      // nothing in the suite would have failed if modal barrier dismissal broke
+      // completely, which it had. Pairing both modes against the same gesture is what
+      // makes either half of this actually informative.
+      Future<void> openAndTapOutside(bool isPersistent, String label) async {
+        await pumpThemedApp(
+          tester,
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () {
+                LayrzBottomSheet.show<String>(
+                  context,
+                  isPersistent: isPersistent,
+                  builder: (context) => SizedBox(height: 200, child: Text(label)),
+                );
+              },
+              child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+            ),
           ),
-        ),
-      );
+        );
 
-      await tester.tap(find.text('Tap'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Tap'));
+        await tester.pumpAndSettle();
 
-      // Tap where barrier would be - sheet persists
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
+        await tester.tapAt(const Offset(200, 20));
+        await tester.pumpAndSettle();
+      }
 
-      // After tap, sheet should still be present (barrier did not dismiss)
-      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+      await openAndTapOutside(true, 'persistent');
+      expect(find.text('persistent'), findsOneWidget, reason: 'persistent sheets must survive an outside tap');
+
+      // Tear down completely before the second case: the persistent sheet above was
+      // never dismissed (that's the point of asserting it survives), so its route is
+      // still on the Navigator. pumpThemedApp's LayrzApp would otherwise be reconciled
+      // against the same Element (same widget type/position in the tree), leaving that
+      // route — and its Navigator — in place underneath the next case's fresh content,
+      // which then intercepts the "Tap" gesture meant for the modal case. Pumping an
+      // unrelated widget type first forces a full teardown.
+      await tester.pumpWidget(const SizedBox());
+
+      await openAndTapOutside(false, 'modal');
+      expect(find.text('modal'), findsNothing, reason: 'modal sheets must dismiss on the same outside tap');
     });
 
     testWidgets('renders sheet with configured animation', (WidgetTester tester) async {
