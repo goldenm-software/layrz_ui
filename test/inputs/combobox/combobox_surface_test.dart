@@ -81,6 +81,55 @@ void main() {
     });
 
     testWidgets(
+      'the shadow-bearing decoration is an ancestor of the scroll viewport, '
+      'not a descendant of it (elevation must not be clipped)',
+      (tester) async {
+        // A BoxShadow paints outside its own box's bounds. SingleChildScrollView
+        // clips at exactly those bounds (Clip.hardEdge by default). So the
+        // decoration that carries the elevation shadow must be an ANCESTOR of
+        // the SingleChildScrollView, never a descendant/child of it — otherwise
+        // the shadow is painted and then clipped away, invisibly. Reading
+        // `decoration.boxShadow` alone cannot catch this: it is non-null on both
+        // sides of the fix. Only the ancestry relationship distinguishes them.
+        final options = List.generate(20, (i) => 'Option $i');
+
+        await pumpThemed(
+          tester,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
+            child: DesktopOverlay(
+              options: options,
+              highlightedIndex: -1,
+              onSelected: (_) {},
+              emptyText: 'No matches',
+            ),
+          ),
+        );
+
+        final shadowDecoratedFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is DecoratedBox &&
+              widget.decoration is BoxDecoration &&
+              (widget.decoration as BoxDecoration).boxShadow != null,
+        );
+
+        expect(
+          shadowDecoratedFinder,
+          findsOneWidget,
+          reason: 'exactly one decoration should carry the elevation shadow',
+        );
+
+        expect(
+          find.ancestor(of: find.byType(SingleChildScrollView), matching: shadowDecoratedFinder),
+          findsOneWidget,
+          reason:
+              'the shadow-bearing decoration must wrap the scroll viewport, '
+              'not sit inside it, or the shadow is clipped away invisibly',
+        );
+      },
+    );
+
+    testWidgets(
       'does not overflow with many options, and the list actually scrolls (DESIGN-35)',
       (tester) async {
         // Regression test for the 840px overflow: a Container(constraints:

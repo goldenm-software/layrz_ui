@@ -54,21 +54,24 @@ class DesktopOverlay extends StatelessWidget {
       );
     }
 
-    return SingleChildScrollView(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: tokens.colors.sf1,
-          borderRadius: tokens.radius.br3,
-          boxShadow: tokens.shadow.elevation3,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            options.length,
-            (index) => OptionItem(
-              option: options[index],
-              isHighlighted: index == highlightedIndex,
-              onTap: () => onSelected(options[index]),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: tokens.colors.sf1,
+        borderRadius: tokens.radius.br3,
+        boxShadow: tokens.shadow.elevation3,
+      ),
+      child: ClipRRect(
+        borderRadius: tokens.radius.br3,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: List.generate(
+              options.length,
+              (index) => OptionItem(
+                option: options[index],
+                isHighlighted: index == highlightedIndex,
+                onTap: () => onSelected(options[index]),
+              ),
             ),
           ),
         ),
