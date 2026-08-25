@@ -299,8 +299,8 @@ void main() {
     });
 
     testWidgets(
-      'step controls are reachable by arrow/page keys on the field, clamp at bounds, '
-      'and are tap targets rather than focus stops',
+      'step controls are reachable by arrow/page keys on the field, clamp at the minimum '
+      'bound, and are tap targets rather than focus stops',
       (tester) async {
         // number_input.dart:611-618 documents that the field is the only focus stop this
         // widget contributes (the ancestor Focus that intercepts stepping keys never
@@ -382,8 +382,10 @@ void main() {
           // reading as the contract. Proving "the caps are tap-actionable buttons, not focus
           // stops" only needs a point where the dump-1 shape is actually correct — this one
           // — not the specific value the keyboard sequence ends on. The staleness itself is
-          // a real, separate reactivity gap (noted to the lead), out of this row's two-file
-          // scope, and is not to be papered over by moving the assertion back once it exists.
+          // excluded by maintainer decision; tracked as its own row — LayrzNumberInput:
+          // step-button state goes stale when the value changes (DESIGN-150), which also
+          // carries the at-bound assertion moved out of this test — and is not to be papered
+          // over by moving the assertion back once that row lands.
           expect(
             tester.getSemantics(find.bySemanticsLabel('Decrease value')),
             matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
