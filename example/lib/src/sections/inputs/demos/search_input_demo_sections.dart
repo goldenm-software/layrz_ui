@@ -26,11 +26,19 @@ class SearchInputDemoSections extends StatelessWidget {
   /// The last query fired by the debounce example's [LayrzSearchInput.onSearch].
   final String debounceQuery;
 
+  /// The [LayrzPreferredSide] currently applied to the "Preferred Side" example's
+  /// icon-mode [LayrzSearchInput], driven by [onIconPreferredSideChanged].
+  final LayrzPreferredSide iconPreferredSide;
+
   /// Callback fired when the field mode example searches.
   final ValueChanged<String> onFieldSearch;
 
   /// Callback fired when the debounce example searches.
   final ValueChanged<String> onDebounceSearch;
+
+  /// Callback fired when the user picks a different side in the "Preferred Side"
+  /// example's radio control.
+  final ValueChanged<LayrzPreferredSide> onIconPreferredSideChanged;
 
   /// Creates the search input demo sections widget.
   const SearchInputDemoSections({
@@ -41,8 +49,10 @@ class SearchInputDemoSections extends StatelessWidget {
     required this.debounceController,
     required this.fieldQuery,
     required this.debounceQuery,
+    required this.iconPreferredSide,
     required this.onFieldSearch,
     required this.onDebounceSearch,
+    required this.onIconPreferredSideChanged,
   });
 
   @override
@@ -196,6 +206,50 @@ class SearchInputDemoSections extends StatelessWidget {
                 ],
               ),
               if (debounceQuery.isNotEmpty) Text('Debounced query: $debounceQuery', style: tokens.typography.label),
+
+              tokens.spacing.sb3,
+              Text('Preferred Side (Icon Mode)', style: tokens.typography.title),
+              Text(
+                'preferredSide controls which side of the trigger button the panel opens on. '
+                'Pick a side below and open the panel to see it move. Defaults to right; it flips '
+                'to the opposite side when it does not fit, and is clamped into the overlay if '
+                'neither does.',
+                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+              ),
+              tokens.spacing.sb2,
+              LayrzRow(
+                spacing: tokens.spacing.sp3,
+                children: [
+                  LayrzCol(
+                    xs: 12,
+                    md: 6,
+                    child: LayrzRadioInput<LayrzPreferredSide>(
+                      labelText: 'preferredSide',
+                      value: iconPreferredSide,
+                      onChanged: (side) {
+                        if (side != null) onIconPreferredSideChanged(side);
+                      },
+                      items: const [
+                        LayrzSelectItem(labelText: 'Top', value: LayrzPreferredSide.top),
+                        LayrzSelectItem(labelText: 'Bottom', value: LayrzPreferredSide.bottom),
+                        LayrzSelectItem(labelText: 'Left', value: LayrzPreferredSide.left),
+                        LayrzSelectItem(labelText: 'Right', value: LayrzPreferredSide.right),
+                      ],
+                      xs: 6,
+                    ),
+                  ),
+                  LayrzCol(
+                    xs: 12,
+                    md: 6,
+                    child: LayrzSearchInput(
+                      mode: LayrzSearchInputMode.icon,
+                      labelText: 'Preferred side',
+                      hintText: 'Opens on the side selected at left',
+                      preferredSide: iconPreferredSide,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

@@ -1,11 +1,14 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 
 import 'search_input_demo_sections.dart';
 
 /// Thin stateful container for the [LayrzSearchInput] showcase.
 ///
-/// Owns and disposes every [TextEditingController] the demo needs, and tracks the
-/// live query text for the two examples that display it back to the user. All layout
+/// Owns and disposes every [TextEditingController] the demo needs, tracks the
+/// live query text for the two examples that display it back to the user, and
+/// tracks the currently selected [LayrzPreferredSide] for the icon-mode panel
+/// example so a person can change it and watch the panel move. All layout
 /// and example composition lives in [SearchInputDemoSections], which renders purely
 /// from the parameters it is given.
 class SearchInputDemo extends StatefulWidget {
@@ -27,6 +30,10 @@ class _SearchInputDemoState extends State<SearchInputDemo> {
 
   String _fieldQuery = '';
   String _debounceQuery = '';
+
+  /// The [LayrzPreferredSide] currently applied to the icon-mode panel example,
+  /// driven by the radio control in [SearchInputDemoSections].
+  LayrzPreferredSide _iconPreferredSide = LayrzPreferredSide.right;
 
   @override
   void initState() {
@@ -55,8 +62,10 @@ class _SearchInputDemoState extends State<SearchInputDemo> {
       debounceController: _debounceController,
       fieldQuery: _fieldQuery,
       debounceQuery: _debounceQuery,
+      iconPreferredSide: _iconPreferredSide,
       onFieldSearch: (query) => setState(() => _fieldQuery = query),
       onDebounceSearch: (query) => setState(() => _debounceQuery = query),
+      onIconPreferredSideChanged: (side) => setState(() => _iconPreferredSide = side),
     );
   }
 }

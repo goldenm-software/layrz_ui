@@ -239,6 +239,46 @@ void main() {
       });
     });
 
+    group('preferredSide', () {
+      testWidgets('defaults to right and forwards to the anchored panel', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+          ),
+        );
+
+        final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
+        expect(panel.preferredSide, LayrzPreferredSide.right);
+      });
+
+      testWidgets('a non-default value reaches the anchored panel', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+            preferredSide: LayrzPreferredSide.top,
+          ),
+        );
+
+        final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
+        expect(panel.preferredSide, LayrzPreferredSide.top);
+      });
+
+      testWidgets('field mode ignores it and renders normally', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            preferredSide: LayrzPreferredSide.left,
+          ),
+        );
+
+        expect(find.byType(LayrzAnchoredPanel), findsNothing);
+        expect(find.byType(LayrzInputChrome), findsOneWidget);
+      });
+    });
+
     group('auto mode', () {
       testWidgets('auto renders the field on a wide surface', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);

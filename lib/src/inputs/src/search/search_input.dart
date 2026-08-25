@@ -6,6 +6,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
+import 'package:layrz_ui/src/positioning/positioning.dart';
 
 import 'search_input_mode.dart';
 import '../shared/editable_field.dart';
@@ -127,6 +128,16 @@ class LayrzSearchInput extends StatefulWidget {
   /// In icon mode, this parameter is ignored.
   final double? maxWidth;
 
+  /// The preferred side on which the search panel opens relative to the trigger button.
+  ///
+  /// Defaults to [LayrzPreferredSide.right]. If the panel does not fit on that side it
+  /// flips to the opposite side, and is clamped into the overlay if neither fits.
+  ///
+  /// Only applies in icon mode — that is, when [mode] is [LayrzSearchInputMode.icon], or
+  /// when [mode] is [LayrzSearchInputMode.auto] and the viewport is compact. In field
+  /// mode there is no panel and this parameter is ignored.
+  final LayrzPreferredSide preferredSide;
+
   /// Creates a new [LayrzSearchInput] with the given properties.
   const LayrzSearchInput({
     super.key,
@@ -146,6 +157,7 @@ class LayrzSearchInput extends StatefulWidget {
     this.focusNode,
     this.padding,
     this.maxWidth,
+    this.preferredSide = LayrzPreferredSide.right,
   });
 
   @override
@@ -492,6 +504,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
       widthBounds: const LayrzAnchoredPanelWidthBounds(minWidth: 280.0, maxWidth: 480.0),
+      preferredSide: widget.preferredSide,
       onOpen: _handlePanelOpened,
       builder: (context, controller) {
         return LayrzButton(
