@@ -1,14 +1,18 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'duration_format.dart';
 import 'duration_picker_panel.dart';
 import 'duration_unit.dart';
 import '../shared/input_chrome.dart';
+import '../shared/input_footer_slot.dart';
 import '../shared/input_slot.dart';
+import '../shared/input_style_spec.dart';
 
 /// The default set of visible duration units.
 const _kDefaultVisibleUnits = {
@@ -328,8 +332,139 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     }
   }
 
-  /// Builds the anchor widget for desktop anchored panel.
-  Widget _buildAnchor(BuildContext context, MenuController controller) {
+  /// Builds the clock-style icon that identifies this field as a duration picker.
+  ///
+  /// Rendered as an **external sibling** of [LayrzInputChrome] — inside [_buildFieldRow]'s
+  /// `Row`, never in `prefixSlot`/`suffixSlot` — so both slots stay free for a caller to use.
+  /// This follows the same governance-approved pattern `LayrzNumberInput` uses for its step
+  /// buttons (`number_input.dart`'s `NumberFieldControl`): the widget's own affordance lives
+  /// beside the chrome, not inside it.
+  ///
+  /// [tokens] supplies spacing, color, and border tokens. [spec] is the
+  /// [LayrzInputStyleSpec] already resolved for the field's current interaction state, so the
+  /// glyph color always matches the field (e.g. dims to `fg4` when disabled) with no
+  /// separate state tracking of its own. [hasErrors] selects the divider's error-aware color,
+  /// mirroring [NumberFieldControl]'s divider treatment between its cap and the chrome.
+  ///
+  /// Purely decorative: the field's own [Semantics] node (set by [_buildInteractiveField])
+  /// already carries the label and enabled state, so this is wrapped in [ExcludeSemantics] to
+  /// avoid announcing the icon a second time.
+  Widget _buildAffordanceIcon({
+    required LayrzTokens tokens,
+    required LayrzInputStyleSpec spec,
+    required bool hasErrors,
+  }) {
+    final dividerColor = hasErrors ? tokens.colors.danger : tokens.colors.divider.withValues(alpha: 0.3);
+
+    return ExcludeSemantics(
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(color: dividerColor, width: tokens.border.stroke2),
+          ),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+        child: Align(
+          alignment: Alignment.center,
+          child: Icon(
+            MdiIcons.clockOutline,
+            size: tokens.typography.body.fontSize,
+            color: spec.textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the bordered field row: [LayrzInputChrome] plus the affordance icon.
+  ///
+  /// Mirrors `number_input.dart:869-924`'s composition — a `Row` of `[chrome, control]`
+  /// wrapped in one outer `Container` that draws the unified border and radius, with the
+  /// chrome itself given `showBorder: false` and `borderRadius: BorderRadius.zero` so its own
+  /// box never paints a competing border. `LayrzInputChrome` needed no change to support
+  /// this: `showBorder` and `borderRadius` already exist on it for exactly this purpose.
+  ///
+  /// [labelText] and the error/helper footer are deliberately **not** passed to the inner
+  /// chrome here (`labelText: null`, `hideDetails: true`) — [_buildInteractiveField] renders
+  /// both outside this row instead, so the affordance icon sits only beside the field box
+  /// itself, not stretched across the label above or the footer below it.
+  ///
+  /// [context] is the current [BuildContext]. [tokens] is the resolved [LayrzTokens] for this
+  /// build. [contentChild] is the (non-editable) summary text widget shown inside the chrome.
+  /// [states] is the widget's current interaction states, forwarded to both the chrome and the
+  /// affordance icon so they always agree on disabled/enabled styling.
+  Widget _buildFieldRow({
+    required BuildContext context,
+    required LayrzTokens tokens,
+    required Widget contentChild,
+    required Set<WidgetState> states,
+  }) {
+    final hasErrors = widget.errors.isNotEmpty;
+    final spec = LayrzInputStyleSpec.resolve(
+      states: states,
+      tokens: tokens,
+      hasErrors: hasErrors,
+      readOnly: true,
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: spec.backgroundColor,
+        border: Border.all(
+          color: spec.borderColor,
+          width: spec.borderWidth,
+        ),
+        borderRadius: tokens.radius.br2,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: LayrzInputChrome(
+                labelText: null,
+                hintText: widget.hintText,
+                isRequired: widget.isRequired,
+                prefixSlot: const LayrzInputPrefixSlot(),
+                suffixSlot: const LayrzInputSuffixSlot(),
+                disabled: widget.disabled,
+                readOnly: true,
+                errors: widget.errors,
+                hideDetails: true,
+                states: states,
+                suppressReadOnlyLock: true,
+                controller: _controller,
+                padding: widget.padding,
+                helpTitleText: widget.helpTitleText,
+                helpContentText: widget.helpContentText,
+                borderRadius: BorderRadius.zero,
+                showBorder: false,
+                child: contentChild,
+              ),
+            ),
+            _buildAffordanceIcon(tokens: tokens, spec: spec, hasErrors: hasErrors),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the interactive anchor shared by the desktop and compact bands.
+  ///
+  /// Both bands render the same composition — an optional label, the bordered field row from
+  /// [_buildFieldRow] (chrome + affordance icon), and the error/helper footer — and differ only
+  /// in what [onTap] does: open the desktop anchored panel's `MenuController`, or open the
+  /// mobile bottom sheet. Factoring this out keeps that composition defined exactly once
+  /// instead of duplicated per band.
+  ///
+  /// [context] is the current [BuildContext]. [onTap] is invoked on tap; callers pass `null`
+  /// when [LayrzDurationInput.disabled] is true so the [GestureDetector] and the [Semantics]
+  /// node both report no tap handler.
+  Widget _buildInteractiveField({
+    required BuildContext context,
+    required VoidCallback? onTap,
+  }) {
     final tokens = context.tokens;
 
     // Display summary text or placeholder
@@ -355,13 +490,20 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       states.add(WidgetState.disabled);
     }
 
+    final fieldRow = _buildFieldRow(
+      context: context,
+      tokens: tokens,
+      contentChild: contentChild,
+      states: states,
+    );
+
     return Semantics(
       label: widget.labelText,
       button: true,
       enabled: !widget.disabled,
-      onTap: widget.disabled ? null : controller.open,
+      onTap: onTap,
       child: GestureDetector(
-        onTap: widget.disabled ? null : controller.open,
+        onTap: onTap,
         behavior: HitTestBehavior.opaque,
         // Attaches `_focusNode` to the focus tree. `LayrzInputChrome` is
         // purely visual and never does this itself, and passing the node to
@@ -369,26 +511,57 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         // to restore focus -- it does not attach the node anywhere on its own.
         child: Focus(
           focusNode: _focusNode,
-          child: LayrzInputChrome(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            prefixSlot: const LayrzInputPrefixSlot(),
-            suffixSlot: const LayrzInputSuffixSlot(),
-            disabled: widget.disabled,
-            readOnly: true,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            states: states,
-            suppressReadOnlyLock: true,
-            controller: _controller,
-            padding: widget.padding,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            child: contentChild,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Label rendered outside the chrome -- see the doc comment on
+              // [_buildFieldRow] for why.
+              if (widget.labelText != null)
+                Padding(
+                  padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+                  child: ExcludeSemantics(
+                    child: RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: widget.labelText,
+                            style: tokens.typography.label.copyWith(
+                              color: tokens.colors.fg2,
+                            ),
+                          ),
+                          if (widget.isRequired)
+                            TextSpan(
+                              text: '*',
+                              style: tokens.typography.label.copyWith(
+                                color: tokens.colors.danger,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              fieldRow,
+              // Error block, rendered outside the chrome -- see the doc comment on
+              // [_buildFieldRow] for why.
+              LayrzInputFooterSlot(
+                errors: widget.errors,
+                hideDetails: widget.hideDetails,
+                controller: _controller,
+              ),
+            ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Builds the anchor widget for desktop anchored panel.
+  Widget _buildAnchor(BuildContext context, MenuController controller) {
+    return _buildInteractiveField(
+      context: context,
+      onTap: widget.disabled ? null : controller.open,
     );
   }
 
@@ -402,65 +575,11 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     final isCompact = context.isCompact;
 
     if (isCompact) {
-      // Mobile: display summary in a read-only input chrome that opens a bottom sheet
-      final tokens = context.tokens;
-
-      // Display summary text or placeholder
-      final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
-
-      // Build the content display widget
-      final contentChild = Padding(
-        padding: tokens.spacing.pd2,
-        child: SizedBox(
-          width: double.infinity,
-          child: Text(
-            displayText,
-            style: tokens.typography.body,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      );
-
-      // Compute widget states
-      final states = <WidgetState>{};
-      if (widget.disabled) {
-        states.add(WidgetState.disabled);
-      }
-
-      return Semantics(
-        label: widget.labelText,
-        button: true,
-        enabled: !widget.disabled,
+      // Mobile: display summary in a read-only field row that opens a bottom sheet. Shares
+      // [_buildInteractiveField] with the desktop anchor below -- see its doc comment.
+      return _buildInteractiveField(
+        context: context,
         onTap: widget.disabled ? null : _openMobileSurface,
-        child: GestureDetector(
-          onTap: widget.disabled ? null : _openMobileSurface,
-          behavior: HitTestBehavior.opaque,
-          // Attaches `_focusNode` to the focus tree. The compact path has no
-          // `Focus` widget of its own -- `LayrzInputChrome` is purely visual
-          // -- so nothing ever received the node before this.
-          child: Focus(
-            focusNode: _focusNode,
-            child: LayrzInputChrome(
-              labelText: widget.labelText,
-              hintText: widget.hintText,
-              isRequired: widget.isRequired,
-              prefixSlot: const LayrzInputPrefixSlot(),
-              suffixSlot: const LayrzInputSuffixSlot(),
-              disabled: widget.disabled,
-              readOnly: true,
-              errors: widget.errors,
-              hideDetails: widget.hideDetails,
-              states: states,
-              suppressReadOnlyLock: true,
-              controller: _controller,
-              padding: widget.padding,
-              helpTitleText: widget.helpTitleText,
-              helpContentText: widget.helpContentText,
-              child: contentChild,
-            ),
-          ),
-        ),
       );
     } else {
       // Desktop: return anchored panel with duration picker surface
