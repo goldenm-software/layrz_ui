@@ -305,14 +305,49 @@ void main() {
     );
 
     testWidgets(
-      'prefix and suffix slots are accessible',
+      'a prefix text slot merges into the field accessible name',
       (tester) async {
-        // Prefix and suffix slots are rendered inside LayrzInputChrome (lib/src/inputs/src/shared/input_chrome.dart),
-        // which is not owned by this unit (maintainer decision per DESIGN-115).
-        // The slots cannot be exposed to the outer Semantics node from this location.
-        // This test cannot be fixed without modifying LayrzInputChrome.
+        // The fuller D64 slot-semantics accounting (labelled icon/widget slots, the
+        // pointer-only suppression) is exercised directly against LayrzInputChrome in
+        // input_chrome_a11y_test.dart, since none of it has a public parameter on this
+        // widget yet. What IS reachable through LayrzTextAreaInput today is the
+        // non-interactive TEXT slot form: per D64, it merges into the field's own
+        // accessible name rather than being excluded like an unlabelled icon/widget
+        // slot. This is the one prefix/suffix accessibility behavior this unit can
+        // verify without a chrome change of its own.
+        final handle = tester.ensureSemantics();
+        final controller = TextEditingController();
+
+        await pumpThemed(
+          tester,
+          LayrzTextAreaInput(
+            labelText: 'Amount',
+            prefixText: 'PREFIX',
+            controller: controller,
+          ),
+        );
+
+        expect(
+          tester.getSemantics(
+            find
+                .descendant(
+                  of: find.byType(LayrzTextAreaInput),
+                  matching: find.byType(Semantics),
+                )
+                .first,
+          ),
+          matchesSemantics(
+            label: 'Amount\nPREFIX',
+            hasEnabledState: true,
+            isEnabled: true,
+            isTextField: true,
+            isMultiline: true,
+            isFocusable: true,
+          ),
+        );
+
+        handle.dispose();
       },
-      skip: true,
     );
 
     testWidgets('disabled prefix/suffix taps are not triggered', (tester) async {
@@ -510,9 +545,10 @@ void main() {
           ),
         );
 
-        // The prefix icon is rendered inside LayrzInputChrome and cannot be exposed
-        // from this unit's outer Semantics node (maintainer decision per DESIGN-115).
-        // Verify that the field semantics remain correct despite the icon's presence.
+        // A `prefixIcon` with no `onPrefixTap` and no semantic label is declared
+        // decorative by LayrzInputChrome (D64) and wrapped in ExcludeSemantics -- it
+        // carries no meaning of its own, so the field's own semantics are unchanged
+        // by its presence.
         expect(
           tester.getSemantics(
             find
@@ -537,20 +573,6 @@ void main() {
     );
 
     testWidgets(
-      'prefix icon cannot be semantically exposed',
-      (tester) async {
-        // Prefix icons are rendered inside LayrzInputChrome, which this unit cannot modify
-        // (maintainer decision per DESIGN-115). The icon cannot be reached from the outer
-        // Semantics node without building a bridge through the off-limits chrome.
-        // A real affordance would require either:
-        // - An onPrefixTap callback surfaced as a semantic action (interaction design needed)
-        // - An explicit semantic label for the icon (passed as a parameter from the caller)
-        // Neither is available. This gap is architectural, not a fixable defect.
-      },
-      skip: true,
-    );
-
-    testWidgets(
       'field semantics remain intact when a suffixIcon is present',
       (tester) async {
         final handle = tester.ensureSemantics();
@@ -564,9 +586,10 @@ void main() {
           ),
         );
 
-        // The suffix icon is rendered inside LayrzInputChrome and cannot be exposed
-        // from this unit's outer Semantics node (maintainer decision per DESIGN-115).
-        // Verify that the field semantics remain correct despite the icon's presence.
+        // A `suffixIcon` with no `onSuffixTap` and no semantic label is declared
+        // decorative by LayrzInputChrome (D64) and wrapped in ExcludeSemantics -- it
+        // carries no meaning of its own, so the field's own semantics are unchanged
+        // by its presence.
         expect(
           tester.getSemantics(
             find
@@ -588,44 +611,6 @@ void main() {
 
         handle.dispose();
       },
-    );
-
-    testWidgets(
-      'suffix icon cannot be semantically exposed',
-      (tester) async {
-        // Suffix icons are rendered inside LayrzInputChrome, which this unit cannot modify
-        // (maintainer decision per DESIGN-115). The icon cannot be reached from the outer
-        // Semantics node without building a bridge through the off-limits chrome.
-        // A real affordance would require either:
-        // - An onSuffixTap callback surfaced as a semantic action (interaction design needed)
-        // - An explicit semantic label for the icon (passed as a parameter from the caller)
-        // Neither is available. This gap is architectural, not a fixable defect.
-      },
-      skip: true,
-    );
-
-    testWidgets(
-      'prefix widget cannot be semantically exposed',
-      (tester) async {
-        // Prefix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
-        // (maintainer decision per DESIGN-115). A real affordance would require either:
-        // - A semantic label passed as a caller parameter
-        // - A callback for interaction wrapped as a semantic action
-        // Neither is available. This gap is architectural.
-      },
-      skip: true,
-    );
-
-    testWidgets(
-      'suffix widget cannot be semantically exposed',
-      (tester) async {
-        // Suffix widgets are rendered inside LayrzInputChrome, which this unit cannot modify
-        // (maintainer decision per DESIGN-115). A real affordance would require either:
-        // - A semantic label passed as a caller parameter
-        // - A callback for interaction wrapped as a semantic action
-        // Neither is available. This gap is architectural.
-      },
-      skip: true,
     );
   });
 }

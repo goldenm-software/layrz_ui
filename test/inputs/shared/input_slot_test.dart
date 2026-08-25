@@ -89,6 +89,72 @@ void main() {
 
       expect(slot1 == slot2, false);
     });
+
+    test('isDecorative defaults to false', () {
+      const slot = LayrzInputPrefixSlot(text: 'test');
+      expect(slot.isDecorative, false);
+    });
+
+    test('semanticLabel defaults to null', () {
+      const slot = LayrzInputPrefixSlot(text: 'test');
+      expect(slot.semanticLabel, isNull);
+    });
+
+    test('accepts a semanticLabel', () {
+      const slot = LayrzInputPrefixSlot(
+        icon: IconData(0xe900, fontFamily: 'test'),
+        semanticLabel: 'Clear',
+      );
+      expect(slot.semanticLabel, 'Clear');
+    });
+
+    test('accepts isDecorative: true with no label and no onTap', () {
+      const slot = LayrzInputPrefixSlot(icon: IconData(0xe900, fontFamily: 'test'), isDecorative: true);
+      expect(slot.isDecorative, true);
+    });
+
+    test('asserts when isDecorative and semanticLabel are both provided', () {
+      expect(
+        () => LayrzInputPrefixSlot(
+          icon: const IconData(0xe900, fontFamily: 'test'),
+          isDecorative: true,
+          semanticLabel: 'Icon label',
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('asserts when isDecorative and onTap are both provided', () {
+      expect(
+        () => LayrzInputPrefixSlot(
+          icon: const IconData(0xe900, fontFamily: 'test'),
+          isDecorative: true,
+          onTap: () {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('semanticLabel is included in equality', () {
+      const slot1 = LayrzInputPrefixSlot(text: 'test', semanticLabel: 'A');
+      const slot2 = LayrzInputPrefixSlot(text: 'test', semanticLabel: 'B');
+
+      expect(slot1 == slot2, false);
+    });
+
+    test('isDecorative is included in equality', () {
+      const slot1 = LayrzInputPrefixSlot(icon: IconData(0xe900, fontFamily: 'test'), isDecorative: true);
+      const slot2 = LayrzInputPrefixSlot(icon: IconData(0xe900, fontFamily: 'test'));
+
+      expect(slot1 == slot2, false);
+    });
+
+    test('semanticLabel and isDecorative are included in hashCode', () {
+      const slot1 = LayrzInputPrefixSlot(text: 'test', semanticLabel: 'A');
+      const slot2 = LayrzInputPrefixSlot(text: 'test', semanticLabel: 'A');
+
+      expect(slot1.hashCode == slot2.hashCode, true);
+    });
   });
 
   group('LayrzInputSuffixSlot', () {
@@ -177,6 +243,72 @@ void main() {
 
       expect(slot1 == slot2, false);
     });
+
+    test('isDecorative defaults to false', () {
+      const slot = LayrzInputSuffixSlot(text: 'test');
+      expect(slot.isDecorative, false);
+    });
+
+    test('semanticLabel defaults to null', () {
+      const slot = LayrzInputSuffixSlot(text: 'test');
+      expect(slot.semanticLabel, isNull);
+    });
+
+    test('accepts a semanticLabel', () {
+      const slot = LayrzInputSuffixSlot(
+        icon: IconData(0xe900, fontFamily: 'test'),
+        semanticLabel: 'Clear',
+      );
+      expect(slot.semanticLabel, 'Clear');
+    });
+
+    test('accepts isDecorative: true with no label and no onTap', () {
+      const slot = LayrzInputSuffixSlot(icon: IconData(0xe900, fontFamily: 'test'), isDecorative: true);
+      expect(slot.isDecorative, true);
+    });
+
+    test('asserts when isDecorative and semanticLabel are both provided', () {
+      expect(
+        () => LayrzInputSuffixSlot(
+          icon: const IconData(0xe900, fontFamily: 'test'),
+          isDecorative: true,
+          semanticLabel: 'Icon label',
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('asserts when isDecorative and onTap are both provided', () {
+      expect(
+        () => LayrzInputSuffixSlot(
+          icon: const IconData(0xe900, fontFamily: 'test'),
+          isDecorative: true,
+          onTap: () {},
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('semanticLabel is included in equality', () {
+      const slot1 = LayrzInputSuffixSlot(text: 'test', semanticLabel: 'A');
+      const slot2 = LayrzInputSuffixSlot(text: 'test', semanticLabel: 'B');
+
+      expect(slot1 == slot2, false);
+    });
+
+    test('isDecorative is included in equality', () {
+      const slot1 = LayrzInputSuffixSlot(icon: IconData(0xe900, fontFamily: 'test'), isDecorative: true);
+      const slot2 = LayrzInputSuffixSlot(icon: IconData(0xe900, fontFamily: 'test'));
+
+      expect(slot1 == slot2, false);
+    });
+
+    test('semanticLabel and isDecorative are included in hashCode', () {
+      const slot1 = LayrzInputSuffixSlot(text: 'test', semanticLabel: 'A');
+      const slot2 = LayrzInputSuffixSlot(text: 'test', semanticLabel: 'A');
+
+      expect(slot1.hashCode == slot2.hashCode, true);
+    });
   });
 
   group('resolvePrefixSlot', () {
@@ -259,6 +391,30 @@ void main() {
         throwsAssertionError,
       );
     });
+
+    test('passes semanticLabel through', () {
+      final slot = resolvePrefixSlot(
+        prefixIcon: const IconData(0xe900, fontFamily: 'test'),
+        onPrefixTap: () {},
+        semanticLabel: 'Clear',
+      );
+
+      expect(slot.semanticLabel, 'Clear');
+    });
+
+    test('passes isDecorative through', () {
+      final slot = resolvePrefixSlot(
+        prefixIcon: const IconData(0xe900, fontFamily: 'test'),
+        isDecorative: true,
+      );
+
+      expect(slot.isDecorative, true);
+    });
+
+    test('isDecorative defaults to false when not specified', () {
+      final slot = resolvePrefixSlot(prefixIcon: const IconData(0xe900, fontFamily: 'test'));
+      expect(slot.isDecorative, false);
+    });
   });
 
   group('resolveSuffixSlot', () {
@@ -340,6 +496,30 @@ void main() {
         ),
         throwsAssertionError,
       );
+    });
+
+    test('passes semanticLabel through', () {
+      final slot = resolveSuffixSlot(
+        suffixIcon: const IconData(0xe900, fontFamily: 'test'),
+        onSuffixTap: () {},
+        semanticLabel: 'Clear',
+      );
+
+      expect(slot.semanticLabel, 'Clear');
+    });
+
+    test('passes isDecorative through', () {
+      final slot = resolveSuffixSlot(
+        suffixIcon: const IconData(0xe900, fontFamily: 'test'),
+        isDecorative: true,
+      );
+
+      expect(slot.isDecorative, true);
+    });
+
+    test('isDecorative defaults to false when not specified', () {
+      final slot = resolveSuffixSlot(suffixIcon: const IconData(0xe900, fontFamily: 'test'));
+      expect(slot.isDecorative, false);
     });
   });
 }
