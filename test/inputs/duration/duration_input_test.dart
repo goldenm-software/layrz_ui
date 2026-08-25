@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/duration/duration_picker_panel.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_slot.dart';
 
 import '../../helpers/find_button_label.dart';
 import '../../helpers/pump_themed_app.dart';
@@ -957,6 +958,183 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(LayrzDurationInput), findsOneWidget);
+    });
+  });
+
+  group('LayrzDurationInput affordance icon', () {
+    testWidgets('renders the clock affordance icon on the desktop band', (WidgetTester tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+        ),
+      );
+
+      final iconFinder = find.byIcon(MdiIcons.clockOutline);
+      expect(iconFinder, findsOneWidget);
+
+      final tokens = LayrzTokens.light();
+      final icon = tester.widget<Icon>(iconFinder);
+      expect(icon.color, tokens.colors.fg1);
+      expect(icon.size, tokens.typography.body.fontSize);
+    });
+
+    testWidgets('renders the clock affordance icon on the compact band', (WidgetTester tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+        ),
+      );
+
+      final iconFinder = find.byIcon(MdiIcons.clockOutline);
+      expect(iconFinder, findsOneWidget);
+
+      final tokens = LayrzTokens.light();
+      final icon = tester.widget<Icon>(iconFinder);
+      expect(icon.color, tokens.colors.fg1);
+      expect(icon.size, tokens.typography.body.fontSize);
+    });
+
+    testWidgets('dims the affordance icon to fg4 when disabled, matching the chrome text color', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          disabled: true,
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final icon = tester.widget<Icon>(find.byIcon(MdiIcons.clockOutline));
+      expect(icon.color, tokens.colors.fg4);
+    });
+
+    testWidgets('recolors the affordance icon to the danger color when errors are present', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          errors: const ['Invalid duration'],
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final icon = tester.widget<Icon>(find.byIcon(MdiIcons.clockOutline));
+      expect(icon.color, tokens.colors.fg1);
+      expect(icon.color, isNot(tokens.colors.fg4));
+    });
+
+    testWidgets(
+      'keeps both prefix and suffix slots empty and available on the inner chrome (desktop band)',
+      (WidgetTester tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+
+        expect(chrome.prefixSlot, isA<LayrzInputPrefixSlot>());
+        expect(chrome.prefixSlot.hasContent, isFalse);
+        expect(chrome.prefixSlot.icon, isNull);
+        expect(chrome.prefixSlot.widget, isNull);
+        expect(chrome.prefixSlot.text, isNull);
+
+        expect(chrome.suffixSlot, isA<LayrzInputSuffixSlot>());
+        expect(chrome.suffixSlot.hasContent, isFalse);
+        expect(chrome.suffixSlot.icon, isNull);
+        expect(chrome.suffixSlot.widget, isNull);
+        expect(chrome.suffixSlot.text, isNull);
+      },
+    );
+
+    testWidgets(
+      'keeps both prefix and suffix slots empty and available on the inner chrome (compact band)',
+      (WidgetTester tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+
+        expect(chrome.prefixSlot.hasContent, isFalse);
+        expect(chrome.suffixSlot.hasContent, isFalse);
+      },
+    );
+
+    testWidgets('the affordance icon is excluded from the semantics tree (decorative)', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+        ),
+      );
+
+      final excludeSemanticsAboveIcon = find.ancestor(
+        of: find.byIcon(MdiIcons.clockOutline),
+        matching: find.byType(ExcludeSemantics),
+      );
+      expect(excludeSemanticsAboveIcon, findsOneWidget);
+    });
+
+    testWidgets('the inner chrome renders with no border and square corners of its own', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+        ),
+      );
+
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+
+      expect(chrome.showBorder, isFalse);
+      expect(chrome.borderRadius, BorderRadius.zero);
     });
   });
 }

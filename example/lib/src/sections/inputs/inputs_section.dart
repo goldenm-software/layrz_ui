@@ -12,6 +12,7 @@ import 'demos/radio_input_demo.dart';
 import 'demos/search_input_demo.dart';
 import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
+import 'demos/duration_input_demo.dart';
 import 'demos/stepper_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
@@ -96,7 +97,13 @@ class _InputsSectionState extends State<InputsSection> {
       icon: MdiIcons.menuDown,
     ),
 
-    // TODO(DESIGN-44): DurationInput will be added here once it lands on development
+    InputDemo(
+      id: 'duration-input',
+      name: 'Duration Input',
+      category: 'Choice',
+      details: DurationInputDemo(),
+      icon: MdiIcons.timerOutline,
+    ),
 
     // Search category
     InputDemo(
