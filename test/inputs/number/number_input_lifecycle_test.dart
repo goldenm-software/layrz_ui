@@ -324,8 +324,13 @@ void main() {
         //
         // The proof is the second step: `value` stays constant across the swap (so the
         // pre-existing, out-of-scope re-seed gap at didUpdateWidget's value block never
-        // fires -- see the class-level doc comment), `second` starts already at `maximum`,
-        // and only a write to `second` *after* the swap can flip the cap back to enabled.
+        // fires here -- that block's own `_updateControllerFromValue` call would push a
+        // write through whichever controller is already current by that point, invoking
+        // its listener before `build()` has re-seeded `_lastDecrementDisabled`/
+        // `_lastIncrementDisabled` for it -- a narrower instance of this same staleness
+        // class that this test does not exercise and that is not documented elsewhere),
+        // `second` starts already at `maximum`, and only a write to `second` *after* the
+        // swap can flip the cap back to enabled.
         // A comparison basis that was refreshed only by the listener itself (mirroring
         // `_wasEmpty` in LayrzSearchInput verbatim, with no swap-time reseed) would still be
         // holding `first`'s pre-swap reading (not at the bound) when this write arrives.

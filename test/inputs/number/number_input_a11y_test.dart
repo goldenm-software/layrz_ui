@@ -94,8 +94,9 @@ void main() {
       // dump 2 (labelText + disabled: true, Branch A): the single merged node carries
       // isTextField, hasEnabledState, isReadOnly, isFocusable, and drops isEnabled
       // (i.e. isEnabled: false) — `disabled` forces Branch A regardless of
-      // hideStepButtons (number_input.dart:511). Absorbs the former "disabled field is
-      // announced as disabled" test, which asserted only widget existence.
+      // hideStepButtons (the `showButtons` gate, number_input.dart:567). Absorbs the
+      // former "disabled field is announced as disabled" test, which asserted only
+      // widget existence.
       final handle = tester.ensureSemantics();
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);
@@ -371,12 +372,13 @@ void main() {
       'step controls are reachable by arrow/page keys on the field, clamp at the minimum '
       'bound, and are tap targets rather than focus stops',
       (tester) async {
-        // number_input.dart:611-618 documents that the field is the only focus stop this
-        // widget contributes (the ancestor Focus that intercepts stepping keys never
+        // The doc comment above the ancestor `Focus(onKeyEvent: _handleKeyEvent, ...)`
+        // (number_input.dart:722-730) documents that the field is the only focus stop
+        // this widget contributes (that Focus intercepts stepping keys but never
         // requests focus itself), and LayrzTappable — the caps' gesture surface — owns no
         // focus either (tappable.dart:27-28). Dump 1 confirms neither cap carries
         // `isFocusable`/`hasFocusAction`. So the real keyboard contract lives entirely on
-        // the field via Focus.onKeyEvent (number_input.dart:445-487), and this test proves
+        // the field via `_handleKeyEvent` (number_input.dart:501-543), and this test proves
         // that contract directly rather than asserting the caps are focusable, which they
         // deliberately are not (decision 1, dossier §10). The caps remain reachable by
         // gesture, asserted here as `isButton` + `hasTapAction` from dump 1/8.
@@ -396,8 +398,9 @@ void main() {
         //      assertion, even as the very first key of a brand-new, isolated test — with
         //      or without semantics enabled. There is no key-based way found to prove
         //      "inert when readOnly" live in this test environment; the guard is instead
-        //      established by direct citation of number_input.dart:453/458/463/473
-        //      (`!widget.readOnly && !widget.disabled` on every branch) plus the semantics
+        //      established by direct citation of the four `!widget.readOnly &&
+        //      !widget.disabled` guards inside `_handleKeyEvent`
+        //      (number_input.dart:509/514/519/530) plus the semantics
         //      dump 3 already pins for readOnly (both caps disabled — see "read-only field
         //      keeps the step-button chrome…" above). `disabled` is the same `||` clause,
         //      exercised identically, and routes to the no-caps plain-chrome branch anyway
@@ -480,8 +483,9 @@ void main() {
             ),
           );
 
-          // A further key at the bound is guarded by number_input.dart:463/473
-          // (`!_isIncrementDisabled()`/`!_isDecrementDisabled()`) — not re-sent here: a
+          // A further key at the bound is guarded by the `_isIncrementDisabled()`/
+          // `_isDecrementDisabled()` checks inside `_handleKeyEvent`
+          // (number_input.dart:509-530) — not re-sent here: a
           // 6th consecutive vertical-movement key in this same test was found to trip an
           // unrelated `VerticalCaretMovementRun` framework assertion documented above
           // (reproduced independent of this row's changes, both with and without semantics
@@ -671,7 +675,8 @@ void main() {
 
     testWidgets('read-only field keeps the step-button chrome and reports both caps disabled', (tester) async {
       // dump 3 (value: 42, readOnly: true, Branch B): `readOnly` does NOT switch to the
-      // plain-chrome branch (only `disabled`/`hideStepButtons` do, number_input.dart:511)
+      // plain-chrome branch (only `disabled`/`hideStepButtons` do, the `showButtons`
+      // gate at number_input.dart:567)
       // — both caps stay rendered but lose `isEnabled`/`actions: tap`, and the field node
       // keeps isTextField/isReadOnly/isFocusable while losing isEnabled.
       final handle = tester.ensureSemantics();
