@@ -60,21 +60,26 @@ class LayrzComboBoxInput extends StatefulWidget {
 
   /// Callback fired when the input value changes.
   ///
-  /// Fires once whenever the field's text itself changes — from typing, from
-  /// selecting an option that differs from the current text, or from an external
-  /// [value] update. It does **not** re-fire when a selection is committed but the
-  /// text does not actually change (for example, re-selecting the option already
-  /// shown). A caller that needs to know whenever the user commits a value — same
-  /// value or not — should use [onSubmit] instead, which fires unconditionally.
+  /// Fires once per genuine keystroke-driven text change while typing, once per
+  /// external [value] update, and exactly once per committed selection —
+  /// tapping an option in the desktop overlay or bottom sheet, or pressing
+  /// Enter on a highlighted option — **even when the committed value is
+  /// identical to the text already shown** (for example, typing an option's
+  /// full text and then tapping that same option, or re-selecting the option
+  /// already displayed). A commit is always reported, regardless of how many
+  /// `TextEditingValue` notifications the resulting controller assignment
+  /// produces underneath (see `_lastNotifiedText` in the implementation for how
+  /// those extra echoes are deduped without swallowing the commit itself).
   final ValueChanged<String>? onChanged;
 
   /// Callback fired when the user submits the input (e.g., presses Enter or picks
   /// an option from the overlay or bottom sheet).
   ///
   /// Fires exactly once per commit, unconditionally — including when the
-  /// committed value is identical to the text already shown. This is the callback
-  /// to use for "the user made a selection"; [onChanged] only reports an actual
-  /// change to the text and stays silent on a same-value re-selection.
+  /// committed value is identical to the text already shown. [onChanged] fires
+  /// on every commit too, but also fires on every intermediate keystroke while
+  /// typing; a caller that only cares about a deliberate commit — not each
+  /// keystroke along the way — should prefer this one.
   final ValueChanged<String>? onSubmit;
 
   /// Whether free-form text entry is allowed.
@@ -261,6 +266,14 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// [LayrzComboBoxInput.onChanged] only when the text itself actually moved,
   /// exactly once per genuine change — regardless of how many `TextEditingValue`
   /// notifications that change happens to produce underneath.
+  ///
+  /// [_commitValue] also writes to this field directly, *before* it assigns
+  /// `_controller.text`. That write-ahead is what lets a commit notify
+  /// [LayrzComboBoxInput.onChanged] itself (unconditionally, exactly once) while
+  /// still using this same dedupe to swallow the assignment's own echo
+  /// notifications — rather than, as a prior version did, using the dedupe as the
+  /// *only* path to `onChanged` and having it silently swallow the commit whenever
+  /// the committed value already matched the displayed text.
   String _lastNotifiedText = '';
 
   /// The current interaction states fed to [LayrzInputChrome].
@@ -418,15 +431,24 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   void _commitValue(String value) {
-    // Deliberately no direct `widget.onChanged?.call(value)` here: setting
-    // `_controller.text` below already routes through `_handleTextChange`, which
-    // reports the change to `onChanged` — exactly once, per [_lastNotifiedText].
-    // Calling `onChanged` a second time here, on top of that, was the mechanism
-    // behind the double (in practice, on a focused field, triple) `onChanged`
-    // invocation per selection: `_handleTextChange` firing from the assignment,
-    // `_handleTextChange` firing again from `EditableText`'s own post-assignment
-    // selection resync, and this explicit call — three notifications for one
-    // committed value, once `_lastNotifiedText` no longer collapses the first two.
+    // A commit (tapping an option, pressing Enter on a highlighted option, or
+    // picking from the bottom sheet) always reports `onChanged`, exactly once —
+    // including when `value` already matches the field's current text (typing
+    // an option's full text and then tapping it, or re-selecting the option
+    // already shown). Writing `_lastNotifiedText` and calling `onChanged`
+    // *before* touching the controller is what makes that hold: the assignment
+    // below still routes through `_handleTextChange`, but by the time it fires,
+    // `_lastNotifiedText` already equals `value`, so that notification — and the
+    // second one from `EditableText`'s post-assignment selection resync — are
+    // both deduped as echoes of the call just made here, rather than the sole
+    // source of the notification. A prior version skipped this explicit call
+    // and relied only on the assignment, which meant a commit whose value
+    // already matched the displayed text produced no `onChanged` call at all:
+    // `_handleTextChange`'s own dedupe had nothing to compare against but
+    // itself.
+    _lastNotifiedText = value;
+    widget.onChanged?.call(value);
+
     _controller.text = value;
     _lastValidOption = value;
     widget.onSubmit?.call(value);

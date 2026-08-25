@@ -439,17 +439,24 @@ void main() {
     );
 
     testWidgets(
-      'reselecting the same option again does not re-fire onChanged, but does re-fire onSubmit',
+      'reselecting the same option again fires onChanged and onSubmit again, once each',
       (tester) async {
-        // Pins the contract decided for the onChanged/onSubmit split once selection
-        // commits stopped double-firing onChanged (DESIGN-35): onChanged tracks the
-        // field's *text value* (per its own doc comment, "fired when the input value
-        // changes") and is deliberately silent when a selection does not change the
-        // text — including re-selecting the option already shown. onSubmit tracks the
-        // *user action* of committing a value (per its doc comment, "fired when the
-        // user submits the input") and fires on every commit unconditionally, so a
-        // caller that needs "the user picked something" — even the same something
-        // again — has a callback that never misses one.
+        // Pins the contract restored for combobox-commit-notify: onChanged now
+        // fires exactly once per genuine *commit* — tapping an option, pressing
+        // Enter on a highlighted option, or picking from the bottom sheet —
+        // regardless of whether the resulting text differs from what the field
+        // already showed. onSubmit already fired unconditionally on every
+        // commit; onChanged now carries the same guarantee for a real commit,
+        // while still deduping the purely mechanical echo notifications that a
+        // controller assignment and EditableText's post-assignment selection
+        // resync produce underneath (see `_lastNotifiedText`).
+        //
+        // An earlier version of this test pinned the opposite: that onChanged
+        // stayed silent on a same-value re-selection. That was the same defect
+        // as "type the option's full text, then tap it" (both leave the field's
+        // displayed text already equal to the committed value at the moment of
+        // commit) — fixing one necessarily fixes the other, since the two are
+        // mechanically indistinguishable at commit time.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -472,7 +479,7 @@ void main() {
         await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
         await tester.pumpAndSettle();
 
-        expect(changedCount, 1);
+        expect(changedCount, 1, reason: 'the first selection is a genuine text change, "" -> "Bravo"');
         expect(submitCount, 1);
 
         // Re-open and select the same option again. The field's text already
@@ -482,8 +489,116 @@ void main() {
         await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
         await tester.pumpAndSettle();
 
-        expect(changedCount, 1, reason: 'onChanged does not re-fire: the text did not change');
+        expect(
+          changedCount,
+          2,
+          reason: 'onChanged fires again: a repeated selection is still a genuine commit',
+        );
         expect(submitCount, 2, reason: 'onSubmit fires on every commit, including a repeated selection');
+      },
+    );
+
+    testWidgets(
+      'commits onChanged exactly once when the typed text already matches the tapped option (desktop)',
+      (tester) async {
+        // This is the exact defect reported for LayrzComboBoxInput: "clicking an
+        // option does not select it". It only reproduces once the field's text
+        // already equals the option being tapped — the ordinary way to reach
+        // that is to type the option's full text and then click it in the still-
+        // open overlay, which is what this test does.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var changedCount = 0;
+        String? lastChanged;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Beta', 'Charlie'],
+            onChanged: (value) {
+              changedCount++;
+              lastChanged = value;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        // Typing the option's full text is itself a genuine change and already
+        // notifies once — isolate that from the tap's own notification below.
+        await tester.enterText(find.byType(EditableText), 'Beta');
+        await tester.pumpAndSettle();
+        expect(changedCount, 1, reason: 'typing "Beta" from empty text is a genuine change');
+        changedCount = 0;
+
+        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Beta')));
+        await tester.pumpAndSettle();
+
+        expect(
+          changedCount,
+          1,
+          reason:
+              'tapping the option that exactly matches the already-typed text is still a '
+              'genuine commit and must notify onChanged exactly once, not zero times',
+        );
+        expect(lastChanged, 'Beta');
+      },
+    );
+
+    testWidgets(
+      'commits onChanged exactly once when the typed text already matches the tapped option (compact)',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var changedCount = 0;
+        String? lastChanged;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Beta', 'Charlie'],
+            onChanged: (value) {
+              changedCount++;
+              lastChanged = value;
+            },
+          ),
+        );
+
+        // Type first, without a real tap gesture, so the compact overlay's
+        // onTap-triggered open does not fire yet: `LayrzComboBoxInput` opens the
+        // bottom sheet with the filtered list computed once, at open time, so
+        // typing after opening it would not be reflected in what is on screen.
+        await tester.showKeyboard(find.byType(EditableText));
+        await tester.enterText(find.byType(EditableText), 'Beta');
+        await tester.pumpAndSettle();
+        expect(changedCount, 1, reason: 'typing "Beta" from empty text is a genuine change');
+        changedCount = 0;
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheetContent), findsOneWidget);
+        final sheetOption = find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Beta'));
+        expect(sheetOption, findsOneWidget, reason: 'the sheet opens already filtered to "Beta"');
+
+        await tester.tap(sheetOption);
+        await tester.pumpAndSettle();
+
+        expect(
+          changedCount,
+          1,
+          reason:
+              'tapping the option that exactly matches the already-typed text is still a '
+              'genuine commit and must notify onChanged exactly once, not zero times',
+        );
+        expect(lastChanged, 'Beta');
       },
     );
   });
