@@ -6,6 +6,16 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 ///
 /// Shows a scrollable list of options with highlight support, or an empty message
 /// when no options match the filter.
+///
+/// The overlay's height is not capped here: the enclosing `CustomSingleChildLayout`
+/// (see `ComboBoxLayoutDelegate.getConstraintsForChild`) already hands this widget a
+/// bounded `maxHeight` via the incoming [BoxConstraints]. Re-applying the same cap on
+/// an inner [Container] here — as this widget previously did — clamps the [Column] to
+/// that height *inside* the [SingleChildScrollView], which makes the scroll view's
+/// content extent equal its viewport extent (so it can never scroll) while the
+/// non-scrolling [Column] overflows by the difference. Leaving the [Column] free to
+/// size to its content, with only the outer constraint bounding the viewport, is what
+/// makes the list actually scrollable past that bound.
 class DesktopOverlay extends StatelessWidget {
   /// The filtered list of options to display.
   final List<String> options;
@@ -16,9 +26,6 @@ class DesktopOverlay extends StatelessWidget {
   /// Callback when an option is selected.
   final ValueChanged<String> onSelected;
 
-  /// Maximum height of the overlay in logical pixels.
-  final double maxHeight;
-
   /// Text to display when no options match.
   final String emptyText;
 
@@ -28,7 +35,6 @@ class DesktopOverlay extends StatelessWidget {
     required this.options,
     required this.highlightedIndex,
     required this.onSelected,
-    required this.maxHeight,
     required this.emptyText,
   });
 
@@ -49,13 +55,12 @@ class DesktopOverlay extends StatelessWidget {
     }
 
     return SingleChildScrollView(
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: tokens.colors.sf1,
           borderRadius: tokens.radius.br3,
           boxShadow: tokens.shadow.elevation3,
         ),
-        constraints: BoxConstraints(maxHeight: maxHeight),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(
@@ -122,13 +127,24 @@ class OptionItem extends StatelessWidget {
 
 /// Content widget for the bottom sheet on mobile.
 ///
-/// Displays options as a scrollable list, with a callback for selection.
+/// Displays options as a scrollable list. Selection is communicated solely by
+/// popping the enclosing route with the chosen option — there is no `onSelected`
+/// callback here, because `LayrzComboBoxInput._openBottomSheet` already commits
+/// the popped value exactly once. An earlier version called both a callback *and*
+/// popped with the same value, which committed the selection twice per tap; this
+/// widget deliberately has only one way to report a choice, so that mistake cannot
+/// come back.
+///
+/// Built as a [SingleChildScrollView] wrapping a plain [Column], never a [ListView]:
+/// [LayrzBottomSheet] is shown with `scrollable: false` for this content (see
+/// `LayrzComboBoxInput._openBottomSheet`), which hands this subtree the sheet's own
+/// [ScrollController] via an ambient `PrimaryScrollController` instead of nesting it
+/// inside another same-axis scrollable. A lazy-loading [ListView] here would receive
+/// unbounded height from that same-axis nesting and assert; a [Column] does not need
+/// laziness in the first place, since combobox option counts are small.
 class BottomSheetContent extends StatelessWidget {
   /// The filtered list of options to display.
   final List<String> options;
-
-  /// Callback when an option is selected.
-  final ValueChanged<String> onSelected;
 
   /// Text to display when no options match.
   final String emptyText;
@@ -137,7 +153,6 @@ class BottomSheetContent extends StatelessWidget {
   const BottomSheetContent({
     super.key,
     required this.options,
-    required this.onSelected,
     required this.emptyText,
   });
 
@@ -159,22 +174,24 @@ class BottomSheetContent extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      itemCount: options.length,
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () {
-          onSelected(options[index]);
-          Navigator.of(context, rootNavigator: true).pop(options[index]);
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: tokens.spacing.sp3,
-            horizontal: tokens.spacing.sp4,
-          ),
-          child: Text(
-            options[index],
-            style: tokens.typography.body.copyWith(
-              color: tokens.colors.fg1,
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          options.length,
+          (index) => GestureDetector(
+            onTap: () => Navigator.of(context, rootNavigator: true).pop(options[index]),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                vertical: tokens.spacing.sp3,
+                horizontal: tokens.spacing.sp4,
+              ),
+              child: Text(
+                options[index],
+                style: tokens.typography.body.copyWith(
+                  color: tokens.colors.fg1,
+                ),
+              ),
             ),
           ),
         ),

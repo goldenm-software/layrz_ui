@@ -10,6 +10,15 @@ import '../shared/input_slot.dart';
 import 'combobox_layout.dart';
 import 'combobox_surface.dart';
 
+/// Maximum height, in logical pixels, of the desktop overlay's option list.
+///
+/// Fixed, not caller-configurable: the overlay renders [DesktopOverlay]'s content up
+/// to this height and scrolls past it. This replaces the former `maxOptionsToDisplay`
+/// parameter, which let a caller size the panel by row count using a row-height
+/// constant (`48.0`) that did not match the actual rendered row height (~36px) — the
+/// panel it produced was already wrong for any count other than the default.
+const double _kComboBoxOverlayMaxHeight = 300.0;
+
 /// A Material-free combobox input in the layrz_ui design system.
 ///
 /// [LayrzComboBoxInput] is an editable input field with a dropdown list of options.
@@ -50,9 +59,22 @@ class LayrzComboBoxInput extends StatefulWidget {
   final String? value;
 
   /// Callback fired when the input value changes.
+  ///
+  /// Fires once whenever the field's text itself changes — from typing, from
+  /// selecting an option that differs from the current text, or from an external
+  /// [value] update. It does **not** re-fire when a selection is committed but the
+  /// text does not actually change (for example, re-selecting the option already
+  /// shown). A caller that needs to know whenever the user commits a value — same
+  /// value or not — should use [onSubmit] instead, which fires unconditionally.
   final ValueChanged<String>? onChanged;
 
-  /// Callback fired when the user submits the input (e.g., presses Enter).
+  /// Callback fired when the user submits the input (e.g., presses Enter or picks
+  /// an option from the overlay or bottom sheet).
+  ///
+  /// Fires exactly once per commit, unconditionally — including when the
+  /// committed value is identical to the text already shown. This is the callback
+  /// to use for "the user made a selection"; [onChanged] only reports an actual
+  /// change to the text and stays silent on a same-value re-selection.
   final ValueChanged<String>? onSubmit;
 
   /// Whether free-form text entry is allowed.
@@ -60,11 +82,6 @@ class LayrzComboBoxInput extends StatefulWidget {
   /// When true (default), any typed text is a valid value. When false, the field
   /// reverts to the last matching option on blur.
   final bool allowFreeForm;
-
-  /// Maximum number of options to display in the overlay/sheet.
-  ///
-  /// If the filtered list exceeds this count, the list becomes scrollable.
-  final int maxOptionsToDisplay;
 
   /// Text to display when no options match the current filter.
   ///
@@ -182,7 +199,6 @@ class LayrzComboBoxInput extends StatefulWidget {
     this.onChanged,
     this.onSubmit,
     this.allowFreeForm = true,
-    this.maxOptionsToDisplay = 5,
     this.emptyOptionsText,
     this.enableAutocomplete = true,
     this.labelText,
@@ -233,6 +249,20 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   String? _lastValidOption;
   int _highlightedIndex = -1;
 
+  /// The text last reported to [LayrzComboBoxInput.onChanged].
+  ///
+  /// `TextEditingController`'s notifications fire on any change to its
+  /// `TextEditingValue` — not just the text itself. A bare cursor tap changes only
+  /// the selection and still notifies; more subtly, `EditableText` resyncs its own
+  /// selection immediately after a programmatic `controller.text =` assignment
+  /// (to keep the cursor within the new text's bounds), which notifies a *second*
+  /// time with the text unchanged from the first notification. [_handleTextChange]
+  /// compares against this field so [_LayrzComboBoxInputState] reports a change to
+  /// [LayrzComboBoxInput.onChanged] only when the text itself actually moved,
+  /// exactly once per genuine change — regardless of how many `TextEditingValue`
+  /// notifications that change happens to produce underneath.
+  String _lastNotifiedText = '';
+
   /// The current interaction states fed to [LayrzInputChrome].
   ///
   /// Carries only [WidgetState.disabled] and [WidgetState.focused] — set in [build]
@@ -253,6 +283,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       _lastValidOption = widget.value;
     }
 
+    _lastNotifiedText = _controller.text;
     _fieldFocusNode.addListener(_handleFocusChange);
     _controller.addListener(_handleTextChange);
   }
@@ -273,6 +304,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       }
       _controller = widget.controller ?? TextEditingController();
       _controller.addListener(_handleTextChange);
+      _lastNotifiedText = _controller.text;
     }
 
     // Handle focus node changes
@@ -316,7 +348,15 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     setState(() {
       _highlightedIndex = -1;
     });
-    widget.onChanged?.call(_controller.text);
+
+    final currentText = _controller.text;
+    if (currentText == _lastNotifiedText) {
+      // See [_lastNotifiedText]: this notification's text is identical to the one
+      // already reported, so it is a selection-only echo, not a real change.
+      return;
+    }
+    _lastNotifiedText = currentText;
+    widget.onChanged?.call(currentText);
   }
 
   void _handleBlur() {
@@ -356,21 +396,39 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       context,
       builder: (context) => BottomSheetContent(
         options: filtered,
-        onSelected: _commitValue,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
       ),
       useRootNavigator: true,
+      // BottomSheetContent renders a plain Column, never a same-axis ListView, so
+      // it needs no lazy-loading scrollable of its own — but it still needs a
+      // *bounded* incoming height to scroll within. scrollable: false hands it the
+      // sheet's own ScrollController via an ambient PrimaryScrollController instead
+      // of nesting it inside the sheet's SingleChildScrollView, so this content's
+      // own SingleChildScrollView receives a real bound directly from the sheet's
+      // Expanded region and shares the sheet's drag/scroll handoff.
+      scrollable: false,
     );
 
+    // The sheet reports the selection solely by popping with a value — see
+    // BottomSheetContent's doc comment for why there is no second, callback-based
+    // commit path here.
     if (selected != null) {
       _commitValue(selected);
     }
   }
 
   void _commitValue(String value) {
+    // Deliberately no direct `widget.onChanged?.call(value)` here: setting
+    // `_controller.text` below already routes through `_handleTextChange`, which
+    // reports the change to `onChanged` — exactly once, per [_lastNotifiedText].
+    // Calling `onChanged` a second time here, on top of that, was the mechanism
+    // behind the double (in practice, on a focused field, triple) `onChanged`
+    // invocation per selection: `_handleTextChange` firing from the assignment,
+    // `_handleTextChange` firing again from `EditableText`'s own post-assignment
+    // selection resync, and this explicit call — three notifications for one
+    // committed value, once `_lastNotifiedText` no longer collapses the first two.
     _controller.text = value;
     _lastValidOption = value;
-    widget.onChanged?.call(value);
     widget.onSubmit?.call(value);
     _menuController.close();
   }
@@ -419,13 +477,12 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
           anchorRect: info.anchorRect,
           overlaySize: info.overlaySize,
           tokens: tokens,
-          maxHeight: widget.maxOptionsToDisplay * 48.0,
+          maxHeight: _kComboBoxOverlayMaxHeight,
         ),
         child: DesktopOverlay(
           options: filtered,
           highlightedIndex: _highlightedIndex,
           onSelected: _commitValue,
-          maxHeight: widget.maxOptionsToDisplay * 48.0,
           emptyText: emptyText,
         ),
       ),
