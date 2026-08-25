@@ -5,6 +5,11 @@ mixin LayrzUiL10nInputsMixin {
   /// Default: "Search"
   String get inputsSearchHint => 'Search';
 
+  /// Localized label for the search input's clear affordance.
+  ///
+  /// Default: "Clear"
+  String get inputsSearchClear => 'Clear';
+
   /// Singular form of "day" (1 day).
   ///
   /// Used when displaying a duration with exactly one day unit.

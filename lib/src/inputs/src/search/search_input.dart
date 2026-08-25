@@ -404,10 +404,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     _syncDisabledState();
 
-    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify);
+    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify, isDecorative: true);
     final suffixSlot = resolveSuffixSlot(
       suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
       onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+      semanticLabel: context.l10n.inputsSearchClear,
     );
 
     final fieldConfig = _buildFieldConfig(
@@ -465,10 +466,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     _syncDisabledState();
 
-    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify);
+    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify, isDecorative: true);
     final suffixSlot = resolveSuffixSlot(
       suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
       onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
+      semanticLabel: context.l10n.inputsSearchClear,
     );
 
     // No labelText here: the panel field must not inherit the trigger button's

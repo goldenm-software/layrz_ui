@@ -296,6 +296,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
         ? suffixSlot
         : LayrzInputSuffixSlot(
             icon: MdiIcons.chevronDown,
+            isDecorative: true,
           );
 
     // Compute states
@@ -392,6 +393,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           ? suffixSlot
           : LayrzInputSuffixSlot(
               icon: MdiIcons.chevronDown,
+              isDecorative: true,
             );
 
       // Compute states
