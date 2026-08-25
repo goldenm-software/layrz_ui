@@ -3598,3 +3598,226 @@ Three corrections, found during DESIGN-142 implementation and settled by the mai
 
    Named explicitly so the next reader does not "find" a fifth or sixth migration that was never in scope.
 
+---
+
+## D64: Prefix/Suffix Slot Semantics — Four Categories, Named Only When Told
+
+**Date**: 2026-08-24  
+**Status**: Decided  
+**Category**: Accessibility / Component Architecture
+
+### Context
+
+`LayrzInputChrome` renders every input's prefix and suffix slot (icon, widget, or text; optionally
+tappable via `onPrefixTap`/`onSuffixTap`) inside its own `Row`, ahead of and behind the field's
+`EditableText` (`input_chrome.dart:393-405`). Before this row, a tappable slot's `GestureDetector` used
+the framework default `excludeFromSemantics: false`, so it contributed an anonymous
+`SemanticsAction.tap` to whatever node absorbed it — and no slot had a `semanticLabel` to attach to that
+action.
+
+**What Unit 1's probe measured** (`test/inputs/shared/input_chrome_phase0_probe_test.dart`, run and then
+deleted per its own remit):
+
+```
+PHASE0 [suffix] result -> suffixTapped=true  fieldFocused=false
+PHASE0 [prefix] result -> prefixTapped=true  fieldFocused=false
+PHASE0 [control, no slots] hasTapAction=false
+PHASE0 [label-baseline] "Amount\nPREFIX"
+```
+
+**Both sides misdirect.** A screen-reader user who activates what is announced as the field "Amount"
+fires the *slot's* callback instead — on the prefix side as well as the suffix side. The control case is
+the load-bearing line: with no slots at all, the field's own merged `Semantics` node carries **no tap
+action of its own** (`hasTapAction=false`).
+
+**The mechanism, corrected from an earlier reading of source alone.** A pre-implementation pass over this
+row read `SemanticsConfiguration.absorb`'s merge —
+
+```dart
+_actions.addAll(child._actions);
+```
+
+(`packages/flutter/lib/src/semantics/semantics.dart:6816`) — and, because `addAll` overwrites on key
+collision so the last-absorbed child wins, predicted that a **suffix** slot (absorbed after the field in
+`_buildRowContent`'s `prefix → EditableText → suffix` traversal order) would win the merge and misdirect,
+while a **prefix** slot (absorbed before) would be silently shadowed by the field's own tap action and
+merely inert. The measurement above contradicts the "prefix inert" half, and the reason is the control
+case: **there was no field tap action for a prefix slot to be shadowed by, on either side.**
+
+`LayrzTextInput`'s field builds its tap-to-focus interaction through
+`TextSelectionGestureDetectorBuilder.buildGestureDetector`, which the Flutter framework constructs with
+`excludeFromSemantics: true` (`text_selection.dart:3780`) — tap-to-focus is deliberately excluded from
+semantics by the SDK itself. `RenderEditable`'s semantics `onTap` (`editable.dart:1491-1494`) exists only
+to activate inline link spans (a `TextSpan.recognizer` inside the field's content), not to focus the
+field. So the field's merged node never carried a tap action for a slot to collide with in the first
+place.
+
+**Record the `absorb` overwrite for what it is: real in the SDK, but not what decided anything here.**
+There was no competing action for a slot's `GestureDetector` to overwrite — describing this as "last
+absorbed child wins" implies a contest between the slot and the field that never happened. The correct
+framing is: **the slot's tap action is un-shadowed because the field never had one.** The traversal-order
+/ `addAll` mechanic remains true and worth recording (it is what would matter if the field ever did carry
+its own tap action — e.g. via a future `onTap` semantics annotation), but it is the explanation of a
+side detail, not of the defect.
+
+**Severity is higher than first assumed.** Every unlabelled interactive slot — prefix or suffix, on
+every input that offers one — misdirects a screen-reader user who activates the field, not only
+`LayrzSearchInput`'s clear button (a suffix) that first surfaced the row.
+
+### Decision
+
+**Every element `LayrzInputChrome` renders falls into exactly one of four semantics categories. Nothing
+is silent by accident:**
+
+| Category | Which slots | Shape |
+|---|---|---|
+| **named** | any slot with an explicit `semanticLabel` (interactive or not); non-interactive text slots (merge by their own text) | its own `Semantics(container: true, …)` node — with `button: true` when also interactive — or merged into the field's own accessible name |
+| **decorative** | non-interactive icon slots (always); any slot with `isDecorative: true` | `ExcludeSemantics` |
+| **pointer-only** | interactive (`onTap` non-null) slots nobody named | rendered, tappable, `excludeFromSemantics: true` on the `GestureDetector` — contributes nothing to the semantics tree |
+| **the caller's own responsibility** | non-interactive, unlabelled, non-decorative **widget** slots | passed through untouched |
+
+The seam carrying the meaning is `resolvePrefixSlot`/`resolveSuffixSlot`, which attach `semanticLabel`
+and `isDecorative` (new fields on the internal, unexported `LayrzInputPrefixSlot`/`LayrzInputSuffixSlot`)
+from the caller's params. The node itself is built one layer in, by the chrome's `_buildSlotContent`
+(`input_chrome.dart:612-704`). This is not a new split: `number_field_edge.dart:158-162` already does the
+equivalent one layer further out, for the ± step caps. Meaning cannot live in the chrome — it never sees
+a call site, only a slot. A node cannot live in the seam — pre-wrapping it there would reproduce
+`LayrzNumberInput`'s pre-flattening (§0.5 of the DESIGN-148 dossier) across all five chrome-composing
+inputs, not just one.
+
+**`Semantics(container: true, …)` is mandatory on every named node.** The ± caps
+(`number_field_edge.dart:158`) omit `container:` because they sit **outside** the field's own `Semantics`
+ancestor. Prefix/suffix slots sit **inside** it (`input_chrome.dart:393-405`). Without `container: true`,
+a slot's label and `button: true` are absorbed into the **field's own** node — the text field itself
+would announce as a button carrying the slot's label and action. That is strictly worse than the defect
+this row exists to remove, and copying the ± caps' `Semantics` verbatim ships it.
+
+**Named handles the collision by construction, on both branches, by two different mechanisms — this is
+what completes the accounting.** A labelled interactive slot gets its own node, so its action never
+reaches the field's node to collide with anything. An unlabelled interactive slot contributes no action
+at all. Either way, the field stops advertising an action it cannot name.
+
+**Blanket suppression (option C) was considered and rejected, specifically because of that symmetry.**
+Suppressing every slot's tap action, named or not, would have "fixed" the misdirection by amputation —
+the collision disappears because the affordance disappears, for everyone. The chosen design (internally,
+"option E") fixes it by construction instead: a named slot keeps its affordance, gains its own
+`Semantics` node, and becomes a real, double-tap-operable control for touch-AT users.
+
+**The icon → label inference table (option D) was considered and rejected.** It cannot distinguish this
+package's own `MdiIcons.close` from a third-party caller's identical icon used for something else — any
+such table is the chrome silently guessing the developer's intent from an implementation detail
+(which `IconData` was passed), which is exactly the kind of inference this decision refuses to make
+even at a single entry. A generic, non-specific `l10n` fallback name (option A) was rejected for the
+same reason in the other direction — a slot announced as `"Icon"` or `"Button"` is not honest labelling,
+it just moves the guess into the string table.
+
+**The widget pass-through category was found mid-implementation, not designed up front — record it as a
+correction.** The row as first implemented (`4159b33`, `62d5a47`) excluded every non-interactive,
+unlabelled slot uniformly — icon **and** widget — via `ExcludeSemantics`. A follow-up commit
+(`8d816d7`) corrected this: the **widget** form of `prefix:`/`suffix:` is the one slot shape where the
+caller has a semantics seam of their own — they may have already embedded a `Semantics` node in whatever
+they passed. Excluding that subtree unconditionally silenced semantics the caller deliberately attached
+at their own call site, and — worse — quietly broke the wiki's documented escape hatch (see Consequences)
+before that escape hatch had even shipped, since "pass a real, focusable, labelled control instead" is
+meaningless if the chrome then excludes it anyway. A non-interactive, unlabelled *icon* slot still
+excludes unconditionally: an `Icon` the chrome constructs itself carries no semantics of its own to
+protect, so there is nothing to pass through.
+
+**Text slots merging into the field's own accessible name is unchanged, and is correct** — `prefixText:
+'$'` on a field labelled `'Amount'` belongs in the field's name, not in a node of its own; the measured
+baseline for the merge is `"Amount\nPREFIX"` (label, newline, then the prefix text — see Context). One
+interaction is worth stating explicitly: a **labelled, tappable** text slot leaves this category — it
+becomes its own `button: true` node and its text leaves the field's accessible name, because at that
+point it is a control, not a fragment of the field's identity. An **unlabelled** tappable text slot stays
+merged into the field's name and loses only its action (moving to pointer-only for the tap, per the table
+above).
+
+**Keyboard traversal was considered and is deliberately out of scope.** `Semantics` describes; `FocusNode`
+/ `Focus(onKeyEvent:)` / `Shortcuts`+`Actions` act. The chrome is a visual component and does not own the
+keyboard layer — consistent with `tappable.dart:27-30`, where focus "remains with whatever real control
+wraps this widget." Record the limit honestly rather than let it read as an oversight: the "pass a real
+control" escape hatch works only for the **widget** form. `prefixIcon:`/`onPrefixTap:` and
+`prefixText:`/`onPrefixTap:` are constructed entirely by the chrome from an `IconData` or a `String` — a
+value with no seam of its own — so **those two forms cannot be made keyboard-reachable by any caller,
+public API or otherwise.** All of this package's own tappable slots today
+(`search_input.dart:408`,`:469`, `select_input_surface.dart:180`) and every example demo use exactly
+those forms. `button: true` on a touch-operable, keyboard-unreachable node is not a false claim — it is a
+common, legitimate state for a control — and under this decision the chrome claims that role only where
+it was actually given a label to attach.
+
+### Rationale
+
+**The cost, plainly, not as a footnote.** Two identical-looking clear buttons now behave differently.
+`LayrzSearchInput`'s clear button is announced as `'Clear'` (`context.l10n.inputsSearchClear`) because
+`search_input.dart:411`/`:473` calls `resolveSuffixSlot` directly, at its own call site, with a
+`semanticLabel`. `select_input_surface.dart:175-182`'s identical-looking clear button — same
+`MdiIcons.close`, same `onSuffixTap` shape — is **pointer-only**, because it routes through the *public*
+`LayrzTextInput`, which has no `suffixSemanticLabel:` parameter for the surface to pass a label through.
+That asymmetry is the accepted, current cost of refusing icon-based inference (option D, above); it is
+recorded here so it reads as a known trade-off rather than an unexplained inconsistency the next reader
+"fixes" by guessing.
+
+**The remedy is named, not left to be re-derived.** Public `prefixSemanticLabel:`/`suffixSemanticLabel:`
+parameters on the chrome-composing inputs close both halves of the cost at once: `select_input_surface.dart`
+gains a way to name its clear button, and every third-party caller gains a way to name their own
+icon/text slot's callback. Deliberately deferred, so M4 Pickers (D63, D61) can inform the final parameter
+shape rather than this row guessing it under a dozen pickers' worth of pressure. Until that row ships,
+**the external contract is not satisfiable** — a third-party caller has no way to name a tappable
+icon/text slot, and every such slot they build today is pointer-only. Say this plainly rather than
+implying the row is closed. The debug-mode assertion `assert(onTap == null || semanticLabel != null)`
+(considered and deferred, not rejected) ships together with those parameters — it is coherent once a
+caller has a way to satisfy it, but unshippable today: it would fire on `text_input.dart`'s pass-through
+of a caller's existing `onSuffixTap` and break every current consumer's debug build.
+
+**The help affordance icon and the shortcut badge are the same defect with the same answer.** Same merge
+mechanic (a `GestureDetector`/tap inside the field's `Semantics` ancestor with no name attached), same
+composition precedent (name it via its own `container: true` node, or leave it pointer-only). Deferred to
+their own row purely for reviewability — that row **applies** this decision, it does not re-derive the
+merge mechanic from scratch.
+
+**The lock icon and the error icon are explicitly NOT this defect — they are field *state*, not slot
+content — and the next row must open by checking for over-announcement, not by assuming absence.**
+`textarea_input_a11y_test.dart` asserts `isReadOnly: true` and passes, while zero inputs set `readOnly:`
+on their own `Semantics` node — it arrives natively through `EditableText`'s own semantics. Labelling
+the lock icon in addition would double-announce read-only state. Error text is already plain,
+non-excluded `Text` (`input_footer_slot.dart:80`,`:135`) and needs no change here.
+
+**The ± caps' keyboard gap is a known, consistent consequence of the keyboard-traversal reversal, not a
+new inconsistency.** `number_field_edge.dart` has no `Focus`, `FocusNode`, or `FocusableActionDetector`,
+so the caps are announced as buttons a keyboard user cannot reach. Under this decision that is the house
+position applied consistently, not a special case — but it is still a real, felt gap and belongs on the
+record rather than silently accepted.
+
+**A separate follow-up row: `disabled` does not reach a caller-supplied widget slot.**
+`input_chrome.dart`'s `disabled` flag only suppresses the chrome's *own* tap wrapper
+(`return content;` when `!hasCallback || disabled`). A caller-supplied focusable control passed through
+`prefix:`/`suffix:` stays fully live — tappable and focusable — on a disabled field. This matters now
+that "pass a real control" is the documented house answer for naming an affordance. The existing test
+`'disabled prefix/suffix taps are not triggered'` only exercises the `prefixText` + `onPrefixTap` path and
+does not cover it. Recorded as its own row; **not fixed by this decision.**
+
+**Rejected, recorded so none of these are re-proposed:** the icon → label inference table (option D); a
+generic `l10n` fallback name for every unlabelled slot (option A); blanket suppression of every slot's tap
+action (option C); migrating the package's own three internal tappable call sites to the widget form —
+there is nothing to migrate to, the widget form is strictly more ceremony for the same result; deprecating
+the tap-on-icon/text form outright — it is the ergonomic path and every existing caller (internal and,
+presumably, external) uses it.
+
+### Consequences
+
+- `LayrzInputPrefixSlot`/`LayrzInputSuffixSlot` (internal, not exported) gain `semanticLabel` and
+  `isDecorative` fields. Non-breaking: both are additive on an unexported type.
+- `LayrzSearchInput` names its clear button (`context.l10n.inputsSearchClear`, default `'Clear'`) and
+  marks its magnifier decorative on both its desktop and mobile branches. `LayrzSelectInput` marks its
+  chevron decorative.
+- One new in-package l10n key, `inputsSearchClear`, defaults to English. `layrz_ui_i18n` is a separate
+  package (`>= 0.0.9`) and its translation of this key will lag a release — expected, not a defect.
+- **D63 forward coupling**: every one of M4's roughly dozen pickers inherits this four-category
+  accounting and the "name only when told" rule the moment it composes `LayrzInputChrome`. None of them
+  should re-derive it.
+- Three items are explicitly deferred to their own rows, each named above so they are applied rather than
+  re-discovered: public `*SemanticLabel` parameters (with the F12 assert), the help icon / shortcut badge
+  application of this same decision, and the `disabled`-does-not-reach-a-caller-widget gap. A fourth —
+  the lock/error icon audit — is deferred but is explicitly **not** an application of this decision; it
+  starts from the opposite risk (over-, not under-, announcement).
+
