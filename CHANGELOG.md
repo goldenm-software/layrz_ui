@@ -6,6 +6,8 @@
 
 The change improves correctness by refusing to hide layout bugs. When a button label is too long, it previously rendered as "Long Label…" silently, hiding the problem. Now it wraps to two lines, alerting the developer to either re-size the button, re-word the label, or explicitly add truncation. See decision D51 for the rationale and three critical facts about how Flutter's text rendering (TextPainter, RichText, Text) actually works — removing the silent truncation from the type scale was essential to correct them.
 
+**Shared `LayrzPreferredSide` for anchored surfaces; `LayrzAnchoredPanel` places on any of four sides.** The tooltip's four-value side vocabulary (`top`/`bottom`/`left`/`right`) moves out of the tooltip module into a new package-level type, `LayrzPreferredSide`, exported from the root barrel. `LayrzTooltip` and `LayrzAnchoredPanel` both now consume it. `LayrzAnchoredPanel` gains a `preferredSide` parameter and can place its panel on any of the four sides (previously vertical-only), with an unconditional flip to the opposite side when the preferred side does not fit. `LayrzSearchInput` gains its own `preferredSide` parameter, forwarded to its panel.
+
 ### Breaking
 
 **Text overflow behaviour** (no API change, no compile-time failure):
@@ -15,6 +17,19 @@ The change improves correctness by refusing to hide layout bugs. When a button l
 - Call sites do NOT fail at compile time; the layout simply grows or overflows visibly.
 - Wrapped text may push parent layouts, causing reflow of pages. Callers must verify their layouts still fit and re-size or explicitly truncate where space is genuinely limited.
 - Migration: No code changes required for text that was already wrapping. For text that grows unexpectedly, add `maxLines: 1, overflow: TextOverflow.ellipsis` to the `Text()` call, or wrap it in a constrained container.
+
+**`LayrzTooltipPosition` removed (no deprecation, no alias)**, replaced by `LayrzPreferredSide` (new type, exported from the root barrel at `package:layrz_ui/layrz_ui.dart`):
+- Same four values (`top`, `bottom`, `left`, `right`) and the same semantics as before. `LayrzTooltip.position` still takes the same four values, now under the new type name.
+- `positionDelegate`'s signature changes with it — it takes a `LayrzPreferredSide` now, since it is publicly exported.
+- Migration: rename `LayrzTooltipPosition` to `LayrzPreferredSide` at every call site. There is no alias; stale call sites fail to compile by design.
+
+**`LayrzAnchoredPanel` — new parameter, a width-clamp fix, and a fallback-placement change:**
+- Gains `preferredSide`, of type `LayrzPreferredSide`, **defaulting to `LayrzPreferredSide.bottom`** — existing call sites do not move and keep today's rendering.
+- The panel's width is now clamped to the overlay's available width. A `contentSized` panel on a viewport narrower than its `maxWidth` now **shrinks instead of overflowing**. This changes rendering for existing callers on narrow viewports.
+- When a panel fits on **neither** the preferred side nor its opposite, it now lands on the opposite side (previously it stayed on the preferred side and clamped there). Observable as: a panel too tall for the viewport now clamps to the overlay's **top** instead of its **bottom**. Reachable today via `duration_input.dart` (`maxHeight: 400`) on a short viewport.
+- `LayrzAnchoredPanelAlignment` is now documented as **cross-axis** alignment rather than strictly horizontal. The values and their behaviour on vertical sides (`top`/`bottom`) are unchanged; they additionally now mean top/middle/bottom when the panel is placed on a horizontal side (`left`/`right`).
+
+**`LayrzSearchInput` gains `preferredSide`**, of type `LayrzPreferredSide`, **defaulting to `LayrzPreferredSide.right`** — this changes where the icon-mode search panel opens relative to its trigger button. Only applies in icon mode; field mode has no panel and ignores it.
 
 ---
 

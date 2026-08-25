@@ -58,7 +58,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,
@@ -207,7 +207,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,
@@ -320,7 +320,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,

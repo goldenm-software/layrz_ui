@@ -5,7 +5,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 void main() {
   group('positionDelegate', () {
     test('bottom: centres horizontally on target', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
       final context = TooltipPositionContext(
         target: const Offset(100, 100), // Centre of anchor
         targetSize: const Size(50, 40), // Width and height
@@ -25,7 +25,7 @@ void main() {
     });
 
     test('bottom: flips above when overflow detected', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
       final context = TooltipPositionContext(
         target: const Offset(200, 580), // Near bottom
         targetSize: const Size(50, 40),
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('bottom: clamps horizontally at left edge', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
       final context = TooltipPositionContext(
         target: const Offset(20, 100), // Near left edge
         targetSize: const Size(50, 40),
@@ -60,7 +60,7 @@ void main() {
     });
 
     test('bottom: clamps horizontally at right edge', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
       final context = TooltipPositionContext(
         target: const Offset(380, 100), // Near right edge
         targetSize: const Size(50, 40),
@@ -77,7 +77,7 @@ void main() {
     });
 
     test('top: positions above the target', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.top);
+      final delegate = positionDelegate(LayrzPreferredSide.top);
       final context = TooltipPositionContext(
         target: const Offset(200, 300),
         targetSize: const Size(50, 40),
@@ -94,7 +94,7 @@ void main() {
     });
 
     test('top: flips below when overflow detected', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.top);
+      final delegate = positionDelegate(LayrzPreferredSide.top);
       final context = TooltipPositionContext(
         target: const Offset(200, 30), // Near top
         targetSize: const Size(50, 40),
@@ -112,7 +112,7 @@ void main() {
     });
 
     test('left: positions to the left of the target', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.left);
+      final delegate = positionDelegate(LayrzPreferredSide.left);
       final context = TooltipPositionContext(
         target: const Offset(300, 300),
         targetSize: const Size(50, 40),
@@ -132,7 +132,7 @@ void main() {
     });
 
     test('left: flips right when overflow detected', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.left);
+      final delegate = positionDelegate(LayrzPreferredSide.left);
       final context = TooltipPositionContext(
         target: const Offset(50, 300),
         targetSize: const Size(50, 40),
@@ -150,7 +150,7 @@ void main() {
     });
 
     test('right: positions to the right of the target', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.right);
+      final delegate = positionDelegate(LayrzPreferredSide.right);
       final context = TooltipPositionContext(
         target: const Offset(100, 300),
         targetSize: const Size(50, 40),
@@ -170,7 +170,7 @@ void main() {
     });
 
     test('right: flips left when overflow detected', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.right);
+      final delegate = positionDelegate(LayrzPreferredSide.right);
       final context = TooltipPositionContext(
         target: const Offset(350, 300),
         targetSize: const Size(50, 40),
@@ -188,7 +188,7 @@ void main() {
     });
 
     test('bottom: handles tooltip larger than overlay horizontally', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
       final context = TooltipPositionContext(
         target: const Offset(200, 300),
         targetSize: const Size(50, 40),
@@ -206,7 +206,7 @@ void main() {
     });
 
     test('top: handles tooltip larger than overlay vertically', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.top);
+      final delegate = positionDelegate(LayrzPreferredSide.top);
       final context = TooltipPositionContext(
         target: const Offset(200, 300),
         targetSize: const Size(50, 40),
@@ -222,7 +222,7 @@ void main() {
     });
 
     test('left: clamps vertically at top edge', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.left);
+      final delegate = positionDelegate(LayrzPreferredSide.left);
       final context = TooltipPositionContext(
         target: const Offset(200, 10), // Near top
         targetSize: const Size(50, 20),
@@ -239,7 +239,7 @@ void main() {
     });
 
     test('right: clamps vertically at bottom edge', () {
-      final delegate = positionDelegate(LayrzTooltipPosition.right);
+      final delegate = positionDelegate(LayrzPreferredSide.right);
       final context = TooltipPositionContext(
         target: const Offset(200, 590), // Near bottom
         targetSize: const Size(50, 20),
@@ -258,7 +258,7 @@ void main() {
     test('bottom: matches button tooltip behaviour exactly', () {
       // This test locks in the exact behavior from button_tooltip_position.dart.
       // It must be byte-for-byte identical for the button refactor to be safe.
-      final delegate = positionDelegate(LayrzTooltipPosition.bottom);
+      final delegate = positionDelegate(LayrzPreferredSide.bottom);
 
       // Test case from button: tooltip below target, centred horizontally.
       final context = TooltipPositionContext(

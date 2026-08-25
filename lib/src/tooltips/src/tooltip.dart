@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/positioning/positioning.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'tooltip_position.dart';
@@ -51,7 +52,7 @@ import 'tooltip_trigger.dart';
 /// - [titleText]: optional title text rendered above the content in a heavier weight
 /// - [contentText]: plain-text tooltip content (mutually exclusive with [contentRichText])
 /// - [contentRichText]: rich-text content with optional per-span styling (mutually exclusive with [contentText])
-/// - [position]: preferred position relative to the anchor (default: [LayrzTooltipPosition.bottom])
+/// - [position]: preferred position relative to the anchor (default: [LayrzPreferredSide.bottom])
 /// - [trigger]: the trigger mode for showing/dismissing the tooltip (default: [LayrzTooltipTrigger.pointer])
 class LayrzTooltip extends StatefulWidget {
   /// The widget to be wrapped with the tooltip.
@@ -76,9 +77,9 @@ class LayrzTooltip extends StatefulWidget {
 
   /// The preferred position of the tooltip relative to its anchor.
   ///
-  /// Defaults to [LayrzTooltipPosition.bottom]. If the tooltip would overflow the
+  /// Defaults to [LayrzPreferredSide.bottom]. If the tooltip would overflow the
   /// overlay bounds on the preferred side, it automatically flips to the opposite side.
-  final LayrzTooltipPosition position;
+  final LayrzPreferredSide position;
 
   /// The trigger mode for showing and dismissing the tooltip.
   ///
@@ -96,7 +97,7 @@ class LayrzTooltip extends StatefulWidget {
     this.titleText,
     this.contentText,
     this.contentRichText,
-    this.position = LayrzTooltipPosition.bottom,
+    this.position = LayrzPreferredSide.bottom,
     this.trigger = LayrzTooltipTrigger.pointer,
   }) : assert(
          (contentText == null) != (contentRichText == null),
@@ -400,7 +401,7 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
       targetSize: anchorRect.size,
       tooltipSize: surfaceSize,
       overlaySize: overlaySize,
-      preferBelow: widget.position == LayrzTooltipPosition.bottom,
+      preferBelow: widget.position == LayrzPreferredSide.bottom,
       verticalOffset: 0,
     );
 

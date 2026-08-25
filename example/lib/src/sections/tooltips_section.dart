@@ -44,7 +44,7 @@ class TooltipsSection extends StatelessWidget {
   }
 }
 
-/// Demonstrates all four [LayrzTooltipPosition] values with clearly labelled anchors.
+/// Demonstrates all four [LayrzPreferredSide] values with clearly labelled anchors.
 ///
 /// Shows top, bottom, left, and right placements, each with sufficient surrounding space
 /// to demonstrate the positioning and overlap behavior.
@@ -83,7 +83,7 @@ class _PositionsDemo extends StatelessWidget {
                     tokens: tokens,
                     tooltip: LayrzTooltip(
                       contentText: 'Tooltip above the anchor',
-                      position: LayrzTooltipPosition.top,
+                      position: LayrzPreferredSide.top,
                       child: SizedBox(
                         width: 60,
                         height: 40,
@@ -107,7 +107,7 @@ class _PositionsDemo extends StatelessWidget {
                     tokens: tokens,
                     tooltip: LayrzTooltip(
                       contentText: 'Tooltip below the anchor',
-                      position: LayrzTooltipPosition.bottom,
+                      position: LayrzPreferredSide.bottom,
                       child: SizedBox(
                         width: 60,
                         height: 40,
@@ -131,7 +131,7 @@ class _PositionsDemo extends StatelessWidget {
                     tokens: tokens,
                     tooltip: LayrzTooltip(
                       contentText: 'Tooltip to the left',
-                      position: LayrzTooltipPosition.left,
+                      position: LayrzPreferredSide.left,
                       child: SizedBox(
                         width: 60,
                         height: 40,
@@ -155,7 +155,7 @@ class _PositionsDemo extends StatelessWidget {
                     tokens: tokens,
                     tooltip: LayrzTooltip(
                       contentText: 'Tooltip to the right',
-                      position: LayrzTooltipPosition.right,
+                      position: LayrzPreferredSide.right,
                       child: SizedBox(
                         width: 60,
                         height: 40,
@@ -300,7 +300,7 @@ class _EdgeFlipDemo extends StatelessWidget {
                 tokens: tokens,
                 tooltip: LayrzTooltip(
                   contentText: 'Should flip to the right',
-                  position: LayrzTooltipPosition.left,
+                  position: LayrzPreferredSide.left,
                   child: SizedBox(
                     width: 60,
                     height: 40,
@@ -314,7 +314,7 @@ class _EdgeFlipDemo extends StatelessWidget {
                 tokens: tokens,
                 tooltip: LayrzTooltip(
                   contentText: 'Should flip to the left',
-                  position: LayrzTooltipPosition.right,
+                  position: LayrzPreferredSide.right,
                   child: SizedBox(
                     width: 60,
                     height: 40,

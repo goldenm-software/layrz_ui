@@ -142,8 +142,8 @@ void main() {
       );
     });
 
-    testWidgets('renders at all LayrzTooltipPosition values', (tester) async {
-      for (final position in LayrzTooltipPosition.values) {
+    testWidgets('renders at all LayrzPreferredSide values', (tester) async {
+      for (final position in LayrzPreferredSide.values) {
         await pumpThemed(
           tester,
           LayrzTooltip(

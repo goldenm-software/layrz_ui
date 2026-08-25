@@ -28,7 +28,7 @@ void main() {
     Future<void> testNoOverlapForAnchorSize(
       WidgetTester tester, {
       required Size anchorSize,
-      required LayrzTooltipPosition position,
+      required LayrzPreferredSide position,
       required String description,
     }) async {
       final anchorKey = GlobalKey();
@@ -104,7 +104,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(50, 40),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '50×40 standard anchor',
         );
       },
@@ -119,7 +119,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '8×24 narrow anchor (spacing sp8)',
         );
       },
@@ -133,7 +133,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(4, 24),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '4×24 very narrow anchor (spacing sp4)',
         );
       },
@@ -147,7 +147,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(6, 100),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '6×100 tall narrow anchor',
         );
       },
@@ -161,7 +161,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(0, 24),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '0×24 near-zero anchor',
         );
       },
@@ -176,7 +176,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
-          position: LayrzTooltipPosition.top,
+          position: LayrzPreferredSide.top,
           description: '8×24 narrow anchor (top position)',
         );
       },
@@ -190,7 +190,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
-          position: LayrzTooltipPosition.left,
+          position: LayrzPreferredSide.left,
           description: '8×24 narrow anchor (left position)',
         );
       },
@@ -204,7 +204,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(8, 24),
-          position: LayrzTooltipPosition.right,
+          position: LayrzPreferredSide.right,
           description: '8×24 narrow anchor (right position)',
         );
       },
@@ -216,7 +216,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(120, 8),
-          position: LayrzTooltipPosition.bottom,
+          position: LayrzPreferredSide.bottom,
           description: '120×8 wide shallow anchor',
         );
       },
@@ -230,7 +230,7 @@ void main() {
         await testNoOverlapForAnchorSize(
           tester,
           anchorSize: const Size(20, 0),
-          position: LayrzTooltipPosition.top,
+          position: LayrzPreferredSide.top,
           description: '20×0 near-zero anchor (top position)',
         );
       },
@@ -258,7 +258,7 @@ void main() {
                 builder: (context) => Center(
                   child: LayrzTooltip(
                     contentText: 'Stable tooltip',
-                    position: LayrzTooltipPosition.bottom,
+                    position: LayrzPreferredSide.bottom,
                     child: SizedBox(
                       key: anchorKey,
                       width: 8,
