@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'decimal_separator.dart';
@@ -515,6 +516,46 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     // through the same plain-chrome layout even when hideStepButtons is false.
     final isDisabledOverall = widget.disabled || widget.readOnly;
 
+    // Semantic label, suffixed with the localized "required" indicator so a screen-reader
+    // user is told the field is required — the visible `*` above lives inside
+    // ExcludeSemantics and never reaches accessibility on its own. Copied verbatim from
+    // LayrzTextAreaInput (textarea_input.dart:371-374), which shipped the same pattern
+    // under DESIGN-115.
+    final l10n = LayrzUiL10n.of(context);
+    final semanticLabel = widget.isRequired && widget.labelText != null
+        ? '${widget.labelText}, ${l10n.inputsRequiredIndicator}'
+        : widget.labelText;
+
+    // Semantic tooltip built from the help affordance (caller-supplied text), joined the
+    // same way as LayrzTextAreaInput (textarea_input.dart:376-383). Null when neither
+    // help field is set, so `tooltip:` is omitted rather than announced as an empty string.
+    //
+    // Note: the chrome's own help icon (`_HelpAffordance` -> `LayrzTooltip`,
+    // input_chrome.dart:539-548 / tooltip.dart:531-532) already sets
+    // `Semantics(tooltip: helpContentText)` on itself, content-only, no title. Unlike the
+    // hintText case above, this does NOT double-announce: the explicit `tooltip:` set here
+    // on the field's own (ancestor) node takes precedence in the merge, so the richer
+    // "title. content" string this widget builds is what actually surfaces — confirmed by
+    // Phase 3's failure proof, where removing this derivation exposed the icon's bare
+    // "content-only" tooltip instead of the value going missing outright.
+    String? semanticTooltip;
+    if (widget.helpTitleText != null || widget.helpContentText != null) {
+      semanticTooltip = [
+        if (widget.helpTitleText != null) widget.helpTitleText,
+        if (widget.helpContentText != null) widget.helpContentText,
+      ].join('. ');
+    }
+
+    // Deliberately NOT deriving a `hint:` value here. DESIGN-116's Phase 0 semantics dump
+    // proved that LayrzInputChrome already renders hintText as a plain, non-excluded Text
+    // (input_chrome.dart:417/:436) that Flutter merges straight into this field's own
+    // label — e.g. labelText: 'Amount', hintText: 'Enter price' announces as a single
+    // two-line label "Amount\nEnter price" on both branches. Adding `hint: widget.hintText`
+    // on top of that would announce the hint a second time. See test T12 for the pinned
+    // shape. (This also means LayrzTextAreaInput, which does set `hint:` while rendering
+    // through the same chrome, has a latent double-announcement — reported upstream,
+    // out of this unit's file set.)
+
     // Manage states for the edge controls
     if (widget.disabled) {
       _states.add(WidgetState.disabled);
@@ -565,6 +606,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
             userPrefix: userPrefix,
             userSuffix: userSuffix,
             hasErrors: hasErrors,
+            semanticLabel: semanticLabel,
+            semanticTooltip: semanticTooltip,
           ),
           // Error block and character counter below the entire row
           LayrzInputFooterSlot(
@@ -584,7 +627,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       final fieldConfig = _buildFieldConfig(formatters);
 
       content = Semantics(
-        label: widget.labelText,
+        label: semanticLabel,
+        tooltip: semanticTooltip,
         enabled: !isDisabledOverall,
         child: LayrzInputChrome(
           labelText: widget.labelText,
@@ -693,6 +737,16 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     required Widget? userPrefix,
     required Widget? userSuffix,
     required bool hasErrors,
+
+    /// The accessible name for the field's own [Semantics] node (label, plus the localized
+    /// required-indicator suffix when [LayrzNumberInput.isRequired] is set). Computed once in
+    /// [build] so this branch and the no-step-buttons branch always announce the same string.
+    required String? semanticLabel,
+
+    /// The accessible tooltip for the field's own [Semantics] node, built from
+    /// [LayrzNumberInput.helpTitleText] / [LayrzNumberInput.helpContentText]. Computed once in
+    /// [build] for the same reason as [semanticLabel].
+    required String? semanticTooltip,
   }) {
     // Resolve the style spec once for the entire control
     final spec = LayrzInputStyleSpec.resolve(
@@ -754,7 +808,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
               // splits the tree into three branches (decrement cap / field / increment cap).
               Expanded(
                 child: Semantics(
-                  label: widget.labelText,
+                  label: semanticLabel,
+                  tooltip: semanticTooltip,
                   enabled: !isDisabled,
                   child: LayrzInputChrome(
                     labelText: null,
