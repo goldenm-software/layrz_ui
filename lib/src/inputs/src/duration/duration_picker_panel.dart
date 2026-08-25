@@ -201,11 +201,25 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
     }
 
     return Padding(
-      padding: EdgeInsets.all(tokens.spacing.sp4),
+      // sp2 (10px), not sp4 (20px): the anchored desktop panel is capped at
+      // maxWidth: 480 (duration_input.dart), and every pixel of padding here
+      // is a pixel the sm:6 (two-column) row does not have for its content.
+      // At sp4 + the row's default inter-column gap, the "Seconds"/"Minutes"
+      // suffixText overflowed LayrzNumberInput's chrome by a few pixels on
+      // that capped width — measured, not assumed — and sp3 alone left only
+      // a few pixels of margin above that overflow threshold. sp2 matches
+      // the padding token this design system already uses as its own
+      // "standard density" input padding (input_chrome.dart), so it is not
+      // an arbitrary shrink.
+      padding: EdgeInsets.all(tokens.spacing.sp2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          LayrzRow(children: fields),
+          // sp1 (6px), not the row's default sp2 (10px) gap: reclaims a
+          // little more width for the same reason as the padding above,
+          // while still leaving a visible gap between stacked/side-by-side
+          // fields rather than letting their borders touch.
+          LayrzRow(spacing: tokens.spacing.sp1, children: fields),
           SizedBox(height: tokens.spacing.sp4),
           SizedBox(
             width: double.infinity,
