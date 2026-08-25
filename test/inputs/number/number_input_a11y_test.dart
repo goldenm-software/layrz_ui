@@ -29,6 +29,29 @@ int countSemanticsWithLabel(WidgetTester tester, String needle) {
   return count;
 }
 
+/// Returns the semantics nodes whose label contains [needle], walking the full tree.
+///
+/// Unlike [countSemanticsWithLabel], this hands back the matched node itself, so a caller
+/// can inspect e.g. [SemanticsNode.childrenCount] to confirm *which* node in the tree owns
+/// the label — a plain occurrence count cannot distinguish a label sitting on its own leaf
+/// node from the same label having been absorbed into an unrelated grouping node, and a
+/// test asserting only the count would stay green either way.
+List<SemanticsNode> findSemanticsWithLabel(WidgetTester tester, String needle) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final matches = <SemanticsNode>[];
+  void walk(SemanticsNode node) {
+    if (node.getSemanticsData().label.contains(needle)) matches.add(node);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return matches;
+}
+
 void main() {
   group('LayrzNumberInput Accessibility', () {
     testWidgets('plain-chrome field exposes label, text-field role and enabled state on one node', (tester) async {
@@ -49,6 +72,9 @@ void main() {
           const LayrzNumberInput(labelText: 'Amount', value: 42, hideStepButtons: true),
         );
 
+        // Guards against a re-introduced duplicate label — the exact regression DESIGN-142
+        // fixed — which a single-node flag assertion below cannot detect on its own.
+        expect(countSemanticsWithLabel(tester, 'Amount'), 1);
         expect(
           tester.getSemantics(find.byType(EditableText)),
           matchesSemantics(
@@ -87,6 +113,9 @@ void main() {
         );
         expect(semanticsNodes, findsWidgets);
 
+        // Guards against a re-introduced duplicate label — the exact regression DESIGN-142
+        // fixed — which a single-node flag assertion below cannot detect on its own.
+        expect(countSemanticsWithLabel(tester, 'Quantity'), 1);
         expect(
           tester.getSemantics(semanticsNodes.first),
           matchesSemantics(
@@ -343,6 +372,27 @@ void main() {
           await tester.pumpAndSettle();
           expect(lastValue, 5, reason: 'PageDown steps by `step * 10`');
 
+          // Asserted HERE — at value 5, with neither cap at a bound — rather than after the
+          // final PageDown below. Moving the value to `minimum` with that last PageDown
+          // makes `_isDecrementDisabled()` true, so the field's own semantics update
+          // correctly, but `_handleKeyEvent`'s stepping branches (unlike `_handleIncrement`/
+          // `_handleDecrement`) never call `setState`, so the DECREMENT CAP's own semantics
+          // node goes stale and keeps reporting `isEnabled: true`/`hasTapAction: true` after
+          // the value that should have disabled it. Asserting there would pin that stale
+          // reading as the contract. Proving "the caps are tap-actionable buttons, not focus
+          // stops" only needs a point where the dump-1 shape is actually correct — this one
+          // — not the specific value the keyboard sequence ends on. The staleness itself is
+          // a real, separate reactivity gap (noted to the lead), out of this row's two-file
+          // scope, and is not to be papered over by moving the assertion back once it exists.
+          expect(
+            tester.getSemantics(find.bySemanticsLabel('Decrease value')),
+            matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
+          );
+          expect(
+            tester.getSemantics(find.bySemanticsLabel('Increase value')),
+            matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
+          );
+
           await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
           await tester.pumpAndSettle();
           expect(lastValue, 0, reason: 'PageDown clamps at `minimum`, never goes negative');
@@ -355,25 +405,6 @@ void main() {
           // enabled). "step caps report disabled at bounds" above already pins the guard's
           // effect on the caps' semantics end-to-end, for a widget constructed already at
           // its bound.
-          //
-          // Both caps still carry their button role (dump 1's shape) after this whole
-          // keyboard sequence — proving decision 1's actual claim: the caps are
-          // tap-actionable buttons, not focus stops, regardless of what the field's value
-          // has done via the keyboard. (Separately noted to the lead: `_handleKeyEvent`'s
-          // stepping branches, like `_handleIncrement`/`_handleDecrement`, never call
-          // `setState`, so a cap's OWN disabled state does not get recomputed just because
-          // keyboard/tap stepping crossed a bound — it only updates on the next rebuild
-          // triggered some other way, e.g. a focus change. That is a real, separate
-          // reactivity gap, not a semantics-exposure gap, and is out of this row's two-file
-          // scope.)
-          expect(
-            tester.getSemantics(find.bySemanticsLabel('Decrease value')),
-            matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
-          );
-          expect(
-            tester.getSemantics(find.bySemanticsLabel('Increase value')),
-            matchesSemantics(isButton: true, hasTapAction: true, hasEnabledState: true, isEnabled: true),
-          );
         } finally {
           handle.dispose();
         }
@@ -599,22 +630,48 @@ void main() {
     testWidgets('field is focusable and takes focus on tap', (tester) async {
       // Name trimmed from the original ("...and text selected with keyboard"): nothing
       // about text *selection* is asserted here, so the name must not promise it.
+      //
+      // This was the last of the 16 tests still asserting a widget fact
+      // (`focusNode.hasFocus`) instead of the accessibility tree — exactly what this suite
+      // exists to replace. Dump (2026-08-24, labelText: 'Number', controller text '42',
+      // after tapping the field) pins the full flag/action set `matchesSemantics` requires
+      // (it fails on a true flag/action left out just as readily as on a false one wrongly
+      // asserted true):
+      //   actions: setSelection, setText
+      //   flags: isTextField, isFocused, hasEnabledState, isEnabled, isFocusable
+      //   label: "Number"
+      final handle = tester.ensureSemantics();
       final controller = TextEditingController(text: '42');
       addTearDown(controller.dispose);
 
-      await pumpThemedApp(
-        tester,
-        LayrzNumberInput(
-          labelText: 'Number',
-          controller: controller,
-        ),
-      );
+      try {
+        await pumpThemedApp(
+          tester,
+          LayrzNumberInput(
+            labelText: 'Number',
+            controller: controller,
+          ),
+        );
 
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
 
-      final editableTextWidget = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editableTextWidget.focusNode.hasFocus, isTrue);
+        expect(
+          tester.getSemantics(find.byType(EditableText)),
+          matchesSemantics(
+            label: 'Number',
+            isTextField: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            isFocusable: true,
+            isFocused: true,
+            hasSetSelectionAction: true,
+            hasSetTextAction: true,
+          ),
+        );
+      } finally {
+        handle.dispose();
+      }
     });
 
     testWidgets('error text merges into the grouping node on the step-buttons branch (DESIGN-145)', (tester) async {
@@ -625,6 +682,19 @@ void main() {
       // separate node. "Too small" appears exactly once (on the outer group), "Price"
       // appears exactly once (on the field); nothing is duplicated or lost. This reproduces
       // DESIGN-145's node-count claim by dump rather than taking it on faith (dossier §11).
+      //
+      // A re-dump (2026-08-24, confirming DESIGN-116 review finding 1) shows the tree is
+      // exactly 7 nodes deep, with the merged "Too small" label sitting on the grouping
+      // node that has the three step-row children as its own children:
+      //   #0 view -> #1 -> #2 -> #3 [label: "Too small", 3 children]
+      //                              ├─ #4 "Decrease value"
+      //                              ├─ #5 "Price" (the field)
+      //                              └─ #6 "Increase value"
+      // Asserting only the label *count* cannot tell this shape apart from the pre-fix
+      // shape (error text as its own 8th leaf, "Price" still labelled once) — both would
+      // satisfy "each string appears on exactly one node". Pinning `childrenCount == 3` on
+      // the matched node is what actually proves the text moved into the grouping node
+      // rather than merely existing somewhere once.
       final handle = tester.ensureSemantics();
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);
@@ -636,7 +706,16 @@ void main() {
           const LayrzNumberInput(labelText: 'Price', errors: ['Too small']),
         );
 
-        expect(countSemanticsWithLabel(tester, 'Too small'), 1);
+        final groupingNodes = findSemanticsWithLabel(tester, 'Too small');
+        expect(groupingNodes, hasLength(1));
+        expect(
+          groupingNodes.single.childrenCount,
+          3,
+          reason:
+              'the error text must be absorbed into the outer grouping node (decrement '
+              'cap / field / increment cap as its three children), not left as its own '
+              'sibling leaf node',
+        );
         expect(countSemanticsWithLabel(tester, 'Price'), 1);
       } finally {
         handle.dispose();
@@ -647,6 +726,10 @@ void main() {
       // dump 7 (labelText: 'Price', helperText: 'Some help', Branch B): helperText, also
       // rendered through LayrzInputFooterSlot, merges into the outer grouping node
       // identically to errors (see the test above) — "Some help" once, "Price" once.
+      //
+      // Re-dump (2026-08-24) confirms the identical 7-node shape as the errors test, with
+      // "Some help" on the grouping node (`childrenCount == 3`) rather than its own leaf —
+      // see that test's comment for the full tree and why the count alone doesn't pin it.
       final handle = tester.ensureSemantics();
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);
@@ -658,7 +741,15 @@ void main() {
           const LayrzNumberInput(labelText: 'Price', helperText: 'Some help'),
         );
 
-        expect(countSemanticsWithLabel(tester, 'Some help'), 1);
+        final groupingNodes = findSemanticsWithLabel(tester, 'Some help');
+        expect(groupingNodes, hasLength(1));
+        expect(
+          groupingNodes.single.childrenCount,
+          3,
+          reason:
+              'the helper text must be absorbed into the outer grouping node, not left '
+              'as its own sibling leaf node',
+        );
         expect(countSemanticsWithLabel(tester, 'Price'), 1);
       } finally {
         handle.dispose();
