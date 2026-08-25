@@ -13,17 +13,21 @@ import 'package:layrz_ui/src/theme/theme.dart';
 
 import '../../helpers/pump_themed.dart';
 
-/// An [LayrzUiL10n] override that replaces every duration unit field label
+/// An [LayrzUiL10n] override that replaces every duration unit field label —
+/// long-form (compact) and short-form (desktop), singular and plural alike —
 /// with [suffix], a deliberately non-English synthetic string.
 ///
 /// Used to prove the picker's layout survives realistic (or worse) locale
 /// lengths, instead of only ever exercising the English default — the
-/// English "Days"/"Hours"/"Minutes"/"Seconds" are not what a Spanish or
-/// Portuguese device renders (`layrz_ui_i18n` supplies those), and a test
-/// that only passes the English case proves the least interesting thing
-/// available.
+/// English "Days"/"Hours"/"Minutes"/"Seconds" (compact) and "d"/"h"/"m"/"s"
+/// (desktop) are not what a Spanish or Portuguese device renders
+/// (`layrz_ui_i18n` supplies those), and a test that only passes the English
+/// case proves the least interesting thing available. Overriding every key
+/// this widget reads, not just the long-form ones, means the same override
+/// pins both bands regardless of which key set a given band happens to use.
 class _SyntheticSuffixL10n extends LayrzUiL10n {
-  /// Creates an override that reports [suffix] for every duration field.
+  /// Creates an override that reports [suffix] for every duration field key,
+  /// long-form or short-form, singular or plural.
   const _SyntheticSuffixL10n(this.suffix);
 
   /// The synthetic suffix returned for every duration unit field getter.
@@ -40,6 +44,30 @@ class _SyntheticSuffixL10n extends LayrzUiL10n {
 
   @override
   String get durationFieldSecond => suffix;
+
+  @override
+  String get durationUnitDayShortSingular => suffix;
+
+  @override
+  String get durationUnitDayShortPlural => suffix;
+
+  @override
+  String get durationUnitHourShortSingular => suffix;
+
+  @override
+  String get durationUnitHourShortPlural => suffix;
+
+  @override
+  String get durationUnitMinuteShortSingular => suffix;
+
+  @override
+  String get durationUnitMinuteShortPlural => suffix;
+
+  @override
+  String get durationUnitSecondShortSingular => suffix;
+
+  @override
+  String get durationUnitSecondShortPlural => suffix;
 }
 
 /// A [LocalizationsDelegate] that always resolves to a [_SyntheticSuffixL10n]
@@ -61,9 +89,65 @@ class _SyntheticSuffixL10nDelegate extends LocalizationsDelegate<LayrzUiL10n> {
   bool shouldReload(_SyntheticSuffixL10nDelegate old) => old.suffix != suffix;
 }
 
-/// Pumps the real [LayrzDurationInput] at a desktop viewport, with every
-/// duration field's [LayrzNumberInput.suffixText] replaced by [suffix], and
-/// opens its desktop anchored panel.
+/// An [LayrzUiL10n] override whose short-form singular and plural duration
+/// keys are deliberately distinct strings, so a test can tell which one a
+/// build actually selected — English's real short forms ('d'/'h'/'m'/'s')
+/// are identical for singular and plural, so they cannot prove the selector
+/// logic runs at all, only that some string rendered.
+class _DistinctShortPluralL10n extends LayrzUiL10n {
+  /// Creates the singular/plural-distinguishing override.
+  const _DistinctShortPluralL10n();
+
+  /// The string every short-form *singular* getter reports.
+  static const singular = '1u';
+
+  /// The string every short-form *plural* getter reports.
+  static const plural = 'Nu';
+
+  @override
+  String get durationUnitDayShortSingular => singular;
+
+  @override
+  String get durationUnitDayShortPlural => plural;
+
+  @override
+  String get durationUnitHourShortSingular => singular;
+
+  @override
+  String get durationUnitHourShortPlural => plural;
+
+  @override
+  String get durationUnitMinuteShortSingular => singular;
+
+  @override
+  String get durationUnitMinuteShortPlural => plural;
+
+  @override
+  String get durationUnitSecondShortSingular => singular;
+
+  @override
+  String get durationUnitSecondShortPlural => plural;
+}
+
+/// A [LocalizationsDelegate] that always resolves to a
+/// [_DistinctShortPluralL10n], regardless of locale.
+class _DistinctShortPluralL10nDelegate extends LocalizationsDelegate<LayrzUiL10n> {
+  /// Creates a delegate that always resolves to [_DistinctShortPluralL10n].
+  const _DistinctShortPluralL10nDelegate();
+
+  @override
+  bool isSupported(Locale locale) => true;
+
+  @override
+  Future<LayrzUiL10n> load(Locale locale) => SynchronousFuture<LayrzUiL10n>(const _DistinctShortPluralL10n());
+
+  @override
+  bool shouldReload(_DistinctShortPluralL10nDelegate old) => false;
+}
+
+/// Pumps the real [LayrzDurationInput] at a desktop viewport and opens its
+/// desktop anchored panel, optionally overriding l10n via [delegate] and
+/// seeding the fields via [value].
 ///
 /// Deliberately routes through the real [LayrzDurationInput] rather than
 /// pumping [LayrzDurationPickerPanel] bare at the full viewport width, to
@@ -72,18 +156,24 @@ class _SyntheticSuffixL10nDelegate extends LocalizationsDelegate<LayrzUiL10n> {
 /// `maxWidth: 480` (`duration_input.dart`), so the panel's real available
 /// width is capped well below the bare viewport — 227px per field at the
 /// time of writing, not whatever the 1600px test viewport alone would give.
-/// A pin test that skips this indirection risks proving a width the picker
-/// never actually renders at.
-Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix}) async {
+/// A pin test that skips this indirection risks proving a width, or a key
+/// selection, the picker never actually renders at.
+Future<void> _pumpDesktopAnchored(
+  WidgetTester tester, {
+  LocalizationsDelegate<LayrzUiL10n>? delegate,
+  Duration? value,
+}) async {
   tester.view.physicalSize = const Size(1200, 800);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
     LayrzApp(
-      home: Center(child: LayrzDurationInput(labelText: 'Duration')),
+      home: Center(
+        child: LayrzDurationInput(labelText: 'Duration', value: value),
+      ),
       theme: LayrzThemeData.light(),
-      localizationsDelegates: [_SyntheticSuffixL10nDelegate(suffix)],
+      localizationsDelegates: delegate == null ? null : [delegate],
       debugShowCheckedModeBanner: false,
     ),
   );
@@ -93,25 +183,37 @@ Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required Strin
   await tester.pumpAndSettle();
 }
 
-/// Pumps the real [LayrzDurationInput] at a compact (mobile) viewport, with
-/// every duration field's [LayrzNumberInput.suffixText] replaced by
-/// [suffix], and opens its compact bottom-sheet picker.
+/// Convenience wrapper over [_pumpDesktopAnchored] that replaces every
+/// duration field's [LayrzNumberInput.suffixText] source key with [suffix].
+Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix}) {
+  return _pumpDesktopAnchored(tester, delegate: _SyntheticSuffixL10nDelegate(suffix));
+}
+
+/// Pumps the real [LayrzDurationInput] at a compact (mobile) viewport and
+/// opens its compact bottom-sheet picker, optionally overriding l10n via
+/// [delegate] and seeding the fields via [value].
 ///
 /// The compact path routes through `LayrzBottomSheet` rather than the
 /// desktop anchored panel's `maxWidth: 480` cap, so — unlike the desktop
 /// case — this is not expected to be as tight. It still goes through the
 /// real end-to-end flow rather than the bare panel, so that claim rests on
 /// a measurement, not an inference from the desktop finding.
-Future<void> _pumpMobileSheetWithSuffix(WidgetTester tester, {required String suffix}) async {
+Future<void> _pumpMobileSheet(
+  WidgetTester tester, {
+  LocalizationsDelegate<LayrzUiL10n>? delegate,
+  Duration? value,
+}) async {
   tester.view.physicalSize = const Size(400, 800);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
     LayrzApp(
-      home: Center(child: LayrzDurationInput(labelText: 'Duration')),
+      home: Center(
+        child: LayrzDurationInput(labelText: 'Duration', value: value),
+      ),
       theme: LayrzThemeData.light(),
-      localizationsDelegates: [_SyntheticSuffixL10nDelegate(suffix)],
+      localizationsDelegates: delegate == null ? null : [delegate],
       debugShowCheckedModeBanner: false,
     ),
   );
@@ -119,6 +221,12 @@ Future<void> _pumpMobileSheetWithSuffix(WidgetTester tester, {required String su
 
   await tester.tap(find.byType(LayrzInputChrome));
   await tester.pumpAndSettle();
+}
+
+/// Convenience wrapper over [_pumpMobileSheet] that replaces every duration
+/// field's [LayrzNumberInput.suffixText] source key with [suffix].
+Future<void> _pumpMobileSheetWithSuffix(WidgetTester tester, {required String suffix}) {
+  return _pumpMobileSheet(tester, delegate: _SyntheticSuffixL10nDelegate(suffix));
 }
 
 /// The [ValueKey]s assigned to each unit's [LayrzCol] wrapper inside
@@ -357,11 +465,23 @@ void main() {
       expect(day.value, 0.0);
     });
 
-    testWidgets('carries the unit label as suffixText, not as a separate sibling widget', (tester) async {
+    testWidgets(
+      'carries the unit label as suffixText, not as a separate sibling widget (compact, long form)',
+      (tester) async {
+        await _pumpPanel(tester, viewportSize: _compactViewport, visibleUnits: _allUnits);
+
+        final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+        expect(day.suffixText, 'Days');
+        expect(day.suffix, isNull);
+        expect(day.suffixIcon, isNull);
+      },
+    );
+
+    testWidgets('carries the abbreviated unit label as suffixText on desktop (short form)', (tester) async {
       await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
-      expect(day.suffixText, 'Days');
+      expect(day.suffixText, 'd');
       expect(day.suffix, isNull);
       expect(day.suffixIcon, isNull);
     });
@@ -497,6 +617,86 @@ void main() {
     });
   });
 
+  group('LayrzDurationPickerPanel band-dependent key selection', () {
+    // The resolution of the locale-length findings below: compact has 16
+    // characters of headroom (no realistic word gets close), so it keeps
+    // the long-form durationField* keys unabridged. Desktop has only 7, and
+    // real translations of "seconds" are 8 characters in at least four major
+    // European languages, so desktop reads the short, count-aware
+    // durationUnit*Short{Singular,Plural} keys instead. Asserted through the
+    // real end-to-end flow (tap -> sheet / anchored panel), with the actual
+    // default English keys — no l10n override — since this is about which
+    // *keys* each band reads, not about a synthetic width stress case.
+
+    testWidgets('compact renders the long-form field label as suffixText, through the real sheet flow', (
+      tester,
+    ) async {
+      await _pumpMobileSheet(tester, value: const Duration(days: 2));
+
+      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+      expect(day.suffixText, 'Days', reason: 'compact has 16 characters of headroom — keeps the long form');
+    });
+
+    testWidgets('desktop renders the short-form abbreviated label as suffixText, through the real anchored flow', (
+      tester,
+    ) async {
+      await _pumpDesktopAnchored(tester, value: const Duration(days: 2));
+
+      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+      expect(day.suffixText, 'd', reason: 'desktop has only 7 characters of headroom — abbreviates');
+    });
+
+    testWidgets('desktop picks the short-form SINGULAR key when the field count is exactly 1', (tester) async {
+      await _pumpDesktopAnchored(
+        tester,
+        delegate: const _DistinctShortPluralL10nDelegate(),
+        value: const Duration(days: 1, hours: 1, minutes: 1, seconds: 1),
+      );
+
+      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+      final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
+      final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
+      final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
+      expect(day.suffixText, _DistinctShortPluralL10n.singular);
+      expect(hour.suffixText, _DistinctShortPluralL10n.singular);
+      expect(minute.suffixText, _DistinctShortPluralL10n.singular);
+      expect(second.suffixText, _DistinctShortPluralL10n.singular);
+    });
+
+    testWidgets('desktop picks the short-form PLURAL key when the field count is 0 or greater than 1', (
+      tester,
+    ) async {
+      await _pumpDesktopAnchored(
+        tester,
+        delegate: const _DistinctShortPluralL10nDelegate(),
+        value: const Duration(days: 2, hours: 0, minutes: 5, seconds: 0),
+      );
+
+      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+      final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
+      final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
+      final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
+      expect(day.suffixText, _DistinctShortPluralL10n.plural, reason: '2 days is plural');
+      expect(hour.suffixText, _DistinctShortPluralL10n.plural, reason: '0 hours is plural');
+      expect(minute.suffixText, _DistinctShortPluralL10n.plural, reason: '5 minutes is plural');
+      expect(second.suffixText, _DistinctShortPluralL10n.plural, reason: '0 seconds is plural');
+    });
+
+    testWidgets('compact fits an 8+ character REAL locale word — the premise the decision rests on', (
+      tester,
+    ) async {
+      // Spanish "Segundos" — the exact real word that overflows desktop.
+      // Compact having room for it, not merely a same-length synthetic
+      // filler, is why compact keeps the long form at all.
+      await _pumpMobileSheetWithSuffix(tester, suffix: 'Segundos');
+
+      expect(tester.takeException(), isNull, reason: '"Segundos" (8 chars) must fit the compact column');
+      final secondRect = tester.getRect(find.byKey(_secondKey));
+      final dayRect = tester.getRect(find.byKey(_dayKey));
+      expect(secondRect.width, closeTo(dayRect.width, 0.5));
+    });
+  });
+
   group('LayrzDurationPickerPanel locale-length safety', () {
     // These pin measured character-length thresholds rather than the English
     // default, per the false-green lesson elsewhere in this run: a test that
@@ -508,7 +708,9 @@ void main() {
     // synthetic suffix fits and an 8-char one ("Segundos", "Secondes",
     // "Sekunden" among them) overflows. At the real compact width (380px,
     // xs: 12, one column), 16 characters fit and 18 do not — comfortably
-    // roomy for any real locale.
+    // roomy for any real locale. This is precisely why the band-dependent
+    // key selection above exists: desktop's 7-character capacity is what
+    // makes the short keys necessary there, not a style preference.
 
     testWidgets(
       'a 7-char synthetic suffix (the measured safe boundary) fits the real compact bottom-sheet flow',
@@ -539,27 +741,31 @@ void main() {
     );
 
     testWidgets(
-      'KNOWN LIMIT: an 8-char suffix overflows the real desktop anchored-panel flow — matches real words '
-      'like "Segundos"/"Secondes"/"Sekunden"',
+      'CAPACITY TRIP-WIRE: desktop layout still cannot take an 8-char suffix — this is WHY the short '
+      'keys are used there, not merely a fact about it',
       (tester) async {
         await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzzz'); // 8 chars, one over the safe boundary
 
-        // This assertion is deliberately inverted: it documents a known,
-        // reported limitation rather than a passing behavior, so that fixing
-        // it (via shorter abbreviated suffixText, or a wider anchor cap) is
-        // forced to touch this test rather than silently leaving it stale.
-        // See the DESIGN-44 picker-layout report: a realistic 8-character
-        // locale suffix does not fit the desktop anchored panel's real,
-        // capped width even at the tightest defensible padding/spacing
-        // tokens, and closing that gap is a product decision (abbreviate the
-        // picker's suffixText, or widen the anchor), not a further padding
-        // shave.
+        // This assertion is deliberately inverted: it pins the desktop
+        // *layout's* character capacity, which has not changed and is not
+        // what the band-dependent key selection above touched. What changed
+        // is that desktop no longer *feeds* this layout an 8-character
+        // string — it now reads the short durationUnit*Short{Singular,
+        // Plural} keys precisely because this capacity ceiling exists.
+        //
+        // If this ever starts passing (the anchor's width cap grows, this
+        // row's padding/spacing gets more room, or the fields' internal
+        // chrome changes), desktop's capacity would clear 8 characters and
+        // the long-form keys become viable there again — at which point
+        // this test should be inverted back to isNull, and the
+        // band-dependent key selection above should be reconsidered rather
+        // than left as a now-unnecessary abbreviation.
         expect(
           tester.takeException(),
           isNotNull,
           reason:
-              'an 8-char suffix is currently known to overflow the real desktop anchored-panel flow; if '
-              'this starts passing, the fix landed and this test should be inverted back to isNull',
+              'desktop layout capacity is currently 7 characters, not 8+; if this starts passing, the '
+              'capacity grew and the short-key decision above should be revisited',
         );
       },
     );
