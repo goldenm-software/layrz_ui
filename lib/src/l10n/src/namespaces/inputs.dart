@@ -66,6 +66,70 @@ mixin LayrzUiL10nInputsMixin {
   /// English default: "seconds"
   String get durationUnitSecondPlural => 'seconds';
 
+  /// Singular abbreviation of "day" (1 day), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with exactly one day unit in the
+  /// abbreviated summary format, e.g. `"1d"`.
+  ///
+  /// English default: "d"
+  String get durationUnitDayShortSingular => 'd';
+
+  /// Plural abbreviation of "day" (2+ days), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with more than one day unit in the
+  /// abbreviated summary format, e.g. `"2d"`.
+  ///
+  /// English default: "d"
+  String get durationUnitDayShortPlural => 'd';
+
+  /// Singular abbreviation of "hour" (1 hour), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with exactly one hour unit in the
+  /// abbreviated summary format, e.g. `"1h"`.
+  ///
+  /// English default: "h"
+  String get durationUnitHourShortSingular => 'h';
+
+  /// Plural abbreviation of "hour" (2+ hours), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with more than one hour unit in the
+  /// abbreviated summary format, e.g. `"2h"`.
+  ///
+  /// English default: "h"
+  String get durationUnitHourShortPlural => 'h';
+
+  /// Singular abbreviation of "minute" (1 minute), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with exactly one minute unit in the
+  /// abbreviated summary format, e.g. `"1m"`.
+  ///
+  /// English default: "m"
+  String get durationUnitMinuteShortSingular => 'm';
+
+  /// Plural abbreviation of "minute" (2+ minutes), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with more than one minute unit in the
+  /// abbreviated summary format, e.g. `"2m"`.
+  ///
+  /// English default: "m"
+  String get durationUnitMinuteShortPlural => 'm';
+
+  /// Singular abbreviation of "second" (1 second), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with exactly one second unit in the
+  /// abbreviated summary format, e.g. `"1s"`.
+  ///
+  /// English default: "s"
+  String get durationUnitSecondShortSingular => 's';
+
+  /// Plural abbreviation of "second" (2+ seconds), for `LayrzDurationFormat.short`.
+  ///
+  /// Used when displaying a duration with more than one second unit in the
+  /// abbreviated summary format, e.g. `"2s"`.
+  ///
+  /// English default: "s"
+  String get durationUnitSecondShortPlural => 's';
+
   /// Label for the reset action in a duration picker.
   ///
   /// Announces the reset button that zeros all time units in the picker.
