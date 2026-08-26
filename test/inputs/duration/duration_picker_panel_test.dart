@@ -11,6 +11,7 @@ import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 
+import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
 /// An [LayrzUiL10n] override that replaces every duration unit field label —
@@ -299,7 +300,7 @@ Finder _numberInputUnder(Key fieldKey) {
 void main() {
   group('LayrzDurationPickerPanel layout', () {
     group('compact viewport (xs band, < 600px)', () {
-      testWidgets('stacks all four fields one per row, in day/hour/minute/second order, with no overflow', (
+      guardedTestWidgets('stacks all four fields one per row, in day/hour/minute/second order, with no overflow', (
         tester,
       ) async {
         // This is the exact scenario a 2-column compact layout could not render: all
@@ -328,7 +329,7 @@ void main() {
         expect(dayRect.width, greaterThan(300.0), reason: 'a full-width compact column should be close to 400px');
       });
 
-      testWidgets('fields are not squeezed into a forced square cell', (tester) async {
+      guardedTestWidgets('fields are not squeezed into a forced square cell', (tester) async {
         await _pumpPanel(tester, viewportSize: _compactViewport, visibleUnits: _allUnits);
 
         final dayRect = tester.getRect(find.byKey(_dayKey));
@@ -351,7 +352,7 @@ void main() {
       // four ~390px-wide fields comfortably clear `_kFieldMinWidth` (200.0) on one
       // row, so "fill the available width" now means all four sit side by side
       // instead of wrapping into two rows of two.
-      testWidgets('lays out all four fields on one row when the panel is wide enough, in day/hour/minute/second '
+      guardedTestWidgets('lays out all four fields on one row when the panel is wide enough, in day/hour/minute/second '
           'order, evenly filling the width', (
         tester,
       ) async {
@@ -383,7 +384,7 @@ void main() {
         expect(dayRect.width, closeTo(minuteRect.width, 0.5));
       });
 
-      testWidgets('wraps to two rows of two fields when the panel is too narrow for all four at the minimum '
+      guardedTestWidgets('wraps to two rows of two fields when the panel is too narrow for all four at the minimum '
           'width, still evenly filling each row', (
         tester,
       ) async {
@@ -420,7 +421,7 @@ void main() {
         expect(minuteRect.width, closeTo(secondRect.width, 0.5));
       });
 
-      testWidgets('field height does not scale proportionally with column width (no forced square)', (
+      guardedTestWidgets('field height does not scale proportionally with column width (no forced square)', (
         tester,
       ) async {
         // Compact stays a genuine single-field-per-row case (400px, well under two
@@ -453,7 +454,7 @@ void main() {
     });
 
     group('visibleUnits subset', () {
-      testWidgets('only the requested units render as fields', (tester) async {
+      guardedTestWidgets('only the requested units render as fields', (tester) async {
         await _pumpPanel(
           tester,
           viewportSize: _wideViewport,
@@ -466,7 +467,7 @@ void main() {
         expect(find.byKey(_secondKey), findsNothing);
       });
 
-      testWidgets('two visible units still lay out side by side', (tester) async {
+      guardedTestWidgets('two visible units still lay out side by side', (tester) async {
         await _pumpPanel(
           tester,
           viewportSize: _wideViewport,
@@ -480,7 +481,7 @@ void main() {
         expect(hourRect.left, lessThan(minuteRect.left));
       });
 
-      testWidgets('a single visible unit renders exactly one field', (tester) async {
+      guardedTestWidgets('a single visible unit renders exactly one field', (tester) async {
         await _pumpPanel(
           tester,
           viewportSize: _wideViewport,
@@ -491,7 +492,7 @@ void main() {
         expect(find.byKey(_secondKey), findsOneWidget);
       });
 
-      testWidgets('an empty visibleUnits set renders no fields but keeps the reset button', (tester) async {
+      guardedTestWidgets('an empty visibleUnits set renders no fields but keeps the reset button', (tester) async {
         await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: const {});
 
         expect(find.byType(LayrzNumberInput), findsNothing);
@@ -501,7 +502,7 @@ void main() {
   });
 
   group('LayrzDurationPickerPanel value binding', () {
-    testWidgets('initializes each field from initialValue', (tester) async {
+    guardedTestWidgets('initializes each field from initialValue', (tester) async {
       await _pumpPanel(
         tester,
         viewportSize: _wideViewport,
@@ -520,14 +521,14 @@ void main() {
       expect(second.value, 4.0);
     });
 
-    testWidgets('defaults every field to zero when initialValue is null', (tester) async {
+    guardedTestWidgets('defaults every field to zero when initialValue is null', (tester) async {
       await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
       expect(day.value, 0.0);
     });
 
-    testWidgets(
+    guardedTestWidgets(
       'carries the unit label as suffixText, not as a separate sibling widget (compact, long form)',
       (tester) async {
         await _pumpPanel(tester, viewportSize: _compactViewport, visibleUnits: _allUnits);
@@ -539,7 +540,7 @@ void main() {
       },
     );
 
-    testWidgets('carries the abbreviated unit label as suffixText when the field is narrow (short form)', (
+    guardedTestWidgets('carries the abbreviated unit label as suffixText when the field is narrow (short form)', (
       tester,
     ) async {
       // The narrow/wide label split is now driven by the panel's own measured
@@ -557,7 +558,7 @@ void main() {
       expect(day.suffixIcon, isNull);
     });
 
-    testWidgets('changing the hour field recomputes and reports the full duration', (tester) async {
+    guardedTestWidgets('changing the hour field recomputes and reports the full duration', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -575,7 +576,7 @@ void main() {
       expect(reported, const Duration(hours: 5, minutes: 30));
     });
 
-    testWidgets('reset zeroes every field and reports Duration.zero', (tester) async {
+    guardedTestWidgets('reset zeroes every field and reports Duration.zero', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -601,7 +602,7 @@ void main() {
       expect(second.value, 0.0);
     });
 
-    testWidgets('minute field clamps changes to 0-59', (tester) async {
+    guardedTestWidgets('minute field clamps changes to 0-59', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -618,7 +619,7 @@ void main() {
       expect(reported, const Duration(minutes: 59));
     });
 
-    testWidgets('second field clamps changes to 0-59', (tester) async {
+    guardedTestWidgets('second field clamps changes to 0-59', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -635,7 +636,7 @@ void main() {
       expect(reported, const Duration(seconds: 59));
     });
 
-    testWidgets('hour field clamps changes to 0-23', (tester) async {
+    guardedTestWidgets('hour field clamps changes to 0-23', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -652,7 +653,7 @@ void main() {
       expect(reported, const Duration(hours: 23));
     });
 
-    testWidgets('day field has no upper clamp', (tester) async {
+    guardedTestWidgets('day field has no upper clamp', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -669,7 +670,7 @@ void main() {
       expect(reported, const Duration(days: 400));
     });
 
-    testWidgets('a null onChanged callback value falls back to zero for that field', (tester) async {
+    guardedTestWidgets('a null onChanged callback value falls back to zero for that field', (tester) async {
       Duration? reported;
 
       await _pumpPanel(
@@ -713,7 +714,7 @@ void main() {
     /// this is based on.
     const narrowAnchorWidth = 260.0;
 
-    testWidgets('compact renders the long-form field label as suffixText, through the real sheet flow', (
+    guardedTestWidgets('compact renders the long-form field label as suffixText, through the real sheet flow', (
       tester,
     ) async {
       await _pumpMobileSheet(tester, value: const Duration(days: 2));
@@ -722,15 +723,18 @@ void main() {
       expect(day.suffixText, 'Days', reason: 'compact has 16 characters of headroom — keeps the long form');
     });
 
-    testWidgets('a narrow desktop anchor renders the short-form abbreviated label as suffixText, through the real '
-        'anchored flow', (tester) async {
-      await _pumpDesktopAnchored(tester, value: const Duration(days: 2), anchorWidth: narrowAnchorWidth);
+    guardedTestWidgets(
+      'a narrow desktop anchor renders the short-form abbreviated label as suffixText, through the real '
+      'anchored flow',
+      (tester) async {
+        await _pumpDesktopAnchored(tester, value: const Duration(days: 2), anchorWidth: narrowAnchorWidth);
 
-      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
-      expect(day.suffixText, 'd', reason: 'a narrow field has only ~7 characters of headroom — abbreviates');
-    });
+        final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+        expect(day.suffixText, 'd', reason: 'a narrow field has only ~7 characters of headroom — abbreviates');
+      },
+    );
 
-    testWidgets('a narrow desktop anchor picks the short-form SINGULAR key when the field count is exactly 1', (
+    guardedTestWidgets('a narrow desktop anchor picks the short-form SINGULAR key when the field count is exactly 1', (
       tester,
     ) async {
       await _pumpDesktopAnchored(
@@ -750,7 +754,7 @@ void main() {
       expect(second.suffixText, _DistinctShortPluralL10n.singular);
     });
 
-    testWidgets('a narrow desktop anchor picks the short-form PLURAL key when the field count is 0 or greater '
+    guardedTestWidgets('a narrow desktop anchor picks the short-form PLURAL key when the field count is 0 or greater '
         'than 1', (tester) async {
       await _pumpDesktopAnchored(
         tester,
@@ -769,7 +773,7 @@ void main() {
       expect(second.suffixText, _DistinctShortPluralL10n.plural, reason: '0 seconds is plural');
     });
 
-    testWidgets('compact fits an 8+ character REAL locale word — the premise the decision rests on', (
+    guardedTestWidgets('compact fits an 8+ character REAL locale word — the premise the decision rests on', (
       tester,
     ) async {
       // Spanish "Segundos" — the exact real word that overflows desktop.
@@ -815,7 +819,7 @@ void main() {
     /// doc comment above.
     const narrowAnchorWidth = 250.0;
 
-    testWidgets(
+    guardedTestWidgets(
       'a 7-char synthetic suffix (the measured safe boundary) fits the real compact bottom-sheet flow',
       (tester) async {
         await _pumpMobileSheetWithSuffix(tester, suffix: 'Zzzzzzz'); // 7 chars, not the English default
@@ -827,7 +831,7 @@ void main() {
       },
     );
 
-    testWidgets(
+    guardedTestWidgets(
       'a 7-char synthetic suffix (the measured safe boundary) fits the real desktop anchored-panel flow at a '
       'narrow anchor width',
       (tester) async {
@@ -845,7 +849,7 @@ void main() {
       },
     );
 
-    testWidgets(
+    guardedTestWidgets(
       'CAPACITY TRIP-WIRE: a narrow desktop anchor still cannot take an 8-char suffix — this is WHY the short '
       'keys are used there, not merely a fact about it',
       (tester) async {
@@ -877,6 +881,11 @@ void main() {
               'starts passing, the capacity grew and the short-key decision above should be revisited',
         );
       },
+      // This test deliberately drives content past the layout's capacity and
+      // asserts on the resulting overflow above via tester.takeException() --
+      // it opts out of guardedTestWidgets' own overflow check rather than
+      // being silently caught by it.
+      expectOverflow: true,
     );
   });
 }

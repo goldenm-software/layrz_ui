@@ -7,11 +7,12 @@ import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_slot.dart';
 
 import '../../helpers/find_button_label.dart';
+import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed_app.dart';
 
 void main() {
   group('LayrzDurationInput', () {
-    testWidgets('renders with label and hint text', (WidgetTester tester) async {
+    guardedTestWidgets('renders with label and hint text', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -24,7 +25,7 @@ void main() {
       expect(find.text('Select a duration'), findsWidgets);
     });
 
-    testWidgets('displays empty text when value is null', (WidgetTester tester) async {
+    guardedTestWidgets('displays empty text when value is null', (WidgetTester tester) async {
       late final TextEditingController controller;
 
       await pumpThemedApp(
@@ -43,7 +44,7 @@ void main() {
       expect(controller.text, isEmpty);
     });
 
-    testWidgets('displays summary text for a complete duration', (WidgetTester tester) async {
+    guardedTestWidgets('displays summary text for a complete duration', (WidgetTester tester) async {
       late final TextEditingController controller;
       const duration = Duration(days: 2, hours: 3, minutes: 4, seconds: 5);
 
@@ -68,7 +69,7 @@ void main() {
       expect(controller.text, contains('5'));
     });
 
-    testWidgets('omits zero-valued units from summary', (WidgetTester tester) async {
+    guardedTestWidgets('omits zero-valued units from summary', (WidgetTester tester) async {
       late final TextEditingController controller;
       const duration = Duration(days: 2, minutes: 4);
 
@@ -91,7 +92,7 @@ void main() {
       expect(summary, contains('4'));
     });
 
-    testWidgets('respects visibleUnits in summary', (WidgetTester tester) async {
+    guardedTestWidgets('respects visibleUnits in summary', (WidgetTester tester) async {
       late final TextEditingController controller;
       const duration = Duration(days: 1, hours: 2, minutes: 3, seconds: 4);
 
@@ -115,7 +116,7 @@ void main() {
       expect(summary, contains('3'));
     });
 
-    testWidgets('opens bottom sheet on compact viewport', (WidgetTester tester) async {
+    guardedTestWidgets('opens bottom sheet on compact viewport', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -135,7 +136,9 @@ void main() {
       expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
     });
 
-    testWidgets('closes picker and fires onChanged when bottom sheet returns value', (WidgetTester tester) async {
+    guardedTestWidgets('closes picker and fires onChanged when bottom sheet returns value', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -157,7 +160,7 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsWidgets);
     });
 
-    testWidgets('applies disabled state correctly', (WidgetTester tester) async {
+    guardedTestWidgets('applies disabled state correctly', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -179,7 +182,7 @@ void main() {
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
 
-    testWidgets('displays errors when provided', (WidgetTester tester) async {
+    guardedTestWidgets('displays errors when provided', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -191,7 +194,7 @@ void main() {
       expect(find.text('Invalid duration'), findsOneWidget);
     });
 
-    testWidgets('hides error block when hideDetails is true', (WidgetTester tester) async {
+    guardedTestWidgets('hides error block when hideDetails is true', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -204,7 +207,7 @@ void main() {
       expect(find.text('Invalid duration'), findsNothing);
     });
 
-    testWidgets('disposes self-created controller on dispose', (WidgetTester tester) async {
+    guardedTestWidgets('disposes self-created controller on dispose', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -216,7 +219,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('does not dispose caller-provided controller', (WidgetTester tester) async {
+    guardedTestWidgets('does not dispose caller-provided controller', (WidgetTester tester) async {
       final controller = TextEditingController();
 
       await pumpThemedApp(
@@ -231,7 +234,7 @@ void main() {
       expect(() => controller.dispose(), returnsNormally);
     });
 
-    testWidgets('does not dispose caller-provided focus node', (WidgetTester tester) async {
+    guardedTestWidgets('does not dispose caller-provided focus node', (WidgetTester tester) async {
       final focusNode = FocusNode();
 
       await pumpThemedApp(
@@ -246,7 +249,7 @@ void main() {
       expect(() => focusNode.dispose(), returnsNormally);
     });
 
-    testWidgets('can be created without labelText or hintText', (WidgetTester tester) async {
+    guardedTestWidgets('can be created without labelText or hintText', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(),
@@ -255,7 +258,7 @@ void main() {
       expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
 
-    testWidgets('asserts visibleUnits is non-empty', (WidgetTester tester) async {
+    guardedTestWidgets('asserts visibleUnits is non-empty', (WidgetTester tester) async {
       expect(
         () => LayrzDurationInput(
           labelText: 'Duration',
@@ -265,7 +268,7 @@ void main() {
       );
     });
 
-    testWidgets('updates summary when value changes', (WidgetTester tester) async {
+    guardedTestWidgets('updates summary when value changes', (WidgetTester tester) async {
       Duration? currentValue = const Duration(hours: 1);
 
       await pumpThemedApp(
@@ -293,7 +296,7 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('clears the summary back to empty text when value transitions from set to null', (
+    guardedTestWidgets('clears the summary back to empty text when value transitions from set to null', (
       WidgetTester tester,
     ) async {
       Duration? currentValue = const Duration(hours: 1);
@@ -328,7 +331,7 @@ void main() {
       expect(controller.text, isEmpty);
     });
 
-    testWidgets('handles null onChanged callback', (WidgetTester tester) async {
+    guardedTestWidgets('handles null onChanged callback', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -346,7 +349,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('respects required flag', (WidgetTester tester) async {
+    guardedTestWidgets('respects required flag', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -358,7 +361,7 @@ void main() {
       expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
 
-    testWidgets('provides help affordance when helpContentText is non-null', (WidgetTester tester) async {
+    guardedTestWidgets('provides help affordance when helpContentText is non-null', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -371,7 +374,9 @@ void main() {
       expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
 
-    testWidgets('round-trip: duration in, same duration out (day,hour,minute,second)', (WidgetTester tester) async {
+    guardedTestWidgets('round-trip: duration in, same duration out (day,hour,minute,second)', (
+      WidgetTester tester,
+    ) async {
       const testDuration = Duration(days: 1, hours: 2, minutes: 3, seconds: 4);
 
       late final TextEditingController controller;
@@ -393,7 +398,7 @@ void main() {
       expect(controller.text, isNotEmpty);
     });
 
-    testWidgets('clamping: hour 0-23 displays correctly', (WidgetTester tester) async {
+    guardedTestWidgets('clamping: hour 0-23 displays correctly', (WidgetTester tester) async {
       final duration = Duration(hours: 47);
       late final TextEditingController controller;
 
@@ -415,7 +420,7 @@ void main() {
       expect(controller.text, contains('23'));
     });
 
-    testWidgets('clamping: minute 0-59 displays correctly', (WidgetTester tester) async {
+    guardedTestWidgets('clamping: minute 0-59 displays correctly', (WidgetTester tester) async {
       final duration = Duration(minutes: 125);
       late final TextEditingController controller;
 
@@ -437,7 +442,7 @@ void main() {
       expect(controller.text, contains('5'));
     });
 
-    testWidgets('clamping: second 0-59 displays correctly', (WidgetTester tester) async {
+    guardedTestWidgets('clamping: second 0-59 displays correctly', (WidgetTester tester) async {
       final duration = Duration(seconds: 125);
       late final TextEditingController controller;
 
@@ -459,7 +464,7 @@ void main() {
       expect(controller.text, contains('5'));
     });
 
-    testWidgets('picker panel has all four number input fields visible by default', (WidgetTester tester) async {
+    guardedTestWidgets('picker panel has all four number input fields visible by default', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -478,7 +483,7 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsNWidgets(4));
     });
 
-    testWidgets('picker panel respects visibleUnits restriction', (WidgetTester tester) async {
+    guardedTestWidgets('picker panel respects visibleUnits restriction', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -497,7 +502,7 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsNWidgets(2));
     });
 
-    testWidgets('does not render read-only lock icon', (WidgetTester tester) async {
+    guardedTestWidgets('does not render read-only lock icon', (WidgetTester tester) async {
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -510,7 +515,7 @@ void main() {
   });
 
   group('LayrzDurationInput format', () {
-    testWidgets('defaults to LayrzDurationFormat.long, matching pre-format behavior exactly', (
+    guardedTestWidgets('defaults to LayrzDurationFormat.long, matching pre-format behavior exactly', (
       WidgetTester tester,
     ) async {
       final controller = TextEditingController();
@@ -527,7 +532,7 @@ void main() {
       expect(controller.text, '2 hours, 30 minutes');
     });
 
-    testWidgets('LayrzDurationFormat.long renders exactly "2 hours, 30 minutes"', (WidgetTester tester) async {
+    guardedTestWidgets('LayrzDurationFormat.long renders exactly "2 hours, 30 minutes"', (WidgetTester tester) async {
       final controller = TextEditingController();
 
       await pumpThemedApp(
@@ -543,7 +548,7 @@ void main() {
       expect(controller.text, '2 hours, 30 minutes');
     });
 
-    testWidgets('LayrzDurationFormat.short renders exactly "2h 30m" — abbreviated, space-joined', (
+    guardedTestWidgets('LayrzDurationFormat.short renders exactly "2h 30m" — abbreviated, space-joined', (
       WidgetTester tester,
     ) async {
       final controller = TextEditingController();
@@ -561,7 +566,7 @@ void main() {
       expect(controller.text, '2h 30m');
     });
 
-    testWidgets('short format reads day abbreviation singular and plural forms from l10n', (
+    guardedTestWidgets('short format reads day abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
       final singularController = TextEditingController();
@@ -591,7 +596,7 @@ void main() {
       expect(pluralController.text, '3d');
     });
 
-    testWidgets('short format reads hour abbreviation singular and plural forms from l10n', (
+    guardedTestWidgets('short format reads hour abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
       final singularController = TextEditingController();
@@ -621,7 +626,7 @@ void main() {
       expect(pluralController.text, '5h');
     });
 
-    testWidgets('short format reads minute abbreviation singular and plural forms from l10n', (
+    guardedTestWidgets('short format reads minute abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
       final singularController = TextEditingController();
@@ -651,7 +656,7 @@ void main() {
       expect(pluralController.text, '45m');
     });
 
-    testWidgets('short format reads second abbreviation singular and plural forms from l10n', (
+    guardedTestWidgets('short format reads second abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
       final singularController = TextEditingController();
@@ -681,7 +686,7 @@ void main() {
       expect(pluralController.text, '45s');
     });
 
-    testWidgets(
+    guardedTestWidgets(
       'Duration.zero renders the smallest visible unit instead of empty text, '
       'with visibleUnits declared out of enum order',
       (WidgetTester tester) async {
@@ -707,7 +712,7 @@ void main() {
       },
     );
 
-    testWidgets('Duration.zero in short format renders "0s" when seconds are visible, out-of-order set', (
+    guardedTestWidgets('Duration.zero in short format renders "0s" when seconds are visible, out-of-order set', (
       WidgetTester tester,
     ) async {
       final controller = TextEditingController();
@@ -726,7 +731,7 @@ void main() {
       expect(controller.text, '0s');
     });
 
-    testWidgets(
+    guardedTestWidgets(
       'Duration.zero renders "0h" when only day and hour are visible (seconds hidden), out-of-order set',
       (WidgetTester tester) async {
         final controller = TextEditingController();
@@ -747,7 +752,7 @@ void main() {
       },
     );
 
-    testWidgets('null value still renders empty text, distinct from an explicit Duration.zero', (
+    guardedTestWidgets('null value still renders empty text, distinct from an explicit Duration.zero', (
       WidgetTester tester,
     ) async {
       final controller = TextEditingController();
@@ -763,7 +768,7 @@ void main() {
       expect(controller.text, isEmpty);
     });
 
-    testWidgets(
+    guardedTestWidgets(
       'a null value shows the hint text on screen, while Duration.zero shows the smallest-unit '
       'zero reading instead of the hint',
       (WidgetTester tester) async {
@@ -806,7 +811,7 @@ void main() {
       },
     );
 
-    testWidgets('resetting the picker fires onChanged with an all-zero duration and updates the summary', (
+    guardedTestWidgets('resetting the picker fires onChanged with an all-zero duration and updates the summary', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(400, 800);
@@ -848,7 +853,7 @@ void main() {
   });
 
   group('LayrzDurationInput desktop anchored panel', () {
-    testWidgets('renders the anchored panel (not the bottom sheet) at a wide viewport', (
+    guardedTestWidgets('renders the anchored panel (not the bottom sheet) at a wide viewport', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -872,7 +877,9 @@ void main() {
       expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
     });
 
-    testWidgets('disabled anchor does not open the panel on tap at a wide viewport', (WidgetTester tester) async {
+    guardedTestWidgets('disabled anchor does not open the panel on tap at a wide viewport', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -891,7 +898,7 @@ void main() {
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
 
-    testWidgets('resetting the panel fires onChanged, updates the summary, and closes the panel', (
+    guardedTestWidgets('resetting the panel fires onChanged, updates the summary, and closes the panel', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -939,7 +946,7 @@ void main() {
     // `_panelController.close()`. See `duration_input.dart`'s `onChanged` vs
     // `onReset` wiring on `LayrzDurationPickerPanel` for the fix: only a
     // genuine reset closes the panel now.
-    testWidgets('tapping a field\'s increment control updates the value and keeps the panel open', (
+    guardedTestWidgets('tapping a field\'s increment control updates the value and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -983,7 +990,7 @@ void main() {
       );
     });
 
-    testWidgets('tapping a field\'s decrement control updates the value and keeps the panel open', (
+    guardedTestWidgets('tapping a field\'s decrement control updates the value and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1027,7 +1034,7 @@ void main() {
       );
     });
 
-    testWidgets('typing directly into a field\'s text box updates the value and keeps the panel open', (
+    guardedTestWidgets('typing directly into a field\'s text box updates the value and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1076,7 +1083,7 @@ void main() {
     // primary/danger `LayrzAnchoredPanelBorder`), while its width policy
     // (`contentSized`, 280.0-480.0) and 400.0 height cap are deliberately left
     // unchanged -- see the class doc on `_LayrzDurationInputState.build`.
-    testWidgets('the panel covers the field -- its rect starts at the anchor\'s own top-left corner', (
+    guardedTestWidgets('the panel covers the field -- its rect starts at the anchor\'s own top-left corner', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1109,7 +1116,7 @@ void main() {
       expect(panelRect.left, equals(anchorRect.left));
     });
 
-    testWidgets('the panel is bordered in the primary color when the field has no errors', (tester) async {
+    guardedTestWidgets('the panel is bordered in the primary color when the field has no errors', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1135,7 +1142,7 @@ void main() {
       expect((decoration.border as Border).top.width, equals(tokens.border.base));
     });
 
-    testWidgets('the panel is bordered in the danger color when the field has errors', (tester) async {
+    guardedTestWidgets('the panel is bordered in the danger color when the field has errors', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1169,7 +1176,7 @@ void main() {
     // fraction of it. `matchAnchor` (mirroring `LayrzSelectInput`) makes the panel
     // span the field's actual rendered width instead -- see the class doc on
     // `_LayrzDurationInputState.build` for the full reasoning.
-    testWidgets('the panel spans the anchor field\'s full width (matchAnchor), not a fixed 280.0-480.0 band', (
+    guardedTestWidgets('the panel spans the anchor field\'s full width (matchAnchor), not a fixed 280.0-480.0 band', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1205,7 +1212,7 @@ void main() {
       );
     });
 
-    testWidgets('a narrow anchor field yields a narrow matchAnchor panel', (tester) async {
+    guardedTestWidgets('a narrow anchor field yields a narrow matchAnchor panel', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1227,7 +1234,7 @@ void main() {
       expect(panelWidth, closeTo(320.0, 1.0));
     });
 
-    testWidgets('a wide anchor field yields a matchAnchor panel wider than the old 480.0 cap', (tester) async {
+    guardedTestWidgets('a wide anchor field yields a matchAnchor panel wider than the old 480.0 cap', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1249,7 +1256,7 @@ void main() {
       expect(panelWidth, closeTo(900.0, 1.0));
     });
 
-    testWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {
+    guardedTestWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1268,7 +1275,7 @@ void main() {
   });
 
   group('LayrzDurationInput controller/focusNode lifecycle updates', () {
-    testWidgets('adopts a newly-supplied controller and disposes the self-created one it replaces', (
+    guardedTestWidgets('adopts a newly-supplied controller and disposes the self-created one it replaces', (
       WidgetTester tester,
     ) async {
       final suppliedController = TextEditingController();
@@ -1302,7 +1309,7 @@ void main() {
       expect(find.byType(LayrzDurationInput), findsOneWidget);
     });
 
-    testWidgets('adopts a newly-supplied focus node and disposes the self-created one it replaces', (
+    guardedTestWidgets('adopts a newly-supplied focus node and disposes the self-created one it replaces', (
       WidgetTester tester,
     ) async {
       final suppliedFocusNode = FocusNode();
@@ -1338,7 +1345,7 @@ void main() {
   });
 
   group('LayrzDurationInput affordance icon', () {
-    testWidgets('renders the clock affordance icon on the desktop band', (WidgetTester tester) async {
+    guardedTestWidgets('renders the clock affordance icon on the desktop band', (WidgetTester tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -1359,7 +1366,7 @@ void main() {
       expect(icon.size, tokens.typography.body.fontSize);
     });
 
-    testWidgets('renders the clock affordance icon on the compact band', (WidgetTester tester) async {
+    guardedTestWidgets('renders the clock affordance icon on the compact band', (WidgetTester tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -1380,7 +1387,7 @@ void main() {
       expect(icon.size, tokens.typography.body.fontSize);
     });
 
-    testWidgets('dims the affordance icon to fg4 when disabled, matching the chrome text color', (
+    guardedTestWidgets('dims the affordance icon to fg4 when disabled, matching the chrome text color', (
       WidgetTester tester,
     ) async {
       addTearDown(tester.view.resetPhysicalSize);
@@ -1400,7 +1407,7 @@ void main() {
       expect(icon.color, tokens.colors.fg4);
     });
 
-    testWidgets('recolors the affordance icon to the danger color when errors are present', (
+    guardedTestWidgets('recolors the affordance icon to the danger color when errors are present', (
       WidgetTester tester,
     ) async {
       addTearDown(tester.view.resetPhysicalSize);
@@ -1421,7 +1428,7 @@ void main() {
       expect(icon.color, isNot(tokens.colors.fg4));
     });
 
-    testWidgets(
+    guardedTestWidgets(
       'keeps both prefix and suffix slots empty and available on the inner chrome (desktop band)',
       (WidgetTester tester) async {
         addTearDown(tester.view.resetPhysicalSize);
@@ -1451,7 +1458,7 @@ void main() {
       },
     );
 
-    testWidgets(
+    guardedTestWidgets(
       'keeps both prefix and suffix slots empty and available on the inner chrome (compact band)',
       (WidgetTester tester) async {
         addTearDown(tester.view.resetPhysicalSize);
@@ -1472,7 +1479,7 @@ void main() {
       },
     );
 
-    testWidgets('the affordance icon is excluded from the semantics tree (decorative)', (
+    guardedTestWidgets('the affordance icon is excluded from the semantics tree (decorative)', (
       WidgetTester tester,
     ) async {
       addTearDown(tester.view.resetPhysicalSize);
@@ -1493,7 +1500,7 @@ void main() {
       expect(excludeSemanticsAboveIcon, findsOneWidget);
     });
 
-    testWidgets('the inner chrome renders with no border and square corners of its own', (
+    guardedTestWidgets('the inner chrome renders with no border and square corners of its own', (
       WidgetTester tester,
     ) async {
       addTearDown(tester.view.resetPhysicalSize);
