@@ -659,11 +659,19 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     }
   }
 
+  /// Wraps [child] with the label above (when [LayrzSelectInput.labelText] is
+  /// non-null) and the error/counter footer below, both rendered OUTSIDE
+  /// [child] entirely -- see the class doc's DESIGN-145 note for why this
+  /// hoisting is load-bearing, not cosmetic.
+  ///
+  /// **The footer is never gated on the label.** An earlier version
+  /// short-circuited to `return child` whenever [LayrzSelectInput.labelText]
+  /// was null, which meant [LayrzSelectInput.errors] rendered nothing at all
+  /// on a field with no label -- a field with an error and no label showed no
+  /// error text whatsoever. Only the label row itself is conditional now;
+  /// this method always wraps in the [Column] so [LayrzInputFooterSlot]
+  /// renders whenever it has something to show, independent of [labelText].
   Widget _appendExtras(Widget child, LayrzTokens tokens) {
-    if (widget.labelText == null) {
-      return child;
-    }
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
