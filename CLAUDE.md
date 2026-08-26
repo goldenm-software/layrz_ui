@@ -282,6 +282,25 @@ lib/src/<domain>/src/
 
 The barrel file must contain **only** `export` statements — no logic, no classes. All modules are exported from the root barrel at `lib/layrz_ui.dart`, which is the blessed consumer import.
 
+### 4. `LayrzInputChrome` is IMMUTABLE — never modify it
+
+`lib/src/inputs/src/shared/input_chrome.dart` is **frozen**. It is the shared chrome behind every input in the library — text, textarea, number, password, search, select, combobox, duration, and every input added later. A change there lands in all of them at once, and nothing in the test suite will tell you which one you broke.
+
+**Do not add a parameter to it. Do not change its layout. Do not change how it resolves style, precedence, or state. Do not "just" add an optional flag with a safe default.**
+
+An optional parameter with a default is still a change to the shared contract, and "it defaults to the old behaviour" is the argument that makes these changes feel free. They are not free.
+
+**The only condition under which it may be modified** is an extreme one: a defect that genuinely cannot be fixed from the calling input, where every workaround available to that input has been tried and shown not to work. That bar is deliberately high, and the burden of proof is on whoever wants to change the file — not on whoever objects.
+
+**Before proposing any change to it, you must first demonstrate that the calling input cannot solve the problem itself.** In practice it almost always can:
+
+- **Wrong colour, border, or state styling?** The caller is passing the wrong thing. Check the style-spec precedence — `disabled > readOnly > error > pressed > hover/focused > default`. A higher-precedence flag hardcoded by the caller silently discards everything below it. A real case: `LayrzDurationInput` hardcoded `readOnly: true` into its own style resolution, so `errors` could never paint a danger border, even though the errors were being passed correctly. The fix was one line in the caller.
+- **Need the label or footer positioned outside the anchor?** Compose it in the caller. Select, ComboBox and Duration all hoist label and error text into a `Column` around the chrome, so the chrome's own box stays the anchor's rect. That is why the anchored panel lands on the field and not 24px above it.
+- **Need content the chrome doesn't render?** Pass it as the `child`, or place it as an external sibling. `LayrzNumberInput`'s step buttons and `LayrzDurationInput`'s clock affordance both live outside the chrome for exactly this reason.
+- **Need the chrome to know something it currently renders?** It cannot, and that is the accepted limitation. `labelText` is a single field that both carries the value and triggers the render — there is no way to supply one without the other, because the label row is the first child of the same `Column` that becomes the panel's anchor. Passing a label to suppress its render would reintroduce the anchor-offset bug. Work around it in the caller, or accept it.
+
+If you believe you have hit the extreme condition, **stop and report it. Do not edit the file.** Say what the defect is, which caller-side workarounds you tried, and why each failed. It is a decision for the maintainer, never for an agent.
+
 ---
 
 ## Coding conventions
