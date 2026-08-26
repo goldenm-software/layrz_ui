@@ -203,28 +203,58 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
       );
     }
 
-    // No height cap here: the 300px maximum is applied exactly once,
-    // by the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the
-    // bottom sheet's own scrollable on mobile). A second, disagreeing
-    // cap here is DESIGN-40's root cause -- see `select_input.dart`.
-    return KeyboardListener(
-      focusNode: _listFocusNode,
-      onKeyEvent: _handleKeyEvent,
-      child: ListView.builder(
-        itemExtent: widget.itemExtent,
-        itemCount: _filteredItems.length,
-        itemBuilder: (context, index) {
-          return _SelectItemRow(
-            key: ValueKey(_filteredItems[index].value),
-            item: _filteredItems[index],
-            isHighlighted: _highlightedIndex == index,
-            isSelected: _filteredItems[index] == widget.selectedItem,
-            onTap: () {
-              widget.onItemSelected(_filteredItems[index]);
-              widget.panelController?.close();
-            },
-          );
-        },
+    // No height CAP here: the 300px maximum is still applied exactly once, by
+    // the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the bottom
+    // sheet's own scrollable on mobile) -- a second, disagreeing cap here is
+    // DESIGN-40's original root cause, see `select_input.dart`.
+    //
+    // A definite height IS given here, though, and that is a different thing:
+    // both hosts place this surface inside their own `SingleChildScrollView`,
+    // which -- regardless of what height cap it itself receives from above --
+    // always relaxes its *child's* incoming height constraint to unbounded
+    // along the scroll axis, so the child can be taller than the viewport and
+    // still scroll. A `Column` (what this surface built before `ListView`
+    // replaced it) tolerates that fine, since its own height is simply the sum
+    // of its children's, computable with no bound at all. A `ListView` cannot:
+    // as a lazy, non-shrinkWrap viewport it must know its own extent to lay
+    // out, and an unbounded incoming height throws (`Vertical viewport was
+    // given unbounded height`) before the caller's cap ever gets a chance to
+    // clamp anything -- this was a real crash on both the desktop panel and
+    // the mobile sheet, not a test-only artifact. Wrapping it in a `SizedBox`
+    // sized to its own full, uncapped content height restores exactly the
+    // shape `Column` provided implicitly, so the caller's single external cap
+    // keeps clamping and scrolling it precisely as it did before.
+    // Sizing the `ListView` to its own full content height also makes its own
+    // scroll extent zero -- it never needs to scroll on its own, since it is
+    // never taller than its own viewport. Left with the default physics, that
+    // still leaves it a second same-axis `Scrollable` co-located with the
+    // caller's outer one, and a plain drag on that region resolves to whichever
+    // of the two wins the gesture arena rather than reliably reaching the
+    // caller's scrollable. `NeverScrollableScrollPhysics` removes it from that
+    // arena entirely, so the caller's `SingleChildScrollView` is unambiguously
+    // the one that scrolls -- exactly as when this was a non-scrollable `Column`.
+    return SizedBox(
+      height: _filteredItems.length * widget.itemExtent,
+      child: KeyboardListener(
+        focusNode: _listFocusNode,
+        onKeyEvent: _handleKeyEvent,
+        child: ListView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          itemExtent: widget.itemExtent,
+          itemCount: _filteredItems.length,
+          itemBuilder: (context, index) {
+            return _SelectItemRow(
+              key: ValueKey(_filteredItems[index].value),
+              item: _filteredItems[index],
+              isHighlighted: _highlightedIndex == index,
+              isSelected: _filteredItems[index] == widget.selectedItem,
+              onTap: () {
+                widget.onItemSelected(_filteredItems[index]);
+                widget.panelController?.close();
+              },
+            );
+          },
+        ),
       ),
     );
   }

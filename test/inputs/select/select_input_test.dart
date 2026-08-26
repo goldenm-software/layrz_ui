@@ -1120,6 +1120,72 @@ void main() {
       // Before the fix this threw `A RenderFlex overflowed by 68 pixels`.
       expect(tester.takeException(), isNull);
     });
+
+    // Regression for a second, later DESIGN-40 defect: `ff58cd7` swapped the
+    // surface's item rendering from a `Column` to a `ListView.builder`. A
+    // `Column` tolerates being handed unbounded height by an ancestor
+    // `SingleChildScrollView` -- its own height is just the sum of its
+    // children's -- but a lazy, non-shrinkWrap `ListView` cannot, and throws
+    // (`Vertical viewport was given unbounded height`) the instant either host
+    // (the desktop panel or the mobile sheet) tries to lay it out, before the
+    // 300px cap this group is named for ever gets a chance to apply. Presence
+    // assertions (`findsOneWidget`, `tester.takeException() is null`) alone do
+    // not catch this: an exception thrown mid-frame during `pumpAndSettle` can
+    // leave enough of the tree built for a text finder to still succeed. These
+    // assert measured geometry instead, on both hosts, so a regression here
+    // fails on the numbers even if presence checks would not have caught it.
+    testWidgets('desktop panel and mobile sheet both stay bounded and scrollable with 30 items', (tester) async {
+      // Desktop first.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(itemExtent: 40, items: buildItems(30), labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      // The panel's own scroll viewport must be strictly shorter than the
+      // full, uncapped content height (30 * 40 = 1200) -- proof the panel is
+      // actually constraining the list, not merely failing to crash.
+      final desktopViewport = tester.getSize(find.byType(SingleChildScrollView));
+      expect(desktopViewport.height, lessThan(1200.0));
+
+      final desktopTopBefore = tester.getTopLeft(find.text('Option 0')).dy;
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      final desktopTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
+      expect(desktopTopAfter, lessThan(desktopTopBefore));
+
+      // Close the panel, then switch to the mobile viewport and repeat through
+      // the bottom sheet path -- a separate host with its own
+      // `SingleChildScrollView`, so the desktop assertions above prove nothing
+      // about it on their own.
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      tester.view.physicalSize = const Size(400, 800);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+
+      final mobileViewport = tester.getSize(find.byType(SingleChildScrollView));
+      expect(mobileViewport.height, lessThan(1200.0));
+
+      final mobileTopBefore = tester.getTopLeft(find.text('Option 0')).dy;
+      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
+      await tester.pumpAndSettle();
+      final mobileTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
+      expect(mobileTopAfter, lessThan(mobileTopBefore));
+    });
   });
 
   // DESIGN-40/144: the field-as-searcher redesign. Neither this widget nor
