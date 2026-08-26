@@ -352,23 +352,6 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('isRequired renders the required marker', (tester) async {
-        final handle = tester.ensureSemantics();
-
-        await pumpThemedApp(
-          tester,
-          const LayrzSearchInput(
-            mode: LayrzSearchInputMode.field,
-            hintText: 'Search',
-            isRequired: true,
-          ),
-        );
-
-        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
-        expect(chrome.isRequired, isTrue);
-        handle.dispose();
-      });
-
       testWidgets('help text renders the help icon', (tester) async {
         final handle = tester.ensureSemantics();
 

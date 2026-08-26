@@ -146,7 +146,7 @@ class SearchInputDemoSections extends StatelessWidget {
               tokens.spacing.sb3,
               Text('Validation and Help', style: tokens.typography.title),
               Text(
-                'Demonstrates isRequired, errors, helpTitleText, and helpContentText.',
+                'Demonstrates errors, helpTitleText, and helpContentText.',
                 style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
               ),
               tokens.spacing.sb2,
@@ -158,7 +158,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: const LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      isRequired: true,
                       errors: ['Enter at least 3 characters'],
                     ),
                   ),

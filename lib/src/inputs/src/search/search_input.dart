@@ -37,7 +37,7 @@ import '../shared/input_style_spec.dart';
 ///
 /// **Accessibility:**
 /// Both presentation forms (field and icon button) provide semantic labels. In field mode, the
-/// widget owns exactly one [Semantics] node carrying [labelText] (falling back to a localized
+/// widget owns exactly one [Semantics] node carrying [hintText] (falling back to a localized
 /// default); the trigger button in icon mode provides its own semantic label, and the panel field
 /// it opens is deliberately unlabelled so the button's label is not announced twice.
 class LayrzSearchInput extends StatefulWidget {
@@ -71,12 +71,6 @@ class LayrzSearchInput extends StatefulWidget {
   ///
   /// Defaults to a localized "Search" string if not provided.
   final String? hintText;
-
-  /// Whether the field is marked as required.
-  ///
-  /// When true, a required marker (`*`) is rendered next to [labelText] in field mode.
-  /// Has no visible effect in icon mode, where the panel field renders no label.
-  final bool isRequired;
 
   /// Whether the input field is disabled.
   final bool disabled;
@@ -145,7 +139,6 @@ class LayrzSearchInput extends StatefulWidget {
     this.onSearch,
     this.debounce = const Duration(milliseconds: 300),
     this.hintText,
-    this.isRequired = false,
     this.disabled = false,
     this.readOnly = false,
     this.errors = const [],
@@ -440,7 +433,9 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
         child: LayrzInputChrome(
           labelText: null,
           hintText: hintText,
-          isRequired: widget.isRequired,
+          // No label is ever rendered here (labelText is always null), so the
+          // required marker has nothing to attach to regardless of this value.
+          isRequired: false,
           prefixSlot: prefixSlot,
           suffixSlot: suffixSlot,
           disabled: widget.disabled,
@@ -535,7 +530,9 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       child: LayrzInputChrome(
         labelText: null,
         hintText: hintText,
-        isRequired: widget.isRequired,
+        // No label is ever rendered here (labelText is always null), so the
+        // required marker has nothing to attach to regardless of this value.
+        isRequired: false,
         prefixSlot: prefixSlot,
         suffixSlot: suffixSlot,
         disabled: widget.disabled,

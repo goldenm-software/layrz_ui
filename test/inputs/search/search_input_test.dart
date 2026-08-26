@@ -615,20 +615,6 @@ void main() {
         expect(find.text('Too short'), findsOneWidget);
       });
 
-      testWidgets('isRequired is forwarded to the chrome', (tester) async {
-        await pumpThemedApp(
-          tester,
-          const LayrzSearchInput(
-            mode: LayrzSearchInputMode.field,
-            hintText: 'Search',
-            isRequired: true,
-          ),
-        );
-
-        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
-        expect(chrome.isRequired, isTrue);
-      });
-
       testWidgets('helpTitleText and helpContentText are forwarded to the chrome', (tester) async {
         await pumpThemedApp(
           tester,
@@ -669,7 +655,6 @@ void main() {
 
         final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
         expect(chrome.errors, isEmpty);
-        expect(chrome.isRequired, isFalse);
         expect(chrome.helpTitleText, isNull);
         expect(chrome.helpContentText, isNull);
         expect(chrome.readOnly, isFalse);
