@@ -306,25 +306,30 @@ void main() {
         handle.dispose();
       });
 
-      // KNOWN DEFECT, skipped deliberately rather than deleted or contorted to pass.
-      //
-      // The panel field genuinely re-announces the trigger button's label.
-      // search_input.dart's icon-mode builder never constructs a Semantics node
-      // for that field (by design -- see the "No labelText here" comment above
-      // its _buildFieldConfig call), so EditableText's own default semantics
-      // takes over: with no explicit label, it surfaces its hintText as the
-      // accessible label once the field is non-empty -- and that field's
-      // hintText is the same string as the button's label by construction, so
-      // the panel now duplicates the announcement instead of staying silent.
-      // Confirmed via countSemanticsWithLabel walking the real semantics tree
-      // (2 nodes carry the label, not 1) -- find.bySemanticsLabel alone can't
-      // see this, since it also matches literal RichText, which is why this
-      // looked passing before. Fixing it needs either an explicit empty-label
-      // Semantics/ExcludeSemantics wrapper around the icon-mode field in
-      // search_input.dart, or a change in editable_field.dart -- both out of
-      // scope for the isRequired-removal pass this test was touched in, and
-      // editable_field.dart is off-limits while DESIGN-153 is open there.
-      // Un-skip once fixed.
+      // KNOWN DEFECT, skipped deliberately -- see the in-progress mitigation in
+      // search_input.dart's icon-mode builder and the report to the team lead
+      // for the full investigation. Summary: the panel field's Semantics node
+      // and the chrome's own hint Text (painting [hintText] as a placeholder
+      // when the field is empty) merge by Flutter's default text-widget
+      // semantics behaviour, regardless of any `label`/`container` set on an
+      // ancestor Semantics wrapper -- an ancestor label does not block a
+      // descendant Text's own contribution, it only adds to it (folded with a
+      // newline, same as the intentional "Find\nSearch" pattern documented
+      // elsewhere in this file). `excludeSemantics: true` on the wrapper does
+      // stop the merge, but was verified (via a manual semantics-tree dump,
+      // both on an empty field and with text typed in) to also delete
+      // EditableText's own dynamic value/focus semantics beneath it -- a
+      // screen reader would see the field exists but never hear what is typed
+      // into it or that it gained focus, which is worse than the duplicate
+      // announcement this test exists to catch. The narrowest fix that avoids
+      // that regression needs to stop the chrome's hint Text specifically from
+      // contributing semantics without touching EditableText's node, and no
+      // such lever is reachable from search_input.dart alone -- it needs
+      // either a caller-facing suppression flag on `LayrzInputChrome`
+      // (currently frozen) or dropping the visible hint from the icon-mode
+      // panel field entirely (a real UX change, not just an accessibility
+      // one). Left skipped rather than shipping either the duplicate or the
+      // silencing over-correction.
       testWidgets(
         'icon mode panel field does not inherit button label',
         skip: true,
@@ -349,12 +354,20 @@ void main() {
           // The chrome is present
           expect(find.byType(LayrzInputChrome), findsOneWidget);
 
-          // Precise version of the intended check: walk the real semantics tree
-          // rather than `find.bySemanticsLabel`, which also matches literal text on
-          // renderable widgets and can't tell "announced once" from "the same
-          // string is visible in two places." See `countSemanticsWithLabel`'s doc
-          // comment above.
+          // The button's label must not be duplicated onto the panel field.
           expect(countSemanticsWithLabel(tester, 'Button label'), 1);
+
+          // The field must not have been silenced in the process of fixing the
+          // duplication above -- it must still be identifiable as exactly one
+          // accessible text field, carrying its own distinct, non-empty label.
+          expect(countSemanticsWithLabel(tester, 'Search field'), 1);
+          final fieldSemantics = tester.getSemantics(find.byType(LayrzInputChrome));
+          expect(fieldSemantics.getSemanticsData().flagsCollection.isTextField, isTrue);
+
+          // The field is still genuinely usable: it accepts focus and typed input.
+          await tester.enterText(find.byType(LayrzInputChrome), 'query');
+          await tester.pump();
+          expect(find.text('query'), findsOneWidget);
 
           handle.dispose();
         },

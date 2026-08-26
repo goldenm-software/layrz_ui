@@ -39,7 +39,8 @@ import '../shared/input_style_spec.dart';
 /// Both presentation forms (field and icon button) provide semantic labels. In field mode, the
 /// widget owns exactly one [Semantics] node carrying [hintText] (falling back to a localized
 /// default); the trigger button in icon mode provides its own semantic label, and the panel field
-/// it opens is deliberately unlabelled so the button's label is not announced twice.
+/// it opens carries a distinct, localized label of its own (not [hintText], and not the button's
+/// label) so the two controls are never announced as the same thing.
 class LayrzSearchInput extends StatefulWidget {
   /// The presentation mode for the search input.
   ///
@@ -487,6 +488,8 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     // No labelText here: the panel field must not inherit the trigger button's
     // label, or the label would be announced twice (button + panel field).
+    // Guarded, not merely hoped for: see the explicit Semantics wrapper around
+    // this method's returned LayrzInputChrome, below.
     final fieldConfig = _buildFieldConfig(
       hintText: hintText,
       autofocus: true,
@@ -527,26 +530,51 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
               width: spec.borderWidth,
             )
           : null,
-      child: LayrzInputChrome(
-        labelText: null,
-        hintText: hintText,
-        // No label is ever rendered here (labelText is always null), so the
-        // required marker has nothing to attach to regardless of this value.
-        isRequired: false,
-        prefixSlot: prefixSlot,
-        suffixSlot: suffixSlot,
-        disabled: widget.disabled,
-        readOnly: widget.readOnly,
-        errors: widget.errors,
-        hideDetails: false,
-        states: _states,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        controller: _controller,
-        dense: widget.dense,
-        borderRadius: tokens.radius.br3,
-        showBorder: false,
-        child: LayrzEditableField(config: fieldConfig),
+      // Explicit Semantics wrapper, enforcing the "No labelText here" contract
+      // above rather than just documenting it. Without a Semantics node of its
+      // own, this field had no deliberate accessible name: the chrome's hint
+      // Text (which paints [hintText] as a placeholder, see input_chrome.dart's
+      // `_buildRowContent`) merges into the nearest Semantics ancestor by
+      // Flutter's own default text-widget behaviour, per the chrome's D64
+      // "text slots merge into the field's accessible name by design" rule. In
+      // field mode that ancestor is this widget's own Semantics(label:
+      // hintText, ...) a few lines up, and merging is exactly the intended
+      // outcome there. In icon mode, before this wrapper, there was no such
+      // ancestor at all -- so the hint Text's merge target was whatever
+      // Semantics happened to be nearest outside this subtree, which turned
+      // out to duplicate the trigger button's own label (identical string by
+      // construction: both derive from `hintText`). `inputsSearchFieldLabel`
+      // is a distinct string precisely so the merge lands on a real,
+      // non-duplicating name instead of an empty one -- an empty label would
+      // satisfy "exactly one Semantics node" just as well but leave the field
+      // announced with no name at all, trading one accessibility defect for
+      // another. `textField: true` preserves the field's identification as an
+      // editable control now that this node is explicit rather than inferred.
+      child: Semantics(
+        textField: true,
+        label: context.l10n.inputsSearchFieldLabel,
+        enabled: !widget.disabled,
+        child: LayrzInputChrome(
+          labelText: null,
+          hintText: hintText,
+          // No label is ever rendered here (labelText is always null), so the
+          // required marker has nothing to attach to regardless of this value.
+          isRequired: false,
+          prefixSlot: prefixSlot,
+          suffixSlot: suffixSlot,
+          disabled: widget.disabled,
+          readOnly: widget.readOnly,
+          errors: widget.errors,
+          hideDetails: false,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
+          dense: widget.dense,
+          borderRadius: tokens.radius.br3,
+          showBorder: false,
+          child: LayrzEditableField(config: fieldConfig),
+        ),
       ),
     );
   }

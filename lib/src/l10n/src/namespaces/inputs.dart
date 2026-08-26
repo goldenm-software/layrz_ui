@@ -10,6 +10,20 @@ mixin LayrzUiL10nInputsMixin {
   /// Default: "Clear"
   String get inputsSearchClear => 'Clear';
 
+  /// Accessible name for the search field inside the icon-mode panel.
+  ///
+  /// [LayrzSearchInput]'s icon mode collapses into a trigger button carrying
+  /// its own accessible label (the widget's `hintText`, or this same string's
+  /// generic fallback). The panel opened by that button contains a second,
+  /// genuinely separate control -- the text field itself -- which must not
+  /// repeat the button's label (that would announce the same string twice for
+  /// one interaction). This string names that field distinctly, without
+  /// relying on a visual label (the panel field renders no label row; only a
+  /// hint).
+  ///
+  /// English default: "Search field"
+  String get inputsSearchFieldLabel => 'Search field';
+
   /// Singular form of "day" (1 day).
   ///
   /// Used when displaying a duration with exactly one day unit.
