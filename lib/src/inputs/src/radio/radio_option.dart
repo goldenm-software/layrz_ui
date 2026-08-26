@@ -144,18 +144,19 @@ class _LayrzRadioOptionState<T> extends State<LayrzRadioOption<T>> with TickerPr
                 ),
               ),
               SizedBox(width: tokens.spacing.sp2),
-              // The item's presentation, left un-excluded (see the outer `Semantics`
-              // comment above) so its own semantics merge upward.
-              //
-              // **Deferred, not forgotten:** this is not yet force-wrapped in its own
-              // `DefaultTextStyle` the way `_SelectItemRow` (select_input_surface.dart)
-              // is -- a plain `Text` inside `child` with no explicit color resolves to
-              // `null` without a real ancestor supplying one, which the engine then
-              // paints solid white rather than the theme's body color. That visual fix
-              // is deliberately held back while the item API is still moving; tracked
-              // as follow-up work alongside the deferred test updates.
+              // The item's presentation. Force-wrapped in its own `DefaultTextStyle`
+              // (body, dimmed to fg4 when disabled) rather than left to inherit
+              // whatever `DefaultTextStyle` happens to be ambient -- a plain `Text`
+              // inside `child` with no explicit color resolves to `null` without a
+              // real ancestor supplying one, which the engine then paints solid
+              // white rather than the theme's body color.
               Expanded(
-                child: widget.item.child,
+                child: DefaultTextStyle(
+                  style: tokens.typography.body.copyWith(
+                    color: isDisabled ? tokens.colors.fg4.withValues(alpha: 0.4) : tokens.colors.fg1,
+                  ),
+                  child: widget.item.child,
+                ),
               ),
             ],
           ),
