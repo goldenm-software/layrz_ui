@@ -223,7 +223,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
           child: LayrzNumberInput(
             hintText: l10n.durationFieldDay,
             suffixText: _dayLabel(l10n, isNarrow: isNarrow),
-            value: _day.toDouble(),
+            value: _day,
             onChanged: (v) {
               setState(() => _day = v?.toInt() ?? 0);
               _handleValueChanged();
@@ -231,6 +231,14 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
             decimalSeparator: LayrzDecimalSeparator.dot,
             minimum: 0,
             step: 1,
+            // Duration components are always whole numbers -- there is no
+            // fractional day once hours are their own field. Zero forbids the
+            // decimal separator at the keystroke level (see
+            // NumericInputFormatter, which only accepts the separator when
+            // maximumDecimalDigits > 0) and, with `value` now an int rather
+            // than `.toDouble()`, makes LayrzNumberInput's default
+            // `num.toString()` formatting render "2", not "2.0".
+            maximumDecimalDigits: 0,
             hideStepButtons: false,
           ),
         ),
@@ -244,7 +252,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
           child: LayrzNumberInput(
             hintText: l10n.durationFieldHour,
             suffixText: _hourLabel(l10n, isNarrow: isNarrow),
-            value: _hour.toDouble(),
+            value: _hour,
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
               setState(() => _hour = newVal.clamp(0, 23));
@@ -254,6 +262,8 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
             minimum: 0,
             maximum: 23,
             step: 1,
+            // See the day field's `maximumDecimalDigits: 0` comment above.
+            maximumDecimalDigits: 0,
             hideStepButtons: false,
           ),
         ),
@@ -267,7 +277,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
           child: LayrzNumberInput(
             hintText: l10n.durationFieldMinute,
             suffixText: _minuteLabel(l10n, isNarrow: isNarrow),
-            value: _minute.toDouble(),
+            value: _minute,
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
               setState(() => _minute = newVal.clamp(0, 59));
@@ -277,6 +287,8 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
             minimum: 0,
             maximum: 59,
             step: 1,
+            // See the day field's `maximumDecimalDigits: 0` comment above.
+            maximumDecimalDigits: 0,
             hideStepButtons: false,
           ),
         ),
@@ -290,7 +302,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
           child: LayrzNumberInput(
             hintText: l10n.durationFieldSecond,
             suffixText: _secondLabel(l10n, isNarrow: isNarrow),
-            value: _second.toDouble(),
+            value: _second,
             onChanged: (v) {
               final newVal = v?.toInt() ?? 0;
               setState(() => _second = newVal.clamp(0, 59));
@@ -300,6 +312,8 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
             minimum: 0,
             maximum: 59,
             step: 1,
+            // See the day field's `maximumDecimalDigits: 0` comment above.
+            maximumDecimalDigits: 0,
             hideStepButtons: false,
           ),
         ),
