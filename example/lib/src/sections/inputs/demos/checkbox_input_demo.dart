@@ -1,7 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+/// Showroom demo for [LayrzCheckboxInput].
+///
+/// Every non-disabled checkbox below is wired to state via `onChanged` + `setState`,
+/// including the error-state example, whose error message clears interactively once
+/// the box is checked.
 class CheckboxInputDemo extends StatefulWidget {
+  /// Creates a new [CheckboxInputDemo].
   const CheckboxInputDemo({super.key});
 
   @override
@@ -11,6 +17,9 @@ class CheckboxInputDemo extends StatefulWidget {
 class _CheckboxInputDemoState extends State<CheckboxInputDemo> {
   bool _unchecked = false;
   bool _checked = true;
+  bool _requiredAccepted = false;
+  bool _featureEnabled = true;
+  bool _featureDisabled = false;
 
   @override
   Widget build(BuildContext context) {
@@ -70,14 +79,24 @@ class _CheckboxInputDemoState extends State<CheckboxInputDemo> {
 
               tokens.spacing.sb3,
               Text('Error State', style: tokens.typography.title),
+              Text(
+                'The error clears as soon as the box is checked -- check it to see the message disappear.',
+                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+              ),
+              tokens.spacing.sb1,
               LayrzRow(
                 children: [
                   LayrzCol(
                     xs: 12,
                     child: LayrzCheckboxInput(
-                      value: false,
+                      value: _requiredAccepted,
+                      onChanged: (v) {
+                        setState(() {
+                          _requiredAccepted = v;
+                        });
+                      },
                       labelText: 'Required field',
-                      errors: ['You must accept this'],
+                      errors: _requiredAccepted ? const [] : const ['You must accept this'],
                     ),
                   ),
                 ],
@@ -91,7 +110,12 @@ class _CheckboxInputDemoState extends State<CheckboxInputDemo> {
                     xs: 12,
                     md: 6,
                     child: LayrzCheckboxInput(
-                      value: true,
+                      value: _featureEnabled,
+                      onChanged: (v) {
+                        setState(() {
+                          _featureEnabled = v;
+                        });
+                      },
                       labelText: 'Feature enabled',
                     ),
                   ),
@@ -99,13 +123,18 @@ class _CheckboxInputDemoState extends State<CheckboxInputDemo> {
                     xs: 12,
                     md: 6,
                     child: LayrzCheckboxInput(
-                      value: false,
+                      value: _featureDisabled,
+                      onChanged: (v) {
+                        setState(() {
+                          _featureDisabled = v;
+                        });
+                      },
                       labelText: 'Feature disabled',
                     ),
                   ),
                   LayrzCol(
                     xs: 12,
-                    child: LayrzCheckboxInput(
+                    child: const LayrzCheckboxInput(
                       value: false,
                       disabled: true,
                       labelText: 'Cannot toggle',

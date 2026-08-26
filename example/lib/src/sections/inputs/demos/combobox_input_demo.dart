@@ -1,7 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+/// Showroom demo for [LayrzComboBoxInput].
+///
+/// Every example below is wired to a [TextEditingController] and an `onChanged` callback
+/// that feeds the committed value back into a visible "Selected: …" line, so the picker,
+/// free-form entry, and error-clearing behaviour are all genuinely interactive rather than
+/// static illustrations.
 class ComboBoxInputDemo extends StatefulWidget {
+  /// Creates a new [ComboBoxInputDemo].
   const ComboBoxInputDemo({super.key});
 
   @override
@@ -10,19 +17,34 @@ class ComboBoxInputDemo extends StatefulWidget {
 
 class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
   late TextEditingController _countryController;
+  late TextEditingController _languageController;
   late TextEditingController _freeFormController;
+  late TextEditingController _statusController;
+  late TextEditingController _categoryController;
+
+  String _selectedCountry = '';
+  String _selectedLanguage = '';
+  String _customTag = '';
+  String _selectedStatus = '';
+  String _selectedCategory = '';
 
   @override
   void initState() {
     super.initState();
     _countryController = TextEditingController();
+    _languageController = TextEditingController();
     _freeFormController = TextEditingController();
+    _statusController = TextEditingController();
+    _categoryController = TextEditingController();
   }
 
   @override
   void dispose() {
     _countryController.dispose();
+    _languageController.dispose();
     _freeFormController.dispose();
+    _statusController.dispose();
+    _categoryController.dispose();
     super.dispose();
   }
 
@@ -54,17 +76,24 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
                 'Italy',
               ],
               onChanged: (value) {
-                debugPrint('Selected: $value');
+                setState(() {
+                  _selectedCountry = value;
+                });
               },
+            ),
+            Text(
+              'Selected: ${_selectedCountry.isEmpty ? '(none yet)' : _selectedCountry}',
+              style: tokens.typography.label,
             ),
 
             // With custom options
             SizedBox(height: tokens.spacing.sp5),
             Text('Programming Language', style: tokens.typography.title),
-            const LayrzComboBoxInput(
+            LayrzComboBoxInput(
               labelText: 'Language',
               hintText: 'Type or select a language',
-              options: [
+              controller: _languageController,
+              options: const [
                 'Dart',
                 'Flutter',
                 'Java',
@@ -74,6 +103,15 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
                 'Python',
                 'JavaScript',
               ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedLanguage = value;
+                });
+              },
+            ),
+            Text(
+              'Selected: ${_selectedLanguage.isEmpty ? '(none yet)' : _selectedLanguage}',
+              style: tokens.typography.label,
             ),
 
             // Allow free form input
@@ -91,8 +129,14 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
               allowFreeForm: true,
               options: const ['Tag1', 'Tag2', 'Tag3'],
               onChanged: (value) {
-                debugPrint('Custom input: $value');
+                setState(() {
+                  _customTag = value;
+                });
               },
+            ),
+            Text(
+              'Current value: ${_customTag.isEmpty ? '(none yet)' : _customTag}',
+              style: tokens.typography.label,
             ),
 
             // Disable free form
@@ -103,11 +147,21 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),
-            const LayrzComboBoxInput(
+            LayrzComboBoxInput(
               labelText: 'Status',
               hintText: 'Select a status',
+              controller: _statusController,
               allowFreeForm: false,
-              options: ['Active', 'Inactive', 'Pending', 'Archived'],
+              options: const ['Active', 'Inactive', 'Pending', 'Archived'],
+              onChanged: (value) {
+                setState(() {
+                  _selectedStatus = value;
+                });
+              },
+            ),
+            Text(
+              'Selected: ${_selectedStatus.isEmpty ? '(none yet)' : _selectedStatus}',
+              style: tokens.typography.label,
             ),
 
             // Disabled state
@@ -123,12 +177,23 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
             // With errors
             SizedBox(height: tokens.spacing.sp5),
             Text('Error State', style: tokens.typography.title),
-            const LayrzComboBoxInput(
+            Text(
+              'The error clears as soon as a valid category is selected.',
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzComboBoxInput(
               labelText: 'Category',
               hintText: 'Select a category',
+              controller: _categoryController,
               isRequired: true,
-              options: ['General', 'Feedback', 'Bug Report', 'Feature Request'],
-              errors: ['Please select a valid category'],
+              options: const ['General', 'Feedback', 'Bug Report', 'Feature Request'],
+              onChanged: (value) {
+                setState(() {
+                  _selectedCategory = value;
+                });
+              },
+              errors: _selectedCategory.isEmpty ? const ['Please select a valid category'] : const [],
             ),
           ],
         ),
