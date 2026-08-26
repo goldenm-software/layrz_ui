@@ -374,47 +374,57 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
           // absorbs any tap within its own bounds, makes the barrier below it in the
           // transition Stack unreachable no matter how far outside the visible sheet
           // the tap lands.
+          // Shared by the decoration and the clip below so the two can never drift apart —
+          // only the top corners are rounded, matching the sheet's bottom-anchored shape.
+          final topRadius = BorderRadius.only(
+            topLeft: Radius.circular(tokens.radius.r4),
+            topRight: Radius.circular(tokens.radius.r4),
+          );
+
           return DecoratedBox(
             decoration: BoxDecoration(
               color: tokens.colors.sf1,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(tokens.radius.r4),
-                topRight: Radius.circular(tokens.radius.r4),
-              ),
+              borderRadius: topRadius,
               boxShadow: tokens.shadow.elevation3,
             ),
-            child: Column(
-              children: [
-                // Drag handle
-                if (widget.showDragHandle)
-                  _DragHandle(
-                    draggable: true,
-                    controller: _sheetController,
-                    snapSizes: widget.snapSizes,
-                    lowSnapSize: lowSnapSize,
+            // Clips the content to the same rounded top edge the decoration paints.
+            // Without this, content taller than the sheet's visible extent keeps its
+            // square corners and bleeds past the decoration's rounded shape at the top.
+            child: ClipRRect(
+              borderRadius: topRadius,
+              child: Column(
+                children: [
+                  // Drag handle
+                  if (widget.showDragHandle)
+                    _DragHandle(
+                      draggable: true,
+                      controller: _sheetController,
+                      snapSizes: widget.snapSizes,
+                      lowSnapSize: lowSnapSize,
+                    ),
+                  // Content
+                  Expanded(
+                    child: widget.scrollable
+                        ? SingleChildScrollView(
+                            controller: scrollController,
+                            child: widget.builder(context),
+                          )
+                        // scrollable: false hands the caller the scrollController via
+                        // PrimaryScrollController instead of wrapping the content: a
+                        // vertical ListView/GridView that sets no controller of its own
+                        // binds to it automatically, giving it the sheet's drag/scroll
+                        // handoff without being nested inside another same-axis scrollable.
+                        // automaticallyInheritForPlatforms covers every platform, not just
+                        // mobile (PrimaryScrollController's own default) — the sheet already
+                        // knows which ScrollController it wants used, on every platform.
+                        : PrimaryScrollController(
+                            controller: scrollController,
+                            automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                            child: widget.builder(context),
+                          ),
                   ),
-                // Content
-                Expanded(
-                  child: widget.scrollable
-                      ? SingleChildScrollView(
-                          controller: scrollController,
-                          child: widget.builder(context),
-                        )
-                      // scrollable: false hands the caller the scrollController via
-                      // PrimaryScrollController instead of wrapping the content: a
-                      // vertical ListView/GridView that sets no controller of its own
-                      // binds to it automatically, giving it the sheet's drag/scroll
-                      // handoff without being nested inside another same-axis scrollable.
-                      // automaticallyInheritForPlatforms covers every platform, not just
-                      // mobile (PrimaryScrollController's own default) — the sheet already
-                      // knows which ScrollController it wants used, on every platform.
-                      : PrimaryScrollController(
-                          controller: scrollController,
-                          automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                          child: widget.builder(context),
-                        ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
