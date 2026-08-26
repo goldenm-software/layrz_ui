@@ -23,21 +23,21 @@ class NotoSansFont extends LayrzFont {
   const NotoSansFont() : super(name: 'Noto Sans');
 
   @override
-  TextStyle get display => throw TextStyle(
-    fontFamily: 'Noto Sans',
-    fontWeight: FontWeight.w800,
-    fontVariations: [FontVariation('wght', 800)],
-  );
-
-  @override
-  TextStyle get headline => throw TextStyle(
+  TextStyle get display => TextStyle(
     fontFamily: 'Noto Sans',
     fontWeight: FontWeight.w700,
     fontVariations: [FontVariation('wght', 700)],
   );
 
   @override
-  TextStyle get title => throw TextStyle(
+  TextStyle get headline => TextStyle(
+    fontFamily: 'Noto Sans',
+    fontWeight: FontWeight.w700,
+    fontVariations: [FontVariation('wght', 700)],
+  );
+
+  @override
+  TextStyle get title => TextStyle(
     fontFamily: 'Noto Sans',
     fontWeight: FontWeight.w600,
     fontVariations: [FontVariation('wght', 600)],
@@ -51,7 +51,7 @@ class NotoSansFont extends LayrzFont {
   );
 
   @override
-  TextStyle get label => throw TextStyle(
+  TextStyle get label => TextStyle(
     fontFamily: 'Noto Sans',
     fontWeight: FontWeight.w400,
     fontVariations: [FontVariation('wght', 400)],
