@@ -2,12 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzTheme', () {
     testWidgets('of() returns the injected data', (WidgetTester tester) async {
-      final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final data = LayrzThemeData.light();
       late LayrzThemeData resolvedData;
 
       final widget = LayrzTheme(
@@ -49,7 +47,7 @@ void main() {
     testWidgets('maybeOf() returns the data when ancestor exists', (
       WidgetTester tester,
     ) async {
-      final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final data = LayrzThemeData.light();
       late LayrzThemeData? resolvedData;
 
       final widget = LayrzTheme(
@@ -70,7 +68,7 @@ void main() {
     });
 
     test('updateShouldNotify is true for differing data', () {
-      final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final data1 = LayrzThemeData.light();
       final data2 = LayrzThemeData.light(primaryColor: const Color(0xFF888888));
 
       final widget1 = LayrzTheme(data: data1, child: const SizedBox());
@@ -80,7 +78,7 @@ void main() {
     });
 
     test('updateShouldNotify is false for equal data', () {
-      final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final data = LayrzThemeData.light();
 
       final widget1 = LayrzTheme(data: data, child: const SizedBox());
       final widget2 = LayrzTheme(data: data, child: const SizedBox());
@@ -91,7 +89,7 @@ void main() {
     testWidgets(
       'LayrzTheme survives an Overlay boundary via InheritedTheme.wrap()',
       (WidgetTester tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         LayrzThemeData? resolvedInOverlay;
 
         final widget = LayrzTheme(
@@ -130,7 +128,7 @@ void main() {
     testWidgets('wrap() returns a LayrzTheme wrapping the child', (
       WidgetTester tester,
     ) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       final childWidget = const SizedBox();
 
       final theme = LayrzTheme(data: themeData, child: childWidget);

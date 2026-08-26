@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -237,7 +236,7 @@ void main() {
         });
 
         testWidgets('semantic entry dot and row button use the same resolved color', (tester) async {
-          final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+          final themeData = LayrzThemeData.light();
           await pumpThemed(
             tester,
             theme: themeData,

@@ -3,18 +3,23 @@ import 'package:flutter/widgets.dart';
 import 'namespaces/actions.dart';
 import 'namespaces/about.dart';
 import 'namespaces/calendar.dart';
+import 'namespaces/combobox.dart';
 import 'namespaces/date_time_pickers.dart';
 import 'namespaces/dual_list.dart';
 import 'namespaces/dynamic_avatar.dart';
 import 'namespaces/editor.dart';
 import 'namespaces/files.dart';
 import 'namespaces/helpers.dart';
+import 'namespaces/inputs.dart';
 import 'namespaces/map.dart';
 import 'namespaces/notifications.dart';
 import 'namespaces/password.dart';
 import 'namespaces/required_fields.dart';
+import 'namespaces/scaffold.dart';
 import 'namespaces/select.dart';
 import 'namespaces/selection.dart';
+import 'namespaces/sheets.dart';
+import 'namespaces/steppers.dart';
 import 'namespaces/table.dart';
 import 'namespaces/taskbar.dart';
 import 'namespaces/weekdays.dart';
@@ -91,18 +96,23 @@ abstract class LayrzUiL10n
         LayrzUiL10nActionsMixin,
         LayrzUiL10nAboutMixin,
         LayrzUiL10nCalendarMixin,
+        LayrzUiL10nComboboxMixin,
         LayrzUiL10nDateTimePickersMixin,
         LayrzUiL10nDualListMixin,
         LayrzUiL10nDynamicAvatarMixin,
         LayrzUiL10nEditorMixin,
         LayrzUiL10nFilesMixin,
         LayrzUiL10nHelpersMixin,
+        LayrzUiL10nInputsMixin,
         LayrzUiL10nMapMixin,
         LayrzUiL10nNotificationsMixin,
         LayrzUiL10nPasswordMixin,
         LayrzUiL10nRequiredFieldsMixin,
+        LayrzUiL10nScaffoldMixin,
         LayrzUiL10nSelectMixin,
         LayrzUiL10nSelectionMixin,
+        LayrzUiL10nSheetsMixin,
+        LayrzUiL10nSteppersMixin,
         LayrzUiL10nTableMixin,
         LayrzUiL10nTaskbarMixin,
         LayrzUiL10nWeekdaysMixin {

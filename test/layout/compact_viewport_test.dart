@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('Compact viewport sizing (DESIGN-104)', () {
     /// Helper to set viewport width for testing.
@@ -16,7 +14,7 @@ void main() {
     testWidgets('context.isCompact is true at width 400 (xs band)', (tester) async {
       setPhysicalSize(tester, 400);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -37,7 +35,7 @@ void main() {
     testWidgets('context.isCompact is false at width 1200 (md band)', (tester) async {
       setPhysicalSize(tester, 1200);
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       late bool resolved;
 
       await tester.pumpWidget(
@@ -56,7 +54,7 @@ void main() {
     });
 
     testWidgets('Compact boundary: 959 is compact (sm), 960 is not (md)', (tester) async {
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
 
       // Test at 959 (should be compact)
       setPhysicalSize(tester, 959);
@@ -116,7 +114,7 @@ void main() {
       // 7. Notifications row height (32 → 40)
       // 8. All icons throughout the chrome
 
-      final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final themeData = LayrzThemeData.light();
       setPhysicalSize(tester, 400);
 
       late LayrzTokens tokens;

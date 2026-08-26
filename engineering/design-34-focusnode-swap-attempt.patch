@@ -1,0 +1,257 @@
+# DESIGN-34 follow-up: attempted fix for the FocusNode swap defect — REJECTED, kept as evidence
+#
+# Defect: swapping a FocusNode from null to a caller-supplied instance leaves the new
+# node unattached. `hasFocus` stays false after `requestFocus()`. Reproduced first-hand
+# against unmodified widget code; the skipped test is
+#   test/inputs/text/textarea_input_test.dart
+#   "swapping focusNode from null to caller-supplied keeps external usable"
+#
+# This patch is NOT a fix and must not be applied as-is. It is recorded because the ways
+# it fails are the argument that this is a shared-contract change, not a local patch:
+#
+#   1. It recreates the EditableText GlobalKey on every focusNode change, which destroys
+#      composing, selection and scroll state for EVERY input built on LayrzEditableField.
+#   2. It wraps removeListener/dispose in bare try/catch blocks with empty bodies, which
+#      would swallow real double-dispose errors and hide the next lifecycle bug entirely.
+#   3. With all of that, THE TEST STILL FAILED.
+#
+# The same ownership pattern exists in LayrzTextInput, so a real fix has to change the
+# focus-ownership contract in lib/src/inputs/src/shared/editable_field.dart deliberately.
+#
+diff --git a/lib/src/inputs/src/shared/editable_field.dart b/lib/src/inputs/src/shared/editable_field.dart
+index da7e5ed..d4978e6 100644
+--- a/lib/src/inputs/src/shared/editable_field.dart
++++ b/lib/src/inputs/src/shared/editable_field.dart
+@@ -142,7 +142,8 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
+   late TextEditingController _controller;
+   late FocusNode _focusNode;
+   final Set<WidgetState> _states = {};
+-  final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
++  late GlobalKey<EditableTextState> _editableTextKey;
++  FocusNode? _lastFocusNodeKey;
+ 
+   /// Whether to show text selection handles (left/right/collapsed cursors).
+   ///
+@@ -165,6 +166,8 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
+     super.initState();
+     _controller = widget.config.controller ?? TextEditingController();
+     _focusNode = widget.config.focusNode ?? FocusNode();
++    _lastFocusNodeKey = _focusNode;
++    _editableTextKey = GlobalKey<EditableTextState>();
+     _focusNode.addListener(_handleFocusChange);
+     // Initialize cached magnifier configuration once; it never changes.
+     _cachedMagnifierConfiguration = LayrzSelectionMagnifier.magnifierConfigurationFor();
+@@ -185,12 +188,33 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
+     }
+     // If focusNode changed, update the reference and listener
+     if (widget.config.focusNode != oldWidget.config.focusNode) {
+-      _focusNode.removeListener(_handleFocusChange);
++      final oldFocusNode = _focusNode;
++
++      // Safely remove listener from old focusNode
++      try {
++        oldFocusNode.removeListener(_handleFocusChange);
++      } catch (e) {
++        // Ignore errors if the old node has been disposed by the parent
++      }
++
+       if (oldWidget.config.focusNode == null) {
+-        _focusNode.dispose();
++        try {
++          oldFocusNode.dispose();
++        } catch (e) {
++          // Ignore errors if already disposed
++        }
+       }
++
+       _focusNode = widget.config.focusNode ?? FocusNode();
+       _focusNode.addListener(_handleFocusChange);
++
++      // Create a new key for EditableText when focusNode changes.
++      // This forces EditableText to be recreated with a new state, which ensures
++      // the new focusNode is properly attached in initState of the new EditableTextState.
++      if (_lastFocusNodeKey != _focusNode) {
++        _editableTextKey = GlobalKey<EditableTextState>();
++        _lastFocusNodeKey = _focusNode;
++      }
+     }
+   }
+ 
+@@ -328,6 +352,7 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
+       isDisabled: widget.config.disabled,
+     );
+ 
++
+     return Listener(
+       onPointerDown: widget.config.disabled ? null : _updateStates,
+       onPointerUp: widget.config.disabled ? null : _updateStates,
+diff --git a/lib/src/inputs/src/text/text_input.dart b/lib/src/inputs/src/text/text_input.dart
+index 4a5f06f..e803009 100644
+--- a/lib/src/inputs/src/text/text_input.dart
++++ b/lib/src/inputs/src/text/text_input.dart
+@@ -262,13 +262,25 @@ class LayrzTextInput extends StatefulWidget {
+ class _LayrzTextInputState extends State<LayrzTextInput> {
+   late TextEditingController _controller;
+   late FocusNode _focusNode;
++  TextEditingController? _internalController;
++  FocusNode? _internalFocusNode;
+   final Set<WidgetState> _states = {};
+ 
+   @override
+   void initState() {
+     super.initState();
+-    _controller = widget.controller ?? TextEditingController();
+-    _focusNode = widget.focusNode ?? FocusNode();
++    if (widget.controller == null) {
++      _internalController = TextEditingController();
++      _controller = _internalController!;
++    } else {
++      _controller = widget.controller!;
++    }
++    if (widget.focusNode == null) {
++      _internalFocusNode = FocusNode();
++      _focusNode = _internalFocusNode!;
++    } else {
++      _focusNode = widget.focusNode!;
++    }
+   }
+ 
+   @override
+@@ -276,29 +288,39 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
+     super.didUpdateWidget(oldWidget);
+     // If controller changed, update the reference
+     if (widget.controller != oldWidget.controller) {
+-      if (oldWidget.controller == null) {
+-        _controller.dispose();
++      // Don't dispose the old controller here; it will be handled in dispose()
++      // when this state is destroyed. Just update the reference.
++      if (widget.controller == null) {
++        // New widget doesn't provide a controller, so create an internal one
++        _internalController = TextEditingController();
++        _controller = _internalController!;
++      } else {
++        // New widget provides a controller, use it directly
++        _internalController = null;
++        _controller = widget.controller!;
+       }
+-      _controller = widget.controller ?? TextEditingController();
+     }
+     // If focusNode changed, update the reference
+     if (widget.focusNode != oldWidget.focusNode) {
+-      if (oldWidget.focusNode == null) {
+-        _focusNode.dispose();
++      // Don't dispose the old focusNode here; it will be handled in dispose()
++      // when this state is destroyed. Just update the reference.
++      if (widget.focusNode == null) {
++        // New widget doesn't provide a focusNode, so create an internal one
++        _internalFocusNode = FocusNode();
++        _focusNode = _internalFocusNode!;
++      } else {
++        // New widget provides a focusNode, use it directly
++        _internalFocusNode = null;
++        _focusNode = widget.focusNode!;
+       }
+-      _focusNode = widget.focusNode ?? FocusNode();
+     }
+   }
+ 
+   @override
+   void dispose() {
+-    // Only dispose if we created them
+-    if (widget.controller == null) {
+-      _controller.dispose();
+-    }
+-    if (widget.focusNode == null) {
+-      _focusNode.dispose();
+-    }
++    // Only dispose internal instances that we created
++    _internalController?.dispose();
++    _internalFocusNode?.dispose();
+     super.dispose();
+   }
+ 
+diff --git a/lib/src/inputs/src/text/textarea_input.dart b/lib/src/inputs/src/text/textarea_input.dart
+index d59e5bc..f54a531 100644
+--- a/lib/src/inputs/src/text/textarea_input.dart
++++ b/lib/src/inputs/src/text/textarea_input.dart
+@@ -251,13 +251,25 @@ class LayrzTextAreaInput extends StatefulWidget {
+ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
+   late TextEditingController _controller;
+   late FocusNode _focusNode;
++  TextEditingController? _internalController;
++  FocusNode? _internalFocusNode;
+   final Set<WidgetState> _states = {};
+ 
+   @override
+   void initState() {
+     super.initState();
+-    _controller = widget.controller ?? TextEditingController();
+-    _focusNode = widget.focusNode ?? FocusNode();
++    if (widget.controller == null) {
++      _internalController = TextEditingController();
++      _controller = _internalController!;
++    } else {
++      _controller = widget.controller!;
++    }
++    if (widget.focusNode == null) {
++      _internalFocusNode = FocusNode();
++      _focusNode = _internalFocusNode!;
++    } else {
++      _focusNode = widget.focusNode!;
++    }
+   }
+ 
+   @override
+@@ -265,29 +277,39 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
+     super.didUpdateWidget(oldWidget);
+     // If controller changed, update the reference
+     if (widget.controller != oldWidget.controller) {
+-      if (oldWidget.controller == null) {
+-        _controller.dispose();
++      // Don't dispose the old controller here; it will be handled in dispose()
++      // when this state is destroyed. Just update the reference.
++      if (widget.controller == null) {
++        // New widget doesn't provide a controller, so create an internal one
++        _internalController = TextEditingController();
++        _controller = _internalController!;
++      } else {
++        // New widget provides a controller, use it directly
++        _internalController = null;
++        _controller = widget.controller!;
+       }
+-      _controller = widget.controller ?? TextEditingController();
+     }
+     // If focusNode changed, update the reference
+     if (widget.focusNode != oldWidget.focusNode) {
+-      if (oldWidget.focusNode == null) {
+-        _focusNode.dispose();
++      // Don't dispose the old focusNode here; it will be handled in dispose()
++      // when this state is destroyed. Just update the reference.
++      if (widget.focusNode == null) {
++        // New widget doesn't provide a focusNode, so create an internal one
++        _internalFocusNode = FocusNode();
++        _focusNode = _internalFocusNode!;
++      } else {
++        // New widget provides a focusNode, use it directly
++        _internalFocusNode = null;
++        _focusNode = widget.focusNode!;
+       }
+-      _focusNode = widget.focusNode ?? FocusNode();
+     }
+   }
+ 
+   @override
+   void dispose() {
+-    // Only dispose if we created them
+-    if (widget.controller == null) {
+-      _controller.dispose();
+-    }
+-    if (widget.focusNode == null) {
+-      _focusNode.dispose();
+-    }
++    // Only dispose internal instances that we created
++    _internalController?.dispose();
++    _internalFocusNode?.dispose();
+     super.dispose();
+   }
+ 

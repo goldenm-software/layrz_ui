@@ -35,8 +35,8 @@ void main() {
         ),
       );
 
-      // Trigger long-press.
-      await tester.longPress(find.byType(SizedBox));
+      // Trigger long-press at the center of the default viewport (where the Center widget places the child).
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // Tooltip should appear.
@@ -53,7 +53,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       expect(find.text(testMessage), findsWidgets);
@@ -75,7 +75,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // Text should render via Text.rich.
@@ -95,7 +95,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // The tooltip surface should render with the correct background colour.
@@ -112,7 +112,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // The tooltip surface should render with border radius.
@@ -142,8 +142,8 @@ void main() {
       );
     });
 
-    testWidgets('renders at all LayrzTooltipPosition values', (tester) async {
-      for (final position in LayrzTooltipPosition.values) {
+    testWidgets('renders at all LayrzPreferredSide values', (tester) async {
+      for (final position in LayrzPreferredSide.values) {
         await pumpThemed(
           tester,
           LayrzTooltip(
@@ -153,7 +153,7 @@ void main() {
           ),
         );
 
-        await tester.longPress(find.byType(SizedBox));
+        await tester.longPressAt(const Offset(400, 300));
         await tester.pumpAndSettle();
 
         // Tooltip should render regardless of position.
@@ -179,7 +179,7 @@ void main() {
 
       // The RawTooltip sets semanticsTooltip, which should appear in semantics.
       // This is tested via tester.getSemantics after long-press.
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // Verify the text is present in the tree.
@@ -199,7 +199,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // The text should render with styling.
@@ -235,7 +235,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       expect(find.text('Tooltip'), findsWidgets);
@@ -260,7 +260,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       // The rich text should render.
@@ -277,7 +277,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       expect(find.text('Title'), findsWidgets);
@@ -293,7 +293,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       expect(find.text('Content only'), findsWidgets);
@@ -321,7 +321,7 @@ void main() {
         ),
       );
 
-      await tester.longPress(find.byType(SizedBox));
+      await tester.longPressAt(const Offset(400, 300));
       await tester.pumpAndSettle();
 
       expect(find.text('Title'), findsWidgets);

@@ -3,8 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 /// Regression tests for the tooltip coordinate-space bug (fixed in 0c645dc).
 ///
 /// **The bug:** Before the fix, `_buildTooltipContent` resolved the anchor's
@@ -43,9 +41,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -62,7 +58,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,
@@ -114,12 +110,12 @@ void main() {
           tooltipRect1.topLeft.dy - anchorRect1.center.dy,
         );
 
-        debugPrint(
-          'At scroll 0:\n'
-          '  Anchor: $anchorRect1\n'
-          '  Tooltip: $tooltipRect1\n'
-          '  Relative offset: $relativeOffset1',
-        );
+        // debugPrint(
+        //   'At scroll 0:\n'
+        //   '  Anchor: $anchorRect1\n'
+        //   '  Tooltip: $tooltipRect1\n'
+        //   '  Relative offset: $relativeOffset1',
+        // );
 
         // Dismiss and scroll
         await mouse.moveTo(const Offset(100, 100));
@@ -153,12 +149,12 @@ void main() {
           tooltipRect2.topLeft.dy - anchorRect2.center.dy,
         );
 
-        debugPrint(
-          'At scroll 300:\n'
-          '  Anchor: $anchorRect2\n'
-          '  Tooltip: $tooltipRect2\n'
-          '  Relative offset: $relativeOffset2',
-        );
+        // debugPrint(
+        //   'At scroll 300:\n'
+        //   '  Anchor: $anchorRect2\n'
+        //   '  Tooltip: $tooltipRect2\n'
+        //   '  Relative offset: $relativeOffset2',
+        // );
 
         // ===== THE CRITICAL ASSERTION =====
         // The relative offset must be identical at both scroll positions.
@@ -194,9 +190,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -213,7 +207,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,
@@ -270,13 +264,13 @@ void main() {
         final expectedTooltipTop = anchorRect.bottom + kLayrzTooltipOffset;
         final expectedTooltipLeft = anchorRect.center.dx - (tooltipRect.width / 2);
 
-        debugPrint(
-          'While scrolled 300:\n'
-          '  Anchor: $anchorRect\n'
-          '  Tooltip: $tooltipRect\n'
-          '  Expected top: $expectedTooltipTop (actual: ${tooltipRect.top})\n'
-          '  Expected left: $expectedTooltipLeft (actual: ${tooltipRect.left})',
-        );
+        // debugPrint(
+        //   'While scrolled 300:\n'
+        //   '  Anchor: $anchorRect\n'
+        //   '  Tooltip: $tooltipRect\n'
+        //   '  Expected top: $expectedTooltipTop (actual: ${tooltipRect.top})\n'
+        //   '  Expected left: $expectedTooltipLeft (actual: ${tooltipRect.left})',
+        // );
 
         // The actual top should match expected (within 10px for text layout variation)
         expect(
@@ -309,9 +303,7 @@ void main() {
           Directionality(
             textDirection: TextDirection.ltr,
             child: LayrzTheme(
-              data: LayrzThemeData.light(
-                fontHandler: const FakeFontHandler(),
-              ),
+              data: LayrzThemeData.light(),
               child: Center(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -328,7 +320,7 @@ void main() {
                                 top: 400,
                                 child: LayrzTooltip(
                                   contentText: 'Tooltip content',
-                                  position: LayrzTooltipPosition.bottom,
+                                  position: LayrzPreferredSide.bottom,
                                   trigger: LayrzTooltipTrigger.pointer,
                                   child: SizedBox(
                                     key: anchorKey,
@@ -375,11 +367,11 @@ void main() {
         final anchorRect1 = tester.getRect(find.byKey(anchorKey));
         final tooltipRect1 = tester.getRect(find.text('Tooltip content'));
 
-        debugPrint(
-          'At scroll offset 0:\n'
-          '  Anchor: ${anchorRect1.topLeft}\n'
-          '  Tooltip: ${tooltipRect1.topLeft}',
-        );
+        // debugPrint(
+        //   'At scroll offset 0:\n'
+        //   '  Anchor: ${anchorRect1.topLeft}\n'
+        //   '  Tooltip: ${tooltipRect1.topLeft}',
+        // );
 
         // ===== PHASE 2: Dismiss tooltip =====
         await mouse.moveTo(const Offset(100, 100));
@@ -409,22 +401,22 @@ void main() {
         final anchorRect2 = tester.getRect(find.byKey(anchorKey));
         final tooltipRect2 = tester.getRect(find.text('Tooltip content'));
 
-        debugPrint(
-          'At scroll offset $scrollDelta:\n'
-          '  Anchor: ${anchorRect2.topLeft}\n'
-          '  Tooltip: ${tooltipRect2.topLeft}',
-        );
+        // debugPrint(
+        //   'At scroll offset $scrollDelta:\n'
+        //   '  Anchor: ${anchorRect2.topLeft}\n'
+        //   '  Tooltip: ${tooltipRect2.topLeft}',
+        // );
 
         // ===== PHASE 5: Verify movement is 1:1, not 2:1 =====
         final anchorMovementY = anchorRect1.top - anchorRect2.top;
         final tooltipMovementY = tooltipRect1.top - tooltipRect2.top;
 
-        debugPrint(
-          'Movements:\n'
-          '  Anchor moved up by: $anchorMovementY\n'
-          '  Tooltip moved up by: $tooltipMovementY\n'
-          '  Ratio: ${(tooltipMovementY / anchorMovementY).toStringAsFixed(3)}',
-        );
+        // debugPrint(
+        //   'Movements:\n'
+        //   '  Anchor moved up by: $anchorMovementY\n'
+        //   '  Tooltip moved up by: $tooltipMovementY\n'
+        //   '  Ratio: ${(tooltipMovementY / anchorMovementY).toStringAsFixed(3)}',
+        // );
 
         // THE CRITICAL ASSERTION:
         // Both should move by ~250px. If the bug is present, the tooltip moves

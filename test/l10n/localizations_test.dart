@@ -102,6 +102,17 @@ void main() {
         // Notifications (1 key)
         expect(localizations.notificationsEmpty, 'No notifications');
 
+        // Scaffold (1 key)
+        expect(localizations.scaffoldEmpty, 'No items');
+
+        // Inputs (6 keys)
+        expect(localizations.inputsRequiredIndicator, 'required');
+        expect(localizations.inputsCharacterCountOf, 'of');
+        expect(localizations.inputsCharacterCountCharacters, 'characters');
+        expect(localizations.inputsNumberIncrement, 'Increase value');
+        expect(localizations.inputsNumberDecrement, 'Decrease value');
+        expect(localizations.inputsSearchClear, 'Clear');
+
         // Code Editor (2 keys — out of scope but reserved)
         expect(localizations.editorDocumentation, 'Documentation');
         expect(localizations.editorLintError, 'Lint error');

@@ -20,7 +20,8 @@ class SpacingSection extends StatelessWidget {
 
     return ShowroomSection(
       title: 'Spacing',
-      description: 'Five semantic spacing levels: sp1 (4px) through sp5 (32px)',
+      description:
+          'Five semantic spacing levels: sp1 (${tokens.spacing.sp1.toStringAsFixed(0)}px) through sp5 (${tokens.spacing.sp5.toStringAsFixed(0)}px)',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

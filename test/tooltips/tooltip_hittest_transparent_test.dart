@@ -127,7 +127,7 @@ void main() {
         await tester.tapAt(const Offset(80, 60));
         await tester.pumpAndSettle();
 
-        debugPrint('Case B result: backdropTapped = $backdropTapped');
+        // debugPrint('Case B result: backdropTapped = $backdropTapped');
         expect(
           backdropTapped,
           isTrue,
@@ -182,7 +182,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // EXPECTED: Wrapping should not prevent backdrop hover detection
-        debugPrint('Case B-hover: backdropEnterEvent = $backdropEnterEvent');
+        // debugPrint('Case B-hover: backdropEnterEvent = $backdropEnterEvent');
         expect(
           backdropEnterEvent,
           isNotNull,

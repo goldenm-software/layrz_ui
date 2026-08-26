@@ -36,7 +36,6 @@ Consumers import the root barrel, e.g., `import 'package:layrz_ui/layrz_ui.dart'
 ```
 lib/
   layrz_ui.dart                  # Root barrel — exports all 14 modules
-  preview.dart                   # Top-level preview entrypoint (deliberate exception; re-exports LayrzPreviewTheme)
   src/
     alerts/
       alerts.dart                # Per-module barrel — re-exports from src/
@@ -82,10 +81,6 @@ lib/
       platform.dart              # Per-module barrel
       src/
         platform.dart            # LayrzPlatform enum
-    preview/
-      preview.dart               # Per-module barrel
-      src/
-        preview_theme.dart       # LayrzPreviewTheme (extends PreviewThemeData)
     state/
       state.dart                 # Per-module barrel
       src/
@@ -267,36 +262,7 @@ The convention of mirroring `lib/src/<module>/` structure under `test/<module>/`
 
 **Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
-### 3. Use @Preview for visual widgets
-
-For stateless or lightly-stateful widgets, add `@Preview` annotations (Flutter 3.47+) at the bottom of the widget file so it can be previewed without launching a device. Previews use the Flutter widget preview system with the `layrzPreviewLightTheme` top-level function.
-
-```dart
-import 'package:flutter/widget_previews.dart';
-import 'package:layrz_ui/preview.dart';
-
-@Preview(
-  name: 'Light',
-  theme: layrzPreviewLightTheme,
-)
-Widget previewMyWidget() => MyWidget(color: kPrimaryColor, size: 48);
-```
-
-The real API in Flutter 3.47:
-- **Import**: `package:flutter/widget_previews.dart` (plural)
-- **Annotation**: `@Preview(...)` with named fields: `group`, `name`, `size`, `textScaleFactor`, `wrapper`, `theme`, `brightness`, `localizations`
-- **Theme type**: `PreviewThemeData` (abstract base class in the SDK)
-- **layrz_ui integration**: `LayrzPreviewTheme extends PreviewThemeData` (must extend because the SDK declares it as `abstract base class`, not an interface). Light theme only; dark mode is out of scope per decision D7.
-
-**Important**: The `theme:` parameter accepts a tear-off **to a top-level function** (not a static method on a class): `@Preview(theme: layrzPreviewLightTheme)`, not an instance. The widget-preview code generator can only serialize top-level function tear-offs; it cannot resolve static methods on a class. So you **must** use the `layrzPreviewLightTheme` top-level function, not `LayrzPreviewTheme.light`.
-
-Rules:
-- Only add previews for **visual** widgets (skip helpers, extensions, enums, data classes).
-- Use `layrzPreviewLightTheme` as a tear-off in the `@Preview` annotation (not `LayrzPreviewTheme.light`, which will fail at compile time).
-- Add a single `@Preview` annotation for the light theme.
-- Each preview function returns the widget directly (no need to wrap in LayrzApp; the theme callback handles it).
-
-### 4. One concern per file — always split, never pile
+### 3. One concern per file — always split, never pile
 
 **Never put multiple unrelated things in a single file.** When a domain grows, split it.
 
@@ -316,7 +282,24 @@ lib/src/<domain>/src/
 
 The barrel file must contain **only** `export` statements — no logic, no classes. All modules are exported from the root barrel at `lib/layrz_ui.dart`, which is the blessed consumer import.
 
-**Note**: `lib/preview.dart` is a deliberately placed top-level barrel (outside the standard per-module structure) to keep preview infrastructure opt-in. See decision D18 in `engineering/decisions.md` for the original rationale. The preview exception survives the current module restructure as a documented allowance.
+### 4. `LayrzInputChrome` is IMMUTABLE — never modify it
+
+`lib/src/inputs/src/shared/input_chrome.dart` is **frozen**. It is the shared chrome behind every input in the library — text, textarea, number, password, search, select, combobox, duration, and every input added later. A change there lands in all of them at once, and nothing in the test suite will tell you which one you broke.
+
+**Do not add a parameter to it. Do not change its layout. Do not change how it resolves style, precedence, or state. Do not "just" add an optional flag with a safe default.**
+
+An optional parameter with a default is still a change to the shared contract, and "it defaults to the old behaviour" is the argument that makes these changes feel free. They are not free.
+
+**The only condition under which it may be modified** is an extreme one: a defect that genuinely cannot be fixed from the calling input, where every workaround available to that input has been tried and shown not to work. That bar is deliberately high, and the burden of proof is on whoever wants to change the file — not on whoever objects.
+
+**Before proposing any change to it, you must first demonstrate that the calling input cannot solve the problem itself.** In practice it almost always can:
+
+- **Wrong colour, border, or state styling?** The caller is passing the wrong thing. Check the style-spec precedence — `disabled > readOnly > error > pressed > hover/focused > default`. A higher-precedence flag hardcoded by the caller silently discards everything below it. A real case: `LayrzDurationInput` hardcoded `readOnly: true` into its own style resolution, so `errors` could never paint a danger border, even though the errors were being passed correctly. The fix was one line in the caller.
+- **Need the label or footer positioned outside the anchor?** Compose it in the caller. Select, ComboBox and Duration all hoist label and error text into a `Column` around the chrome, so the chrome's own box stays the anchor's rect. That is why the anchored panel lands on the field and not 24px above it.
+- **Need content the chrome doesn't render?** Pass it as the `child`, or place it as an external sibling. `LayrzNumberInput`'s step buttons and `LayrzDurationInput`'s clock affordance both live outside the chrome for exactly this reason.
+- **Need the chrome to know something it currently renders?** It cannot, and that is the accepted limitation. `labelText` is a single field that both carries the value and triggers the render — there is no way to supply one without the other, because the label row is the first child of the same `Column` that becomes the panel's anchor. Passing a label to suppress its render would reintroduce the anchor-offset bug. Work around it in the caller, or accept it.
+
+If you believe you have hit the extreme condition, **stop and report it. Do not edit the file.** Say what the defect is, which caller-side workarounds you tried, and why each failed. It is a decision for the maintainer, never for an agent.
 
 ---
 
@@ -330,7 +313,7 @@ The barrel file must contain **only** `export` statements — no logic, no class
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **Interaction states** — hover, press, focus, and disabled states must vary colour, border colour, shadow, opacity, and cursor only; never size, border width, padding, margin, or scale. Geometry changes cause flicker and reflow. See decision D15 in `engineering/decisions.md`.
 - **Cross-module imports use `package:layrz_ui/src/`** — within `lib/`, use the absolute form `import 'package:layrz_ui/src/constants/constants.dart';` to reach other modules' per-module barrels, never relative paths. Same-module imports within `src/` may remain relative. Consumers in `test/` and `example/lib/` import the root barrel `import 'package:layrz_ui/layrz_ui.dart';`. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.
-- **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, `RawRadio`, and the stable `@Preview` API exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
+- **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, and `RawRadio` exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
 
 ### Light Mode Only
 
@@ -383,7 +366,6 @@ Tests live under `test/` and mirror the structure of `lib/src/`. For example:
 4. Update `lib/layrz_ui.dart` to export the module (if new)
 5. Document every argument (see rule #1)
 6. Write tests in `test/<domain>/<widget_name>_test.dart` (see rule #2)
-7. Add `@Preview` annotations at the bottom of the widget file if applicable (see rule #3)
-8. Run `flutter analyze` — must be clean
-9. Run `flutter test` — must be green
-10. Verify no material/cupertino imports crept in
+7. Run `flutter analyze` — must be clean
+8. Run `flutter test` — must be green
+9. Verify no material/cupertino imports crept in

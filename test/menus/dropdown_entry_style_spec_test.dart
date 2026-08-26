@@ -3,14 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/menus/src/dropdown_entry_style_spec.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzDropdownEntryStyleSpec', () {
     late LayrzTokens tokens;
 
     setUp(() {
-      tokens = LayrzThemeData.light(fontHandler: const FakeFontHandler()).tokens;
+      tokens = LayrzThemeData.light().tokens;
     });
 
     testWidgets('resolve returns correct colors for default state', (tester) async {

@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import 'fake_font_handler.dart';
-
 /// Pumps a widget into a themed [Localizations] + [LayrzTheme] + [Overlay] hierarchy.
 ///
 /// This helper wraps [child] with the minimal tree needed for widget testing:
@@ -42,7 +40,7 @@ Future<void> pumpThemed(
         LayrzUiL10nDelegate(),
       ],
       child: LayrzTheme(
-        data: theme ?? LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+        data: theme ?? LayrzThemeData.light(),
         child: Overlay(
           initialEntries: [
             OverlayEntry(

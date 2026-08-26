@@ -3,24 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
-
-/// Specifies the preferred position of a tooltip relative to its anchor.
-///
-/// The tooltip will be positioned on the specified side of the anchor. If it would
-/// overflow the overlay bounds on that side, it automatically flips to the opposite side.
-enum LayrzTooltipPosition {
-  /// Position the tooltip above the anchor.
-  top,
-
-  /// Position the tooltip below the anchor.
-  bottom,
-
-  /// Position the tooltip to the left of the anchor.
-  left,
-
-  /// Position the tooltip to the right of the anchor.
-  right,
-}
+import 'package:layrz_ui/src/positioning/positioning.dart';
 
 /// Computes the position delegate for [RawTooltip] based on the desired position.
 ///
@@ -40,7 +23,7 @@ enum LayrzTooltipPosition {
 /// 4. Clamp the tooltip on the cross axis to stay inside the overlay.
 /// 5. Guard every clamp with `math.max(0.0, overlaySize.dimension - tooltipSize.dimension)`
 ///    to avoid throwing when the tooltip is larger than the overlay on that axis.
-TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
+TooltipPositionDelegate positionDelegate(LayrzPreferredSide position) {
   return (TooltipPositionContext context) {
     final target = context.target; // Anchor centre in global coords.
     final targetSize = context.targetSize;
@@ -48,7 +31,7 @@ TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
     final overlaySize = context.overlaySize;
 
     switch (position) {
-      case LayrzTooltipPosition.bottom:
+      case LayrzPreferredSide.bottom:
         // Horizontal: centre on the target's x-coordinate.
         final centerX = target.dx;
         var tooltipLeft = centerX - (tooltipSize.width / 2);
@@ -72,7 +55,7 @@ TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
 
         return Offset(tooltipLeft, tooltipTop);
 
-      case LayrzTooltipPosition.top:
+      case LayrzPreferredSide.top:
         // Horizontal: centre on the target's x-coordinate.
         final centerX = target.dx;
         var tooltipLeft = centerX - (tooltipSize.width / 2);
@@ -96,7 +79,7 @@ TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
 
         return Offset(tooltipLeft, tooltipTop);
 
-      case LayrzTooltipPosition.left:
+      case LayrzPreferredSide.left:
         // Vertical: centre on the target's y-coordinate.
         final centerY = target.dy;
         var tooltipTop = centerY - (tooltipSize.height / 2);
@@ -120,7 +103,7 @@ TooltipPositionDelegate positionDelegate(LayrzTooltipPosition position) {
 
         return Offset(tooltipLeft, tooltipTop);
 
-      case LayrzTooltipPosition.right:
+      case LayrzPreferredSide.right:
         // Vertical: centre on the target's y-coordinate.
         final centerY = target.dy;
         var tooltipTop = centerY - (tooltipSize.height / 2);

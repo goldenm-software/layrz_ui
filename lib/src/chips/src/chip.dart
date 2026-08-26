@@ -95,7 +95,7 @@ class LayrzChip extends StatefulWidget {
     }
 
     // Add horizontal padding
-    width += tokens.spacing.sp2 * 2;
+    width += (tokens.spacing.sp1 * 2);
 
     return width;
   }
@@ -134,10 +134,7 @@ class _LayrzChipState extends State<LayrzChip> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: tokens.spacing.sp2,
-        vertical: tokens.spacing.sp1,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
       decoration: BoxDecoration(
         color: spec.backgroundColor,
         border: widget.style.hasBorder
@@ -146,7 +143,7 @@ class _LayrzChipState extends State<LayrzChip> {
                 width: spec.borderWidth,
               )
             : null,
-        borderRadius: BorderRadius.circular(tokens.radius.full),
+        borderRadius: BorderRadius.circular(tokens.radius.r1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

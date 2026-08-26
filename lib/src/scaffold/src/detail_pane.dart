@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -12,26 +11,16 @@ class DetailPane<T> extends StatelessWidget {
   final T? opened;
 
   /// Callback to build the detail content.
-  final Widget Function(BuildContext, T)? contentBuilder;
-
-  /// Callback to close the detail pane.
-  final VoidCallback? onClose;
-
-  /// Whether the detail pane should show a back button.
-  final bool showBack;
+  final Widget Function(T)? contentBuilder;
 
   /// Creates a new [DetailPane].
   ///
   /// - [opened]: The currently opened item, or null. Defaults to null.
   /// - [contentBuilder]: Callback to build the detail content, or null. Defaults to null.
-  /// - [onClose]: Callback to close the detail pane, or null. Defaults to null.
-  /// - [showBack]: Whether to show a back button. Defaults to false.
   const DetailPane({
     super.key,
     this.opened,
     this.contentBuilder,
-    this.onClose,
-    this.showBack = false,
   });
 
   @override
@@ -40,55 +29,7 @@ class DetailPane<T> extends StatelessWidget {
 
     return Container(
       color: tokens.colors.sf1,
-      child: Column(
-        children: [
-          if (showBack)
-            Container(
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 26),
-              decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: tokens.colors.divider,
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: onClose,
-                    child: Icon(
-                      MdiIcons.arrowLeft,
-                      size: 20,
-                      color: tokens.colors.fg1,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Back",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: tokens.colors.fg1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Expanded(
-            child: opened == null
-                ? _buildEmptyState(tokens)
-                : SingleChildScrollView(
-                    child: Container(
-                      padding: const EdgeInsets.all(26),
-                      constraints: const BoxConstraints(maxWidth: 1080),
-                      child: contentBuilder?.call(context, opened as T),
-                    ),
-                  ),
-          ),
-        ],
-      ),
+      child: opened == null ? _buildEmptyState(tokens) : contentBuilder?.call(opened as T),
     );
   }
 

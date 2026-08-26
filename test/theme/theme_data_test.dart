@@ -2,88 +2,56 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzThemeData', () {
     group('light() factory', () {
       test('uses default primary color', () {
-        final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data = LayrzThemeData.light();
         expect(data.primaryColor, equals(kPrimaryColor));
       });
 
       test('uses default background color', () {
-        final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data = LayrzThemeData.light();
         expect(data.backgroundColor, equals(const Color(0xFFFCFCFC)));
       });
 
       test('accepts custom primary color', () {
         const customPrimary = Color(0xFF112233);
-        final data = LayrzThemeData.light(
-          primaryColor: customPrimary,
-          fontHandler: const FakeFontHandler(),
-        );
+        final data = LayrzThemeData.light(primaryColor: customPrimary);
         expect(data.primaryColor, equals(customPrimary));
       });
 
       test('creates IconThemeData with fg1 color and size 24', () {
-        final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data = LayrzThemeData.light();
         expect(data.iconTheme.color, equals(data.tokens.colors.fg1));
         expect(data.iconTheme.size, equals(24));
       });
 
-      test('accepts custom titleFont and bodyFont', () {
-        final customFont = LayrzFont(
-          source: LayrzFontSource.local,
-          name: 'CustomFont',
-        );
+      test('accepts custom font', () {
+        final customFont = LayrzRobotoFont();
         final data = LayrzThemeData.light(
-          titleFont: customFont,
-          bodyFont: customFont,
-          fontHandler: const FakeFontHandler(),
+          font: customFont,
         );
         // Verify that the typography was created (indirect verification).
         expect(data.tokens.typography, isNotNull);
         expect(data.tokens.typography.display, isNotNull);
       });
 
-      test('wraps fontName into Google Font when titleFont and bodyFont are null', () {
-        final data = LayrzThemeData.light(
-          fontName: 'Roboto',
-          fontHandler: const FakeFontHandler(),
-        );
-        // The fake handler returns font names directly, so both should be 'Roboto'
+      test('defaults to Roboto font when font is null', () {
+        final data = LayrzThemeData.light();
+        // The default font should be Roboto
         expect(data.tokens.typography.display.fontFamily, equals('Roboto'));
         expect(data.tokens.typography.body.fontFamily, equals('Roboto'));
       });
 
-      test('titleFont and bodyFont override fontName when provided', () {
-        final titleFont = LayrzFont(
-          source: LayrzFontSource.local,
-          name: 'CustomTitle',
-        );
-        final bodyFont = LayrzFont(
-          source: LayrzFontSource.local,
-          name: 'CustomBody',
-        );
+      test('font is used when provided', () {
+        final font = LayrzRobotoFont();
         final data = LayrzThemeData.light(
-          fontName: 'Roboto',
-          titleFont: titleFont,
-          bodyFont: bodyFont,
-          fontHandler: const FakeFontHandler(),
+          font: font,
         );
-        // Verify that custom fonts are used, not the fontName
-        expect(data.tokens.typography.display.fontFamily, equals('CustomTitle'));
-        expect(data.tokens.typography.body.fontFamily, equals('CustomBody'));
-      });
-
-      test('defaults to Open Sans font name', () {
-        final data = LayrzThemeData.light(
-          fontHandler: const FakeFontHandler(),
-        );
-        // Default font should be Open Sans
-        expect(data.tokens.typography.display.fontFamily, equals('Open Sans'));
-        expect(data.tokens.typography.body.fontFamily, equals('Open Sans'));
+        // Verify that custom font is used
+        expect(data.tokens.typography.display.fontFamily, equals('Roboto'));
+        expect(data.tokens.typography.body.fontFamily, equals('Roboto'));
       });
     });
 
@@ -91,7 +59,7 @@ void main() {
       late LayrzThemeData data;
 
       setUp(() {
-        data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        data = LayrzThemeData.light();
       });
 
       test('primaryColor delegates to tokens.colors.primary.shade500', () {
@@ -146,11 +114,8 @@ void main() {
 
     group('copyWith', () {
       test('replaces tokens when provided', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final customTokens = LayrzTokens.light(
-          primaryColor: const Color(0xFF999999),
-          fontHandler: const FakeFontHandler(),
-        );
+        final data1 = LayrzThemeData.light();
+        final customTokens = LayrzTokens.light(primaryColor: const Color(0xFF999999));
         final data2 = data1.copyWith(tokens: customTokens);
 
         expect(data2.tokens, same(customTokens));
@@ -158,7 +123,7 @@ void main() {
       });
 
       test('replaces iconTheme when provided', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data1 = LayrzThemeData.light();
         const customIconTheme = IconThemeData(
           color: Color(0xFF555555),
           size: 32,
@@ -170,7 +135,7 @@ void main() {
       });
 
       test('preserves fields not in copyWith arguments', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data1 = LayrzThemeData.light();
         const customIconTheme = IconThemeData(
           color: Color(0xFF555555),
           size: 32,
@@ -183,53 +148,47 @@ void main() {
 
     group('Equality', () {
       test('two light() instances with same args are equal', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final data2 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light();
 
         expect(data1, equals(data2));
       });
 
       test('two instances with different primary colors are unequal', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final data2 = LayrzThemeData.light(
-          primaryColor: const Color(0xFF999999),
-          fontHandler: const FakeFontHandler(),
-        );
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light(primaryColor: const Color(0xFF999999));
 
         expect(data1, isNot(equals(data2)));
       });
 
       test('identical instances are equal', () {
-        final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data = LayrzThemeData.light();
         expect(data, equals(data));
       });
     });
 
     group('hashCode', () {
       test('two equal instances have the same hash code', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final data2 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light();
 
         expect(data1.hashCode, equals(data2.hashCode));
       });
 
       test('two unequal instances likely have different hash codes', () {
-        final data1 = LayrzThemeData.light(fontHandler: const FakeFontHandler());
-        final data2 = LayrzThemeData.light(
-          primaryColor: const Color(0xFF999999),
-          fontHandler: const FakeFontHandler(),
-        );
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light(primaryColor: const Color(0xFF999999));
 
-        // While hash codes are not guaranteed to be different for unequal objects,
+        // While hash codes are not guaranteed to be different for unequal objects
         // the likelihood is very high for well-distributed hash functions.
         expect(data1.hashCode, isNot(equals(data2.hashCode)));
       });
     });
 
     group('Light mode only', () {
-      test('LayrzThemeData.light() constructs with fake handler', () {
+      test('LayrzThemeData.light() constructs without arguments', () {
         expect(
-          () => LayrzThemeData.light(fontHandler: const FakeFontHandler()),
+          () => LayrzThemeData.light(),
           returnsNormally,
         );
       });
@@ -238,124 +197,45 @@ void main() {
         // This test documents that dark mode is not supported.
         // The absence of LayrzThemeData.dark() is a compile-time guarantee.
         // We verify that the API is light-only by checking that light() works.
-        final data = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final data = LayrzThemeData.light();
         expect(data, isNotNull);
-      });
-    });
-
-    group('preloadFont static method', () {
-      test('delegates to fontHandler.preload with correct font', () async {
-        var preloadCalled = false;
-        String? preloadedFontName;
-
-        final testHandler = _TestFontHandler(
-          onPreload: (font) {
-            preloadCalled = true;
-            preloadedFontName = font.name;
-          },
-        );
-
-        await LayrzThemeData.preloadFont('My Font', testHandler);
-
-        expect(preloadCalled, isTrue);
-        expect(preloadedFontName, equals('My Font'));
-      });
-
-      test('preloadFont defaults to Open Sans', () async {
-        var preloadedFontName = '';
-
-        final testHandler = _TestFontHandler(
-          onPreload: (font) {
-            preloadedFontName = font.name;
-          },
-        );
-
-        await LayrzThemeData.preloadFont(kLayrzFontName, testHandler);
-
-        expect(preloadedFontName, equals('Open Sans'));
       });
     });
 
     group('Mandatory font loading regression test', () {
       test(
-        'LayrzThemeData.light() with no arguments uses default GoogleFontsHandler',
+        'LayrzThemeData.light() uses default LayrzRobotoFont',
         () {
-          // REGRESSION TEST: Proves mandatory font loading guarantee.
-          // If fontHandler default is ever reverted to null, this test fails.
-          // GoogleFonts.getFont() returns a resolved family name synchronously
-          // (e.g. 'OpenSans-Regular' instead of raw 'Open Sans'), so the family
-          // here should NOT be the raw name. Offline-safe because the sync
-          // constructor completes; only async byte fetch happens later.
+          // REGRESSION TEST: Proves the default font is LayrzRobotoFont.
+          // The LayrzRobotoFont performs no network I/O. A design system
+          // should not perform implicit network calls; consumers who need custom
+          // fonts should provide their own handler via layrz_ui_extensions.
           final theme = LayrzThemeData.light();
           final family = theme.tokens.typography.body.fontFamily;
 
           expect(family, isNotNull);
           expect(
             family,
-            isNot(equals('Open Sans')),
-            reason:
-                'fontHandler must resolve the family; raw "Open Sans" '
-                'means no resolution happened (default reverted to null)',
+            equals('Roboto'),
+            reason: 'default font is LayrzRobotoFont, which provides Roboto without any network calls',
           );
         },
       );
 
-      test('LayrzThemeData.light() with explicit handler uses that handler', () {
-        var resolveCalled = false;
-
-        final testHandler = _TestFontHandler(
-          onResolveFamily: (font) {
-            resolveCalled = true;
-            return font.name;
-          },
-        );
-
-        final data = LayrzThemeData.light(fontHandler: testHandler);
-
-        // Verify that the handler was used to resolve fonts
-        expect(resolveCalled, isTrue);
-        expect(data.tokens.typography.body, isNotNull);
-      });
-
       test(
-        'LayrzTextTheme.defaults() with null handler uses raw font name',
+        'LayrzTextTheme.defaults() with null font uses LayrzRobotoFont',
         () {
-          // This test ensures the null-handler path still works for pure logic testing
+          // This test ensures the null-font path still works for pure logic testing
           final data = LayrzTextTheme.defaults(
             textColor: const Color(0xFF000000),
-            fontHandler: null,
           );
 
-          // When fontHandler is null, font name is used directly
-          expect(data.body.fontFamily, equals('Open Sans'));
+          // When font is null, defaults to Roboto
+          expect(data.body.fontFamily, equals('Roboto'));
         },
       );
     });
   });
 }
 
-/// Test fake handler that records method calls for verification.
-class _TestFontHandler implements LayrzFontHandler {
-  final void Function(LayrzFont)? onPreload;
-  final String Function(LayrzFont)? onResolveFamily;
-
-  _TestFontHandler({this.onPreload, this.onResolveFamily});
-
-  @override
-  Future<void> preload(LayrzFont font) async {
-    onPreload?.call(font);
-  }
-
-  @override
-  String resolveFamily(LayrzFont font) {
-    return onResolveFamily?.call(font) ?? font.name;
-  }
-
-  @override
-  String resolveFamilyForWeight(LayrzFont font, FontWeight weight) {
-    return onResolveFamily?.call(font) ?? font.name;
-  }
-
-  @override
-  List<String> get fallbacks => kLayrzFontFallbacks;
-}
+/// Test fon

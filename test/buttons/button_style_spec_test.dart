@@ -2,15 +2,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzButtonStyleSpec', () {
     late LayrzTokens tokens;
     late Color primaryColor;
 
     setUp(() {
-      tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+      tokens = LayrzTokens.light();
       primaryColor = tokens.colors.primary;
     });
 

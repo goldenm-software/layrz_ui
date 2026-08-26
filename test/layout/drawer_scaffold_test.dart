@@ -161,7 +161,7 @@ void main() {
       expect(bodyFinder, findsOneWidget);
 
       final bodyRect = tester.getRect(bodyFinder);
-      debugPrint('BODY RECT at t==1: $bodyRect');
+      // debugPrint('BODY RECT at t==1: $bodyRect');
 
       // The Body is centered in the page. After scale(0.88) and translate(260):
       // Expected page bounds (in render space): left ≈ 0-400, top ≈ 0-800

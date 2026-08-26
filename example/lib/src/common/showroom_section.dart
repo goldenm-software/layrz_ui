@@ -29,32 +29,35 @@ class ShowroomSection extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: EdgeInsets.all(context.tokens.spacing.sp3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            // Title
-            Text(title, style: tokens.typography.headline),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.all(context.tokens.spacing.sp3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              // Title
+              Text(title, style: tokens.typography.headline),
 
-            // Description (if provided)
-            if (description != null) ...[
-              SizedBox(height: tokens.spacing.sp2),
-              Text(
-                description!,
-                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
-                maxLines: 3,
+              // Description (if provided)
+              if (description != null) ...[
+                SizedBox(height: tokens.spacing.sp2),
+                Text(
+                  description!,
+                  style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              // Content area with LayrzCard for elevation and surface styling
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzCard(
+                elevation: 1,
+                child: child,
               ),
             ],
-
-            // Content area with LayrzCard for elevation and surface styling
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzCard(
-              elevation: 1,
-              child: child,
-            ),
-          ],
+          ),
         ),
       ),
     );

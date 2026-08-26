@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -44,7 +43,7 @@ void main() {
 
     group('Type-resolved icon colours', () {
       testWidgets('info type renders icon in info colour', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.info),
@@ -55,7 +54,7 @@ void main() {
       });
 
       testWidgets('success type renders icon in success colour', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.success),
@@ -66,7 +65,7 @@ void main() {
       });
 
       testWidgets('warning type renders icon in warning colour', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.warning),
@@ -77,7 +76,7 @@ void main() {
       });
 
       testWidgets('danger type renders icon in danger colour', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.danger),
@@ -88,7 +87,7 @@ void main() {
       });
 
       testWidgets('context type renders icon in contextual colour', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.context),
@@ -115,7 +114,7 @@ void main() {
       });
 
       testWidgets('custom type without explicit color defaults to primary', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(
@@ -158,7 +157,7 @@ void main() {
 
     group('Chip background colour', () {
       testWidgets('info type chip uses tonal background', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(type: LayrzAlertType.info),
@@ -174,7 +173,7 @@ void main() {
       });
 
       testWidgets('custom type chip uses custom colour with tonal opacity', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         const customColor = Color(0xFFFF5733);
         await pumpThemed(
           tester,
@@ -210,7 +209,7 @@ void main() {
 
     group('Border radius', () {
       testWidgets('icon chip has rounded square border radius', (tester) async {
-        final tokens = LayrzTokens.light(fontHandler: const FakeFontHandler());
+        final tokens = LayrzTokens.light();
         await pumpThemed(
           tester,
           const LayrzAlertIcon(),

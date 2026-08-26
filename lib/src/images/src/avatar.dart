@@ -51,6 +51,12 @@ class LayrzAvatar extends StatelessWidget {
   /// Renders the avatar described by the [LayrzAvatarSource] object.
   /// Falls back to initials from [nameText] when the source is null.
   /// At least one of [source] or [nameText] should be provided for useful output.
+  ///
+  /// The [semanticLabel] is an optional text description for screen readers.
+  /// When using image sources ([LayrzAvatarUrl] or [LayrzAvatarBase64]), provide a descriptive
+  /// label such as "Jane Smith's profile photo". For non-image sources (icon, emoji, or initials),
+  /// the label can still be provided, or left null to emit no semantics wrapper (reducing
+  /// screen reader noise when context is already provided elsewhere).
   const LayrzAvatar({
     super.key,
     this.source,
@@ -58,9 +64,13 @@ class LayrzAvatar extends StatelessWidget {
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
+    this.semanticLabel,
   }) : _imageSource = null,
        _icon = null,
-       _emoji = null;
+       _emoji = null,
+       assert(elevation == null || elevation >= 0, 'Elevation must be non-negative'),
+       assert(elevation == null || elevation <= 3, 'Elevation must be 0, 1, 2, or 3');
 
   /// Creates an avatar that displays an image from a URL or base64 source.
   ///
@@ -69,12 +79,18 @@ class LayrzAvatar extends StatelessWidget {
   /// - A data-URI with base64 encoding
   /// - A bare base64 string
   ///
+  /// The [semanticLabel] is a required text description of the image for screen readers.
+  /// It should describe the content or context of the image, not just "image".
+  /// For example, "Jane Smith's profile photo" or "Team avatar".
+  ///
   /// See [LayrzImage] for detailed source handling.
   const LayrzAvatar.image({
     super.key,
     required String imageSource,
+    required this.semanticLabel,
     this.size = 40,
     this.borderRadius,
+    this.elevation,
   }) : source = null,
        nameText = null,
        color = null,
@@ -87,12 +103,18 @@ class LayrzAvatar extends StatelessWidget {
   ///
   /// The icon is rendered at 70% of the avatar [size] to maintain visual balance.
   /// [color] defaults to the primary token color.
+  ///
+  /// The [semanticLabel] is an optional text description for screen readers.
+  /// If not provided, no semantics announcement is made (reducing screen reader noise
+  /// when an icon avatar appears alongside other context that already describes it).
   const LayrzAvatar.icon({
     super.key,
     required IconData icon,
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
+    this.semanticLabel,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -105,11 +127,17 @@ class LayrzAvatar extends StatelessWidget {
   ///
   /// The emoji is rendered centered and scaled to 60% of the avatar [size].
   /// The background color defaults to white for emoji avatars.
+  ///
+  /// The [semanticLabel] is an optional text description for screen readers.
+  /// If not provided, no semantics announcement is made (reducing screen reader noise
+  /// when an emoji avatar appears alongside other context that already describes it).
   const LayrzAvatar.emoji({
     super.key,
     required String emoji,
     this.size = 40,
     this.borderRadius,
+    this.elevation,
+    this.semanticLabel,
     // ignore: prefer_initializing_formals
   }) : source = null,
        nameText = null,
@@ -123,12 +151,18 @@ class LayrzAvatar extends StatelessWidget {
   ///
   /// The initials are extracted from [nameText] using the algorithm described
   /// in [LayrzAvatar]'s documentation.
+  ///
+  /// The [semanticLabel] is an optional text description for screen readers.
+  /// If not provided, no semantics announcement is made (reducing screen reader noise
+  /// when an initials avatar appears alongside other context that already describes it).
   const LayrzAvatar.initials({
     super.key,
     required this.nameText,
     this.size = 40,
     this.color,
     this.borderRadius,
+    this.elevation,
+    this.semanticLabel,
   }) : source = null,
        _imageSource = null,
        _icon = null,
@@ -173,6 +207,19 @@ class LayrzAvatar extends StatelessWidget {
   /// For named constructors: the emoji to render (used by `.emoji()` constructor).
   final String? _emoji;
 
+  /// Change the elevation of the avatar. Defaults to null, which uses the default compact shadow.
+  final double? elevation;
+
+  /// Optional semantic label for screen readers.
+  ///
+  /// For image sources: this is required and provides an accessible description of the image
+  /// (e.g., "Jane Smith's profile photo").
+  ///
+  /// For non-image sources (icon, emoji, initials): this is optional. When null, no semantics
+  /// wrapper is emitted, avoiding redundant announcements when the avatar sits alongside other
+  /// context that already describes it. When provided, the label is announced.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     // If a named constructor provides a specific rendering, use it
@@ -209,6 +256,8 @@ class LayrzAvatar extends StatelessWidget {
         child: Text(
           emoji,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: size * 0.6,
             height: 1.0,
@@ -231,6 +280,8 @@ class LayrzAvatar extends StatelessWidget {
       child: Text(
         initials,
         textAlign: TextAlign.center,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: size * 0.4,
           fontWeight: FontWeight.w600,
@@ -272,6 +323,8 @@ class LayrzAvatar extends StatelessWidget {
         child: Text(
           emoji,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: size * 0.6,
             height: 1.0,
@@ -286,6 +339,10 @@ class LayrzAvatar extends StatelessWidget {
   /// The outer container applies the fixed compact-level-1 shadow, ensuring it is
   /// not clipped by the inner [ClipRRect]. The inner container clips to the resolved
   /// radius and applies the background color.
+  ///
+  /// If [semanticLabel] is provided, wraps the entire avatar in a [Semantics] node
+  /// with the given label. If no label is provided, no semantics wrapper is applied,
+  /// avoiding screen reader noise when context is already provided elsewhere.
   Widget _buildContainer({
     required BuildContext context,
     required Color backgroundColor,
@@ -293,12 +350,12 @@ class LayrzAvatar extends StatelessWidget {
   }) {
     final radius = BorderRadius.circular(borderRadius ?? context.tokens.radius.r3);
 
-    return Container(
+    final container = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         borderRadius: radius,
-        boxShadow: context.tokens.shadow.compact1,
+        boxShadow: _resolveElevation(context),
       ),
       child: ClipRRect(
         borderRadius: radius,
@@ -315,6 +372,15 @@ class LayrzAvatar extends StatelessWidget {
         ),
       ),
     );
+
+    if (semanticLabel case final label?) {
+      return Semantics(
+        label: label,
+        child: container,
+      );
+    }
+
+    return container;
   }
 
   /// Builds an icon avatar using an [IconData].
@@ -360,5 +426,25 @@ class LayrzAvatar extends StatelessWidget {
     // Standard relative luminance calculation
     final lum = (0.299 * r + 0.587 * g + 0.114 * b);
     return lum > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  }
+
+  /// Resolves the elevation to a list of box shadows.
+  ///
+  /// If [elevation] is null, uses the default compact shadow from the theme.
+  List<BoxShadow> _resolveElevation(BuildContext context) {
+    if (elevation == null) return context.tokens.shadow.compact1;
+
+    switch (elevation) {
+      case 0:
+        return [];
+      case 1:
+        return context.tokens.shadow.compact1;
+      case 2:
+        return context.tokens.shadow.compact2;
+      case 3:
+        return context.tokens.shadow.compact3;
+      default:
+        return context.tokens.shadow.compact1;
+    }
   }
 }

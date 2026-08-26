@@ -2210,6 +2210,20 @@ After the first consuming app ships using `LayrzLayout` and `LayrzScaffoldShell`
 
 If feedback indicates a second presentation is essential, revisit in M5.x (post-release patch work).
 
+### Amendment — DESIGN-140 (2026-08-23)
+
+**Lifts the mobile bottom sheet deferral.** The original DESIGN-62 decision deferred the narrow-band presentation on mobile, ruling "Narrow fallback is a single-pane layout with a back affordance; no bottom-sheet modal presentation." This deferral was prudent at the time because `LayrzBottomSheet` did not exist.
+
+`LayrzBottomSheet` now exists at `lib/src/sheets/src/bottom_sheet.dart`, and the mobile experience is refined by DESIGN-140 to use it:
+
+- **Narrow band (sm/xs)** now presents the detail in a `LayrzBottomSheet` layered over the still-visible list (not replaced).
+- **Sheet defaults**: 50% initialSize, snaps to 50% and 95%, maxSize 95%, drag handle on. No public parameters customize the sheet — it is a fixed presentation choice.
+- **Selection persistence**: Selection survives a breakpoint crossing. Crossing from narrow → wide pops the sheet but keeps `openedKey`, so the detail pane shows the same item. Crossing from wide → narrow auto-opens the sheet for the already-selected item.
+- **Dismissal**: Dismissing the sheet (drag-down, barrier tap, Escape, system back) calls `controller.close()`, de-highlighting the list row and returning to list-only view.
+- **Navigator requirement**: The narrow band now pushes a route (`LayrzBottomSheet.show`), so the shell requires a `Navigator` ancestor (e.g. inside `LayrzApp`). A debug assert fires if missing; no release crash.
+
+This amendment also softens the consequence stated in D37's Decision section, "Neither component pushes a Navigator route." That was true of `LayrzLayout` and of the wide band of `LayrzScaffoldShell`, but the narrow band now does push one to show the detail sheet. The amendment records this honestly rather than quietly contradicting the original statement.
+
 ---
 
 ---
@@ -2997,4 +3011,813 @@ The selection overlay is created lazily, not eagerly. It requires the field to b
 ### Review Trigger
 
 If Flutter's text selection API is refactored in a future version, revisit these traps to see if any are no longer necessary.
+
+---
+
+## D51: Text Wraps by Default — Component Structural Limits Own Truncation
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Design System / Typography
+
+### Context
+
+`LayrzTextTheme` in the type scale historically included `overflow: TextOverflow.ellipsis` in two places: the `titleStyle` builder (feeding `display`, `headline`, and `title` styles) and the `bodyStyle` builder (feeding `body` and `label` styles). This assumption was that all text should truncate with an ellipsis when it did not fit.
+
+This conflates two concerns: **typography** (how text looks) and **layout** (whether text may wrap or must truncate). A type scale defines semantic roles and visual appearance, not layout constraints. Whether text wraps depends entirely on the container's dimensions and layout rules — which the type scale has no visibility into. Additionally, the implementation created a hidden API contract: developers wanting wrapped text had to pass `overflow: TextOverflow.visible` at every `Text()` call site, overriding the type scale's default. This was inverted and unintuitive.
+
+The assumption also masked a shipped bug. `LayrzButton` rendered labels at fixed size with `TextOverflow.ellipsis` inside the button's chrome, so buttons with long labels silently truncated instead of alerting the developer to a layout problem (DESIGN-78).
+
+### Decision
+
+**Text wraps by default. Truncation is an explicit decision, owned by the component.**
+
+### Rule
+
+- **Text in unbounded space** needs no special handling — wrapping is the default and sufficient.
+- **Height-locked containers, single-line badges, fixed-geometry chrome** take explicit `maxLines: 1` plus explicit `overflow: TextOverflow.ellipsis`.
+- **Deliberate multi-line caps** take `maxLines: N` plus explicit `overflow`.
+- **`RichText` must set `overflow` on its own constructor**, because it ignores `style.overflow`. The `RichText.overflow` parameter defaults to `TextOverflow.clip`; callers pass `overflow: TextOverflow.ellipsis` explicitly if they need a three-dot truncation.
+- **Measurement-only `TextPainter`s take neither.** `TextPainter` never reads `TextStyle.overflow`; it exposes an `ellipsis` field on the painter itself. Measurement painters (used for intrinsic-width calculations) should not set ellipsis.
+
+### Three Critical Facts (do not re-litigate)
+
+1. **`TextPainter` ignores `TextStyle.overflow` entirely.** `RenderParagraph` translates `overflow == TextOverflow.ellipsis` into `textPainter.ellipsis = '…'` (`packages/flutter/lib/src/rendering/paragraph.dart:377,633`); the painter honours only its own `ellipsis` field. Measurement-only painters (e.g., at `lib/src/buttons/src/button.dart:728` and `lib/src/chips/src/chip.dart:81` for intrinsic-width calculation) are unaffected by `TextStyle.overflow` and should not be given an ellipsis value.
+
+2. **`RichText` never reads `TextStyle.overflow`.** `RichText.overflow` is its own constructor parameter defaulting to `TextOverflow.clip`. Only `Text` / `Text.rich` fall back to reading `style.overflow`. So no `RichText` site in layrz_ui was ever affected by the type scale's ellipsis, and none need it.
+
+3. **Field label is unbounded; hint/placeholder is layout-locked.** The field label is the `RichText` at `input_chrome.dart:191`, sets neither `maxLines` nor `overflow`, and already wrapped freely. The hint/placeholder is at `input_chrome.dart:260-261` and `:274-275`, renders in a fixed-height chrome row, and takes `maxLines: 1` + `overflow: TextOverflow.ellipsis` because the row height is locked to `density.contentHeight`. These are different layout concerns.
+
+### Rationale
+
+- **Ownership**: Components know their layout constraints; type scales do not. A component that renders text in a constrained geometry should own the decision to truncate.
+- **Correctness**: Silent truncation masks layout bugs. Wrapped text that grows the layout alerts developers to re-size containers or re-word labels. This is better than invisible `…` that hides the problem (DESIGN-78).
+- **Simplicity**: Removing `overflow` from the type scale means `Text` calls in unbounded slots (paragraphs, descriptions, alert content, tooltips) need no overrides. This is the common case, so the default should be the simplest one.
+- **Measured containers**: Components that measure text for intrinsic sizing (buttons, chips) cannot use `ellipsis` in the painter without corrupting width calculations. Ownership at the render site (not in the type scale) ensures painters are clean.
+
+### Consequences
+
+- **Behavioural breaking change** (no API change). `Text` widgets with no explicit `overflow` that sit in height-constrained space now wrap instead of truncating. Examples: alert titles, tooltip content/title. Components that already set `overflow` explicitly are unchanged (button labels, chip labels, navigator rail items all use `RichText` with explicit truncation). Code that was silently truncating may now wrap and grow layouts. Callers must verify their layouts still fit or explicitly add `maxLines: 1` + `overflow: TextOverflow.ellipsis` where space is genuinely limited.
+- **No compile-time failure.** Existing `Text(label)` calls compile and render unchanged unless the new wrapping causes layout overflow. This silence is intentional and the trade-off of a behavioural change: the alternative (always truncate) masks bugs like DESIGN-78.
+- **Eleven sites across six files** now explicitly set truncation where text was previously truncated by the type scale:
+  - Avatar emoji/initials/fallback: three sites in `lib/src/images/src/avatar.dart` (emoji in `.emoji()`, initials in fallback, emoji in `_buildFromSource()`) — all use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Selection-toolbar action labels: one site in `lib/src/selection/src/selection_toolbar.dart` (`LayrzSelectionToolbar`) — uses `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Input shortcut badge and slot text: two sites in `lib/src/inputs/src/input_chrome.dart` — both use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Input error text: two sites in `lib/src/inputs/src/input_error_block.dart` (one in the errors-only branch, one in `_ErrorAndCounterRow`) — both use `maxLines: 2` + `overflow: TextOverflow.ellipsis` for legible multi-line error messages
+  - Dropdown plain label and shortcut badge: two sites in `lib/src/menus/src/dropdown_items.dart` (`LayrzDropdownLabel` and `LayrzDropdownEntry`) — both use `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+  - Navigator section caption: one site in `lib/src/layout/src/navigator_panel.dart` (uppercase section caption) — uses `maxLines: 1` + `overflow: TextOverflow.ellipsis`
+- **Text in wrappable slots** (alert titles, tooltip content/title, empty-state literals, input field label) is left unchanged and wraps freely. No `maxLines` was added to them.
+- **No `DefaultTextStyle` safety net.** Setting `overflow` on `DefaultTextStyle` would re-apply ellipsis to every `Text` in the tree, re-creating DESIGN-78. Setting `maxLines` on `DefaultTextStyle` would cap all text globally. Both are rejected.
+
+### Related Decisions
+
+- **D27** (Component Enum Trims): Records the design rule that `LayrzButton` continues to render labels with `TextOverflow.ellipsis` / `maxLines: 1` (line 1705). This now lives at the render site (`lib/src/buttons/src/button_content.dart:104-105`) rather than inherited from the type scale.
+- **D23** (Five-Style Type Scale): Established the scope of `LayrzTextTheme` as five semantic roles. D51 removes a detail (overflow) that never belonged in the type scale.
+- **D50** (Text Selection): Affects the same text-rendering layer; both decisions honor correct Flutter semantics.
+
+### Review Trigger
+
+If consuming apps report a pattern of needing `maxLines: 1` in many call sites, consider a wrapper component or extension to reduce boilerplate. Do NOT add overflow back to the type scale.
+
+### Amendment (2026-08-21) — Input Error Text Capped at Two Lines
+
+**What changed**: Input error text is now capped at `maxLines: 2` with `overflow: TextOverflow.ellipsis`. The original task description stated errors "have no `maxLines` and no `overflow`, so they already wrap freely — correct as-is; leave alone", and this was accepted at plan time. Device testing disproved it: when two validation errors were joined into one string ("Must be at least 8 characters, Must contain uppercase letter"), the error text wrapped to two lines and pushed the form downward, reflowing the page.
+
+**General lesson**: A slot being _unbounded_ is not the same as it being _safe to grow_. Input error text is attached to a field in a form, so its vertical growth reflows everything below it. While single-line errors are rare enough that unbounded wrapping was acceptable when combined with field-level rules, real-world validation messages are often compound, and letting them grow without limit degrades the UX. The fix is a deliberate middle position: capped multi-line (`maxLines: 2`) rather than either extreme (no cap / silent truncation).
+
+**This is the fourth error found in the task description** — the first three are recorded in "Three Critical Facts". But they are not the same kind. The first three were **factually wrong about the code and SDK** (TextPainter's behaviour, the field layout distinction, RichText's overflow handling) and were caught by reading the source. This fourth is **factually correct about the code but wrong about the consequence** — the code was right that errors had no `maxLines`, but the inference that unbounded therefore meant safe was wrong. Only running the app on a device surfaced it. The lesson: reading source catches errors about implementation; consequence-finding requires testing.
+
+**Why this is no longer an exception**: A slot with `maxLines: N` + explicit `overflow` is no longer a special case — it is now an instance of the Rule's "Deliberate multi-line caps" bullet, which already covers the pattern. The change makes error text consistent with the system's architecture.
+
+---
+
+## D52: Picker Surfaces Are Adaptive — Anchored Overlay on Desktop, Bottom Sheet Below `md`
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Interaction Design
+
+### Context
+
+M3 introduces three picker-style inputs — `LayrzComboBoxInput`, `LayrzSelectInput`, and `LayrzDurationInput` — all of which need to present a list or surface for selection. The question of "desktop popup vs. mobile sheet" affects the implementation and the public API of all three components.
+
+### Decision
+
+**Picker surfaces are adaptive:**
+- **Desktop (md/lg/xl, ≥ 960px)**: Anchored overlay panel that flips up or down based on available vertical space
+- **Mobile (sm/xs, < 960px)**: `LayrzBottomSheet` modal or persistent
+
+The boundary is the `isCompact` breakpoint (< 960px). No dialog primitive is used in M3; desktop uses the anchored overlay, mobile uses the sheet.
+
+### Rationale
+
+**No dialog in M3 scope**. DESIGN-96 `LayrzDialog` and DESIGN-99 `LayrzAdaptiveModal` remain out of scope. Dialogs would require pulling two more rows into M3. The anchored overlay is lighter-weight and appropriate for inline form picking.
+
+**Container-driven flip logic**. The overlay's position is computed from available vertical space, never declared by the caller. A caller cannot know at build time whether a field sits near the bottom of a scrolled viewport. layrz_theme already overrode declared positions that did not fit, making the parameter advisory.
+
+**Width matching on desktop**. The anchored overlay matches its anchor (the field) width — like a classic web combobox. This distinguishes it from `LayrzDropdownMenu`, which clamps to 160–320px.
+
+### Consequences
+
+- All three picker-component APIs are simplified: no `position` or `surface` parameter
+- `LayrzBottomSheet` becomes a required M3 prerequisite (DESIGN-97)
+- DESIGN-96 `LayrzDialog` and DESIGN-99 `LayrzAdaptiveModal` deferred to M4 or later
+
+### Related Decisions
+
+- **D53** (`LayrzSelectItem<T>`): Shared item type across pickers
+- **D59** (ComboBox free-form): Enabled by adaptive surface
+
+---
+
+## D53: `LayrzSelectItem<T>` — Minimal Data Container
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Component Reuse
+
+### Context
+
+Three M3 components need to represent list items: `LayrzRadioInput`, `LayrzComboBoxInput`, and `LayrzSelectInput`. A shared item type would unify the three and simplify documentation.
+
+### Decision
+
+**Introduce `LayrzSelectItem<T>` as a shared container:**
+
+```dart
+class LayrzSelectItem<T> {
+  final String labelText;
+  final T? value;
+  final Widget? child;
+  final Set<String> searchableAttributes;
+}
+```
+
+Consumed by `LayrzRadioInput`, `LayrzComboBoxInput`, and `LayrzSelectInput`.
+
+### Rationale
+
+**Responsibility split: rendering vs. identity**. The design system owns search and the field's display text. The consumer owns row rendering via `child`. If `child` is null, the field renders `labelText` as a fallback.
+
+**`labelText` is always required** because search and the collapsed field display both depend on it, even when `child` is supplied.
+
+**Dropped from layrz_theme:** `icon`, `leading`, `content`, `onTap`, `isRemoved`, and a proposed `Color? color` field. Follows D27/D28 trimming pattern.
+
+**`searchableAttributes`** defaults to `{labelText}`, allowing custom search hints (e.g., a contact item can include a phone number in search even if the row only shows the name).
+
+### Consequences
+
+- New shared type `LayrzSelectItem<T>` exported from `lib/layrz_ui.dart`
+- Three M3 components consume it consistently
+- No per-component item duplication
+
+---
+
+## D54: Checkbox and Switch Are Separate Components
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Code Organization
+
+### Context
+
+`ThemedCheckboxInput` in layrz_theme supported four styles, cramming two semantically different inputs (checkbox vs. toggle) and three style variants into one component.
+
+### Decision
+
+**Implement two separate components**: `LayrzCheckboxInput` and `LayrzSwitchInput`.
+
+**Dropped styles:**
+- `asCheckbox2` (design-refresh duplicate)
+- `asField` (callers use `LayrzSelectInput<bool>` instead)
+
+**Scope:** Boolean only; tristate is not supported. Labels are trailing and tappable.
+
+### Rationale
+
+**One concern per file**. A checkbox and a switch share no paint code. One file holding both violates single-responsibility for no practical gain. Splitting makes each component's intent clear.
+
+**`asField` drops cleanly**. It was `LayrzSelectInput<bool>` with hardcoded Yes/No labels. Callers can compose their own once `LayrzSelectInput` lands.
+
+**Interaction state compliance (D15)**. Both vary only colour and opacity on hover/press/focus; size and padding never change. Tests explicitly assert this.
+
+**Accessibility (WCAG 1.4.1)**. State is not colour-only:
+- Checkbox: checkmark glyph when checked
+- Switch: thumb position (left/right)
+
+### Consequences
+
+- `LayrzCheckboxInput` and `LayrzSwitchInput` are separate exports
+- No tristate checkbox
+- No style variants
+
+---
+
+## D55: Multiline Text Is a Sibling Component Over Shared Chrome
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Component Architecture
+
+### Context
+
+Supporting multiline in `LayrzTextInput` would require either widening its public API (breaking DESIGN-33's review scope) or creating a separate component. `LayrzTextInput` ships in 0.0.12 awaiting team review.
+
+### Decision
+
+**`LayrzTextAreaInput` is a sibling widget over shared input chrome, not a mode of `LayrzTextInput`.**
+
+**`LayrzTextInput`'s public API remains byte-identical to 0.0.12.**
+
+**Shared plumbing extracted into library-private modules:**
+- `LayrzEditableField` (not exported): encapsulates text selection controls and magnifier config
+- `LayrzInputChrome.variableHeight`: aligns the trailing cluster to the **top** of tall fields instead of vertically centring
+
+### Rationale
+
+**Preservation of review scope**. DESIGN-33 is already under review; widening its public surface would change the component being reviewed. Deferring multiline to DESIGN-34 keeps reviews coherent.
+
+**Code reuse without duplication**. Duplicating ~600 lines of text-selection wiring introduces drift risk. Extracting shared plumbing allows both to use it without exposing an intermediate API.
+
+### Consequences
+
+- New `LayrzTextAreaInput` component (DESIGN-34)
+- Defaults: `minLines: 3`, `maxLines: 10`, then scrolls
+- **No change to `LayrzTextInput`'s public API**
+- Two new private types not exported
+
+---
+
+## D56: `LayrzSearchInputMode` — Inline and Overlay Forms
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Responsiveness
+
+### Context
+
+`ThemedSearchInput` supported two presentations via a boolean flag, forcing every consumer to implement responsive logic themselves with `LayoutBuilder`.
+
+### Decision
+
+**Introduce `LayrzSearchInputMode` enum:**
+
+```dart
+enum LayrzSearchInputMode { field, icon, auto }
+```
+
+- `field`: inline `LayrzTextInput` with magnifier prefix, × clear suffix
+- `icon`: magnifier button that opens an anchored overlay
+- `auto`: selects between them based on available space (default)
+
+### Rationale
+
+**Enum over boolean**. Aligns with D27/D28 trimming of style parameters. The `auto` member lets the component decide for the caller.
+
+**Computed from constraints**. Overlay direction is computed from available space, not declared. Like D52, overlay position is flexible.
+
+**Position parameter dropped**. layrz_theme's `position { left, right }` is not ported because direction is computed, and layrz_theme already overrode declared positions that did not fit.
+
+### Consequences
+
+- New `LayrzSearchInputMode` enum exported
+- No `asField` boolean or `position` parameter
+- Icon mode available for dense toolbars
+
+---
+
+## D57: `LayrzStepper` Owns the Whole Flow
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Scope
+
+### Context
+
+This row's spec raised a critical question: does the widget render only the step header or own the whole flow (header + body + actions)?
+
+### Decision
+
+**`LayrzStepper` owns the whole flow** — header, current step body, and back/next actions.
+
+**`LayrzStep` is a data class carrying `label`, `body`, and `state`.**
+
+**Plus a controller**: `LayrzStepperController` allows programmatic navigation. Follows established conventions: never swapped, and disposed only if created by the widget.
+
+### Rationale
+
+**Header-only was the recommendation and was overruled deliberately.** A full stepper is heavier but bakes in navigation layout. Consumers needing custom actions can request escape hatches later.
+
+**Scope trims (D27/D28):**
+- Horizontal only
+- Step states: `upcoming / active / completed / error` (not Material's full set)
+- Below `md` breakpoint, header collapses to *"Step X of Y"* instead of scrolling
+
+**Accessibility (WCAG 1.4.1)**. Completed steps carry `MdiIcons.check`, errors carry `MdiIcons.alertCircle`. State is never colour-only.
+
+### Consequences
+
+- `LayrzStepper` ships with full flow ownership
+- `LayrzStep` is a simple data class
+- `LayrzStepperController` required for navigation
+- Responsive header collapse below `md`
+
+---
+
+## D58: Responsive Option Grids Use `LayrzCol` Integer Spans
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Grid System
+
+### Context
+
+This row's spec defined responsive layout using a `Sizes` enum. However, **decision D9 deleted the `Sizes` enum**, making the spec unbuildable.
+
+### Decision
+
+**Radio/checkbox grid layouts use per-breakpoint `int` spans (1–12), mirroring `LayrzCol`'s API:**
+
+```dart
+LayrzRadioInput<T>(
+  xs: 12,  sm: 6,  md: 4,  lg: 3,  xl: 2,
+  items: [...],
+  onChanged: (v) => …,
+)
+```
+
+Layout uses the real `LayrzRow` + `LayrzCol`, not a reimplementation.
+
+### Rationale
+
+**Vocabulary consistency**. `LayrzCol` already implements cascading fallback. Reusing its parameter names means one concept for developers, not two.
+
+**Avoid boilerplate**. A single `columns: int` parameter forces callers to hand-roll responsiveness. Per-breakpoint spans let the component handle it.
+
+**No new enum**. Introducing a `Columns` enum would duplicate cascade logic and risk divergence.
+
+### Consequences
+
+- `LayrzRadioInput` takes `xs: 12` (non-nullable), `sm/md/lg/xl` (nullable, cascade)
+- Grid layout uses actual `LayrzRow` and `LayrzCol` children
+- Follow-through on D9 (deleting Sizes)
+
+---
+
+## D59: Combobox Free-Form Entry Is Opt-Out
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: API Design / Feature Scope
+
+### Context
+
+`LayrzComboBoxInput` is editable (unlike `LayrzSelectInput`, which is read-only). Should typed values be valid by default, or should the field lock to the options list?
+
+### Decision
+
+**Free-form entry is the default. Set `allowFreeForm: false` to lock to options.**
+
+When `allowFreeForm: true`: Any typed text is valid, submitted on Enter or blur. Overlay is a suggestion aid.
+
+When `allowFreeForm: false`: Field reverts to the last matching option on blur.
+
+### Rationale
+
+**Free-form is the reason combobox exists separately from select.** If locked-to-options was the design, `LayrzSelectInput` already handles that. Free-text is what combobox adds, so it is the default.
+
+**Opt-out rather than opt-in**. Making free-form require an explicit flag would force the typical case to be opt-in, which is backwards.
+
+### Consequences
+
+- `LayrzComboBoxInput` ships with `allowFreeForm: true` by default
+- Invalid typed values (when `allowFreeForm: false`) revert on blur without error
+
+---
+
+## D60: Duration Units Are Configurable and Capped Per Unit
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Component Design / Data Modeling
+
+### Context
+
+`LayrzDurationInput` must convert between user-visible UI and Dart's fixed-length `Duration` type. Which units should be visible, how should they map to Duration, and what are the bounds?
+
+### Decision
+
+**Units are configurable:**
+- `visibleUnits: {day, hour, minute, second}` defaults to all four
+- Each unit is **capped to its natural range**: hour 0–23, minute 0–59, second 0–59, day unbounded
+
+**Result: exactly one field representation per `Duration`.**
+
+### Rationale
+
+**Capped ranges give a unique representation**. Uncapped (e.g., allow minute: 90) makes the mapping ambiguous: two different field states represent the same Duration. Capping ensures exactly one representation.
+
+**No year/month/week support**. These are not fixed-length and cannot map onto `Duration`. Callers who want any number of minutes use `LayrzNumberInput` and construct `Duration` themselves.
+
+### Consequences
+
+- New `LayrzDurationInput` component (DESIGN-44)
+- New `LayrzDurationUnit { day, hour, minute, second }` enum
+- Per-unit field capping
+- Surface: anchored overlay on desktop, `LayrzBottomSheet` below `md` (D52)
+
+---
+
+## D61: M3 Scope Trim — MultiSelect and DualList Move to M4
+
+**Date**: 2026-08-21  
+**Status**: Decided  
+**Category**: Release Planning / Scope Management
+
+### Context
+
+The original M3 scope included DESIGN-41 `LayrzMultiSelectInput` and DESIGN-43 `LayrzDualListInput`. Both would consume M3 picker-surface decisions. However, M3 is already at 9 rows + 1 prerequisite, and adding two more risks the release.
+
+### Decision
+
+**Move DESIGN-41 and DESIGN-43 to M4 (Pickers).**
+
+M3 ships with: 8 input components, 1 stepper, and supporting work (bottom sheet, anchored panel, select item).
+
+### Rationale
+
+**M3 scope is at the limit**. 9 components + 1 prerequisite is already substantial. Adding 2 more would stretch testing and review.
+
+**No architectural blocker**. Both would build on top of existing M3 decisions. Deferring them does not require rework.
+
+**Better released than rushed**. M3 ships solid and ready for review; M4 absorbs the pickers without tight deadline.
+
+### Consequences
+
+- DESIGN-41 `LayrzMultiSelectInput` → M4
+- DESIGN-43 `LayrzDualListInput` → M4
+- M3 scope: 9 input/surface rows + 1 prerequisite
+- 0.0.13 does not include multi-selection inputs
+
+---
+
+## D62: Remove Flutter Widget Preview System
+
+**Date**: 2026-08-22  
+**Status**: Decided  
+**Category**: Build System / Developer Experience
+
+### Context
+
+Flutter 3.47 introduced the stable `@Preview` widget-preview API. Early in layrz_ui development, this system was adopted to enable quick preview of widgets without launching a device. However:
+
+1. The preview system adds build complexity (`flutter/widget_previews.dart`, `LayrzPreviewTheme`, `.widget_preview/` project).
+2. Maintenance burden: every visual widget needs a corresponding preview function.
+3. Low adoption: the team rarely uses widget previews during development; device testing is the primary workflow.
+4. Minimal productivity gain: previews save time only for isolated components; most work involves integration testing across the app.
+
+### Decision
+
+**Remove the entire Flutter widget-preview system from layrz_ui.**
+
+- Delete all `@Preview` annotations from widgets
+- Delete all preview functions and dedicated preview files (`*_previews.dart`, `*_preview.dart`)
+- Delete the `lib/src/preview/` module and `lib/preview.dart` barrel
+- Delete the `.widget_preview/` project
+- Remove preview-related imports (`package:flutter/widget_previews.dart`, `package:layrz_ui/preview.dart`)
+- Update documentation (CLAUDE.md, engineering docs)
+
+### Rationale
+
+**Complexity vs. benefit**: The preview system adds real complexity (import decisions, test harnesses, a separate Flutter project) for limited practical return. Development workflow is device-based; static previews do not accelerate that.
+
+**Maintainability**: Removing the system eliminates an entire category of maintenance (keeping `LayrzPreviewTheme` aligned with the real theme, documenting preview patterns, ensuring preview functions are updated when widgets change).
+
+**SDK floor unchanged**: The decision to remove `@Preview` does not affect the Flutter 3.47 floor — `RawTooltip`, `RawMenuAnchor`, and `RawRadio` remain hard requirements that justify staying on 3.47+.
+
+### Consequences
+
+- 10+ preview test files removed (minor coverage reduction; no behavioral tests lost)
+- 14 dedicated preview files deleted
+- 54 `@Preview` annotations and related functions removed
+- CLAUDE.md rule #3 removed entirely
+- Decision D18 (preview.dart placement rationale) remains in history, marked as superseded
+- `.widget_preview/` and all its contents removed from the repository
+- Documentation updated to reflect no preview system
+- SDK constraint section revised (no mention of `@Preview` API requirement)
+
+---
+
+## D63: No Input Wraps Another Input — Every Field Composes `LayrzInputChrome` Directly
+
+**Date**: 2026-08-23  
+**Status**: Decided  
+**Category**: API Design / Component Architecture
+
+### Context
+
+An audit of `development` @ `b639d2a` on 2026-08-23 examined how all ten M3 input components obtain their visual chrome (border, label, help text, error state, prefix/suffix slots). Three compositions exist:
+
+- **Uses `LayrzInputChrome` directly (4)**: `LayrzTextInput` (`text_input.dart:375`), `LayrzTextAreaInput` (`textarea_input.dart:390`, `.variableHeight` — see D55), `LayrzSelectInput` (`select_input.dart:331` desktop / `:426` mobile), `LayrzDurationInput` (`duration_input.dart:288` / `:354`).
+- **Wraps another input (3)**: `LayrzSearchInput` (`search_input.dart:223`), `LayrzComboBoxInput` (`combobox_input.dart:480`), `LayrzNumberInput` on its `hideStepButtons=true` path (`number_input.dart:561`).
+- **Neither — control with a label, not a field (3)**: `LayrzRadioInput`, `LayrzCheckboxInput`, `LayrzSwitchInput`.
+
+The wrapping pattern is not hypothetical risk — it has already produced three concrete defects:
+
+1. **`LayrzNumberInput` accepts `errors` and never forwards it** on the `hideStepButtons=true` path (`number_input.dart:561`). The identical defect was already found and fixed on the *other* path of the same `if`, after the maintainer saw it on a physical device: the chrome painted a red border and danger-tinted caps while the field interior stayed neutral grey. One widget, two architectures, and the bug survived in the branch nobody looked at.
+2. **`LayrzSearchInput` cannot show an error at all** — it does not accept `errors`, `isRequired`, or help text, and never sets `readOnly` (`search_input.dart`, constructor).
+3. **`LayrzNumberInput` is the only input that duplicates the chrome's border**, rebuilding it in an outer `Container` (`number_input.dart:618-620`) because it needed step buttons at the sides and wrapping left it no way to place them there. It is the sole real visual duplication in the module — the borders in `checkbox_input.dart:257-260` and `radio_option.dart:202-207` are the *control glyph's* border (the checkbox box, the radio circle), not field chrome, and are not duplication of this kind.
+
+### Decision
+
+**No input widget wraps another input widget. Every input composes its own (editing primitive + `LayrzInputChrome`) pair directly.**
+
+`LayrzInputChrome` is the shared visual layer for inputs that are *fields*. An input must never obtain its chrome by wrapping a sibling input, because the wrapper then inherits chrome it cannot control and must forward every property by hand — and, as the evidence above shows, forwarding is where properties get dropped.
+
+**Explicitly excluded from this rule**: `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput`. These are controls with a label, not bordered fields — they own their visual state deliberately, and forcing them through `LayrzInputChrome` would impose a field shape they do not have. This exclusion is a deliberate part of the decision, not an omission: it exists to be found by whoever later reads "no input wraps another input" as universal and goes looking for a fourth migration.
+
+### Rationale — undeclared coupling, and why now
+
+The primary reason for this decision is **blast radius, not flexibility**. As the maintainer put it:
+
+> "Lo que no quiero es, si el día de mañana necesitamos cambiar el TextInput por X o Y, no rompa el resto de inputs." — *(What I don't want is: if tomorrow we need to change the TextInput for whatever reason, that it breaks the rest of the inputs.)*
+
+Wrapping creates coupling that nothing in the codebase declares. `LayrzTextInput` is not just a widget here — it is a de facto base class for `LayrzSearchInput`, `LayrzComboBoxInput`, and `LayrzNumberInput`'s `hideStepButtons=true` path (see Context above), without that relationship being stated anywhere or enforced by anything. A change to `text_input.dart` therefore has a blast radius of four widgets, and the three downstream ones are only discovered by whoever happens to break them.
+
+That coupling shows up as **silent property drift, not compile errors** — the defects in Context are exactly this: `number_input.dart:561` accepts `errors` and never forwards them; `LayrzSearchInput` never accepted `errors`, `isRequired`, or help text at all. Neither failure failed a build. One shipped and was found on a physical device. Composition against a stable, minimal editing primitive bounds the blast radius: each input owns its own chrome and its own forwarding, so a change to one input's chrome cannot leak into another.
+
+**This is not hypothetical — it is the next scheduled change to this file.** DESIGN-141 is already specified and will add `hint`, `tooltip`, and a required-indicator `label` to `LayrzTextInput`'s `Semantics` node. Under the current (wrapping) architecture, that change propagates automatically into `LayrzSearchInput` and `LayrzComboBoxInput` because they wrap it — and it would land on top of an unresolved contradiction about whether those two already double-announce their semantics: an audit says they do, while a passing test on `combobox_input_a11y_test.dart` says the label is announced exactly once. Landing DESIGN-141 before this migration means shipping a semantics change into that unresolved contradiction, in three widgets at once instead of one.
+
+**Sequencing constraint: DESIGN-142 (this migration) must land before DESIGN-141.** DESIGN-141's `Semantics` change should touch exactly one widget, which is only true once `LayrzSearchInput` and `LayrzComboBoxInput` no longer wrap `LayrzTextInput`. This is the more expensive ordering — DESIGN-142 is the larger piece of work, since it requires the editing-core extraction and the public-API decision that follows from Dart's per-library privacy (see Consequences below) — but the alternative is landing 141's change three times, on a wrapping architecture this decision is retiring anyway.
+
+M3 Inputs is largely built; **M4 Pickers is entirely ahead** (D61), and it supplies a secondary, supporting reason to settle this now rather than later. Every picker is field-shaped: a non-editable or semi-editable field with a trailing affordance that opens a panel, and typically wanting both an identifying glyph and a clear action.
+
+The two existing inputs closest to that shape — `LayrzSelectInput` and `LayrzDurationInput` — **already use `LayrzInputChrome` directly, and are the healthy ones.** The one input that needed a control at its side (`LayrzNumberInput`'s step buttons) took the wrapping route instead and had to duplicate the border to place them. M4 is roughly a dozen pickers with that same requirement — an identifying glyph plus a trailing action — so the pattern is worth settling now, on three migrations, rather than discovering it midway through twelve. Going through the chrome directly keeps its prefix/suffix slots available to each picker and leaves room for a trailing action button — flexibility that wrapping a text input forecloses, because the wrapper only ever sees what the wrapped input's own constructor chose to expose. Unlike the coupling argument above, this reason is temporary: M4 ends, and it does not restate the decision's rationale after M4 ships.
+
+### Scope
+
+**In scope — 3 inputs to migrate:**
+- `LayrzSearchInput` (currently wraps, `search_input.dart:223`)
+- `LayrzComboBoxInput` (currently wraps, `combobox_input.dart:480`)
+- `LayrzNumberInput`'s `hideStepButtons=true` path (currently wraps, `number_input.dart:561`)
+
+**Explicitly out of scope — `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput`.** See the exclusion above; do not read this decision as calling for their migration.
+
+### Consequences
+
+- **Known prerequisite**: for `LayrzSearchInput` and `LayrzComboBoxInput` to compose `LayrzInputChrome` directly, the text-editing core of `LayrzTextInput` must be extractable without its chrome. Dart privacy is per-library (per-file, absent `part`), so extracting that core into its own file means it **cannot remain underscore-private** — it becomes public API needing a name and documentation, or the extraction uses `part`. This already cost a round with `NumberFieldControl`; this decision creates that API-surface question for the text core and does not itself settle it.
+- `LayrzNumberInput`'s outer-`Container` border duplication (`number_input.dart:618-620`) is retired once its `hideStepButtons=true` path is migrated; step buttons become a chrome-native affordance instead of an outer wrapper.
+- `LayrzSearchInput` gains `errors`, `isRequired`, help text, and `readOnly` support as a direct consequence of going through the chrome — not as separate follow-up work.
+- Three inputs' migrations are tracked as the concrete deliverable of this decision; see the M4 Pickers milestone for scheduling.
+
+### Open Question
+
+Whether `LayrzInputChrome`'s single `suffixSlot` + `onSuffixTap` can carry **two** trailing affordances at once — a picker's identifying glyph *and* a clear button — or whether the chrome needs an explicit action slot separate from suffix. This is left open, to be settled during the migration rather than during M4 planning.
+
+### Review Trigger
+
+After the three in-scope migrations ship, confirm the open question above is resolved one way or the other before M4 Pickers begins consuming `LayrzInputChrome`, so no picker has to guess at a slot contract still in flux.
+
+### Amendment (2026-08-24) — NumberInput Scope Corrected; Outer Border Stays; Acceptance Criterion Reworded
+
+Three corrections, found during DESIGN-142 implementation and settled by the maintainer.
+
+**1. Scope was wrong about `LayrzNumberInput`.** The Context and Scope sections above name only the `hideStepButtons=true` path (`number_input.dart:561`) as wrapping, which implies the step-button path (`:641`) already composed the chrome directly. It did not — **both branches wrapped `LayrzTextInput`**, and the selector at `:499` is `!hideStepButtons && !disabled`, so `disabled: true` routed through the `:561` path too, regardless of `hideStepButtons`. That is **three configurations**, not two, and all three wrapped before this migration.
+
+**2. The outer `Container` border does NOT retire — this decision's Consequences was wrong to say it would.** Consequences originally stated: *"`LayrzNumberInput`'s outer-`Container` border duplication (`number_input.dart:618-620`) is retired once its `hideStepButtons=true` path is migrated; step buttons become a chrome-native affordance instead of an outer wrapper."* This was never coherent with Scope as written — the outer `Container` exists only on the step-button path, which the original Scope excluded. Independent of that internal contradiction, **the maintainer ruled during implementation that the outer `Container`, its border, and the full-height step caps are intended design, not duplication, and they stay.** That consequence is **withdrawn**, not deferred. `LayrzNumberInput` migrated all three configurations onto `LayrzInputChrome` directly (`develop` @ `a86644a`), and the outer border and caps render exactly as before.
+
+   One more pre-existing, deliberately-unfixed detail worth recording here so nobody "fixes" it later: the outer `Container` and the chrome it now contains both paint `spec.backgroundColor` — a double *fill*, not a double border. It is invisible (same opaque colour resolved from the same spec) and left alone.
+
+**3. Acceptance criterion 1 was too literal.** As written — *"No widget under `lib/src/inputs/` constructs another `Layrz*Input`"* — it fails a mechanical grep even after a correct migration, because two compositions construct an input from inside another input's **panel surface**, not by wrapping for chrome:
+   - `lib/src/inputs/src/select/select_input_surface.dart:175` — a `LayrzTextInput` used as the search box inside the select picker's panel.
+   - `lib/src/inputs/src/duration/duration_picker_panel.dart:95,119,145,171` — four `LayrzNumberInput`s used as the day/hour/minute/second spinners inside the duration picker's panel.
+
+   Both are the same category of deliberate exclusion this decision already carves out for `LayrzCheckboxInput`/`LayrzSwitchInput`/`LayrzRadioInput`: a control embedded in a panel, not chrome obtained by wrapping. The criterion now reads:
+
+   > No input widget obtains its visual chrome by wrapping another input widget. (Exclusions: `LayrzCheckboxInput`, `LayrzSwitchInput`, `LayrzRadioInput` — controls, not fields, per the Decision above; `select_input_surface.dart:175` and `duration_picker_panel.dart:95,119,145,171` — inputs embedded inside a panel surface, not chrome inherited by wrapping.)
+
+   Named explicitly so the next reader does not "find" a fifth or sixth migration that was never in scope.
+
+---
+
+## D64: Prefix/Suffix Slot Semantics — Four Categories, Named Only When Told
+
+**Date**: 2026-08-24  
+**Status**: Decided  
+**Category**: Accessibility / Component Architecture
+
+### Context
+
+`LayrzInputChrome` renders every input's prefix and suffix slot (icon, widget, or text; optionally
+tappable via `onPrefixTap`/`onSuffixTap`) inside its own `Row`, ahead of and behind the field's
+`EditableText` (`input_chrome.dart:393-405`). Before this row, a tappable slot's `GestureDetector` used
+the framework default `excludeFromSemantics: false`, so it contributed an anonymous
+`SemanticsAction.tap` to whatever node absorbed it — and no slot had a `semanticLabel` to attach to that
+action.
+
+**What Unit 1's probe measured** (`test/inputs/shared/input_chrome_phase0_probe_test.dart`, run and then
+deleted per its own remit):
+
+```
+PHASE0 [suffix] result -> suffixTapped=true  fieldFocused=false
+PHASE0 [prefix] result -> prefixTapped=true  fieldFocused=false
+PHASE0 [control, no slots] hasTapAction=false
+PHASE0 [label-baseline] "Amount\nPREFIX"
+```
+
+**Both sides misdirect.** A screen-reader user who activates what is announced as the field "Amount"
+fires the *slot's* callback instead — on the prefix side as well as the suffix side. The control case is
+the load-bearing line: with no slots at all, the field's own merged `Semantics` node carries **no tap
+action of its own** (`hasTapAction=false`).
+
+**The mechanism, corrected from an earlier reading of source alone.** A pre-implementation pass over this
+row read `SemanticsConfiguration.absorb`'s merge —
+
+```dart
+_actions.addAll(child._actions);
+```
+
+(`packages/flutter/lib/src/semantics/semantics.dart:6816`) — and, because `addAll` overwrites on key
+collision so the last-absorbed child wins, predicted that a **suffix** slot (absorbed after the field in
+`_buildRowContent`'s `prefix → EditableText → suffix` traversal order) would win the merge and misdirect,
+while a **prefix** slot (absorbed before) would be silently shadowed by the field's own tap action and
+merely inert. The measurement above contradicts the "prefix inert" half, and the reason is the control
+case: **there was no field tap action for a prefix slot to be shadowed by, on either side.**
+
+`LayrzTextInput`'s field builds its tap-to-focus interaction through
+`TextSelectionGestureDetectorBuilder.buildGestureDetector`, which the Flutter framework constructs with
+`excludeFromSemantics: true` (`text_selection.dart:3780`) — tap-to-focus is deliberately excluded from
+semantics by the SDK itself. `RenderEditable`'s semantics `onTap` (`editable.dart:1491-1494`) exists only
+to activate inline link spans (a `TextSpan.recognizer` inside the field's content), not to focus the
+field. So the field's merged node never carried a tap action for a slot to collide with in the first
+place.
+
+**Record the `absorb` overwrite for what it is: real in the SDK, but not what decided anything here.**
+There was no competing action for a slot's `GestureDetector` to overwrite — describing this as "last
+absorbed child wins" implies a contest between the slot and the field that never happened. The correct
+framing is: **the slot's tap action is un-shadowed because the field never had one.** The traversal-order
+/ `addAll` mechanic remains true and worth recording (it is what would matter if the field ever did carry
+its own tap action — e.g. via a future `onTap` semantics annotation), but it is the explanation of a
+side detail, not of the defect.
+
+**Severity is higher than first assumed.** Every unlabelled interactive slot — prefix or suffix, on
+every input that offers one — misdirects a screen-reader user who activates the field, not only
+`LayrzSearchInput`'s clear button (a suffix) that first surfaced the row.
+
+### Decision
+
+**Every element `LayrzInputChrome` renders falls into exactly one of four semantics categories. Nothing
+is silent by accident:**
+
+| Category | Which slots | Shape |
+|---|---|---|
+| **named** | any slot with an explicit `semanticLabel` (interactive or not); non-interactive text slots (merge by their own text) | its own `Semantics(container: true, …)` node — with `button: true` when also interactive — or merged into the field's own accessible name |
+| **decorative** | non-interactive icon slots (always); any slot with `isDecorative: true` | `ExcludeSemantics` |
+| **pointer-only** | interactive (`onTap` non-null) slots nobody named | rendered, tappable, `excludeFromSemantics: true` on the `GestureDetector` — contributes nothing to the semantics tree |
+| **the caller's own responsibility** | non-interactive, unlabelled, non-decorative **widget** slots | passed through untouched |
+
+The seam carrying the meaning is `resolvePrefixSlot`/`resolveSuffixSlot`, which attach `semanticLabel`
+and `isDecorative` (new fields on the internal, unexported `LayrzInputPrefixSlot`/`LayrzInputSuffixSlot`)
+from the caller's params. The node itself is built one layer in, by the chrome's `_buildSlotContent`
+(`input_chrome.dart:612-704`). This is not a new split: `number_field_edge.dart:158-162` already does the
+equivalent one layer further out, for the ± step caps. Meaning cannot live in the chrome — it never sees
+a call site, only a slot. A node cannot live in the seam — pre-wrapping it there would reproduce
+`LayrzNumberInput`'s pre-flattening (§0.5 of the DESIGN-148 dossier) across all five chrome-composing
+inputs, not just one.
+
+**`Semantics(container: true, …)` is mandatory on every named node.** The ± caps
+(`number_field_edge.dart:158`) omit `container:` because they sit **outside** the field's own `Semantics`
+ancestor. Prefix/suffix slots sit **inside** it (`input_chrome.dart:393-405`). Without `container: true`,
+a slot's label and `button: true` are absorbed into the **field's own** node — the text field itself
+would announce as a button carrying the slot's label and action. That is strictly worse than the defect
+this row exists to remove, and copying the ± caps' `Semantics` verbatim ships it.
+
+**Named handles the collision by construction, on both branches, by two different mechanisms — this is
+what completes the accounting.** A labelled interactive slot gets its own node, so its action never
+reaches the field's node to collide with anything. An unlabelled interactive slot contributes no action
+at all. Either way, the field stops advertising an action it cannot name.
+
+**Blanket suppression (option C) was considered and rejected, specifically because of that symmetry.**
+Suppressing every slot's tap action, named or not, would have "fixed" the misdirection by amputation —
+the collision disappears because the affordance disappears, for everyone. The chosen design (internally,
+"option E") fixes it by construction instead: a named slot keeps its affordance, gains its own
+`Semantics` node, and becomes a real, double-tap-operable control for touch-AT users.
+
+**The icon → label inference table (option D) was considered and rejected.** It cannot distinguish this
+package's own `MdiIcons.close` from a third-party caller's identical icon used for something else — any
+such table is the chrome silently guessing the developer's intent from an implementation detail
+(which `IconData` was passed), which is exactly the kind of inference this decision refuses to make
+even at a single entry. A generic, non-specific `l10n` fallback name (option A) was rejected for the
+same reason in the other direction — a slot announced as `"Icon"` or `"Button"` is not honest labelling,
+it just moves the guess into the string table.
+
+**The widget pass-through category was found mid-implementation, not designed up front — record it as a
+correction.** The row as first implemented (`4159b33`, `62d5a47`) excluded every non-interactive,
+unlabelled slot uniformly — icon **and** widget — via `ExcludeSemantics`. A follow-up commit
+(`8d816d7`) corrected this: the **widget** form of `prefix:`/`suffix:` is the one slot shape where the
+caller has a semantics seam of their own — they may have already embedded a `Semantics` node in whatever
+they passed. Excluding that subtree unconditionally silenced semantics the caller deliberately attached
+at their own call site, and — worse — quietly broke the wiki's documented escape hatch (see Consequences)
+before that escape hatch had even shipped, since "pass a real, focusable, labelled control instead" is
+meaningless if the chrome then excludes it anyway. A non-interactive, unlabelled *icon* slot still
+excludes unconditionally: an `Icon` the chrome constructs itself carries no semantics of its own to
+protect, so there is nothing to pass through.
+
+**Text slots merging into the field's own accessible name is unchanged, and is correct** — `prefixText:
+'$'` on a field labelled `'Amount'` belongs in the field's name, not in a node of its own; the measured
+baseline for the merge is `"Amount\nPREFIX"` (label, newline, then the prefix text — see Context). One
+interaction is worth stating explicitly: a **labelled, tappable** text slot leaves this category — it
+becomes its own `button: true` node and its text leaves the field's accessible name, because at that
+point it is a control, not a fragment of the field's identity. An **unlabelled** tappable text slot stays
+merged into the field's name and loses only its action (moving to pointer-only for the tap, per the table
+above).
+
+**Keyboard traversal was considered and is deliberately out of scope.** `Semantics` describes; `FocusNode`
+/ `Focus(onKeyEvent:)` / `Shortcuts`+`Actions` act. The chrome is a visual component and does not own the
+keyboard layer — consistent with `tappable.dart:27-30`, where focus "remains with whatever real control
+wraps this widget." Record the limit honestly rather than let it read as an oversight: the "pass a real
+control" escape hatch works only for the **widget** form. `prefixIcon:`/`onPrefixTap:` and
+`prefixText:`/`onPrefixTap:` are constructed entirely by the chrome from an `IconData` or a `String` — a
+value with no seam of its own — so **those two forms cannot be made keyboard-reachable by any caller,
+public API or otherwise.** All of this package's own tappable slots today
+(`search_input.dart:408`,`:469`, `select_input_surface.dart:180`) and every example demo use exactly
+those forms. `button: true` on a touch-operable, keyboard-unreachable node is not a false claim — it is a
+common, legitimate state for a control — and under this decision the chrome claims that role only where
+it was actually given a label to attach.
+
+### Rationale
+
+**The cost, plainly, not as a footnote.** Two identical-looking clear buttons now behave differently.
+`LayrzSearchInput`'s clear button is announced as `'Clear'` (`context.l10n.inputsSearchClear`) because
+`search_input.dart:411`/`:473` calls `resolveSuffixSlot` directly, at its own call site, with a
+`semanticLabel`. `select_input_surface.dart:175-182`'s identical-looking clear button — same
+`MdiIcons.close`, same `onSuffixTap` shape — is **pointer-only**, because it routes through the *public*
+`LayrzTextInput`, which has no `suffixSemanticLabel:` parameter for the surface to pass a label through.
+That asymmetry is the accepted, current cost of refusing icon-based inference (option D, above); it is
+recorded here so it reads as a known trade-off rather than an unexplained inconsistency the next reader
+"fixes" by guessing.
+
+**The remedy is named, not left to be re-derived.** Public `prefixSemanticLabel:`/`suffixSemanticLabel:`
+parameters on the chrome-composing inputs close both halves of the cost at once: `select_input_surface.dart`
+gains a way to name its clear button, and every third-party caller gains a way to name their own
+icon/text slot's callback. Deliberately deferred, so M4 Pickers (D63, D61) can inform the final parameter
+shape rather than this row guessing it under a dozen pickers' worth of pressure. Until that row ships,
+**the external contract is not satisfiable** — a third-party caller has no way to name a tappable
+icon/text slot, and every such slot they build today is pointer-only. Say this plainly rather than
+implying the row is closed. The debug-mode assertion `assert(onTap == null || semanticLabel != null)`
+(considered and deferred, not rejected) ships together with those parameters — it is coherent once a
+caller has a way to satisfy it, but unshippable today: it would fire on `text_input.dart`'s pass-through
+of a caller's existing `onSuffixTap` and break every current consumer's debug build.
+
+**The help affordance icon and the shortcut badge are the same defect with the same answer.** Same merge
+mechanic (a `GestureDetector`/tap inside the field's `Semantics` ancestor with no name attached), same
+composition precedent (name it via its own `container: true` node, or leave it pointer-only). Deferred to
+their own row purely for reviewability — that row **applies** this decision, it does not re-derive the
+merge mechanic from scratch.
+
+**The lock icon and the error icon are explicitly NOT this defect — they are field *state*, not slot
+content — and the next row must open by checking for over-announcement, not by assuming absence.**
+`textarea_input_a11y_test.dart` asserts `isReadOnly: true` and passes, while zero inputs set `readOnly:`
+on their own `Semantics` node — it arrives natively through `EditableText`'s own semantics. Labelling
+the lock icon in addition would double-announce read-only state. Error text is already plain,
+non-excluded `Text` (`input_footer_slot.dart:80`,`:135`) and needs no change here.
+
+**The ± caps' keyboard gap is a known, consistent consequence of the keyboard-traversal reversal, not a
+new inconsistency.** `number_field_edge.dart` has no `Focus`, `FocusNode`, or `FocusableActionDetector`,
+so the caps are announced as buttons a keyboard user cannot reach. Under this decision that is the house
+position applied consistently, not a special case — but it is still a real, felt gap and belongs on the
+record rather than silently accepted.
+
+**A separate follow-up row: `disabled` does not reach a caller-supplied widget slot.**
+`input_chrome.dart`'s `disabled` flag only suppresses the chrome's *own* tap wrapper
+(`return content;` when `!hasCallback || disabled`). A caller-supplied focusable control passed through
+`prefix:`/`suffix:` stays fully live — tappable and focusable — on a disabled field. This matters now
+that "pass a real control" is the documented house answer for naming an affordance. The existing test
+`'disabled prefix/suffix taps are not triggered'` only exercises the `prefixText` + `onPrefixTap` path and
+does not cover it. Recorded as its own row; **not fixed by this decision.**
+
+**Rejected, recorded so none of these are re-proposed:** the icon → label inference table (option D); a
+generic `l10n` fallback name for every unlabelled slot (option A); blanket suppression of every slot's tap
+action (option C); migrating the package's own three internal tappable call sites to the widget form —
+there is nothing to migrate to, the widget form is strictly more ceremony for the same result; deprecating
+the tap-on-icon/text form outright — it is the ergonomic path and every existing caller (internal and,
+presumably, external) uses it.
+
+### Consequences
+
+- `LayrzInputPrefixSlot`/`LayrzInputSuffixSlot` (internal, not exported) gain `semanticLabel` and
+  `isDecorative` fields. Non-breaking: both are additive on an unexported type.
+- `LayrzSearchInput` names its clear button (`context.l10n.inputsSearchClear`, default `'Clear'`) and
+  marks its magnifier decorative on both its desktop and mobile branches. `LayrzSelectInput` marks its
+  chevron decorative.
+- One new in-package l10n key, `inputsSearchClear`, defaults to English. `layrz_ui_i18n` is a separate
+  package (`>= 0.0.9`) and its translation of this key will lag a release — expected, not a defect.
+- **D63 forward coupling**: every one of M4's roughly dozen pickers inherits this four-category
+  accounting and the "name only when told" rule the moment it composes `LayrzInputChrome`. None of them
+  should re-derive it.
+- Three items are explicitly deferred to their own rows, each named above so they are applied rather than
+  re-discovered: public `*SemanticLabel` parameters (with the F12 assert), the help icon / shortcut badge
+  application of this same decision, and the `disabled`-does-not-reach-a-caller-widget gap. A fourth —
+  the lock/error icon audit — is deferred but is explicitly **not** an application of this decision; it
+  starts from the opposite risk (over-, not under-, announcement).
 

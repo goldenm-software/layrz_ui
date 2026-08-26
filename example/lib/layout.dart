@@ -25,7 +25,7 @@ class ShowroomLayout extends StatelessWidget {
       body: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        child: SingleChildScrollView(child: child),
+        child: child,
       ),
       logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
       userName: 'John Doe',

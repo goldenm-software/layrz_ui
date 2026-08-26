@@ -4,8 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
-
 void main() {
   group('LayrzApp', () {
     testWidgets('imperative constructor pumps without error', (tester) async {
@@ -63,12 +61,12 @@ void main() {
         ),
       );
 
-      final defaultTheme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final defaultTheme = LayrzThemeData.light();
       expect(resolvedTheme.primaryColor, equals(defaultTheme.primaryColor));
     });
 
     testWidgets('DefaultTextStyle carries theme.textStyle', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await tester.pumpWidget(
         LayrzApp(
@@ -91,7 +89,7 @@ void main() {
     });
 
     testWidgets('IconTheme carries theme.iconTheme', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await tester.pumpWidget(
         LayrzApp(
@@ -119,7 +117,7 @@ void main() {
     });
 
     testWidgets('ColoredBox carries theme.backgroundColor', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
 
       await tester.pumpWidget(
         LayrzApp(
@@ -176,7 +174,6 @@ void main() {
     testWidgets('color defaults to theme.primaryColor', (tester) async {
       final theme = LayrzThemeData.light(
         primaryColor: const Color(0xFFAABBCC),
-        fontHandler: const FakeFontHandler(),
       );
 
       await tester.pumpWidget(
@@ -260,7 +257,7 @@ void main() {
     });
 
     testWidgets('router path applies DefaultTextStyle, IconTheme, and ColoredBox', (tester) async {
-      final theme = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+      final theme = LayrzThemeData.light();
       late TextStyle resolvedTextStyle;
       late IconThemeData resolvedIconTheme;
 

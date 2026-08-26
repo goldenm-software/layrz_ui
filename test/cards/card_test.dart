@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import '../helpers/fake_font_handler.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
@@ -33,7 +32,7 @@ void main() {
 
     group('Elevation levels', () {
       testWidgets('elevation 1 uses elevation1 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation1;
 
         await pumpThemed(
@@ -49,7 +48,7 @@ void main() {
       });
 
       testWidgets('elevation 2 uses elevation2 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation2;
 
         await pumpThemed(
@@ -64,7 +63,7 @@ void main() {
       });
 
       testWidgets('elevation 3 uses elevation3 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation3;
 
         await pumpThemed(
@@ -79,7 +78,7 @@ void main() {
       });
 
       testWidgets('elevation 4 uses elevation4 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation4;
 
         await pumpThemed(
@@ -94,7 +93,7 @@ void main() {
       });
 
       testWidgets('elevation 5 uses elevation5 shadow', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation5;
 
         await pumpThemed(
@@ -125,7 +124,7 @@ void main() {
 
     group('Background color', () {
       testWidgets('null backgroundColor uses surface token', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedColor = themeData.tokens.colors.sf1;
 
         await pumpThemed(
@@ -158,7 +157,7 @@ void main() {
 
     group('Padding', () {
       testWidgets('applies fixed sp3 padding on all sides', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         const childSize = Size(40, 40);
         const expectedPadding = 14.0;
 
@@ -182,7 +181,7 @@ void main() {
 
     group('Border radius', () {
       testWidgets('uses r12 radius token', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedRadius = themeData.tokens.radius.r3;
 
         await pumpThemed(
@@ -274,7 +273,7 @@ void main() {
       });
 
       testWidgets('pressing lowers shadow and releasing restores it', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         const baseElevation = 3;
         final expectedBaseShadow = themeData.tokens.shadow.elevation3;
         final expectedPressedShadow = themeData.tokens.shadow.elevation2;
@@ -315,7 +314,7 @@ void main() {
       });
 
       testWidgets('elevation 5 pressed clamps to elevation 4', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedPressedShadow = themeData.tokens.shadow.elevation4;
 
         await pumpThemed(
@@ -341,7 +340,7 @@ void main() {
       });
 
       testWidgets('elevation 1 pressed clamps to elevation 1', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
         final expectedShadow = themeData.tokens.shadow.elevation1;
 
         await pumpThemed(
@@ -369,7 +368,7 @@ void main() {
 
     group('Geometry invariant (decision D15)', () {
       testWidgets('card size and child position remain constant across press states', (tester) async {
-        final themeData = LayrzThemeData.light(fontHandler: const FakeFontHandler());
+        final themeData = LayrzThemeData.light();
 
         await pumpThemed(
           tester,

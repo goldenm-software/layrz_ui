@@ -35,7 +35,6 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 - Coverage floor (90%) not breached
 - Invariant verified: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - All new public code documented per CLAUDE.md rule #1
-- Every widget has `@Preview` annotations (rule #3)
 - All M2 components integrated with theme system (LayrzTheme, tokens, state resolution)
 - Wiki pages created/updated for all M2 components
 
@@ -186,7 +185,7 @@ This prevents reflow and flicker during state changes.
 - FAB variants render icon-only with appropriate sizing
 - RawTooltip shows hintText on hover (with caveat that Overlay ancestor is required)
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
-- `@Preview` annotations present at bottom of button.dart file
+
 - Wiki page documents final API, examples, and RawTooltip caveat
 
 ---
@@ -242,7 +241,7 @@ This prevents reflow and flicker during state changes.
 - D15 verified: no geometry changes during state transitions
 - Keyboard activation (Enter/Space) works identically to tap
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
-- `@Preview` annotations present at bottom of card.dart file
+
 - Wiki page documents final API, interaction model, and D15 compliance
 
 ---
@@ -297,7 +296,7 @@ This prevents reflow and flicker during state changes.
 
 **Dependencies**:
 - M1: LayrzTheme, tokens
-- Flutter 3.47: @Preview API (for widget preview annotations)
+
 - Flutter SDK: Overlay, OverlayEntry, TextPainter, RenderBox (for measuring and positioning)
 
 **Files affected**:
@@ -330,7 +329,7 @@ This prevents reflow and flicker during state changes.
 - Dismissal: auto-dismiss on pointer-exit; no tooltip leak across anchors on re-hover
 - Lifecycle safety: no crashes on rapid mount/unmount cycles; no memory leaks
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
-- `@Preview` annotations present at bottom of tooltip.dart file
+
 - Wiki page documents final API, positioning, hit-test transparency guarantee, layout neutrality, anchor-always-visible invariant, and graceful degradation
 - LayrzButton `_buildTooltip()` and `layrzButtonTooltipPosition()` helpers retired
 
@@ -459,7 +458,7 @@ This prevents reflow and flicker during state changes.
 - `maxLines` limits description text before ellipsis
 - `LayrzAlertIcon` is a standalone public widget exported from `lib/alerts.dart`
 - `flutter analyze` clean, tests green (coverage >90%), Material/Cupertino grep empty
-- `@Preview` annotations present at bottom of alert.dart file (one per style)
+ (one per style)
 - Wiki pages document final API, interaction model, style specs table (with split-panel column), icon building block, layout patterns, and implementation notes on border painting and fill flattening
 - Tests verify interactive behavior: hover lift translation, layout neutrality, oscillation safety, keyboard activation, and shadow rendering with flattened fills
 
@@ -715,7 +714,7 @@ Ships with `emptyTextSelectionControls` from `package:flutter/widgets.dart` (a n
 **Files affected**:
 - `lib/src/text/text.dart` (per-module barrel, new)
 - `lib/src/text/src/text.dart` (new, LayrzText widget)
-- `lib/src/text/src/text_previews.dart` (new, @Preview annotations)
+
 - `lib/layrz_ui.dart` (update to export text module)
 - `test/text/text_test.dart` (tests)
 - `wiki/Widgets/LayrzText.md` (new wiki page)
@@ -726,10 +725,10 @@ Ships with `emptyTextSelectionControls` from `package:flutter/widgets.dart` (a n
 
 M2 is complete when all the following criteria are satisfied:
 
-- **Item 1 (LayrzButton)**: Constructor documented, six styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, `@Preview` annotations present, D27 style trim from 12 to 6 applied
-- **Item 2 (LayrzCard)**: Five elevation levels, optional backgroundColor override, interactive cards respond to hover/press/focus with shadow elevation changes, non-interactive cards are inert, D15 verified (no geometry changes during state transitions), `flutter analyze` clean, tests green, `@Preview` annotations present
-- **Item 3 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning with overflow detection and flipping, content is text-only (contentText XOR contentRichText), pass-through requirement (`ignorePointer: true`), graceful degradation with no Overlay ancestor, animation with motion tokens, RawTooltip Overlay requirement documented, SDK `verticalOffset` gotcha documented, LayrzButton `_buildTooltip()` helpers retired, `flutter analyze` clean, tests green (including passthrough verification), `@Preview` annotations present
-- **Item 4 (LayrzAlert)**: Six semantic types (info, success, warning, danger, context, custom), two visual styles (layrz, filledIcon) with split-panel layout and correct style spec resolution, both title and description required, LayrzAlertIcon standalone building block, interactive and non-interactive modes with D15 compliance, `flutter analyze` clean, tests green, `@Preview` annotations present for each style, D27 style trim from 5 to 2 applied
+- **Item 1 (LayrzButton)**: Constructor documented, six styles render correctly, six semantic factories render with icons and colours, loading/cooldown states externally-owned via ValueListenable, D15 interaction states verified (no geometry changes), RawTooltip caveat noted, `flutter analyze` clean, tests green, D27 style trim from 12 to 6 applied
+- **Item 2 (LayrzCard)**: Five elevation levels, optional backgroundColor override, interactive cards respond to hover/press/focus with shadow elevation changes, non-interactive cards are inert, D15 verified (no geometry changes during state transitions), `flutter analyze` clean, tests green
+- **Item 3 (LayrzTooltip)**: Wraps RawTooltip, theme-aware positioning with overflow detection and flipping, content is text-only (contentText XOR contentRichText), pass-through requirement (`ignorePointer: true`), graceful degradation with no Overlay ancestor, animation with motion tokens, RawTooltip Overlay requirement documented, SDK `verticalOffset` gotcha documented, LayrzButton `_buildTooltip()` helpers retired, `flutter analyze` clean, tests green (including passthrough verification)
+- **Item 4 (LayrzAlert)**: Six semantic types (info, success, warning, danger, context, custom), two visual styles (layrz, filledIcon) with split-panel layout and correct style spec resolution, both title and description required, LayrzAlertIcon standalone building block, interactive and non-interactive modes with D15 compliance, `flutter analyze` clean, tests green for each style, D27 style trim from 5 to 2 applied
 - **Item 5 (LayrzChip/ChipGroup)**: Chip styling, delete action, group selection behaviour, state management via WidgetState
 - **Item 6 (LayrzRow/Col)**: 12-column grid, breakpoint-specific widths, responsive adaptation
 - **Item 7 (LayrzConstrainedView)**: Constrains max width, centres horizontally, lays children in Column internally, nothing clipped, exposes spacing parameter with default from tokens
@@ -742,7 +741,7 @@ M2 is complete when all the following criteria are satisfied:
 - **Coverage floor maintained**: `flutter test --coverage` reports >90% coverage (current baseline 97.21%)
 - **Invariant verified**: `grep -r "package:flutter/material\|package:flutter/cupertino" lib/` returns empty
 - **All code documented**: Every public member has doc comments per rule #1
-- **All visual components have @Preview**: Annotations at bottom of widget files
+
 - **Wiki updated**: Pages created for all M2 components with API, examples, and design rationale
 - **engineering/milestone-2.md Status table updated**: All items marked Done (authoritative record kept in sync with code)
 

@@ -124,6 +124,8 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
           alignment: Alignment.centerLeft,
           child: Text(
             labelText,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: tokens.typography.body.copyWith(
               color: color != null ? color! : tokens.colors.fg3,
             ),
@@ -616,6 +618,8 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                         SizedBox(width: tokens.spacing.sp2),
                         Text(
                           formatLayrzShortcut(widget.shortcut),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: tokens.typography.label.copyWith(
                             color: tokens.colors.fg3,
                           ),
