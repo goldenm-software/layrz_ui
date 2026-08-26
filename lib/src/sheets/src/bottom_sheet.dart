@@ -377,8 +377,16 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     final focusChild = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
-        // Dismiss on Escape (modal mode only)
-        if (!widget.isPersistent && event.logicalKey == LogicalKeyboardKey.escape) {
+        // Dismiss on Escape (modal mode only). Guarded the same way as the
+        // barrier's onTap (see the comment there) for consistency across every
+        // pop site in this file — a fast repeated Escape was not reproducible as
+        // an actual double-pop in testing (the second key event is not even
+        // delivered to this handler once the first pop is in flight, unlike the
+        // barrier tap, which is a spatial hit-test unaffected by focus state),
+        // but the guard costs nothing and removes the asymmetry.
+        if (!widget.isPersistent &&
+            event.logicalKey == LogicalKeyboardKey.escape &&
+            (ModalRoute.of(context)?.isCurrent ?? false)) {
           Navigator.of(context).pop();
           return KeyEventResult.handled;
         }
@@ -568,7 +576,15 @@ class _DragHandle extends StatelessWidget {
 
     final currentSize = sheetController.size;
     if (currentSize < lowSnapSize) {
-      Navigator.of(context).pop();
+      // Guarded the same way as the barrier's onTap and the Escape handler, for
+      // consistency across every pop site in this file. In practice a second
+      // drag-to-dismiss during the exit animation was not reproducible as a
+      // double-pop in testing: `sheetController.isAttached` (checked above)
+      // already returns early once the sheet detaches, before this line is
+      // ever reached — but the guard costs nothing and removes the asymmetry.
+      if (ModalRoute.of(context)?.isCurrent ?? false) {
+        Navigator.of(context).pop();
+      }
       return;
     }
 
