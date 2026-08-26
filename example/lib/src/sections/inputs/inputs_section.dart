@@ -140,7 +140,7 @@ class _InputsSectionState extends State<InputsSection> {
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
       title: Text('Inputs Showcase', style: context.tokens.typography.title),
-      itemExtent: 47.0,
+      itemExtent: 45.0,
       items: _allDemos.map((demo) {
         return LayrzScaffoldItem<InputDemo>(
           key: ValueKey(demo.id),
@@ -172,7 +172,7 @@ class _InputsSectionState extends State<InputsSection> {
           crossAxisAlignment: .start,
           mainAxisAlignment: .start,
           children: [
-            Text(demo.name, style: tokens.typography.body.copyWith(fontWeight: .bold)),
+            Text(demo.name, style: tokens.typography.label.copyWith(fontWeight: .bold)),
             Text(
               demo.category,
               style: tokens.typography.label,
