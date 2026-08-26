@@ -12,8 +12,8 @@ void main() {
         LayrzRadioInput<String>(
           labelText: 'Choose a department',
           items: [
-            const LayrzSelectItem(labelText: 'Sales', value: 'sales'),
-            const LayrzSelectItem(labelText: 'Engineering', value: 'eng'),
+            const LayrzSelectItem(value: 'sales', child: Text('Sales'), searchableStrings: {'Sales'}),
+            const LayrzSelectItem(value: 'eng', child: Text('Engineering'), searchableStrings: {'Engineering'}),
           ],
         ),
       );
@@ -30,8 +30,8 @@ void main() {
           LayrzRadioInput<String>(
             labelText: 'Department',
             items: [
-              const LayrzSelectItem(labelText: 'Sales', value: 'sales'),
-              const LayrzSelectItem(labelText: 'Engineering', value: 'eng'),
+              const LayrzSelectItem(value: 'sales', child: Text('Sales'), searchableStrings: {'Sales'}),
+              const LayrzSelectItem(value: 'eng', child: Text('Engineering'), searchableStrings: {'Engineering'}),
             ],
           ),
         );
@@ -48,8 +48,8 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Marketing', value: 'marketing'),
-            const LayrzSelectItem(labelText: 'Sales', value: 'sales'),
+            const LayrzSelectItem(value: 'marketing', child: Text('Marketing'), searchableStrings: {'Marketing'}),
+            const LayrzSelectItem(value: 'sales', child: Text('Sales'), searchableStrings: {'Sales'}),
           ],
         ),
       );
@@ -66,8 +66,8 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: [
-              const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-              const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+              const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+              const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
             ],
           ),
         );
@@ -119,13 +119,19 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: [
-              const LayrzSelectItem(labelText: 'Unified Label', value: 'unified'),
+              const LayrzSelectItem(
+                value: 'unified',
+                child: Text('Unified Label'),
+                searchableStrings: {'Unified Label'},
+              ),
             ],
           ),
         );
 
-        // The label and radio should be merged into one semantics node via the Semantics wrapper.
-        // The label is wrapped with ExcludeSemantics to prevent double-announcement.
+        // The label and radio should be merged into one semantics node via the Semantics
+        // wrapper. BREAKING (DESIGN-142): the outer `Semantics` no longer sets an explicit
+        // `label` -- `child`'s own semantics (a plain `Text`, here) merge upward into it
+        // instead, producing the same single-node result without a separate label string.
         final radioFinder = find.byWidgetPredicate((w) => w is RawRadio);
         expect(radioFinder, findsOneWidget);
 
@@ -158,7 +164,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           disabled: false,
           onChanged: (value) {
@@ -180,7 +186,11 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Disabled Option', value: 'disabled'),
+            const LayrzSelectItem(
+              value: 'disabled',
+              child: Text('Disabled Option'),
+              searchableStrings: {'Disabled Option'},
+            ),
           ],
           disabled: true,
           onChanged: (value) {
@@ -205,7 +215,7 @@ void main() {
             labelText: 'Choose',
             isRequired: true,
             items: [
-              const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
             ],
           ),
         );
@@ -226,7 +236,7 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: [
-              const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
             ],
             errors: [errorText],
           ),
@@ -246,8 +256,8 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: [
-              const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-              const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+              const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+              const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
             ],
           ),
         );
@@ -301,8 +311,8 @@ void main() {
           LayrzRadioInput<String>(
             value: 'a',
             items: const [
-              LayrzSelectItem(labelText: 'Option A', value: 'a'),
-              LayrzSelectItem(labelText: 'Option B', value: 'b'),
+              LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+              LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
             ],
           ),
         );
@@ -357,8 +367,8 @@ void main() {
         LayrzRadioInput<String>(
           value: 'a',
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
         ),
       );
@@ -376,14 +386,17 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: const [
-              LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
             ],
           ),
         );
 
         // Count semantics nodes that carry the label 'Option A'.
-        // The ExcludeSemantics wrapper on the Text prevents the Text widget from contributing
-        // a semantic node, so the label should appear exactly once in the semantics tree.
+        // BREAKING (DESIGN-142): there is no separate `labelText` string anymore -- the
+        // outer `Semantics` sets no explicit `label`, and `child` (here a plain `Text`) is
+        // left un-excluded so its own semantics merge upward into that same node, rather
+        // than contributing a second, sibling node. The label should still appear exactly
+        // once in the semantics tree.
         // ignore: deprecated_member_use
         final semanticsOwner = tester.binding.pipelineOwner.semanticsOwner;
         expect(semanticsOwner, isNotNull);
@@ -404,7 +417,7 @@ void main() {
 
         countLabels(rootNode!);
 
-        // With ExcludeSemantics on the Text, the label is announced only once.
+        // Merged into one node rather than two siblings -- announced only once.
         expect(
           labelCount,
           equals(1),
@@ -423,8 +436,8 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: const [
-              LayrzSelectItem(labelText: 'Option A', value: 'a'),
-              LayrzSelectItem(labelText: 'Option B', value: 'b'),
+              LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+              LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
             ],
           ),
         );
@@ -472,7 +485,11 @@ void main() {
           LayrzRadioInput<String>(
             disabled: true,
             items: const [
-              LayrzSelectItem(labelText: 'Disabled Option', value: 'disabled'),
+              LayrzSelectItem(
+                value: 'disabled',
+                child: Text('Disabled Option'),
+                searchableStrings: {'Disabled Option'},
+              ),
             ],
           ),
         );

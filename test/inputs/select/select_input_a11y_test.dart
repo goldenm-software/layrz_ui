@@ -10,9 +10,9 @@ import '../../helpers/pump_themed_app.dart';
 void main() {
   group('LayrzSelectInput Accessibility - Semantics', () {
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
-      const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+      const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+      const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
+      const LayrzSelectItem(value: 'c', child: Text('Option C'), searchableStrings: {'Option C'}),
     ];
 
     group('Anchor semantics', () {
@@ -440,8 +440,8 @@ void main() {
           var selectedValue = 'a';
 
           final itemsWithEmpty = <LayrzSelectItem<String>>[
-            const LayrzSelectItem(labelText: 'None', value: ''),
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: '', child: Text('None'), searchableStrings: {'None'}),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ];
 
           await pumpThemedApp(
@@ -479,7 +479,8 @@ void main() {
         // against "Option A" and a query of "OPTION" never actually matched
         // anything; the sole assertion checked only that the search box widget
         // still existed, not that filtering narrowed the list. Rewritten with a
-        // genuinely case-insensitive filter and an assertion on the narrowing.
+        // genuinely case-insensitive filter over `searchableStrings` (BREAKING:
+        // `labelText` is gone) and an assertion on the narrowing.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -492,7 +493,7 @@ void main() {
               items: items,
               labelText: 'Choose one',
               enableSearch: true,
-              filter: (query, item) => item.labelText.toUpperCase().contains(query.toUpperCase()),
+              filter: (query, item) => item.searchableStrings.any((s) => s.toUpperCase().contains(query.toUpperCase())),
             ),
           );
 

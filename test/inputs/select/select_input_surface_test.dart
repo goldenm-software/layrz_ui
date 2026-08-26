@@ -18,9 +18,9 @@ import '../../helpers/pump_themed.dart';
 void main() {
   group('LayrzSelectInputSurface', () {
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Apple', value: 'apple'),
-      const LayrzSelectItem(labelText: 'Banana', value: 'banana'),
-      const LayrzSelectItem(labelText: 'Cherry', value: 'cherry'),
+      const LayrzSelectItem(value: 'apple', child: Text('Apple'), searchableStrings: {'Apple'}),
+      const LayrzSelectItem(value: 'banana', child: Text('Banana'), searchableStrings: {'Banana'}),
+      const LayrzSelectItem(value: 'cherry', child: Text('Cherry'), searchableStrings: {'Cherry'}),
     ];
 
     testWidgets('renders all items by default', (tester) async {
@@ -81,7 +81,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('search filters items using the default label match (query supplied by the caller)', (
+    testWidgets('search filters items using searchableStrings (query supplied by the caller)', (
       tester,
     ) async {
       // REWRITE (was: typed into the surface's own now-removed search box). The
@@ -104,6 +104,34 @@ void main() {
       expect(find.text('Banana'), findsOneWidget);
       expect(find.text('Apple'), findsNothing);
       expect(find.text('Cherry'), findsNothing);
+    });
+
+    testWidgets('search matches searchableStrings even when the matched text is not in the child', (
+      tester,
+    ) async {
+      // The whole reason `searchableStrings` and `child` are separate fields: an item
+      // can be found by text that never appears on screen at all (a code, an ID, an
+      // alternate spelling).
+      final itemsWithHiddenSearchTerms = <LayrzSelectItem<String>>[
+        const LayrzSelectItem(value: 'apple', child: Text('Apple'), searchableStrings: {'Apple', 'fruit-001'}),
+        const LayrzSelectItem(value: 'banana', child: Text('Banana'), searchableStrings: {'Banana', 'fruit-002'}),
+      ];
+
+      await pumpThemed(
+        tester,
+        LayrzSelectInputSurface<String>(
+          items: itemsWithHiddenSearchTerms,
+          enableSearch: true,
+          canUnselect: false,
+          query: 'fruit-002',
+          onItemSelected: (_) {},
+        ),
+      );
+
+      // "fruit-002" appears nowhere in either item's rendered child -- only in
+      // Banana's searchableStrings -- yet it narrows the list to just Banana.
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
     });
 
     testWidgets('search uses a custom filter function when provided (query supplied by the caller)', (
@@ -258,9 +286,9 @@ void main() {
       expect(find.byWidgetPredicate((w) => w is Icon), findsOneWidget);
     });
 
-    testWidgets('renders custom item child when provided instead of default label text', (tester) async {
+    testWidgets('renders the item\'s child widget (its only presentation)', (tester) async {
       final customItems = <LayrzSelectItem<String>>[
-        LayrzSelectItem(labelText: 'Custom', value: 'custom', child: const Text('Custom Widget')),
+        const LayrzSelectItem(value: 'custom', child: Text('Custom Widget')),
       ];
 
       await pumpThemed(
@@ -274,7 +302,38 @@ void main() {
       );
 
       expect(find.text('Custom Widget'), findsOneWidget);
-      expect(find.text('Custom'), findsNothing);
+    });
+
+    testWidgets('custom item child is forced to the body text style, never inherited implicitly', (tester) async {
+      // Regression guard for the "white text" bug: a bare `item.child` with no
+      // explicit color (like this plain Text) must not depend on whatever
+      // DefaultTextStyle happens to be ambient -- it must resolve to the real
+      // tokens.typography.body color every time. `pumpThemed` deliberately sets
+      // up no DefaultTextStyle at all (see its own doc comment), so this fails
+      // against the bare `item.child ?? Text(...)` rendering (color resolves to
+      // null, which the engine then paints white) and passes once the row wraps
+      // `item.child` in its own `DefaultTextStyle(style: tokens.typography.body)`.
+      final customItems = <LayrzSelectItem<String>>[
+        const LayrzSelectItem(value: 'custom', child: Text('Custom Widget')),
+      ];
+
+      await pumpThemed(
+        tester,
+        LayrzSelectInputSurface<String>(
+          items: customItems,
+          enableSearch: false,
+          canUnselect: false,
+          onItemSelected: (_) {},
+        ),
+      );
+
+      final richText = tester.widget<RichText>(
+        find.descendant(of: find.text('Custom Widget'), matching: find.byType(RichText)),
+      );
+      final bodyColor = LayrzThemeData.light().tokens.typography.body.color;
+
+      expect(richText.text.style?.color, isNotNull);
+      expect(richText.text.style?.color, equals(bodyColor));
     });
 
     group('keyboard navigation', () {

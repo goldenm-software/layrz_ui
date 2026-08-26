@@ -13,9 +13,9 @@ import '../../helpers/find_button_label.dart';
 void main() {
   group('LayrzSelectInput', () {
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
-      const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+      const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+      const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
+      const LayrzSelectItem(value: 'c', child: Text('Option C'), searchableStrings: {'Option C'}),
     ];
 
     testWidgets('renders without crashing', (tester) async {
@@ -167,7 +167,7 @@ void main() {
 
       expect(selectedItem, isNotNull);
       expect(selectedItem!.value, 'b');
-      expect(selectedItem!.labelText, 'Option B');
+      expect(selectedItem!.searchableStrings, {'Option B'});
     });
 
     testWidgets('field updates after selection', (tester) async {
@@ -360,7 +360,7 @@ void main() {
           items: items,
           labelText: 'Choose one',
           enableSearch: true,
-          filter: (query, item) => item.labelText.contains('A'),
+          filter: (query, item) => item.searchableStrings.any((s) => s.contains('A')),
         ),
       );
 
@@ -395,9 +395,9 @@ void main() {
 
       final customItems = <LayrzSelectItem<String>>[
         LayrzSelectItem(
-          labelText: 'Option A',
           value: 'a',
           child: const Text('Custom A'),
+          searchableStrings: const {'Option A'},
         ),
       ];
 
@@ -416,8 +416,6 @@ void main() {
 
       // Custom rendering should appear in surface
       expect(find.text('Custom A'), findsOneWidget);
-      // Label text is not shown when custom child is provided
-      expect(find.text('Option A'), findsNothing);
     });
 
     testWidgets('opens surface when field has no value selected', (tester) async {
@@ -456,8 +454,8 @@ void main() {
         tester,
         LayrzSelectInput<String?>(
           items: const [
-            LayrzSelectItem(labelText: 'None', value: null),
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(value: null, child: Text('None'), searchableStrings: {'None'}),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           labelText: 'Choose one',
           canUnselect: true,
@@ -602,8 +600,8 @@ void main() {
         tester,
         LayrzSelectInput<String>(
           items: const [
-            LayrzSelectItem(labelText: 'None', value: 'none'),
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(value: 'none', child: Text('None'), searchableStrings: {'None'}),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           value: 'a',
           labelText: 'Choose one',
@@ -639,7 +637,7 @@ void main() {
           items: items,
           labelText: 'Choose one',
           enableSearch: true,
-          filter: (query, item) => item.labelText.toLowerCase().contains(query.toLowerCase()),
+          filter: (query, item) => item.searchableStrings.any((s) => s.toLowerCase().contains(query.toLowerCase())),
         ),
       );
 
@@ -998,7 +996,7 @@ void main() {
   group('LayrzSelectInput height rule (DESIGN-40)', () {
     List<LayrzSelectItem<String>> buildItems(int count) => List.generate(
       count,
-      (i) => LayrzSelectItem(labelText: 'Option $i', value: 'v$i'),
+      (i) => LayrzSelectItem(value: 'v$i', child: Text('Option $i'), searchableStrings: {'Option $i'}),
     );
 
     testWidgets('desktop panel shrinks to content with 2 items', (tester) async {
@@ -1092,20 +1090,47 @@ void main() {
   // of the four modes gets its own test; mode 3 (blur-revert) is the one people
   // forget, so it is asserted explicitly rather than folded into another test.
   group('LayrzSelectInput field-as-searcher mode logic (DESIGN-40/144)', () {
+    // Each item's child pairs an Icon with Text -- a widget shape no string-based
+    // check could produce by coincidence, so finding both inside the field (mode 1)
+    // is real proof the field renders the actual `LayrzSelectItem.child` widget,
+    // not merely a string that happens to match.
+    Widget itemChild(String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(MdiIcons.flag, key: ValueKey('flag-$label')),
+        Text(label),
+      ],
+    );
+
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
-      const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+      LayrzSelectItem(value: 'a', child: itemChild('Option A'), searchableStrings: const {'Option A'}),
+      LayrzSelectItem(value: 'b', child: itemChild('Option B'), searchableStrings: const {'Option B'}),
+      LayrzSelectItem(value: 'c', child: itemChild('Option C'), searchableStrings: const {'Option C'}),
     ];
 
-    testWidgets('mode 1: idle shows the selected item\'s label', (tester) async {
+    testWidgets("mode 1: idle renders the selected item's child widget", (tester) async {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
       );
 
+      // Scoped to LayrzInputChrome (the field itself) -- the surface, when open,
+      // lives in a completely separate subtree (the anchored panel's overlay), so
+      // this can never accidentally pass because of the surface's own list.
+      final field = find.descendant(
+        of: find.byType(LayrzInputChrome),
+        matching: find.byKey(const ValueKey('flag-Option B')),
+      );
+      expect(field, findsOneWidget);
+      expect(
+        find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Option B')),
+        findsOneWidget,
+      );
+
+      // And the EditableText itself -- still mounted for focus continuity -- carries
+      // no display text of its own; the child overlay is what's actually shown.
       final editable = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editable.controller.text, 'Option B');
+      expect(editable.controller.text, isNot('Option B'));
     });
 
     testWidgets('mode 2: typing shows the query and filters the opened list', (tester) async {
@@ -1162,7 +1187,7 @@ void main() {
       },
     );
 
-    testWidgets('mode 3: blur with nothing picked reverts to the selected label', (tester) async {
+    testWidgets("mode 3: blur with nothing picked reverts to the selected item's child", (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1189,13 +1214,21 @@ void main() {
       var editable = tester.widget<EditableText>(find.byType(EditableText));
       expect(editable.controller.text, 'zzz-no-match');
 
-      // Blur without picking anything -- the field must revert to the label,
-      // not stay showing the abandoned query.
+      // Blur without picking anything -- the field must revert to rendering the
+      // selected item's child, not stay showing the abandoned query.
       focusNode.unfocus();
       await tester.pumpAndSettle();
 
       editable = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editable.controller.text, 'Option B');
+      expect(editable.controller.text, isNot('zzz-no-match'));
+      expect(
+        find.descendant(of: find.byType(LayrzInputChrome), matching: find.byKey(const ValueKey('flag-Option B'))),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Option B')),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
@@ -1241,13 +1274,17 @@ void main() {
         expect(editable.controller.text, 'typing...');
 
         // Once the query resolves (blur, nothing picked), the *new* external
-        // value's label appears -- proving the change was reconciled, not
+        // value's child renders -- proving the change was reconciled, not
         // dropped.
         focusNode.unfocus();
         await tester.pumpAndSettle();
 
         editable = tester.widget<EditableText>(find.byType(EditableText));
-        expect(editable.controller.text, 'Option C');
+        expect(editable.controller.text, isNot('typing...'));
+        expect(
+          find.descendant(of: find.byType(LayrzInputChrome), matching: find.byKey(const ValueKey('flag-Option C'))),
+          findsOneWidget,
+        );
       },
     );
 
@@ -1277,9 +1314,14 @@ void main() {
         await tester.pumpAndSettle();
 
         final editable = tester.widget<EditableText>(find.byType(EditableText));
-        expect(editable.controller.text, 'Option B');
         // Still not editable: the false path needs no mode logic of its own.
         expect(editable.readOnly, isTrue);
+        // enableSearch: false never diverges from the selected item's child --
+        // it shows every time, focused or not (unlike the searchable path).
+        expect(
+          find.descendant(of: find.byType(LayrzInputChrome), matching: find.byKey(const ValueKey('flag-Option B'))),
+          findsOneWidget,
+        );
       },
     );
 
@@ -1310,8 +1352,8 @@ void main() {
   // reaches anything underneath it.
   group('LayrzSelectInput chrome-region tap fallback does not break text interaction', () {
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+      const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+      const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
     ];
 
     testWidgets('tapping the chrome outside the text (e.g. the floating label) opens the surface', (
@@ -1349,6 +1391,15 @@ void main() {
         LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
       );
 
+      // The field's own idle text is intentionally empty now (mode 1 renders the
+      // selected item's `child` instead, see select_input.dart) -- so a caret has
+      // nothing to be "placed" within until there is a live query to place it in.
+      // Focus and type first (`enterText` focuses directly, no hit-testing involved),
+      // then tap again to reposition the caret within that typed text, which is what
+      // this test actually pins.
+      await tester.enterText(find.byType(EditableText), 'Selectable query text');
+      await tester.pumpAndSettle();
+
       await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
@@ -1365,6 +1416,11 @@ void main() {
         tester,
         LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
       );
+
+      // Same reasoning as the caret test above: there must be real text present
+      // to drag across before a range selection is even possible.
+      await tester.enterText(find.byType(EditableText), 'Selectable query text');
+      await tester.pumpAndSettle();
 
       final editableRect = tester.getRect(find.byType(EditableText));
       final start = Offset(editableRect.left + 4, editableRect.center.dy);
@@ -1392,6 +1448,14 @@ void main() {
         tester,
         LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
       );
+
+      // Same reasoning again: long-press-to-select needs real text under the field.
+      // `enterText` focuses the field directly (it does not hit-test), unlike a real
+      // `tap` -- deliberately avoided here, since on this mobile viewport a real tap
+      // opens the bottom sheet (a separate modal route) instead of just focusing the
+      // inline field, which would leave nothing left to long-press against afterward.
+      await tester.enterText(find.byType(EditableText), 'Selectable query text');
+      await tester.pumpAndSettle();
 
       await tester.longPress(find.byType(EditableText));
       await tester.pumpAndSettle();
