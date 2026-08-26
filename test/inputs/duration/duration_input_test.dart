@@ -763,6 +763,49 @@ void main() {
       expect(controller.text, isEmpty);
     });
 
+    testWidgets(
+      'a null value shows the hint text on screen, while Duration.zero shows the smallest-unit '
+      'zero reading instead of the hint',
+      (WidgetTester tester) async {
+        // `_buildInteractiveField`'s `displayText` falls back to `hintText` only
+        // when the controller's own text is empty -- `value: null` is the one
+        // case that leaves it empty (see `_updateSummary`). `Duration.zero`
+        // deliberately renders a non-empty "0s" (with `visibleUnits: {second}`
+        // here, so the smallest -- and only -- visible unit is unambiguous), so
+        // the hint must NOT be what is shown once a duration, even a zero one,
+        // has actually been chosen.
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+            hintText: 'Select a duration',
+            visibleUnits: const {LayrzDurationUnit.second},
+            format: LayrzDurationFormat.short,
+          ),
+        );
+
+        expect(find.text('Select a duration'), findsWidgets);
+        expect(find.text('0s'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox());
+        await tester.pump();
+
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(
+            labelText: 'Duration',
+            hintText: 'Select a duration',
+            visibleUnits: const {LayrzDurationUnit.second},
+            format: LayrzDurationFormat.short,
+            value: Duration.zero,
+          ),
+        );
+
+        expect(find.text('0s'), findsWidgets);
+        expect(find.text('Select a duration'), findsNothing);
+      },
+    );
+
     testWidgets('resetting the picker fires onChanged with an all-zero duration and updates the summary', (
       WidgetTester tester,
     ) async {
