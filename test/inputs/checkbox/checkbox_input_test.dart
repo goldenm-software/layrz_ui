@@ -258,26 +258,23 @@ void main() {
       expect(find.text('This field is required'), findsNothing);
     });
 
-    testWidgets('respects custom padding', (tester) async {
-      const customPadding = EdgeInsets.only(left: 20, right: 20);
-
+    testWidgets('applies the fixed control padding', (tester) async {
       await pumpThemed(
         tester,
         LayrzCheckboxInput(
           value: false,
           onChanged: (_) {},
-          padding: customPadding,
         ),
       );
 
-      expect(find.byType(LayrzCheckboxInput), findsOneWidget);
-      // Verify widget renders with the custom padding applied
-      final checkbox = find.byType(LayrzCheckboxInput);
-      expect(checkbox, findsOneWidget);
-      // Widget should be rendered and interactive (can be tapped)
-      await tester.tap(checkbox);
-      await tester.pumpAndSettle();
-      // Should complete without error
+      final paddingWidget = tester.widget<Padding>(
+        find.ancestor(
+          of: find.byType(GestureDetector),
+          matching: find.byType(Padding),
+        ),
+      );
+
+      expect(paddingWidget.padding, const EdgeInsets.all(10));
     });
 
     testWidgets('checkbox size is consistent across states', (tester) async {

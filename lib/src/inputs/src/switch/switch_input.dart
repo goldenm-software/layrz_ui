@@ -60,11 +60,6 @@ class LayrzSwitchInput extends StatefulWidget {
   /// Whether the switch is disabled (read-only and non-interactive).
   final bool disabled;
 
-  /// The padding applied around the entire control and label.
-  ///
-  /// If null, defaults to [tokens.spacing.pd2] (10px all sides).
-  final EdgeInsets? padding;
-
   /// Creates a new [LayrzSwitchInput] with the given properties.
   const LayrzSwitchInput({
     super.key,
@@ -75,7 +70,6 @@ class LayrzSwitchInput extends StatefulWidget {
     this.errors = const [],
     this.hideDetails = false,
     this.disabled = false,
-    this.padding,
   });
 
   @override
@@ -152,7 +146,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: widget.padding ?? tokens.spacing.pd2,
+          padding: tokens.spacing.pd2,
           child: GestureDetector(
             onTap: isDisabled ? null : _toggleSwitch,
             onTapDown: isDisabled
