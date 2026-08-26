@@ -111,9 +111,23 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       oldWidget.controller.removeListener(_controllerListener);
       widget.controller.addListener(_controllerListener);
     }
-    // Notify when items list instance changes (handles refetches with same keys but new instances)
-    if (!identical(oldWidget.items, widget.items)) {
-      _itemsChangeNotifier.value++;
+    // Notify when items list instance changes (handles refetches with same keys but new instances),
+    // but only while the narrow sheet's ListenableBuilder is actually listening to this notifier —
+    // otherwise the bump is both unobserved and unsafe.
+    //
+    // The bump is deferred to a post-frame callback rather than applied synchronously here: this
+    // notifier is merged into the Listenable driving the sheet's ListenableBuilder, so an immediate
+    // `.value++` fires `notifyListeners()` -> `setState()` on that (possibly still-mounted, e.g.
+    // mid exit-animation) builder while the framework may already be building this shell's own
+    // subtree (e.g. from a LayoutBuilder-driven breakpoint change). That is an illegal
+    // setState-during-build. Deferring costs at most one extra frame, and only when the sheet is
+    // actually open to observe it.
+    if (_sheetOpen && !identical(oldWidget.items, widget.items)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _sheetOpen) {
+          _itemsChangeNotifier.value++;
+        }
+      });
     }
   }
 
