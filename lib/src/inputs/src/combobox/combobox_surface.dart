@@ -2,9 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
-// ignore: unused_import
-import 'combobox_custom_value_row.dart';
-
 /// The desktop panel's content for [LayrzComboBoxInput].
 ///
 /// **Q3 -- the panel's first row IS the live input (structural, not visual).**
@@ -16,11 +13,6 @@ import 'combobox_custom_value_row.dart';
 /// than copying text across the open transition) is what makes text, caret and
 /// focus continuity structural instead of best-effort -- there is only ever one
 /// controller and one focus node, whichever host currently renders them.
-///
-/// **Q4 -- the "use '&lt;typed&gt;'" row.** [customValueRow], when non-null, is
-/// rendered directly under [fieldRow] and above the option list -- see
-/// [LayrzComboBoxCustomValueRow]'s own doc comment for why that position is
-/// load-bearing, not cosmetic.
 ///
 /// **Border/background/shadow ownership (S2).** This widget paints none of its
 /// own decoration. Before this unit, [LayrzComboBoxInput] built a hand-rolled
@@ -41,14 +33,7 @@ class LayrzComboBoxPanelContent extends StatelessWidget {
   /// back the closed field -- see the class doc.
   final Widget fieldRow;
 
-  /// The "use '&lt;typed&gt;'" row, or null when nothing should be offered.
-  ///
-  /// Non-null only when the typed text is non-empty and does not exactly
-  /// match any option in [options] -- [LayrzComboBoxInput] computes that
-  /// condition; this widget merely renders whatever it is given.
-  final Widget? customValueRow;
-
-  /// The filtered list of options to display below [fieldRow]/[customValueRow].
+  /// The filtered list of options to display below [fieldRow].
   final List<String> options;
 
   /// Index of the currently highlighted option in [options], or -1 if none.
@@ -64,7 +49,6 @@ class LayrzComboBoxPanelContent extends StatelessWidget {
   const LayrzComboBoxPanelContent({
     super.key,
     required this.fieldRow,
-    this.customValueRow,
     required this.options,
     required this.highlightedIndex,
     required this.onSelected,
@@ -111,7 +95,6 @@ class LayrzComboBoxPanelContent extends StatelessWidget {
       children: [
         fieldRow,
         Container(height: 1, color: tokens.colors.divider),
-        ?customValueRow,
         listOrEmptyState,
       ],
     );

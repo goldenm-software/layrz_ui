@@ -173,12 +173,11 @@ void main() {
       },
     );
 
-    testWidgets('renders the custom-value row directly under the field row, above the options', (tester) async {
+    testWidgets('renders the field row directly above the options, with no custom-value row', (tester) async {
       await pumpThemed(
         tester,
         LayrzComboBoxPanelContent(
           fieldRow: const Text('field row'),
-          customValueRow: const Text('custom row'),
           options: const ['Alpha'],
           highlightedIndex: -1,
           onSelected: (_) {},
@@ -190,26 +189,7 @@ void main() {
       final column = tester.widget<Column>(columnFinder);
       final texts = column.children.whereType<Text>().map((t) => t.data).toList();
 
-      expect(find.text('custom row'), findsOneWidget);
-      // Field row must precede the custom row, which must precede the options.
-      final fieldIndex = column.children.indexWhere((w) => w is Text && w.data == 'field row');
-      final customIndex = column.children.indexWhere((w) => w is Text && w.data == 'custom row');
-      expect(fieldIndex, lessThan(customIndex), reason: 'the field row must come before the custom-value row');
       expect(texts, contains('field row'));
-    });
-
-    testWidgets('omits the custom-value row when null', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzComboBoxPanelContent(
-          fieldRow: const SizedBox.shrink(),
-          options: const ['Alpha'],
-          highlightedIndex: -1,
-          onSelected: (_) {},
-          emptyText: 'No matches',
-        ),
-      );
-
       expect(find.byType(OptionItem), findsOneWidget);
     });
   });
