@@ -621,7 +621,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                                   // one, which the engine then paints solid white.
                                   IgnorePointer(
                                     child: DefaultTextStyle(
-                                      style: context.titleStyle,
+                                      style: context.bodyStyle,
                                       child: selectedItem.child,
                                     ),
                                   ),

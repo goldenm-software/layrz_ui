@@ -474,6 +474,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     _lastValidOption = value;
     widget.onSubmit?.call(value);
     _menuController.close();
+    _fieldFocusNode.unfocus();
   }
 
   void _handleMenuOpenRequested(Offset? position, VoidCallback showOverlay) {

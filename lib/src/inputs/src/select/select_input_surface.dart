@@ -196,9 +196,7 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
         padding: tokens.spacing.pd3,
         child: Text(
           widget.emptyListText ?? l10n.selectEmpty,
-          style: tokens.typography.body.copyWith(
-            color: tokens.colors.fg3,
-          ),
+          style: tokens.typography.label,
         ),
       );
     }
@@ -317,7 +315,7 @@ class _SelectItemRow<T> extends StatelessWidget {
               // rendering engine then paints as solid white, not the theme's body color.
               Expanded(
                 child: DefaultTextStyle(
-                  style: context.titleStyle,
+                  style: context.bodyStyle,
                   child: item.child,
                 ),
               ),
