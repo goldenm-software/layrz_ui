@@ -519,45 +519,17 @@ void main() {
       });
     });
 
-    group('Keyboard insets — Scaffold-style resizing (see layout_keyboard_insets_test.dart)', () {
-      testWidgets('viewInsets are applied by shrinking the body, not as SafeArea padding', (
-        WidgetTester tester,
-      ) async {
-        /// viewInsets (like keyboard height) are distinct from viewPadding (device insets).
-        /// SafeArea itself only ever reads viewPadding, so it correctly never grows a padding
-        /// for the keyboard. That is not a gap: the layout handles the keyboard separately by
-        /// reducing the body's available height by viewInsets.bottom (Scaffold-style), rather
-        /// than by feeding it through SafeArea. See layout_keyboard_insets_test.dart for the
-        /// dedicated coverage of that resizing behaviour, for both presentation paths.
-
-        await pumpThemedApp(
-          tester,
-          Builder(
-            builder: (context) => MediaQuery(
-              data: MediaQuery.of(context).copyWith(
-                viewInsets: const EdgeInsets.only(bottom: 300.0),
-              ),
-              child: LayrzLayout(
-                logo: 'assets/test-logo.png',
-                items: [
-                  LayrzNavigatorPage(id: 'home', labelText: 'Home'),
-                ],
-                body: const SizedBox(child: Text('Body')),
-              ),
-            ),
-          ),
-        );
-
-        await tester.pumpAndSettle();
-
-        /// Verify SafeArea is still present (no crash) — the keyboard resize path lives
-        /// alongside it, not inside it.
-        expect(
-          find.byType(SafeArea),
-          findsWidgets,
-          reason: 'SafeArea must handle viewInsets without crashing',
-        );
-      });
-    });
+    /// Keyboard insets (viewInsets) are distinct from viewPadding (device insets). SafeArea
+    /// itself only ever reads viewPadding, so it correctly never grows a padding for the
+    /// keyboard — that is not a gap in SafeArea. The layout handles the keyboard separately,
+    /// by reducing the body's (and, when visible, the navigator panel's) available height by
+    /// viewInsets.bottom, Scaffold-style. A prior version of this file held a test here
+    /// ("viewInsets are not applied as SafeArea padding") whose only assertion was that
+    /// SafeArea did not crash under a nonzero viewInsets — it asserted nothing about
+    /// viewInsets itself and would have passed under the old, buggy behaviour too. The real
+    /// assertions — that the body's usable height actually shrinks by viewInsets.bottom for
+    /// both presentation paths, that the inset is not double-counted by nested readers, and
+    /// that the open drawer panel shrinks in step — now live in
+    /// test/layout/layout_keyboard_insets_test.dart.
   });
 }
