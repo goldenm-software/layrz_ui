@@ -126,9 +126,31 @@ void main() {
             ),
           );
 
+          // `labelText` is asserted on the SEMANTICS TREE, not on
+          // `LayrzInputChrome`'s own constructor parameter: DESIGN-145
+          // deliberately hoists the label out of the chrome (it is rendered by
+          // the `Semantics(label: widget.labelText, ...)` node that wraps the
+          // chrome's `Container` in `select_input.dart`, around line 477) so the
+          // anchor's measured rect used for positioning the opened panel never
+          // includes the label -- a label rendered *inside* the chrome would
+          // extend that rect upward and misplace the panel by the label's own
+          // height (measured before the fix: 24.0 logical pixels). The chrome
+          // itself always receives `labelText: null` by design; asserting
+          // `chrome.labelText` checks a parameter this component intentionally
+          // never sets, not whether the label is actually exposed. See the
+          // "anchor exposes label and button state" test above, which pins the
+          // same scoping for the same reason.
+          final semantics = tester.getSemantics(find.byType(LayrzInputChrome));
+          expect(semantics.label, contains('Select'));
+
+          // `hintText`, unlike `labelText`, IS passed straight into the chrome
+          // and rendered there with no hoisting (select_input.dart:526) -- it
+          // never sits inside the anchor's measured rect the way the label
+          // would, since it paints only when no item is selected and never
+          // changes the field's geometry. So this stays a direct parameter
+          // assertion; it is checking the actual rendering path.
           final chromeWidget = find.byType(LayrzInputChrome);
           final chrome = tester.widget<LayrzInputChrome>(chromeWidget);
-          expect(chrome.labelText, equals('Select'));
           expect(chrome.hintText, equals('Choose from list'));
         } finally {
           handle.dispose();
