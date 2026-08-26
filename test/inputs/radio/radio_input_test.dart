@@ -133,7 +133,7 @@ void main() {
         LayrzRadioInput<String>(
           labelText: 'Choose one',
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
         ),
       );
@@ -148,7 +148,7 @@ void main() {
           labelText: 'Choose one',
           isRequired: true,
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
         ),
       );
@@ -162,7 +162,7 @@ void main() {
         LayrzRadioInput<String>(
           labelText: 'Choose one',
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
         ),
       );
@@ -172,9 +172,9 @@ void main() {
 
     testWidgets('renders all options', (tester) async {
       final items = [
-        const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-        const LayrzSelectItem(labelText: 'Option B', value: 'b'),
-        const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+        const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+        const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
+        const LayrzSelectItem(value: 'c', child: Text('Option C'), searchableStrings: {'Option C'}),
       ];
 
       await pumpThemed(
@@ -196,8 +196,8 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
           onChanged: (value) {
             selectedValue = value;
@@ -219,8 +219,8 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
           onChanged: (value) {
             selectedValue = value;
@@ -246,8 +246,8 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: [
-                const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-                const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+                const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+                const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
               ],
               onChanged: (value) {
                 changeCount++;
@@ -277,8 +277,8 @@ void main() {
         LayrzRadioInput<String>(
           disabled: true,
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
           onChanged: (value) {
             selectedValue = value;
@@ -302,11 +302,11 @@ void main() {
         LayrzRadioInput<String>(
           items: [
             LayrzSelectItem(
-              labelText: 'Option A',
               value: 'a',
               child: const Text(customText),
+              searchableStrings: const {'Option A'},
             ),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
         ),
       );
@@ -321,8 +321,8 @@ void main() {
         LayrzRadioInput<String>(
           value: null,
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
         ),
       );
@@ -341,8 +341,8 @@ void main() {
         LayrzRadioInput<String>(
           value: 'nonexistent',
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
         ),
       );
@@ -357,8 +357,8 @@ void main() {
       await tester.pumpWidget(
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'same'),
-            const LayrzSelectItem(labelText: 'Option B', value: 'same'),
+            const LayrzSelectItem(value: 'same', child: Text('Option A'), searchableStrings: {'Option A'}),
+            const LayrzSelectItem(value: 'same', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
         ),
       );
@@ -374,7 +374,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           errors: [errorMessage],
         ),
@@ -390,7 +390,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           errors: [errorMessage],
           hideDetails: true,
@@ -407,7 +407,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           padding: padding,
         ),
@@ -423,7 +423,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
         ),
       );
@@ -440,8 +440,8 @@ void main() {
           items: List.generate(
             6,
             (i) => LayrzSelectItem(
-              labelText: 'Option ${i + 1}',
               value: 'opt${i + 1}',
+              child: Text('Option ${i + 1}'),
             ),
           ),
         ),
@@ -460,8 +460,8 @@ void main() {
           items: List.generate(
             4,
             (i) => LayrzSelectItem(
-              labelText: 'Option ${i + 1}',
               value: 'opt${i + 1}',
+              child: Text('Option ${i + 1}'),
             ),
           ),
           xs: 12, // mobile: 1 per row
@@ -484,8 +484,8 @@ void main() {
           items: List.generate(
             3,
             (i) => LayrzSelectItem(
-              labelText: 'Option ${i + 1}',
               value: 'opt${i + 1}',
+              child: Text('Option ${i + 1}'),
             ),
           ),
           xs: 12, // 1 per row
@@ -512,7 +512,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: [
-                const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 setState(() {
@@ -544,7 +544,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           onChanged: null,
         ),
@@ -575,7 +575,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           disabled: false,
         ),
@@ -590,7 +590,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: [
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           disabled: true,
         ),
@@ -610,7 +610,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 setState(() {
@@ -665,7 +665,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 setState(() {
@@ -715,7 +715,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: const [
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
         ),
       );
@@ -736,7 +736,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 setState(() {
@@ -769,7 +769,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: const [
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           onChanged: (_) {},
         ),
@@ -797,7 +797,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 setState(() {
@@ -842,7 +842,7 @@ void main() {
           tester,
           LayrzRadioInput<String>(
             items: const [
-              LayrzSelectItem(labelText: 'Option A', value: 'a'),
+              LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
             ],
           ),
         );
@@ -869,8 +869,13 @@ void main() {
 
         countLabels(rootNode!);
 
-        // With ExcludeSemantics, the Text widget's label is excluded, so we should have exactly 1.
-        // Without it, we'd have 2 (one from the Semantics node, one from the Text).
+        // BREAKING (DESIGN-142): there is no separate `labelText` string anymore -- the
+        // outer `Semantics` sets no explicit `label` of its own, and `child` (here a plain
+        // `Text`) is left un-excluded so its own semantics merge upward into the same node
+        // instead of being replaced by a second, separate string. That merge is exactly what
+        // keeps this at 1, not 2: two *sibling* semantics nodes both carrying "Option A"
+        // would double-count here just as surely as an explicit label alongside an
+        // un-excluded Text would have.
         expect(
           labelCount,
           equals(1),
@@ -888,8 +893,8 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: const [
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
-            LayrzSelectItem(labelText: 'Option B', value: 'b'),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+            LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
           ],
           onChanged: (_) {},
         ),
@@ -934,7 +939,7 @@ void main() {
                   labelText: 'Test',
                   value: selectedValue,
                   items: const [
-                    LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                    LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -996,7 +1001,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 callCount++;
@@ -1033,7 +1038,7 @@ void main() {
             return LayrzRadioInput<String>(
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 callCount++;
@@ -1071,7 +1076,7 @@ void main() {
               disabled: true,
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 callCount++;
@@ -1103,7 +1108,7 @@ void main() {
               disabled: true,
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 callCount++;
@@ -1136,7 +1141,7 @@ void main() {
               disabled: true,
               value: selectedValue,
               items: const [
-                LayrzSelectItem(labelText: 'Option A', value: 'a'),
+                LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
               ],
               onChanged: (value) {
                 callCount++;
@@ -1166,7 +1171,7 @@ void main() {
         tester,
         LayrzRadioInput<String>(
           items: const [
-            LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
           onChanged: (_) {},
         ),

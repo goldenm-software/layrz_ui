@@ -26,8 +26,9 @@ class _SwappableSelectInputState extends State<_SwappableSelectInput> {
   @override
   Widget build(BuildContext context) {
     return LayrzSelectInput<String>(
+      itemExtent: 40,
       items: const [
-        LayrzSelectItem(labelText: 'Option A', value: 'a'),
+        LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
       ],
       focusNode: _useExternal ? widget.external : null,
     );
@@ -74,7 +75,10 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
-          items: const [LayrzSelectItem(labelText: 'Option A', value: 'a')],
+          itemExtent: 40,
+          items: const [
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+          ],
           focusNode: focusNode,
         ),
       );
@@ -96,7 +100,10 @@ void main() {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
-          items: const [LayrzSelectItem(labelText: 'Option A', value: 'a')],
+          itemExtent: 40,
+          items: const [
+            LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+          ],
           focusNode: focusNode,
         ),
       );

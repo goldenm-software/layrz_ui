@@ -10,9 +10,9 @@ import '../../helpers/pump_themed_app.dart';
 void main() {
   group('LayrzSelectInput Accessibility - Semantics', () {
     final items = <LayrzSelectItem<String>>[
-      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
-      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
-      const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+      const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+      const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
+      const LayrzSelectItem(value: 'c', child: Text('Option C'), searchableStrings: {'Option C'}),
     ];
 
     group('Anchor semantics', () {
@@ -22,6 +22,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose an option',
             ),
@@ -40,6 +41,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               disabled: false,
@@ -59,6 +61,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Disabled Field',
               disabled: true,
@@ -81,6 +84,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Required field',
               isRequired: true,
@@ -101,6 +105,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Select',
               hintText: 'Choose from list',
@@ -122,6 +127,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               errors: const ['Field is required'],
@@ -140,6 +146,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               helpTitleText: 'Help',
@@ -162,6 +169,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
             ),
@@ -185,6 +193,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
             ),
@@ -212,6 +221,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               value: 'b',
               labelText: 'Choose one',
@@ -240,6 +250,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               onChanged: (item) {
@@ -276,6 +287,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               enableSearch: true,
@@ -308,6 +320,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               enableSearch: true,
@@ -340,6 +353,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               enableSearch: false,
@@ -371,6 +385,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
             ),
@@ -401,6 +416,7 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               onChanged: (item) {
@@ -440,13 +456,14 @@ void main() {
           var selectedValue = 'a';
 
           final itemsWithEmpty = <LayrzSelectItem<String>>[
-            const LayrzSelectItem(labelText: 'None', value: ''),
-            const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+            const LayrzSelectItem(value: '', child: Text('None'), searchableStrings: {'None'}),
+            const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ];
 
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: itemsWithEmpty,
               labelText: 'Choose',
               value: selectedValue,
@@ -479,7 +496,8 @@ void main() {
         // against "Option A" and a query of "OPTION" never actually matched
         // anything; the sole assertion checked only that the search box widget
         // still existed, not that filtering narrowed the list. Rewritten with a
-        // genuinely case-insensitive filter and an assertion on the narrowing.
+        // genuinely case-insensitive filter over `searchableStrings` (BREAKING:
+        // `labelText` is gone) and an assertion on the narrowing.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -489,10 +507,11 @@ void main() {
           await pumpThemedApp(
             tester,
             LayrzSelectInput<String>(
+              itemExtent: 40,
               items: items,
               labelText: 'Choose one',
               enableSearch: true,
-              filter: (query, item) => item.labelText.toUpperCase().contains(query.toUpperCase()),
+              filter: (query, item) => item.searchableStrings.any((s) => s.toUpperCase().contains(query.toUpperCase())),
             ),
           );
 
@@ -527,6 +546,7 @@ void main() {
             StatefulBuilder(
               builder: (context, setState) {
                 return LayrzSelectInput<String>(
+                  itemExtent: 40,
                   items: items,
                   value: state.selectedValue,
                   labelText: 'Choose one',
