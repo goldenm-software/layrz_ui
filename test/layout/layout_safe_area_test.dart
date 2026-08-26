@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/layout/src/navigator_panel.dart';
 
 import '../helpers/pump_themed_app.dart';
 
@@ -249,6 +250,226 @@ void main() {
               'CRITICAL: content.left must be >= $leftInset pt. '
               'This proves SafeArea(right:false) insets from the left. '
               'With a $leftInset pt left inset, content is inset while the surface (if any) reaches the edge.',
+        );
+      });
+    });
+
+    group(
+      'Navigator panel with RIGHT inset (DESIGN-84) — critical invariant: content.right == surface.right',
+      () {
+        /// DESIGN-84: `LayrzLayoutNavigatorPanel` (navigator_panel.dart:140-141) wraps its
+        /// content Column in `SafeArea(right: false)`. This single line is shared by BOTH
+        /// presentations of the panel — [LayrzLayout] instantiates the exact same
+        /// [LayrzLayoutNavigatorPanel] widget twice: once as the persistent rail
+        /// (layout.dart, onClose: null) and once as the drawer (layout.dart, onClose:
+        /// closeDrawer). `right: false` means the panel does NOT inset its content away from
+        /// its own right edge, so content.right must coincide with surface.right even under a
+        /// non-zero right inset. If `right: false` were removed (i.e. SafeArea applied the
+        /// right inset too), content.right would retreat from surface.right by the inset
+        /// amount, and this assertion would fail.
+
+        const rightInset = 30.0;
+
+        testWidgets('rail: content.right == surface.right under a right inset', (WidgetTester tester) async {
+          // Force expanded (rail) presentation with a wide test size. devicePixelRatio is
+          // pinned to 1.0 so physicalSize maps 1:1 to logical size — otherwise the ambient
+          // test devicePixelRatio (3.0) would shrink the logical width into the drawer band.
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(1200, 800);
+
+          await pumpThemedApp(
+            tester,
+            Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  padding: const EdgeInsets.only(right: rightInset),
+                  viewPadding: const EdgeInsets.only(right: rightInset),
+                ),
+                child: LayrzLayout(
+                  logo: 'assets/test-logo.png',
+                  items: [
+                    LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
+                  ],
+                  body: const SizedBox(child: Text('Body')),
+                ),
+              ),
+            ),
+          );
+
+          await tester.pumpAndSettle();
+
+          final panelFinder = find.byType(LayrzLayoutNavigatorPanel);
+          expect(panelFinder, findsOneWidget, reason: 'Rail must render exactly one LayrzLayoutNavigatorPanel');
+
+          final surfaceRect = tester.getRect(panelFinder);
+
+          // The SafeArea-wrapped content Column is the sole child of the panel's outer
+          // Container; find it as the Column directly inside the panel subtree.
+          final contentFinder = find.descendant(
+            of: panelFinder,
+            matching: find.byType(Column).first,
+          );
+          final contentRect = tester.getRect(contentFinder);
+
+          /// CRITICAL ASSERTION: content.right == surface.right (within the panel).
+          /// If `right: false` were removed, SafeArea would inset the content by
+          /// rightInset, and content.right would be < surface.right.
+          expect(
+            contentRect.right,
+            equals(surfaceRect.right),
+            reason:
+                'CRITICAL: rail content.right must equal surface.right even with a '
+                '$rightInset pt right inset. This proves SafeArea(right: false) at '
+                'navigator_panel.dart:140-141 does NOT inset content from the right edge. '
+                'If right:false were removed, content.right would retreat by $rightInset pt.',
+          );
+        });
+
+        testWidgets('drawer: content.right == surface.right under a right inset', (WidgetTester tester) async {
+          // Force drawer presentation with a narrow test size. devicePixelRatio is pinned
+          // to 1.0 for consistency with the rail test above (both must resolve deterministically).
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          await pumpThemedApp(
+            tester,
+            Builder(
+              builder: (context) => MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  padding: const EdgeInsets.only(right: rightInset),
+                  viewPadding: const EdgeInsets.only(right: rightInset),
+                ),
+                child: LayrzLayout(
+                  logo: 'assets/test-logo.png',
+                  items: [
+                    LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+                  ],
+                  body: const SizedBox(child: Text('Body')),
+                ),
+              ),
+            ),
+          );
+
+          await tester.pumpAndSettle();
+
+          // The drawer panel is not mounted until the drawer is opened.
+          final triggerFinder = find.byKey(const ValueKey('drawer_trigger_button'));
+          expect(triggerFinder, findsOneWidget, reason: 'Drawer trigger button must be present');
+
+          await tester.tap(triggerFinder);
+          await tester.pumpAndSettle();
+
+          final panelFinder = find.byType(LayrzLayoutNavigatorPanel);
+          expect(panelFinder, findsOneWidget, reason: 'Drawer must render exactly one LayrzLayoutNavigatorPanel');
+
+          final surfaceRect = tester.getRect(panelFinder);
+
+          final contentFinder = find.descendant(
+            of: panelFinder,
+            matching: find.byType(Column).first,
+          );
+          final contentRect = tester.getRect(contentFinder);
+
+          /// CRITICAL ASSERTION: content.right == surface.right (within the panel).
+          /// This guards the SAME line as the rail test above — navigator_panel.dart:140-141
+          /// is shared by both presentations.
+          expect(
+            contentRect.right,
+            equals(surfaceRect.right),
+            reason:
+                'CRITICAL: drawer content.right must equal surface.right even with a '
+                '$rightInset pt right inset. This proves SafeArea(right: false) at '
+                'navigator_panel.dart:140-141 does NOT inset content from the right edge. '
+                'If right:false were removed, content.right would retreat by $rightInset pt.',
+          );
+        });
+      },
+    );
+
+    group('Rail with TOP and BOTTOM insets simultaneously — surface spans full height, content is inset both ends', () {
+      testWidgets('rail surface spans 0..screenHeight; content is inset by topInset..(screenHeight - bottomInset)', (
+        WidgetTester tester,
+      ) async {
+        /// Tests that with non-zero TOP and BOTTOM insets applied together, the rail surface
+        /// still spans the full screen height (0 to screenHeight) while the content Column
+        /// (SafeArea-wrapped) is inset at both ends: content.top >= topInset and
+        /// content.bottom <= screenHeight - bottomInset.
+        ///
+        /// At screenHeight 800 with topInset 24 and bottomInset 16:
+        ///   surface: 0 -> 800
+        ///   content: 24 -> 784
+
+        const screenHeight = 800.0;
+        const topInset = 24.0;
+        const bottomInset = 16.0;
+
+        // devicePixelRatio is pinned to 1.0 so physicalSize maps 1:1 to logical size —
+        // otherwise the ambient test devicePixelRatio (3.0) would shrink the logical width
+        // into the drawer band instead of the rail band this test targets.
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1200, screenHeight);
+
+        await pumpThemedApp(
+          tester,
+          Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                padding: const EdgeInsets.only(top: topInset, bottom: bottomInset),
+                viewPadding: const EdgeInsets.only(top: topInset, bottom: bottomInset),
+              ),
+              child: LayrzLayout(
+                logo: 'assets/test-logo.png',
+                items: [
+                  LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true),
+                ],
+                body: const SizedBox(child: Text('Body')),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        final panelFinder = find.byType(LayrzLayoutNavigatorPanel);
+        expect(panelFinder, findsOneWidget, reason: 'Rail must render exactly one LayrzLayoutNavigatorPanel');
+
+        final surfaceRect = tester.getRect(panelFinder);
+
+        expect(
+          surfaceRect.top,
+          equals(0.0),
+          reason: 'Rail surface must reach the top edge (extends behind the status bar).',
+        );
+        expect(
+          surfaceRect.bottom,
+          closeTo(screenHeight, 1.0),
+          reason: 'Rail surface must span the full screen height ($screenHeight), extending behind any bottom inset.',
+        );
+
+        final contentFinder = find.descendant(
+          of: panelFinder,
+          matching: find.byType(Column).first,
+        );
+        final contentRect = tester.getRect(contentFinder);
+
+        /// CRITICAL ASSERTION: content.top >= topInset AND content.bottom <= screenHeight - bottomInset.
+        /// This proves SafeArea insets content from both the top and bottom simultaneously,
+        /// while the surface (the outer Container) remains full-bleed.
+        expect(
+          contentRect.top,
+          greaterThanOrEqualTo(topInset),
+          reason: 'Rail content.top must be >= $topInset pt (top inset).',
+        );
+        expect(
+          contentRect.bottom,
+          lessThanOrEqualTo(screenHeight - bottomInset + 1.0),
+          reason: 'Rail content.bottom must be <= ${screenHeight - bottomInset} pt (screenHeight - bottomInset).',
         );
       });
     });
