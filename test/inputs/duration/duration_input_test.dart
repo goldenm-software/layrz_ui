@@ -889,6 +889,135 @@ void main() {
       expect(controller.text, '0 seconds');
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
+
+    // Shell-parity regressions: `LayrzDurationInput` adopts the same panel
+    // chrome `LayrzSelectInput` already has (`coverAnchor: true` plus a
+    // primary/danger `LayrzAnchoredPanelBorder`), while its width policy
+    // (`contentSized`, 280.0-480.0) and 400.0 height cap are deliberately left
+    // unchanged -- see the class doc on `_LayrzDurationInputState.build`.
+    testWidgets('the panel covers the field -- its rect starts at the anchor\'s own top-left corner', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(),
+      );
+
+      // `RawMenuAnchor` measures its `anchorRect` from the entire widget
+      // `_buildAnchor` returns -- the outermost `GestureDetector` wrapping the
+      // label, bordered field row, and footer -- not from `LayrzInputChrome`
+      // alone. `LayrzInputChrome`'s own rect sits inset from that by the
+      // field row's own border width (`tokens.border.base`, painted with the
+      // default inside `strokeAlign` in `_buildFieldRow`), so the anchor
+      // widget itself is the correct rect to compare against.
+      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final panelRect = tester.getRect(find.byType(LayrzDurationPickerPanel));
+
+      // `coverAnchor: true` starts the panel's top-left exactly at the
+      // anchor's own top-left, clamped into overlay bounds -- mirroring
+      // `LayrzSelectInput`'s DESIGN-145 defect-1 regression.
+      expect(panelRect.top, equals(anchorRect.top));
+      expect(panelRect.left, equals(anchorRect.left));
+    });
+
+    testWidgets('the panel is bordered in the primary color when the field has no errors', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      late LayrzTokens tokens;
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) {
+            tokens = context.tokens;
+            return LayrzDurationInput(labelText: 'Duration');
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
+      expect(decoration.border, isNotNull);
+      expect((decoration.border as Border).top.color, equals(tokens.colors.primary));
+      expect((decoration.border as Border).top.width, equals(tokens.border.base));
+    });
+
+    testWidgets('the panel is bordered in the danger color when the field has errors', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      late LayrzTokens tokens;
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) {
+            tokens = context.tokens;
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              errors: const ['Required'],
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
+      expect(decoration.border, isNotNull);
+      expect((decoration.border as Border).top.color, equals(tokens.colors.danger));
+    });
+
+    testWidgets('the width policy stays contentSized within 280.0-480.0, unaffected by the border/coverAnchor', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(labelText: 'Duration'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
+      expect(panelWidth, greaterThanOrEqualTo(280.0));
+      expect(panelWidth, lessThanOrEqualTo(480.0));
+    });
+
+    testWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(labelText: 'Duration'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final panelHeight = tester.getSize(find.byType(SingleChildScrollView)).height;
+      expect(panelHeight, lessThanOrEqualTo(400.0));
+    });
   });
 
   group('LayrzDurationInput controller/focusNode lifecycle updates', () {
@@ -1137,4 +1266,17 @@ void main() {
       expect(chrome.borderRadius, BorderRadius.zero);
     });
   });
+}
+
+/// Locates the `Container` [LayrzAnchoredPanel] itself builds around its
+/// scroll viewport -- the one carrying `sf1`/shadow/radius and, when set, the
+/// border -- identified structurally as the closest `Container` ancestor of
+/// the panel's [SingleChildScrollView]. Mirrors the identical helper in
+/// `test/overlays/anchored_panel_border_test.dart`; duplicated locally rather
+/// than shared, since these two test files own disjoint concerns.
+Container _panelDecoratedBox(WidgetTester tester) {
+  final scrollViewElement = tester.element(find.byType(SingleChildScrollView));
+  final ancestor = scrollViewElement.findAncestorWidgetOfExactType<Container>();
+  expect(ancestor, isNotNull, reason: 'LayrzAnchoredPanel must wrap its scroll viewport in a Container.');
+  return ancestor!;
 }
