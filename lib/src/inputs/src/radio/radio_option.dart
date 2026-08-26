@@ -118,7 +118,15 @@ class _LayrzRadioOptionState<T> extends State<LayrzRadioOption<T>> with TickerPr
           checked: isSelected,
           enabled: !isDisabled,
           onTap: isDisabled ? null : _handleTap,
-          label: widget.item.labelText,
+          // No explicit `label` here -- `widget.item.child` is the item's only
+          // presentation (BREAKING: `LayrzSelectItem.labelText` is gone), so it is
+          // left un-excluded below and its own semantics (a plain `Text`, most
+          // commonly) merge upward into this node instead of being replaced by a
+          // separate string. Verified this produces the exact same single merged
+          // node as the old explicit label, with no double announcement. A caller
+          // whose `child` carries no text semantics of its own (icon-only, a color
+          // swatch) announces with no name unless that `child` supplies its own
+          // `Semantics(label:)` -- this type no longer owns any text to fall back to.
           child: Row(
             children: [
               // Radio button using RawRadio
@@ -136,17 +144,18 @@ class _LayrzRadioOptionState<T> extends State<LayrzRadioOption<T>> with TickerPr
                 ),
               ),
               SizedBox(width: tokens.spacing.sp2),
-              // Label (custom or text)
+              // The item's presentation. Force-wrapped in its own `DefaultTextStyle`
+              // (body, dimmed to fg4 when disabled) rather than left to inherit
+              // whatever `DefaultTextStyle` happens to be ambient -- a plain `Text`
+              // inside `child` with no explicit color resolves to `null` without a
+              // real ancestor supplying one, which the engine then paints solid
+              // white rather than the theme's body color.
               Expanded(
-                child: ExcludeSemantics(
-                  child:
-                      widget.item.child ??
-                      Text(
-                        widget.item.labelText,
-                        style: tokens.typography.body.copyWith(
-                          color: isDisabled ? tokens.colors.fg4.withValues(alpha: 0.4) : tokens.colors.fg1,
-                        ),
-                      ),
+                child: DefaultTextStyle(
+                  style: tokens.typography.body.copyWith(
+                    color: isDisabled ? tokens.colors.fg4.withValues(alpha: 0.4) : tokens.colors.fg1,
+                  ),
+                  child: widget.item.child,
                 ),
               ),
             ],

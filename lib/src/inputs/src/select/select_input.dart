@@ -300,17 +300,21 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     }
   }
 
-  /// Updates the controller text to match [_displayedValue]'s item label (mode 1: idle).
+  /// Clears the controller's text (mode 1: idle).
   ///
-  /// Deliberately blank when [_displayedValue] is null, even if some item's own
-  /// `value` happens to also be null (a common convention for a "None"/clear entry):
-  /// a null value means "nothing chosen", and the field should read as empty, not as
-  /// if the user had explicitly picked that placeholder. [_findSelectedItem] itself
-  /// carries no such guard -- the surface's own highlighting (via `selectedItem:`)
-  /// still treats a null-value item as "the current state" and marks it selected.
+  /// **BREAKING (DESIGN-142):** this used to set the controller's text to the selected
+  /// item's `labelText`, which [_buildField] then displayed via the [LayrzEditableField]
+  /// itself. Now the idle display is the selected item's [LayrzSelectItem.child] widget,
+  /// rendered as a separate overlay (see [_SelectFieldDisplay]) -- there is no longer any
+  /// text representation of an item to show, so the controller is simply kept empty.
+  /// [_buildField] independently suppresses [LayrzInputChrome]'s own hint text while a
+  /// selection exists (by passing it a null `hintText` rather than relying on the
+  /// controller's text being non-empty) -- so clearing this to empty, unconditionally,
+  /// never causes the hint to leak through underneath the child overlay. Kept as a named
+  /// method (even though it is now a one-liner) because [_commitSelection] and the blur
+  /// handler both call it, and its purpose reads better named than inlined.
   void _updateControllerText() {
-    final selectedItem = _displayedValue == null ? null : _findSelectedItem();
-    _controller.text = selectedItem?.labelText ?? '';
+    _controller.clear();
   }
 
   /// Handles a genuine user edit to the field's text (mode 2: typing).
@@ -326,9 +330,17 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
   /// Handles the field gaining or losing focus.
   ///
-  /// On blur with an unresolved query (mode 3), reverts the display back to the
-  /// selected item's label -- the case people forget, so it is a named method rather
-  /// than inline logic, and it has its own test.
+  /// Deliberately does not touch [_controller]'s text on gaining focus: it is already
+  /// empty whenever idle (see [_updateControllerText]), so there is nothing to clear, and
+  /// mutating it synchronously from this callback would race an in-flight gesture that
+  /// requested the same focus change (e.g. a drag-to-select starting from an unfocused
+  /// field) -- changing the text's length mid-gesture resets `EditableText`'s own
+  /// in-progress selection tracking, breaking drag-select and long-press. (Verified: this
+  /// is exactly what an earlier version of this method did, and it broke both.)
+  ///
+  /// On blur with an unresolved query (mode 3), reverts the display back to the selected
+  /// item's child -- the case people forget, so it is a named method rather than inline
+  /// logic, and it has its own test.
   void _handleFieldFocusChanged(bool hasFocus) {
     setState(() {
       if (hasFocus) {
@@ -445,11 +457,27 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
     final hasErrors = widget.errors.isNotEmpty;
 
+    // Deliberately blank when `_displayedValue` is null, matching `_updateControllerText`'s
+    // own guard: a null value means "nothing chosen", so the field must read as empty rather
+    // than showing an item that merely happens to also carry a null `value` (a common
+    // "None"/clear entry convention). `_findSelectedItem` itself carries no such guard --
+    // it is also used for the surface's highlighting, which still treats a null-value item
+    // as "the current state" there.
+    final selectedItem = _displayedValue == null ? null : _findSelectedItem();
+    // Idle (mode 1) shows the selected item's `child`; focused-and-editable (mode 2) shows
+    // the `EditableText` query instead. `enableSearch: false` never enters mode 2 at all --
+    // it "never diverges from the selected [item]" (class doc) regardless of focus.
+    final showChildDisplay = selectedItem != null && (!widget.enableSearch || !_states.contains(WidgetState.focused));
+
     // Not editable when `enableSearch` is false: a pure picker that still
     // self-displays (mode-logic-free, per the class doc), never a query source.
     final fieldConfig = LayrzEditableFieldConfig(
       labelText: widget.labelText,
-      hintText: widget.hintText,
+      // Suppressed while a selection exists: `LayrzInputChrome` shows its hint only
+      // when the controller's text is empty (see `_updateControllerText`), which it
+      // always is while idle -- so the hint must be withheld here instead, or it would
+      // render underneath the selected item's `child` overlay.
+      hintText: selectedItem == null ? widget.hintText : null,
       disabled: widget.disabled,
       readOnly: !widget.enableSearch,
       controller: _controller,
@@ -533,7 +561,11 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                     padding: widget.padding,
                     borderRadius: BorderRadius.zero,
                     showBorder: false,
-                    child: LayrzEditableField(config: fieldConfig),
+                    child: _SelectFieldDisplay<T>(
+                      editableField: LayrzEditableField(config: fieldConfig),
+                      selectedItem: selectedItem,
+                      showChildDisplay: showChildDisplay,
+                    ),
                   ),
                 ),
               ),
@@ -686,6 +718,66 @@ class _SelectFieldCaret extends StatelessWidget {
           child: tappable,
         ),
       ),
+    );
+  }
+}
+
+/// Switches [LayrzSelectInput]'s field content between the selected item's own
+/// presentation and the live editable text, without ever unmounting either.
+///
+/// **Design decision (DESIGN-142, explicit):** idle with a selection shows the selected
+/// [LayrzSelectItem]'s [LayrzSelectItem.child] widget -- icon, formatting, and all -- not a
+/// degraded plain-text label. Focused-and-editable shows the [EditableText] query instead.
+/// The item defines its own presentation in the field exactly as it does in the list.
+///
+/// [editableField] (the [LayrzEditableField]) is always mounted, whichever mode is active --
+/// never swapped out -- so focus, the caret, drag-selection and long-press keep working
+/// exactly as before (see the class doc's "must not regress" list). When [showChildDisplay]
+/// is true, it is merely hidden via [Opacity] rather than removed, and the selected item's
+/// [LayrzSelectItem.child] is painted on top through an [IgnorePointer] overlay -- so it never
+/// steals the tap that the (invisible) editable field still needs for opening the surface,
+/// caret placement, and everything else already wired to it.
+class _SelectFieldDisplay<T> extends StatelessWidget {
+  /// The always-mounted editable field, shown whenever [showChildDisplay] is false.
+  final Widget editableField;
+
+  /// The currently selected item, or null if nothing is selected.
+  ///
+  /// Its [LayrzSelectItem.child] is what renders when [showChildDisplay] is true.
+  final LayrzSelectItem<T>? selectedItem;
+
+  /// Whether to show [selectedItem]'s [LayrzSelectItem.child] instead of [editableField].
+  ///
+  /// True in mode 1 (idle, with a selection) and, unconditionally, whenever the field is
+  /// not searchable at all -- see [_LayrzSelectInputState._buildField] for the exact rule.
+  final bool showChildDisplay;
+
+  /// Creates a new [_SelectFieldDisplay].
+  const _SelectFieldDisplay({
+    required this.editableField,
+    required this.selectedItem,
+    required this.showChildDisplay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.centerLeft,
+      children: [
+        Opacity(
+          opacity: showChildDisplay ? 0.0 : 1.0,
+          child: editableField,
+        ),
+        if (showChildDisplay && selectedItem != null)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: selectedItem!.child,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
