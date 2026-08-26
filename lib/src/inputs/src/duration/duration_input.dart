@@ -582,7 +582,17 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         onTap: widget.disabled ? null : _openMobileSurface,
       );
     } else {
-      // Desktop: return anchored panel with duration picker surface
+      // Desktop: return an anchored panel that covers the field itself, mirroring
+      // `LayrzSelectInput`'s "elevated field" illusion (DESIGN-145) -- see the
+      // `border` argument below for why. `widthPolicy: contentSized` and its
+      // 280.0-480.0 bounds are UNCHANGED from before this shell-parity pass:
+      // `LayrzDurationPickerPanel`'s two-column grid depends on this exact width
+      // range (see its own class doc for the measured 227px/7-character
+      // constraint), so this stays `contentSized` rather than moving to
+      // `matchAnchor` the way `LayrzSelectInput` does.
+      final tokens = context.tokens;
+      final hasErrors = widget.errors.isNotEmpty;
+
       return LayrzAnchoredPanel(
         widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
         widthBounds: const LayrzAnchoredPanelWidthBounds(
@@ -590,11 +600,21 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
           maxWidth: 480.0,
         ),
         maxHeight: 400.0,
+        coverAnchor: true,
         childFocusNode: _focusNode,
         builder: (context, controller) {
           _panelController = controller;
           return _buildAnchor(context, controller);
         },
+        // Painted by the panel around its own capped viewport, not by this
+        // widget around its content -- see `LayrzAnchoredPanelBorder`'s own doc
+        // comment for why that distinction matters. Mirrors
+        // `select_input.dart`'s identical border, colored the same way
+        // (primary, or danger when the field has errors).
+        border: LayrzAnchoredPanelBorder(
+          color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
+          width: tokens.border.base,
+        ),
         child: LayrzDurationPickerPanel(
           initialValue: widget.value,
           visibleUnits: widget.visibleUnits,
