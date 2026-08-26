@@ -520,6 +520,39 @@ void main() {
       expect(second.value, 4.0);
     });
 
+    // Regression for a device-reported bug: every unit field rendered its
+    // value with a trailing ".0" ("0.0" Days, "2.0" Hours, "30.0" Minutes,
+    // "0.0" Seconds) even though duration components are always whole
+    // numbers -- there is no fractional hour once minutes are their own
+    // field. Root cause was `LayrzNumberInput.value` being fed a `double`
+    // (`_hour.toDouble()`) with no `format` override, so
+    // `LayrzNumberInput._formatNumber` fell through to `num.toString()`,
+    // which always renders a decimal point for a `double`. Asserts the
+    // actual rendered `EditableText` content, not `LayrzNumberInput.value`
+    // (a `num?`, where `2 == 2.0`  and so cannot tell int and double display
+    // apart -- see the numeric `.value` assertions above, which pass either
+    // way and would not have caught this).
+    testWidgets('renders unit field values as integers, not decimals', (tester) async {
+      await _pumpPanel(
+        tester,
+        viewportSize: _wideViewport,
+        visibleUnits: _allUnits,
+        initialValue: const Duration(hours: 2, minutes: 30),
+      );
+
+      String textUnder(Key fieldKey) {
+        final editable = tester.widget<EditableText>(
+          find.descendant(of: find.byKey(fieldKey), matching: find.byType(EditableText)),
+        );
+        return editable.controller.text;
+      }
+
+      expect(textUnder(_dayKey), '0');
+      expect(textUnder(_hourKey), '2');
+      expect(textUnder(_minuteKey), '30');
+      expect(textUnder(_secondKey), '0');
+    });
+
     testWidgets('defaults every field to zero when initialValue is null', (tester) async {
       await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
 
