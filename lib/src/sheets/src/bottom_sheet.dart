@@ -240,9 +240,27 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                    // barrier already blocks hits to whatever sits behind it in the Stack,
                    // with or without this line. Kept explicit so the GestureDetector's own
                    // hit-testing contract does not silently depend on an implementation
-                   // detail of its child.
+                   // detail of its child. This also means the barrier absorbs MORE taps
+                   // than before, not fewer — which is exactly why the guard below is not
+                   // optional once this line is present: a barrier that reliably catches
+                   // every tap needs to reliably refuse to act on ones it should not.
                    behavior: HitTestBehavior.opaque,
-                   onTap: () => Navigator.of(context).pop(),
+                   onTap: () {
+                     // transitionBuilder (this whole Stack) renders for the ENTIRE
+                     // transition, including the exit/dismiss animation — the barrier
+                     // stays mounted and hit-testable while the sheet slides out. A
+                     // second fast tap during that window would otherwise call pop()
+                     // on a route that is already popping, which — under go_router —
+                     // throws 'currentConfiguration.isNotEmpty' trying to remove the
+                     // last page off the stack, or re-enters the Navigator mid-pop
+                     // ('!_debugLocked'). ModalRoute.of(context)?.isCurrent is the
+                     // SDK's own purpose-built answer to "is this route still the one
+                     // to pop" — it is what the barrier's onTap should have always been
+                     // conditioned on, independent of the opaque fix above.
+                     if (ModalRoute.of(context)?.isCurrent ?? false) {
+                       Navigator.of(context).pop();
+                     }
+                   },
                    child: Container(
                      color: barrierColor,
                    ),
