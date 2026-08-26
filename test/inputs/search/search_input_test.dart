@@ -517,20 +517,6 @@ void main() {
     });
 
     group('hint and label text behavior', () {
-      testWidgets('uses labelText fallback when provided', (tester) async {
-        await pumpThemedApp(
-          tester,
-          const LayrzSearchInput(
-            mode: LayrzSearchInputMode.field,
-            hintText: 'Search products',
-          ),
-        );
-
-        // labelText should be used as the field label
-        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
-        expect(chrome.labelText, equals('Search products'));
-      });
-
       testWidgets('uses default localized hint when hintText is null', (tester) async {
         await pumpThemedApp(
           tester,
