@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -490,5 +493,146 @@ void main() {
       expect(find.text('Item 0'), findsNothing);
       expect(find.text('Item 49'), findsOneWidget, reason: 'scrollable: false must produce a working, scrolling frame');
     });
+
+    testWidgets('wraps the sheet content in a ClipRRect matching the decoration radii', (WidgetTester tester) async {
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => const SizedBox(height: 200, child: Text('body')),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      // Same predicate the "does not span the full viewport" test above uses to find the
+      // sheet's own decorated surface — the DecoratedBox carrying the boxShadow (the drag
+      // handle's pill is also a DecoratedBox, via Container's borderRadius, but has none).
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).boxShadow != null,
+        ),
+      );
+
+      // The decoration's child must be a ClipRRect, not the content Column directly — this
+      // is the structural fix: without it, content taller than the visible area is not
+      // clipped to the sheet's rounded top edge and bleeds past it with square corners.
+      expect(
+        decoratedBox.child,
+        isA<ClipRRect>(),
+        reason: 'the DecoratedBox must clip its child to the sheet\'s rounded corners',
+      );
+
+      final clipRRect = decoratedBox.child! as ClipRRect;
+      final decoration = decoratedBox.decoration as BoxDecoration;
+
+      // The clip's radii must be read from the same source as the decoration's, not a
+      // separately hardcoded value, or the two can silently drift apart.
+      expect(
+        clipRRect.borderRadius,
+        equals(decoration.borderRadius),
+        reason: 'the ClipRRect radii must match the decoration\'s radii exactly',
+      );
+
+      expect(
+        clipRRect.child,
+        isA<Column>(),
+        reason: 'the ClipRRect must sit directly between the decoration and the content Column',
+      );
+    });
+
+    testWidgets(
+      'clips content taller than the sheet to the rounded top corners',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        // A saturated color unlikely to already appear anywhere in the theme (surface,
+        // barrier scrim, drag handle) or the marker would be indistinguishable from its
+        // surroundings.
+        const markerColor = Color(0xFFFF00FF);
+
+        await pumpThemedApp(
+          tester,
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () {
+                LayrzBottomSheet.show<String>(
+                  context,
+                  // Drag handle hidden so the content's top edge coincides exactly with
+                  // the decorated surface's top edge — otherwise the drag handle's own
+                  // (transparent) header row would sit over the rounded corners instead,
+                  // and the defect this test targets would never reach them.
+                  showDragHandle: false,
+                  builder: (context) => Container(height: 2000, color: markerColor),
+                );
+              },
+              child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Tap'));
+        await tester.pumpAndSettle();
+
+        final surfaceFinder = find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).boxShadow != null,
+        );
+        final topLeft = tester.getTopLeft(surfaceFinder);
+
+        late ui.Image image;
+        late ByteData bytes;
+        await tester.runAsync(() async {
+          image = await captureImage(tester.element(surfaceFinder));
+          bytes = (await image.toByteData(format: ui.ImageByteFormat.rawStraightRgba))!;
+        });
+        addTearDown(image.dispose);
+
+        Color pixelAt(Offset logical) {
+          // [captureImage] rasterizes via [OffsetLayer.toImage] with the default
+          // pixelRatio of 1.0, which is independent of [FlutterView.devicePixelRatio] —
+          // the resulting image is 1:1 with logical pixels, so no scaling is applied here.
+          final x = logical.dx.round();
+          final y = logical.dy.round();
+          final offset = (x + y * image.width) * 4;
+          return Color.fromARGB(
+            bytes.getUint8(offset + 3),
+            bytes.getUint8(offset + 0),
+            bytes.getUint8(offset + 1),
+            bytes.getUint8(offset + 2),
+          );
+        }
+
+        // Just inside the decorated surface's bounding box, but outside the rounded
+        // corner's arc — the region the decoration itself never paints into, and which
+        // must stay clipped away from the (opaque, taller-than-the-sheet) content. Before
+        // the fix, the content's square corner bleeds through here with the marker color.
+        final cornerPoint = topLeft + const Offset(2, 2);
+        expect(
+          pixelAt(cornerPoint),
+          isNot(equals(markerColor)),
+          reason: 'content must be clipped to the rounded top corner, not bleed past it',
+        );
+
+        // Sanity check: well inside the sheet, past the corner radius, the marker color
+        // must still be visible — proving the corner assertion above is measuring a real
+        // clip and not simply an absent or mispositioned widget.
+        final insidePoint = topLeft + const Offset(30, 30);
+        expect(
+          pixelAt(insidePoint),
+          equals(markerColor),
+          reason: 'the marker content must still paint inside the sheet, away from the corner',
+        );
+      },
+      skip: !canCaptureImage,
+    );
   });
 }
