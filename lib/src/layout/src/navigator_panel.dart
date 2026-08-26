@@ -168,12 +168,11 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
               padding: EdgeInsets.symmetric(
                 horizontal: tokens.spacing.sp2,
               ),
-              child: LayrzTextInput(
+              child: LayrzSearchInput(
                 hintText: context.l10n.actionSearch,
-                hideDetails: true,
                 controller: _searchController,
-                onChanged: (_) {},
-                prefixIcon: MdiIcons.magnify,
+                mode: LayrzSearchInputMode.field,
+                dense: true,
               ),
             ),
 

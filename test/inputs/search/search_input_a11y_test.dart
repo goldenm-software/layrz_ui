@@ -54,7 +54,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
           ),
         );
 
@@ -112,7 +112,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search products',
+            hintText: 'Search products',
           ),
         );
 
@@ -280,7 +280,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Custom search',
+            hintText: 'Custom search',
           ),
         );
 
@@ -297,7 +297,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.icon,
-            labelText: 'Custom button',
+            hintText: 'Custom button',
           ),
         );
 
@@ -313,7 +313,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.icon,
-            labelText: 'Button label',
+            hintText: 'Button label',
           ),
         );
 
@@ -342,7 +342,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             errors: ['Something went wrong'],
           ),
         );
@@ -359,7 +359,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             isRequired: true,
           ),
         );
@@ -376,7 +376,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             helpTitleText: 'Help',
             helpContentText: 'This searches all products.',
           ),
@@ -393,7 +393,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             readOnly: true,
           ),
         );

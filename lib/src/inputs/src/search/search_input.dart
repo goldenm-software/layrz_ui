@@ -67,9 +67,6 @@ class LayrzSearchInput extends StatefulWidget {
   /// A pending debounce timer is always cancelled in `dispose`.
   final Duration? debounce;
 
-  /// The label text for the input field (field and icon modes).
-  final String? labelText;
-
   /// The hint text displayed when the field is empty.
   ///
   /// Defaults to a localized "Search" string if not provided.
@@ -147,7 +144,6 @@ class LayrzSearchInput extends StatefulWidget {
     this.value,
     this.onSearch,
     this.debounce = const Duration(milliseconds: 300),
-    this.labelText,
     this.hintText,
     this.isRequired = false,
     this.disabled = false,
@@ -370,12 +366,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// [labelText] and [autofocus] differ between the two call sites; every other value
   /// is identical, so it is factored out to avoid the two modes drifting apart.
   LayrzEditableFieldConfig _buildFieldConfig({
-    required String? labelText,
     required String hintText,
     required bool autofocus,
   }) {
     return LayrzEditableFieldConfig(
-      labelText: labelText,
+      labelText: null,
       hintText: hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
@@ -414,7 +409,6 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Builds the field mode: inline text input with magnifier prefix and clear suffix.
   Widget _buildFieldMode(BuildContext context) {
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
-    final resolvedLabel = widget.labelText ?? context.l10n.helperSearch;
 
     _syncDisabledState();
 
@@ -429,13 +423,12 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     );
 
     final fieldConfig = _buildFieldConfig(
-      labelText: resolvedLabel,
       hintText: hintText,
       autofocus: false,
     );
 
     return Semantics(
-      label: resolvedLabel,
+      label: hintText,
       enabled: !widget.disabled,
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -445,7 +438,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           ),
         ),
         child: LayrzInputChrome(
-          labelText: resolvedLabel,
+          labelText: null,
           hintText: hintText,
           isRequired: widget.isRequired,
           prefixSlot: prefixSlot,
@@ -500,7 +493,6 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     // No labelText here: the panel field must not inherit the trigger button's
     // label, or the label would be announced twice (button + panel field).
     final fieldConfig = _buildFieldConfig(
-      labelText: null,
       hintText: hintText,
       autofocus: true,
     );
@@ -523,7 +515,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       onOpen: _handlePanelOpened,
       builder: (context, controller) {
         return LayrzButton(
-          labelText: widget.labelText ?? context.l10n.helperSearch,
+          labelText: widget.hintText ?? context.l10n.helperSearch,
           icon: MdiIcons.magnify,
           onTap: widget.disabled ? null : controller.open,
           isDisabled: widget.disabled,

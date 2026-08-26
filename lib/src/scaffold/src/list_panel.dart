@@ -128,6 +128,8 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
             LayrzSearchInput(
               controller: _searchController,
               hintText: 'Search items',
+              dense: true,
+              mode: LayrzSearchInputMode.field,
             ),
           Expanded(
             child: _filteredItems.isEmpty

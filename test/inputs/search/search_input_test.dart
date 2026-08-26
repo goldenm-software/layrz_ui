@@ -522,7 +522,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search products',
+            hintText: 'Search products',
           ),
         );
 
@@ -562,7 +562,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.icon,
-            labelText: 'Find items',
+            hintText: 'Find items',
           ),
         );
 
@@ -620,7 +620,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             isRequired: true,
           ),
         );

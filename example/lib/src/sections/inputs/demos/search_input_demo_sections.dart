@@ -84,7 +84,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 4,
                     child: LayrzSearchInput(
                       mode: LayrzSearchInputMode.auto,
-                      labelText: 'Auto',
                       hintText: 'Resizes with the viewport',
                       controller: autoController,
                     ),
@@ -94,7 +93,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 4,
                     child: LayrzSearchInput(
                       mode: LayrzSearchInputMode.icon,
-                      labelText: 'Icon',
                       hintText: 'Opens in a floating panel',
                       controller: iconController,
                     ),
@@ -104,7 +102,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 4,
                     child: LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Field',
                       hintText: 'Always inline',
                       controller: fieldController,
                       onSearch: onFieldSearch,
@@ -130,7 +127,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: const LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Disabled',
                       hintText: 'Cannot search',
                       disabled: true,
                     ),
@@ -140,7 +136,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: const LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Read-only',
                       value: 'read-only query',
                       readOnly: true,
                     ),
@@ -163,7 +158,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: const LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Search catalog',
                       isRequired: true,
                       errors: ['Enter at least 3 characters'],
                     ),
@@ -173,7 +167,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: const LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Search',
                       helpTitleText: 'About search',
                       helpContentText: 'Searches across every field in the record, not just its name.',
                     ),
@@ -196,7 +189,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: LayrzSearchInput(
                       mode: LayrzSearchInputMode.field,
-                      labelText: 'Search',
                       hintText: 'Type to search (500ms debounce)',
                       controller: debounceController,
                       debounce: const Duration(milliseconds: 500),
@@ -255,7 +247,6 @@ class SearchInputDemoSections extends StatelessWidget {
                     md: 6,
                     child: LayrzSearchInput(
                       mode: LayrzSearchInputMode.icon,
-                      labelText: 'Preferred side',
                       hintText: 'Opens on the side selected at left',
                       preferredSide: iconPreferredSide,
                     ),
