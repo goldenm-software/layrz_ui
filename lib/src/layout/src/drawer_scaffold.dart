@@ -174,18 +174,39 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
+    // Scaffold-style keyboard handling: shrink the body (and, symmetrically, the drawer
+    // panel) by viewInsets.bottom, then zero viewInsets for their subtrees so nested widgets
+    // that read MediaQuery.viewInsetsOf do not double-count the same inset.
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final resizedBody = Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: widget.body,
+      ),
+    );
+
     // Build the page (top bar + body) once, outside the AnimatedBuilder.
     final page = Column(
       children: [
         widget.topBarBuilder(openDrawer),
-        Expanded(child: widget.body),
+        Expanded(child: resizedBody),
       ],
     );
 
-    // Build the drawer once, outside the AnimatedBuilder, and reuse it.
+    // Build the drawer once, outside the AnimatedBuilder, and reuse it. The panel is
+    // padded the same way as the body so it shrinks in step with the keyboard while open.
     // This prevents ~1000 rebuilds per second and eliminates GC pressure.
     final drawerWidget = RepaintBoundary(
-      child: widget.drawerBuilder(closeDrawer),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: viewInsets.bottom),
+        child: MediaQuery.removeViewInsets(
+          context: context,
+          removeBottom: true,
+          child: widget.drawerBuilder(closeDrawer),
+        ),
+      ),
     );
 
     return PopScope(

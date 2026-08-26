@@ -519,11 +519,16 @@ void main() {
       });
     });
 
-    group('Keyboard insets — out of scope for layout surface geometry', () {
-      testWidgets('viewInsets are not applied as SafeArea padding', (WidgetTester tester) async {
+    group('Keyboard insets — Scaffold-style resizing (see layout_keyboard_insets_test.dart)', () {
+      testWidgets('viewInsets are applied by shrinking the body, not as SafeArea padding', (
+        WidgetTester tester,
+      ) async {
         /// viewInsets (like keyboard height) are distinct from viewPadding (device insets).
-        /// This test documents that keyboard insets are not applied to the layout surface,
-        /// as they are for transient, content-driven overlays, not the layout structure.
+        /// SafeArea itself only ever reads viewPadding, so it correctly never grows a padding
+        /// for the keyboard. That is not a gap: the layout handles the keyboard separately by
+        /// reducing the body's available height by viewInsets.bottom (Scaffold-style), rather
+        /// than by feeding it through SafeArea. See layout_keyboard_insets_test.dart for the
+        /// dedicated coverage of that resizing behaviour, for both presentation paths.
 
         await pumpThemedApp(
           tester,
@@ -545,7 +550,8 @@ void main() {
 
         await tester.pumpAndSettle();
 
-        /// Verify SafeArea is still present (no crash).
+        /// Verify SafeArea is still present (no crash) — the keyboard resize path lives
+        /// alongside it, not inside it.
         expect(
           find.byType(SafeArea),
           findsWidgets,

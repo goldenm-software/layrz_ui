@@ -3821,3 +3821,65 @@ presumably, external) uses it.
   the lock/error icon audit — is deferred but is explicitly **not** an application of this decision; it
   starts from the opposite risk (over-, not under-, announcement).
 
+## D65: `LayrzLayout` Resizes Its Body for the Keyboard, Scaffold-Style
+
+### Context
+
+Reported from an Android emulator (Pixel 7 Pro): with the on-screen keyboard open, page content
+rendered behind the keyboard. A grep across `lib/` for `viewInsets`, `resizeToAvoidBottomInset`,
+`maintainBottomViewPadding`, `bottomViewPadding`, `MediaQuery.viewInsetsOf`, and
+`KeyboardVisibility` returned zero hits — the package had no keyboard-aware code at all. Both
+presentation paths anchored their body to a viewport that never shrank: `drawer_scaffold.dart`
+used `Column(children: [topBar, Expanded(body)])`, and `layout.dart`'s rail/expanded path used a
+`Stack` with `Positioned`/`PositionedDirectional` pinned `top: 0, bottom: 0`. `SafeArea` cannot
+fix this on its own — it only ever reads `MediaQuery.padding`/`viewPadding`, never `viewInsets`,
+so it structurally cannot respond to a keyboard.
+
+layrz_ui is Material-free by design (D2), so there is no `Scaffold` to inherit
+`resizeToAvoidBottomInset` from. `LayrzLayout` is the closest thing the package has to an
+application shell, so it takes on that responsibility itself.
+
+### Decision
+
+`LayrzLayout` reduces the body's available height by `MediaQuery.viewInsetsOf(context).bottom`,
+then hands the body a `MediaQuery` with `viewInsets` zeroed via
+`MediaQuery.removeViewInsets(removeBottom: true, ...)`. This mirrors exactly what Material's
+`Scaffold` does, and the zeroing is the essential half of it: without it, a nested widget that
+itself reads `viewInsets` (as `LayrzLayout`'s own body callers sometimes will) would double-count
+the same inset the layout already consumed.
+
+The navigator panel shrinks the same way when visible with the keyboard up — the rail panel in
+the expanded path, and the open drawer panel in the compact path. The panel's existing
+`SingleChildScrollView` (`navigator_panel.dart:182`) then lets the user reach lower nav items,
+consistent with how the body itself is expected to cope with the reduced space (see below).
+
+Both presentation paths needed fixing, with different mechanisms since they use different layout
+primitives:
+
+- **Rail/expanded** (`layout.dart`): the `Positioned.directional`/`PositionedDirectional` widgets
+  for the body and the rail panel each get `bottom: viewInsets.bottom` instead of `bottom: 0`,
+  and each subtree is wrapped in `MediaQuery.removeViewInsets`.
+- **Drawer/compact** (`drawer_scaffold.dart`): the body and the drawer panel (navigator panel) are
+  each wrapped in `Padding(padding: EdgeInsets.only(bottom: viewInsets.bottom))` plus
+  `MediaQuery.removeViewInsets`, inside the `Column`/`Expanded` and the drawer's `Positioned`
+  panel respectively.
+
+This is unconditional — no new public flag. It is a correctness fix to the layout's default
+behaviour, not an opt-in feature; a flag would just let a consumer opt back into the bug.
+
+The page body is **not** made scrollable by default. Content squeezes into the reduced space;
+whether it scrolls remains the consumer's own business, matching existing `LayrzLayout` behaviour
+for every other constrained dimension.
+
+### Consequences
+
+- `test/layout/layout_safe_area_test.dart`'s pre-existing "Keyboard insets — out of scope for
+  layout surface geometry" group documented the old non-support as intentional. That framing was
+  wrong; the group and its test were renamed and reworded to point at the new coverage rather than
+  assert the old gap as a feature.
+- New coverage lives in `test/layout/layout_keyboard_insets_test.dart`: body height shrinkage for
+  both presentation paths, non-double-counting of the inset inside the body, and drawer-panel
+  shrinkage while open.
+- `SafeArea(right: false)` in `navigator_panel.dart` (D84 territory) is untouched — it addresses a
+  different axis (device insets, not keyboard) and continues to do only that.
+

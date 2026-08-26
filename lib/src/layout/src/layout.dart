@@ -253,6 +253,11 @@ class _LayrzLayoutState extends State<LayrzLayout> {
           )
         : widget.body;
 
+    // Scaffold-style keyboard handling: reduce the bottom of both the body and the rail
+    // panel by viewInsets.bottom, then zero viewInsets for their subtrees so nested widgets
+    // that read MediaQuery.viewInsetsOf do not double-count the same inset.
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+
     return Container(
       color: backgroundColor,
       child: Stack(
@@ -262,25 +267,33 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             start: kLayrzLayoutRailWidth,
             end: 0,
             top: 0,
-            bottom: 0,
-            child: bodyWidget,
+            bottom: viewInsets.bottom,
+            child: MediaQuery.removeViewInsets(
+              context: context,
+              removeBottom: true,
+              child: bodyWidget,
+            ),
           ),
           PositionedDirectional(
             start: 0,
             top: 0,
-            bottom: 0,
-            child: LayrzLayoutNavigatorPanel(
-              tokens: tokens,
-              width: kLayrzLayoutRailWidth,
-              items: widget.items,
-              logo: widget.logo,
-              userName: widget.userName,
-              userAvatar: widget.userAvatar,
-              userMenuItems: widget.userMenuItems,
-              notifications: widget.notifications,
-              onNotificationTap: widget.onNotificationTap,
-              onClose: null,
-              getInitials: _getInitials,
+            bottom: viewInsets.bottom,
+            child: MediaQuery.removeViewInsets(
+              context: context,
+              removeBottom: true,
+              child: LayrzLayoutNavigatorPanel(
+                tokens: tokens,
+                width: kLayrzLayoutRailWidth,
+                items: widget.items,
+                logo: widget.logo,
+                userName: widget.userName,
+                userAvatar: widget.userAvatar,
+                userMenuItems: widget.userMenuItems,
+                notifications: widget.notifications,
+                onNotificationTap: widget.onNotificationTap,
+                onClose: null,
+                getInitials: _getInitials,
+              ),
             ),
           ),
         ],
