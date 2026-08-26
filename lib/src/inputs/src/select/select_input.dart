@@ -4,6 +4,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
@@ -529,7 +530,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                     disabled: widget.disabled,
                     readOnly: false,
                     errors: widget.errors,
-                    hideDetails: widget.hideDetails,
+                    hideDetails: true,
                     states: _states,
                     helpTitleText: widget.helpTitleText,
                     helpContentText: widget.helpContentText,
@@ -591,7 +592,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       // Note: Mobile bottom sheet does not expose expanded state since it is not
       // connected to a controller that can be queried. This is acceptable because
       // the bottom sheet itself is its own modal navigation layer.
-      return _buildLabel(
+      return _appendExtras(
         _buildField(context, onOpen: _openMobileSurface, isExpanded: false),
         context.tokens,
       );
@@ -613,7 +614,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       final hasErrors = widget.errors.isNotEmpty;
       final minHeight = widget.itemExtent + (widget.enableSearch ? widget.itemExtent : 0.0);
 
-      return _buildLabel(
+      return _appendExtras(
         LayrzAnchoredPanel(
           widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
           coverAnchor: true,
@@ -665,7 +666,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     }
   }
 
-  Widget _buildLabel(Widget child, LayrzTokens tokens) {
+  Widget _appendExtras(Widget child, LayrzTokens tokens) {
     if (widget.labelText == null) {
       return child;
     }
@@ -701,6 +702,13 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
             ),
           ),
         child,
+        // Error block and character counter below the entire row
+        LayrzInputFooterSlot(
+          errors: widget.errors,
+          hideDetails: widget.hideDetails,
+          maxLength: null,
+          controller: _controller,
+        ),
       ],
     );
   }
