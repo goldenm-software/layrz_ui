@@ -1,8 +1,10 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
+import '../helpers/pump_themed_app.dart';
 
 void main() {
   group('LayrzAnchoredPanel', () {
@@ -334,5 +336,144 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Panel content'), findsNothing);
     });
+  });
+
+  // Regression coverage for the panel-tap-region defect: tapping content inside
+  // the panel's overlay must never be treated as a tap "outside" a nearby
+  // EditableText, and a genuinely outside tap must dismiss the panel — both
+  // uniformly across mouse and touch pointers. See `_buildPanelOverlay`'s
+  // `TextFieldTapRegion` wrapper for the fix and its doc comment for why.
+  //
+  // A bystander `EditableText`, unrelated to the panel's own anchor, is used
+  // here so these assertions are not entangled with the anchored panel's own
+  // (separate, out-of-scope) focus-steal-to-`_panelFocusNode` behavior in
+  // `_handlePanelOpenRequested`, which would otherwise pull focus away from
+  // the anchor itself immediately after every open, independent of this fix.
+  group('LayrzAnchoredPanel panel/field tap-region grouping', () {
+    Future<FocusNode> pumpPanelWithBystanderField(WidgetTester tester) async {
+      final fieldFocusNode = FocusNode(debugLabel: 'bystander-field');
+      final controller = TextEditingController();
+      addTearDown(fieldFocusNode.dispose);
+      addTearDown(controller.dispose);
+
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 200,
+              height: 30,
+              child: EditableText(
+                controller: controller,
+                focusNode: fieldFocusNode,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF000000)),
+                cursorColor: const Color(0xFF000000),
+                backgroundCursorColor: const Color(0xFFAAAAAA),
+              ),
+            ),
+            LayrzAnchoredPanel(
+              builder: (context, panelController) => LayrzButton(
+                labelText: 'Open',
+                onTap: panelController.open,
+              ),
+              child: SizedBox(
+                width: 150,
+                height: 60,
+                child: GestureDetector(
+                  onTap: () {},
+                  child: const Text('Option'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pumpAndSettle();
+
+      // Refocus the bystander field explicitly, after the panel's own open
+      // sequence (including its unrelated focus steal) has fully settled, so
+      // the assertions below isolate this fix from that other defect.
+      fieldFocusNode.requestFocus();
+      await tester.pumpAndSettle();
+      expect(fieldFocusNode.hasFocus, isTrue, reason: 'precondition: the bystander field must be focused');
+
+      return fieldFocusNode;
+    }
+
+    testWidgets(
+      'a mouse tap on panel content does not unfocus a field elsewhere on screen',
+      (tester) async {
+        final fieldFocusNode = await pumpPanelWithBystanderField(tester);
+
+        final optionCenter = tester.getCenter(find.text('Option'));
+        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.mouse);
+        await tester.pump();
+
+        expect(
+          fieldFocusNode.hasFocus,
+          isTrue,
+          reason:
+              'a mouse tap-down on panel content must not be classified as "outside" the '
+              'bystander field\'s own TextFieldTapRegion — without the fix, EditableText '
+              'unconditionally unfocuses on a mouse tap-down it considers outside',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'a touch tap on panel content does not unfocus a field elsewhere on screen (parity with mouse)',
+      (tester) async {
+        final fieldFocusNode = await pumpPanelWithBystanderField(tester);
+
+        final optionCenter = tester.getCenter(find.text('Option'));
+        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.touch);
+        await tester.pump();
+
+        expect(fieldFocusNode.hasFocus, isTrue);
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      },
+    );
+
+    testWidgets(
+      'a genuine mouse tap outside the field and panel closes the panel',
+      (tester) async {
+        await pumpPanelWithBystanderField(tester);
+        expect(find.text('Option'), findsOneWidget, reason: 'panel must be open before the outside tap');
+
+        final gesture = await tester.startGesture(const Offset(780, 580), kind: PointerDeviceKind.mouse);
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Option'), findsNothing, reason: 'a genuine outside tap must close the panel');
+      },
+    );
+
+    testWidgets(
+      'a genuine touch tap outside the field and panel closes the panel (parity with mouse)',
+      (tester) async {
+        await pumpPanelWithBystanderField(tester);
+        expect(find.text('Option'), findsOneWidget, reason: 'panel must be open before the outside tap');
+
+        final gesture = await tester.startGesture(const Offset(780, 580), kind: PointerDeviceKind.touch);
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Option'), findsNothing, reason: 'a genuine outside tap must close the panel');
+      },
+    );
   });
 }
