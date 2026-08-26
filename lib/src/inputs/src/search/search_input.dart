@@ -117,10 +117,12 @@ class LayrzSearchInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// The maximum width of the input field.
   ///
@@ -155,7 +157,7 @@ class LayrzSearchInput extends StatefulWidget {
     this.helpContentText,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.maxWidth,
     this.preferredSide = LayrzPreferredSide.right,
   });
@@ -349,9 +351,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Otherwise, returns the specified mode.
   LayrzSearchInputMode _resolveMode(BuildContext context) {
     if (widget.mode == LayrzSearchInputMode.auto) {
-      return context.isCompact
-          ? LayrzSearchInputMode.icon
-          : LayrzSearchInputMode.field;
+      return context.isCompact ? LayrzSearchInputMode.icon : LayrzSearchInputMode.field;
     }
     return widget.mode;
   }
@@ -458,7 +458,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           helpTitleText: widget.helpTitleText,
           helpContentText: widget.helpContentText,
           controller: _controller,
-          padding: widget.padding,
+          dense: widget.dense,
           child: LayrzEditableField(config: fieldConfig),
         ),
       ),
@@ -511,9 +511,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       hasErrors: hasErrors,
       readOnly: widget.readOnly,
     );
-    final showFocusRing =
-        !widget.disabled &&
-        (_states.contains(WidgetState.focused) || hasErrors);
+    final showFocusRing = !widget.disabled && (_states.contains(WidgetState.focused) || hasErrors);
 
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
@@ -556,7 +554,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
         helpTitleText: widget.helpTitleText,
         helpContentText: widget.helpContentText,
         controller: _controller,
-        padding: widget.padding,
+        dense: widget.dense,
         borderRadius: tokens.radius.br3,
         showBorder: false,
         child: LayrzEditableField(config: fieldConfig),

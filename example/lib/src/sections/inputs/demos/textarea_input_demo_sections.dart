@@ -65,10 +65,10 @@ class TextAreaInputDemoSections extends StatelessWidget {
   /// Controller for the keyboard behaviour field.
   final TextEditingController keyboardController;
 
-  /// Controller for the custom padding field.
+  /// Controller for the dense-density field.
   final TextEditingController customPaddingController;
 
-  /// Controller for the default padding field.
+  /// Controller for the default-density field.
   final TextEditingController defaultPaddingController;
 
   /// Callback fired when the input state changes.
@@ -488,9 +488,9 @@ class TextAreaInputDemoSections extends StatelessWidget {
               ),
 
               tokens.spacing.sb3,
-              Text('Padding Override', style: tokens.typography.title),
+              Text('Density', style: tokens.typography.title),
               Text(
-                'Left field has custom padding (16px), right field uses default (10px).',
+                'Left field uses dense: true (smaller internal padding), right field uses the default density.',
                 style: tokens.typography.label,
               ),
               LayrzRow(
@@ -500,9 +500,9 @@ class TextAreaInputDemoSections extends StatelessWidget {
                     xs: 12,
                     md: 6,
                     child: LayrzTextAreaInput(
-                      labelText: 'Custom Padding (16px)',
-                      hintText: 'Extra internal spacing',
-                      padding: EdgeInsets.all(16),
+                      labelText: 'Dense',
+                      hintText: 'Reduced internal spacing',
+                      dense: true,
                       controller: customPaddingController,
                       onChanged: (_) => onStateChanged(),
                     ),
@@ -511,7 +511,7 @@ class TextAreaInputDemoSections extends StatelessWidget {
                     xs: 12,
                     md: 6,
                     child: LayrzTextAreaInput(
-                      labelText: 'Default Padding',
+                      labelText: 'Default',
                       hintText: 'Standard internal spacing',
                       controller: defaultPaddingController,
                       onChanged: (_) => onStateChanged(),
