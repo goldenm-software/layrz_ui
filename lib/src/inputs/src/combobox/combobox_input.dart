@@ -567,10 +567,27 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// `coverAnchor: true` means the panel already renders the real, focused
   /// field in exactly the same position; mounting a second [EditableText]
   /// bound to the same [FocusNode] there would conflict with the panel's.
+  ///
+  /// [isPanelRow] distinguishes the panel's own first row from every other
+  /// caller of this function (the closed desktop field, and the compact/mobile
+  /// field, both of which render standalone and need their own border to read
+  /// as an input at all). The user's own framing: "the panel's input IS the
+  /// field's input, continuing" -- so when this row sits *inside*
+  /// `LayrzAnchoredPanel`'s already-bordered, already-rounded container, it
+  /// must not draw a second border and a second rounded rect of its own. Doing
+  /// so drew a bordered, rounded box nested inside the panel's own bordered,
+  /// rounded box -- a self-contained "field" floating in the dropdown, which
+  /// read as a search bar sitting above a results list (the user's own words:
+  /// "partially search, partially just a TextInput") rather than the closed
+  /// field's border simply continuing uninterrupted into the panel. Mirrors
+  /// how `LayrzSelectInputSurface._buildSearchField` suppresses its own border
+  /// for the identical reason (`showBorder: false`) -- see
+  /// `select_input_surface.dart:307`.
   Widget _buildFieldChrome(
     BuildContext context, {
     required VoidCallback onOpen,
     required bool readOnlyPlaceholder,
+    bool isPanelRow = false,
   }) {
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
@@ -634,6 +651,25 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       expands: false,
     );
 
+    // `LayrzInputChrome` paints its border with the SDK's default
+    // `BorderSide.strokeAlignInside`, so on the closed field the border
+    // occupies space *inside* the padded box -- the content's effective inset
+    // from the field's own outer edge is `padding + tokens.border.base`, not
+    // `padding` alone (confirmed directly: a bare `Container` with the same
+    // padding shifts its child by exactly the border's own width depending on
+    // whether a border is painted). Suppressing the border for the panel row
+    // (below) removes that inset, so it is added back here as extra padding
+    // -- otherwise the panel row's text would sit `tokens.border.base` closer
+    // to the edge than the closed field's does, a small but real misalignment
+    // the governing "the panel's input IS the field's input, continuing" rule
+    // does not allow. The base padding matches what `LayrzInputChrome` itself
+    // would default to (`pd3` compact / `pd2` regular) when [padding] is null,
+    // computed here because that default lives in a private class local to
+    // `input_chrome.dart` this file cannot reach.
+    final tokens = context.tokens;
+    final basePadding = widget.padding ?? (context.isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2);
+    final panelRowPadding = isPanelRow ? basePadding + EdgeInsets.all(tokens.border.base) : widget.padding;
+
     return LayrzInputChrome(
       labelText: widget.labelText,
       hintText: widget.hintText,
@@ -648,7 +684,12 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
       controller: _controller,
-      padding: widget.padding,
+      padding: panelRowPadding,
+      // Only the panel's own row suppresses its border/radius (see the class
+      // doc on `isPanelRow`) -- the closed field (desktop or compact) always
+      // keeps both, since nothing else draws a border around it.
+      showBorder: !isPanelRow,
+      borderRadius: isPanelRow ? BorderRadius.zero : null,
       child: readOnlyPlaceholder
           ? ValueListenableBuilder<TextEditingValue>(
               valueListenable: _controller,
@@ -673,6 +714,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       context,
       onOpen: () {},
       readOnlyPlaceholder: false,
+      isPanelRow: true,
     );
 
     // With a custom-value row shown, index 0 is the custom row and option
