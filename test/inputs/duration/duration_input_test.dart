@@ -933,6 +933,144 @@ void main() {
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
 
+    // Regression for a device-reported bug: tapping a field's +/- stepper (or
+    // editing its text) used to close the panel, because `onChanged` -- fired
+    // for every field edit, not just Reset -- was wired straight to
+    // `_panelController.close()`. See `duration_input.dart`'s `onChanged` vs
+    // `onReset` wiring on `LayrzDurationPickerPanel` for the fix: only a
+    // genuine reset closes the panel now.
+    testWidgets('tapping a field\'s increment control updates the value and keeps the panel open', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue,
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      expect(dayIncrement, findsOneWidget);
+
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(days: 1));
+      expect(
+        find.byType(LayrzDurationPickerPanel),
+        findsWidgets,
+        reason: 'a field edit must not close the panel -- only Reset does',
+      );
+    });
+
+    testWidgets('tapping a field\'s decrement control updates the value and keeps the panel open', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 5),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      final hourDecrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_hour')),
+        matching: find.bySemanticsLabel('Decrease value'),
+      );
+      expect(hourDecrement, findsOneWidget);
+
+      await tester.tap(hourDecrement);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(hours: 4));
+      expect(
+        find.byType(LayrzDurationPickerPanel),
+        findsWidgets,
+        reason: 'a field edit must not close the panel -- only Reset does',
+      );
+    });
+
+    testWidgets('typing directly into a field\'s text box updates the value and keeps the panel open', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue,
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      final minuteField = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_minute')),
+        matching: find.byType(EditableText),
+      );
+      expect(minuteField, findsOneWidget);
+
+      await tester.enterText(minuteField, '15');
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(minutes: 15));
+      expect(
+        find.byType(LayrzDurationPickerPanel),
+        findsWidgets,
+        reason: 'typing into a field must not close the panel -- only Reset does',
+      );
+    });
+
     // Shell-parity regressions: `LayrzDurationInput` adopts the same panel
     // chrome `LayrzSelectInput` already has (`coverAnchor: true` plus a
     // primary/danger `LayrzAnchoredPanelBorder`), while its width policy
@@ -1025,7 +1163,13 @@ void main() {
       expect((decoration.border as Border).top.color, equals(tokens.colors.danger));
     });
 
-    testWidgets('the width policy stays contentSized within 280.0-480.0, unaffected by the border/coverAnchor', (
+    // Device-reported defect fix, reversing an earlier decision: the panel used to
+    // stay `contentSized` within a fixed 280.0-480.0 band regardless of the anchor
+    // field's own width, so on a wide field it visually occupied only a small
+    // fraction of it. `matchAnchor` (mirroring `LayrzSelectInput`) makes the panel
+    // span the field's actual rendered width instead -- see the class doc on
+    // `_LayrzDurationInputState.build` for the full reasoning.
+    testWidgets('the panel spans the anchor field\'s full width (matchAnchor), not a fixed 280.0-480.0 band', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1037,12 +1181,72 @@ void main() {
         LayrzDurationInput(labelText: 'Duration'),
       );
 
+      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
+
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
       final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-      expect(panelWidth, greaterThanOrEqualTo(280.0));
-      expect(panelWidth, lessThanOrEqualTo(480.0));
+
+      expect(
+        panelWidth,
+        greaterThan(480.0),
+        reason: 'the old contentSized cap must no longer bound the panel on a wide field',
+      );
+      // The anchor here spans the full 1200px overlay, so LayrzAnchoredPanelLayoutDelegate's
+      // own overlay-bounds clamp (overlaySize.width - 2 * sp2) legitimately trims a few
+      // pixels off matchAnchor's raw anchorRect.width -- a wide tolerance distinguishes that
+      // expected clamp from the old, much narrower 280.0-480.0 contentSized cap this test
+      // guards against regressing to.
+      expect(
+        panelWidth,
+        closeTo(anchorRect.width, 25.0),
+        reason: 'matchAnchor makes the panel width track the anchor field\'s own rendered width',
+      );
+    });
+
+    testWidgets('a narrow anchor field yields a narrow matchAnchor panel', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Center(
+          child: SizedBox(
+            width: 320.0,
+            child: LayrzDurationInput(labelText: 'Duration'),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
+      expect(panelWidth, closeTo(320.0, 1.0));
+    });
+
+    testWidgets('a wide anchor field yields a matchAnchor panel wider than the old 480.0 cap', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Center(
+          child: SizedBox(
+            width: 900.0,
+            child: LayrzDurationInput(labelText: 'Duration'),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
+      expect(panelWidth, closeTo(900.0, 1.0));
     });
 
     testWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {

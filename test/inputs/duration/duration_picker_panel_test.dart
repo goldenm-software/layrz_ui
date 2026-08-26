@@ -146,31 +146,38 @@ class _DistinctShortPluralL10nDelegate extends LocalizationsDelegate<LayrzUiL10n
 }
 
 /// Pumps the real [LayrzDurationInput] at a desktop viewport and opens its
-/// desktop anchored panel, optionally overriding l10n via [delegate] and
-/// seeding the fields via [value].
+/// desktop anchored panel, optionally overriding l10n via [delegate],
+/// seeding the fields via [value], and constraining the anchor field's own
+/// width via [anchorWidth].
 ///
 /// Deliberately routes through the real [LayrzDurationInput] rather than
 /// pumping [LayrzDurationPickerPanel] bare at the full viewport width, to
-/// reproduce the actual constraint the picker renders under in production:
-/// `LayrzDurationInput`'s anchored panel is `contentSized` with
-/// `maxWidth: 480` (`duration_input.dart`), so the panel's real available
-/// width is capped well below the bare viewport — 227px per field at the
-/// time of writing, not whatever the 1600px test viewport alone would give.
-/// A pin test that skips this indirection risks proving a width, or a key
-/// selection, the picker never actually renders at.
+/// reproduce the actual constraint the picker renders under in production.
+/// `LayrzDurationInput`'s anchored panel is `matchAnchor`
+/// (`duration_input.dart`), so the panel's real available width tracks
+/// whatever width the anchor field itself renders at -- there is no longer a
+/// fixed cap the picker can be tested against independent of the caller's
+/// own layout. [anchorWidth], when supplied, constrains the anchor (and so
+/// the panel) to that width via a [SizedBox]; when null, the anchor is left
+/// to size to the full 1200px viewport under [Center]. A pin test that skips
+/// this indirection risks proving a width, or a key selection, the picker
+/// never actually renders at.
 Future<void> _pumpDesktopAnchored(
   WidgetTester tester, {
   LocalizationsDelegate<LayrzUiL10n>? delegate,
   Duration? value,
+  double? anchorWidth,
 }) async {
   tester.view.physicalSize = const Size(1200, 800);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
+  final anchor = LayrzDurationInput(labelText: 'Duration', value: value);
+
   await tester.pumpWidget(
     LayrzApp(
       home: Center(
-        child: LayrzDurationInput(labelText: 'Duration', value: value),
+        child: anchorWidth == null ? anchor : SizedBox(width: anchorWidth, child: anchor),
       ),
       theme: LayrzThemeData.light(),
       localizationsDelegates: delegate == null ? null : [delegate],
@@ -184,9 +191,10 @@ Future<void> _pumpDesktopAnchored(
 }
 
 /// Convenience wrapper over [_pumpDesktopAnchored] that replaces every
-/// duration field's [LayrzNumberInput.suffixText] source key with [suffix].
-Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix}) {
-  return _pumpDesktopAnchored(tester, delegate: _SyntheticSuffixL10nDelegate(suffix));
+/// duration field's [LayrzNumberInput.suffixText] source key with [suffix],
+/// optionally constraining the anchor field's own width via [anchorWidth].
+Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix, double? anchorWidth}) {
+  return _pumpDesktopAnchored(tester, delegate: _SyntheticSuffixL10nDelegate(suffix), anchorWidth: anchorWidth);
 }
 
 /// Pumps the real [LayrzDurationInput] at a compact (mobile) viewport and
@@ -336,7 +344,15 @@ void main() {
     });
 
     group('wide viewport (sm band and above, >= 600px)', () {
-      testWidgets('lays out fields two per row, in day/hour/minute/second order (span change applies)', (
+      // Replaces the old fixed two-column assertion: the panel no longer picks its
+      // column count from a viewport breakpoint (see the class doc on
+      // `LayrzDurationPickerPanel` for why -- `matchAnchor` removed the fixed
+      // 280.0-480.0 width cap this depended on). At `_wideViewport`'s 1600px, all
+      // four ~390px-wide fields comfortably clear `_kFieldMinWidth` (200.0) on one
+      // row, so "fill the available width" now means all four sit side by side
+      // instead of wrapping into two rows of two.
+      testWidgets('lays out all four fields on one row when the panel is wide enough, in day/hour/minute/second '
+          'order, evenly filling the width', (
         tester,
       ) async {
         await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
@@ -346,22 +362,60 @@ void main() {
         final minuteRect = tester.getRect(find.byKey(_minuteKey));
         final secondRect = tester.getRect(find.byKey(_secondKey));
 
-        // Row 1: day and hour share the same top edge, day to the left of hour.
-        expect(dayRect.top, closeTo(hourRect.top, 0.5), reason: 'day and hour should share visual row 1');
+        // All four fields share the same visual row ...
+        expect(hourRect.top, closeTo(dayRect.top, 0.5), reason: 'day and hour should share the same row');
+        expect(minuteRect.top, closeTo(dayRect.top, 0.5), reason: 'minute should share the same row as day');
+        expect(secondRect.top, closeTo(dayRect.top, 0.5), reason: 'second should share the same row as day');
+
+        // ... in day/hour/minute/second order, left to right ...
+        expect(dayRect.left, lessThan(hourRect.left));
+        expect(hourRect.left, lessThan(minuteRect.left));
+        expect(minuteRect.left, lessThan(secondRect.left));
+
+        // ... each clearing the minimum usable width ...
+        expect(dayRect.width, greaterThanOrEqualTo(200.0));
+
+        // ... and, since all four are on one row, each is given an equal share of
+        // the available width -- "fill the available width", not merely "stay
+        // above the minimum and leave the rest empty".
+        expect(dayRect.width, closeTo(hourRect.width, 0.5));
+        expect(minuteRect.width, closeTo(secondRect.width, 0.5));
+        expect(dayRect.width, closeTo(minuteRect.width, 0.5));
+      });
+
+      testWidgets('wraps to two rows of two fields when the panel is too narrow for all four at the minimum '
+          'width, still evenly filling each row', (
+        tester,
+      ) async {
+        // 460px: two 200px-minimum fields plus the 6px inter-field gap fit
+        // (2*200 + 6 = 406 <= availableWidth after the panel's own sp2 padding),
+        // but a third does not (3*200 + 2*6 = 612 > availableWidth). This is the
+        // exact "never shrink a field below its minimum, wrap instead" scenario
+        // the maintainer asked for, reproduced at a width the four-field row
+        // above does not exercise.
+        await _pumpPanel(tester, viewportSize: const Size(460, 800), visibleUnits: _allUnits);
+        expect(tester.takeException(), isNull, reason: 'no field should overflow when wrapping to two rows');
+
+        final dayRect = tester.getRect(find.byKey(_dayKey));
+        final hourRect = tester.getRect(find.byKey(_hourKey));
+        final minuteRect = tester.getRect(find.byKey(_minuteKey));
+        final secondRect = tester.getRect(find.byKey(_secondKey));
+
+        // Row 1: day and hour.
+        expect(hourRect.top, closeTo(dayRect.top, 0.5), reason: 'day and hour should share visual row 1');
         expect(dayRect.left, lessThan(hourRect.left));
 
-        // Row 2: minute and second share the same top edge, below row 1, minute left of second.
-        expect(minuteRect.top, closeTo(secondRect.top, 0.5), reason: 'minute and second should share visual row 2');
+        // Row 2: minute and second, below row 1.
+        expect(secondRect.top, closeTo(minuteRect.top, 0.5), reason: 'minute and second should share visual row 2');
         expect(minuteRect.top, greaterThan(dayRect.top), reason: 'row 2 must be below row 1');
         expect(minuteRect.left, lessThan(secondRect.left));
 
-        // The two-column grid lines up vertically: day/minute share the left column,
-        // hour/second share the right column. This is the span change (xs: 12 -> sm: 6)
-        // actually taking effect, not merely a breakpoint value nobody exercised.
-        expect(dayRect.left, closeTo(minuteRect.left, 0.5), reason: 'day and minute share the left column');
-        expect(hourRect.left, closeTo(secondRect.left, 0.5), reason: 'hour and second share the right column');
+        // Neither field drops below the usable minimum ...
+        expect(dayRect.width, greaterThanOrEqualTo(200.0));
+        expect(minuteRect.width, greaterThanOrEqualTo(200.0));
 
-        // Two equal-span (sm: 6) columns in the same row must be equal width.
+        // ... and each row's two fields still evenly fill that row's width, rather
+        // than sitting at the bare minimum with empty trailing space.
         expect(dayRect.width, closeTo(hourRect.width, 0.5));
         expect(minuteRect.width, closeTo(secondRect.width, 0.5));
       });
@@ -369,14 +423,22 @@ void main() {
       testWidgets('field height does not scale proportionally with column width (no forced square)', (
         tester,
       ) async {
+        // Compact stays a genuine single-field-per-row case (400px, well under two
+        // fields' combined minimum). The "wide" case now needs an explicit narrow
+        // viewport (460px) rather than `_wideViewport` -- at `_wideViewport`'s
+        // 1600px, all four fields fit one row and each is given nearly the same
+        // generous per-field width as the compact single-column case, which would
+        // no longer exercise "column widths should genuinely differ". 460px instead
+        // forces two fields per row (see the wrap test above), giving a narrower,
+        // genuinely different per-field width to compare against.
         await _pumpPanel(tester, viewportSize: _compactViewport, visibleUnits: _allUnits);
         final compactRect = tester.getRect(find.byKey(_dayKey));
 
-        await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
+        await _pumpPanel(tester, viewportSize: const Size(460, 800), visibleUnits: _allUnits);
         final wideRect = tester.getRect(find.byKey(_dayKey));
 
         // Width changes substantially with the column count (one-per-row on compact vs.
-        // two-per-row on wide), so a forced-square layout would make height track it.
+        // two-per-row when wrapped), so a forced-square layout would make height track it.
         // Height instead only shifts by the compact-vs-regular comfortable-density
         // padding delta (pd3 10px -> pd2 14px per side, ~8px total) — not by anything
         // resembling the width's change — confirming height is intrinsic to content
@@ -477,8 +539,17 @@ void main() {
       },
     );
 
-    testWidgets('carries the abbreviated unit label as suffixText on desktop (short form)', (tester) async {
-      await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
+    testWidgets('carries the abbreviated unit label as suffixText when the field is narrow (short form)', (
+      tester,
+    ) async {
+      // The narrow/wide label split is now driven by the panel's own measured
+      // per-field width (see `_kNarrowFieldWidth` on `duration_picker_panel.dart`),
+      // not by a viewport breakpoint -- `_wideViewport` no longer produces a
+      // narrow field once the panel spans its full available width (matchAnchor
+      // removed the old 480.0 cap that used to force two cramped columns there).
+      // A narrow *viewport* (260px) is used here purely as a vehicle to force a
+      // narrow *field*, exactly as `_pumpPanel`'s own bare-panel flow requires.
+      await _pumpPanel(tester, viewportSize: const Size(260, 800), visibleUnits: _allUnits);
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
       expect(day.suffixText, 'd');
@@ -618,15 +689,29 @@ void main() {
   });
 
   group('LayrzDurationPickerPanel band-dependent key selection', () {
-    // The resolution of the locale-length findings below: compact has 16
-    // characters of headroom (no realistic word gets close), so it keeps
-    // the long-form durationField* keys unabridged. Desktop has only 7, and
-    // real translations of "seconds" are 8 characters in at least four major
-    // European languages, so desktop reads the short, count-aware
-    // durationUnit*Short{Singular,Plural} keys instead. Asserted through the
-    // real end-to-end flow (tap -> sheet / anchored panel), with the actual
-    // default English keys — no l10n override — since this is about which
-    // *keys* each band reads, not about a synthetic width stress case.
+    // The resolution of the locale-length findings below: a field with at least
+    // 16 characters of headroom keeps the long-form durationField* keys
+    // unabridged; a field with only ~7 characters of headroom -- narrower than
+    // `_kNarrowFieldWidth` -- reads the short, count-aware
+    // durationUnit*Short{Singular,Plural} keys instead, since real translations
+    // of "seconds" are 8 characters in at least four major European languages.
+    // This split is now driven by the panel's own measured per-field width
+    // (see `duration_picker_panel.dart`'s class doc), not by a viewport
+    // breakpoint, so the "desktop" cases below constrain the anchor field's own
+    // width (`anchorWidth`) to force a narrow field through the real anchored
+    // flow -- `_pumpDesktopAnchored`'s default (a field spanning the full
+    // viewport) no longer reproduces a narrow field on its own now that
+    // `matchAnchor` removed the old fixed 480.0 cap. Asserted through the real
+    // end-to-end flow (tap -> sheet / anchored panel), with the actual default
+    // English keys — no l10n override — since this is about which *keys* each
+    // width reads, not about a synthetic width stress case.
+
+    /// An anchor width narrow enough that `LayrzDurationPickerPanel` renders
+    /// one field per row at well under `_kNarrowFieldWidth` (280.0) per field
+    /// -- see the "narrow anchor field" width tests in
+    /// `duration_input_test.dart` for the same 320.0/240.0 style measurement
+    /// this is based on.
+    const narrowAnchorWidth = 260.0;
 
     testWidgets('compact renders the long-form field label as suffixText, through the real sheet flow', (
       tester,
@@ -637,20 +722,22 @@ void main() {
       expect(day.suffixText, 'Days', reason: 'compact has 16 characters of headroom — keeps the long form');
     });
 
-    testWidgets('desktop renders the short-form abbreviated label as suffixText, through the real anchored flow', (
-      tester,
-    ) async {
-      await _pumpDesktopAnchored(tester, value: const Duration(days: 2));
+    testWidgets('a narrow desktop anchor renders the short-form abbreviated label as suffixText, through the real '
+        'anchored flow', (tester) async {
+      await _pumpDesktopAnchored(tester, value: const Duration(days: 2), anchorWidth: narrowAnchorWidth);
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
-      expect(day.suffixText, 'd', reason: 'desktop has only 7 characters of headroom — abbreviates');
+      expect(day.suffixText, 'd', reason: 'a narrow field has only ~7 characters of headroom — abbreviates');
     });
 
-    testWidgets('desktop picks the short-form SINGULAR key when the field count is exactly 1', (tester) async {
+    testWidgets('a narrow desktop anchor picks the short-form SINGULAR key when the field count is exactly 1', (
+      tester,
+    ) async {
       await _pumpDesktopAnchored(
         tester,
         delegate: const _DistinctShortPluralL10nDelegate(),
         value: const Duration(days: 1, hours: 1, minutes: 1, seconds: 1),
+        anchorWidth: narrowAnchorWidth,
       );
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
@@ -663,13 +750,13 @@ void main() {
       expect(second.suffixText, _DistinctShortPluralL10n.singular);
     });
 
-    testWidgets('desktop picks the short-form PLURAL key when the field count is 0 or greater than 1', (
-      tester,
-    ) async {
+    testWidgets('a narrow desktop anchor picks the short-form PLURAL key when the field count is 0 or greater '
+        'than 1', (tester) async {
       await _pumpDesktopAnchored(
         tester,
         delegate: const _DistinctShortPluralL10nDelegate(),
         value: const Duration(days: 2, hours: 0, minutes: 5, seconds: 0),
+        anchorWidth: narrowAnchorWidth,
       );
 
       final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
@@ -703,14 +790,30 @@ void main() {
     // only exercises "Days"/"Hours"/"Minutes"/"Seconds" proves nothing about
     // what a Spanish or Portuguese build actually renders through
     // `layrz_ui_i18n`, since those keys are translated, not literal in this
-    // repo. Measured directly (temporary probes, deleted): at the real
-    // desktop anchored-panel width (227px, sm: 6, two columns), a 7-char
+    // repo. At the real compact width (380px, one column), 16 characters fit
+    // and 18 do not — comfortably roomy for any real locale.
+    //
+    // RE-DERIVED for `matchAnchor` (previously pinned to a fixed 227px desktop
+    // panel width -- see `duration_picker_panel.dart`'s class doc for why that
+    // width no longer exists as a constant). The desktop case below now fixes
+    // a concrete `anchorWidth` (250.0) instead: since the panel's width is
+    // caller-determined, the "measured safe boundary" is re-expressed as "at
+    // this specific, still-realistic anchor width, a 7-char label fits and an
+    // 8-char one overflows" -- the same underlying claim (a real capacity
+    // ceiling exists, which is why the band-dependent key selection above
+    // reads the short keys below `_kNarrowFieldWidth`), reproduced against the
+    // new width mechanism. Measured directly (temporary probes, deleted): at
+    // `anchorWidth: 250.0` (one field per row, ~230px per field), a 7-char
     // synthetic suffix fits and an 8-char one ("Segundos", "Secondes",
-    // "Sekunden" among them) overflows. At the real compact width (380px,
-    // xs: 12, one column), 16 characters fit and 18 do not — comfortably
-    // roomy for any real locale. This is precisely why the band-dependent
-    // key selection above exists: desktop's 7-character capacity is what
-    // makes the short keys necessary there, not a style preference.
+    // "Sekunden" among them) overflows -- the same boundary the old fixed
+    // 227px cap pinned, still reproducible, just at a caller-chosen width
+    // instead of a built-in one.
+
+    /// The concrete anchor width this group's desktop cases pin, chosen
+    /// (temporary probes, deleted) as the widest anchor at which a 7-char
+    /// suffix still fits and an 8-char one still overflows -- see the group
+    /// doc comment above.
+    const narrowAnchorWidth = 250.0;
 
     testWidgets(
       'a 7-char synthetic suffix (the measured safe boundary) fits the real compact bottom-sheet flow',
@@ -725,47 +828,53 @@ void main() {
     );
 
     testWidgets(
-      'a 7-char synthetic suffix (the measured safe boundary) fits the real desktop anchored-panel flow',
+      'a 7-char synthetic suffix (the measured safe boundary) fits the real desktop anchored-panel flow at a '
+      'narrow anchor width',
       (tester) async {
-        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzz'); // 7 chars, not the English default
+        // 7 chars, not the English default.
+        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzz', anchorWidth: narrowAnchorWidth);
 
         expect(
           tester.takeException(),
           isNull,
-          reason: '7-char labels must fit the wide (sm: 6) two-column row at the anchor\'s real, capped width',
+          reason: '7-char labels must fit one field per row at the narrow anchor\'s real, measured width',
         );
         final dayRect = tester.getRect(find.byKey(_dayKey));
         final hourRect = tester.getRect(find.byKey(_hourKey));
-        expect(dayRect.top, closeTo(hourRect.top, 0.5), reason: 'still two per row, not forced to wrap');
+        expect(hourRect.top, greaterThan(dayRect.top), reason: 'one field per row at this width, day above hour');
       },
     );
 
     testWidgets(
-      'CAPACITY TRIP-WIRE: desktop layout still cannot take an 8-char suffix — this is WHY the short '
+      'CAPACITY TRIP-WIRE: a narrow desktop anchor still cannot take an 8-char suffix — this is WHY the short '
       'keys are used there, not merely a fact about it',
       (tester) async {
-        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzzz'); // 8 chars, one over the safe boundary
+        // 8 chars, one over the safe boundary.
+        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzzz', anchorWidth: narrowAnchorWidth);
 
-        // This assertion is deliberately inverted: it pins the desktop
-        // *layout's* character capacity, which has not changed and is not
-        // what the band-dependent key selection above touched. What changed
-        // is that desktop no longer *feeds* this layout an 8-character
-        // string — it now reads the short durationUnit*Short{Singular,
-        // Plural} keys precisely because this capacity ceiling exists.
+        // This assertion is deliberately inverted: it pins the narrow-anchor
+        // layout's character capacity, which has not changed in kind -- only
+        // in which width exhibits it, now that the panel's width is
+        // caller-determined instead of built-in. What changed is that a
+        // desktop field narrower than `_kNarrowFieldWidth` no longer *feeds*
+        // this layout an 8-character string — it now reads the short
+        // durationUnit*Short{Singular,Plural} keys precisely because this
+        // capacity ceiling exists.
         //
-        // If this ever starts passing (the anchor's width cap grows, this
-        // row's padding/spacing gets more room, or the fields' internal
-        // chrome changes), desktop's capacity would clear 8 characters and
-        // the long-form keys become viable there again — at which point
-        // this test should be inverted back to isNull, and the
-        // band-dependent key selection above should be reconsidered rather
-        // than left as a now-unnecessary abbreviation.
+        // If this ever starts passing at `narrowAnchorWidth` (the fields'
+        // internal chrome changes, or this row's padding/spacing gets more
+        // room), that specific width's capacity would clear 8 characters and
+        // the long-form keys become viable there again — at which point this
+        // test should be inverted back to isNull (or `narrowAnchorWidth`
+        // re-derived narrower), and the band-dependent key selection above
+        // should be reconsidered rather than left as a now-unnecessary
+        // abbreviation.
         expect(
           tester.takeException(),
           isNotNull,
           reason:
-              'desktop layout capacity is currently 7 characters, not 8+; if this starts passing, the '
-              'capacity grew and the short-key decision above should be revisited',
+              'a $narrowAnchorWidth-wide anchor\'s layout capacity is currently 7 characters, not 8+; if this '
+              'starts passing, the capacity grew and the short-key decision above should be revisited',
         );
       },
     );
