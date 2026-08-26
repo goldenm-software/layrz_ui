@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -54,7 +55,7 @@ void main() {
       expect(find.text('Option B'), findsOneWidget);
     });
 
-    testWidgets('field is read-only (no keyboard input)', (tester) async {
+    testWidgets('chrome readOnly flag is false (field-as-searcher redesign)', (tester) async {
       await pumpThemedApp(
         tester,
         LayrzSelectInput<String>(
@@ -66,11 +67,15 @@ void main() {
       // Verify the select input exists
       expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
 
-      // Verify the chrome is created with readOnly flag
+      // Chrome's own `readOnly` was always inert (its only consequence was the lock
+      // icon, suppressed via `suppressReadOnlyLock`); non-editability came from the
+      // old `Text` content child, not this flag. Now that the field is genuinely
+      // editable (the field is the searcher), the flag is `false` -- see the
+      // BREAKING changelog entry for the redesign this pins.
       final chromeWidget = find.byType(LayrzInputChrome);
       expect(chromeWidget, findsOneWidget);
       final chrome = tester.widget<LayrzInputChrome>(chromeWidget);
-      expect(chrome.readOnly, true);
+      expect(chrome.readOnly, false);
     });
 
     testWidgets('does not render lock icon (uses dropdown chevron instead)', (tester) async {
@@ -208,7 +213,11 @@ void main() {
     });
 
     testWidgets('search field filters items', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: the search box this test originally typed into lived inside the
+      // panel and is gone. The field itself is the searcher now -- typing into it
+      // filters live, and that only works with the surface open, which requires
+      // the desktop path (see select_input.dart's focus-race handling).
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -221,18 +230,15 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      // Tap the field to open the surface and focus it.
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Type in search
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'B');
+      // Type into the field itself -- there is no separate search box anymore.
+      await tester.enterText(find.byType(EditableText), 'B');
       await tester.pumpAndSettle();
 
-      // Only Option B should remain
+      // Assert the narrowing: the right item remains, the wrong ones are gone.
       expect(find.text('Option B'), findsWidgets);
       expect(find.text('Option A'), findsNothing);
       expect(find.text('Option C'), findsNothing);
@@ -316,7 +322,8 @@ void main() {
     });
 
     testWidgets('empty list shows empty state message', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -329,19 +336,17 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'nonexistent');
+      await tester.enterText(find.byType(EditableText), 'nonexistent');
       await tester.pumpAndSettle();
 
-      // Empty message should appear
+      // Empty message should appear, and no items should remain.
       expect(find.text('No item found'), findsOneWidget);
+      expect(find.text('Option A'), findsNothing);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('custom filter function works', (tester) async {
@@ -623,7 +628,8 @@ void main() {
     });
 
     testWidgets('custom filter respects case sensitivity', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -637,19 +643,18 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
       // Type uppercase search
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'A');
+      await tester.enterText(find.byType(EditableText), 'A');
       await tester.pumpAndSettle();
 
-      // Should find Option A (case-insensitive)
+      // Should find Option A (case-insensitive) and narrow out B and C, neither
+      // of which contains an "a".
       expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('multiple errors are joined with comma', (tester) async {
@@ -715,7 +720,8 @@ void main() {
     });
 
     testWidgets('empty search result shows custom empty text', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -729,19 +735,17 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'zzz');
+      await tester.enterText(find.byType(EditableText), 'zzz');
       await tester.pumpAndSettle();
 
-      // Custom empty message should appear
+      // Custom empty message should appear, and no items should remain.
       expect(find.text('No matching items'), findsOneWidget);
+      expect(find.text('Option A'), findsNothing);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('focus node is created and disposed by widget', (tester) async {
@@ -771,29 +775,6 @@ void main() {
       );
 
       expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
-    });
-
-    testWidgets('text input disables autocomplete when enableSearch is false', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: false,
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // No search field should be present
-      expect(find.byType(LayrzTextInput), findsNothing);
     });
 
     testWidgets('selected item is preserved when value changes', (tester) async {
@@ -930,8 +911,15 @@ void main() {
       expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
     });
 
-    testWidgets('search clear button removes query text', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+    testWidgets('clearing the typed query restores the full list', (tester) async {
+      // REWRITE, with a caveat: the old panel search box's inline clear (close)
+      // icon is gone, and there is no equivalent built-in "clear" affordance on
+      // the field itself -- that specific UI capability disappeared with the
+      // search box (flagged to the maintainer separately). What survives is the
+      // underlying behavior: erasing the query restores the full list. Proven
+      // here by clearing the field's text directly, the same way a user would by
+      // backspacing, rather than by tapping a control that no longer exists.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -944,30 +932,24 @@ void main() {
         ),
       );
 
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Type search text
-      final searchInput = find.byType(LayrzTextInput).first;
-      await tester.enterText(searchInput, 'A');
+      await tester.enterText(find.byType(EditableText), 'A');
       await tester.pumpAndSettle();
 
       // Only one option visible
       expect(find.text('Option A'), findsOneWidget);
       expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
 
-      // Find and tap clear button
-      final closeIcon = find.byIcon(MdiIcons.close);
-      if (closeIcon.evaluate().isNotEmpty) {
-        await tester.tap(closeIcon.first);
-        await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText), '');
+      await tester.pumpAndSettle();
 
-        // All options visible again
-        expect(find.text('Option A'), findsOneWidget);
-        expect(find.text('Option B'), findsOneWidget);
-        expect(find.text('Option C'), findsOneWidget);
-      }
+      // All options visible again
+      expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsOneWidget);
+      expect(find.text('Option C'), findsOneWidget);
     });
 
     testWidgets('enter with no highlight does nothing', (tester) async {
@@ -1101,6 +1083,321 @@ void main() {
 
       // Before the fix this threw `A RenderFlex overflowed by 68 pixels`.
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  // DESIGN-40/144: the field-as-searcher redesign. Neither this widget nor
+  // `LayrzComboBoxInput` had this mode logic before -- combobox's displayed text
+  // *is* its value, so it never needed to distinguish "idle" from "typing". Each
+  // of the four modes gets its own test; mode 3 (blur-revert) is the one people
+  // forget, so it is asserted explicitly rather than folded into another test.
+  group('LayrzSelectInput field-as-searcher mode logic (DESIGN-40/144)', () {
+    final items = <LayrzSelectItem<String>>[
+      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+      const LayrzSelectItem(labelText: 'Option C', value: 'c'),
+    ];
+
+    testWidgets('mode 1: idle shows the selected item\'s label', (tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
+      );
+
+      final editable = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable.controller.text, 'Option B');
+    });
+
+    testWidgets('mode 2: typing shows the query and filters the opened list', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText), 'B');
+      await tester.pumpAndSettle();
+
+      final editable = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable.controller.text, 'B');
+      expect(find.text('Option B'), findsOneWidget);
+      expect(find.text('Option A'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
+    });
+
+    testWidgets(
+      'the field keeps focus after the desktop panel opens (not the panel itself)',
+      (tester) async {
+        // Asserts the OUTCOME, not the timing that produces it:
+        // `LayrzAnchoredPanel._handlePanelOpenRequested` unconditionally moves
+        // focus to its own internal panel-focus-node one frame after opening, which
+        // would otherwise defocus the field the instant it's tapped -- breaking
+        // "the field is the searcher" on desktop before the user types a single
+        // character. `LayrzSelectInput._handlePanelOpened` (wired via the panel's
+        // own `onOpen` hook) wins that race back for the field. If the race ever
+        // flips -- an SDK change, a change to the panel's own open-focus timing --
+        // this must fail rather than let the regression pass silently.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(items: items, labelText: 'Choose one', focusNode: focusNode),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(focusNode.hasFocus, isTrue);
+      },
+    );
+
+    testWidgets('mode 3: blur with nothing picked reverts to the selected label', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          items: items,
+          value: 'b',
+          labelText: 'Choose one',
+          focusNode: focusNode,
+        ),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText), 'zzz-no-match');
+      await tester.pumpAndSettle();
+
+      var editable = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable.controller.text, 'zzz-no-match');
+
+      // Blur without picking anything -- the field must revert to the label,
+      // not stay showing the abandoned query.
+      focusNode.unfocus();
+      await tester.pumpAndSettle();
+
+      editable = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable.controller.text, 'Option B');
+    });
+
+    testWidgets(
+      'mode 4: a caller-supplied value change mid-query reconciles without clobbering the typed text',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+        String? currentValue = 'a';
+        late StateSetter setOuterState;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              setOuterState = setState;
+              return LayrzSelectInput<String>(
+                items: items,
+                value: currentValue,
+                labelText: 'Choose one',
+                focusNode: focusNode,
+              );
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(EditableText), 'typing...');
+        await tester.pumpAndSettle();
+
+        // The caller changes `value` externally while the user is mid-query.
+        setOuterState(() => currentValue = 'c');
+        await tester.pump();
+
+        // The typed text must survive the external change -- it is reconciled
+        // silently, not applied immediately over what the user is typing.
+        var editable = tester.widget<EditableText>(find.byType(EditableText));
+        expect(editable.controller.text, 'typing...');
+
+        // Once the query resolves (blur, nothing picked), the *new* external
+        // value's label appears -- proving the change was reconciled, not
+        // dropped.
+        focusNode.unfocus();
+        await tester.pumpAndSettle();
+
+        editable = tester.widget<EditableText>(find.byType(EditableText));
+        expect(editable.controller.text, 'Option C');
+      },
+    );
+
+    testWidgets(
+      'enableSearch: false self-displays a local pick without the caller feeding value back',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        // Deliberately no `onChanged`/`value` wiring -- the caller never feeds a
+        // new value back. Under the old spec the field would never update; under
+        // the redesign it self-displays from internal state regardless.
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(
+            items: items,
+            labelText: 'Choose one',
+            enableSearch: false,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Option B'));
+        await tester.pumpAndSettle();
+
+        final editable = tester.widget<EditableText>(find.byType(EditableText));
+        expect(editable.controller.text, 'Option B');
+        // Still not editable: the false path needs no mode logic of its own.
+        expect(editable.readOnly, isTrue);
+      },
+    );
+
+    testWidgets('a caller-supplied suffix and the dropdown caret render together', (tester) async {
+      // Before the caret moved to an external sibling, the widget's own chevron
+      // occupied `suffixSlot` whenever the caller left it empty -- a caller that
+      // *did* supply a suffix lost the chevron entirely. This is what proves that
+      // is no longer true.
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          items: items,
+          labelText: 'Choose one',
+          suffixIcon: MdiIcons.star,
+        ),
+      );
+
+      expect(find.byIcon(MdiIcons.star), findsOneWidget);
+      expect(find.byIcon(MdiIcons.chevronDown), findsOneWidget);
+    });
+  });
+
+  // The chrome region outside the field's own text (its floating label, its
+  // padding) has a `LayrzTappable` fallback so the whole chrome opens the
+  // surface, matching pre-redesign behavior. These assert the four outcomes
+  // that fallback must not break, not the widget tree -- a `find.byType`
+  // assertion on the wrapper would pass whether or not the tap actually
+  // reaches anything underneath it.
+  group('LayrzSelectInput chrome-region tap fallback does not break text interaction', () {
+    final items = <LayrzSelectItem<String>>[
+      const LayrzSelectItem(labelText: 'Option A', value: 'a'),
+      const LayrzSelectItem(labelText: 'Option B', value: 'b'),
+    ];
+
+    testWidgets('tapping the chrome outside the text (e.g. the floating label) opens the surface', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, labelText: 'Choose one'),
+      );
+
+      final chromeRect = tester.getRect(find.byType(LayrzInputChrome));
+      final editableRect = tester.getRect(find.byType(EditableText));
+      final labelAreaPoint = Offset(chromeRect.left + 20, chromeRect.top + 10);
+      // Sanity-check the point actually sits outside the editable text's own
+      // hit region -- otherwise this would not be testing the fallback at all.
+      expect(editableRect.contains(labelAreaPoint), isFalse);
+
+      await tester.tapAt(labelAreaPoint);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Option A'), findsWidgets);
+    });
+
+    testWidgets('tapping directly on the text still places the caret', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
+      );
+
+      await tester.tap(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+      expect(editableState.textEditingValue.selection.isCollapsed, isTrue);
+    });
+
+    testWidgets('dragging across the text still selects a range', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
+      );
+
+      final editableRect = tester.getRect(find.byType(EditableText));
+      final start = Offset(editableRect.left + 4, editableRect.center.dy);
+      final end = Offset(editableRect.right - 4, editableRect.center.dy);
+
+      final gesture = await tester.startGesture(start, kind: PointerDeviceKind.mouse);
+      for (var i = 1; i <= 10; i++) {
+        await tester.pump(const Duration(milliseconds: 20));
+        await gesture.moveTo(Offset.lerp(start, end, i / 10)!);
+      }
+      await tester.pump(const Duration(milliseconds: 20));
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+      expect(editableState.textEditingValue.selection.isCollapsed, isFalse);
+    });
+
+    testWidgets('long-pressing the text still shows touch selection handles', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(items: items, value: 'b', labelText: 'Choose one'),
+      );
+
+      await tester.longPress(find.byType(EditableText));
+      await tester.pumpAndSettle();
+
+      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+      expect(editableState.widget.showSelectionHandles, isTrue);
     });
   });
 }

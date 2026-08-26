@@ -264,7 +264,10 @@ void main() {
 
     group('Search functionality', () {
       testWidgets('search field filters items', (tester) async {
-        tester.view.physicalSize = const Size(400, 800);
+        // REWRITE: the search box this test originally typed into lived inside
+        // the panel and is gone. The field itself is the searcher now, which
+        // only works with the surface open -- the desktop path.
+        tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
@@ -279,25 +282,24 @@ void main() {
             ),
           );
 
-          final field = find.byType(LayrzInputChrome);
-          await tester.tap(field);
+          await tester.tap(find.byType(EditableText));
           await tester.pumpAndSettle();
 
-          expect(find.byType(LayrzTextInput), findsOneWidget);
-
-          final searchField = find.byType(LayrzTextInput).first;
-          await tester.enterText(searchField, 'B');
+          await tester.enterText(find.byType(EditableText), 'B');
           await tester.pumpAndSettle();
 
+          // Assert the narrowing: the right item remains, the wrong one is gone.
           expect(find.text('Option B'), findsOneWidget);
           expect(find.text('Option A'), findsNothing);
+          expect(find.text('Option C'), findsNothing);
         } finally {
           handle.dispose();
         }
       });
 
       testWidgets('empty search shows empty list message', (tester) async {
-        tester.view.physicalSize = const Size(400, 800);
+        // REWRITE: typed into the field itself now, not a separate search box.
+        tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
@@ -313,15 +315,16 @@ void main() {
             ),
           );
 
-          final field = find.byType(LayrzInputChrome);
-          await tester.tap(field);
+          await tester.tap(find.byType(EditableText));
           await tester.pumpAndSettle();
 
-          final searchField = find.byType(LayrzTextInput).first;
-          await tester.enterText(searchField, 'XYZ');
+          await tester.enterText(find.byType(EditableText), 'XYZ');
           await tester.pumpAndSettle();
 
           expect(find.text('No matches'), findsOneWidget);
+          expect(find.text('Option A'), findsNothing);
+          expect(find.text('Option B'), findsNothing);
+          expect(find.text('Option C'), findsNothing);
         } finally {
           handle.dispose();
         }
@@ -470,7 +473,14 @@ void main() {
 
     group('Custom filter', () {
       testWidgets('custom filter function is applied', (tester) async {
-        tester.view.physicalSize = const Size(400, 800);
+        // REWRITE: typed into the field itself now, not a separate search box.
+        // Also fixes a pre-existing weak assertion -- the original filter,
+        // `item.labelText.contains(query.toUpperCase())`, was case-sensitive
+        // against "Option A" and a query of "OPTION" never actually matched
+        // anything; the sole assertion checked only that the search box widget
+        // still existed, not that filtering narrowed the list. Rewritten with a
+        // genuinely case-insensitive filter and an assertion on the narrowing.
+        tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
@@ -482,20 +492,20 @@ void main() {
               items: items,
               labelText: 'Choose one',
               enableSearch: true,
-              filter: (query, item) => item.labelText.contains(query.toUpperCase()),
+              filter: (query, item) => item.labelText.toUpperCase().contains(query.toUpperCase()),
             ),
           );
 
-          final field = find.byType(LayrzInputChrome);
-          await tester.tap(field);
+          await tester.tap(find.byType(EditableText));
           await tester.pumpAndSettle();
 
-          final searchField = find.byType(LayrzTextInput).first;
-          await tester.enterText(searchField, 'OPTION');
+          await tester.enterText(find.byType(EditableText), 'B');
           await tester.pumpAndSettle();
 
-          // Filter should only show items with custom filter match
-          expect(find.byType(LayrzTextInput), findsOneWidget);
+          // The custom filter narrows to just Option B.
+          expect(find.text('Option B'), findsOneWidget);
+          expect(find.text('Option A'), findsNothing);
+          expect(find.text('Option C'), findsNothing);
         } finally {
           handle.dispose();
         }

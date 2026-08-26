@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
@@ -6,24 +7,43 @@ import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
+import '../shared/editable_field.dart';
 import '../shared/input_chrome.dart';
 import '../shared/input_slot.dart';
+import '../shared/input_style_spec.dart';
 import 'select_input_surface.dart';
 
 /// A Material-free, adaptive select input in the layrz_ui design system.
 ///
-/// [LayrzSelectInput] displays a read-only field showing the selected item's label text,
-/// with a dropdown chevron affordance. Tapping the field opens a selection surface that
-/// adapts to the viewport:
+/// [LayrzSelectInput] displays a field showing the selected item's label text, with a
+/// dropdown chevron affordance rendered as an external sibling to the field (never inside
+/// a caller-suppliable slot). Tapping the field opens a selection surface that adapts to
+/// the viewport:
 /// - **Desktop / wide (≥ 960px)**: An anchored overlay panel below the field
 /// - **Below `md` breakpoint (< 960px)**: A bottom sheet covering the lower portion of the screen
 ///
 /// This follows decision D52 (adaptive surface) and avoids depending on the dialog system
 /// (DESIGN-96/99), keeping the component self-contained and lightweight.
 ///
-/// **Keyboard support:** Arrow keys move a highlight in the list, Enter commits the
-/// highlighted item, Escape closes without changing the selection.
+/// **Self-display (BREAKING, DESIGN-40/144):** The field renders from its own internal
+/// state, not directly from [value]. Picking an item updates the field's display
+/// immediately, whether or not the caller feeds an updated [value] back on the next
+/// build -- a caller-supplied [value] change is still honored (it reconciles the internal
+/// state), but is no longer required for the field to reflect a pick. See the CHANGELOG
+/// for the full migration note; this widget was previously a strictly controlled
+/// component and is not anymore.
+///
+/// **Search (when [enableSearch] is true, the default):** the field itself is the
+/// searcher -- there is no separate search box in the opened surface. Typing filters the
+/// list live; the field shows the selected item's label while idle, the typed query while
+/// typing, and reverts to the label on blur if nothing was picked. When [enableSearch] is
+/// false, the field is not editable (a pure picker) but still self-displays from internal
+/// state -- it just never diverges from the selected label, since it never accepts input.
+///
+/// **Keyboard support:** When [enableSearch] is false, arrow keys move a highlight in the
+/// list, Enter commits the highlighted item, Escape closes without changing the selection.
 class LayrzSelectInput<T> extends StatefulWidget {
   /// The list of items to choose from.
   ///
@@ -34,7 +54,10 @@ class LayrzSelectInput<T> extends StatefulWidget {
   /// The currently selected value.
   ///
   /// May be null to represent no selection. If the value matches no item,
-  /// the field displays empty.
+  /// the field displays empty. Feeding this back after [onChanged] fires is no
+  /// longer required for the field's own display to update (see the class doc),
+  /// but it is still honored: a caller-supplied change reconciles the field's
+  /// internal display state, without clobbering a query the user is mid-typing.
   final T? value;
 
   /// Callback fired when the user selects an item or clears the selection.
@@ -44,10 +67,13 @@ class LayrzSelectInput<T> extends StatefulWidget {
   /// If no item was selected, this callback is not called.
   final void Function(LayrzSelectItem<T>?)? onChanged;
 
-  /// Whether to show a search field in the selection surface.
+  /// Whether the field is the searcher for the selection surface.
   ///
-  /// Defaults to `true`. When false, the search field is hidden and all items
-  /// are displayed unconditionally.
+  /// Defaults to `true`. When true, the field is editable: it shows the selected
+  /// item's label while idle, the typed query while typing, and filters the opened
+  /// surface's list live. When false, the field is not editable -- a pure picker --
+  /// but still self-displays the selected item's label from internal state; it never
+  /// accepts a query because it never accepts input.
   final bool enableSearch;
 
   /// Whether the user can select an item with `value: null` to clear the selection.
@@ -60,7 +86,9 @@ class LayrzSelectInput<T> extends StatefulWidget {
   ///
   /// If provided, replaces the default [LayrzSelectItem.matches] logic.
   /// Called with the search query and each item; should return `true` if the
-  /// item matches. When null, uses [LayrzSelectItem.matches] instead.
+  /// item matches. When null, uses [LayrzSelectItem.matches] instead. Applied
+  /// regardless of whether the field currently holds a query -- an empty query
+  /// still runs through this callback rather than short-circuiting to "show all".
   final bool Function(String query, LayrzSelectItem<T> item)? filter;
 
   /// Text displayed when the search finds no matching items.
@@ -95,19 +123,24 @@ class LayrzSelectInput<T> extends StatefulWidget {
   /// Callback fired when the prefix is tapped.
   final VoidCallback? onPrefixTap;
 
-  /// Icon to render as a suffix (excluding the dropdown chevron).
+  /// Icon to render as a suffix.
   ///
-  /// Mutually exclusive with [suffix] and [suffixText].
+  /// Mutually exclusive with [suffix] and [suffixText]. Unlike the dropdown
+  /// chevron -- which is always rendered as an external sibling to the field,
+  /// never inside this slot -- this slot is entirely free for the caller: a
+  /// caller-supplied suffix and the chevron always render together.
   final IconData? suffixIcon;
 
-  /// Widget to render as a suffix (excluding the dropdown chevron).
+  /// Widget to render as a suffix.
   ///
-  /// Mutually exclusive with [suffixIcon] and [suffixText].
+  /// Mutually exclusive with [suffixIcon] and [suffixText]. See [suffixIcon]
+  /// for why this slot never loses room to the dropdown chevron.
   final Widget? suffix;
 
-  /// Text to render as a suffix (excluding the dropdown chevron).
+  /// Text to render as a suffix.
   ///
-  /// Mutually exclusive with [suffixIcon] and [suffix].
+  /// Mutually exclusive with [suffixIcon] and [suffix]. See [suffixIcon]
+  /// for why this slot never loses room to the dropdown chevron.
   final String? suffixText;
 
   /// Callback fired when the suffix is tapped.
@@ -191,11 +224,33 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   final Set<WidgetState> _states = {};
   MenuController? _panelController;
 
+  /// The value the field currently displays, independent of [LayrzSelectInput.value]
+  /// once a pick has been made locally.
+  ///
+  /// This is what makes both paths self-display (DESIGN-40/144's redesign): a pick
+  /// updates this immediately via [_commitSelection], so the field's own display never
+  /// depends on the caller feeding [LayrzSelectInput.value] back. [didUpdateWidget]
+  /// still reconciles this with an externally-changed [LayrzSelectInput.value] --
+  /// silently, without disturbing a query the user is mid-typing (see [_isQuerying]).
+  T? _displayedValue;
+
+  /// Whether the field currently shows a user-typed query rather than the selected
+  /// item's idle label.
+  ///
+  /// Only ever set by [_handleQueryChanged], which fires only for genuine user edits
+  /// (never for a programmatic `_controller.text =` assignment) -- and only reachable
+  /// at all when [LayrzSelectInput.enableSearch] is true, since the field is read-only
+  /// otherwise and never receives edits. Cleared on a committed pick ([_commitSelection])
+  /// and on blur with nothing picked ([_handleFieldFocusChanged]), both of which revert
+  /// the display to the selected item's label.
+  bool _isQuerying = false;
+
   @override
   void initState() {
     super.initState();
     _focusNode = widget.focusNode ?? FocusNode();
     _controller = TextEditingController();
+    _displayedValue = widget.value;
     _updateControllerText();
   }
 
@@ -213,8 +268,15 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       }
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (oldWidget.value != widget.value) {
-      _updateControllerText();
+    if (widget.value != oldWidget.value) {
+      // Mode 4: reconcile with the caller's own value change, but never clobber
+      // a query the user is actively typing -- `_updateControllerText` (and the
+      // visible text change it causes) is deferred until the query resolves,
+      // via `_isQuerying`'s own revert-on-blur / revert-on-commit paths.
+      _displayedValue = widget.value;
+      if (!_isQuerying) {
+        _updateControllerText();
+      }
     }
   }
 
@@ -227,21 +289,72 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     super.dispose();
   }
 
-  /// Finds the item matching the current value, or null if not found.
+  /// Finds the item matching [_displayedValue], or null if not found.
   LayrzSelectItem<T>? _findSelectedItem() {
     try {
       return widget.items.firstWhere(
-        (item) => item.value == widget.value,
+        (item) => item.value == _displayedValue,
       );
     } catch (e) {
       return null;
     }
   }
 
-  /// Updates the controller text to match the selected item's label.
+  /// Updates the controller text to match [_displayedValue]'s item label (mode 1: idle).
+  ///
+  /// Deliberately blank when [_displayedValue] is null, even if some item's own
+  /// `value` happens to also be null (a common convention for a "None"/clear entry):
+  /// a null value means "nothing chosen", and the field should read as empty, not as
+  /// if the user had explicitly picked that placeholder. [_findSelectedItem] itself
+  /// carries no such guard -- the surface's own highlighting (via `selectedItem:`)
+  /// still treats a null-value item as "the current state" and marks it selected.
   void _updateControllerText() {
-    final selectedItem = _findSelectedItem();
+    final selectedItem = _displayedValue == null ? null : _findSelectedItem();
     _controller.text = selectedItem?.labelText ?? '';
+  }
+
+  /// Handles a genuine user edit to the field's text (mode 2: typing).
+  ///
+  /// Never invoked for a programmatic `_controller.text =` assignment -- this is wired
+  /// to [LayrzEditableFieldConfig.onChanged], which [LayrzEditableField] calls only from
+  /// [EditableText]'s own `onChanged`, itself fired only by real user input.
+  void _handleQueryChanged(String text) {
+    setState(() {
+      _isQuerying = true;
+    });
+  }
+
+  /// Handles the field gaining or losing focus.
+  ///
+  /// On blur with an unresolved query (mode 3), reverts the display back to the
+  /// selected item's label -- the case people forget, so it is a named method rather
+  /// than inline logic, and it has its own test.
+  void _handleFieldFocusChanged(bool hasFocus) {
+    setState(() {
+      if (hasFocus) {
+        _states.add(WidgetState.focused);
+      } else {
+        _states.remove(WidgetState.focused);
+      }
+      if (!hasFocus && _isQuerying) {
+        _isQuerying = false;
+        _updateControllerText();
+      }
+    });
+  }
+
+  /// Commits [item] as the current selection.
+  ///
+  /// Updates [_displayedValue] and the field's text immediately -- this is what lets
+  /// the field self-display without requiring the caller to feed [LayrzSelectInput.value]
+  /// back -- then notifies the caller via [LayrzSelectInput.onChanged].
+  void _commitSelection(LayrzSelectItem<T>? item) {
+    setState(() {
+      _displayedValue = item?.value;
+      _isQuerying = false;
+      _updateControllerText();
+    });
+    widget.onChanged?.call(item);
   }
 
   /// Opens the selection surface on mobile via bottom sheet.
@@ -264,19 +377,52 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     );
 
     if (result != null || widget.canUnselect) {
-      widget.onChanged?.call(result);
+      _commitSelection(result);
     }
   }
 
-  /// Builds the anchor widget for desktop anchored panel.
+  /// Refocuses [_focusNode] after [LayrzAnchoredPanel] opens.
   ///
-  /// The anchor is built from LayrzInputChrome with suppressReadOnlyLock=true
-  /// to hide the read-only lock icon and show the dropdown chevron instead.
-  Widget _buildAnchor(BuildContext context, MenuController controller) {
-    final tokens = context.tokens;
-    final isExpanded = controller.isOpen;
+  /// [LayrzAnchoredPanel]'s own `_handlePanelOpenRequested` unconditionally moves
+  /// focus to its internal panel-focus node one frame after opening (so Escape and
+  /// arrow-key traversal reach the panel). Left alone, that steal would land after
+  /// this callback's own single-frame refocus if both raced in the same frame, so
+  /// this defers a *second* frame past that steal (an inner `addPostFrameCallback`
+  /// registered from within an outer one) to reliably win the race and hand focus
+  /// back to the field -- otherwise the field would lose focus the instant the panel
+  /// opens, and "the field is the searcher" would be unusable on desktop the moment
+  /// a caller actually taps it.
+  void _handlePanelOpened() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.enableSearch) {
+          _focusNode.requestFocus();
+        }
+      });
+    });
+  }
 
-    // Resolve slots
+  /// Builds the field's content: the chrome (as an [Expanded] sibling with no border
+  /// or radius of its own) plus the dropdown chevron as an external caret.
+  ///
+  /// Mirrors `number_input.dart`'s step-button composition -- an outer bordered
+  /// container around a [Row] of [chrome, caret] -- so that [suffixSlot] (and
+  /// [prefixSlot]) stay entirely free for the caller: the widget's own dropdown
+  /// affordance never occupies a slot the caller might want. [LayrzInputChrome]
+  /// already exposes `showBorder`/`borderRadius` for exactly this composition, so
+  /// this needs no change to the chrome itself.
+  ///
+  /// [onOpen] opens the selection surface -- [MenuController.open] on desktop,
+  /// [_openMobileSurface] on mobile. [isExpanded] reports whether the surface is
+  /// currently open, for the semantics `expanded` flag (always `false` on mobile,
+  /// which has no controller to query).
+  Widget _buildField(
+    BuildContext context, {
+    required VoidCallback onOpen,
+    required bool isExpanded,
+  }) {
+    final tokens = context.tokens;
+
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
       prefix: widget.prefix,
@@ -291,44 +437,47 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       onSuffixTap: widget.onSuffixTap,
     );
 
-    // Add dropdown chevron to the suffix slot if not provided
-    final finalSuffixSlot = suffixSlot.hasContent
-        ? suffixSlot
-        : LayrzInputSuffixSlot(
-            icon: MdiIcons.chevronDown,
-            isDecorative: true,
-          );
-
-    // Compute states
     if (widget.disabled) {
       _states.add(WidgetState.disabled);
     } else {
       _states.remove(WidgetState.disabled);
     }
 
-    // Find the selected item's label text
-    String? selectedLabel;
-    if (widget.value != null) {
-      for (final item in widget.items) {
-        if (item.value == widget.value) {
-          selectedLabel = item.labelText;
-          break;
-        }
-      }
-    }
+    final hasErrors = widget.errors.isNotEmpty;
 
-    // Build the content display widget with full width
-    final contentChild = Padding(
-      padding: tokens.spacing.pd2,
-      child: SizedBox(
-        width: double.infinity,
-        child: Text(
-          selectedLabel ?? '',
-          style: tokens.typography.body,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+    // Not editable when `enableSearch` is false: a pure picker that still
+    // self-displays (mode-logic-free, per the class doc), never a query source.
+    final fieldConfig = LayrzEditableFieldConfig(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      disabled: widget.disabled,
+      readOnly: !widget.enableSearch,
+      controller: _controller,
+      focusNode: _focusNode,
+      onChanged: widget.enableSearch ? _handleQueryChanged : null,
+      onSubmit: null,
+      onFocusChanged: _handleFieldFocusChanged,
+      onTap: widget.disabled ? null : onOpen,
+      keyboardType: TextInputType.text,
+      textInputAction: null,
+      inputFormatters: const [],
+      maxLength: null,
+      autofocus: false,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: false,
+      enableSuggestions: false,
+      actions: null,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+    );
+
+    final spec = LayrzInputStyleSpec.resolve(
+      states: _states,
+      tokens: tokens,
+      hasErrors: hasErrors,
     );
 
     return Semantics(
@@ -336,33 +485,65 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       button: true,
       enabled: !widget.disabled,
       expanded: isExpanded,
-      onTap: widget.disabled ? null : controller.open,
-      child: GestureDetector(
-        onTap: widget.disabled ? null : controller.open,
-        behavior: HitTestBehavior.opaque,
-        // Attaches `_focusNode` to the focus tree (DESIGN-144). `LayrzInputChrome`
-        // is purely visual and never does this itself, and passing the node to
-        // `LayrzAnchoredPanel.childFocusNode` alone only tells the panel where to
-        // restore focus -- it does not attach the node anywhere on its own.
-        child: Focus(
-          focusNode: _focusNode,
-          child: LayrzInputChrome(
-            labelText: widget.labelText,
-            hintText: widget.hintText,
-            isRequired: widget.isRequired,
-            prefixSlot: prefixSlot,
-            suffixSlot: finalSuffixSlot,
-            disabled: widget.disabled,
-            readOnly: true,
-            errors: widget.errors,
-            hideDetails: widget.hideDetails,
-            states: _states,
-            helpTitleText: widget.helpTitleText,
-            helpContentText: widget.helpContentText,
-            controller: _controller,
-            padding: widget.padding,
-            suppressReadOnlyLock: true,
-            child: contentChild,
+      child: Container(
+        decoration: BoxDecoration(
+          color: spec.backgroundColor,
+          border: Border.all(color: spec.borderColor, width: spec.borderWidth),
+          borderRadius: tokens.radius.br2,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                // A fallback tap target for the chrome region outside the field's own
+                // text content (e.g. the floating label, padding): `LayrzEditableField`'s
+                // gesture handling only claims the text's own hit region, so a tap
+                // landing elsewhere in the chrome would otherwise do nothing (verified:
+                // see the doc comment on `_buildField`). `LayrzTappable` hit-tests
+                // opaquely but tests children FIRST -- Flutter's hit-testing always
+                // visits descendants before the ancestor considers itself -- so this
+                // never intercepts a tap the field's own selection gesture recognizer
+                // already claims; both simply enter the same arena for that pointer,
+                // and the deeper (field's own) recognizer wins on the text itself.
+                // Colors are fully transparent: `LayrzInputStyleSpec`-driven painting
+                // on the chrome itself already reflects hover/press/focus, and this
+                // must not paint a second, competing tint on top of that.
+                child: LayrzTappable(
+                  onTap: widget.disabled ? null : onOpen,
+                  disabled: widget.disabled,
+                  color: const Color(0x00000000),
+                  hoverColor: const Color(0x00000000),
+                  pressedColor: const Color(0x00000000),
+                  child: LayrzInputChrome(
+                    labelText: widget.labelText,
+                    hintText: widget.hintText,
+                    isRequired: widget.isRequired,
+                    prefixSlot: prefixSlot,
+                    suffixSlot: suffixSlot,
+                    disabled: widget.disabled,
+                    readOnly: false,
+                    errors: widget.errors,
+                    hideDetails: widget.hideDetails,
+                    states: _states,
+                    helpTitleText: widget.helpTitleText,
+                    helpContentText: widget.helpContentText,
+                    controller: _controller,
+                    padding: widget.padding,
+                    borderRadius: BorderRadius.zero,
+                    showBorder: false,
+                    child: LayrzEditableField(config: fieldConfig),
+                  ),
+                ),
+              ),
+              _SelectFieldCaret(
+                onTap: widget.disabled ? null : onOpen,
+                isDisabled: widget.disabled,
+                hasErrors: hasErrors,
+                states: _states,
+              ),
+            ],
           ),
         ),
       ),
@@ -378,97 +559,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       // Note: Mobile bottom sheet does not expose expanded state since it is not
       // connected to a controller that can be queried. This is acceptable because
       // the bottom sheet itself is its own modal navigation layer.
-      final tokens = context.tokens;
-
-      // Resolve slots
-      final prefixSlot = resolvePrefixSlot(
-        prefixIcon: widget.prefixIcon,
-        prefix: widget.prefix,
-        prefixText: widget.prefixText,
-        onPrefixTap: widget.onPrefixTap,
-      );
-
-      final suffixSlot = resolveSuffixSlot(
-        suffixIcon: widget.suffixIcon,
-        suffix: widget.suffix,
-        suffixText: widget.suffixText,
-        onSuffixTap: widget.onSuffixTap,
-      );
-
-      // Add dropdown chevron to the suffix slot if not provided
-      final finalSuffixSlot = suffixSlot.hasContent
-          ? suffixSlot
-          : LayrzInputSuffixSlot(
-              icon: MdiIcons.chevronDown,
-              isDecorative: true,
-            );
-
-      // Compute states
-      if (widget.disabled) {
-        _states.add(WidgetState.disabled);
-      } else {
-        _states.remove(WidgetState.disabled);
-      }
-
-      // Find the selected item's label text
-      String? selectedLabel;
-      if (widget.value != null) {
-        for (final item in widget.items) {
-          if (item.value == widget.value) {
-            selectedLabel = item.labelText;
-            break;
-          }
-        }
-      }
-
-      // Build the content display widget with full width
-      final contentChild = Padding(
-        padding: tokens.spacing.pd2,
-        child: SizedBox(
-          width: double.infinity,
-          child: Text(
-            selectedLabel ?? '',
-            style: tokens.typography.body,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      );
-
-      return Semantics(
-        label: widget.labelText,
-        button: true,
-        enabled: !widget.disabled,
-        onTap: widget.disabled ? null : _openMobileSurface,
-        child: GestureDetector(
-          onTap: widget.disabled ? null : _openMobileSurface,
-          behavior: HitTestBehavior.opaque,
-          // Attaches `_focusNode` to the focus tree (DESIGN-144). The compact
-          // path has no `Focus` widget of its own -- `LayrzInputChrome` is
-          // purely visual -- so nothing ever received the node before this.
-          child: Focus(
-            focusNode: _focusNode,
-            child: LayrzInputChrome(
-              labelText: widget.labelText,
-              hintText: widget.hintText,
-              isRequired: widget.isRequired,
-              prefixSlot: prefixSlot,
-              suffixSlot: finalSuffixSlot,
-              disabled: widget.disabled,
-              readOnly: true,
-              errors: widget.errors,
-              hideDetails: widget.hideDetails,
-              states: _states,
-              helpTitleText: widget.helpTitleText,
-              helpContentText: widget.helpContentText,
-              controller: _controller,
-              padding: widget.padding,
-              suppressReadOnlyLock: true,
-              child: contentChild,
-            ),
-          ),
-        ),
-      );
+      return _buildField(context, onOpen: _openMobileSurface, isExpanded: false);
     } else {
       // Desktop: return anchored panel with selection surface.
       //
@@ -481,9 +572,14 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
         widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
         maxHeight: 300.0,
         childFocusNode: _focusNode,
+        onOpen: _handlePanelOpened,
         builder: (context, controller) {
           _panelController = controller;
-          return _buildAnchor(context, controller);
+          return _buildField(
+            context,
+            onOpen: controller.open,
+            isExpanded: controller.isOpen,
+          );
         },
         child: LayrzSelectInputSurface(
           items: widget.items,
@@ -493,11 +589,103 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           filter: widget.filter,
           emptyListText: widget.emptyListText,
           panelController: _panelController,
-          onItemSelected: (item) {
-            widget.onChanged?.call(item);
-          },
+          query: widget.enableSearch && _isQuerying ? _controller.text : '',
+          onItemSelected: _commitSelection,
         ),
       );
     }
+  }
+}
+
+/// The dropdown chevron affordance, rendered as an external sibling to
+/// [LayrzInputChrome] rather than inside its `suffixSlot`.
+///
+/// This is what frees [LayrzSelectInput.suffixIcon]/[LayrzSelectInput.suffix]/
+/// [LayrzSelectInput.suffixText] for the caller: before this, the widget's own
+/// chevron occupied the suffix slot whenever the caller left it empty, so a caller
+/// that *did* supply a suffix lost the chevron entirely. Styled from
+/// [LayrzInputStyleSpec] so it always matches the chrome's own current state
+/// (focused, error, disabled), mirroring `NumberFieldControl`'s edge-control pattern.
+class _SelectFieldCaret extends StatelessWidget {
+  /// Called when the caret is tapped. Opens the selection surface, matching a tap
+  /// anywhere else in the field. Null makes the caret inert (e.g. when disabled).
+  final VoidCallback? onTap;
+
+  /// Whether the field is disabled. Disabled carets render at reduced opacity and
+  /// are never tappable, regardless of [onTap].
+  final bool isDisabled;
+
+  /// Whether the field currently has errors, for danger-tinted styling.
+  final bool hasErrors;
+
+  /// The field's current interaction states (focused, hovered, pressed, disabled),
+  /// used to resolve matching colors via [LayrzInputStyleSpec.resolve].
+  final Set<WidgetState> states;
+
+  /// Creates a new [_SelectFieldCaret].
+  const _SelectFieldCaret({
+    required this.onTap,
+    required this.isDisabled,
+    required this.hasErrors,
+    required this.states,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    final spec = LayrzInputStyleSpec.resolve(
+      states: states,
+      tokens: tokens,
+      hasErrors: hasErrors,
+    );
+
+    final innerR = Radius.circular(
+      tokens.radius.innerRadiusValue(
+        outerRadius: tokens.radius.r2,
+        spacer: spec.borderWidth,
+      ),
+    );
+    final capRadius = BorderRadius.only(topRight: innerR, bottomRight: innerR);
+
+    final dividerColor = hasErrors ? tokens.colors.danger : tokens.colors.divider.withValues(alpha: 0.3);
+    final divider = BorderSide(color: dividerColor, width: tokens.border.stroke2);
+
+    final content = Padding(
+      padding: EdgeInsets.all(tokens.spacing.sp2),
+      child: Icon(
+        MdiIcons.chevronDown,
+        size: tokens.typography.body.fontSize,
+        color: spec.textColor,
+      ),
+    );
+
+    final tappable = LayrzTappable(
+      onTap: isDisabled ? null : onTap,
+      disabled: isDisabled,
+      borderRadius: capRadius,
+      color: spec.backgroundColor,
+      hoverColor: tokens.colors.sf3,
+      pressedColor: tokens.colors.sf4,
+      child: content,
+    );
+
+    // Excluded from semantics: the field's own outer `Semantics(button: true)`
+    // already announces "opens the picker", and the caret triggers the exact same
+    // action -- a second named button here would double-announce one affordance.
+    return ExcludeSemantics(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: capRadius,
+          color: spec.backgroundColor,
+          border: Border(left: divider),
+        ),
+        child: AnimatedOpacity(
+          duration: tokens.motion.dTransition,
+          opacity: isDisabled ? 0.5 : 1.0,
+          child: tappable,
+        ),
+      ),
+    );
   }
 }

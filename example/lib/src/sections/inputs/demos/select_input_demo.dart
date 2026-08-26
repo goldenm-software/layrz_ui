@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 class SelectInputDemo extends StatefulWidget {
@@ -107,6 +108,40 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
               onChanged: (item) {
                 setState(() {
                   _selectedCategory = item?.value;
+                });
+              },
+            ),
+
+            // Pure picker (enableSearch: false) -- not editable, but still
+            // self-displays a pick from internal state (DESIGN-40/144).
+            SizedBox(height: tokens.spacing.sp3),
+            Text('Pure Picker (search disabled)', style: tokens.typography.title),
+            LayrzSelectInput<String>(
+              items: _sizeItems,
+              value: _selectedSize,
+              labelText: 'Size',
+              hintText: 'Not editable, still self-displays',
+              enableSearch: false,
+              onChanged: (item) {
+                setState(() {
+                  _selectedSize = item?.value;
+                });
+              },
+            ),
+
+            // Caller-supplied suffix, alongside the widget's own dropdown caret.
+            // Before the caret moved to an external sibling, this suffix would
+            // have replaced the caret entirely.
+            SizedBox(height: tokens.spacing.sp3),
+            Text('With a Caller Suffix', style: tokens.typography.title),
+            LayrzSelectInput<String>(
+              items: _countryItems,
+              value: _selectedCountry,
+              labelText: 'Country',
+              suffixIcon: MdiIcons.earth,
+              onChanged: (item) {
+                setState(() {
+                  _selectedCountry = item?.value;
                 });
               },
             ),
