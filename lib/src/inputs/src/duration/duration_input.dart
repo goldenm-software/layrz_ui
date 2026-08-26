@@ -400,11 +400,22 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     required Set<WidgetState> states,
   }) {
     final hasErrors = widget.errors.isNotEmpty;
+    // `readOnly` is deliberately NOT passed here (defaults to false): this
+    // anchor is read-only only in the sense that it never accepts typed
+    // input (it opens a picker on tap instead, see the class doc's
+    // "Read-only anchor" note) -- that is a behavioral fact, not something a
+    // caller ever set (`LayrzDurationInput` exposes no `readOnly` parameter
+    // at all). `LayrzInputStyleSpec.resolve`'s own precedence table ranks
+    // readOnly ABOVE error ("disabled > readOnly > error > ..."), so passing
+    // `readOnly: true` here silently suppressed the danger border/background
+    // whenever `hasErrors` was also true -- the field rendered in its neutral
+    // resting colors even with an error present. Confirmed by the maintainer
+    // from a device screenshot: label, error icon and footer text all showed
+    // correctly, but the field's own border stayed grey instead of red.
     final spec = LayrzInputStyleSpec.resolve(
       states: states,
       tokens: tokens,
       hasErrors: hasErrors,
-      readOnly: true,
     );
 
     return Container(
@@ -429,7 +440,14 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
                 prefixSlot: const LayrzInputPrefixSlot(),
                 suffixSlot: const LayrzInputSuffixSlot(),
                 disabled: widget.disabled,
-                readOnly: true,
+                // See the doc comment on `spec` above -- same reasoning: this
+                // chrome's own internal `LayrzInputStyleSpec.resolve` call
+                // would otherwise rank this false "readOnly" fact above a
+                // real error state. `suppressReadOnlyLock: true` below
+                // already independently keeps the lock icon from ever
+                // showing (this field was never locked, just non-editable),
+                // so this has no other effect than restoring error styling.
+                readOnly: false,
                 errors: widget.errors,
                 hideDetails: true,
                 states: states,
