@@ -256,8 +256,14 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     // Mark the sheet as open before checking anything else
     _sheetOpen = true;
 
-    // Guard: check if there's a Navigator available
-    final navigator = Navigator.maybeOf(context);
+    // Guard: check if the ROOT Navigator is reachable -- the sheet below is
+    // pushed there (useRootNavigator: true), so this must validate the same
+    // Navigator it pushes to. Checking the nearest one instead would pass
+    // here and still throw at the push if only a nested Navigator exists
+    // with no root above it (impossible under LayrzApp in practice, but the
+    // guard should not claim success for a Navigator it isn't actually
+    // going to use).
+    final navigator = Navigator.maybeOf(context, rootNavigator: true);
     if (navigator == null) {
       assert(
         false,
