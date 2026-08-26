@@ -205,10 +205,12 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
                         SizedBox(width: tokens.spacing.sp2),
                         Expanded(
                           child: ExcludeSemantics(
-                            child: Text(
-                              widget.labelText!,
-                              style: tokens.typography.body.copyWith(
-                                color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                            child: SelectionContainer.disabled(
+                              child: Text(
+                                widget.labelText!,
+                                style: tokens.typography.body.copyWith(
+                                  color: isDisabled ? tokens.colors.fg4 : tokens.colors.fg1,
+                                ),
                               ),
                             ),
                           ),

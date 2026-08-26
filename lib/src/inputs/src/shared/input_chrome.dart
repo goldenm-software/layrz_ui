@@ -644,6 +644,8 @@ class LayrzInputChrome extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    content = SelectionContainer.disabled(child: content);
+
     final isInteractive = slot.onTap != null && !disabled;
 
     if (isInteractive) {

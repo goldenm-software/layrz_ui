@@ -155,7 +155,7 @@ class _LayrzRadioOptionState<T> extends State<LayrzRadioOption<T>> with TickerPr
                   style: tokens.typography.body.copyWith(
                     color: isDisabled ? tokens.colors.fg4.withValues(alpha: 0.4) : tokens.colors.fg1,
                   ),
-                  child: widget.item.child,
+                  child: SelectionContainer.disabled(child: widget.item.child),
                 ),
               ),
             ],
