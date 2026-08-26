@@ -584,21 +584,27 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     } else {
       // Desktop: return an anchored panel that covers the field itself, mirroring
       // `LayrzSelectInput`'s "elevated field" illusion (DESIGN-145) -- see the
-      // `border` argument below for why. `widthPolicy: contentSized` and its
-      // 280.0-480.0 bounds are UNCHANGED from before this shell-parity pass:
-      // `LayrzDurationPickerPanel`'s two-column grid depends on this exact width
-      // range (see its own class doc for the measured 227px/7-character
-      // constraint), so this stays `contentSized` rather than moving to
-      // `matchAnchor` the way `LayrzSelectInput` does.
+      // `border` argument below for why. `widthPolicy: matchAnchor` -- the panel
+      // spans the field's full rendered width, exactly like `LayrzSelectInput`.
+      //
+      // This REVERSES an earlier decision (device-tested and reported by the
+      // maintainer): the panel previously stayed `contentSized` within
+      // 280.0-480.0 on the reasoning that `LayrzDurationPickerPanel`'s
+      // two-column grid depended on that exact width range (the measured
+      // 227px/7-character constraint documented on that widget's class doc).
+      // On a wide anchor field, `contentSized` made the panel occupy only a
+      // small fraction of the field -- visually wrong, and rejected on sight.
+      // `LayrzDurationPickerPanel` no longer depends on a capped width: its own
+      // per-unit fields now carry a minimum width and wrap to additional rows
+      // via a `LayoutBuilder` that reads the panel's own measured width,
+      // instead of the old fixed two-column `LayrzRow`/`LayrzCol` grid, so
+      // they stay legible at whatever width `matchAnchor` actually provides --
+      // see that widget's class doc for the new mechanism.
       final tokens = context.tokens;
       final hasErrors = widget.errors.isNotEmpty;
 
       return LayrzAnchoredPanel(
-        widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
-        widthBounds: const LayrzAnchoredPanelWidthBounds(
-          minWidth: 280.0,
-          maxWidth: 480.0,
-        ),
+        widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
         maxHeight: 400.0,
         coverAnchor: true,
         childFocusNode: _focusNode,
@@ -618,7 +624,21 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         child: LayrzDurationPickerPanel(
           initialValue: widget.value,
           visibleUnits: widget.visibleUnits,
+          // Field edits (typing, +/- taps) report the new value and update the
+          // anchor's summary, but deliberately do NOT close the panel -- a user
+          // composing a duration across multiple fields (day, then hour, then
+          // minute) needs the panel to stay open between edits. Only `onReset`
+          // below closes it; see that callback's wiring for why.
           onChanged: (duration) {
+            widget.onChanged?.call(duration);
+            _updateSummary();
+          },
+          // Reset is the one action in the panel meant to close it: it is a
+          // deliberate "clear and I'm done" gesture, unlike an in-progress field
+          // edit. Wiring this separately from `onChanged` above is what stops
+          // every +/- tap and keystroke from closing the panel too -- they used
+          // to share one callback that always closed it.
+          onReset: (duration) {
             widget.onChanged?.call(duration);
             _updateSummary();
             _panelController.close();
