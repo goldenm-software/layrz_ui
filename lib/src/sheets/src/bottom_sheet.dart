@@ -457,38 +457,61 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
             // square corners and bleeds past the decoration's rounded shape at the top.
             child: ClipRRect(
               borderRadius: topRadius,
-              child: Column(
-                children: [
-                  // Drag handle
-                  if (widget.showDragHandle)
-                    _DragHandle(
-                      draggable: true,
-                      controller: _sheetController,
-                      snapSizes: widget.snapSizes,
-                      lowSnapSize: lowSnapSize,
+              // The surface (the DecoratedBox above) deliberately stays OUTSIDE
+              // this SafeArea and keeps extending edge-to-edge under the status
+              // bar and the Android navigation bar -- that full-bleed background
+              // is the point, matching the modern Android look the maintainer
+              // asked for. Only the CONTENT is inset clear of those system bars.
+              // This uses SafeArea rather than a bespoke Padding so it composes
+              // with the keyboard for free: SafeArea's default `bottom: true`
+              // reads MediaQuery.paddingOf, which the engine already reports as
+              // zero for any edge the keyboard is currently covering -- unlike
+              // viewPadding, which holds the device's permanent inset regardless
+              // of the keyboard. So once the keyboard is up and covers the nav
+              // bar, this bottom inset already collapses to zero on its own;
+              // nothing here needs to know about the keyboard to avoid
+              // double-insetting on top of it (see _BottomSheetRoute.transitionBuilder
+              // for the other half of that composition). left/right are left
+              // unhandled (false) since the sheet is always full-width and has no
+              // side notches to avoid, matching the selective-edge precedent in
+              // top_bar.dart (SafeArea(bottom: false)) and navigator_panel.dart
+              // (SafeArea(right: false)).
+              child: SafeArea(
+                left: false,
+                right: false,
+                child: Column(
+                  children: [
+                    // Drag handle
+                    if (widget.showDragHandle)
+                      _DragHandle(
+                        draggable: true,
+                        controller: _sheetController,
+                        snapSizes: widget.snapSizes,
+                        lowSnapSize: lowSnapSize,
+                      ),
+                    // Content
+                    Expanded(
+                      child: widget.scrollable
+                          ? SingleChildScrollView(
+                              controller: scrollController,
+                              child: widget.builder(context),
+                            )
+                          // scrollable: false hands the caller the scrollController via
+                          // PrimaryScrollController instead of wrapping the content: a
+                          // vertical ListView/GridView that sets no controller of its own
+                          // binds to it automatically, giving it the sheet's drag/scroll
+                          // handoff without being nested inside another same-axis scrollable.
+                          // automaticallyInheritForPlatforms covers every platform, not just
+                          // mobile (PrimaryScrollController's own default) — the sheet already
+                          // knows which ScrollController it wants used, on every platform.
+                          : PrimaryScrollController(
+                              controller: scrollController,
+                              automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                              child: widget.builder(context),
+                            ),
                     ),
-                  // Content
-                  Expanded(
-                    child: widget.scrollable
-                        ? SingleChildScrollView(
-                            controller: scrollController,
-                            child: widget.builder(context),
-                          )
-                        // scrollable: false hands the caller the scrollController via
-                        // PrimaryScrollController instead of wrapping the content: a
-                        // vertical ListView/GridView that sets no controller of its own
-                        // binds to it automatically, giving it the sheet's drag/scroll
-                        // handoff without being nested inside another same-axis scrollable.
-                        // automaticallyInheritForPlatforms covers every platform, not just
-                        // mobile (PrimaryScrollController's own default) — the sheet already
-                        // knows which ScrollController it wants used, on every platform.
-                        : PrimaryScrollController(
-                            controller: scrollController,
-                            automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                            child: widget.builder(context),
-                          ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );

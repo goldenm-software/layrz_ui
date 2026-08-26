@@ -25,11 +25,9 @@ import 'input_style_spec.dart';
 /// to button sizing (see DESIGN-103 for button compact sizing strategy).
 class _InputComfortableSpec {
   final LayrzTokens tokens;
-  final IconThemeData? iconTheme;
-  final bool isCompact;
   final bool dense;
 
-  _InputComfortableSpec(this.tokens, this.iconTheme, {required this.isCompact, required this.dense});
+  _InputComfortableSpec(this.tokens, {required this.dense});
 
   /// The padding applied to all sides inside the input field.
   ///
@@ -37,16 +35,14 @@ class _InputComfortableSpec {
   /// (width < 960px) to ensure adequate touch targets on mobile. When [dense] is
   /// true, each of those drops one spacing level: 6px (pd1) regular, 10px (pd2)
   /// compact.
-  EdgeInsets get padding => dense
-      ? (isCompact ? tokens.spacing.pd2 : tokens.spacing.pd1)
-      : (isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2);
+  EdgeInsets get padding => dense ? tokens.spacing.pd1 : tokens.spacing.pd2;
 
   /// The size of icons in slots and state indicators.
   ///
   /// Scales proportionally with the text content. On compact viewports, if the font
   /// grows, the icon grows with it. Currently, since font stays at body (16px),
   /// icon size is 16 + 6 = 22px in both regular and compact viewports.
-  double get iconSize => iconTheme?.size ?? (tokens.typography.body.fontSize ?? 16.0) + tokens.spacing.sp1;
+  double get iconSize => 14.0 + tokens.spacing.sp1;
 
   /// The text style for input hints and slot text.
   ///
@@ -279,12 +275,7 @@ class LayrzInputChrome extends StatelessWidget {
     );
 
     // Comfortable density specification — all dimensions for field layout (responsive to viewport width)
-    final density = _InputComfortableSpec(
-      tokens,
-      context.theme.iconTheme,
-      isCompact: context.isCompact,
-      dense: dense,
-    );
+    final density = _InputComfortableSpec(tokens, dense: dense);
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. The height accommodates both

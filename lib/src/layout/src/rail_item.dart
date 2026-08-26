@@ -49,7 +49,7 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
     final tokens = widget.tokens;
     final isCompact = context.isCompact;
     final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
-    final fontSize = isCompact ? tokens.typography.body.fontSize : tokens.typography.label.fontSize;
+    final fontSize = tokens.typography.body.fontSize;
     final itemPadding = isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2;
     final countFontSize = isCompact ? tokens.typography.body.fontSize : tokens.typography.label.fontSize;
 

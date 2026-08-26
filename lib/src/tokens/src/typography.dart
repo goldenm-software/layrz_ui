@@ -78,11 +78,11 @@ class LayrzTextTheme {
     final fontResolved = font ?? const LayrzRobotoFont();
 
     return LayrzTextTheme(
-      display: fontResolved.display.copyWith(fontSize: 40, color: textColor, decoration: TextDecoration.none),
+      display: fontResolved.display.copyWith(fontSize: 30, color: textColor, decoration: TextDecoration.none),
       headline: fontResolved.headline.copyWith(fontSize: 24, color: textColor, decoration: TextDecoration.none),
-      title: fontResolved.title.copyWith(fontSize: 20, color: textColor, decoration: TextDecoration.none),
-      body: fontResolved.body.copyWith(fontSize: 16, color: textColor, decoration: TextDecoration.none),
-      label: fontResolved.label.copyWith(fontSize: 14, color: textColor, decoration: TextDecoration.none),
+      title: fontResolved.title.copyWith(fontSize: 18, color: textColor, decoration: TextDecoration.none),
+      body: fontResolved.body.copyWith(fontSize: 14, color: textColor, decoration: TextDecoration.none),
+      label: fontResolved.label.copyWith(fontSize: 12, color: textColor, decoration: TextDecoration.none),
     );
   }
 
