@@ -380,9 +380,17 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
   ///
   /// Mirrors `number_input.dart:869-924`'s composition — a `Row` of `[chrome, control]`
   /// wrapped in one outer `Container` that draws the unified border and radius, with the
-  /// chrome itself given `showBorder: false` and `borderRadius: BorderRadius.zero` so its own
-  /// box never paints a competing border. `LayrzInputChrome` needed no change to support
-  /// this: `showBorder` and `borderRadius` already exist on it for exactly this purpose.
+  /// chrome itself given `showBorder: false` so its own box never paints a competing
+  /// border. `LayrzInputChrome` needed no change to support this: `showBorder` and
+  /// `borderRadius` already exist on it for exactly this purpose. Unlike an earlier
+  /// version of this row, the chrome's `borderRadius` is NOT `BorderRadius.zero`
+  /// on the left: the chrome sits flush against this Row's physical left edge and
+  /// paints its own opaque fill there, so it needs the same inset-corrected corner
+  /// radius on that side that `NumberFieldControl` and `_SelectFieldCaret` give
+  /// their own outer-edge caps — otherwise the outer `Container`'s `Clip.antiAlias`
+  /// alone does not reshape the chrome's own square-cornered fill, and the left
+  /// corners render flat instead of rounded. The right side (facing the affordance
+  /// icon below) stays square — that edge is an internal seam, not a physical corner.
   ///
   /// [labelText] and the error/helper footer are deliberately **not** passed to the inner
   /// chrome here (`labelText: null`, `hideDetails: true`) — [_buildInteractiveField] renders
@@ -417,6 +425,25 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       tokens: tokens,
       hasErrors: hasErrors,
     );
+
+    // The chrome sits at the Row's physical LEFT edge and paints its own opaque
+    // fill (`spec.backgroundColor`) right up to that edge -- `Clip.antiAlias` on
+    // the outer `Container` below clips content that overflows its bounds, but
+    // does not reach inside to reshape an inner child's own square-cornered
+    // fill that already sits flush within those bounds, so the chrome's
+    // corners painted through unclipped and square. Mirrors the fix already
+    // applied to `NumberFieldControl` (`number_field_edge.dart:80-93`) and
+    // `_SelectFieldCaret`, both of which round their own outer-facing corners
+    // for the same reason instead of relying on the outer clip. The inner
+    // (right) edge, facing `_buildAffordanceIcon`, stays square -- it is an
+    // internal seam, not a physical corner.
+    final leftInnerR = Radius.circular(
+      tokens.radius.innerRadiusValue(
+        outerRadius: tokens.radius.r2,
+        spacer: spec.borderWidth,
+      ),
+    );
+    final chromeRadius = BorderRadius.only(topLeft: leftInnerR, bottomLeft: leftInnerR);
 
     return Container(
       decoration: BoxDecoration(
@@ -456,7 +483,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
                 padding: widget.padding,
                 helpTitleText: widget.helpTitleText,
                 helpContentText: widget.helpContentText,
-                borderRadius: BorderRadius.zero,
+                borderRadius: chromeRadius,
                 showBorder: false,
                 child: contentChild,
               ),

@@ -1463,25 +1463,50 @@ void main() {
       expect(excludeSemanticsAboveIcon, findsOneWidget);
     });
 
-    guardedTestWidgets('the inner chrome renders with no border and square corners of its own', (
-      WidgetTester tester,
-    ) async {
-      addTearDown(tester.view.resetPhysicalSize);
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
+    guardedTestWidgets(
+      'the inner chrome renders with no border of its own, and rounds only its left (outer-edge) corners',
+      (WidgetTester tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
 
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(
-          labelText: 'Duration',
-        ),
-      );
+        late LayrzTokens tokens;
 
-      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        await pumpThemedApp(
+          tester,
+          Builder(
+            builder: (context) {
+              tokens = context.tokens;
+              return LayrzDurationInput(labelText: 'Duration');
+            },
+          ),
+        );
 
-      expect(chrome.showBorder, isFalse);
-      expect(chrome.borderRadius, BorderRadius.zero);
-    });
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+
+        expect(chrome.showBorder, isFalse);
+
+        // The chrome sits flush against the field row's physical LEFT edge and
+        // paints its own opaque fill there -- `BorderRadius.zero` on both sides
+        // (the value this test pinned before the corner-crop fix) left that
+        // fill square, so it painted over the outer container's own rounded
+        // left corner instead of matching it. The RIGHT side stays square: it
+        // is the internal seam facing `_buildAffordanceIcon`, not a physical
+        // corner, and rounding it would open a visible gap against that
+        // neighbor. Mirrors `NumberFieldControl`'s and `_SelectFieldCaret`'s
+        // identical outer-corners-only treatment.
+        final expectedInnerR = Radius.circular(
+          tokens.radius.innerRadiusValue(
+            outerRadius: tokens.radius.r2,
+            spacer: tokens.border.base,
+          ),
+        );
+        expect(
+          chrome.borderRadius,
+          BorderRadius.only(topLeft: expectedInnerR, bottomLeft: expectedInnerR),
+        );
+      },
+    );
   });
 }
 
