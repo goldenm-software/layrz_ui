@@ -400,22 +400,24 @@ void main() {
       expect(find.text(errorMessage), findsNothing);
     });
 
-    testWidgets('padding is applied correctly', (tester) async {
-      const padding = EdgeInsets.all(20.0);
-
+    testWidgets('applies the fixed group padding', (tester) async {
       await pumpThemed(
         tester,
         LayrzRadioInput<String>(
           items: [
             const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
           ],
-          padding: padding,
         ),
       );
 
-      expect(find.byType(Padding), findsWidgets);
-      // Verify padding is applied (indirectly via widget tree)
-      expect(find.text('Option A'), findsOneWidget);
+      final paddingWidget = tester.widget<Padding>(
+        find.ancestor(
+          of: find.byType(RadioGroup<String?>),
+          matching: find.byType(Padding),
+        ),
+      );
+
+      expect(paddingWidget.padding, const EdgeInsets.all(10));
     });
 
     testWidgets('default padding is used when not specified', (tester) async {

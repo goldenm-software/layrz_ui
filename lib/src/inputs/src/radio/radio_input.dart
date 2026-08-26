@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/grid/grid.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/inputs/src/select/select_item.dart';
@@ -82,11 +81,6 @@ class LayrzRadioInput<T> extends StatefulWidget {
   /// Whether to hide the error message block.
   final bool hideDetails;
 
-  /// Padding applied inside the group (around the grid and below the label).
-  ///
-  /// If null, defaults to [LayrzTokens.spacing.pd2] (8px).
-  final EdgeInsets? padding;
-
   /// The column span for extra-small screens (<600px).
   ///
   /// Defaults to 12 (1 option per row).
@@ -132,7 +126,6 @@ class LayrzRadioInput<T> extends StatefulWidget {
     this.disabled = false,
     this.errors = const [],
     this.hideDetails = false,
-    this.padding,
     this.xs = 12,
     this.sm = 6,
     this.md = 4,
@@ -159,7 +152,7 @@ class _LayrzRadioInputState<T> extends State<LayrzRadioInput<T>> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final resolvedPadding = widget.padding ?? tokens.spacing.pd2;
+    final resolvedPadding = tokens.spacing.pd2;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
