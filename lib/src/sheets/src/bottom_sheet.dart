@@ -229,6 +229,30 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
            final disableAnimations = MediaQuery.of(context).disableAnimations;
            final effectiveAnimation = disableAnimations ? AlwaysStoppedAnimation(1.0) : animation;
 
+           // Push the whole sheet up above the keyboard, Scaffold-style (D65's
+           // pattern in layout.dart/drawer_scaffold.dart), but with a different
+           // mechanism: D65 SHRINKS a full-height body in place. A bottom sheet
+           // is anchored to the bottom edge via Align(bottomCenter) below, so
+           // shrinking its own height would just make it shorter without
+           // moving it — the keyboard would still cover the same slice of
+           // screen the sheet no longer occupies. Padding the STACK's available
+           // height by viewInsets.bottom instead moves the Align's "bottom"
+           // reference point itself: the sheet's bottomCenter anchor now sits
+           // viewInsets.bottom above the true screen edge, so the whole sheet
+           // slides up, not just shrinks. Its own DraggableScrollableSheet
+           // fractions (initialSize/minSize/maxSize) are relative to this
+           // (now-reduced) available height, so if the sheet is taller than
+           // the remaining space above the keyboard, it naturally clamps to
+           // maxSize of that smaller height and its own existing
+           // SingleChildScrollView (see _BottomSheetContentState.build)
+           // handles the rest by scrolling -- no new scroll mechanism needed,
+           // this is the sheet's existing overflow behavior, just operating
+           // on a smaller available height. MediaQuery.removeViewInsets zeroes
+           // the inset for the sheet's own subtree so nested readers (a
+           // caller's own MediaQuery.viewInsetsOf) do not double-count the
+           // same inset this Padding already consumed.
+           final viewInsets = MediaQuery.viewInsetsOf(context);
+
            return Stack(
              children: [
                // Barrier
@@ -266,20 +290,27 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                    ),
                  ),
                // Sheet
-               SlideTransition(
-                 position:
-                     Tween<Offset>(
-                       begin: const Offset(0, 1),
-                       end: Offset.zero,
-                     ).animate(
-                       CurvedAnimation(
-                         parent: effectiveAnimation,
-                         curve: Curves.easeOut,
-                       ),
+               Padding(
+                 padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                 child: MediaQuery.removeViewInsets(
+                   context: context,
+                   removeBottom: true,
+                   child: SlideTransition(
+                     position:
+                         Tween<Offset>(
+                           begin: const Offset(0, 1),
+                           end: Offset.zero,
+                         ).animate(
+                           CurvedAnimation(
+                             parent: effectiveAnimation,
+                             curve: Curves.easeOut,
+                           ),
+                         ),
+                     child: Align(
+                       alignment: Alignment.bottomCenter,
+                       child: child,
                      ),
-                 child: Align(
-                   alignment: Alignment.bottomCenter,
-                   child: child,
+                   ),
                  ),
                ),
              ],
@@ -555,13 +586,23 @@ class _DragHandle extends StatelessWidget {
 
   /// Resizes the sheet by the drag delta. Dragging up (negative `dy`) grows the
   /// sheet; dragging down shrinks it. [DraggableScrollableController.jumpTo] clamps
-  /// the result to the sheet's own `minSize`/`maxSize`, so no clamping is done here.
+  /// the result to the sheet's own `minSize`/`maxSize` internally (inside
+  /// `updateSize`), but only AFTER its own `assert(size >= 0 && size <= 1)` — that
+  /// assert fires on the raw, unclamped value, so a `newSize` outside `[0, 1]`
+  /// crashes before the minSize/maxSize clamping this comment used to (wrongly)
+  /// credit with covering this. `pixelsToSize` converts by dividing by the sheet's
+  /// parent height; with the keyboard open, the bottom-sheet keyboard-avoidance
+  /// Padding (see `_BottomSheetRoute`) reduces that parent height, so the same
+  /// drag delta in pixels now converts to a larger fraction than it did against
+  /// the full screen — a single fast drag can land `newSize` past 1.0 (or below
+  /// 0.0) well before the finger physically leaves the sheet. Clamp here so this
+  /// holds for any large-enough delta, keyboard-driven or not.
   void _onDragUpdate(DraggableScrollableController sheetController, DragUpdateDetails details) {
     if (!sheetController.isAttached) {
       return;
     }
     final newSize = sheetController.size - sheetController.pixelsToSize(details.delta.dy);
-    sheetController.jumpTo(newSize);
+    sheetController.jumpTo(newSize.clamp(0.0, 1.0));
   }
 
   /// On release, either dismisses the sheet (current size below [lowSnapSize]) or
