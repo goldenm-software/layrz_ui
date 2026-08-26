@@ -87,6 +87,14 @@ void main() {
                           controller: controller,
                           items: items,
                           itemExtent: 56.0,
+                          // Plain, non-tappable text -- used by the
+                          // "page selection with no sheet open" test as a
+                          // target that cannot accidentally open the sheet
+                          // (unlike the LayrzTappable-wrapped row tiles).
+                          title: const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: Text('Inputs Showcase'),
+                          ),
                           onDetailsBuild: (item) => Padding(
                             padding: const EdgeInsets.all(16),
                             child: Text('Field States for ${item.name}', style: const TextStyle(fontSize: 20)),
@@ -125,15 +133,30 @@ void main() {
         expect(sheetTitleFinder, findsOneWidget, reason: 'sheet must be open');
 
         // Structural assertion: walk UP from the sheet's own content and
-        // confirm the page's SelectableRegion is NOT among its ancestors.
-        // This is what the bug actually was -- the sheet living inside the
-        // region's subtree -- so this survives refactors that a
-        // gesture/selection-state test alone would not catch.
+        // confirm the PAGE's SelectableRegion specifically is NOT among its
+        // ancestors. This is what the bug actually was -- the sheet living
+        // inside the page region's subtree -- so this survives refactors
+        // that a gesture/selection-state test alone would not catch.
+        //
+        // Not "no ancestor region at all": DetailPane now gives the sheet's
+        // own content its OWN SelectableRegion (the sheet-text-selectable
+        // follow-up), so an ancestor region genuinely exists -- it just must
+        // not be the PAGE's. Identify the page's region via a context that is
+        // inside it but outside the sheet -- the list row's own text, which
+        // is a genuine descendant of LayrzLayout's SelectableRegion (unlike
+        // LayrzLayout's own element, which is an ANCESTOR of that region, not
+        // a descendant -- findAncestorStateOfType from there would find
+        // nothing, the mistake this test avoided by using a descendant).
+        final pageRegionState = tester
+            .element(find.text('ComboBox Input'))
+            .findAncestorStateOfType<SelectableRegionState>();
+        expect(pageRegionState, isNotNull, reason: 'the page region must genuinely exist for this test to be valid');
+
         final sheetContentContext = tester.element(sheetTitleFinder);
-        final ancestorRegion = sheetContentContext.findAncestorStateOfType<SelectableRegionState>();
+        final sheetAncestorRegion = sheetContentContext.findAncestorStateOfType<SelectableRegionState>();
         expect(
-          ancestorRegion,
-          isNull,
+          identical(sheetAncestorRegion, pageRegionState),
+          isFalse,
           reason: 'the sheet\'s content must not be a descendant of the page\'s SelectableRegion',
         );
       },
@@ -175,16 +198,57 @@ void main() {
 
           expect(tester.takeException(), isNull);
 
-          // Ground truth: read the PAGE's own SelectableRegionState directly.
-          final pageRegionElement = find.byType(SelectableRegion).evaluate().single;
-          final pageRegionState = (pageRegionElement as StatefulElement).state as SelectableRegionState;
+          // Ground truth: read the PAGE's own SelectableRegionState directly
+          // (identified via a descendant context that is genuinely inside the
+          // page's region but outside the sheet -- there are now TWO regions
+          // in the tree, the page's and DetailPane's own inside the sheet, so
+          // find.byType(SelectableRegion).single would ambiguously match
+          // either).
+          final pageRegionState = tester
+              .element(find.text('ComboBox Input'))
+              .findAncestorStateOfType<SelectableRegionState>();
+          expect(pageRegionState, isNotNull);
           expect(
-            () => pageRegionState.contextMenuAnchors,
+            () => pageRegionState!.contextMenuAnchors,
             throwsA(anything),
             reason:
                 'the page region must have NO active selection -- contextMenuAnchors throws when there is '
                 'nothing selected; a non-throwing call here would mean the double-tap on the sheet leaked '
                 'into the page\'s selection scope',
+          );
+
+          // And the SHEET's own region (via DetailPane) must have the
+          // selection -- the double-tap should not simply vanish, it must
+          // resolve against the sheet's own text.
+          final sheetRegionState = tester
+              .element(find.text('Field States for Text Input'))
+              .findAncestorStateOfType<SelectableRegionState>();
+          expect(sheetRegionState, isNotNull);
+          expect(
+            identical(sheetRegionState, pageRegionState),
+            isFalse,
+            reason: 'the sheet\'s region must be a different instance from the page\'s region',
+          );
+          expect(
+            () => sheetRegionState!.contextMenuAnchors,
+            returnsNormally,
+            reason: 'the sheet\'s own region must hold the selection from the double-tap',
+          );
+
+          // Geometry, not just booleans: the selection's own anchor must sit
+          // near the sheet's text (where the tap actually landed), not near
+          // the list row well above it -- this is what actually failed on
+          // the maintainer's device (handles/toolbar anchored over the row
+          // behind the sheet despite the gesture landing on the sheet).
+          final anchorY = sheetRegionState!.contextMenuAnchors.primaryAnchor.dy;
+          final sheetTextTop = tester.getTopLeft(sheetTitleFinder).dy;
+          final rowTop = tester.getTopLeft(find.text('Text Input')).dy;
+          expect(
+            (anchorY - sheetTextTop).abs() < (anchorY - rowTop).abs(),
+            isTrue,
+            reason:
+                'the selection anchor (y=$anchorY) must be closer to the sheet text (y=$sheetTextTop) '
+                'than to the list row behind it (y=$rowTop)',
           );
         } finally {
           debugDefaultTargetPlatformOverride = null;
@@ -317,6 +381,100 @@ void main() {
         // content now -- confirming the preserved selection is actually
         // rendered, not just recorded in the controller.
         expect(find.text('Field States for Text Input'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'long-press on the sheet\'s own text selects it and does not crash (contextMenuBuilder guard)',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        try {
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          final controller = LayrzScaffoldController();
+          addTearDown(controller.dispose);
+
+          await pumpNestedShellApp(tester, controller);
+
+          await tester.tap(find.text('Text Input'));
+          await tester.pumpAndSettle();
+
+          final sheetTitleFinder = find.text('Field States for Text Input');
+          expect(sheetTitleFinder, findsOneWidget, reason: 'sheet must be open and settled');
+
+          // Long-press, not double-tap: this is the path that null-crashes a
+          // bare SelectableRegion with no contextMenuBuilder in this repo.
+          // DetailPane's own _buildContextMenu must guard against exactly
+          // this, mirroring LayrzLayout's internal pattern.
+          await tester.longPress(sheetTitleFinder);
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull, reason: 'long-press on the sheet\'s own text must not crash');
+          expect(
+            find.byType(LayrzSelectionToolbar),
+            findsOneWidget,
+            reason: 'long-press must select a word and show the copy toolbar, same as double-tap',
+          );
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      },
+    );
+
+    testWidgets(
+      'the page\'s own selection still works normally when no sheet is ever opened',
+      (tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        try {
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(400, 800);
+
+          final controller = LayrzScaffoldController();
+          addTearDown(controller.dispose);
+
+          await pumpNestedShellApp(tester, controller);
+
+          // No sheet ever opened -- DetailPane's own SelectableRegion never
+          // mounts. The page's own SelectableRegion (LayrzLayout's) must
+          // still select its own content normally.
+          //
+          // Using a list row's own label would not test this cleanly: it is
+          // wrapped in an active LayrzTappable, whose GestureDetector wins
+          // the gesture arena for each tap individually (established earlier
+          // this investigation), so a single tap on it opens the sheet --
+          // exactly the thing this test is meant to avoid. The shell's own
+          // title is plain page text with no tappable wrapper, so it
+          // exercises ordinary page selection without side-effects.
+          final textFinder = find.text('Inputs Showcase');
+          final textPoint = tester.getCenter(textFinder);
+
+          await tester.tapAt(textPoint);
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.tapAt(textPoint);
+          await tester.pumpAndSettle();
+
+          expect(tester.takeException(), isNull);
+          expect(
+            find.byType(LayrzSelectionToolbar),
+            findsOneWidget,
+            reason: 'double-tap on ordinary page text must still select a word, unaffected by this fix',
+          );
+
+          // Long-press still works and does not crash either, confirming
+          // this fix touched nothing about ordinary page gesture handling
+          // when no sheet is involved.
+          await tester.longPress(textFinder);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(LayrzSelectionToolbar), findsOneWidget);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
       },
     );
   });
