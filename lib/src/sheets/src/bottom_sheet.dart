@@ -234,6 +234,14 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                // Barrier
                if (!isPersistent)
                  GestureDetector(
+                   // Explicit for clarity/defensiveness: Container(color: ...) already
+                   // builds a ColoredBox, whose render object (_RenderColoredBox) is
+                   // unconditionally HitTestBehavior.opaque regardless of alpha — so this
+                   // barrier already blocks hits to whatever sits behind it in the Stack,
+                   // with or without this line. Kept explicit so the GestureDetector's own
+                   // hit-testing contract does not silently depend on an implementation
+                   // detail of its child.
+                   behavior: HitTestBehavior.opaque,
                    onTap: () => Navigator.of(context).pop(),
                    child: Container(
                      color: barrierColor,
