@@ -47,10 +47,11 @@ class LayrzRadioInput<T> extends StatefulWidget {
 
   /// The list of options to display.
   ///
-  /// Each [LayrzSelectItem] defines a label, typed value, optional custom rendering,
-  /// and search metadata. The radio group ignores the search metadata (no search in radio).
-  /// When [LayrzSelectItem.child] is non-null, that widget is rendered instead of
-  /// a default [Text] label; [labelText] is still used by accessibility.
+  /// Each [LayrzSelectItem] defines a typed value, a required [LayrzSelectItem.child]
+  /// presentation widget, and search metadata. The radio group ignores the search
+  /// metadata (no search in radio). [LayrzSelectItem.child] is the option's only
+  /// presentation and its own semantics (e.g. a plain [Text]'s implicit label) are what
+  /// accessibility announces -- there is no separate label string on the item.
   ///
   /// **Important:** Item values must be unique. The underlying [RadioGroup] enforces
   /// single-selection semantics and cannot handle multiple items with the same value.

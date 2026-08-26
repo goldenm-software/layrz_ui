@@ -232,7 +232,7 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
 
 /// A single item row in the select input surface.
 ///
-/// Displays the item with optional custom rendering and selection/highlight states.
+/// Displays the item's [LayrzSelectItem.child] alongside selection/highlight states.
 class _SelectItemRow<T> extends StatelessWidget {
   final LayrzSelectItem<T> item;
   final bool isHighlighted;
@@ -258,11 +258,14 @@ class _SelectItemRow<T> extends StatelessWidget {
         ? tokens.colors.fg3.withValues(alpha: 0.1)
         : Color.fromARGB(0, 0, 0, 0);
 
-    // Determine text color
-    final textColor = isSelected ? tokens.colors.primary : tokens.colors.fg1;
-
     return Semantics(
-      label: item.labelText,
+      // No explicit `label` here -- `item.child` is the item's only presentation
+      // (BREAKING: `LayrzSelectItem.labelText` is gone), so it is left un-excluded
+      // below and its own semantics (a plain `Text`, most commonly) merge upward into
+      // this node instead of being replaced by a separate string. A caller whose
+      // `child` carries no text semantics of its own (icon-only, a color swatch)
+      // announces with no name unless that `child` supplies its own `Semantics(label:)`
+      // -- this type no longer owns any text to fall back to.
       button: true,
       selected: isSelected,
       onTap: onTap,
@@ -276,20 +279,16 @@ class _SelectItemRow<T> extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Item content (custom or default)
-              DefaultTextStyle(
-                style: context.titleStyle,
-                child: Expanded(
-                  child:
-                      item.child ??
-                      Text(
-                        item.labelText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tokens.typography.body.copyWith(
-                          color: textColor,
-                        ),
-                      ),
+              // `item.child` is force-wrapped in its own `DefaultTextStyle`: it must
+              // never depend on whatever `DefaultTextStyle` happens to be ambient at
+              // its mount point. Left bare, a plain `Text` inside `child` (with no
+              // explicit color of its own) resolves `style.color` to `null` whenever
+              // there is no real ancestor `DefaultTextStyle` supplying one -- which the
+              // rendering engine then paints as solid white, not the theme's body color.
+              Expanded(
+                child: DefaultTextStyle(
+                  style: context.titleStyle,
+                  child: item.child,
                 ),
               ),
 

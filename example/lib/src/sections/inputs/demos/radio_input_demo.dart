@@ -30,9 +30,9 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
               LayrzRadioInput<String>(
                 value: _selectedOption,
                 items: const [
-                  LayrzSelectItem(labelText: 'Option 1', value: 'option1'),
-                  LayrzSelectItem(labelText: 'Option 2', value: 'option2'),
-                  LayrzSelectItem(labelText: 'Option 3', value: 'option3'),
+                  LayrzSelectItem(value: 'option1', child: Text('Option 1'), searchableStrings: {'Option 1'}),
+                  LayrzSelectItem(value: 'option2', child: Text('Option 2'), searchableStrings: {'Option 2'}),
+                  LayrzSelectItem(value: 'option3', child: Text('Option 3'), searchableStrings: {'Option 3'}),
                 ],
                 onChanged: (v) {
                   setState(() {
@@ -47,9 +47,9 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
               LayrzRadioInput<String>(
                 value: _selectedSize,
                 items: const [
-                  LayrzSelectItem(labelText: 'Small', value: 'small'),
-                  LayrzSelectItem(labelText: 'Medium', value: 'medium'),
-                  LayrzSelectItem(labelText: 'Large', value: 'large'),
+                  LayrzSelectItem(value: 'small', child: Text('Small'), searchableStrings: {'Small'}),
+                  LayrzSelectItem(value: 'medium', child: Text('Medium'), searchableStrings: {'Medium'}),
+                  LayrzSelectItem(value: 'large', child: Text('Large'), searchableStrings: {'Large'}),
                 ],
                 onChanged: (v) {
                   setState(() {
@@ -69,9 +69,17 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
               LayrzRadioInput<String>(
                 value: _selectedShipping,
                 items: const [
-                  LayrzSelectItem(labelText: 'Standard (5-7 days)', value: 'standard'),
-                  LayrzSelectItem(labelText: 'Express (2-3 days)', value: 'express'),
-                  LayrzSelectItem(labelText: 'Overnight', value: 'overnight'),
+                  LayrzSelectItem(
+                    value: 'standard',
+                    child: Text('Standard (5-7 days)'),
+                    searchableStrings: {'Standard (5-7 days)'},
+                  ),
+                  LayrzSelectItem(
+                    value: 'express',
+                    child: Text('Express (2-3 days)'),
+                    searchableStrings: {'Express (2-3 days)'},
+                  ),
+                  LayrzSelectItem(value: 'overnight', child: Text('Overnight'), searchableStrings: {'Overnight'}),
                 ],
                 onChanged: (v) {
                   setState(() {
@@ -88,8 +96,16 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
                 value: 'option1',
                 disabled: true,
                 items: [
-                  LayrzSelectItem(labelText: 'Disabled option 1', value: 'option1'),
-                  LayrzSelectItem(labelText: 'Disabled option 2', value: 'option2'),
+                  LayrzSelectItem(
+                    value: 'option1',
+                    child: Text('Disabled option 1'),
+                    searchableStrings: {'Disabled option 1'},
+                  ),
+                  LayrzSelectItem(
+                    value: 'option2',
+                    child: Text('Disabled option 2'),
+                    searchableStrings: {'Disabled option 2'},
+                  ),
                 ],
               ),
 
@@ -105,8 +121,8 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
                   const LayrzRadioInput<String>(
                     value: null,
                     items: [
-                      LayrzSelectItem(labelText: 'I agree', value: 'agree'),
-                      LayrzSelectItem(labelText: 'I disagree', value: 'disagree'),
+                      LayrzSelectItem(value: 'agree', child: Text('I agree'), searchableStrings: {'I agree'}),
+                      LayrzSelectItem(value: 'disagree', child: Text('I disagree'), searchableStrings: {'I disagree'}),
                     ],
                     errors: ['You must make a selection'],
                   ),

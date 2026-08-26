@@ -17,7 +17,7 @@ import 'select_input_surface.dart';
 
 /// A Material-free, adaptive select input in the layrz_ui design system.
 ///
-/// [LayrzSelectInput] displays a field showing the selected item's label text, with a
+/// [LayrzSelectInput] displays a field for picking an item, with a
 /// dropdown chevron affordance rendered as an external sibling to the field (never inside
 /// a caller-suppliable slot). Tapping the field opens a selection surface that adapts to
 /// the viewport:
@@ -37,18 +37,21 @@ import 'select_input_surface.dart';
 ///
 /// **Search (when [enableSearch] is true, the default):** the field itself is the
 /// searcher -- there is no separate search box in the opened surface. Typing filters the
-/// list live; the field shows the selected item's label while idle, the typed query while
-/// typing, and reverts to the label on blur if nothing was picked. When [enableSearch] is
-/// false, the field is not editable (a pure picker) but still self-displays from internal
-/// state -- it just never diverges from the selected label, since it never accepts input.
+/// list live; the field is blank while idle (there is no text representation of a selected
+/// item's [LayrzSelectItem.child] to show inline -- see [_updateControllerText]), shows the
+/// typed query while typing, and reverts to blank on blur if nothing was picked. When
+/// [enableSearch] is false, the field is not editable (a pure picker) but still
+/// self-displays from internal state -- it just never diverges from the blank idle
+/// display, since it never accepts input.
 ///
 /// **Keyboard support:** When [enableSearch] is false, arrow keys move a highlight in the
 /// list, Enter commits the highlighted item, Escape closes without changing the selection.
 class LayrzSelectInput<T> extends StatefulWidget {
   /// The list of items to choose from.
   ///
-  /// Each item combines a label, a typed value, optional custom rendering,
-  /// and search metadata. Use [LayrzSelectItem] to construct items.
+  /// Each item combines a typed value, a required presentation widget ([LayrzSelectItem.child]),
+  /// and search metadata ([LayrzSelectItem.searchableStrings]). Use [LayrzSelectItem] to
+  /// construct items.
   final List<LayrzSelectItem<T>> items;
 
   /// The currently selected value.
@@ -304,17 +307,22 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     }
   }
 
-  /// Updates the controller text to match [_displayedValue]'s item label (mode 1: idle).
+  /// Clears the controller's text (mode 1: idle).
   ///
-  /// Deliberately blank when [_displayedValue] is null, even if some item's own
-  /// `value` happens to also be null (a common convention for a "None"/clear entry):
-  /// a null value means "nothing chosen", and the field should read as empty, not as
-  /// if the user had explicitly picked that placeholder. [_findSelectedItem] itself
-  /// carries no such guard -- the surface's own highlighting (via `selectedItem:`)
-  /// still treats a null-value item as "the current state" and marks it selected.
+  /// **BREAKING (DESIGN-142):** this used to set the controller's text to the selected
+  /// item's `labelText`, which was then displayed via [LayrzEditableField] itself.
+  /// `labelText` is gone from [LayrzSelectItem] -- an item's only presentation is now
+  /// [LayrzSelectItem.child], a widget, which this `TextEditingController`-backed field
+  /// cannot render inline. There is no text representation of an item left to show, so
+  /// the controller is simply kept empty; [_buildField] independently suppresses
+  /// [LayrzInputChrome]'s own hint text while a selection exists, so an idle selected
+  /// field reads as blank rather than showing the hint underneath nothing. Rendering the
+  /// selected item's actual [LayrzSelectItem.child] while idle is tracked as follow-up
+  /// work (an overlay-based field redesign), not attempted here. Kept as a named method
+  /// (even though it is now a one-liner) because [_commitSelection] and the blur handler
+  /// both call it, and its purpose reads better named than inlined.
   void _updateControllerText() {
-    final selectedItem = _displayedValue == null ? null : _findSelectedItem();
-    _controller.text = selectedItem?.labelText ?? '';
+    _controller.clear();
   }
 
   /// Handles a genuine user edit to the field's text (mode 2: typing).
@@ -330,9 +338,9 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
   /// Handles the field gaining or losing focus.
   ///
-  /// On blur with an unresolved query (mode 3), reverts the display back to the
-  /// selected item's label -- the case people forget, so it is a named method rather
-  /// than inline logic, and it has its own test.
+  /// On blur with an unresolved query (mode 3), reverts the display back to blank
+  /// (idle) -- the case people forget, so it is a named method rather than inline
+  /// logic, and it has its own test.
   void _handleFieldFocusChanged(bool hasFocus) {
     setState(() {
       if (hasFocus) {
@@ -450,11 +458,29 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
     final hasErrors = widget.errors.isNotEmpty;
 
+    // Deliberately blank when `_displayedValue` is null, matching `_updateControllerText`'s
+    // own guard: a null value means "nothing chosen", so the field must read as empty rather
+    // than showing an item that merely happens to also carry a null `value` (a common
+    // "None"/clear entry convention). `_findSelectedItem` itself carries no such guard --
+    // it is also used for the surface's highlighting, which still treats a null-value item
+    // as "the current state" there.
+    final selectedItem = _displayedValue == null ? null : _findSelectedItem();
+
+    // Idle (mode 1) shows the selected item's `child`; focused-and-editable (mode 2)
+    // shows the `EditableText` query instead. `enableSearch: false` never enters mode 2
+    // at all -- it "never diverges from the selected [item]" (class doc) regardless of
+    // focus.
+    final showChildDisplay = selectedItem != null && (!widget.enableSearch || !_states.contains(WidgetState.focused));
+
     // Not editable when `enableSearch` is false: a pure picker that still
     // self-displays (mode-logic-free, per the class doc), never a query source.
     final fieldConfig = LayrzEditableFieldConfig(
       labelText: widget.labelText,
-      hintText: widget.hintText,
+      // [LayrzEditableFieldConfig.hintText] is metadata only -- `LayrzEditableField`
+      // never reads it; the visible hint is rendered by `LayrzInputChrome` itself, from
+      // the `hintText:` passed to it directly below. Kept in sync with that value anyway
+      // for consistency with the config's documented contract.
+      hintText: selectedItem == null ? widget.hintText : null,
       disabled: widget.disabled,
       readOnly: !widget.enableSearch,
       controller: _controller,
@@ -558,7 +584,12 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                       borderRadius: tokens.radius.br2,
                       child: LayrzInputChrome(
                         labelText: null,
-                        hintText: widget.hintText,
+                        // Suppressed while a selection exists: the controller's text is
+                        // always empty while idle (see `_updateControllerText`), and the
+                        // chrome shows this hint whenever the controller reads empty --
+                        // so without this it would show through underneath (or beside)
+                        // `selectedItem.child` below, as if nothing were selected.
+                        hintText: selectedItem == null ? widget.hintText : null,
                         isRequired: widget.isRequired,
                         prefixSlot: prefixSlot,
                         suffixSlot: suffixSlot,
@@ -573,7 +604,29 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                         padding: widget.padding,
                         borderRadius: BorderRadius.zero,
                         showBorder: false,
-                        child: LayrzEditableField(config: fieldConfig),
+                        child: !showChildDisplay
+                            ? LayrzEditableField(config: fieldConfig)
+                            : Stack(
+                                alignment: Alignment.centerLeft,
+                                children: [
+                                  LayrzEditableField(config: fieldConfig),
+                                  // The selected item's own presentation, shown while idle.
+                                  // `IgnorePointer` keeps every tap routed to the
+                                  // `LayrzEditableField` beneath -- this overlay is purely
+                                  // visual, never a second hit-test target. Force-wrapped in
+                                  // its own `DefaultTextStyle` for the same reason
+                                  // `_SelectItemRow` is (see select_input_surface.dart): a
+                                  // plain `Text` inside `child` with no explicit color
+                                  // resolves to `null` without a real ancestor supplying
+                                  // one, which the engine then paints solid white.
+                                  IgnorePointer(
+                                    child: DefaultTextStyle(
+                                      style: context.titleStyle,
+                                      child: selectedItem.child,
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
                     ),
                   ),
