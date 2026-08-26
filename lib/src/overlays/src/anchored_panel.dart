@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/positioning/positioning.dart';
 
+import 'anchored_panel_border.dart';
 import 'anchored_panel_layout_delegate.dart';
 
 /// Signature for building an anchored panel's anchor/trigger widget.
@@ -180,6 +181,22 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// rest of the content is very short.
   final double? minHeight;
 
+  /// Optional border painted around the panel's own decorated box -- the box
+  /// that wraps its scroll viewport and is clamped to [maxHeight] -- rather
+  /// than around [child].
+  ///
+  /// When null (the default), no border is painted and every existing caller
+  /// is unaffected. When set, callers describe the border they want (color,
+  /// width) instead of hand-rolling a bordered container as part of [child];
+  /// content passed inside a `SingleChildScrollView` has its height
+  /// constraint relaxed to unbounded along the scroll axis, so a bordered box
+  /// drawn there would size to the full, uncapped content height instead of
+  /// the panel's actual capped viewport. See [LayrzAnchoredPanelBorder]'s own
+  /// doc comment for the full rationale. Painted with
+  /// `strokeAlign: BorderSide.strokeAlignOutside`, so it never changes the
+  /// panel's occupied geometry (D15).
+  final LayrzAnchoredPanelBorder? border;
+
   /// Creates a new [LayrzAnchoredPanel].
   ///
   /// [builder] and [child] are required. All other parameters are optional.
@@ -200,6 +217,7 @@ class LayrzAnchoredPanel extends StatefulWidget {
     this.panelSemanticLabel,
     this.coverAnchor = false,
     this.minHeight,
+    this.border,
     super.key,
   });
 
@@ -332,6 +350,13 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
                 color: tokens.colors.sf1,
                 borderRadius: tokens.radius.br3,
                 boxShadow: tokens.shadow.elevation3,
+                border: widget.border == null
+                    ? null
+                    : Border.all(
+                        color: widget.border!.color,
+                        width: widget.border!.width,
+                        strokeAlign: BorderSide.strokeAlignOutside,
+                      ),
               ),
               child: Focus(
                 focusNode: _panelFocusNode,
