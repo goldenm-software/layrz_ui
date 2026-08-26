@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/select/select_input_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
@@ -28,7 +29,20 @@ void main() {
             ),
           );
 
-          final semantics = tester.getSemantics(find.byType(LayrzSelectInput<String>));
+          // Scoped to `LayrzInputChrome`, not `LayrzSelectInput` itself
+          // (DESIGN-145): `WidgetTester.getSemantics` walks from
+          // `element.findRenderObject()`, and now that the field's `EditableText`
+          // is always read-only, that walk can land in `EditableText`'s own
+          // offstage text-selection-toolbar overlay branch (a `RenderObject`
+          // descendant of `LayrzSelectInput` in element-tree terms, even though it
+          // paints nowhere) before it reaches the field's own labeled node -- an
+          // empty-label `RenderSemanticsAnnotations` there, not a missing label,
+          // is what a bare `find.byType(LayrzSelectInput<String>)` was hitting.
+          // `LayrzInputChrome` has no such duplicate in that offstage branch, so
+          // walking up from it is unambiguous. The real, compiled semantics tree
+          // (what assistive tech actually sees) has always carried this label
+          // correctly; this is a test-scoping fix, not a behavior fix.
+          final semantics = tester.getSemantics(find.byType(LayrzInputChrome));
           expect(semantics.label, contains('Choose an option'));
         } finally {
           handle.dispose();
@@ -275,9 +289,9 @@ void main() {
 
     group('Search functionality', () {
       testWidgets('search field filters items', (tester) async {
-        // REWRITE: the search box this test originally typed into lived inside
-        // the panel and is gone. The field itself is the searcher now, which
-        // only works with the surface open -- the desktop path.
+        // REWRITE (DESIGN-145): the surface owns its own internal search field
+        // again (see select_input_surface.dart) -- typing there filters live,
+        // never on the closed field, which is always read-only.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -294,10 +308,14 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byType(EditableText));
+          await tester.tap(find.byType(LayrzInputChrome).first);
           await tester.pumpAndSettle();
 
-          await tester.enterText(find.byType(EditableText), 'B');
+          final searchField = find.descendant(
+            of: find.byType(LayrzSelectInputSurface<String>),
+            matching: find.byType(EditableText),
+          );
+          await tester.enterText(searchField, 'B');
           await tester.pumpAndSettle();
 
           // Assert the narrowing: the right item remains, the wrong one is gone.
@@ -310,7 +328,8 @@ void main() {
       });
 
       testWidgets('empty search shows empty list message', (tester) async {
-        // REWRITE: typed into the field itself now, not a separate search box.
+        // REWRITE (DESIGN-145): typed into the surface's own internal search
+        // field, not the closed field itself.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -328,10 +347,14 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byType(EditableText));
+          await tester.tap(find.byType(LayrzInputChrome).first);
           await tester.pumpAndSettle();
 
-          await tester.enterText(find.byType(EditableText), 'XYZ');
+          final searchField = find.descendant(
+            of: find.byType(LayrzSelectInputSurface<String>),
+            matching: find.byType(EditableText),
+          );
+          await tester.enterText(searchField, 'XYZ');
           await tester.pumpAndSettle();
 
           expect(find.text('No matches'), findsOneWidget);
@@ -490,14 +513,8 @@ void main() {
 
     group('Custom filter', () {
       testWidgets('custom filter function is applied', (tester) async {
-        // REWRITE: typed into the field itself now, not a separate search box.
-        // Also fixes a pre-existing weak assertion -- the original filter,
-        // `item.labelText.contains(query.toUpperCase())`, was case-sensitive
-        // against "Option A" and a query of "OPTION" never actually matched
-        // anything; the sole assertion checked only that the search box widget
-        // still existed, not that filtering narrowed the list. Rewritten with a
-        // genuinely case-insensitive filter over `searchableStrings` (BREAKING:
-        // `labelText` is gone) and an assertion on the narrowing.
+        // REWRITE (DESIGN-145): typed into the surface's own internal search
+        // field, not the closed field.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -515,10 +532,14 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byType(EditableText));
+          await tester.tap(find.byType(LayrzInputChrome).first);
           await tester.pumpAndSettle();
 
-          await tester.enterText(find.byType(EditableText), 'B');
+          final searchField = find.descendant(
+            of: find.byType(LayrzSelectInputSurface<String>),
+            matching: find.byType(EditableText),
+          );
+          await tester.enterText(searchField, 'B');
           await tester.pumpAndSettle();
 
           // The custom filter narrows to just Option B.

@@ -1,10 +1,10 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/select/select_input_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
@@ -222,10 +222,10 @@ void main() {
     });
 
     testWidgets('search field filters items', (tester) async {
-      // REWRITE: the search box this test originally typed into lived inside the
-      // panel and is gone. The field itself is the searcher now -- typing into it
-      // filters live, and that only works with the surface open, which requires
-      // the desktop path (see select_input.dart's focus-race handling).
+      // REWRITE (DESIGN-145): search moved back into the opened surface's own
+      // internal search field (see select_input_surface.dart) -- the closed field
+      // itself is always read-only and never hosts a query. Typing narrows the
+      // list live from there instead.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -240,12 +240,16 @@ void main() {
         ),
       );
 
-      // Tap the field to open the surface and focus it.
-      await tester.tap(find.byType(EditableText));
+      // Tap the field to open the surface.
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // Type into the field itself -- there is no separate search box anymore.
-      await tester.enterText(find.byType(EditableText), 'B');
+      // Type into the surface's own internal search field, not the closed field.
+      final searchField = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(searchField, 'B');
       await tester.pumpAndSettle();
 
       // Assert the narrowing: the right item remains, the wrong ones are gone.
@@ -334,7 +338,8 @@ void main() {
     });
 
     testWidgets('empty list shows empty state message', (tester) async {
-      // REWRITE: typed into the field itself now, not a separate search box.
+      // REWRITE (DESIGN-145): typed into the surface's own internal search field,
+      // not the closed field itself -- see the class doc.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -349,10 +354,14 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(EditableText));
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(EditableText), 'nonexistent');
+      final searchField = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(searchField, 'nonexistent');
       await tester.pumpAndSettle();
 
       // Empty message should appear, and no items should remain.
@@ -650,7 +659,7 @@ void main() {
     });
 
     testWidgets('custom filter respects case sensitivity', (tester) async {
-      // REWRITE: typed into the field itself now, not a separate search box.
+      // REWRITE (DESIGN-145): typed into the surface's own internal search field.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -666,11 +675,15 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(EditableText));
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // Type uppercase search
-      await tester.enterText(find.byType(EditableText), 'A');
+      // Type uppercase search into the surface's own search field.
+      final searchField = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(searchField, 'A');
       await tester.pumpAndSettle();
 
       // Should find Option A (case-insensitive) and narrow out B and C, neither
@@ -746,7 +759,7 @@ void main() {
     });
 
     testWidgets('empty search result shows custom empty text', (tester) async {
-      // REWRITE: typed into the field itself now, not a separate search box.
+      // REWRITE (DESIGN-145): typed into the surface's own internal search field.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -762,10 +775,14 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(EditableText));
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(EditableText), 'zzz');
+      final searchField = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(searchField, 'zzz');
       await tester.pumpAndSettle();
 
       // Custom empty message should appear, and no items should remain.
@@ -946,13 +963,8 @@ void main() {
     });
 
     testWidgets('clearing the typed query restores the full list', (tester) async {
-      // REWRITE, with a caveat: the old panel search box's inline clear (close)
-      // icon is gone, and there is no equivalent built-in "clear" affordance on
-      // the field itself -- that specific UI capability disappeared with the
-      // search box (flagged to the maintainer separately). What survives is the
-      // underlying behavior: erasing the query restores the full list. Proven
-      // here by clearing the field's text directly, the same way a user would by
-      // backspacing, rather than by tapping a control that no longer exists.
+      // REWRITE (DESIGN-145): the surface owns its own search field again, so
+      // erasing the query happens there, not on the closed field.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -967,10 +979,14 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(EditableText));
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(EditableText), 'A');
+      final searchField = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(searchField, 'A');
       await tester.pumpAndSettle();
 
       // Only one option visible
@@ -978,7 +994,7 @@ void main() {
       expect(find.text('Option B'), findsNothing);
       expect(find.text('Option C'), findsNothing);
 
-      await tester.enterText(find.byType(EditableText), '');
+      await tester.enterText(searchField, '');
       await tester.pumpAndSettle();
 
       // All options visible again
@@ -1188,12 +1204,15 @@ void main() {
     });
   });
 
-  // DESIGN-40/144: the field-as-searcher redesign. Neither this widget nor
-  // `LayrzComboBoxInput` had this mode logic before -- combobox's displayed text
-  // *is* its value, so it never needed to distinguish "idle" from "typing". Each
-  // of the four modes gets its own test; mode 3 (blur-revert) is the one people
-  // forget, so it is asserted explicitly rather than folded into another test.
-  group('LayrzSelectInput field-as-searcher mode logic (DESIGN-40/144)', () {
+  // DESIGN-145 superseded DESIGN-40/144's "field is the searcher" design: typing
+  // now happens in the opened surface's own internal search field (see
+  // select_input_surface.dart), never in this closed field. That collapses the
+  // old four-mode logic (idle / typing / blur-revert / external-change-mid-query)
+  // down to one: the field always shows the selected item's child, full stop --
+  // it is always read-only and never diverges by focus. The obsolete
+  // mode-2/3/4 tests and the "field keeps focus" test this group used to carry
+  // are retired below in favor of the group that actually pins the new contract.
+  group('LayrzSelectInput field self-display (DESIGN-145)', () {
     // Each item's child pairs an Icon with Text -- a widget shape no string-based
     // check could produce by coincidence, so finding both inside the field (mode 1)
     // is real proof the field renders the actual `LayrzSelectItem.child` widget,
@@ -1237,41 +1256,42 @@ void main() {
       expect(editable.controller.text, isNot('Option B'));
     });
 
-    testWidgets('mode 2: typing shows the query and filters the opened list', (tester) async {
+    testWidgets('the field never accepts typed input, on any enableSearch value', (tester) async {
+      // Regression guard for defect 2's actual root cause (DESIGN-145): the field
+      // used to stay focused-and-editable post-tap whenever `enableSearch` was
+      // true, which is what left it rendering an empty `EditableText` instead of
+      // the selected item's child right after a pick. It is now always read-only,
+      // so there is no focus-dependent display path left to regress.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemedApp(
         tester,
-        LayrzSelectInput<String>(itemExtent: 40, items: items, labelText: 'Choose one'),
+        LayrzSelectInput<String>(itemExtent: 40, items: items, labelText: 'Choose one', enableSearch: true),
       );
 
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
+      final field = find.descendant(of: find.byType(LayrzInputChrome).first, matching: find.byType(EditableText));
+      final editable = tester.widget<EditableText>(field);
+      expect(editable.readOnly, isTrue);
 
-      await tester.enterText(find.byType(EditableText), 'B');
+      // Tapping still opens the surface (the tap callback fires regardless of
+      // read-only), but typing into the field itself is a no-op: `readOnly`
+      // routes `onUserTap` straight to `onTap` without ever calling
+      // `_focusNode.requestFocus()`, so there is nothing to type into.
+      await tester.tap(field);
       await tester.pumpAndSettle();
-
-      final editable = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editable.controller.text, 'B');
-      expect(find.text('Option B'), findsOneWidget);
-      expect(find.text('Option A'), findsNothing);
-      expect(find.text('Option C'), findsNothing);
+      expect(editable.controller.text, isEmpty);
     });
 
     testWidgets(
-      'the field keeps focus after the desktop panel opens (not the panel itself)',
+      'opening the desktop panel does not require the field to hold focus',
       (tester) async {
-        // Asserts the OUTCOME, not the timing that produces it:
-        // `LayrzAnchoredPanel._handlePanelOpenRequested` unconditionally moves
-        // focus to its own internal panel-focus-node one frame after opening, which
-        // would otherwise defocus the field the instant it's tapped -- breaking
-        // "the field is the searcher" on desktop before the user types a single
-        // character. `LayrzSelectInput._handlePanelOpened` (wired via the panel's
-        // own `onOpen` hook) wins that race back for the field. If the race ever
-        // flips -- an SDK change, a change to the panel's own open-focus timing --
-        // this must fail rather than let the regression pass silently.
+        // Supersedes the old "field keeps focus after the desktop panel opens"
+        // test: DESIGN-145 covers the field with the panel instead of keeping it
+        // focused as the searcher, so the field losing focus on open is no longer
+        // a regression -- it is expected. Typing now happens in the surface's own
+        // internal search field instead (see select_input_surface.dart).
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -1284,113 +1304,17 @@ void main() {
           LayrzSelectInput<String>(itemExtent: 40, items: items, labelText: 'Choose one', focusNode: focusNode),
         );
 
-        await tester.tap(find.byType(EditableText));
+        await tester.tap(find.byType(LayrzInputChrome).first);
         await tester.pumpAndSettle();
 
-        expect(focusNode.hasFocus, isTrue);
-      },
-    );
-
-    testWidgets("mode 3: blur with nothing picked reverts to the selected item's child", (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final focusNode = FocusNode();
-      addTearDown(focusNode.dispose);
-
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          itemExtent: 40,
-          items: items,
-          value: 'b',
-          labelText: 'Choose one',
-          focusNode: focusNode,
-        ),
-      );
-
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(EditableText), 'zzz-no-match');
-      await tester.pumpAndSettle();
-
-      var editable = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editable.controller.text, 'zzz-no-match');
-
-      // Blur without picking anything -- the field must revert to rendering the
-      // selected item's child, not stay showing the abandoned query.
-      focusNode.unfocus();
-      await tester.pumpAndSettle();
-
-      editable = tester.widget<EditableText>(find.byType(EditableText));
-      expect(editable.controller.text, isNot('zzz-no-match'));
-      expect(
-        find.descendant(of: find.byType(LayrzInputChrome), matching: find.byKey(const ValueKey('flag-Option B'))),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Option B')),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets(
-      'mode 4: a caller-supplied value change mid-query reconciles without clobbering the typed text',
-      (tester) async {
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
-
-        final focusNode = FocusNode();
-        addTearDown(focusNode.dispose);
-        String? currentValue = 'a';
-        late StateSetter setOuterState;
-
-        await pumpThemedApp(
-          tester,
-          StatefulBuilder(
-            builder: (context, setState) {
-              setOuterState = setState;
-              return LayrzSelectInput<String>(
-                itemExtent: 40,
-                items: items,
-                value: currentValue,
-                labelText: 'Choose one',
-                focusNode: focusNode,
-              );
-            },
-          ),
+        // The surface's own search field is what ends up focused, not the
+        // (always read-only) outer field.
+        final searchField = find.descendant(
+          of: find.byType(LayrzSelectInputSurface<String>),
+          matching: find.byType(EditableText),
         );
-
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(find.byType(EditableText), 'typing...');
-        await tester.pumpAndSettle();
-
-        // The caller changes `value` externally while the user is mid-query.
-        setOuterState(() => currentValue = 'c');
-        await tester.pump();
-
-        // The typed text must survive the external change -- it is reconciled
-        // silently, not applied immediately over what the user is typing.
-        var editable = tester.widget<EditableText>(find.byType(EditableText));
-        expect(editable.controller.text, 'typing...');
-
-        // Once the query resolves (blur, nothing picked), the *new* external
-        // value's child renders -- proving the change was reconciled, not
-        // dropped.
-        focusNode.unfocus();
-        await tester.pumpAndSettle();
-
-        editable = tester.widget<EditableText>(find.byType(EditableText));
-        expect(editable.controller.text, isNot('typing...'));
-        expect(
-          find.descendant(of: find.byType(LayrzInputChrome), matching: find.byKey(const ValueKey('flag-Option C'))),
-          findsOneWidget,
-        );
+        final searchEditable = tester.widget<EditableText>(searchField);
+        expect(searchEditable.focusNode.hasFocus, isTrue);
       },
     );
 
@@ -1489,7 +1413,14 @@ void main() {
       expect(find.text('Option A'), findsWidgets);
     });
 
-    testWidgets('tapping directly on the text still places the caret', (tester) async {
+    // The three tests this group used to carry here (caret placement, drag-to-select,
+    // long-press handles) pinned text-selection mechanics on the field itself, back
+    // when the field was genuinely editable (it was the searcher). DESIGN-145 makes
+    // the field permanently read-only -- see the class doc -- so there is no longer
+    // any selection state to place a caret in, drag across, or show handles for.
+    // Replaced with the tests below, which pin that non-editability directly instead
+    // of retrofitting selection assertions onto a field that no longer supports them.
+    testWidgets('tapping directly on the text opens the surface instead of placing a caret', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1499,55 +1430,21 @@ void main() {
         LayrzSelectInput<String>(itemExtent: 40, items: items, value: 'b', labelText: 'Choose one'),
       );
 
-      // The field's own idle text is intentionally empty now (mode 1 renders the
-      // selected item's `child` instead, see select_input.dart) -- so a caret has
-      // nothing to be "placed" within until there is a live query to place it in.
-      // Focus and type first (`enterText` focuses directly, no hit-testing involved),
-      // then tap again to reposition the caret within that typed text, which is what
-      // this test actually pins.
-      await tester.enterText(find.byType(EditableText), 'Selectable query text');
+      final field = find.descendant(of: find.byType(LayrzInputChrome).first, matching: find.byType(EditableText));
+      await tester.tap(field);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
-
-      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
-      expect(editableState.textEditingValue.selection.isCollapsed, isTrue);
+      // Tapping directly on the (read-only) text still triggers the field's own
+      // `onTap` -- opening the surface -- rather than focusing it for editing. The
+      // surface's own search field is what actually gets focus (see the
+      // "opening the desktop panel does not require the field to hold focus" test
+      // above), never this one.
+      final editableState = tester.state<EditableTextState>(field);
+      expect(editableState.widget.focusNode.hasFocus, isFalse);
+      expect(find.byType(LayrzSelectInputSurface<String>), findsOneWidget);
     });
 
-    testWidgets('dragging across the text still selects a range', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(itemExtent: 40, items: items, value: 'b', labelText: 'Choose one'),
-      );
-
-      // Same reasoning as the caret test above: there must be real text present
-      // to drag across before a range selection is even possible.
-      await tester.enterText(find.byType(EditableText), 'Selectable query text');
-      await tester.pumpAndSettle();
-
-      final editableRect = tester.getRect(find.byType(EditableText));
-      final start = Offset(editableRect.left + 4, editableRect.center.dy);
-      final end = Offset(editableRect.right - 4, editableRect.center.dy);
-
-      final gesture = await tester.startGesture(start, kind: PointerDeviceKind.mouse);
-      for (var i = 1; i <= 10; i++) {
-        await tester.pump(const Duration(milliseconds: 20));
-        await gesture.moveTo(Offset.lerp(start, end, i / 10)!);
-      }
-      await tester.pump(const Duration(milliseconds: 20));
-      await gesture.up();
-      await tester.pumpAndSettle();
-
-      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
-      expect(editableState.textEditingValue.selection.isCollapsed, isFalse);
-    });
-
-    testWidgets('long-pressing the text still shows touch selection handles', (tester) async {
+    testWidgets('the field never shows selection handles, since it is always read-only', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1557,19 +1454,134 @@ void main() {
         LayrzSelectInput<String>(itemExtent: 40, items: items, value: 'b', labelText: 'Choose one'),
       );
 
-      // Same reasoning again: long-press-to-select needs real text under the field.
-      // `enterText` focuses the field directly (it does not hit-test), unlike a real
-      // `tap` -- deliberately avoided here, since on this mobile viewport a real tap
-      // opens the bottom sheet (a separate modal route) instead of just focusing the
-      // inline field, which would leave nothing left to long-press against afterward.
-      await tester.enterText(find.byType(EditableText), 'Selectable query text');
+      final field = find.descendant(of: find.byType(LayrzInputChrome).first, matching: find.byType(EditableText));
+      // A real `tap` here would open the bottom sheet (a separate modal route) on
+      // this mobile viewport; `longPress` on the same finder exercises the same
+      // gesture-detector wiring without leaving the field for a route that no
+      // longer contains it.
+      await tester.longPress(field);
       await tester.pumpAndSettle();
 
-      await tester.longPress(find.byType(EditableText));
+      final editableState = tester.state<EditableTextState>(field);
+      expect(editableState.widget.showSelectionHandles, isFalse);
+    });
+  });
+
+  // DESIGN-145 regressions: geometry and behavior, not mere presence -- see the
+  // four defects fixed in this change. A widget being findable somewhere in the
+  // tree proves nothing about where it is or what it does; these pin the actual
+  // outcomes the maintainer reported as broken.
+  group('LayrzSelectInput DESIGN-145 regressions', () {
+    final items = <LayrzSelectItem<String>>[
+      const LayrzSelectItem(value: 'a', child: Text('Option A'), searchableStrings: {'Option A'}),
+      const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
+    ];
+
+    testWidgets("defect 1: the desktop overlay's rect overlaps the field's own rect, not sits below it", (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(itemExtent: 40, items: items, labelText: 'Choose one'),
+      );
+
+      final fieldRect = tester.getRect(find.byType(LayrzInputChrome).first);
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final editableState = tester.state<EditableTextState>(find.byType(EditableText));
-      expect(editableState.widget.showSelectionHandles, isTrue);
+      final surfaceRect = tester.getRect(find.byType(LayrzSelectInputSurface<String>));
+
+      // The old (pre-DESIGN-145) behavior placed the surface entirely BELOW the
+      // field, with a small gap -- their rects would never overlap at all. The
+      // new behavior starts the overlay at the field's own top-left corner, so
+      // it genuinely covers the field rather than merely sitting near it.
+      // Tolerance of 2.0 (not a tight 0.5) because the border `LayrzSelectInput`
+      // draws around the surface (the "elevated field" border, see its class
+      // doc) insets the surface's own rect by the border's width -- an
+      // intentional few pixels, not slack in the assertion. No width assertion
+      // here: the surface's own width is additionally narrowed by its vertical
+      // scrollbar reserving space on desktop, which is a scroll-affordance
+      // concern unrelated to what this test pins (position, not width policy --
+      // `LayrzAnchoredPanelWidthPolicy.matchAnchor` already has its own coverage
+      // in the overlays module).
+      expect(surfaceRect.overlaps(fieldRect), isTrue);
+      expect(surfaceRect.left, closeTo(fieldRect.left, 2.0));
+      expect(surfaceRect.top, closeTo(fieldRect.top, 2.0));
+    });
+
+    testWidgets(
+      "defect 2: the selected item's child is visible immediately after picking it, with no focus change",
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        LayrzSelectItem<String>? selected;
+
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(
+            itemExtent: 40,
+            items: items,
+            labelText: 'Choose one',
+            onChanged: (item) => selected = item,
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
+
+        // Tap the option WITHOUT any subsequent focus manipulation (no `unfocus()`,
+        // no tapping elsewhere first) -- the old bug was that the field stayed
+        // focused right after a pick and kept showing its (empty) `EditableText`
+        // instead of the picked item's child until focus moved away.
+        await tester.tap(find.text('Option B').last);
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(selected?.value, equals('b'));
+        expect(
+          find.descendant(of: find.byType(LayrzInputChrome).first, matching: find.text('Option B')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('defect 3: the clear affordance actually clears the selection', (tester) async {
+      LayrzSelectItem<String>? changedTo;
+      var callbackFired = false;
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          itemExtent: 40,
+          items: items,
+          value: 'a',
+          labelText: 'Choose one',
+          canUnselect: true,
+          onChanged: (item) {
+            callbackFired = true;
+            changedTo = item;
+          },
+        ),
+      );
+
+      // The field shows the selection to start, and no items in `items` carry a
+      // null value -- so the only way to clear is the dedicated affordance itself,
+      // not the pre-existing "select a null-value item" mechanism.
+      expect(find.text('Option A'), findsOneWidget);
+
+      await tester.tap(find.byIcon(MdiIcons.close));
+      await tester.pumpAndSettle();
+
+      expect(callbackFired, isTrue);
+      expect(changedTo, isNull);
+      expect(find.text('Option A'), findsNothing);
     });
   });
 }
