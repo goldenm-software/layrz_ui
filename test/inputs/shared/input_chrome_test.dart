@@ -1496,13 +1496,13 @@ void main() {
           }
         });
 
-        /// Verifies that caller-supplied padding parameter overrides the compact-responsive padding.
-        testWidgets('caller-supplied padding parameter overrides compact padding', (tester) async {
+        /// Verifies that `dense: true` drops padding one spacing level on a compact viewport
+        /// (pd3 14px → pd2 10px), per DESIGN-126. The `padding` escape hatch this test used to
+        /// exercise was removed in the same change; density is now expressible only via `dense`.
+        testWidgets('dense compact viewport (width 400): padding is pd2 (10px all sides)', (tester) async {
           addTearDown(tester.view.resetPhysicalSize);
           tester.view.devicePixelRatio = 1.0;
           tester.view.physicalSize = const Size(400, 800);
-
-          final customPadding = EdgeInsets.all(20.0);
 
           await pumpThemed(
             tester,
@@ -1516,27 +1516,73 @@ void main() {
               errors: [],
               hideDetails: false,
               states: {},
-              padding: customPadding,
+              dense: true,
               child: Container(),
             ),
           );
 
+          EdgeInsets? resolvedPadding;
           final containers = find.byType(Container);
           for (int i = 0; i < containers.evaluate().length; i++) {
             final container = tester.widget<Container>(containers.at(i));
             if (container.decoration is BoxDecoration) {
               final dec = container.decoration as BoxDecoration;
               if (dec.border != null) {
-                final resolvedPadding = container.padding as EdgeInsets;
-                // Verify that custom padding is used, not the compact responsive one
-                expect(resolvedPadding.top, equals(20.0));
-                expect(resolvedPadding.bottom, equals(20.0));
-                expect(resolvedPadding.left, equals(20.0));
-                expect(resolvedPadding.right, equals(20.0));
+                resolvedPadding = container.padding as EdgeInsets;
                 break;
               }
             }
           }
+
+          expect(resolvedPadding, isNotNull, reason: 'Bordered input container should have been found');
+          expect(resolvedPadding!.top, equals(10.0));
+          expect(resolvedPadding.bottom, equals(10.0));
+          expect(resolvedPadding.left, equals(10.0));
+          expect(resolvedPadding.right, equals(10.0));
+        });
+
+        /// Verifies that `dense: true` drops padding one spacing level on a regular/wide viewport
+        /// (pd2 10px → pd1 6px), per DESIGN-126.
+        testWidgets('dense regular viewport (width 1200): padding is pd1 (6px all sides)', (tester) async {
+          addTearDown(tester.view.resetPhysicalSize);
+          tester.view.devicePixelRatio = 1.0;
+          tester.view.physicalSize = const Size(1200, 800);
+
+          await pumpThemed(
+            tester,
+            LayrzInputChrome(
+              labelText: 'Test Field',
+              isRequired: false,
+              prefixSlot: LayrzInputPrefixSlot(),
+              suffixSlot: LayrzInputSuffixSlot(),
+              disabled: false,
+              readOnly: false,
+              errors: [],
+              hideDetails: false,
+              states: {},
+              dense: true,
+              child: Container(),
+            ),
+          );
+
+          EdgeInsets? resolvedPadding;
+          final containers = find.byType(Container);
+          for (int i = 0; i < containers.evaluate().length; i++) {
+            final container = tester.widget<Container>(containers.at(i));
+            if (container.decoration is BoxDecoration) {
+              final dec = container.decoration as BoxDecoration;
+              if (dec.border != null) {
+                resolvedPadding = container.padding as EdgeInsets;
+                break;
+              }
+            }
+          }
+
+          expect(resolvedPadding, isNotNull, reason: 'Bordered input container should have been found');
+          expect(resolvedPadding!.top, equals(6.0));
+          expect(resolvedPadding.bottom, equals(6.0));
+          expect(resolvedPadding.left, equals(6.0));
+          expect(resolvedPadding.right, equals(6.0));
         });
       });
     });

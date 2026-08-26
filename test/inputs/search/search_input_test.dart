@@ -25,6 +25,24 @@ void main() {
         await tester.pumpAndSettle();
       });
 
+      /// Per DESIGN-126, `dense` forwards to the chrome and resolves a smaller padding.
+      testWidgets('dense: true resolves pd1 (6px) padding on a regular viewport', (tester) async {
+        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(1200, 800);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.field,
+            dense: true,
+          ),
+        );
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.dense, isTrue);
+      });
+
       testWidgets('clear suffix is absent when field is empty', (tester) async {
         await pumpThemedApp(
           tester,
@@ -145,6 +163,24 @@ void main() {
 
         // Now the chrome should be visible
         expect(find.byType(LayrzInputChrome), findsOneWidget);
+      });
+
+      /// Per DESIGN-126, `dense` forwards to the overlay panel's chrome (the second of the
+      /// two `LayrzInputChrome` call sites in this widget) as well as the field-mode one.
+      testWidgets('dense: true forwards to the overlay panel chrome', (tester) async {
+        await pumpThemedApp(
+          tester,
+          const LayrzSearchInput(
+            mode: LayrzSearchInputMode.icon,
+            dense: true,
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+        expect(chrome.dense, isTrue);
       });
 
       testWidgets('panel has sensible minimum width (not as narrow as button)', (tester) async {

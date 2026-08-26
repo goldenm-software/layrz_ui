@@ -124,10 +124,12 @@ class LayrzTextAreaInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (10px regular / 14px compact on all sides).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// The keyboard type for the input field.
   ///
@@ -207,7 +209,7 @@ class LayrzTextAreaInput extends StatefulWidget {
     this.onTap,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.keyboardType = TextInputType.multiline,
     this.textInputAction = TextInputAction.newline,
     this.inputFormatters = const [],
@@ -415,7 +417,7 @@ class _LayrzTextAreaInputState extends State<LayrzTextAreaInput> {
         helpTitleText: widget.helpTitleText,
         helpContentText: widget.helpContentText,
         controller: _controller,
-        padding: widget.padding,
+        dense: widget.dense,
         maxLength: widget.maxLength,
         minContentHeight: minContentHeight,
         maxContentHeight: maxContentHeight,

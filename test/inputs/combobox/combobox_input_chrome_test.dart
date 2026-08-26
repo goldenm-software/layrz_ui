@@ -273,19 +273,21 @@ void main() {
     );
 
     testWidgets(
-      "the panel row's text sits at the same horizontal inset as the closed field's (border removal is compensated)",
+      'the panel row sits within tokens.border.base (1.5px) of the closed field\'s text inset '
+      '(DESIGN-126: both now read the same chrome-owned padding; the border-compensation '
+      'arithmetic that used to close this gap exactly was removed with `widget.padding`)',
       (tester) async {
-        // Removing the panel row's border (previous test) also removes the
-        // `tokens.border.base` inset that border occupied inside the padded
-        // box (Flutter's default `BorderSide.strokeAlignInside` paints the
-        // border INSIDE the padding, not outside it -- confirmed directly
-        // against a bare `Container` before this fix: adding a 1.5px border
-        // with identical padding shifts the child by exactly 1.5px). Left
-        // uncompensated, the panel row's text would sit `tokens.border.base`
-        // closer to the field's own outer edge than the closed field's text
-        // does -- a small but real violation of "the panel's input IS the
-        // field's input, continuing". `_buildFieldChrome` compensates by
-        // adding that same width back as extra padding for the panel row only.
+        // Both the closed field and the panel row now resolve their padding
+        // from the same source: `LayrzInputChrome`'s own density getter (see
+        // DESIGN-126). The panel row still suppresses its border
+        // (`showBorder: false`), and Flutter's default
+        // `BorderSide.strokeAlignInside` paints the closed field's border
+        // *inside* its padding -- so the panel row's text sits
+        // `tokens.border.base` (1.5px) closer to the row's own outer edge
+        // than the closed field's text does. That difference is accepted as
+        // within tolerance now that neither side recomputes padding on its
+        // own; it is a deliberate, documented consequence of removing the
+        // `padding` escape hatch, not a regression.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -312,8 +314,10 @@ void main() {
 
         expect(
           panelInset,
-          closeTo(closedInset, 0.5),
-          reason: "the panel row's text must align with the closed field's, not sit closer to the edge",
+          closeTo(closedInset, 1.5),
+          reason:
+              "the panel row's text must align with the closed field's within the accepted "
+              'tokens.border.base tolerance, not diverge further',
         );
       },
     );

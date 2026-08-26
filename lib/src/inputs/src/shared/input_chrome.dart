@@ -12,11 +12,12 @@ import 'input_style_spec.dart';
 /// Comfortable (normal) density specification for input fields.
 ///
 /// Encapsulates all dimensions that define the comfortable density mode:
-/// padding (10px regular / 14px compact on all sides), icon size (fontSize + 6px),
-/// text style (body), and content height that accommodates both icons and text.
+/// padding (10px regular / 14px compact on all sides, or 6px regular / 10px
+/// compact when [dense] is true), icon size (fontSize + 6px), text style
+/// (body), and content height that accommodates both icons and text.
 ///
 /// Padding and icon size scale on compact viewports (width < 960px) to improve touch targets:
-/// - Padding: pd2 (10px) → pd3 (14px)
+/// - Padding: pd2 (10px) → pd3 (14px), or pd1 (6px) → pd2 (10px) when [dense]
 /// - Icon size: grows proportionally with text content
 /// - Text style remains body (16px) in both regular and compact viewports
 ///
@@ -26,14 +27,19 @@ class _InputComfortableSpec {
   final LayrzTokens tokens;
   final IconThemeData? iconTheme;
   final bool isCompact;
+  final bool dense;
 
-  _InputComfortableSpec(this.tokens, this.iconTheme, {required this.isCompact});
+  _InputComfortableSpec(this.tokens, this.iconTheme, {required this.isCompact, required this.dense});
 
   /// The padding applied to all sides inside the input field.
   ///
   /// Returns 10px (pd2) on regular viewports and 14px (pd3) on compact viewports
-  /// (width < 960px) to ensure adequate touch targets on mobile.
-  EdgeInsets get padding => isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2;
+  /// (width < 960px) to ensure adequate touch targets on mobile. When [dense] is
+  /// true, each of those drops one spacing level: 6px (pd1) regular, 10px (pd2)
+  /// compact.
+  EdgeInsets get padding => dense
+      ? (isCompact ? tokens.spacing.pd2 : tokens.spacing.pd1)
+      : (isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2);
 
   /// The size of icons in slots and state indicators.
   ///
@@ -121,10 +127,15 @@ class LayrzInputChrome extends StatelessWidget {
   /// If null, the hint text is always shown when [hintText] is non-null.
   final TextEditingController? controller;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
-  final EdgeInsets? padding;
+  /// When false (default), the internal padding is `tokens.spacing.pd3` (14px)
+  /// on compact viewports and `tokens.spacing.pd2` (10px) on regular viewports.
+  /// When true, each of those drops one spacing level: `tokens.spacing.pd2`
+  /// (10px) on compact viewports and `tokens.spacing.pd1` (6px) on regular
+  /// viewports. No other dimension (height, label sizing, typography, error
+  /// block spacing) changes with this flag.
+  final bool dense;
 
   /// Maximum length of the input text.
   ///
@@ -196,7 +207,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.helpTitleText,
     this.helpContentText,
     this.controller,
-    this.padding,
+    this.dense = false,
     this.maxLength,
     this.helperText,
     bool expandHeight = false,
@@ -237,7 +248,7 @@ class LayrzInputChrome extends StatelessWidget {
     this.helpTitleText,
     this.helpContentText,
     this.controller,
-    this.padding,
+    this.dense = false,
     this.maxLength,
     this.helperText,
     required double minContentHeight,
@@ -272,10 +283,8 @@ class LayrzInputChrome extends StatelessWidget {
       tokens,
       context.theme.iconTheme,
       isCompact: context.isCompact,
+      dense: dense,
     );
-
-    // Compute padding: explicit caller value wins over comfortable default
-    final resolvedPadding = padding ?? density.padding;
 
     // Fixed content height to ensure field geometry is constant across states,
     // regardless of whether slots have icons. The height accommodates both
@@ -327,7 +336,7 @@ class LayrzInputChrome extends StatelessWidget {
                 : null,
             borderRadius: borderRadius ?? tokens.radius.br2,
           ),
-          padding: resolvedPadding,
+          padding: density.padding,
           child: _expandHeight
               ? ConstrainedBox(
                   constraints: BoxConstraints(

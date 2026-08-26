@@ -178,10 +178,12 @@ class LayrzDurationInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the anchor field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to the value used by [LayrzTextInput].
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// The title text for the help affordance tooltip.
   final String? helpTitleText;
@@ -204,7 +206,7 @@ class LayrzDurationInput extends StatefulWidget {
     this.disabled = false,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.helpTitleText,
     this.helpContentText,
   }) : assert(
@@ -480,7 +482,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
                 states: states,
                 suppressReadOnlyLock: true,
                 controller: _controller,
-                padding: widget.padding,
+                dense: widget.dense,
                 helpTitleText: widget.helpTitleText,
                 helpContentText: widget.helpContentText,
                 borderRadius: chromeRadius,

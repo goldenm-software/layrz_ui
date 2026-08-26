@@ -370,5 +370,59 @@ void main() {
         reason: 'Hint should be at top in multiline mode',
       );
     });
+
+    /// Verifies that `dense: true` on the `.variableHeight` constructor resolves the same
+    /// density-aware padding as the default constructor, per DESIGN-126. Both constructors
+    /// must stay in lockstep on the `dense` default and its resolution.
+    testWidgets('variableHeight with dense: true resolves pd1 (6px) padding on a regular viewport', (
+      tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1200, 800);
+
+      final controller = TextEditingController();
+      await pumpThemed(
+        tester,
+        LayrzInputChrome.variableHeight(
+          labelText: 'Description',
+          isRequired: false,
+          prefixSlot: LayrzInputPrefixSlot(),
+          suffixSlot: LayrzInputSuffixSlot(),
+          disabled: false,
+          readOnly: false,
+          errors: [],
+          hideDetails: false,
+          states: {},
+          controller: controller,
+          dense: true,
+          minContentHeight: 80,
+          child: EditableText(
+            controller: controller,
+            focusNode: FocusNode(),
+            style: const TextStyle(fontSize: 16),
+            cursorColor: const Color(0xFF000000),
+            backgroundCursorColor: const Color(0xFFBDBDBD),
+          ),
+        ),
+      );
+
+      EdgeInsets? resolvedPadding;
+      final containers = find.byType(Container);
+      for (int i = 0; i < containers.evaluate().length; i++) {
+        final container = tester.widget<Container>(containers.at(i));
+        if (container.decoration is BoxDecoration) {
+          final dec = container.decoration as BoxDecoration;
+          if (dec.border != null) {
+            resolvedPadding = container.padding as EdgeInsets;
+            break;
+          }
+        }
+      }
+
+      expect(resolvedPadding, isNotNull, reason: 'Bordered input container should have been found');
+      expect(resolvedPadding!.top, equals(6.0));
+      expect(resolvedPadding.left, equals(6.0));
+    });
   });
 }

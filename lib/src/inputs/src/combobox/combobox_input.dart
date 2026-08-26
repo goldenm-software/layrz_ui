@@ -189,10 +189,13 @@ class LayrzComboBoxInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  /// Applies identically to the closed field and the open panel's own row.
+  final bool dense;
 
   /// The keyboard type for the input field.
   final TextInputType keyboardType;
@@ -238,7 +241,7 @@ class LayrzComboBoxInput extends StatefulWidget {
     this.hideDetails = false,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.keyboardType = TextInputType.text,
     this.textInputAction,
     this.inputFormatters = const [],
@@ -631,25 +634,6 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       expands: false,
     );
 
-    // `LayrzInputChrome` paints its border with the SDK's default
-    // `BorderSide.strokeAlignInside`, so on the closed field the border
-    // occupies space *inside* the padded box -- the content's effective inset
-    // from the field's own outer edge is `padding + tokens.border.base`, not
-    // `padding` alone (confirmed directly: a bare `Container` with the same
-    // padding shifts its child by exactly the border's own width depending on
-    // whether a border is painted). Suppressing the border for the panel row
-    // (below) removes that inset, so it is added back here as extra padding
-    // -- otherwise the panel row's text would sit `tokens.border.base` closer
-    // to the edge than the closed field's does, a small but real misalignment
-    // the governing "the panel's input IS the field's input, continuing" rule
-    // does not allow. The base padding matches what `LayrzInputChrome` itself
-    // would default to (`pd3` compact / `pd2` regular) when [padding] is null,
-    // computed here because that default lives in a private class local to
-    // `input_chrome.dart` this file cannot reach.
-    final tokens = context.tokens;
-    final basePadding = widget.padding ?? (context.isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2);
-    final panelRowPadding = isPanelRow ? basePadding + EdgeInsets.all(tokens.border.base) : widget.padding;
-
     return LayrzInputChrome(
       // Deliberately null/true -- see the doc comment above on why the label
       // and error footer must never live inside this chrome.
@@ -666,7 +650,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
       controller: _controller,
-      padding: panelRowPadding,
+      dense: widget.dense,
       // Only the panel's own row suppresses its border/radius (see the class
       // doc on `isPanelRow`) -- the closed field (desktop or compact) always
       // keeps both, since nothing else draws a border around it.

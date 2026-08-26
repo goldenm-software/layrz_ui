@@ -507,23 +507,7 @@ void main() {
       expect(find.text('Invalid'), findsOneWidget);
     });
 
-    testWidgets('uses custom padding when provided', (tester) async {
-      const customPadding = EdgeInsets.all(20);
-      await pumpThemed(
-        tester,
-        LayrzTextInput(
-          labelText: 'Custom Padding',
-          padding: customPadding,
-        ),
-      );
-
-      final container = find.byType(Container).first;
-      expect(container, findsOneWidget);
-      final widget = tester.widget<Container>(container);
-      expect(widget.padding, customPadding);
-    });
-
-    testWidgets('uses token-derived padding when not provided', (tester) async {
+    testWidgets('uses token-derived padding when dense is not provided', (tester) async {
       await pumpThemed(
         tester,
         LayrzTextInput(
@@ -535,20 +519,36 @@ void main() {
       expect(container, findsOneWidget);
     });
 
-    testWidgets('explicit padding overrides token default', (tester) async {
-      const customPadding = EdgeInsets.symmetric(horizontal: 15, vertical: 25);
+    /// Per DESIGN-126, the public `padding` escape hatch was removed; density is now
+    /// expressible only via `dense`, which resolves through the shared chrome.
+    testWidgets('dense: true resolves a smaller padding than the default', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1200, 800);
+
       await pumpThemed(
         tester,
         LayrzTextInput(
-          labelText: 'Custom Padding',
-          padding: customPadding,
+          labelText: 'Dense',
+          dense: true,
         ),
       );
 
-      final container = find.byType(Container).first;
-      expect(container, findsOneWidget);
-      final widget = tester.widget<Container>(container);
-      expect(widget.padding, customPadding);
+      EdgeInsets? resolvedPadding;
+      final containers = find.byType(Container);
+      for (int i = 0; i < containers.evaluate().length; i++) {
+        final container = tester.widget<Container>(containers.at(i));
+        if (container.decoration is BoxDecoration) {
+          final dec = container.decoration as BoxDecoration;
+          if (dec.border != null) {
+            resolvedPadding = container.padding as EdgeInsets;
+            break;
+          }
+        }
+      }
+
+      expect(resolvedPadding, isNotNull, reason: 'Bordered input container should have been found');
+      expect(resolvedPadding!.top, equals(6.0), reason: 'dense + regular viewport resolves to pd1 (6px)');
     });
 
     testWidgets('hint is visible when field is empty', (tester) async {

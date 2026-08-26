@@ -190,10 +190,12 @@ class LayrzSelectInput<T> extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (10px on regular, 14px on compact).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// Defines the expected height of the items in the list.
   final double itemExtent;
@@ -225,7 +227,7 @@ class LayrzSelectInput<T> extends StatefulWidget {
     this.errors = const [],
     this.hideDetails = false,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     required this.itemExtent,
   }) : assert(
          (prefixIcon == null || prefix == null) &&
@@ -535,7 +537,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                     helpTitleText: widget.helpTitleText,
                     helpContentText: widget.helpContentText,
                     controller: _controller,
-                    padding: widget.padding,
+                    dense: widget.dense,
                     borderRadius: BorderRadius.zero,
                     showBorder: false,
                     child: !showChildDisplay
