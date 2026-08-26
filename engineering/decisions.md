@@ -3883,3 +3883,186 @@ for every other constrained dimension.
 - `SafeArea(right: false)` in `navigator_panel.dart` (D84 territory) is untouched — it addresses a
   different axis (device insets, not keyboard) and continues to do only that.
 
+---
+
+## D66: `dense` Restored as a Semantic Bool, `padding` Removed From Every `*Input`
+
+**Date**: 2026-08-26  
+**Status**: Decided  
+**Category**: Architecture / API Design (BREAKING)
+
+### Context
+
+`LayrzInputChrome` (`lib/src/inputs/src/shared/input_chrome.dart`) resolved its content padding
+to a single comfortable ramp — `isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2` (14px
+compact / 10px wide) — with a public `EdgeInsets? padding` escape hatch on the chrome and on
+every one of the 10 `*Input` widgets that let a caller override it outright.
+
+That escape hatch was already showing its cost. `LayrzComboBoxInput` needed its open panel row to
+read the *same* density as the closed field, but had no way to ask the chrome for "the chrome's
+own default" — only to override it — so `combobox_input.dart:638-651` **duplicated** the chrome's
+private default as `basePadding = isCompact ? pd3 : pd2`, added a `+ EdgeInsets.all(tokens.border.base)`
+term to compensate for the panel row's `showBorder: false`, and carried a ~15-line comment
+apologising for the duplication. One caller, one raw-value reach-around, one apology. A raw
+`EdgeInsets?` hatch does not stay a convenience — every caller that needs to relate to the
+chrome's own default is forced to either reimplement it or drift from it, and there is no way to
+express "give me the chrome's answer, just denser" without exposing what that answer computes to.
+
+Separately, there was a genuine, previously-shipped product need for a denser input for
+dense data-entry contexts — tables of similar fields, admin/ops consoles, filter bars — the kind
+of screen that is scanned on a monitor with a mouse, not thumb-scrolled on a phone. Nobody
+thumb-scans a grid of dense fields; that use case, not layrz_theme parity, is the actual
+justification for shipping a second density at all. ("It used to exist in layrz_theme" is not
+why this ships.)
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Keep the raw `EdgeInsets? padding` hatch, do nothing further | No new API surface | Leaves the exact failure mode that produced the combobox duplication-plus-apology; every future caller needing "the chrome's default, but denser" pays the same cost |
+| (b) Add `LayrzInputDensity` enum (`comfortable`/`dense`, room for a future third value) | Extensible to a third density without a second flag | No concrete use for a third value today; an enum invites speculative values matching nothing in the design system |
+| (c) Add `bool dense`, delete `padding` outright (chosen) | Expresses exactly the caller's intent; the chrome remains sole owner of the pixel ramp; deletes the class of problem the combobox duplication exemplified | A `bool` cannot express a future third density without either a second bool or a breaking migration to an enum |
+
+### Decision
+
+**Chose (c): a semantic `bool dense` on `LayrzInputChrome`, forwarded from the 7 chrome-owning
+widgets (`LayrzTextInput`, `LayrzTextAreaInput`, `LayrzSearchInput`, `LayrzNumberInput`,
+`LayrzSelectInput`, `LayrzDurationInput`, `LayrzComboBoxInput`), and the public `EdgeInsets?
+padding` parameter removed from all 10 `*Input` widgets — the 7 above plus `LayrzCheckboxInput`,
+`LayrzSwitchInput`, and `LayrzRadioInput`, which have no chrome and receive no `dense`.**
+
+The chrome resolves `dense` to pixels itself, and nothing else changes:
+
+```
+default:  isCompact ? pd3 : pd2   ->  14px compact / 10px wide
+dense:    isCompact ? pd2 : pd1   ->  10px compact /  6px wide
+```
+
+(`tokens.spacing`: `sp1 = 6.0`, `sp2 = 10.0`, `sp3 = 14.0`; `pdN = EdgeInsets.all(spN)`.) The
+change is padding-level only — nothing else in the chrome moves: not field height, not label
+sizing, not typography, not `LayrzInputErrorBlock` spacing.
+
+### Rationale
+
+**Bool over enum.** The concrete evidence for a semantic flag over a raw value is exactly the
+combobox site described above: the one caller that needed to relate to the chrome's own default
+had no way to do so except by duplicating it and apologising for the duplication. That is the
+failure mode a raw escape hatch produces at scale — one apology per caller. A `bool dense`
+expresses intent instead of a value, so the chrome stays the sole owner of what the pixels
+actually are, and no caller can drift from it. The trade-off is accepted with eyes open: a `bool`
+cannot express a future third density (e.g. `comfortable`) without either a second bool or a
+breaking migration to an enum. If a third density is ever requested, **this decision is what gets
+revisited first** — see Review Trigger.
+
+**Per-widget parameter, not theme-level inheritance.** Nothing was added to `LayrzTheme`. There
+is no way to set an entire form dense at once; each widget opts in individually. Density is a
+per-field authoring choice (a specific dense table row, a specific filter bar), not an app-wide
+mode, so it does not belong on the theme.
+
+**Why `padding` was removed rather than kept alongside `dense`.** Two different arguments, for
+two different groups of widgets:
+- For the 7 chrome-owning inputs: padding is the chrome's own internal concern, and the escape
+  hatch is what permitted uncontrolled modification of it in the first place — the combobox
+  duplication above is the direct consequence of that hatch existing. Density is now expressible
+  only through intent (`dense`), never through a raw value, because a raw value is exactly what
+  produced the defect this decision closes.
+- For `LayrzCheckboxInput`/`LayrzSwitchInput`/`LayrzRadioInput`, which have no chrome and
+  therefore receive no `dense`: the rationale is **API uniformity across every `*Input`**, not
+  chrome internals — *"Remove on all `*Input`, why? Simple, common API along all"* (maintainer).
+  These three widgets lose the `padding` parameter and gain **no replacement knob**. That
+  asymmetry — chrome-owning widgets get `dense`, non-chrome widgets get nothing — is the intended
+  consequence of a uniform API, not an oversight, and it must not later be "restored" as a
+  hardcoded `Padding` wrapper around any of the three.
+
+**The measured height table.** These are real measurements, not estimates:
+
+| | default | dense |
+|---|---|---|
+| compact (< 960px) | 55px | **47px** |
+| wide (≥ 960px) | 47px | **39px** |
+
+Mechanism: `contentHeight = max(iconSize 22, textLineHeight 16) = 27px`, plus 2× padding, plus 2×
+border.
+
+**The accessibility trade-off — recorded, not acted on, and the obvious fix was rejected.** A
+reviewer recommended gating `dense` off compact viewports, on an *estimate* that dense+compact
+would land tap targets in the "low-to-mid 30s px", below the common 44–48px touch-target
+guidance. That estimate was then measured and was ~14px low. The real numbers invert the
+recommendation:
+- dense+compact = **47px**, which is *inside* the 44–48px guidance and is exactly today's
+  shipping wide default — every desktop user already uses a 47px field.
+- The only sub-guidance value is dense+**wide** at **39px** — and that is the case the same
+  reviewer explicitly cleared, correctly, because pointer input has no fingertip floor
+  ("wide is mouse-driven").
+- **Gating dense off compact would therefore have suppressed the compliant case (47px) while
+  leaving the non-compliant one (39px) fully active.** Considered and rejected for exactly this
+  reason.
+
+39px on wide is accepted deliberately, on the stated grounds that wide is mouse-driven and has no
+fingertip floor. **Anyone revisiting this should measure before acting on an estimate** — the
+original concern was raised about compact from an estimate; measurement put the sub-guidance
+value on wide instead.
+
+**The combobox 1.5px — the load-bearing paragraph of this entry.**
+`combobox_input.dart:651` previously computed
+`isPanelRow ? basePadding + EdgeInsets.all(tokens.border.base) : widget.padding`
+for its panel row. Two separate things were bundled into that one expression:
+- `basePadding` = `isCompact ? pd3 : pd2` — a duplication of the chrome's private default.
+  Deleting this is what closes the two-density defect: before this change, a dense closed field
+  and its (undensified) panel row would have shown two different densities side by side, purely
+  because the panel row read its own hardcoded copy of the comfortable default instead of the
+  chrome's resolved value.
+- `+ tokens.border.base` (1.5px) was **not** duplicated default. It compensated for the panel row
+  setting `showBorder: false`, so unlike the bordered closed field it has no stroke contributing
+  inset.
+
+**Both terms were deleted, deliberately, by maintainer ruling.** Consequence: the borderless
+panel row now sits **1.5px tighter** than the bordered closed field. This is accepted as within
+tolerance: both sides now read one chrome-owned padding instead of two divergent sources, and a
+1.5px edge inset on a borderless row is not a density difference.
+
+**This knowingly accepts the exact misalignment the original 15-line apology comment was written
+to warn about.** That comment is deleted by this change, so its warning survives only here. A
+future reader who finds an unexplained 1.5px inconsistency between the combobox's closed field
+and its open panel row must not "fix" it by reintroducing caller-side padding arithmetic — that
+is precisely the pattern this decision removes. The test `combobox_input_chrome_test.dart` now
+asserts `closeTo(closedInset, 1.5)` with an explanatory comment pointing back at this entry; that
+assertion, and this paragraph, are the only surviving record of the trade-off once the code
+comment is gone.
+
+**The use case.** Dense exists for dense data-entry: tables of similar fields, admin/ops
+consoles, filter bars — scanned on a monitor with a mouse. Not layrz_theme parity. A
+wide-heavy density ramp (39px on wide, accepted; 47px on compact, comfortably inside guidance)
+only makes sense once this is understood as the actual justification.
+
+### Consequences
+
+- **Breaking change to 10 public widgets.** `EdgeInsets? padding` is removed from
+  `LayrzTextInput`, `LayrzTextAreaInput`, `LayrzSearchInput`, `LayrzNumberInput`,
+  `LayrzSelectInput`, `LayrzDurationInput`, `LayrzComboBoxInput`, `LayrzCheckboxInput`,
+  `LayrzSwitchInput`, and `LayrzRadioInput`, with no replacement parameter on the last three.
+- The 7 chrome-owning widgets above gain `bool dense` (default `false`). A caller that needs the
+  chrome's own default denser sets `dense: true`; a caller that needs a padding value that is
+  neither the default (10/14) nor the dense value (6/10) has no way to express it — this is a
+  genuine capability loss for non-density `padding` usage, not a renamed parameter. The one
+  in-repo case of this (`example/`'s showroom demo, migrated in the same row) is evidence the
+  pattern exists in the wild, not evidence that it doesn't; external pre-1.0 consumers relying on
+  an arbitrary `padding` value have no migration path other than deleting the override.
+  `LayrzInputChrome` remains the sole owner of density→pixel resolution: after this change,
+  nothing outside `input_chrome.dart` may name an input's internal padding.
+- `LayrzComboBoxInput`'s closed field and open panel row read the same chrome-owned,
+  density-aware padding, closing the two-density defect described above, at the cost of the
+  accepted 1.5px edge-inset difference recorded above.
+- No breakpoint guard on `dense` — it is active on both compact and wide, per the accessibility
+  rationale above.
+
+### Review Trigger
+
+Revisit if a third density is ever requested. A `bool` cannot express it without either a second
+bool (`denser`?) or a breaking migration to an enum (`LayrzInputDensity`) — this entry is where
+that trade-off was made explicit, and the decision should be made again with the actual third
+value in hand rather than retrofitted around a binary flag.
+
+Also revisit if a consuming app reports needing an arbitrary (non-density) padding override on
+any of the 10 widgets in this decision — see the capability-loss note above.
+
