@@ -57,7 +57,6 @@ class _ComboBoxInputDemoState extends State<ComboBoxInputDemo> {
         padding: tokens.spacing.pd2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp5,
           children: [
             // Basic combo box
             Text('Combo Box with Fixed Options', style: tokens.typography.title),

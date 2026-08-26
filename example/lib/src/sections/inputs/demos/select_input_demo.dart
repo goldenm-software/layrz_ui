@@ -89,12 +89,11 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
         padding: tokens.spacing.pd2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp5,
           children: [
             // Default select input
             Text('Default Select Input', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _countryItems,
               value: _selectedCountry,
               hintText: 'Choose a country',
@@ -109,7 +108,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('With Label and Hint', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _sizeItems,
               value: _selectedSize,
               labelText: 'Size',
@@ -126,7 +125,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('Searchable (with Preselection)', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _countryItems,
               value: 'us',
               labelText: 'Origin Country',
@@ -140,7 +139,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('Custom Item Child (flag + name)', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _flaggedCountryItems,
               value: _selectedFlaggedCountry,
               labelText: 'Country',
@@ -156,7 +155,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('Can Unselect', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: [
                 const LayrzSelectItem(value: null, child: Text('None'), searchableStrings: {'None'}),
                 ..._categoryItems,
@@ -177,7 +176,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('Pure Picker (search disabled)', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _sizeItems,
               value: _selectedSize,
               labelText: 'Size',
@@ -196,7 +195,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('With a Caller Suffix', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _countryItems,
               value: _selectedCountry,
               labelText: 'Country',
@@ -212,7 +211,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('Disabled', style: tokens.typography.title),
             const LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _sizeItems,
               value: 'medium',
               labelText: 'Size',
@@ -223,7 +222,7 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
             SizedBox(height: tokens.spacing.sp3),
             Text('With Error', style: tokens.typography.title),
             LayrzSelectInput<String>(
-              itemExtent: 30,
+              itemExtent: 50,
               items: _countryItems,
               value: null,
               labelText: 'Country',
