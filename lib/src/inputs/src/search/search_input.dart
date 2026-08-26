@@ -488,8 +488,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     // No labelText here: the panel field must not inherit the trigger button's
     // label, or the label would be announced twice (button + panel field).
-    // Guarded, not merely hoped for: see the explicit Semantics wrapper around
-    // this method's returned LayrzInputChrome, below.
+    // Guarded, not merely hoped for: this method passes `hintText: null` to
+    // LayrzInputChrome (suppressing its own hint rendering) and instead paints
+    // an equivalent hint itself, excluded from semantics, wrapped in an
+    // explicit Semantics(textField: true, label: inputsSearchFieldLabel, ...)
+    // -- see the comment on that wrapper, below, for why.
     final fieldConfig = _buildFieldConfig(
       hintText: hintText,
       autofocus: true,
@@ -530,33 +533,49 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
               width: spec.borderWidth,
             )
           : null,
-      // Explicit Semantics wrapper, enforcing the "No labelText here" contract
-      // above rather than just documenting it. Without a Semantics node of its
-      // own, this field had no deliberate accessible name: the chrome's hint
-      // Text (which paints [hintText] as a placeholder, see input_chrome.dart's
-      // `_buildRowContent`) merges into the nearest Semantics ancestor by
-      // Flutter's own default text-widget behaviour, per the chrome's D64
-      // "text slots merge into the field's accessible name by design" rule. In
-      // field mode that ancestor is this widget's own Semantics(label:
-      // hintText, ...) a few lines up, and merging is exactly the intended
-      // outcome there. In icon mode, before this wrapper, there was no such
-      // ancestor at all -- so the hint Text's merge target was whatever
-      // Semantics happened to be nearest outside this subtree, which turned
-      // out to duplicate the trigger button's own label (identical string by
-      // construction: both derive from `hintText`). `inputsSearchFieldLabel`
-      // is a distinct string precisely so the merge lands on a real,
-      // non-duplicating name instead of an empty one -- an empty label would
-      // satisfy "exactly one Semantics node" just as well but leave the field
-      // announced with no name at all, trading one accessibility defect for
-      // another. `textField: true` preserves the field's identification as an
-      // editable control now that this node is explicit rather than inferred.
+      // Enforces the "No labelText here" contract above rather than just
+      // documenting it. The panel field renders its own hint (below) instead
+      // of handing `hintText` to LayrzInputChrome, and wraps the field in an
+      // explicit, named Semantics node -- two changes forced together, not a
+      // stylistic choice:
+      //
+      // LayrzInputChrome paints its hint as a plain Text layered in a Stack
+      // alongside `child` (see input_chrome.dart's `_buildRowContent`), a
+      // SIBLING of `child`, not a descendant of it. That Text creates its own
+      // leaf semantics node regardless of anything this widget wraps `child`
+      // in -- verified empirically (dumping the actual semantics tree): a
+      // Semantics ancestor around `child` with an explicit `label` does not
+      // suppress or absorb a sibling Text's own contribution, it only adds to
+      // it when they happen to merge, and `excludeSemantics: true` on that
+      // ancestor blocks the sibling too, but ALSO deletes EditableText's own
+      // dynamic value/focus semantics -- worse than the duplicate it was
+      // meant to fix, since a screen reader would then never hear what is
+      // typed or that the field gained focus. There is no way to reach or
+      // exclude specifically that sibling Text from here: it is chrome-internal,
+      // outside the `child` subtree this widget controls, and
+      // input_chrome.dart is off-limits (frozen).
+      //
+      // So instead: this widget stops asking the chrome to render a hint at
+      // all (`hintText: null` below skips both of input_chrome.dart's hint
+      // branches entirely -- they are gated on `hintText != null &&
+      // hintText.isNotEmpty`), and paints an equivalent hint itself, inside
+      // `child`, wrapped in `ExcludeSemantics` -- which is safe here
+      // specifically because this widget's own hint Text is not a sibling of
+      // EditableText's semantics, it is wrapped independently around itself
+      // with EditableText excluded from its own subtree. Same visual
+      // position, same style (mirrors input_chrome.dart's hint styling:
+      // `tokens.colors.fg3`, single line, ellipsis overflow), reactive to the
+      // same `controller.text.isEmpty` condition -- a caller cannot tell the
+      // hint moved. Only its semantics changed: now excluded, so the only
+      // label the field carries is the explicit, distinct one below.
       child: Semantics(
+        container: true,
         textField: true,
         label: context.l10n.inputsSearchFieldLabel,
         enabled: !widget.disabled,
         child: LayrzInputChrome(
           labelText: null,
-          hintText: hintText,
+          hintText: null,
           // No label is ever rendered here (labelText is always null), so the
           // required marker has nothing to attach to regardless of this value.
           isRequired: false,
@@ -573,7 +592,33 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           dense: widget.dense,
           borderRadius: tokens.radius.br3,
           showBorder: false,
-          child: LayrzEditableField(config: fieldConfig),
+          child: Stack(
+            children: [
+              ExcludeSemantics(
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) => value.text.isEmpty
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: SelectionContainer.disabled(
+                            child: Text(
+                              hintText,
+                              // Merges with the ambient DefaultTextStyle the chrome
+                              // applies around `child` (density-scaled body text),
+                              // matching input_chrome.dart's own hint styling exactly
+                              // -- only the color is overridden.
+                              style: DefaultTextStyle.of(context).style.copyWith(color: tokens.colors.fg3),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+              LayrzEditableField(config: fieldConfig),
+            ],
+          ),
         ),
       ),
     );

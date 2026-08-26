@@ -50,11 +50,24 @@ void main() {
       await tester.tap(find.byType(LayrzButton));
       await tester.pumpAndSettle();
 
+      // As of the icon-mode label-duplication fix (see search_input_a11y_test.dart's
+      // "icon mode panel field does not inherit button label"), LayrzInputChrome is
+      // no longer handed `hintText` in icon mode -- the widget renders an equivalent
+      // hint itself, wrapped in ExcludeSemantics, so LayrzInputChrome.hintText is
+      // deliberately null here. The defect this test guards against (icon mode never
+      // rendering a hint at all) is unaffected: the hint is still painted, just by a
+      // different mechanism, so what this test actually needs to assert is that the
+      // hint text is visually present -- scoped to the chrome, since the trigger
+      // button's own label also happens to read "Search records" via its l10n
+      // fallback-free `hintText ?? helperSearch` default here.
       final chrome = tester.widget<LayrzInputChrome>(
         find.byType(LayrzInputChrome),
       );
-      expect(chrome.hintText, equals('Search records'));
-      expect(find.text('Search records'), findsOneWidget);
+      expect(chrome.hintText, isNull);
+      expect(
+        find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Search records')),
+        findsOneWidget,
+      );
     });
 
     testWidgets(
