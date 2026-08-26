@@ -213,7 +213,11 @@ void main() {
     });
 
     testWidgets('search field filters items', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: the search box this test originally typed into lived inside the
+      // panel and is gone. The field itself is the searcher now -- typing into it
+      // filters live, and that only works with the surface open, which requires
+      // the desktop path (see select_input.dart's focus-race handling).
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -226,18 +230,15 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      // Tap the field to open the surface and focus it.
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Type in search
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'B');
+      // Type into the field itself -- there is no separate search box anymore.
+      await tester.enterText(find.byType(EditableText), 'B');
       await tester.pumpAndSettle();
 
-      // Only Option B should remain
+      // Assert the narrowing: the right item remains, the wrong ones are gone.
       expect(find.text('Option B'), findsWidgets);
       expect(find.text('Option A'), findsNothing);
       expect(find.text('Option C'), findsNothing);
@@ -321,7 +322,8 @@ void main() {
     });
 
     testWidgets('empty list shows empty state message', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -334,19 +336,17 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'nonexistent');
+      await tester.enterText(find.byType(EditableText), 'nonexistent');
       await tester.pumpAndSettle();
 
-      // Empty message should appear
+      // Empty message should appear, and no items should remain.
       expect(find.text('No item found'), findsOneWidget);
+      expect(find.text('Option A'), findsNothing);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('custom filter function works', (tester) async {
@@ -628,7 +628,8 @@ void main() {
     });
 
     testWidgets('custom filter respects case sensitivity', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -642,19 +643,18 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
       // Type uppercase search
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'A');
+      await tester.enterText(find.byType(EditableText), 'A');
       await tester.pumpAndSettle();
 
-      // Should find Option A (case-insensitive)
+      // Should find Option A (case-insensitive) and narrow out B and C, neither
+      // of which contains an "a".
       expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('multiple errors are joined with comma', (tester) async {
@@ -720,7 +720,8 @@ void main() {
     });
 
     testWidgets('empty search result shows custom empty text', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+      // REWRITE: typed into the field itself now, not a separate search box.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -734,19 +735,17 @@ void main() {
         ),
       );
 
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Search for non-existent item
-      final searchField = find.byType(LayrzTextInput);
-      await tester.tap(searchField);
-      await tester.enterText(searchField, 'zzz');
+      await tester.enterText(find.byType(EditableText), 'zzz');
       await tester.pumpAndSettle();
 
-      // Custom empty message should appear
+      // Custom empty message should appear, and no items should remain.
       expect(find.text('No matching items'), findsOneWidget);
+      expect(find.text('Option A'), findsNothing);
+      expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
     });
 
     testWidgets('focus node is created and disposed by widget', (tester) async {
@@ -776,29 +775,6 @@ void main() {
       );
 
       expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
-    });
-
-    testWidgets('text input disables autocomplete when enableSearch is false', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzSelectInput<String>(
-          items: items,
-          labelText: 'Choose one',
-          enableSearch: false,
-        ),
-      );
-
-      // Tap the field
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
-      await tester.pumpAndSettle();
-
-      // No search field should be present
-      expect(find.byType(LayrzTextInput), findsNothing);
     });
 
     testWidgets('selected item is preserved when value changes', (tester) async {
@@ -935,8 +911,15 @@ void main() {
       expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
     });
 
-    testWidgets('search clear button removes query text', (tester) async {
-      tester.view.physicalSize = const Size(400, 800);
+    testWidgets('clearing the typed query restores the full list', (tester) async {
+      // REWRITE, with a caveat: the old panel search box's inline clear (close)
+      // icon is gone, and there is no equivalent built-in "clear" affordance on
+      // the field itself -- that specific UI capability disappeared with the
+      // search box (flagged to the maintainer separately). What survives is the
+      // underlying behavior: erasing the query restores the full list. Proven
+      // here by clearing the field's text directly, the same way a user would by
+      // backspacing, rather than by tapping a control that no longer exists.
+      tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -949,30 +932,24 @@ void main() {
         ),
       );
 
-      final field = find.byType(LayrzInputChrome);
-      await tester.tap(field);
+      await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      // Type search text
-      final searchInput = find.byType(LayrzTextInput).first;
-      await tester.enterText(searchInput, 'A');
+      await tester.enterText(find.byType(EditableText), 'A');
       await tester.pumpAndSettle();
 
       // Only one option visible
       expect(find.text('Option A'), findsOneWidget);
       expect(find.text('Option B'), findsNothing);
+      expect(find.text('Option C'), findsNothing);
 
-      // Find and tap clear button
-      final closeIcon = find.byIcon(MdiIcons.close);
-      if (closeIcon.evaluate().isNotEmpty) {
-        await tester.tap(closeIcon.first);
-        await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText), '');
+      await tester.pumpAndSettle();
 
-        // All options visible again
-        expect(find.text('Option A'), findsOneWidget);
-        expect(find.text('Option B'), findsOneWidget);
-        expect(find.text('Option C'), findsOneWidget);
-      }
+      // All options visible again
+      expect(find.text('Option A'), findsOneWidget);
+      expect(find.text('Option B'), findsOneWidget);
+      expect(find.text('Option C'), findsOneWidget);
     });
 
     testWidgets('enter with no highlight does nothing', (tester) async {

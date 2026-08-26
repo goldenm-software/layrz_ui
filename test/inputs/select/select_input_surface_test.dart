@@ -39,38 +39,6 @@ void main() {
       expect(find.text('Cherry'), findsOneWidget);
     });
 
-    testWidgets('shows a search field when enableSearch is true', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSelectInputSurface<String>(
-          items: items,
-          enableSearch: true,
-          canUnselect: false,
-          onItemSelected: (_) {},
-        ),
-      );
-
-      expect(find.byType(LayrzTextInput), findsOneWidget);
-    });
-
-    testWidgets('hides the search field when enableSearch is false', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSelectInputSurface<String>(
-          items: items,
-          enableSearch: false,
-          canUnselect: false,
-          onItemSelected: (_) {},
-        ),
-      );
-
-      expect(find.byType(LayrzTextInput), findsNothing);
-      // All items still render unconditionally when search is disabled.
-      expect(find.text('Apple'), findsOneWidget);
-      expect(find.text('Banana'), findsOneWidget);
-      expect(find.text('Cherry'), findsOneWidget);
-    });
-
     testWidgets('tapping an item invokes onItemSelected with that item', (tester) async {
       LayrzSelectItem<String>? selected;
 
@@ -113,26 +81,35 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('search filters items using the default label match', (tester) async {
+    testWidgets('search filters items using the default label match (query supplied by the caller)', (
+      tester,
+    ) async {
+      // REWRITE (was: typed into the surface's own now-removed search box). The
+      // surface no longer owns a search box -- the caller (LayrzSelectInput's
+      // field) is the searcher and feeds the query in via this parameter. The
+      // filtering behavior itself survives; only where the query comes from moved.
       await pumpThemed(
         tester,
         LayrzSelectInputSurface<String>(
           items: items,
           enableSearch: true,
           canUnselect: false,
+          query: 'ban',
           onItemSelected: (_) {},
         ),
       );
 
-      await tester.enterText(find.byType(LayrzTextInput), 'ban');
-      await tester.pumpAndSettle();
-
+      // Assert the narrowing, not mere presence: the right item remains and the
+      // wrong ones are gone.
       expect(find.text('Banana'), findsOneWidget);
       expect(find.text('Apple'), findsNothing);
       expect(find.text('Cherry'), findsNothing);
     });
 
-    testWidgets('search uses a custom filter function when provided', (tester) async {
+    testWidgets('search uses a custom filter function when provided (query supplied by the caller)', (
+      tester,
+    ) async {
+      // REWRITE (was: typed into the surface's own now-removed search box).
       await pumpThemed(
         tester,
         LayrzSelectInputSurface<String>(
@@ -140,12 +117,10 @@ void main() {
           enableSearch: true,
           canUnselect: false,
           filter: (query, item) => item.value == 'cherry',
+          query: 'anything',
           onItemSelected: (_) {},
         ),
       );
-
-      await tester.enterText(find.byType(LayrzTextInput), 'anything');
-      await tester.pumpAndSettle();
 
       // The custom filter always matches only "cherry", regardless of query.
       expect(find.text('Cherry'), findsOneWidget);
@@ -153,26 +128,48 @@ void main() {
       expect(find.text('Banana'), findsNothing);
     });
 
-    testWidgets('search clear button resets the query and restores the full list', (tester) async {
+    testWidgets('clearing the query restores the full list (no dedicated clear affordance on the surface)', (
+      tester,
+    ) async {
+      // REWRITE, with a caveat: the surface's own inline clear (close) icon is
+      // gone along with its search box -- that was a UI affordance on the
+      // now-removed internal LayrzTextInput, not a capability of the surface
+      // itself. There is no equivalent "clear" control on the surface to tap;
+      // the caller (LayrzSelectInput's field) owns the query text entirely now.
+      // What survives is the underlying behavior this test actually pins: an
+      // empty query restores the full list. Proven here by rebuilding the SAME
+      // mounted surface with a new `query` value via `didUpdateWidget`, exactly
+      // as LayrzSelectInput does when its field's text changes.
+      var query = 'ban';
+
       await pumpThemed(
         tester,
-        LayrzSelectInputSurface<String>(
-          items: items,
-          enableSearch: true,
-          canUnselect: false,
-          onItemSelected: (_) {},
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzButton(
+                  labelText: 'Clear',
+                  onTap: () => setState(() => query = ''),
+                ),
+                LayrzSelectInputSurface<String>(
+                  items: items,
+                  enableSearch: true,
+                  canUnselect: false,
+                  query: query,
+                  onItemSelected: (_) {},
+                ),
+              ],
+            );
+          },
         ),
       );
-
-      await tester.enterText(find.byType(LayrzTextInput), 'ban');
-      await tester.pumpAndSettle();
+      expect(find.text('Banana'), findsOneWidget);
       expect(find.text('Apple'), findsNothing);
+      expect(find.text('Cherry'), findsNothing);
 
-      // The clear (close) suffix icon appears once the query is non-empty.
-      final clearIcon = find.byWidgetPredicate((w) => w is Icon);
-      expect(clearIcon, findsWidgets);
-
-      await tester.tap(clearIcon.first);
+      await tester.tap(find.byType(LayrzButton));
       await tester.pumpAndSettle();
 
       expect(find.text('Apple'), findsOneWidget);
@@ -180,27 +177,34 @@ void main() {
       expect(find.text('Cherry'), findsOneWidget);
     });
 
-    testWidgets('shows the default empty-list message when search matches nothing', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSelectInputSurface<String>(
-          items: items,
-          enableSearch: true,
-          canUnselect: false,
-          onItemSelected: (_) {},
-        ),
-      );
+    testWidgets(
+      'shows the default empty-list message when search matches nothing (query supplied by the caller)',
+      (tester) async {
+        // REWRITE (was: typed into the surface's own now-removed search box).
+        await pumpThemed(
+          tester,
+          LayrzSelectInputSurface<String>(
+            items: items,
+            enableSearch: true,
+            canUnselect: false,
+            query: 'zzz-no-match',
+            onItemSelected: (_) {},
+          ),
+        );
 
-      await tester.enterText(find.byType(LayrzTextInput), 'zzz-no-match');
-      await tester.pumpAndSettle();
+        expect(find.text('Apple'), findsNothing);
+        expect(find.text('Banana'), findsNothing);
+        expect(find.text('Cherry'), findsNothing);
+        // The default l10n empty-state text is rendered; exact copy is an
+        // l10n concern, so this only proves *a* message replaces the list.
+        expect(find.byType(Text), findsOneWidget);
+      },
+    );
 
-      expect(find.text('Apple'), findsNothing);
-      // The default l10n empty-state text is rendered; exact copy is an
-      // l10n concern, so this only proves *a* message replaces the list.
-      expect(find.byType(Text), findsOneWidget);
-    });
-
-    testWidgets('shows a custom empty-list message when provided', (tester) async {
+    testWidgets('shows a custom empty-list message when provided (query supplied by the caller)', (
+      tester,
+    ) async {
+      // REWRITE (was: typed into the surface's own now-removed search box).
       await pumpThemed(
         tester,
         LayrzSelectInputSurface<String>(
@@ -208,14 +212,35 @@ void main() {
           enableSearch: true,
           canUnselect: false,
           emptyListText: 'Nothing here',
+          query: 'zzz-no-match',
           onItemSelected: (_) {},
         ),
       );
 
-      await tester.enterText(find.byType(LayrzTextInput), 'zzz-no-match');
-      await tester.pumpAndSettle();
-
       expect(find.text('Nothing here'), findsOneWidget);
+    });
+
+    testWidgets('enableSearch: false ignores any query and always shows every item', (tester) async {
+      // New coverage, prompted by retiring the old enableSearch:false focus test:
+      // the false path needs no mode logic (see select_input.dart's class doc),
+      // which specifically means it must never filter, even if a `query` were
+      // somehow supplied. `_updateFilteredItems` forces the query to '' whenever
+      // `enableSearch` is false; this pins that directly rather than leaving it
+      // implicit.
+      await pumpThemed(
+        tester,
+        LayrzSelectInputSurface<String>(
+          items: items,
+          enableSearch: false,
+          canUnselect: false,
+          query: 'ban',
+          onItemSelected: (_) {},
+        ),
+      );
+
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Cherry'), findsOneWidget);
     });
 
     testWidgets('selected item shows a selection indicator icon', (tester) async {
@@ -401,39 +426,6 @@ void main() {
         // assertion here is that routing through it does not throw.
         expect(tester.takeException(), isNull);
       });
-
-      testWidgets('list receives focus on open when search is disabled', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzSelectInputSurface<String>(
-            items: items,
-            enableSearch: false,
-            canUnselect: false,
-            onItemSelected: (_) {},
-          ),
-        );
-        await tester.pump();
-
-        expect(find.byType(KeyboardListener), findsOneWidget);
-        final listener = tester.widget<KeyboardListener>(find.byType(KeyboardListener));
-        expect(listener.focusNode.hasFocus, isTrue);
-      });
-    });
-
-    testWidgets('search field receives focus on open when search is enabled', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzSelectInputSurface<String>(
-          items: items,
-          enableSearch: true,
-          canUnselect: false,
-          onItemSelected: (_) {},
-        ),
-      );
-      await tester.pump();
-
-      final textInput = tester.widget<LayrzTextInput>(find.byType(LayrzTextInput));
-      expect(textInput.focusNode?.hasFocus, isTrue);
     });
 
     testWidgets('disposes internal controllers and focus nodes without throwing', (tester) async {
