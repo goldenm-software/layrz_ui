@@ -48,7 +48,6 @@ class _DurationInputDemoState extends State<DurationInputDemo> {
         padding: tokens.spacing.pd2,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp5,
           children: [
             // Long format (default)
             Text('Long Format (Default)', style: tokens.typography.title),
