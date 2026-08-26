@@ -68,6 +68,44 @@ void main() {
       expect(controller.text, contains('5'));
     });
 
+    // Regression for a device-reported CRITICAL bug: every closed LayrzDurationInput field
+    // with a non-null value rendered visibly blank, even though `controller.text` held the
+    // correct summary string the whole time. Asserting `controller.text` (as the test above
+    // does) cannot catch this class of bug -- the controller was always right. Root cause was
+    // `_buildInteractiveField`'s `contentChild` wrapping its `Text` in an extra
+    // `Padding(tokens.spacing.pd2)` (20px vertical) that `LayrzInputChrome` never budgets for:
+    // the chrome constrains its child to a fixed-height box sized by
+    // `_InputComfortableSpec.contentHeight` (~24px, just the text line height), so the added
+    // padding squeezed the actual paintable height for the text down to ~4px -- too small to
+    // render any glyphs, even though the `Text` widget's `data` (and so `controller.text`,
+    // and even `find.text`, which matches by widget data, not by paint) was always correct.
+    // This asserts the rendered box is actually tall enough to show a real line of body text,
+    // which the 4px-clipped bug fails and a correctly-painted summary passes.
+    testWidgets('renders the summary text tall enough to actually be visible, not clipped to a sliver', (
+      WidgetTester tester,
+    ) async {
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 2, minutes: 30),
+        ),
+      );
+
+      final textFinder = find.text('2 hours, 30 minutes');
+      expect(textFinder, findsOneWidget, reason: 'the Text widget must exist with the correct summary data');
+
+      final renderedHeight = tester.getSize(textFinder).height;
+      expect(
+        renderedHeight,
+        greaterThan(15.0),
+        reason:
+            'a real line of 16px body text needs at least ~16px of rendered height; the '
+            'reported bug clipped this to ~4px, which is invisible even though the text data '
+            'itself was correct',
+      );
+    });
+
     testWidgets('omits zero-valued units from summary', (WidgetTester tester) async {
       late final TextEditingController controller;
       const duration = Duration(days: 2, minutes: 4);

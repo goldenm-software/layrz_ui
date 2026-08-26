@@ -470,17 +470,31 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     // Display summary text or placeholder
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
 
-    // Build the content display widget
-    final contentChild = Padding(
-      padding: tokens.spacing.pd2,
-      child: SizedBox(
-        width: double.infinity,
-        child: Text(
-          displayText,
-          style: tokens.typography.body,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+    // Build the content display widget.
+    //
+    // Deliberately NOT wrapped in its own `Padding` -- unlike an earlier version of this
+    // widget, which wrapped `Text` in `Padding(tokens.spacing.pd2)` here. `_buildFieldRow`
+    // (below) already places this `child` inside `LayrzInputChrome`'s `Stack`/`Align`, which
+    // is constrained to a fixed-height box sized by `LayrzInputChrome`'s own
+    // `_InputComfortableSpec.contentHeight` (the text line height, with no allowance for a
+    // caller-added Padding on top of it) -- the same box every other input's summary content
+    // (e.g. `LayrzSelectInput`'s `selectedItem.child`) renders into with no padding of its
+    // own. The chrome's outer `Container` already applies the field's real padding once
+    // (`resolvedPadding`, outside this constrained box), so a second, inner `Padding` here
+    // doesn't add visual breathing room -- it silently eats into the fixed content-height box
+    // instead, squeezing the text's available height down to a sliver too small to paint,
+    // even though the text itself renders with the correct content (verified live: the
+    // summary "2 hours, 30 minutes" was present in the widget tree and the `RenderParagraph`
+    // had the right text, but was laid out with `0.0<=h<=4.0`, rendering nothing visible).
+    // `width: double.infinity` is kept so `TextOverflow.ellipsis`/wrapping still has a bounded
+    // width to measure against.
+    final contentChild = SizedBox(
+      width: double.infinity,
+      child: Text(
+        displayText,
+        style: tokens.typography.body,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
       ),
     );
 
