@@ -42,6 +42,17 @@ class LayrzBottomSheet {
   /// Returns `Future<T?>` that completes with the value passed to [Navigator.pop]
   /// in the sheet, or `null` if the sheet is dismissed without a value.
   ///
+  /// For modal sheets ([isPersistent] `false`), any active text selection in
+  /// the nearest ancestor [SelectableRegion] (for example, the one
+  /// `LayrzLayout` provides via its `selectableContent` parameter) is cleared
+  /// before the sheet opens. Without this, the selection's handles and
+  /// context-menu toolbar keep rendering above the sheet — they live in the
+  /// root [Overlay], which sits above whatever this call pushes into it — so
+  /// a page selection made moments earlier would appear to float over a modal
+  /// scrim that exists specifically to say that content is not interactive
+  /// right now. Persistent sheets do not clear the selection: they document
+  /// no barrier and an interactive page, so nothing here is actually occluded.
+  ///
   /// **Parameters:**
   /// - [context]: the build context from which to show the sheet. Must contain a Navigator.
   /// - [builder]: a builder function that constructs the sheet's content. The builder
@@ -154,6 +165,29 @@ class LayrzBottomSheet {
 
     // Use default snap sizes if not provided
     final effectiveSnapSizes = snapSizes ?? [0.5, 0.95];
+
+    // A SelectableRegion's selection handles and context-menu toolbar render
+    // into the root Overlay (see SelectableRegionState.build in the SDK),
+    // which sits above whatever a later-pushed route puts into that same
+    // Overlay. Nothing in the SDK's route machinery couples an ancestor
+    // selection to a route pushed on top of it, so a selection made before
+    // this sheet opens would otherwise keep painting its handles/toolbar over
+    // the modal — on top of a scrim that exists specifically to say that
+    // content is not interactive right now. Clearing it here, before the
+    // route is pushed, is the only point that has both the right ancestor
+    // context (this call's own `context`, still inside the page) and happens
+    // before the toolbar could ever be seen rendering over the sheet.
+    //
+    // Scoped to modal sheets only: a persistent sheet documents "no barrier,
+    // the page remains interactive" (see the class doc above) — it does not
+    // occlude the page the way a modal scrim does, so clearing the user's
+    // selection there would be gratuitous. Only LayrzBottomSheet is covered;
+    // the same exposure applies to dialogs, pickers, and anchored panels
+    // elsewhere in this package, but fixing those was a deliberate choice,
+    // not an oversight — see the maintainer's report this responds to.
+    if (!isPersistent) {
+      context.findAncestorStateOfType<SelectableRegionState>()?.clearSelection();
+    }
 
     final navigator = Navigator.of(
       context,
