@@ -13,34 +13,72 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
   String? _selectedCountry;
   String? _selectedSize = 'medium';
   String? _selectedCategory;
+  String? _selectedFlaggedCountry;
 
   static const List<LayrzSelectItem<String>> _countryItems = [
-    LayrzSelectItem(labelText: 'United States', value: 'us'),
-    LayrzSelectItem(labelText: 'Canada', value: 'ca'),
-    LayrzSelectItem(labelText: 'Mexico', value: 'mx'),
-    LayrzSelectItem(labelText: 'United Kingdom', value: 'uk'),
-    LayrzSelectItem(labelText: 'Germany', value: 'de'),
-    LayrzSelectItem(labelText: 'France', value: 'fr'),
-    LayrzSelectItem(labelText: 'Spain', value: 'es'),
-    LayrzSelectItem(labelText: 'Italy', value: 'it'),
-    LayrzSelectItem(labelText: 'Japan', value: 'jp'),
-    LayrzSelectItem(labelText: 'Australia', value: 'au'),
+    LayrzSelectItem(value: 'us', child: Text('United States'), searchableStrings: {'United States'}),
+    LayrzSelectItem(value: 'ca', child: Text('Canada'), searchableStrings: {'Canada'}),
+    LayrzSelectItem(value: 'mx', child: Text('Mexico'), searchableStrings: {'Mexico'}),
+    LayrzSelectItem(value: 'uk', child: Text('United Kingdom'), searchableStrings: {'United Kingdom'}),
+    LayrzSelectItem(value: 'de', child: Text('Germany'), searchableStrings: {'Germany'}),
+    LayrzSelectItem(value: 'fr', child: Text('France'), searchableStrings: {'France'}),
+    LayrzSelectItem(value: 'es', child: Text('Spain'), searchableStrings: {'Spain'}),
+    LayrzSelectItem(value: 'it', child: Text('Italy'), searchableStrings: {'Italy'}),
+    LayrzSelectItem(value: 'jp', child: Text('Japan'), searchableStrings: {'Japan'}),
+    LayrzSelectItem(value: 'au', child: Text('Australia'), searchableStrings: {'Australia'}),
   ];
 
   static const List<LayrzSelectItem<String>> _sizeItems = [
-    LayrzSelectItem(labelText: 'Extra Small', value: 'xs'),
-    LayrzSelectItem(labelText: 'Small', value: 'small'),
-    LayrzSelectItem(labelText: 'Medium', value: 'medium'),
-    LayrzSelectItem(labelText: 'Large', value: 'large'),
-    LayrzSelectItem(labelText: 'Extra Large', value: 'xl'),
+    LayrzSelectItem(value: 'xs', child: Text('Extra Small'), searchableStrings: {'Extra Small'}),
+    LayrzSelectItem(value: 'small', child: Text('Small'), searchableStrings: {'Small'}),
+    LayrzSelectItem(value: 'medium', child: Text('Medium'), searchableStrings: {'Medium'}),
+    LayrzSelectItem(value: 'large', child: Text('Large'), searchableStrings: {'Large'}),
+    LayrzSelectItem(value: 'xl', child: Text('Extra Large'), searchableStrings: {'Extra Large'}),
   ];
 
   static const List<LayrzSelectItem<String>> _categoryItems = [
-    LayrzSelectItem(labelText: 'Electronics', value: 'electronics'),
-    LayrzSelectItem(labelText: 'Clothing', value: 'clothing'),
-    LayrzSelectItem(labelText: 'Books', value: 'books'),
-    LayrzSelectItem(labelText: 'Home & Garden', value: 'home'),
+    LayrzSelectItem(value: 'electronics', child: Text('Electronics'), searchableStrings: {'Electronics'}),
+    LayrzSelectItem(value: 'clothing', child: Text('Clothing'), searchableStrings: {'Clothing'}),
+    LayrzSelectItem(value: 'books', child: Text('Books'), searchableStrings: {'Books'}),
+    LayrzSelectItem(value: 'home', child: Text('Home & Garden'), searchableStrings: {'Home & Garden'}),
   ];
+
+  // Demonstrates a custom `child` combining an icon with text -- the item defines its own
+  // presentation, and (per LayrzSelectInput's field-renders-child-when-idle behaviour) the
+  // field shows this exact same flag+name row once picked, not a degraded plain-text label.
+  //
+  // Deliberately built with `Text.rich`, not the raw `RichText` widget: `Text.rich` applies
+  // the ambient `DefaultTextStyle` to its `TextSpan` the same way a plain `Text` does, so it
+  // correctly picks up the theme's body style wherever it renders (the surface's list, or the
+  // field itself). `RichText` does not -- it renders its span's own style only, so a bare
+  // `RichText` used as a `child` here would render with no color, which the engine then
+  // paints solid white regardless of theme. Reach for `Text.rich` whenever a `child` needs
+  // multiple styled runs; never `RichText` directly.
+  static List<LayrzSelectItem<String>> get _flaggedCountryItems => [
+    _flaggedCountryItem(code: 'us', flag: '🇺🇸', name: 'United States'),
+    _flaggedCountryItem(code: 'ca', flag: '🇨🇦', name: 'Canada'),
+    _flaggedCountryItem(code: 'mx', flag: '🇲🇽', name: 'Mexico'),
+    _flaggedCountryItem(code: 'jp', flag: '🇯🇵', name: 'Japan'),
+  ];
+
+  static LayrzSelectItem<String> _flaggedCountryItem({
+    required String code,
+    required String flag,
+    required String name,
+  }) {
+    return LayrzSelectItem<String>(
+      value: code,
+      searchableStrings: {name, code},
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$flag  '),
+            TextSpan(text: name),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,12 +131,29 @@ class _SelectInputDemoState extends State<SelectInputDemo> {
               onChanged: (_) {},
             ),
 
+            // Custom item child (icon + text) -- the field shows this same child while idle,
+            // not just the surface's list. See `_flaggedCountryItem` above for why this uses
+            // `Text.rich`, never a bare `RichText`.
+            SizedBox(height: tokens.spacing.sp3),
+            Text('Custom Item Child (flag + name)', style: tokens.typography.title),
+            LayrzSelectInput<String>(
+              items: _flaggedCountryItems,
+              value: _selectedFlaggedCountry,
+              labelText: 'Country',
+              hintText: 'Choose a country',
+              onChanged: (item) {
+                setState(() {
+                  _selectedFlaggedCountry = item?.value;
+                });
+              },
+            ),
+
             // Can unselect
             SizedBox(height: tokens.spacing.sp3),
             Text('Can Unselect', style: tokens.typography.title),
             LayrzSelectInput<String>(
               items: [
-                const LayrzSelectItem(labelText: 'None', value: null),
+                const LayrzSelectItem(value: null, child: Text('None'), searchableStrings: {'None'}),
                 ..._categoryItems,
               ],
               value: _selectedCategory,

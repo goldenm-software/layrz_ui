@@ -230,10 +230,22 @@ class SearchInputDemoSections extends StatelessWidget {
                         if (side != null) onIconPreferredSideChanged(side);
                       },
                       items: const [
-                        LayrzSelectItem(labelText: 'Top', value: LayrzPreferredSide.top),
-                        LayrzSelectItem(labelText: 'Bottom', value: LayrzPreferredSide.bottom),
-                        LayrzSelectItem(labelText: 'Left', value: LayrzPreferredSide.left),
-                        LayrzSelectItem(labelText: 'Right', value: LayrzPreferredSide.right),
+                        LayrzSelectItem(value: LayrzPreferredSide.top, child: Text('Top'), searchableStrings: {'Top'}),
+                        LayrzSelectItem(
+                          value: LayrzPreferredSide.bottom,
+                          child: Text('Bottom'),
+                          searchableStrings: {'Bottom'},
+                        ),
+                        LayrzSelectItem(
+                          value: LayrzPreferredSide.left,
+                          child: Text('Left'),
+                          searchableStrings: {'Left'},
+                        ),
+                        LayrzSelectItem(
+                          value: LayrzPreferredSide.right,
+                          child: Text('Right'),
+                          searchableStrings: {'Right'},
+                        ),
                       ],
                       xs: 6,
                     ),
