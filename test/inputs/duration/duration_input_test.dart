@@ -45,28 +45,23 @@ void main() {
     });
 
     guardedTestWidgets('displays summary text for a complete duration', (WidgetTester tester) async {
-      late final TextEditingController controller;
       const duration = Duration(days: 2, hours: 3, minutes: 4, seconds: 5);
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              controller: controller,
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
         ),
       );
 
-      expect(controller.text, isNotEmpty);
-      expect(controller.text, contains('2'));
-      expect(controller.text, contains('3'));
-      expect(controller.text, contains('4'));
-      expect(controller.text, contains('5'));
+      // Asserted on rendered output, not `controller.text` -- see the geometry
+      // regression above for why a controller-only assertion cannot catch a
+      // visually blank field.
+      expect(find.textContaining('2'), findsWidgets);
+      expect(find.textContaining('3'), findsWidgets);
+      expect(find.textContaining('4'), findsWidgets);
+      expect(find.textContaining('5'), findsWidgets);
     });
 
     // Regression for a device-reported CRITICAL bug: every closed LayrzDurationInput field
@@ -108,50 +103,34 @@ void main() {
     });
 
     guardedTestWidgets('omits zero-valued units from summary', (WidgetTester tester) async {
-      late final TextEditingController controller;
       const duration = Duration(days: 2, minutes: 4);
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              controller: controller,
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
         ),
       );
 
-      final summary = controller.text;
-      expect(summary, contains('2'));
-      expect(summary, contains('4'));
+      expect(find.textContaining('2'), findsWidgets);
+      expect(find.textContaining('4'), findsWidgets);
     });
 
     guardedTestWidgets('respects visibleUnits in summary', (WidgetTester tester) async {
-      late final TextEditingController controller;
       const duration = Duration(days: 1, hours: 2, minutes: 3, seconds: 4);
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              visibleUnits: {LayrzDurationUnit.day, LayrzDurationUnit.minute},
-              controller: controller,
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
+          visibleUnits: {LayrzDurationUnit.day, LayrzDurationUnit.minute},
         ),
       );
 
-      final summary = controller.text;
-      expect(summary, contains('1'));
-      expect(summary, contains('3'));
+      expect(find.textContaining('1'), findsWidgets);
+      expect(find.textContaining('3'), findsWidgets);
     });
 
     guardedTestWidgets('opens bottom sheet on compact viewport', (WidgetTester tester) async {
@@ -417,89 +396,60 @@ void main() {
     ) async {
       const testDuration = Duration(days: 1, hours: 2, minutes: 3, seconds: 4);
 
-      late final TextEditingController controller;
-
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: testDuration,
-              controller: controller,
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: testDuration,
         ),
       );
 
-      expect(controller.text, isNotEmpty);
+      expect(find.text('1 day, 2 hours, 3 minutes, 4 seconds'), findsOneWidget);
     });
 
     guardedTestWidgets('clamping: hour 0-23 displays correctly', (WidgetTester tester) async {
       final duration = Duration(hours: 47);
-      late final TextEditingController controller;
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              controller: controller,
-              visibleUnits: {LayrzDurationUnit.hour},
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
+          visibleUnits: {LayrzDurationUnit.hour},
         ),
       );
 
-      expect(controller.text, contains('23'));
+      expect(find.textContaining('23'), findsWidgets);
     });
 
     guardedTestWidgets('clamping: minute 0-59 displays correctly', (WidgetTester tester) async {
       final duration = Duration(minutes: 125);
-      late final TextEditingController controller;
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              controller: controller,
-              visibleUnits: {LayrzDurationUnit.minute},
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
+          visibleUnits: {LayrzDurationUnit.minute},
         ),
       );
 
-      expect(controller.text, contains('5'));
+      expect(find.textContaining('5'), findsWidgets);
     });
 
     guardedTestWidgets('clamping: second 0-59 displays correctly', (WidgetTester tester) async {
       final duration = Duration(seconds: 125);
-      late final TextEditingController controller;
 
       await pumpThemedApp(
         tester,
-        Builder(
-          builder: (context) {
-            controller = TextEditingController();
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: duration,
-              controller: controller,
-              visibleUnits: {LayrzDurationUnit.second},
-            );
-          },
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: duration,
+          visibleUnits: {LayrzDurationUnit.second},
         ),
       );
 
-      expect(controller.text, contains('5'));
+      expect(find.textContaining('5'), findsWidgets);
     });
 
     guardedTestWidgets('picker panel has all four number input fields visible by default', (WidgetTester tester) async {
@@ -556,58 +506,52 @@ void main() {
     guardedTestWidgets('defaults to LayrzDurationFormat.long, matching pre-format behavior exactly', (
       WidgetTester tester,
     ) async {
-      final controller = TextEditingController();
-
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
           labelText: 'Duration',
           value: const Duration(hours: 2, minutes: 30),
-          controller: controller,
         ),
       );
 
-      expect(controller.text, '2 hours, 30 minutes');
+      // Asserts what is actually ON SCREEN, not `controller.text` -- a
+      // `Text` widget with the right `data` can still render invisibly (see
+      // the geometry regression above), so only `find.text` proves the
+      // summary is something a user can actually read.
+      expect(find.text('2 hours, 30 minutes'), findsOneWidget);
     });
 
     guardedTestWidgets('LayrzDurationFormat.long renders exactly "2 hours, 30 minutes"', (WidgetTester tester) async {
-      final controller = TextEditingController();
-
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
           labelText: 'Duration',
           value: const Duration(hours: 2, minutes: 30),
           format: LayrzDurationFormat.long,
-          controller: controller,
         ),
       );
 
-      expect(controller.text, '2 hours, 30 minutes');
+      expect(find.text('2 hours, 30 minutes'), findsOneWidget);
     });
 
     guardedTestWidgets('LayrzDurationFormat.short renders exactly "2h 30m" — abbreviated, space-joined', (
       WidgetTester tester,
     ) async {
-      final controller = TextEditingController();
-
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
           labelText: 'Duration',
           value: const Duration(hours: 2, minutes: 30),
           format: LayrzDurationFormat.short,
-          controller: controller,
         ),
       );
 
-      expect(controller.text, '2h 30m');
+      expect(find.text('2h 30m'), findsOneWidget);
     });
 
     guardedTestWidgets('short format reads day abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
-      final singularController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -615,12 +559,10 @@ void main() {
           value: const Duration(days: 1),
           visibleUnits: const {LayrzDurationUnit.day},
           format: LayrzDurationFormat.short,
-          controller: singularController,
         ),
       );
-      expect(singularController.text, '1d');
+      expect(find.text('1d'), findsOneWidget);
 
-      final pluralController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -628,16 +570,14 @@ void main() {
           value: const Duration(days: 3),
           visibleUnits: const {LayrzDurationUnit.day},
           format: LayrzDurationFormat.short,
-          controller: pluralController,
         ),
       );
-      expect(pluralController.text, '3d');
+      expect(find.text('3d'), findsOneWidget);
     });
 
     guardedTestWidgets('short format reads hour abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
-      final singularController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -645,12 +585,10 @@ void main() {
           value: const Duration(hours: 1),
           visibleUnits: const {LayrzDurationUnit.hour},
           format: LayrzDurationFormat.short,
-          controller: singularController,
         ),
       );
-      expect(singularController.text, '1h');
+      expect(find.text('1h'), findsOneWidget);
 
-      final pluralController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -658,16 +596,14 @@ void main() {
           value: const Duration(hours: 5),
           visibleUnits: const {LayrzDurationUnit.hour},
           format: LayrzDurationFormat.short,
-          controller: pluralController,
         ),
       );
-      expect(pluralController.text, '5h');
+      expect(find.text('5h'), findsOneWidget);
     });
 
     guardedTestWidgets('short format reads minute abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
-      final singularController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -675,12 +611,10 @@ void main() {
           value: const Duration(minutes: 1),
           visibleUnits: const {LayrzDurationUnit.minute},
           format: LayrzDurationFormat.short,
-          controller: singularController,
         ),
       );
-      expect(singularController.text, '1m');
+      expect(find.text('1m'), findsOneWidget);
 
-      final pluralController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -688,16 +622,14 @@ void main() {
           value: const Duration(minutes: 45),
           visibleUnits: const {LayrzDurationUnit.minute},
           format: LayrzDurationFormat.short,
-          controller: pluralController,
         ),
       );
-      expect(pluralController.text, '45m');
+      expect(find.text('45m'), findsOneWidget);
     });
 
     guardedTestWidgets('short format reads second abbreviation singular and plural forms from l10n', (
       WidgetTester tester,
     ) async {
-      final singularController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -705,12 +637,10 @@ void main() {
           value: const Duration(seconds: 1),
           visibleUnits: const {LayrzDurationUnit.second},
           format: LayrzDurationFormat.short,
-          controller: singularController,
         ),
       );
-      expect(singularController.text, '1s');
+      expect(find.text('1s'), findsOneWidget);
 
-      final pluralController = TextEditingController();
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -718,18 +648,15 @@ void main() {
           value: const Duration(seconds: 45),
           visibleUnits: const {LayrzDurationUnit.second},
           format: LayrzDurationFormat.short,
-          controller: pluralController,
         ),
       );
-      expect(pluralController.text, '45s');
+      expect(find.text('45s'), findsOneWidget);
     });
 
     guardedTestWidgets(
       'Duration.zero renders the smallest visible unit instead of empty text, '
       'with visibleUnits declared out of enum order',
       (WidgetTester tester) async {
-        final controller = TextEditingController();
-
         await pumpThemedApp(
           tester,
           LayrzDurationInput(
@@ -741,20 +668,16 @@ void main() {
             // index instead is order-independent by construction.
             visibleUnits: const {LayrzDurationUnit.second, LayrzDurationUnit.day},
             value: Duration.zero,
-            controller: controller,
           ),
         );
 
-        expect(controller.text, isNot(''));
-        expect(controller.text, '0 seconds');
+        expect(find.text('0 seconds'), findsOneWidget);
       },
     );
 
     guardedTestWidgets('Duration.zero in short format renders "0s" when seconds are visible, out-of-order set', (
       WidgetTester tester,
     ) async {
-      final controller = TextEditingController();
-
       await pumpThemedApp(
         tester,
         LayrzDurationInput(
@@ -762,18 +685,15 @@ void main() {
           visibleUnits: const {LayrzDurationUnit.second, LayrzDurationUnit.day},
           value: Duration.zero,
           format: LayrzDurationFormat.short,
-          controller: controller,
         ),
       );
 
-      expect(controller.text, '0s');
+      expect(find.text('0s'), findsOneWidget);
     });
 
     guardedTestWidgets(
       'Duration.zero renders "0h" when only day and hour are visible (seconds hidden), out-of-order set',
       (WidgetTester tester) async {
-        final controller = TextEditingController();
-
         await pumpThemedApp(
           tester,
           LayrzDurationInput(
@@ -782,11 +702,10 @@ void main() {
             visibleUnits: const {LayrzDurationUnit.hour, LayrzDurationUnit.day},
             value: Duration.zero,
             format: LayrzDurationFormat.short,
-            controller: controller,
           ),
         );
 
-        expect(controller.text, '0h');
+        expect(find.text('0h'), findsOneWidget);
       },
     );
 
@@ -887,6 +806,7 @@ void main() {
       expect(changedValue, const Duration());
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
       expect(controller.text, '0s');
+      expect(find.text('0s'), findsOneWidget, reason: 'the reset summary must actually be visible, not just correct');
     });
   });
 
@@ -975,6 +895,11 @@ void main() {
 
       expect(changedValue, const Duration());
       expect(controller.text, '0 seconds');
+      expect(
+        find.text('0 seconds'),
+        findsOneWidget,
+        reason: 'the reset summary must actually be visible, not just correct',
+      );
       expect(find.byType(LayrzDurationPickerPanel), findsNothing);
     });
 
