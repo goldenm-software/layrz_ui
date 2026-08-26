@@ -1202,6 +1202,78 @@ void main() {
       final mobileTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
       expect(mobileTopAfter, lessThan(mobileTopBefore));
     });
+
+    // Promoted from the context dossier's measured probe (context-dossier.md
+    // §2.3): before the fix, `select_input.dart` drew its "elevated field"
+    // border as a `ClipRRect`+`Container` passed as `LayrzAnchoredPanel.child`,
+    // which lands *inside* `SingleChildScrollView`. A `SingleChildScrollView`
+    // relaxes its child's height constraint to unbounded along the scroll
+    // axis, so that bordered box sized itself to the full, uncapped content
+    // height (measured: 1260px for 30 items @ itemExtent 40) instead of the
+    // panel's own 300px cap -- the border was painted ~960px past the visible
+    // panel edge. This must fail before the fix and pass after.
+    //
+    // The invariant checked is scoped to *decorated boxes carrying a border*,
+    // not to every descendant: the panel's actual scrollable content (the
+    // item list) is SUPPOSED to be taller than the 300px viewport -- that is
+    // what makes it scroll. What must never happen is a `Container`/
+    // `DecoratedBox` painting a border sizing itself to that full content
+    // height instead of the panel's own capped box.
+    testWidgets(
+      'no bordered decoration inside the panel scroll viewport exceeds the viewport height (border-scoping regression)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(itemExtent: 40, items: buildItems(30), labelText: 'Choose one'),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        final scrollViewFinder = find.byType(SingleChildScrollView);
+        final viewportHeight = tester.getSize(scrollViewFinder).height;
+        final viewportElement = tester.element(scrollViewFinder);
+
+        final offenders = <String>[];
+        viewportElement.visitChildElements((child) {
+          void visit(Element element) {
+            final widget = element.widget;
+            BoxDecoration? decoration;
+            if (widget is Container && widget.decoration is BoxDecoration) {
+              decoration = widget.decoration as BoxDecoration;
+            } else if (widget is DecoratedBox && widget.decoration is BoxDecoration) {
+              decoration = widget.decoration as BoxDecoration;
+            }
+
+            if (decoration?.border != null) {
+              final renderObject = element.renderObject;
+              if (renderObject is RenderBox && renderObject.hasSize) {
+                final height = renderObject.size.height;
+                if (height > viewportHeight + 0.5) {
+                  offenders.add('${widget.runtimeType} height=$height > viewport=$viewportHeight');
+                }
+              }
+            }
+
+            element.visitChildElements(visit);
+          }
+
+          visit(child);
+        });
+
+        expect(
+          offenders,
+          isEmpty,
+          reason:
+              'Bordered decorations inside the panel scroll viewport must never exceed its height:\n'
+              '${offenders.join('\n')}',
+        );
+      },
+    );
   });
 
   // DESIGN-145 superseded DESIGN-40/144's "field is the searcher" design: typing
@@ -1500,18 +1572,26 @@ void main() {
       // field, with a small gap -- their rects would never overlap at all. The
       // new behavior starts the overlay at the field's own top-left corner, so
       // it genuinely covers the field rather than merely sitting near it.
-      // Tolerance of 2.0 (not a tight 0.5) because the border `LayrzSelectInput`
-      // draws around the surface (the "elevated field" border, see its class
-      // doc) insets the surface's own rect by the border's width -- an
-      // intentional few pixels, not slack in the assertion. No width assertion
+      //
+      // Tolerance is exactly 0.0, not the 2.0 this assertion previously used.
+      // That 2.0 existed only because the "elevated field" border used to be
+      // drawn as a `ClipRRect`+`Container` INSIDE `LayrzAnchoredPanel.child`
+      // (see the border-scoping regression above), which inset the surface's
+      // own rect by the border's width -- a side effect of the border's wrong
+      // location, not a real design property. Now that the border is painted
+      // by `LayrzAnchoredPanel` around its own outer decoration, with
+      // `strokeAlign: BorderSide.strokeAlignOutside`, it no longer occupies any
+      // of the surface's layout box -- measured directly: `surfaceRect.left`
+      // and `surfaceRect.top` are bit-identical to `fieldRect`'s (0.0 diff on
+      // both axes at the showroom's own configuration). No width assertion
       // here: the surface's own width is additionally narrowed by its vertical
       // scrollbar reserving space on desktop, which is a scroll-affordance
       // concern unrelated to what this test pins (position, not width policy --
       // `LayrzAnchoredPanelWidthPolicy.matchAnchor` already has its own coverage
       // in the overlays module).
       expect(surfaceRect.overlaps(fieldRect), isTrue);
-      expect(surfaceRect.left, closeTo(fieldRect.left, 2.0));
-      expect(surfaceRect.top, closeTo(fieldRect.top, 2.0));
+      expect(surfaceRect.left, closeTo(fieldRect.left, 0.0));
+      expect(surfaceRect.top, closeTo(fieldRect.top, 0.0));
     });
 
     testWidgets(

@@ -629,36 +629,29 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
               isExpanded: controller.isOpen,
             );
           },
-          // The border and radius here -- not on `LayrzAnchoredPanel` itself -- are
-          // what sell the "elevated field" illusion (DESIGN-145): the panel already
+          // The border here -- painted by the panel around its own capped
+          // viewport, not by this widget around its content -- is what sells
+          // the "elevated field" illusion (DESIGN-145): the panel already
           // paints its own background, shadow, and rounded corners at this same
           // radius, so this just adds a border colored like a focused/errored input
           // (primary, or danger when the field has errors) right at the panel's own
-          // inner edge, making the covered field look like it grew this card in
-          // place. Mirrors the same trick `LayrzSearchInput` already uses for its
-          // own icon-mode panel.
-          child: ClipRRect(
-            borderRadius: tokens.radius.br3,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-                  width: tokens.border.base,
-                ),
-                borderRadius: tokens.radius.br3,
-              ),
-              child: LayrzSelectInputSurface(
-                items: widget.items,
-                selectedItem: _findSelectedItem(),
-                enableSearch: widget.enableSearch,
-                canUnselect: widget.canUnselect,
-                filter: widget.filter,
-                emptyListText: widget.emptyListText,
-                panelController: _panelController,
-                onItemSelected: _commitSelection,
-                itemExtent: widget.itemExtent,
-              ),
-            ),
+          // outer edge, making the covered field look like it grew this card in
+          // place. Mirrors the same trick `LayrzSearchInput` uses for its own
+          // icon-mode panel.
+          border: LayrzAnchoredPanelBorder(
+            color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
+            width: tokens.border.base,
+          ),
+          child: LayrzSelectInputSurface(
+            items: widget.items,
+            selectedItem: _findSelectedItem(),
+            enableSearch: widget.enableSearch,
+            canUnselect: widget.canUnselect,
+            filter: widget.filter,
+            emptyListText: widget.emptyListText,
+            panelController: _panelController,
+            onItemSelected: _commitSelection,
+            itemExtent: widget.itemExtent,
           ),
         ),
         context.tokens,
