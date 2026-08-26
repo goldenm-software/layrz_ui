@@ -104,6 +104,31 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
   /// [preferredSide], `false` when it landed on [preferredSide] itself.
   final void Function(bool flippedUp)? onFlipped;
 
+  /// When true, positions the panel directly on top of the anchor -- same top-left
+  /// corner, same width (given [widthPolicy] of [LayrzAnchoredPanelWidthPolicy.matchAnchor]) --
+  /// instead of on [preferredSide] with a [gap].
+  ///
+  /// Defaults to `false`, which preserves the side/gap positioning every existing
+  /// caller relies on. When `true`, [preferredSide] and [gap] are ignored entirely for
+  /// placement (there is no side to resolve and nothing to flip), and [onFlipped] is
+  /// never invoked. The resulting position is still clamped into the overlay bounds,
+  /// exactly as the side-based placement is.
+  ///
+  /// This is the mechanism behind the "elevated field" illusion: a panel that exactly
+  /// covers its anchor, with its own border and shadow, reads as though the anchor
+  /// itself grew a dropdown rather than as a separate floating surface.
+  final bool coverAnchor;
+
+  /// Optional minimum height for the panel's content in logical pixels.
+  ///
+  /// When null (default), the panel's height is bounded only by [maxHeight] and the
+  /// overlay bounds, with no floor -- content shorter than that simply renders
+  /// shorter. When set, the panel is never shorter than this value even when its
+  /// content would otherwise be shorter, clamped so it never exceeds the computed
+  /// maximum height. Useful for a panel that must have room for a fixed-height header
+  /// (e.g. a search field) regardless of how few items its content ends up showing.
+  final double? minHeight;
+
   /// Creates a new layout delegate for an anchored panel.
   ///
   /// [anchorRect], [preferredSide], [alignment], [widthPolicy], [widthBounds], [gap],
@@ -119,6 +144,8 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
     required this.tokens,
     this.maxHeight,
     this.onFlipped,
+    this.coverAnchor = false,
+    this.minHeight,
   });
 
   @override
@@ -163,12 +190,21 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
     // Height constraint: overlay bounds minus padding, with optional max height
     // applied. Deliberately side-blind — see class doc.
     final availableHeight = (overlaySize.height - 2 * tokens.spacing.sp2).clamp(0.0, double.infinity);
-    final constrainedHeight = maxHeight != null ? math.min(availableHeight, maxHeight!) : availableHeight;
+    final constrainedHeight = (maxHeight != null ? math.min(availableHeight, maxHeight!) : availableHeight).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    // Never let the floor exceed the ceiling — a `minHeight` larger than the
+    // computed maximum (a cramped overlay, a small `maxHeight`) would otherwise
+    // violate `BoxConstraints`' own invariant.
+    final effectiveMinHeight = minHeight != null ? math.min(minHeight!, constrainedHeight) : 0.0;
 
     return BoxConstraints(
       minWidth: effectiveMinWidth,
       maxWidth: effectiveMaxWidth,
-      maxHeight: constrainedHeight.clamp(0.0, double.infinity),
+      minHeight: effectiveMinHeight,
+      maxHeight: constrainedHeight,
     );
   }
 
@@ -222,6 +258,15 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size childSize) {
+    if (coverAnchor) {
+      // No side to resolve and nothing to flip -- the panel always starts at the
+      // anchor's own top-left corner, clamped into the overlay exactly like the
+      // side-based placement below.
+      final clampedX = anchorRect.left.clamp(0.0, (size.width - childSize.width).clamp(0.0, double.infinity));
+      final clampedY = anchorRect.top.clamp(0.0, (size.height - childSize.height).clamp(0.0, double.infinity));
+      return Offset(clampedX, clampedY);
+    }
+
     final resolved = _resolveSide(size, childSize);
     onFlipped?.call(resolved != preferredSide);
 
@@ -259,7 +304,9 @@ class LayrzAnchoredPanelLayoutDelegate extends SingleChildLayoutDelegate {
         oldDelegate.maxHeight != maxHeight ||
         oldDelegate.gap != gap ||
         oldDelegate.overlaySize != overlaySize ||
-        oldDelegate.tokens != tokens;
+        oldDelegate.tokens != tokens ||
+        oldDelegate.coverAnchor != coverAnchor ||
+        oldDelegate.minHeight != minHeight;
   }
 }
 

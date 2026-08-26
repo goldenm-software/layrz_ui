@@ -157,6 +157,29 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// label is added to the panel.
   final String? panelSemanticLabel;
 
+  /// When true, positions the panel directly on top of the anchor instead of on
+  /// [preferredSide].
+  ///
+  /// Defaults to `false`, which preserves today's side/gap positioning for every
+  /// existing caller. When `true`, [preferredSide] and [gap] no longer affect
+  /// placement -- the panel's top-left corner starts exactly at the anchor's own
+  /// top-left corner (clamped into the overlay bounds), and [onFlipped] is never
+  /// invoked. Combined with [LayrzAnchoredPanelWidthPolicy.matchAnchor], the panel
+  /// ends up the same size and position as the anchor, so it visually covers it --
+  /// the "elevated field" illusion: the anchor appears to have grown its own
+  /// dropdown in place, rather than a separate surface appearing beside it.
+  final bool coverAnchor;
+
+  /// Optional minimum height for the panel's content in logical pixels.
+  ///
+  /// When null (default), the panel's height has no floor beyond its content and
+  /// [maxHeight]. When set, the panel is never shorter than this value, clamped so
+  /// it never exceeds the height [maxHeight] (and the overlay bounds) would
+  /// otherwise allow. Useful when the panel's content includes a fixed-height
+  /// header (e.g. a search field) that should never look cramped even when the
+  /// rest of the content is very short.
+  final double? minHeight;
+
   /// Creates a new [LayrzAnchoredPanel].
   ///
   /// [builder] and [child] are required. All other parameters are optional.
@@ -175,6 +198,8 @@ class LayrzAnchoredPanel extends StatefulWidget {
     this.childFocusNode,
     this.onFlipped,
     this.panelSemanticLabel,
+    this.coverAnchor = false,
+    this.minHeight,
     super.key,
   });
 
@@ -297,6 +322,8 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
             tokens: tokens,
             maxHeight: widget.maxHeight,
             onFlipped: widget.onFlipped,
+            coverAnchor: widget.coverAnchor,
+            minHeight: widget.minHeight,
           ),
           child: FadeTransition(
             opacity: _curvedAnimation,

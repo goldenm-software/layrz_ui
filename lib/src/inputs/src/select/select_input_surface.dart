@@ -7,13 +7,24 @@ import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 
+import '../shared/editable_field.dart';
+import '../shared/input_chrome.dart';
+import '../shared/input_slot.dart';
+
 /// The selection surface content used by [LayrzSelectInput].
 ///
-/// This widget renders a scrollable list of items and manages keyboard navigation
-/// (arrow keys, Enter, Escape) and item selection. It no longer owns a search field of
-/// its own (DESIGN-40/144's redesign): when [enableSearch] is true, the caller's own
-/// field is the searcher, and [query] is fed in from there; when false, this is a pure
-/// picker and [query] is ignored (always treated as empty).
+/// This widget renders its own search field (when [enableSearch] is true) followed by
+/// a scrollable list of items, and manages keyboard navigation (arrow keys, Enter,
+/// Escape) and item selection.
+///
+/// **Search ownership (DESIGN-145, reverting part of DESIGN-40/144):** this surface now
+/// owns its own search text state again -- it is no longer fed a [query] from the
+/// caller. This follows from the "elevated field" redesign in [LayrzSelectInput]: since
+/// the surface is now presented as a floating card that covers [LayrzSelectInput]'s own
+/// field, that underlying field is never the searcher (and never needs focus while the
+/// surface is open) -- typing happens in this surface's own internal search field
+/// instead, which is what removes the focus fight DESIGN-40/144 was fighting in the
+/// first place, without bringing the fight back.
 ///
 /// This is a private implementation detail; consumers use [LayrzSelectInput] instead.
 class LayrzSelectInputSurface<T> extends StatefulWidget {
@@ -23,12 +34,11 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// The currently selected item (for visual highlighting).
   final LayrzSelectItem<T>? selectedItem;
 
-  /// Whether the caller's own field is the searcher for this surface.
+  /// Whether this surface renders its own search field above the list.
   ///
-  /// When true, [query] carries the caller's field's current text and this surface
-  /// never requests keyboard focus for its list on open -- the caller's field keeps
-  /// focus so typing keeps working. When false, this is a pure picker: [query] is
-  /// ignored, and the list requests focus on open so arrow keys/Enter/Escape work.
+  /// When true, a search field is rendered at the top of the surface and typing into
+  /// it filters the list live. When false, no search field is rendered and the list
+  /// shows every item, unfiltered.
   final bool enableSearch;
 
   /// Whether an item with `value: null` can be selected.
@@ -36,8 +46,8 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
 
   /// Optional custom filter function; if null, uses [LayrzSelectItem.matches].
   ///
-  /// Applied regardless of whether [query] is empty -- an empty query still runs
-  /// through this callback rather than short-circuiting to "show all".
+  /// Applied regardless of whether the search text is empty -- an empty query still
+  /// runs through this callback rather than short-circuiting to "show all".
   final bool Function(String query, LayrzSelectItem<T> item)? filter;
 
   /// Text shown when search finds no matching items.
@@ -51,12 +61,6 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// When provided, the surface will call [controller.close()] after an item is selected.
   /// This is used when the surface is displayed in an anchored panel on desktop.
   final MenuController? panelController;
-
-  /// The current search query, typed into the caller's own field.
-  ///
-  /// Ignored when [enableSearch] is false. Defaults to `''` (show everything, subject
-  /// to [filter] if provided).
-  final String query;
 
   /// Defines the expected height of each item in the list.
   final double itemExtent;
@@ -72,7 +76,6 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
     this.emptyListText,
     required this.onItemSelected,
     this.panelController,
-    this.query = '',
     required this.itemExtent,
   });
 
@@ -81,45 +84,82 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
 }
 
 class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>> {
+  late TextEditingController _searchController;
+  late FocusNode _searchFocusNode;
   late FocusNode _listFocusNode;
+  final Set<WidgetState> _searchStates = {};
   int _highlightedIndex = -1;
   List<LayrzSelectItem<T>> _filteredItems = [];
 
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
     _listFocusNode = FocusNode();
+    _searchFocusNode.addListener(_handleSearchFocusChanged);
     _updateFilteredItems();
     _setInitialHighlight();
 
-    // The list only claims focus for itself when it is the sole way to navigate
-    // (no search field, caller's field is not the searcher): with `enableSearch`
-    // true, the caller's own field keeps focus (see `LayrzSelectInput`), and
-    // stealing it here would break typing the moment the surface opens.
+    // Whichever of the search field or the plain list is the way to type/navigate
+    // gets focus once the surface is actually visible. Double-nested: when this
+    // surface is presented inside `LayrzAnchoredPanel`, that panel's own
+    // `_handlePanelOpenRequested` registers a *second* post-frame callback (after
+    // this widget has already mounted and registered its first one) that steals
+    // focus to its own wrapping `_panelFocusNode` -- a single post-frame callback
+    // here would win the race backwards (fire first, get stolen from one tick
+    // later). Nesting a second callback inside the first pushes this request to
+    // the frame *after* that steal, so it reliably wins. Harmless extra one-frame
+    // delay on hosts with no such steal (e.g. the mobile bottom sheet).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted && !widget.enableSearch) {
-        _listFocusNode.requestFocus();
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (widget.enableSearch) {
+          _searchFocusNode.requestFocus();
+        } else {
+          _listFocusNode.requestFocus();
+        }
+      });
     });
   }
 
   @override
   void didUpdateWidget(LayrzSelectInputSurface<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.query != oldWidget.query || widget.items != oldWidget.items || widget.filter != oldWidget.filter) {
-      _updateFilteredItems();
+    if (widget.items != oldWidget.items || widget.filter != oldWidget.filter) {
+      setState(_updateFilteredItems);
     }
   }
 
   @override
   void dispose() {
+    _searchFocusNode.removeListener(_handleSearchFocusChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
     _listFocusNode.dispose();
     super.dispose();
   }
 
-  /// Updates the filtered items list based on [LayrzSelectInputSurface.query].
+  /// Tracks focus on the internal search field, purely for its own visual state
+  /// (hover/focus colors resolved by [LayrzInputChrome]).
+  void _handleSearchFocusChanged() {
+    setState(() {
+      if (_searchFocusNode.hasFocus) {
+        _searchStates.add(WidgetState.focused);
+      } else {
+        _searchStates.remove(WidgetState.focused);
+      }
+    });
+  }
+
+  /// Handles a genuine edit to the internal search field's text.
+  void _handleSearchChanged(String text) {
+    setState(_updateFilteredItems);
+  }
+
+  /// Updates the filtered items list based on the internal search text.
   void _updateFilteredItems() {
-    final query = widget.enableSearch ? widget.query : '';
+    final query = widget.enableSearch ? _searchController.text : '';
     final filter = widget.filter;
 
     _filteredItems = widget.items.where((item) {
@@ -149,8 +189,23 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
   }
 
   /// Handles keyboard events (arrow keys, Enter, Escape).
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) return;
+  ///
+  /// Bound to a [Focus] wrapping the *entire* surface (search field and list alike,
+  /// see [build]), so this fires via bubbling regardless of whether the search field
+  /// or nothing currently holds primary focus.
+  ///
+  /// **Must return [KeyEventResult.handled] for Escape, not merely act on it.** A
+  /// bare [KeyboardListener] (which this used to be) never marks an event handled,
+  /// so it always keeps bubbling upward -- on mobile, past this surface's own
+  /// `Navigator.pop(context)`, into the framework's own default Escape-to-dismiss
+  /// shortcut, which then pops a *second* time. With nothing left on the stack to
+  /// distinguish "the sheet" from "the app", that second pop tore down the entire
+  /// test app, not just this surface. Harmless before this surface grew its own
+  /// search field (nothing here had focus for `enableSearch: true`, so this handler
+  /// never ran at all in that combination) -- but a real, reachable bug once the
+  /// search field is a focus descendant of this node on every `enableSearch` value.
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     final key = event.logicalKey;
 
@@ -162,6 +217,7 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
           _highlightedIndex = 0;
         }
       });
+      return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.arrowUp) {
       setState(() {
         if (_highlightedIndex > 0) {
@@ -170,18 +226,88 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
           _highlightedIndex = _filteredItems.length - 1;
         }
       });
+      return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.enter) {
       if (_highlightedIndex >= 0 && _highlightedIndex < _filteredItems.length) {
         widget.onItemSelected(_filteredItems[_highlightedIndex]);
         widget.panelController?.close();
+        return KeyEventResult.handled;
       }
+      return KeyEventResult.ignored;
     } else if (key == LogicalKeyboardKey.escape) {
       if (widget.panelController != null) {
         widget.panelController!.close();
       } else {
         Navigator.pop(context);
       }
+      return KeyEventResult.handled;
     }
+    return KeyEventResult.ignored;
+  }
+
+  /// Builds the internal search field row, shown above the list when
+  /// [LayrzSelectInputSurface.enableSearch] is true.
+  ///
+  /// Deliberately borderless ([LayrzInputChrome.showBorder] false): the border that
+  /// sells the "elevated field" illusion belongs to the floating card as a whole
+  /// (drawn by [LayrzSelectInput] around this entire surface), not to this row on
+  /// its own -- a second, inner border here would read as two competing fields
+  /// instead of one continuous surface.
+  Widget _buildSearchField(BuildContext context) {
+    final l10n = LayrzUiL10n.of(context);
+
+    final fieldConfig = LayrzEditableFieldConfig(
+      labelText: null,
+      hintText: l10n.selectSearch,
+      disabled: false,
+      readOnly: false,
+      controller: _searchController,
+      focusNode: _searchFocusNode,
+      onChanged: _handleSearchChanged,
+      onSubmit: null,
+      onFocusChanged: null,
+      onTap: null,
+      keyboardType: TextInputType.text,
+      textInputAction: null,
+      inputFormatters: const [],
+      maxLength: null,
+      autofocus: false,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: false,
+      enableSuggestions: false,
+      actions: null,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+    );
+
+    return LayrzInputChrome(
+      labelText: null,
+      hintText: l10n.selectSearch,
+      isRequired: false,
+      prefixSlot: resolvePrefixSlot(prefixIcon: MdiIcons.magnify, isDecorative: true),
+      suffixSlot: resolveSuffixSlot(
+        suffixIcon: _searchController.text.isNotEmpty ? MdiIcons.close : null,
+        onSuffixTap: _searchController.text.isNotEmpty
+            ? () {
+                _searchController.clear();
+                setState(_updateFilteredItems);
+              }
+            : null,
+        semanticLabel: _searchController.text.isNotEmpty ? l10n.inputsSearchClear : null,
+      ),
+      disabled: false,
+      readOnly: false,
+      errors: const [],
+      hideDetails: true,
+      states: _searchStates,
+      controller: _searchController,
+      showBorder: false,
+      borderRadius: BorderRadius.zero,
+      child: LayrzEditableField(config: fieldConfig),
+    );
   }
 
   @override
@@ -189,53 +315,48 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     final l10n = LayrzUiL10n.of(context);
     final tokens = context.tokens;
 
-    // Items list with keyboard support. No search field here anymore -- see the
-    // class doc: the caller's own field is the searcher when `enableSearch` is true.
+    final Widget listOrEmptyState;
     if (_filteredItems.isEmpty) {
-      return Padding(
+      listOrEmptyState = Padding(
         padding: tokens.spacing.pd3,
         child: Text(
           widget.emptyListText ?? l10n.selectEmpty,
           style: tokens.typography.label,
         ),
       );
-    }
-
-    // No height CAP here: the 300px maximum is still applied exactly once, by
-    // the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the bottom
-    // sheet's own scrollable on mobile) -- a second, disagreeing cap here is
-    // DESIGN-40's original root cause, see `select_input.dart`.
-    //
-    // A definite height IS given here, though, and that is a different thing:
-    // both hosts place this surface inside their own `SingleChildScrollView`,
-    // which -- regardless of what height cap it itself receives from above --
-    // always relaxes its *child's* incoming height constraint to unbounded
-    // along the scroll axis, so the child can be taller than the viewport and
-    // still scroll. A `Column` (what this surface built before `ListView`
-    // replaced it) tolerates that fine, since its own height is simply the sum
-    // of its children's, computable with no bound at all. A `ListView` cannot:
-    // as a lazy, non-shrinkWrap viewport it must know its own extent to lay
-    // out, and an unbounded incoming height throws (`Vertical viewport was
-    // given unbounded height`) before the caller's cap ever gets a chance to
-    // clamp anything -- this was a real crash on both the desktop panel and
-    // the mobile sheet, not a test-only artifact. Wrapping it in a `SizedBox`
-    // sized to its own full, uncapped content height restores exactly the
-    // shape `Column` provided implicitly, so the caller's single external cap
-    // keeps clamping and scrolling it precisely as it did before.
-    // Sizing the `ListView` to its own full content height also makes its own
-    // scroll extent zero -- it never needs to scroll on its own, since it is
-    // never taller than its own viewport. Left with the default physics, that
-    // still leaves it a second same-axis `Scrollable` co-located with the
-    // caller's outer one, and a plain drag on that region resolves to whichever
-    // of the two wins the gesture arena rather than reliably reaching the
-    // caller's scrollable. `NeverScrollableScrollPhysics` removes it from that
-    // arena entirely, so the caller's `SingleChildScrollView` is unambiguously
-    // the one that scrolls -- exactly as when this was a non-scrollable `Column`.
-    return SizedBox(
-      height: _filteredItems.length * widget.itemExtent,
-      child: KeyboardListener(
-        focusNode: _listFocusNode,
-        onKeyEvent: _handleKeyEvent,
+    } else {
+      // No height CAP here: the 300px maximum is still applied exactly once, by
+      // the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the bottom
+      // sheet's own scrollable on mobile) -- a second, disagreeing cap here is
+      // DESIGN-40's original root cause, see `select_input.dart`.
+      //
+      // A definite height IS given here, though, and that is a different thing:
+      // both hosts place this surface inside their own `SingleChildScrollView`,
+      // which -- regardless of what height cap it itself receives from above --
+      // always relaxes its *child's* incoming height constraint to unbounded
+      // along the scroll axis, so the child can be taller than the viewport and
+      // still scroll. A `Column` (what this surface built before `ListView`
+      // replaced it) tolerates that fine, since its own height is simply the sum
+      // of its children's, computable with no bound at all. A `ListView` cannot:
+      // as a lazy, non-shrinkWrap viewport it must know its own extent to lay
+      // out, and an unbounded incoming height throws (`Vertical viewport was
+      // given unbounded height`) before the caller's cap ever gets a chance to
+      // clamp anything -- this was a real crash on both the desktop panel and
+      // the mobile sheet, not a test-only artifact. Wrapping it in a `SizedBox`
+      // sized to its own full, uncapped content height restores exactly the
+      // shape `Column` provided implicitly, so the caller's single external cap
+      // keeps clamping and scrolling it precisely as it did before.
+      // Sizing the `ListView` to its own full content height also makes its own
+      // scroll extent zero -- it never needs to scroll on its own, since it is
+      // never taller than its own viewport. Left with the default physics, that
+      // still leaves it a second same-axis `Scrollable` co-located with the
+      // caller's outer one, and a plain drag on that region resolves to whichever
+      // of the two wins the gesture arena rather than reliably reaching the
+      // caller's scrollable. `NeverScrollableScrollPhysics` removes it from that
+      // arena entirely, so the caller's `SingleChildScrollView` is unambiguously
+      // the one that scrolls -- exactly as when this was a non-scrollable `Column`.
+      listOrEmptyState = SizedBox(
+        height: _filteredItems.length * widget.itemExtent,
         child: ListView.builder(
           physics: const NeverScrollableScrollPhysics(),
           itemExtent: widget.itemExtent,
@@ -253,6 +374,35 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
             );
           },
         ),
+      );
+    }
+
+    // `Focus`, not `KeyboardListener`: `_handleKeyEvent` must be able to mark
+    // Escape/Enter/arrows as `handled` (see its own doc comment) to stop them from
+    // also reaching the framework's default shortcuts above this. Wraps the WHOLE
+    // column (search field and list alike), not just the list: when `enableSearch`
+    // is true, `_searchFocusNode` (a descendant of `_listFocusNode`'s `Focus` node)
+    // holds primary focus, and key events bubble up through their focus ancestor
+    // chain -- which includes this node -- reaching `_handleKeyEvent` regardless of
+    // which child actually has focus. `skipTraversal: true` keeps `_listFocusNode`
+    // itself out of Tab order (it is never meant to be a stop on its own -- only
+    // the search field, or a direct `.requestFocus()` call, ever holds it).
+    return Focus(
+      focusNode: _listFocusNode,
+      skipTraversal: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.enableSearch) ...[
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+              child: _buildSearchField(context),
+            ),
+            Container(height: 1, color: tokens.colors.divider),
+          ],
+          listOrEmptyState,
+        ],
       ),
     );
   }
