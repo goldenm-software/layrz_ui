@@ -1,22 +1,24 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../shared/editable_field.dart';
 import '../shared/input_chrome.dart';
 import '../shared/input_slot.dart';
-import 'combobox_layout.dart';
+import 'combobox_custom_value_row.dart';
 import 'combobox_surface.dart';
 
 /// Maximum height, in logical pixels, of the desktop overlay's option list.
 ///
-/// Fixed, not caller-configurable: the overlay renders [DesktopOverlay]'s content up
-/// to this height and scrolls past it. This replaces the former `maxOptionsToDisplay`
-/// parameter, which let a caller size the panel by row count using a row-height
-/// constant (`48.0`) that did not match the actual rendered row height (~36px) — the
-/// panel it produced was already wrong for any count other than the default.
+/// Fixed, not caller-configurable: the overlay renders [LayrzComboBoxPanelContent]
+/// up to this height and scrolls past it. This replaces the former
+/// `maxOptionsToDisplay` parameter, which let a caller size the panel by row
+/// count using a row-height constant (`48.0`) that did not match the actual
+/// rendered row height (~36px) -- the panel it produced was already wrong for
+/// any count other than the default.
 const double _kComboBoxOverlayMaxHeight = 300.0;
 
 /// A Material-free combobox input in the layrz_ui design system.
@@ -26,18 +28,33 @@ const double _kComboBoxOverlayMaxHeight = 300.0;
 /// adding suggestion filtering and intelligent overlay positioning on top.
 ///
 /// **Desktop vs. Mobile behavior**:
-/// - **Desktop (>= 960px)**: Displays a dropdown overlay that flips above/below based on
-///   available space, using [RawMenuAnchor]-like positioning logic.
+/// - **Desktop (>= 960px)**: Displays [LayrzAnchoredPanel], which covers the field
+///   itself (`coverAnchor: true`) -- the same "elevated field" illusion
+///   [LayrzSelectInput] uses (DESIGN-145) -- rather than sitting beside it.
 /// - **Mobile (< 960px)**: Opens a bottom sheet instead, allowing touch-friendly interaction
 ///   with better use of screen space.
 ///
-/// **Field focus**: The text field retains focus while the overlay is open, allowing
-/// the user to continue typing to filter options. Arrow keys move a highlight through
-/// options; Enter commits the highlighted option; Escape closes without committing.
+/// **The panel's first row IS the live input (Q3).** Unlike [LayrzSelectInput] --
+/// whose field is always read-only, so its opened surface owns a second,
+/// independent search field -- this field *is* the input, so typing must keep
+/// working uninterrupted across the open transition. When the panel opens, the
+/// SAME `TextEditingController` and `FocusNode` instances that back the closed
+/// field are handed to the panel's first-row [LayrzEditableField] instead of
+/// the closed field's own -- there is only ever one live editable field, one
+/// controller, one focus node; only which host currently renders it changes.
+/// This is what makes text, caret, and focus continuity structural rather than
+/// copied: nothing needs to be seeded or resynced across the transition.
 ///
 /// **Free-form entry** (default): When [allowFreeForm] is true, any text the user types
 /// is a valid value. On blur or Enter, the field commits whatever is typed. When false,
 /// the field reverts to the last matching option on blur.
+///
+/// **The "use '&lt;typed&gt;'" row (Q4).** When the typed text is non-empty and does
+/// not exactly match any option, the panel shows an explicit
+/// [LayrzComboBoxCustomValueRow] directly under the input, above the filtered
+/// option list. Committing it -- by tap or Enter -- behaves exactly like
+/// committing a matching option. A custom value is never committed implicitly
+/// on dismiss; only an explicit act commits it.
 ///
 /// **Filtering**: Options are matched case-insensitively from the start of each option.
 /// The [enableAutocomplete] flag controls whether filtering is applied (when true, default)
@@ -62,18 +79,19 @@ class LayrzComboBoxInput extends StatefulWidget {
   ///
   /// Fires once per genuine keystroke-driven text change while typing, once per
   /// external [value] update, and exactly once per committed selection —
-  /// tapping an option in the desktop overlay or bottom sheet, or pressing
-  /// Enter on a highlighted option — **even when the committed value is
-  /// identical to the text already shown** (for example, typing an option's
-  /// full text and then tapping that same option, or re-selecting the option
-  /// already displayed). A commit is always reported, regardless of how many
-  /// `TextEditingValue` notifications the resulting controller assignment
-  /// produces underneath (see `_lastNotifiedText` in the implementation for how
-  /// those extra echoes are deduped without swallowing the commit itself).
+  /// tapping an option in the desktop panel or bottom sheet, committing the
+  /// "use '&lt;typed&gt;'" row, or pressing Enter on a highlighted row —
+  /// **even when the committed value is identical to the text already shown**
+  /// (for example, typing an option's full text and then tapping that same
+  /// option, or re-selecting the option already displayed). A commit is
+  /// always reported, regardless of how many `TextEditingValue` notifications
+  /// the resulting controller assignment produces underneath (see
+  /// `_lastNotifiedText` in the implementation for how those extra echoes are
+  /// deduped without swallowing the commit itself).
   final ValueChanged<String>? onChanged;
 
   /// Callback fired when the user submits the input (e.g., presses Enter or picks
-  /// an option from the overlay or bottom sheet).
+  /// an option from the panel or bottom sheet).
   ///
   /// Fires exactly once per commit, unconditionally — including when the
   /// committed value is identical to the text already shown. [onChanged] fires
@@ -250,8 +268,31 @@ class LayrzComboBoxInput extends StatefulWidget {
 class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   late TextEditingController _controller;
   late FocusNode _fieldFocusNode;
-  late MenuController _menuController;
+  MenuController? _panelController;
   String? _lastValidOption;
+
+  /// Identifies the single, shared [LayrzEditableField] across the open
+  /// transition (Q3).
+  ///
+  /// Without this, toggling which host renders the live field (the closed
+  /// anchor slot vs. the open panel's first row -- see [_buildFieldChrome]'s
+  /// `readOnlyPlaceholder`) would destroy and recreate the [EditableText]
+  /// each time: a genuine unmount fires a focus-loss notification on
+  /// [_fieldFocusNode] *before* the new instance can request focus, which
+  /// [_handleFocusChange] reads as "the user left the field" and reacts to by
+  /// closing the panel via [_handleBlur] -- observed directly: a manual open
+  /// probe showed the panel's options present for one frame and gone the
+  /// next, exactly the unmount/remount window. A stable [GlobalKey] on the
+  /// [LayrzEditableField] built in [_buildFieldChrome] instead makes this a
+  /// single [Element] reparented within the same frame (both the anchor's
+  /// `builder` and the panel's `overlayBuilder` are built inside one
+  /// `RawMenuAnchor.build()` pass), so [_fieldFocusNode] is never actually
+  /// detached -- no spurious blur, no self-inflicted close.
+  final GlobalKey<LayrzEditableFieldState> _sharedFieldKey = GlobalKey<LayrzEditableFieldState>();
+
+  /// Highlight index across the combined navigable list: the "use '&lt;typed&gt;'"
+  /// row (index 0, when shown) followed by the filtered options. `-1` means no
+  /// row is highlighted. See [_navigableRowCount] and [_commitHighlighted].
   int _highlightedIndex = -1;
 
   /// The text last reported to [LayrzComboBoxInput.onChanged].
@@ -288,7 +329,6 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _fieldFocusNode = widget.focusNode ?? FocusNode();
-    _menuController = MenuController();
 
     // Initialize with the provided value if any
     if (widget.value != null) {
@@ -347,7 +387,6 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     if (widget.focusNode == null) {
       _fieldFocusNode.dispose();
     }
-    _menuController.close();
     super.dispose();
   }
 
@@ -372,29 +411,32 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     widget.onChanged?.call(currentText);
   }
 
-  /// Closes the overlay and, if free-form entry is disallowed, reverts the
+  /// Closes the panel and, if free-form entry is disallowed, reverts the
   /// field's text — invoked on any loss of [_fieldFocusNode]'s focus.
-  ///
-  /// **Why this still exists after the panel-tap-region fix:** before that fix,
-  /// this was the amplifier that turned a mere focus loss into a destroyed tap —
-  /// a mouse tap-down on an option unfocused the field (see [_buildMenuOverlay]'s
-  /// doc comment), and this method's unconditional [MenuController.close] then
-  /// tore the overlay down before the option's own tap could complete. With the
-  /// grouping fix in place, a tap *inside* the overlay no longer counts as
-  /// "outside" the field, so it no longer reaches this method at all for that
-  /// case — the reported defect is fixed at its root, not by this method.
-  ///
-  /// This method is kept because focus can still legitimately move away from
-  /// the field for reasons that are not a tap inside the overlay at all — Tab
-  /// key navigation, a programmatic `FocusScope` change elsewhere in the app, or
-  /// the window itself losing focus — and closing the overlay on any of those is
-  /// correct, expected combobox behavior. [LayrzSelectInput] does not need an
-  /// equivalent because its own blur handler never closes its panel; this
-  /// combobox's overlay is coupled to the field's focus by design (documented at
-  /// the top of this class: "the text field retains focus while the overlay is
-  /// open"), so losing that focus for any reason should close it.
   void _handleBlur() {
-    _menuController.close();
+    // Deferred, and re-checked, rather than acted on synchronously: opening
+    // the desktop panel briefly unfocuses `_fieldFocusNode` mid-gesture --
+    // `EditableText`'s own tap handling loses focus for an instant before
+    // `LayrzEditableField`'s own gesture recognizer re-requests it, and the
+    // panel's own `onOpen` callback (see `build`) also explicitly moves
+    // focus onto the panel's own field row via a double post-frame callback,
+    // mirroring the exact race `LayrzSelectInputSurface` documents against
+    // `LayrzAnchoredPanel`'s internal focus steal. Closing synchronously on
+    // that transient blip would tear the panel down one frame after it
+    // opened, before the user ever saw it (observed directly: a manual open
+    // probe showed the panel's options present for one frame and gone the
+    // next). Posting this check to the frame after every focus-driven
+    // refocus has had a chance to run means a *genuine* loss of focus (tab
+    // away, a real outside click, the window itself losing focus) still
+    // closes the panel -- it is simply no longer treated as genuine before
+    // this frame's own focus traffic has settled.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_fieldFocusNode.hasFocus) return;
+        _panelController?.close();
+      });
+    });
 
     // If allowFreeForm is false, revert to last valid option
     if (!widget.allowFreeForm && _lastValidOption != null) {
@@ -416,11 +458,29 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     return widget.options.where((option) => option.toLowerCase().startsWith(text)).toList();
   }
 
+  /// The current typed text, non-empty and not an exact match to any option --
+  /// i.e. the condition under which the "use '&lt;typed&gt;'" row is shown
+  /// (Q4). Returns null when the row should not be shown.
+  String? _getCustomValueCandidate() {
+    final text = _controller.text;
+    if (text.isEmpty) return null;
+    if (widget.options.contains(text)) return null;
+    return text;
+  }
+
+  /// The number of navigable rows in the currently open panel: the "use
+  /// '&lt;typed&gt;'" row (if shown) plus the filtered options. Used to keep
+  /// [_highlightedIndex] within bounds across arrow-key navigation.
+  int _navigableRowCount() {
+    final hasCustomRow = _getCustomValueCandidate() != null;
+    return (hasCustomRow ? 1 : 0) + _getFilteredOptions().length;
+  }
+
   void _openOverlay() {
     if (context.isCompact) {
       _openBottomSheet();
     } else {
-      _menuController.open();
+      _panelController?.open();
     }
   }
 
@@ -452,97 +512,232 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   void _commitValue(String value) {
-    // A commit (tapping an option, pressing Enter on a highlighted option, or
-    // picking from the bottom sheet) always reports `onChanged`, exactly once —
-    // including when `value` already matches the field's current text (typing
-    // an option's full text and then tapping it, or re-selecting the option
-    // already shown). Writing `_lastNotifiedText` and calling `onChanged`
-    // *before* touching the controller is what makes that hold: the assignment
-    // below still routes through `_handleTextChange`, but by the time it fires,
-    // `_lastNotifiedText` already equals `value`, so that notification — and the
-    // second one from `EditableText`'s post-assignment selection resync — are
-    // both deduped as echoes of the call just made here, rather than the sole
-    // source of the notification. A prior version skipped this explicit call
-    // and relied only on the assignment, which meant a commit whose value
-    // already matched the displayed text produced no `onChanged` call at all:
-    // `_handleTextChange`'s own dedupe had nothing to compare against but
-    // itself.
+    // A commit (tapping an option, committing the custom-value row, pressing
+    // Enter on a highlighted row, or picking from the bottom sheet) always
+    // reports `onChanged`, exactly once — including when `value` already
+    // matches the field's current text (typing an option's full text and
+    // then tapping it, or re-selecting the option already shown). Writing
+    // `_lastNotifiedText` and calling `onChanged` *before* touching the
+    // controller is what makes that hold: the assignment below still routes
+    // through `_handleTextChange`, but by the time it fires,
+    // `_lastNotifiedText` already equals `value`, so that notification — and
+    // the second one from `EditableText`'s post-assignment selection resync
+    // — are both deduped as echoes of the call just made here, rather than
+    // the sole source of the notification.
     _lastNotifiedText = value;
     widget.onChanged?.call(value);
 
     _controller.text = value;
     _lastValidOption = value;
     widget.onSubmit?.call(value);
-    _menuController.close();
+    _panelController?.close();
     _fieldFocusNode.unfocus();
   }
 
-  void _handleMenuOpenRequested(Offset? position, VoidCallback showOverlay) {
-    showOverlay();
-    setState(() {
-      _highlightedIndex = -1;
-    });
+  /// Commits whichever row [_highlightedIndex] currently points at (the
+  /// custom-value row, if shown and highlighted at index 0, otherwise an
+  /// option), invoked on Enter.
+  void _commitHighlighted() {
+    if (_highlightedIndex < 0) return;
 
-    // Keep focus in the text field
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted) {
-        _fieldFocusNode.requestFocus();
+    final customValue = _getCustomValueCandidate();
+    final filtered = _getFilteredOptions();
+
+    if (customValue != null) {
+      if (_highlightedIndex == 0) {
+        _commitValue(customValue);
+        return;
       }
-    });
+      final optionIndex = _highlightedIndex - 1;
+      if (optionIndex >= 0 && optionIndex < filtered.length) {
+        _commitValue(filtered[optionIndex]);
+      }
+      return;
+    }
+
+    if (_highlightedIndex < filtered.length) {
+      _commitValue(filtered[_highlightedIndex]);
+    }
   }
 
-  void _handleMenuCloseRequested(VoidCallback hideOverlay) {
-    hideOverlay();
-    setState(() {
-      _highlightedIndex = -1;
-    });
+  /// Builds the field row shared, by instance, between the closed field and
+  /// the open panel's first row (Q3). [readOnlyPlaceholder] renders a
+  /// non-editable visual stand-in instead of the real [LayrzEditableField] —
+  /// used for the closed-field slot while the panel is open, since
+  /// `coverAnchor: true` means the panel already renders the real, focused
+  /// field in exactly the same position; mounting a second [EditableText]
+  /// bound to the same [FocusNode] there would conflict with the panel's.
+  Widget _buildFieldChrome(
+    BuildContext context, {
+    required VoidCallback onOpen,
+    required bool readOnlyPlaceholder,
+  }) {
+    final prefixSlot = resolvePrefixSlot(
+      prefixIcon: widget.prefixIcon,
+      prefix: widget.prefix,
+      prefixText: widget.prefixText,
+      onPrefixTap: widget.onPrefixTap,
+    );
+
+    final suffixSlot = resolveSuffixSlot(
+      suffixIcon: widget.suffixIcon,
+      suffix: widget.suffix,
+      suffixText: widget.suffixText,
+      onSuffixTap: widget.onSuffixTap,
+    );
+
+    if (widget.disabled) {
+      _states.add(WidgetState.disabled);
+    } else {
+      _states.remove(WidgetState.disabled);
+    }
+
+    final fieldConfig = LayrzEditableFieldConfig(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      controller: _controller,
+      focusNode: _fieldFocusNode,
+      // Deliberately null: `_handleTextChange` is already registered as a
+      // listener on `_controller` and wiring `onChanged` too would fire the
+      // callback twice.
+      onChanged: null,
+      onSubmit: (_) => _commitHighlighted(),
+      onFocusChanged: (isFocused) {
+        setState(() {
+          if (isFocused) {
+            _states.add(WidgetState.focused);
+          } else {
+            _states.remove(WidgetState.focused);
+          }
+        });
+      },
+      onTap: () {
+        if (!widget.disabled && !widget.readOnly) {
+          onOpen();
+        }
+      },
+      keyboardType: widget.keyboardType,
+      textInputAction: widget.textInputAction,
+      inputFormatters: widget.inputFormatters,
+      maxLength: null,
+      autofocus: false,
+      textCapitalization: TextCapitalization.none,
+      autofillHints: const [],
+      obscureText: false,
+      autocorrect: true,
+      enableSuggestions: true,
+      actions: widget.actions,
+      minLines: 1,
+      maxLines: 1,
+      expands: false,
+    );
+
+    return LayrzInputChrome(
+      labelText: widget.labelText,
+      hintText: widget.hintText,
+      isRequired: widget.isRequired,
+      prefixSlot: prefixSlot,
+      suffixSlot: suffixSlot,
+      disabled: widget.disabled,
+      readOnly: widget.readOnly,
+      errors: widget.errors,
+      hideDetails: widget.hideDetails,
+      states: _states,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
+      controller: _controller,
+      padding: widget.padding,
+      child: readOnlyPlaceholder
+          ? ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) => Text(
+                value.text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          : LayrzEditableField(key: _sharedFieldKey, config: fieldConfig),
+    );
   }
 
-  /// Builds an empty overlay for mobile (compact) mode.
-  ///
-  /// On mobile, the overlay is not shown; the bottom sheet is used instead.
-  /// This is a no-op builder that returns an empty container.
-  Widget buildEmptyOverlay(BuildContext context, RawMenuOverlayInfo info) {
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildMenuOverlay(BuildContext context, RawMenuOverlayInfo info) {
-    final tokens = context.tokens;
+  /// Builds the panel's content: the live input row, the optional custom-value
+  /// row (Q4), and the filtered option list — see [LayrzComboBoxPanelContent].
+  Widget _buildPanelContent(BuildContext context) {
     final filtered = _getFilteredOptions();
     final emptyText = widget.emptyOptionsText ?? context.l10n.comboboxEmpty;
+    final customValue = _getCustomValueCandidate();
 
-    // Wrapped in [TextFieldTapRegion] so a tap on an option is never treated as
-    // "outside" this combobox's own [EditableText]. Without this, a mouse-kind
-    // tap-down on an option is outside-of-field by `EditableText`'s own
-    // unconditional (for mouse) tap-outside handling, which unfocuses
-    // `_fieldFocusNode` before the tap reaches pointer-up; `_handleFocusChange`
-    // then calls `_handleBlur`, which closes this very overlay mid-gesture,
-    // destroying the tap before `DesktopOverlay`'s `onSelected` ever fires. This
-    // combobox builds its own overlay directly with `RawMenuAnchor` rather than
-    // through `LayrzAnchoredPanel`, so the same fix applied there (see its
-    // `_buildPanelOverlay`) is duplicated here for this hand-rolled overlay.
-    return TextFieldTapRegion(
-      child: TapRegion(
-        groupId: info.tapRegionGroupId,
-        onTapOutside: (PointerDownEvent event) {
-          MenuController.maybeOf(context)?.close();
-        },
-        child: CustomSingleChildLayout(
-          delegate: ComboBoxLayoutDelegate(
-            anchorRect: info.anchorRect,
-            overlaySize: info.overlaySize,
-            tokens: tokens,
-            maxHeight: _kComboBoxOverlayMaxHeight,
-          ),
-          child: DesktopOverlay(
-            options: filtered,
-            highlightedIndex: _highlightedIndex,
-            onSelected: _commitValue,
-            emptyText: emptyText,
-          ),
-        ),
-      ),
+    final fieldRow = _buildFieldChrome(
+      context,
+      onOpen: () {},
+      readOnlyPlaceholder: false,
     );
+
+    // With a custom-value row shown, index 0 is the custom row and option
+    // indices shift by one; without it, indices map directly onto `filtered`.
+    final optionHighlightOffset = customValue != null ? 1 : 0;
+
+    return LayrzComboBoxPanelContent(
+      fieldRow: fieldRow,
+      customValueRow: customValue == null
+          ? null
+          : LayrzComboBoxCustomValueRow(
+              typedText: customValue,
+              isHighlighted: _highlightedIndex == 0,
+              onCommit: _commitValue,
+            ),
+      options: filtered,
+      highlightedIndex: _highlightedIndex - optionHighlightOffset,
+      onSelected: _commitValue,
+      emptyText: emptyText,
+    );
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    final isCompact = context.isCompact;
+    final isOpen = _panelController?.isOpen ?? false;
+
+    if (!isOpen) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        if (!isCompact) {
+          _openOverlay();
+          return KeyEventResult.handled;
+        }
+      }
+      return KeyEventResult.ignored;
+    }
+
+    final rowCount = _navigableRowCount();
+    if (rowCount == 0) {
+      return KeyEventResult.ignored;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      setState(() {
+        _highlightedIndex = (_highlightedIndex + 1) % rowCount;
+      });
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      setState(() {
+        _highlightedIndex = (_highlightedIndex - 1 + rowCount) % rowCount;
+      });
+      return KeyEventResult.handled;
+    } else if (event.logicalKey == LogicalKeyboardKey.enter) {
+      if (_highlightedIndex >= 0 && _highlightedIndex < rowCount) {
+        _commitHighlighted();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _panelController?.close();
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -553,142 +748,58 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       label: widget.labelText,
       button: true,
       enabled: !widget.disabled && !widget.readOnly,
-      expanded: _menuController.isOpen,
+      expanded: _panelController?.isOpen ?? false,
       onTap: (widget.disabled || widget.readOnly) ? null : _openOverlay,
       child: Focus(
-        onKeyEvent: (node, event) {
-          if (!_menuController.isOpen) {
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              if (!isCompact) {
-                _openOverlay();
-                return KeyEventResult.handled;
-              }
-            }
-            return KeyEventResult.ignored;
-          }
+        onKeyEvent: _handleKeyEvent,
+        child: isCompact
+            ? _buildFieldChrome(context, onOpen: _openOverlay, readOnlyPlaceholder: false)
+            : LayrzAnchoredPanel(
+                widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
+                coverAnchor: true,
+                maxHeight: _kComboBoxOverlayMaxHeight,
+                childFocusNode: _fieldFocusNode,
+                onOpen: () {
+                  setState(() {
+                    _highlightedIndex = -1;
+                  });
 
-          final filtered = _getFilteredOptions();
-          if (filtered.isEmpty) {
-            return KeyEventResult.ignored;
-          }
-
-          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-            setState(() {
-              _highlightedIndex = (_highlightedIndex + 1) % filtered.length;
-            });
-            return KeyEventResult.handled;
-          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-            setState(() {
-              _highlightedIndex = (_highlightedIndex - 1 + filtered.length) % filtered.length;
-            });
-            return KeyEventResult.handled;
-          } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-            if (_highlightedIndex >= 0 && _highlightedIndex < filtered.length) {
-              _commitValue(filtered[_highlightedIndex]);
-              return KeyEventResult.handled;
-            }
-            return KeyEventResult.ignored;
-          } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-            _menuController.close();
-            return KeyEventResult.handled;
-          }
-
-          return KeyEventResult.ignored;
-        },
-        child: RawMenuAnchor(
-          controller: _menuController,
-          onOpenRequested: isCompact ? (offset, callback) {} : _handleMenuOpenRequested,
-          onCloseRequested: isCompact ? (callback) {} : _handleMenuCloseRequested,
-          useRootOverlay: true,
-          consumeOutsideTaps: false,
-          childFocusNode: isCompact ? null : _fieldFocusNode,
-          overlayBuilder: isCompact ? buildEmptyOverlay : _buildMenuOverlay,
-          builder: (context, menuController, child) {
-            // Resolve slots
-            final prefixSlot = resolvePrefixSlot(
-              prefixIcon: widget.prefixIcon,
-              prefix: widget.prefix,
-              prefixText: widget.prefixText,
-              onPrefixTap: widget.onPrefixTap,
-            );
-
-            final suffixSlot = resolveSuffixSlot(
-              suffixIcon: widget.suffixIcon,
-              suffix: widget.suffix,
-              suffixText: widget.suffixText,
-              onSuffixTap: widget.onSuffixTap,
-            );
-
-            // Compute states
-            if (widget.disabled) {
-              _states.add(WidgetState.disabled);
-            } else {
-              _states.remove(WidgetState.disabled);
-            }
-
-            // Create the editable field configuration.
-            //
-            // `onChanged` is deliberately null: `_handleTextChange` is already
-            // registered as a listener on `_controller` and wiring `onChanged` too
-            // would fire the callback twice.
-            final fieldConfig = LayrzEditableFieldConfig(
-              labelText: widget.labelText,
-              hintText: widget.hintText,
-              disabled: widget.disabled,
-              readOnly: widget.readOnly,
-              controller: _controller,
-              focusNode: _fieldFocusNode,
-              onChanged: null,
-              onSubmit: widget.onSubmit,
-              onFocusChanged: (isFocused) {
-                setState(() {
-                  if (isFocused) {
-                    _states.add(WidgetState.focused);
-                  } else {
-                    _states.remove(WidgetState.focused);
-                  }
-                });
-              },
-              onTap: () {
-                if (!widget.disabled && !widget.readOnly) {
-                  _openOverlay();
-                }
-              },
-              keyboardType: widget.keyboardType,
-              textInputAction: widget.textInputAction,
-              inputFormatters: widget.inputFormatters,
-              maxLength: null,
-              autofocus: false,
-              textCapitalization: TextCapitalization.none,
-              autofillHints: const [],
-              obscureText: false,
-              autocorrect: true,
-              enableSuggestions: true,
-              actions: widget.actions,
-              minLines: 1,
-              maxLines: 1,
-              expands: false,
-            );
-
-            return LayrzInputChrome(
-              labelText: widget.labelText,
-              hintText: widget.hintText,
-              isRequired: widget.isRequired,
-              prefixSlot: prefixSlot,
-              suffixSlot: suffixSlot,
-              disabled: widget.disabled,
-              readOnly: widget.readOnly,
-              errors: widget.errors,
-              hideDetails: widget.hideDetails,
-              states: _states,
-              helpTitleText: widget.helpTitleText,
-              helpContentText: widget.helpContentText,
-              controller: _controller,
-              padding: widget.padding,
-              child: LayrzEditableField(config: fieldConfig),
-            );
-          },
-        ),
+                  // Focus must land on the panel's own input (Q3), not on
+                  // `LayrzAnchoredPanel`'s internal `_panelFocusNode`. The
+                  // panel requests focus on its own node via a post-frame
+                  // callback in `_handlePanelOpenRequested`, registered
+                  // *before* `widget.onOpen` (this callback) runs — so a
+                  // single post-frame callback here would lose that race
+                  // (fire first, get stolen from one tick later). Nesting a
+                  // second callback inside the first pushes this request to
+                  // the frame after that steal, mirroring the exact fix
+                  // `LayrzSelectInputSurface` uses for the same race.
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      _fieldFocusNode.requestFocus();
+                    });
+                  });
+                },
+                onClose: () {
+                  setState(() {
+                    _highlightedIndex = -1;
+                  });
+                },
+                builder: (context, controller) {
+                  _panelController = controller;
+                  return _buildFieldChrome(
+                    context,
+                    onOpen: controller.open,
+                    readOnlyPlaceholder: controller.isOpen,
+                  );
+                },
+                border: LayrzAnchoredPanelBorder(
+                  color: widget.errors.isNotEmpty ? context.tokens.colors.danger : context.tokens.colors.primary,
+                  width: context.tokens.border.base,
+                ),
+                child: Builder(builder: _buildPanelContent),
+              ),
       ),
     );
   }

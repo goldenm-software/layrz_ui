@@ -2,36 +2,69 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
-/// Displays filtered options in a desktop overlay.
+// ignore: unused_import
+import 'combobox_custom_value_row.dart';
+
+/// The desktop panel's content for [LayrzComboBoxInput].
 ///
-/// Shows a scrollable list of options with highlight support, or an empty message
-/// when no options match the filter.
+/// **Q3 -- the panel's first row IS the live input (structural, not visual).**
+/// Unlike [LayrzSelectInputSurface] (whose field is read-only, so the surface
+/// owns a second, independent search field), ComboBox's field *is* the input --
+/// so this widget renders [fieldRow] literally as its first child, built by
+/// [LayrzComboBoxInput] from the *same* `TextEditingController`/`FocusNode`
+/// instances that back the closed field. Passing the same instances (rather
+/// than copying text across the open transition) is what makes text, caret and
+/// focus continuity structural instead of best-effort -- there is only ever one
+/// controller and one focus node, whichever host currently renders them.
 ///
-/// The overlay's height is not capped here: the enclosing `CustomSingleChildLayout`
-/// (see `ComboBoxLayoutDelegate.getConstraintsForChild`) already hands this widget a
-/// bounded `maxHeight` via the incoming [BoxConstraints]. Re-applying the same cap on
-/// an inner [Container] here — as this widget previously did — clamps the [Column] to
-/// that height *inside* the [SingleChildScrollView], which makes the scroll view's
-/// content extent equal its viewport extent (so it can never scroll) while the
-/// non-scrolling [Column] overflows by the difference. Leaving the [Column] free to
-/// size to its content, with only the outer constraint bounding the viewport, is what
-/// makes the list actually scrollable past that bound.
-class DesktopOverlay extends StatelessWidget {
-  /// The filtered list of options to display.
+/// **Q4 -- the "use '&lt;typed&gt;'" row.** [customValueRow], when non-null, is
+/// rendered directly under [fieldRow] and above the option list -- see
+/// [LayrzComboBoxCustomValueRow]'s own doc comment for why that position is
+/// load-bearing, not cosmetic.
+///
+/// **Border/background/shadow ownership (S2).** This widget paints none of its
+/// own decoration. Before this unit, [LayrzComboBoxInput] built a hand-rolled
+/// `RawMenuAnchor` overlay and this class (formerly `DesktopOverlay`) drew its
+/// own `DecoratedBox` (background, radius, shadow) plus its own `ClipRRect`.
+/// Both are gone: [LayrzComboBoxInput] now uses `LayrzAnchoredPanel`, which
+/// paints the panel's background, radius, shadow, and optional border around
+/// its own capped scroll viewport (see `LayrzAnchoredPanelBorder`'s doc
+/// comment for why that scoping matters) -- this widget is purely the
+/// undecorated content passed as the panel's `child:`.
+///
+/// This is a private implementation detail; consumers use [LayrzComboBoxInput]
+/// instead.
+class LayrzComboBoxPanelContent extends StatelessWidget {
+  /// The panel's first row: the live, editable field.
+  ///
+  /// Built by [LayrzComboBoxInput] from the same controller/focus node that
+  /// back the closed field -- see the class doc.
+  final Widget fieldRow;
+
+  /// The "use '&lt;typed&gt;'" row, or null when nothing should be offered.
+  ///
+  /// Non-null only when the typed text is non-empty and does not exactly
+  /// match any option in [options] -- [LayrzComboBoxInput] computes that
+  /// condition; this widget merely renders whatever it is given.
+  final Widget? customValueRow;
+
+  /// The filtered list of options to display below [fieldRow]/[customValueRow].
   final List<String> options;
 
-  /// Index of the currently highlighted option, or -1 if none.
+  /// Index of the currently highlighted option in [options], or -1 if none.
   final int highlightedIndex;
 
   /// Callback when an option is selected.
   final ValueChanged<String> onSelected;
 
-  /// Text to display when no options match.
+  /// Text to display when [options] is empty.
   final String emptyText;
 
-  /// Creates a desktop overlay.
-  const DesktopOverlay({
+  /// Creates a new [LayrzComboBoxPanelContent].
+  const LayrzComboBoxPanelContent({
     super.key,
+    required this.fieldRow,
+    this.customValueRow,
     required this.options,
     required this.highlightedIndex,
     required this.onSelected,
@@ -42,8 +75,9 @@ class DesktopOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
+    final Widget listOrEmptyState;
     if (options.isEmpty) {
-      return Padding(
+      listOrEmptyState = Padding(
         padding: EdgeInsets.all(tokens.spacing.sp2),
         child: Text(
           emptyText,
@@ -52,30 +86,34 @@ class DesktopOverlay extends StatelessWidget {
           ),
         ),
       );
-    }
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: tokens.colors.sf1,
-        borderRadius: tokens.radius.br3,
-        boxShadow: tokens.shadow.elevation3,
-      ),
-      child: ClipRRect(
-        borderRadius: tokens.radius.br3,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(
-              options.length,
-              (index) => OptionItem(
-                option: options[index],
-                isHighlighted: index == highlightedIndex,
-                onTap: () => onSelected(options[index]),
-              ),
-            ),
+    } else {
+      // Mirrors `LayrzSelectInputSurface`'s own reasoning verbatim: this
+      // `Column` is free to size to its full, uncapped content height. The
+      // one and only height cap is applied by the caller
+      // (`LayrzAnchoredPanel.maxHeight`, via its `SingleChildScrollView`),
+      // never by this widget -- a second, disagreeing cap here is exactly
+      // DESIGN-40's original root cause.
+      listOrEmptyState = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(
+          options.length,
+          (index) => OptionItem(
+            option: options[index],
+            isHighlighted: index == highlightedIndex,
+            onTap: () => onSelected(options[index]),
           ),
         ),
-      ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        fieldRow,
+        Container(height: 1, color: tokens.colors.divider),
+        ?customValueRow,
+        listOrEmptyState,
+      ],
     );
   }
 }
@@ -131,7 +169,7 @@ class OptionItem extends StatelessWidget {
 /// Content widget for the bottom sheet on mobile.
 ///
 /// Displays options as a scrollable list. Selection is communicated solely by
-/// popping the enclosing route with the chosen option — there is no `onSelected`
+/// popping the enclosing route with the chosen option -- there is no `onSelected`
 /// callback here, because `LayrzComboBoxInput._openBottomSheet` already commits
 /// the popped value exactly once. An earlier version called both a callback *and*
 /// popped with the same value, which committed the selection twice per tap; this

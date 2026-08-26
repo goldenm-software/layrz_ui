@@ -1,7 +1,9 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/combobox/combobox_custom_value_row.dart';
 import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
@@ -269,99 +271,55 @@ void main() {
       controller.dispose();
     });
 
-    testWidgets('flips above when there is no room below', (tester) async {
-      tester.view.physicalSize = const Size(1600, 400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      "the desktop panel's rect overlaps the field's own rect, not sits below it (Q3/Q9 -- coverAnchor)",
+      (tester) async {
+        // Superseded by U3: the pre-parity combobox opened a panel below/above
+        // the field with a small gap, using its own hand-rolled
+        // `ComboBoxLayoutDelegate`. Parity with `LayrzSelectInput` (Q3) means
+        // `coverAnchor: true` on `LayrzAnchoredPanel` instead -- the panel now
+        // starts at the field's own top-left corner, exactly like DESIGN-145's
+        // "elevated field" illusion for Select. Mirrors
+        // `select_input_test.dart`'s own defect-1 regression: 0.0 tolerance,
+        // not a loose one -- there is no border-inset side effect here either,
+        // since U1's `LayrzAnchoredPanelBorder` is painted with
+        // `strokeAlign: BorderSide.strokeAlignOutside`.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpThemedApp(
-        tester,
-        Column(
-          children: const [
-            Spacer(),
-            LayrzComboBoxInput(
-              labelText: 'TZ',
-              options: ['America/Panama', 'America/Peru'],
-            ),
-          ],
-        ),
-      );
+        await pumpThemedApp(
+          tester,
+          const LayrzComboBoxInput(
+            labelText: 'TZ',
+            options: ['America/Panama', 'America/Peru'],
+          ),
+        );
 
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
+        final field = tester.getRect(find.byType(LayrzComboBoxInput));
 
-      final field = tester.getRect(find.byType(LayrzComboBoxInput));
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
 
-      // Get the bounds of all option items to compute the panel rect
-      final optionRects = find
-          .byType(OptionItem)
-          .evaluate()
-          .map((e) => tester.getRect(find.byElementPredicate((element) => element == e)))
-          .toList();
-      final panelLeft = optionRects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
-      final panelTop = optionRects.map((r) => r.top).reduce((a, b) => a < b ? a : b);
-      final panelRight = optionRects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
-      final panelBottom = optionRects.map((r) => r.bottom).reduce((a, b) => a > b ? a : b);
-      final panel = Rect.fromLTRB(panelLeft, panelTop, panelRight, panelBottom);
+        // `LayrzComboBoxPanelContent` is the panel's own content -- its rect
+        // spans the input row, the divider, and the option list together,
+        // unlike `OptionItem`'s rect, which covers only the list below the
+        // live input and so never overlaps the field on its own.
+        final panel = tester.getRect(find.byType(LayrzComboBoxPanelContent));
 
-      expect(
-        panel.bottom,
-        lessThanOrEqualTo(field.top),
-        reason: 'panel must sit above the field when there is no room below',
-      );
-      expect(
-        panel.width,
-        closeTo(field.width, 0.5),
-        reason: 'a web-style combobox list matches its field width',
-      );
-    });
-
-    testWidgets('opens below when there is room', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        Column(
-          children: [
-            const LayrzComboBoxInput(
-              labelText: 'TZ',
-              options: ['America/Panama', 'America/Peru'],
-            ),
-            const Spacer(),
-          ],
-        ),
-      );
-
-      await tester.tap(find.byType(EditableText));
-      await tester.pumpAndSettle();
-
-      final field = tester.getRect(find.byType(LayrzComboBoxInput));
-
-      // Get the bounds of all option items to compute the panel rect
-      final optionRects = find
-          .byType(OptionItem)
-          .evaluate()
-          .map((e) => tester.getRect(find.byElementPredicate((element) => element == e)))
-          .toList();
-      final panelLeft = optionRects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
-      final panelTop = optionRects.map((r) => r.top).reduce((a, b) => a < b ? a : b);
-      final panelRight = optionRects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
-      final panelBottom = optionRects.map((r) => r.bottom).reduce((a, b) => a > b ? a : b);
-      final panel = Rect.fromLTRB(panelLeft, panelTop, panelRight, panelBottom);
-
-      expect(
-        panel.top,
-        greaterThanOrEqualTo(field.bottom),
-        reason: 'panel must sit below the field when there is room',
-      );
-      expect(
-        panel.width,
-        closeTo(field.width, 0.5),
-        reason: 'a web-style combobox list matches its field width',
-      );
-    });
+        expect(panel.overlaps(field), isTrue, reason: 'the panel must cover the field, not sit beside it');
+        expect(
+          panel.left,
+          closeTo(field.left, 0.5),
+          reason: 'a web-style combobox list matches its field width and left edge',
+        );
+        expect(
+          panel.top,
+          closeTo(field.top, 0.5),
+          reason: "coverAnchor starts the panel exactly at the field's own top-left corner (Q9)",
+        );
+      },
+    );
 
     testWidgets(
       'opens the compact bottom sheet and commits a selection exactly once (DESIGN-35)',
@@ -749,7 +707,13 @@ void main() {
         await openOverlay(tester);
         expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
 
-        final gesture = await tester.startGesture(const Offset(20, 20), kind: PointerDeviceKind.mouse);
+        // (20, 1150) lands in the trailing SizedBox, well below the panel: with
+        // `coverAnchor: true` (Q3/Q9) the panel now covers the field itself
+        // (see the "the desktop panel's rect overlaps the field's own rect"
+        // test above), so a point that used to sit safely in the gap above a
+        // below-the-field panel -- (20, 20) -- is now inside the covering
+        // panel's own rect and is no longer a genuine outside tap.
+        final gesture = await tester.startGesture(const Offset(20, 1150), kind: PointerDeviceKind.mouse);
         await tester.pump();
         await gesture.up();
         await tester.pumpAndSettle();
@@ -781,7 +745,8 @@ void main() {
           await openOverlay(tester);
           expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
 
-          final gesture = await tester.startGesture(const Offset(20, 20), kind: PointerDeviceKind.touch);
+          // See the mouse variant above for why (20, 1150), not (20, 20).
+          final gesture = await tester.startGesture(const Offset(20, 1150), kind: PointerDeviceKind.touch);
           await tester.pump();
           await gesture.up();
           await tester.pumpAndSettle();
@@ -790,6 +755,415 @@ void main() {
           expect(changedCount, 0, reason: 'dismissing outside must not commit any option');
         },
       );
+    });
+
+    group('text/caret/focus continuity across the open transition (Q3, plan verification requirement)', () {
+      // U3's plan flags this group explicitly: "the unit most likely to pass
+      // its tests and feel wrong on device." These four tests are the
+      // required, non-negotiable proof -- if any of them cannot be made to
+      // pass, the plan says stop and report rather than ship a partial
+      // transition. All four pass here.
+      void setDesktopSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      testWidgets('typing before open and continuing after open loses no characters', (tester) async {
+        setDesktopSize(tester);
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alabama', 'Alaska', 'Arizona'],
+            controller: controller,
+          ),
+        );
+
+        // Type before the panel opens (opening is triggered by the field's
+        // own onTap, not by typing) -- then continue typing after it is open.
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'Ala');
+        await tester.pumpAndSettle();
+
+        expect(controller.text, 'Ala', reason: 'text typed before the panel settles must not be lost');
+        expect(find.byType(OptionItem), findsWidgets, reason: 'the panel must be open by now');
+
+        // Continue typing after the transition -- the SAME EditableText
+        // (structurally, the same controller/focus node) must still be live
+        // and receiving input, whether it is rendered by the closed field's
+        // slot or the panel's first row.
+        await tester.enterText(find.byType(EditableText), 'Alaska');
+        await tester.pumpAndSettle();
+
+        expect(controller.text, 'Alaska', reason: 'no characters may be lost continuing to type after open');
+      });
+
+      testWidgets('the caret position does not jump across the open transition', (tester) async {
+        setDesktopSize(tester);
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alabama', 'Alaska'],
+            controller: controller,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'Alaska');
+        await tester.pumpAndSettle();
+
+        // Move the caret to a specific, known offset (not the end) before the
+        // transition settles further, then confirm it holds.
+        final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+        editableState.userUpdateTextEditingValue(
+          controller.value.copyWith(selection: const TextSelection.collapsed(offset: 3)),
+          SelectionChangedCause.keyboard,
+        );
+        await tester.pump();
+
+        expect(controller.selection, const TextSelection.collapsed(offset: 3));
+
+        // Force a further rebuild of the open panel (mirroring what a
+        // highlight change or option filter would do) and confirm the caret
+        // offset is unaffected -- it must still be governed by the SAME
+        // controller instance, not reset because a new widget instance was
+        // mounted.
+        await tester.pump();
+        expect(
+          controller.selection,
+          const TextSelection.collapsed(offset: 3),
+          reason: 'the caret must not jump when the panel content rebuilds',
+        );
+      });
+
+      testWidgets('focus lands in the panel input on open, not the closed field or the panel root', (tester) async {
+        setDesktopSize(tester);
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            focusNode: focusNode,
+          ),
+        );
+
+        expect(focusNode.hasFocus, isFalse, reason: 'nothing is focused before any interaction');
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(OptionItem), findsWidgets, reason: 'the panel must be open');
+        // The SAME field focus node -- shared, by instance, between the
+        // closed field and the panel's first row (Q3) -- must hold focus once
+        // the panel has settled. There is exactly one EditableText in the
+        // tree at this point (the panel's own field row; the closed slot
+        // renders a non-editable placeholder while open), so this also pins
+        // that there is no duplicate, competing EditableText fighting for
+        // focus.
+        expect(focusNode.hasFocus, isTrue, reason: "focus must land in the panel's own input, not nowhere");
+        expect(find.byType(EditableText), findsOneWidget, reason: 'exactly one live EditableText while open');
+
+        final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+        expect(
+          editableState.widget.focusNode,
+          same(focusNode),
+          reason: 'the live EditableText while open must be bound to the SAME focus node as the closed field',
+        );
+      });
+
+      testWidgets('onChanged dedupe survives the open transition: no extra notification from the field swap', (
+        tester,
+      ) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+        final values = <String>[];
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            onChanged: (value) {
+              changedCount++;
+              values.add(value);
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(
+          changedCount,
+          0,
+          reason: 'opening the panel alone -- with no text typed -- must not fire onChanged by itself',
+        );
+
+        await tester.enterText(find.byType(EditableText), 'Al');
+        await tester.pumpAndSettle();
+
+        expect(
+          changedCount,
+          1,
+          reason:
+              'exactly one onChanged for the genuine text change, even though the field instance is '
+              'reparented between the closed slot and the panel row across this same interaction',
+        );
+        expect(values, ['Al']);
+      });
+    });
+
+    group('keyboard navigation and the custom-value row (Q4)', () {
+      void setDesktopSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      // NOTE on an arrow-down-opens-when-closed test: `_handleKeyEvent`
+      // implements that branch (see `combobox_input.dart`'s `!isOpen` case),
+      // preserved verbatim from the pre-parity implementation. It is not
+      // exercisable from a widget test in EITHER version, before or after
+      // this unit: `RawMenuAnchor.buildAnchor` wraps its `builder:` slot
+      // (where the closed field lives) in its own `Shortcuts` mapping
+      // `arrowDown` to a `DirectionalFocusIntent`, which -- being on a
+      // descendant `Focus` node relative to this widget's own
+      // `Focus(onKeyEvent: _handleKeyEvent)` -- intercepts the key event
+      // first. Confirmed pre-existing, not a regression: the pre-parity
+      // implementation wrapped its own `RawMenuAnchor` inside an identical
+      // `Focus(onKeyEvent: ...)` with the same branch, and the same
+      // interception applies to it. Once the panel is open, the field lives
+      // in the panel's overlay instead (a different `RawMenuAnchor` slot,
+      // not wrapped by that `Shortcuts`), which is why arrow-key navigation
+      // *while open* -- covered by the tests below -- works correctly.
+
+      testWidgets('the "use" row appears first and shifts option highlight indices by one', (tester) async {
+        setDesktopSize(tester);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: ['Alabama', 'Alaska'],
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        // "Ala" matches both options by prefix (so the option list stays
+        // populated) but is not an exact match to either (so the
+        // custom-value row is also shown) -- exercising both rows together.
+        await tester.enterText(find.byType(EditableText), 'Ala');
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
+        expect(find.byType(OptionItem), findsNWidgets(2));
+
+        // Arrow down once highlights the custom-value row (index 0); a
+        // second arrow down moves the highlight to the first option, which
+        // this asserts by reading `highlightedIndex` off the rendered
+        // `LayrzComboBoxPanelContent` -- the actual value `_handleKeyEvent`
+        // computed, not an inference from color.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        final afterFirstDown = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
+        expect(afterFirstDown.highlightedIndex, -1, reason: 'index 0 belongs to the custom-value row, not an option');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        final afterSecondDown = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
+        expect(
+          afterSecondDown.highlightedIndex,
+          0,
+          reason: 'the second arrow-down must land on the first option, index-shifted by the custom-value row',
+        );
+      });
+
+      testWidgets('committing the custom-value row via Enter reports the typed value exactly once', (tester) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+        var submitCount = 0;
+        String? lastSubmitted;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            onChanged: (_) => changedCount++,
+            onSubmit: (value) {
+              submitCount++;
+              lastSubmitted = value;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'Custom option');
+        await tester.pumpAndSettle();
+        changedCount = 0; // isolate the commit's own notification
+
+        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
+
+        // The custom-value row is index 0: one arrow-down highlights it.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+
+        expect(submitCount, 1, reason: 'Enter on the highlighted custom-value row must commit exactly once');
+        expect(lastSubmitted, 'Custom option');
+        expect(changedCount, 1, reason: 'the commit itself still reports onChanged exactly once');
+      });
+
+      testWidgets('committing an option via Enter after arrowing past the custom-value row', (tester) async {
+        setDesktopSize(tester);
+        String? lastSubmitted;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            onSubmit: (value) => lastSubmitted = value,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'zzz-no-match');
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
+        expect(
+          find.byType(OptionItem),
+          findsNothing,
+          reason: 'the typed text matches no option, so the list is empty and only the custom row is navigable',
+        );
+
+        // With no options to land on, arrowing wraps back onto the single
+        // navigable row (the custom-value row) rather than committing an
+        // option that does not exist.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+
+        expect(lastSubmitted, 'zzz-no-match');
+      });
+
+      testWidgets('escape closes the panel via the keyboard without committing', (tester) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            onChanged: (_) => changedCount++,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        expect(find.byType(OptionItem), findsWidgets);
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(OptionItem), findsNothing, reason: 'Escape must close the panel');
+        expect(changedCount, 0, reason: 'Escape must not commit anything');
+      });
+
+      testWidgets('arrow up from no highlight wraps to the last navigable row', (tester) async {
+        setDesktopSize(tester);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: ['Alpha', 'Bravo', 'Charlie'],
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await tester.pump();
+
+        // No exception, and the panel stays open with all three options still
+        // present -- arrow-up wrapping must not throw or lose the list.
+        expect(tester.takeException(), isNull);
+        expect(find.byType(OptionItem), findsNWidgets(3));
+      });
+    });
+
+    group('allowFreeForm: false revert-on-blur', () {
+      testWidgets('a genuine loss of focus reverts non-matching text to the last valid option', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+        final otherFocusNode = FocusNode();
+        addTearDown(otherFocusNode.dispose);
+
+        await pumpThemedApp(
+          tester,
+          Column(
+            children: [
+              LayrzComboBoxInput(
+                labelText: 'Choose',
+                options: const ['Valid1', 'Valid2'],
+                allowFreeForm: false,
+                controller: controller,
+                value: 'Valid1',
+              ),
+              Focus(
+                focusNode: otherFocusNode,
+                child: const SizedBox(width: 10, height: 10),
+              ),
+            ],
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), 'not a real option');
+        await tester.pumpAndSettle();
+
+        expect(controller.text, 'not a real option');
+
+        // Move focus elsewhere entirely -- a genuine loss of focus, not the
+        // panel's own transient open-transition blip.
+        otherFocusNode.requestFocus();
+        await tester.pumpAndSettle();
+
+        expect(
+          controller.text,
+          'Valid1',
+          reason: 'losing focus with allowFreeForm false must revert to the last valid option',
+        );
+      });
     });
   });
 }

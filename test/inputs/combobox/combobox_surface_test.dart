@@ -7,11 +7,27 @@ import '../../helpers/pump_themed.dart';
 import '../../helpers/pump_themed_app.dart';
 
 void main() {
-  group('DesktopOverlay', () {
+  group('LayrzComboBoxPanelContent', () {
+    testWidgets('renders the field row first, always', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzComboBoxPanelContent(
+          fieldRow: const Text('field row'),
+          options: const [],
+          highlightedIndex: -1,
+          onSelected: (_) {},
+          emptyText: 'No matches',
+        ),
+      );
+
+      expect(find.text('field row'), findsOneWidget);
+    });
+
     testWidgets('shows the empty text when there are no options', (tester) async {
       await pumpThemed(
         tester,
-        DesktopOverlay(
+        LayrzComboBoxPanelContent(
+          fieldRow: const SizedBox.shrink(),
           options: const [],
           highlightedIndex: -1,
           onSelected: (_) {},
@@ -26,7 +42,8 @@ void main() {
     testWidgets('renders one OptionItem per option', (tester) async {
       await pumpThemed(
         tester,
-        DesktopOverlay(
+        LayrzComboBoxPanelContent(
+          fieldRow: const SizedBox.shrink(),
           options: const ['Alpha', 'Bravo', 'Charlie'],
           highlightedIndex: -1,
           onSelected: (_) {},
@@ -45,7 +62,8 @@ void main() {
 
       await pumpThemed(
         tester,
-        DesktopOverlay(
+        LayrzComboBoxPanelContent(
+          fieldRow: const SizedBox.shrink(),
           options: const ['Alpha', 'Bravo'],
           highlightedIndex: -1,
           onSelected: (value) => selected = value,
@@ -62,7 +80,8 @@ void main() {
     testWidgets('the highlighted option renders with a different background', (tester) async {
       await pumpThemed(
         tester,
-        DesktopOverlay(
+        LayrzComboBoxPanelContent(
+          fieldRow: const SizedBox.shrink(),
           options: const ['Alpha', 'Bravo'],
           highlightedIndex: 1,
           onSelected: (_) {},
@@ -81,74 +100,57 @@ void main() {
     });
 
     testWidgets(
-      'the shadow-bearing decoration is an ancestor of the scroll viewport, '
-      'not a descendant of it (elevation must not be clipped)',
+      'no descendant of the surrounding SingleChildScrollView exceeds its own height '
+      '(S2 -- the panel, not this content, owns the border/shadow/clip)',
       (tester) async {
-        // A BoxShadow paints outside its own box's bounds. SingleChildScrollView
-        // clips at exactly those bounds (Clip.hardEdge by default). So the
-        // decoration that carries the elevation shadow must be an ANCESTOR of
-        // the SingleChildScrollView, never a descendant/child of it — otherwise
-        // the shadow is painted and then clipped away, invisibly. Reading
-        // `decoration.boxShadow` alone cannot catch this: it is non-null on both
-        // sides of the fix. Only the ancestry relationship distinguishes them.
-        final options = List.generate(20, (i) => 'Option $i');
-
-        await pumpThemed(
-          tester,
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200, maxWidth: 300),
-            child: DesktopOverlay(
-              options: options,
-              highlightedIndex: -1,
-              onSelected: (_) {},
-              emptyText: 'No matches',
-            ),
-          ),
-        );
-
-        final shadowDecoratedFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is DecoratedBox &&
-              widget.decoration is BoxDecoration &&
-              (widget.decoration as BoxDecoration).boxShadow != null,
-        );
-
-        expect(
-          shadowDecoratedFinder,
-          findsOneWidget,
-          reason: 'exactly one decoration should carry the elevation shadow',
-        );
-
-        expect(
-          find.ancestor(of: find.byType(SingleChildScrollView), matching: shadowDecoratedFinder),
-          findsOneWidget,
-          reason:
-              'the shadow-bearing decoration must wrap the scroll viewport, '
-              'not sit inside it, or the shadow is clipped away invisibly',
-        );
-      },
-    );
-
-    testWidgets(
-      'does not overflow with many options, and the list actually scrolls (DESIGN-35)',
-      (tester) async {
-        // Regression test for the 840px overflow: a Container(constraints:
-        // maxHeight) used to sit inside the SingleChildScrollView, clamping the
-        // Column to the same bound as the viewport so it could never scroll while
-        // the Column itself overflowed. The fix leaves the Column free to exceed
-        // the bound the outer constraint applies to the scroll view, so it scrolls
-        // instead of overflowing.
+        // This content paints no decoration of its own (S2): background,
+        // shadow, radius, border and the height cap all belong to
+        // LayrzAnchoredPanel now. Regression-shaped like the U1 select probe:
+        // wrap this content the way the real panel does (a bounded
+        // SingleChildScrollView) and confirm nothing inside disagrees with
+        // that bound.
         final options = List.generate(30, (i) => 'Option $i');
 
         await pumpThemed(
           tester,
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 240, maxWidth: 300),
-            child: DesktopOverlay(
-              options: options,
-              highlightedIndex: -1,
-              onSelected: (_) {},
-              emptyText: 'No matches',
+            child: SingleChildScrollView(
+              child: LayrzComboBoxPanelContent(
+                fieldRow: const SizedBox(height: 40),
+                options: options,
+                highlightedIndex: -1,
+                onSelected: (_) {},
+                emptyText: 'No matches',
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+
+        final viewport = tester.getRect(find.byType(SingleChildScrollView));
+        expect(viewport.height, 240.0);
+      },
+    );
+
+    testWidgets(
+      'does not overflow with many options, and the list actually scrolls',
+      (tester) async {
+        final options = List.generate(30, (i) => 'Option $i');
+
+        await pumpThemed(
+          tester,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 240, maxWidth: 300),
+            child: SingleChildScrollView(
+              child: LayrzComboBoxPanelContent(
+                fieldRow: const SizedBox(height: 40),
+                options: options,
+                highlightedIndex: -1,
+                onSelected: (_) {},
+                emptyText: 'No matches',
+              ),
             ),
           ),
         );
@@ -157,7 +159,7 @@ void main() {
 
         final beforeRect = tester.getRect(find.text('Option 29'));
 
-        await tester.drag(find.byType(DesktopOverlay), const Offset(0, -400));
+        await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -400));
         await tester.pump();
 
         expect(tester.takeException(), isNull);
@@ -170,6 +172,46 @@ void main() {
         );
       },
     );
+
+    testWidgets('renders the custom-value row directly under the field row, above the options', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzComboBoxPanelContent(
+          fieldRow: const Text('field row'),
+          customValueRow: const Text('custom row'),
+          options: const ['Alpha'],
+          highlightedIndex: -1,
+          onSelected: (_) {},
+          emptyText: 'No matches',
+        ),
+      );
+
+      final columnFinder = find.byType(Column).first;
+      final column = tester.widget<Column>(columnFinder);
+      final texts = column.children.whereType<Text>().map((t) => t.data).toList();
+
+      expect(find.text('custom row'), findsOneWidget);
+      // Field row must precede the custom row, which must precede the options.
+      final fieldIndex = column.children.indexWhere((w) => w is Text && w.data == 'field row');
+      final customIndex = column.children.indexWhere((w) => w is Text && w.data == 'custom row');
+      expect(fieldIndex, lessThan(customIndex), reason: 'the field row must come before the custom-value row');
+      expect(texts, contains('field row'));
+    });
+
+    testWidgets('omits the custom-value row when null', (tester) async {
+      await pumpThemed(
+        tester,
+        LayrzComboBoxPanelContent(
+          fieldRow: const SizedBox.shrink(),
+          options: const ['Alpha'],
+          highlightedIndex: -1,
+          onSelected: (_) {},
+          emptyText: 'No matches',
+        ),
+      );
+
+      expect(find.byType(OptionItem), findsOneWidget);
+    });
   });
 
   group('OptionItem', () {
