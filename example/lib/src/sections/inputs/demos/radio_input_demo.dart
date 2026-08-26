@@ -1,7 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+/// Showroom demo for [LayrzRadioInput].
+///
+/// Every non-disabled group below is wired to state via `onChanged` + `setState`,
+/// including the error-state example, whose error message clears interactively once
+/// an option is selected.
 class RadioInputDemo extends StatefulWidget {
+  /// Creates a new [RadioInputDemo].
   const RadioInputDemo({super.key});
 
   @override
@@ -12,6 +18,7 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
   String? _selectedOption;
   String? _selectedSize = 'medium';
   String? _selectedShipping = 'standard';
+  String? _agreement;
 
   @override
   Widget build(BuildContext context) {
@@ -118,13 +125,18 @@ class _RadioInputDemoState extends State<RadioInputDemo> {
                 children: [
                   Text('Please select an option *', style: tokens.typography.body),
                   SizedBox(height: tokens.spacing.sp2),
-                  const LayrzRadioInput<String>(
-                    value: null,
-                    items: [
+                  LayrzRadioInput<String>(
+                    value: _agreement,
+                    items: const [
                       LayrzSelectItem(value: 'agree', child: Text('I agree'), searchableStrings: {'I agree'}),
                       LayrzSelectItem(value: 'disagree', child: Text('I disagree'), searchableStrings: {'I disagree'}),
                     ],
-                    errors: ['You must make a selection'],
+                    onChanged: (v) {
+                      setState(() {
+                        _agreement = v;
+                      });
+                    },
+                    errors: _agreement == null ? const ['You must make a selection'] : const [],
                   ),
                 ],
               ),

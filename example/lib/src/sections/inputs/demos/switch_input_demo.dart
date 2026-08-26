@@ -1,7 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+/// Showroom demo for [LayrzSwitchInput].
+///
+/// Every non-disabled switch below is wired to state via `onChanged` + `setState`,
+/// including the error-state example, whose error message clears interactively once
+/// the switch is turned on.
 class SwitchInputDemo extends StatefulWidget {
+  /// Creates a new [SwitchInputDemo].
   const SwitchInputDemo({super.key});
 
   @override
@@ -12,6 +18,8 @@ class _SwitchInputDemoState extends State<SwitchInputDemo> {
   bool _notifications = true;
   bool _darkMode = false;
   bool _analytics = true;
+  bool _twoFactor = true;
+  bool _agreedToTerms = false;
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +74,13 @@ class _SwitchInputDemoState extends State<SwitchInputDemo> {
                     },
                     labelText: 'Share analytics',
                   ),
-                  const LayrzSwitchInput(
-                    value: true,
+                  LayrzSwitchInput(
+                    value: _twoFactor,
+                    onChanged: (v) {
+                      setState(() {
+                        _twoFactor = v;
+                      });
+                    },
                     labelText: 'Two-factor authentication',
                   ),
                 ],
@@ -78,13 +91,13 @@ class _SwitchInputDemoState extends State<SwitchInputDemo> {
               Text('Disabled State', style: tokens.typography.title),
               Column(
                 spacing: tokens.spacing.sp3,
-                children: [
-                  const LayrzSwitchInput(
+                children: const [
+                  LayrzSwitchInput(
                     value: false,
                     disabled: true,
                     labelText: 'Disabled switch (off)',
                   ),
-                  const LayrzSwitchInput(
+                  LayrzSwitchInput(
                     value: true,
                     disabled: true,
                     labelText: 'Disabled switch (on)',
@@ -95,13 +108,23 @@ class _SwitchInputDemoState extends State<SwitchInputDemo> {
               // With errors
               SizedBox(height: tokens.spacing.sp3),
               Text('Error State', style: tokens.typography.title),
+              Text(
+                'The error clears as soon as the switch is turned on.',
+                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+              ),
+              SizedBox(height: tokens.spacing.sp2),
               Column(
                 spacing: tokens.spacing.sp3,
                 children: [
-                  const LayrzSwitchInput(
-                    value: false,
+                  LayrzSwitchInput(
+                    value: _agreedToTerms,
+                    onChanged: (v) {
+                      setState(() {
+                        _agreedToTerms = v;
+                      });
+                    },
                     labelText: 'Agree to terms',
-                    errors: ['You must accept the terms to proceed'],
+                    errors: _agreedToTerms ? const [] : const ['You must accept the terms to proceed'],
                   ),
                 ],
               ),
