@@ -296,7 +296,12 @@ void main() {
           ),
         );
 
-        final field = tester.getRect(find.byType(LayrzComboBoxInput));
+        // The FIELD's own rect, not `LayrzComboBoxInput`'s whole rect: since the
+        // label/error hoisting fix (parity with `LayrzSelectInput`'s
+        // `_appendExtras`), the label renders OUTSIDE the anchor passed to
+        // `LayrzAnchoredPanel` -- the panel now covers the field exactly, not
+        // the field-plus-label the widget's outer rect includes.
+        final field = tester.getRect(find.byType(LayrzInputChrome).first);
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
@@ -359,7 +364,18 @@ void main() {
         // only a tap that lands on the EditableText itself does. Verified during
         // the DESIGN-35 investigation; asserted here so a future regression that
         // moves the open-trigger back onto the chrome is caught.
-        await tester.tap(find.byType(LayrzInputChrome));
+        //
+        // Tapping a point genuinely outside `EditableText`'s own rect, rather
+        // than `find.byType(LayrzInputChrome)`'s default geometric center: since
+        // the label/error hoisting fix (parity with `LayrzSelectInput`'s
+        // `_appendExtras`), `LayrzInputChrome` no longer renders the label
+        // internally, so its rect is now exactly the bordered field box --
+        // whose center now sits ON the text line, not in dead space above it as
+        // it did when the label lived inside the chrome. `chromeRect.topLeft`
+        // plus a small inset lands inside the chrome's own left padding, still
+        // outside the text field's own hit region.
+        final chromeRect = tester.getRect(find.byType(LayrzInputChrome));
+        await tester.tapAt(chromeRect.topLeft + const Offset(4, 4));
         await tester.pumpAndSettle();
         expect(
           find.byType(BottomSheetContent),
