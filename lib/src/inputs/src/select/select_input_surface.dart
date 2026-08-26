@@ -5,6 +5,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
 /// The selection surface content used by [LayrzSelectInput].
 ///
@@ -57,6 +58,9 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// to [filter] if provided).
   final String query;
 
+  /// Defines the expected height of each item in the list.
+  final double itemExtent;
+
   /// Creates a new [LayrzSelectInputSurface].
   const LayrzSelectInputSurface({
     super.key,
@@ -69,6 +73,7 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
     required this.onItemSelected,
     this.panelController,
     this.query = '',
+    required this.itemExtent,
   });
 
   @override
@@ -205,24 +210,21 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     return KeyboardListener(
       focusNode: _listFocusNode,
       onKeyEvent: _handleKeyEvent,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(_filteredItems.length, (index) {
-          final item = _filteredItems[index];
-          final isHighlighted = _highlightedIndex == index;
-          final isSelected = item.value == widget.selectedItem?.value;
-
+      child: ListView.builder(
+        itemExtent: widget.itemExtent,
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
           return _SelectItemRow(
-            key: ValueKey(item.value),
-            item: item,
-            isHighlighted: isHighlighted,
-            isSelected: isSelected,
+            key: ValueKey(_filteredItems[index].value),
+            item: _filteredItems[index],
+            isHighlighted: _highlightedIndex == index,
+            isSelected: _filteredItems[index] == widget.selectedItem,
             onTap: () {
-              widget.onItemSelected(item);
+              widget.onItemSelected(_filteredItems[index]);
               widget.panelController?.close();
             },
           );
-        }),
+        },
       ),
     );
   }
@@ -264,7 +266,7 @@ class _SelectItemRow<T> extends StatelessWidget {
       button: true,
       selected: isSelected,
       onTap: onTap,
-      child: GestureDetector(
+      child: LayrzTappable(
         onTap: onTap,
         child: Container(
           color: backgroundColor,
@@ -275,17 +277,20 @@ class _SelectItemRow<T> extends StatelessWidget {
           child: Row(
             children: [
               // Item content (custom or default)
-              Expanded(
-                child:
-                    item.child ??
-                    Text(
-                      item.labelText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: tokens.typography.body.copyWith(
-                        color: textColor,
+              DefaultTextStyle(
+                style: context.titleStyle,
+                child: Expanded(
+                  child:
+                      item.child ??
+                      Text(
+                        item.labelText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: tokens.typography.body.copyWith(
+                          color: textColor,
+                        ),
                       ),
-                    ),
+                ),
               ),
 
               // Selection indicator

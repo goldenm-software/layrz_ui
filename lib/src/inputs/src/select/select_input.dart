@@ -173,6 +173,9 @@ class LayrzSelectInput<T> extends StatefulWidget {
   /// If null, defaults to `tokens.spacing.pd2` (10px on regular, 14px on compact).
   final EdgeInsets? padding;
 
+  /// Defines the expected height of the items in the list.
+  final double itemExtent;
+
   /// Creates a new [LayrzSelectInput] with the given properties.
   const LayrzSelectInput({
     super.key,
@@ -201,6 +204,7 @@ class LayrzSelectInput<T> extends StatefulWidget {
     this.hideDetails = false,
     this.focusNode,
     this.padding,
+    required this.itemExtent,
   }) : assert(
          (prefixIcon == null || prefix == null) &&
              (prefix == null || prefixText == null) &&
@@ -369,6 +373,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           canUnselect: widget.canUnselect,
           filter: widget.filter,
           emptyListText: widget.emptyListText,
+          itemExtent: widget.itemExtent,
           onItemSelected: (item) {
             Navigator.pop(context, item);
           },
@@ -485,67 +490,104 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
       button: true,
       enabled: !widget.disabled,
       expanded: isExpanded,
-      child: Container(
-        decoration: BoxDecoration(
-          color: spec.backgroundColor,
-          border: Border.all(color: spec.borderColor, width: spec.borderWidth),
-          borderRadius: tokens.radius.br2,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                // A fallback tap target for the chrome region outside the field's own
-                // text content (e.g. the floating label, padding): `LayrzEditableField`'s
-                // gesture handling only claims the text's own hit region, so a tap
-                // landing elsewhere in the chrome would otherwise do nothing (verified:
-                // see the doc comment on `_buildField`). `LayrzTappable` hit-tests
-                // opaquely but tests children FIRST -- Flutter's hit-testing always
-                // visits descendants before the ancestor considers itself -- so this
-                // never intercepts a tap the field's own selection gesture recognizer
-                // already claims; both simply enter the same arena for that pointer,
-                // and the deeper (field's own) recognizer wins on the text itself.
-                // Colors are fully transparent: `LayrzInputStyleSpec`-driven painting
-                // on the chrome itself already reflects hover/press/focus, and this
-                // must not paint a second, competing tint on top of that.
-                child: LayrzTappable(
-                  onTap: widget.disabled ? null : onOpen,
-                  disabled: widget.disabled,
-                  color: const Color(0x00000000),
-                  hoverColor: const Color(0x00000000),
-                  pressedColor: const Color(0x00000000),
-                  child: LayrzInputChrome(
-                    labelText: widget.labelText,
-                    hintText: widget.hintText,
-                    isRequired: widget.isRequired,
-                    prefixSlot: prefixSlot,
-                    suffixSlot: suffixSlot,
-                    disabled: widget.disabled,
-                    readOnly: false,
-                    errors: widget.errors,
-                    hideDetails: widget.hideDetails,
-                    states: _states,
-                    helpTitleText: widget.helpTitleText,
-                    helpContentText: widget.helpContentText,
-                    controller: _controller,
-                    padding: widget.padding,
-                    borderRadius: BorderRadius.zero,
-                    showBorder: false,
-                    child: LayrzEditableField(config: fieldConfig),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Label (rendered by number input, not by chrome)
+          if (widget.labelText != null)
+            Padding(
+              padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+              child: ExcludeSemantics(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: widget.labelText,
+                        style: tokens.typography.label.copyWith(
+                          color: tokens.colors.fg2,
+                        ),
+                      ),
+                      if (widget.isRequired)
+                        TextSpan(
+                          text: '*',
+                          style: tokens.typography.label.copyWith(
+                            color: tokens.colors.danger,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
-              _SelectFieldCaret(
-                onTap: widget.disabled ? null : onOpen,
-                isDisabled: widget.disabled,
-                hasErrors: hasErrors,
-                states: _states,
+            ),
+          Container(
+            decoration: BoxDecoration(
+              color: spec.backgroundColor,
+              borderRadius: tokens.radius.br2,
+              border: Border.all(
+                color: spec.borderColor,
+                width: spec.borderWidth,
+                strokeAlign: BorderSide.strokeAlignOutside,
               ),
-            ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    // A fallback tap target for the chrome region outside the field's own
+                    // text content (e.g. the floating label, padding): `LayrzEditableField`'s
+                    // gesture handling only claims the text's own hit region, so a tap
+                    // landing elsewhere in the chrome would otherwise do nothing (verified:
+                    // see the doc comment on `_buildField`). `LayrzTappable` hit-tests
+                    // opaquely but tests children FIRST -- Flutter's hit-testing always
+                    // visits descendants before the ancestor considers itself -- so this
+                    // never intercepts a tap the field's own selection gesture recognizer
+                    // already claims; both simply enter the same arena for that pointer,
+                    // and the deeper (field's own) recognizer wins on the text itself.
+                    // Colors are fully transparent: `LayrzInputStyleSpec`-driven painting
+                    // on the chrome itself already reflects hover/press/focus, and this
+                    // must not paint a second, competing tint on top of that.
+                    child: LayrzTappable(
+                      onTap: widget.disabled ? null : onOpen,
+                      disabled: widget.disabled,
+                      color: const Color(0x00000000),
+                      hoverColor: const Color(0x00000000),
+                      pressedColor: const Color(0x00000000),
+                      borderRadius: tokens.radius.br2,
+                      child: LayrzInputChrome(
+                        labelText: null,
+                        hintText: widget.hintText,
+                        isRequired: widget.isRequired,
+                        prefixSlot: prefixSlot,
+                        suffixSlot: suffixSlot,
+                        disabled: widget.disabled,
+                        readOnly: false,
+                        errors: widget.errors,
+                        hideDetails: widget.hideDetails,
+                        states: _states,
+                        helpTitleText: widget.helpTitleText,
+                        helpContentText: widget.helpContentText,
+                        controller: _controller,
+                        padding: widget.padding,
+                        borderRadius: BorderRadius.zero,
+                        showBorder: false,
+                        child: LayrzEditableField(config: fieldConfig),
+                      ),
+                    ),
+                  ),
+                  _SelectFieldCaret(
+                    onTap: widget.disabled ? null : onOpen,
+                    isDisabled: widget.disabled,
+                    hasErrors: hasErrors,
+                    states: _states,
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -591,6 +633,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           panelController: _panelController,
           query: widget.enableSearch && _isQuerying ? _controller.text : '',
           onItemSelected: _commitSelection,
+          itemExtent: widget.itemExtent,
         ),
       );
     }
