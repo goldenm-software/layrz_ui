@@ -349,7 +349,9 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Otherwise, returns the specified mode.
   LayrzSearchInputMode _resolveMode(BuildContext context) {
     if (widget.mode == LayrzSearchInputMode.auto) {
-      return context.isCompact ? LayrzSearchInputMode.icon : LayrzSearchInputMode.field;
+      return context.isCompact
+          ? LayrzSearchInputMode.icon
+          : LayrzSearchInputMode.field;
     }
     return widget.mode;
   }
@@ -416,7 +418,10 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     _syncDisabledState();
 
-    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify, isDecorative: true);
+    final prefixSlot = resolvePrefixSlot(
+      prefixIcon: MdiIcons.magnify,
+      isDecorative: true,
+    );
     final suffixSlot = resolveSuffixSlot(
       suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
       onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
@@ -434,7 +439,10 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       enabled: !widget.disabled,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: (widget.maxWidth ?? double.infinity).clamp(0.0, double.infinity),
+          maxWidth: (widget.maxWidth ?? double.infinity).clamp(
+            0.0,
+            double.infinity,
+          ),
         ),
         child: LayrzInputChrome(
           labelText: resolvedLabel,
@@ -461,16 +469,17 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   ///
   /// [LayrzAnchoredPanel] is the single visual container here: it already draws the
   /// background, shadow, and rounded corners (`tokens.radius.br3`). The chrome is told
-  /// `showBorder: false` and given a matching `borderRadius` so it never draws a second,
-  /// differently-rounded rectangle inside the panel (the "double rounded rectangle" bug).
+  /// `showBorder: false` so it never draws a second, differently-rounded rectangle inside
+  /// the panel (the "double rounded rectangle" bug).
   ///
   /// That removes the chrome's only carrier of the focused/error visual states, so this
-  /// method wraps the chrome in its own [Container] that paints a border -- at the exact
-  /// same radius as the panel -- only while [_states] is focused or [LayrzSearchInput.errors]
-  /// is non-empty. In every other state (rest, hover, disabled, plain read-only) that
-  /// wrapper paints nothing, preserving the "one floating surface" look; the moment the
-  /// field is focused or errored, the whole panel reads as carrying a colored ring instead
-  /// of the field growing a mismatched inner border.
+  /// method instead hands the panel a [LayrzAnchoredPanelBorder] -- painted by the panel
+  /// around its own capped viewport, not by this widget around its content, mirroring the
+  /// same trick [LayrzSelectInput] uses -- only while [_states] is focused or
+  /// [LayrzSearchInput.errors] is non-empty. In every other state (rest, hover, disabled,
+  /// plain read-only) no border is passed at all, preserving the "one floating surface"
+  /// look; the moment the field is focused or errored, the whole panel reads as carrying a
+  /// colored ring instead of the field growing a mismatched inner border.
   Widget _buildIconMode(BuildContext context) {
     final tokens = context.tokens;
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
@@ -478,7 +487,10 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     _syncDisabledState();
 
-    final prefixSlot = resolvePrefixSlot(prefixIcon: MdiIcons.magnify, isDecorative: true);
+    final prefixSlot = resolvePrefixSlot(
+      prefixIcon: MdiIcons.magnify,
+      isDecorative: true,
+    );
     final suffixSlot = resolveSuffixSlot(
       suffixIcon: _controller.text.isNotEmpty ? MdiIcons.close : null,
       onSuffixTap: _controller.text.isNotEmpty ? _clearSearch : null,
@@ -499,11 +511,16 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       hasErrors: hasErrors,
       readOnly: widget.readOnly,
     );
-    final showFocusRing = !widget.disabled && (_states.contains(WidgetState.focused) || hasErrors);
+    final showFocusRing =
+        !widget.disabled &&
+        (_states.contains(WidgetState.focused) || hasErrors);
 
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
-      widthBounds: const LayrzAnchoredPanelWidthBounds(minWidth: 280.0, maxWidth: 480.0),
+      widthBounds: const LayrzAnchoredPanelWidthBounds(
+        minWidth: 280.0,
+        maxWidth: 480.0,
+      ),
       preferredSide: widget.preferredSide,
       onOpen: _handlePanelOpened,
       builder: (context, controller) {
@@ -515,35 +532,34 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           style: LayrzButtonStyle.elevatedFab,
         );
       },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: tokens.radius.br3,
-          border: showFocusRing
-              ? Border.all(
-                  color: spec.borderColor,
-                  width: spec.borderWidth,
-                )
-              : null,
-        ),
-        child: LayrzInputChrome(
-          labelText: null,
-          hintText: hintText,
-          isRequired: widget.isRequired,
-          prefixSlot: prefixSlot,
-          suffixSlot: suffixSlot,
-          disabled: widget.disabled,
-          readOnly: widget.readOnly,
-          errors: widget.errors,
-          hideDetails: false,
-          states: _states,
-          helpTitleText: widget.helpTitleText,
-          helpContentText: widget.helpContentText,
-          controller: _controller,
-          padding: widget.padding,
-          borderRadius: tokens.radius.br3,
-          showBorder: false,
-          child: LayrzEditableField(config: fieldConfig),
-        ),
+      // Painted by the panel around its own capped viewport instead of by this
+      // widget around its content -- see the method doc above. `null` when
+      // `showFocusRing` is false preserves today's exact resting-state
+      // behaviour (no border at all, not merely a transparent one).
+      border: showFocusRing
+          ? LayrzAnchoredPanelBorder(
+              color: spec.borderColor,
+              width: spec.borderWidth,
+            )
+          : null,
+      child: LayrzInputChrome(
+        labelText: null,
+        hintText: hintText,
+        isRequired: widget.isRequired,
+        prefixSlot: prefixSlot,
+        suffixSlot: suffixSlot,
+        disabled: widget.disabled,
+        readOnly: widget.readOnly,
+        errors: widget.errors,
+        hideDetails: false,
+        states: _states,
+        helpTitleText: widget.helpTitleText,
+        helpContentText: widget.helpContentText,
+        controller: _controller,
+        padding: widget.padding,
+        borderRadius: tokens.radius.br3,
+        showBorder: false,
+        child: LayrzEditableField(config: fieldConfig),
       ),
     );
   }
