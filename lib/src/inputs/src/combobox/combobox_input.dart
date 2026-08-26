@@ -372,6 +372,27 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     widget.onChanged?.call(currentText);
   }
 
+  /// Closes the overlay and, if free-form entry is disallowed, reverts the
+  /// field's text — invoked on any loss of [_fieldFocusNode]'s focus.
+  ///
+  /// **Why this still exists after the panel-tap-region fix:** before that fix,
+  /// this was the amplifier that turned a mere focus loss into a destroyed tap —
+  /// a mouse tap-down on an option unfocused the field (see [_buildMenuOverlay]'s
+  /// doc comment), and this method's unconditional [MenuController.close] then
+  /// tore the overlay down before the option's own tap could complete. With the
+  /// grouping fix in place, a tap *inside* the overlay no longer counts as
+  /// "outside" the field, so it no longer reaches this method at all for that
+  /// case — the reported defect is fixed at its root, not by this method.
+  ///
+  /// This method is kept because focus can still legitimately move away from
+  /// the field for reasons that are not a tap inside the overlay at all — Tab
+  /// key navigation, a programmatic `FocusScope` change elsewhere in the app, or
+  /// the window itself losing focus — and closing the overlay on any of those is
+  /// correct, expected combobox behavior. [LayrzSelectInput] does not need an
+  /// equivalent because its own blur handler never closes its panel; this
+  /// combobox's overlay is coupled to the field's focus by design (documented at
+  /// the top of this class: "the text field retains focus while the overlay is
+  /// open"), so losing that focus for any reason should close it.
   void _handleBlur() {
     _menuController.close();
 
@@ -489,23 +510,35 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     final filtered = _getFilteredOptions();
     final emptyText = widget.emptyOptionsText ?? context.l10n.comboboxEmpty;
 
-    return TapRegion(
-      groupId: info.tapRegionGroupId,
-      onTapOutside: (PointerDownEvent event) {
-        MenuController.maybeOf(context)?.close();
-      },
-      child: CustomSingleChildLayout(
-        delegate: ComboBoxLayoutDelegate(
-          anchorRect: info.anchorRect,
-          overlaySize: info.overlaySize,
-          tokens: tokens,
-          maxHeight: _kComboBoxOverlayMaxHeight,
-        ),
-        child: DesktopOverlay(
-          options: filtered,
-          highlightedIndex: _highlightedIndex,
-          onSelected: _commitValue,
-          emptyText: emptyText,
+    // Wrapped in [TextFieldTapRegion] so a tap on an option is never treated as
+    // "outside" this combobox's own [EditableText]. Without this, a mouse-kind
+    // tap-down on an option is outside-of-field by `EditableText`'s own
+    // unconditional (for mouse) tap-outside handling, which unfocuses
+    // `_fieldFocusNode` before the tap reaches pointer-up; `_handleFocusChange`
+    // then calls `_handleBlur`, which closes this very overlay mid-gesture,
+    // destroying the tap before `DesktopOverlay`'s `onSelected` ever fires. This
+    // combobox builds its own overlay directly with `RawMenuAnchor` rather than
+    // through `LayrzAnchoredPanel`, so the same fix applied there (see its
+    // `_buildPanelOverlay`) is duplicated here for this hand-rolled overlay.
+    return TextFieldTapRegion(
+      child: TapRegion(
+        groupId: info.tapRegionGroupId,
+        onTapOutside: (PointerDownEvent event) {
+          MenuController.maybeOf(context)?.close();
+        },
+        child: CustomSingleChildLayout(
+          delegate: ComboBoxLayoutDelegate(
+            anchorRect: info.anchorRect,
+            overlaySize: info.overlaySize,
+            tokens: tokens,
+            maxHeight: _kComboBoxOverlayMaxHeight,
+          ),
+          child: DesktopOverlay(
+            options: filtered,
+            highlightedIndex: _highlightedIndex,
+            onSelected: _commitValue,
+            emptyText: emptyText,
+          ),
         ),
       ),
     );

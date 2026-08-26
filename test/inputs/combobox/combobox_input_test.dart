@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -601,5 +602,194 @@ void main() {
         expect(lastChanged, 'Beta');
       },
     );
+
+    group('panel tap region (H1)', () {
+      // Regression coverage for the reported defect: "tapping an option in
+      // LayrzComboBoxInput's overlay does nothing." Root cause: the overlay
+      // was not grouped with the field's own `TextFieldTapRegion`, so a
+      // mouse-kind tap-down on an option counted as "outside" the field for
+      // `EditableText`'s own (mouse-unconditional, touch-conditional) tap-
+      // outside handling, unfocusing it; `_handleFocusChange` then called
+      // `_handleBlur`, which closed the overlay mid-gesture via
+      // `_menuController.close()` before the option's own `onTap` ever fired
+      // on pointer-up. `flutter_test`'s default synthetic taps use
+      // `PointerDeviceKind.touch`, which this SDK path never unfocuses for —
+      // which is exactly why 2648 prior passing tests said nothing about a
+      // widget the maintainer could not use with a mouse. These tests
+      // exercise a real `PointerDeviceKind.mouse` gesture instead.
+      void setDesktopSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      Future<void> openOverlay(WidgetTester tester) async {
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('a mouse tap on an option commits the selection', (tester) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+        String? lastChanged;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo', 'Charlie'],
+            onChanged: (value) {
+              changedCount++;
+              lastChanged = value;
+            },
+          ),
+        );
+
+        await openOverlay(tester);
+
+        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
+        expect(optionFinder, findsOneWidget, reason: 'option must be visible before tapping it');
+        final optionCenter = tester.getCenter(optionFinder);
+
+        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.mouse);
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(
+          changedCount,
+          1,
+          reason: 'a mouse tap on the option must commit the selection exactly once, not be destroyed',
+        );
+        expect(lastChanged, 'Bravo');
+      });
+
+      testWidgets('a touch tap on an option commits the selection, matching mouse behavior', (tester) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+        String? lastChanged;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo', 'Charlie'],
+            onChanged: (value) {
+              changedCount++;
+              lastChanged = value;
+            },
+          ),
+        );
+
+        await openOverlay(tester);
+
+        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
+        final optionCenter = tester.getCenter(optionFinder);
+
+        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.touch);
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(changedCount, 1, reason: 'touch must commit the selection exactly like a mouse tap does');
+        expect(lastChanged, 'Bravo');
+      });
+
+      testWidgets('tapping an option with a mouse pointer keeps the field focused', (tester) async {
+        setDesktopSize(tester);
+        final focusNode = FocusNode();
+        addTearDown(focusNode.dispose);
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo', 'Charlie'],
+            focusNode: focusNode,
+          ),
+        );
+
+        await openOverlay(tester);
+        expect(focusNode.hasFocus, isTrue, reason: 'opening the overlay must keep the field focused');
+
+        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
+        final optionCenter = tester.getCenter(optionFinder);
+
+        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.mouse);
+        await tester.pump();
+
+        expect(
+          focusNode.hasFocus,
+          isTrue,
+          reason: 'a tap landing inside the overlay must never unfocus the field mid-gesture',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('a genuine mouse tap outside the field and overlay closes it without committing', (tester) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          Column(
+            children: [
+              LayrzComboBoxInput(
+                labelText: 'Choose',
+                options: const ['Alpha', 'Bravo', 'Charlie'],
+                onChanged: (_) => changedCount++,
+              ),
+              const SizedBox(height: 400),
+            ],
+          ),
+        );
+
+        await openOverlay(tester);
+        expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
+
+        final gesture = await tester.startGesture(const Offset(20, 20), kind: PointerDeviceKind.mouse);
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(find.byType(OptionItem), findsNothing, reason: 'a genuine outside tap must close the overlay');
+        expect(changedCount, 0, reason: 'dismissing outside must not commit any option');
+      });
+
+      testWidgets(
+        'a genuine touch tap outside the field and overlay closes it, matching mouse behavior',
+        (tester) async {
+          setDesktopSize(tester);
+          var changedCount = 0;
+
+          await pumpThemedApp(
+            tester,
+            Column(
+              children: [
+                LayrzComboBoxInput(
+                  labelText: 'Choose',
+                  options: const ['Alpha', 'Bravo', 'Charlie'],
+                  onChanged: (_) => changedCount++,
+                ),
+                const SizedBox(height: 400),
+              ],
+            ),
+          );
+
+          await openOverlay(tester);
+          expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
+
+          final gesture = await tester.startGesture(const Offset(20, 20), kind: PointerDeviceKind.touch);
+          await tester.pump();
+          await gesture.up();
+          await tester.pumpAndSettle();
+
+          expect(find.byType(OptionItem), findsNothing, reason: 'a genuine outside tap must close the overlay');
+          expect(changedCount, 0, reason: 'dismissing outside must not commit any option');
+        },
+      );
+    });
   });
 }

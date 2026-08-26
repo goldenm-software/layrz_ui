@@ -267,38 +267,52 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
   Widget _buildPanelOverlay(BuildContext context, RawMenuOverlayInfo info) {
     final tokens = context.tokens;
 
-    Widget panelContent = TapRegion(
-      groupId: info.tapRegionGroupId,
-      onTapOutside: (PointerDownEvent event) {
-        MenuController.maybeOf(context)?.close();
-      },
-      child: CustomSingleChildLayout(
-        delegate: LayrzAnchoredPanelLayoutDelegate(
-          anchorRect: info.anchorRect,
-          preferredSide: widget.preferredSide,
-          alignment: widget.alignment,
-          widthPolicy: widget.widthPolicy,
-          widthBounds: widget.widthBounds,
-          gap: widget.gap,
-          overlaySize: info.overlaySize,
-          tokens: tokens,
-          maxHeight: widget.maxHeight,
-          onFlipped: widget.onFlipped,
-        ),
-        child: FadeTransition(
-          opacity: _curvedAnimation,
-          child: Container(
-            decoration: BoxDecoration(
-              color: tokens.colors.sf1,
-              borderRadius: tokens.radius.br3,
-              boxShadow: tokens.shadow.elevation3,
-            ),
-            child: Focus(
-              focusNode: _panelFocusNode,
-              child: ClipRRect(
+    // Wrapped in [TextFieldTapRegion] so a tap on the panel's content is never
+    // treated as "outside" a nearby [EditableText] (e.g. the field that anchors
+    // this panel, when the anchor is an editable field such as in
+    // `LayrzComboBoxInput`). Without this, `EditableText`'s own tap-outside
+    // handling — which is unconditional for a mouse pointer, unlike touch, per
+    // its own platform-conditional design — unfocuses the field before the tap
+    // on a panel option reaches pointer-up, destroying the tap. Grouping the
+    // panel with the field is the mechanism the framework documents for exactly
+    // this case; see [TextFieldTapRegion]'s own doc comment. This nests inside
+    // the [TapRegion] below, which is a separate group (`info.tapRegionGroupId`)
+    // used by [RawMenuAnchor] itself to detect genuine outside taps and close
+    // the panel — the two groups serve different purposes and do not conflict.
+    Widget panelContent = TextFieldTapRegion(
+      child: TapRegion(
+        groupId: info.tapRegionGroupId,
+        onTapOutside: (PointerDownEvent event) {
+          MenuController.maybeOf(context)?.close();
+        },
+        child: CustomSingleChildLayout(
+          delegate: LayrzAnchoredPanelLayoutDelegate(
+            anchorRect: info.anchorRect,
+            preferredSide: widget.preferredSide,
+            alignment: widget.alignment,
+            widthPolicy: widget.widthPolicy,
+            widthBounds: widget.widthBounds,
+            gap: widget.gap,
+            overlaySize: info.overlaySize,
+            tokens: tokens,
+            maxHeight: widget.maxHeight,
+            onFlipped: widget.onFlipped,
+          ),
+          child: FadeTransition(
+            opacity: _curvedAnimation,
+            child: Container(
+              decoration: BoxDecoration(
+                color: tokens.colors.sf1,
                 borderRadius: tokens.radius.br3,
-                child: SingleChildScrollView(
-                  child: widget.child,
+                boxShadow: tokens.shadow.elevation3,
+              ),
+              child: Focus(
+                focusNode: _panelFocusNode,
+                child: ClipRRect(
+                  borderRadius: tokens.radius.br3,
+                  child: SingleChildScrollView(
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),
