@@ -10,7 +10,6 @@ import '../shared/editable_field.dart';
 import '../shared/input_chrome.dart';
 import '../shared/input_footer_slot.dart';
 import '../shared/input_slot.dart';
-import 'combobox_custom_value_row.dart';
 import 'combobox_surface.dart';
 
 /// Maximum height, in logical pixels, of the desktop overlay's option list.
@@ -48,15 +47,9 @@ const double _kComboBoxOverlayMaxHeight = 300.0;
 /// copied: nothing needs to be seeded or resynced across the transition.
 ///
 /// **Free-form entry** (default): When [allowFreeForm] is true, any text the user types
-/// is a valid value. On blur or Enter, the field commits whatever is typed. When false,
-/// the field reverts to the last matching option on blur.
-///
-/// **The "use '&lt;typed&gt;'" row (Q4).** When the typed text is non-empty and does
-/// not exactly match any option, the panel shows an explicit
-/// [LayrzComboBoxCustomValueRow] directly under the input, above the filtered
-/// option list. Committing it -- by tap or Enter -- behaves exactly like
-/// committing a matching option. A custom value is never committed implicitly
-/// on dismiss; only an explicit act commits it.
+/// is a valid value -- reported via [onChanged] as the user types, with no separate
+/// confirmation step required. On blur or Enter, the field commits whatever is typed.
+/// When false, the field reverts to the last matching option on blur.
 ///
 /// **Filtering**: Options are matched case-insensitively from the start of each option.
 /// The [enableAutocomplete] flag controls whether filtering is applied (when true, default)
@@ -292,9 +285,8 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// detached -- no spurious blur, no self-inflicted close.
   final GlobalKey<LayrzEditableFieldState> _sharedFieldKey = GlobalKey<LayrzEditableFieldState>();
 
-  /// Highlight index across the combined navigable list: the "use '&lt;typed&gt;'"
-  /// row (index 0, when shown) followed by the filtered options. `-1` means no
-  /// row is highlighted. See [_navigableRowCount] and [_commitHighlighted].
+  /// Highlight index across the filtered options list. `-1` means no option
+  /// is highlighted. See [_navigableRowCount] and [_commitHighlighted].
   int _highlightedIndex = -1;
 
   /// The text last reported to [LayrzComboBoxInput.onChanged].
@@ -460,22 +452,11 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     return widget.options.where((option) => option.toLowerCase().startsWith(text)).toList();
   }
 
-  /// The current typed text, non-empty and not an exact match to any option --
-  /// i.e. the condition under which the "use '&lt;typed&gt;'" row is shown
-  /// (Q4). Returns null when the row should not be shown.
-  String? _getCustomValueCandidate() {
-    final text = _controller.text;
-    if (text.isEmpty) return null;
-    if (widget.options.contains(text)) return null;
-    return text;
-  }
-
-  /// The number of navigable rows in the currently open panel: the "use
-  /// '&lt;typed&gt;'" row (if shown) plus the filtered options. Used to keep
-  /// [_highlightedIndex] within bounds across arrow-key navigation.
+  /// The number of navigable rows in the currently open panel: the filtered
+  /// options. Used to keep [_highlightedIndex] within bounds across
+  /// arrow-key navigation.
   int _navigableRowCount() {
-    final hasCustomRow = _getCustomValueCandidate() != null;
-    return (hasCustomRow ? 1 : 0) + _getFilteredOptions().length;
+    return _getFilteredOptions().length;
   }
 
   void _openOverlay() {
@@ -514,9 +495,9 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   void _commitValue(String value) {
-    // A commit (tapping an option, committing the custom-value row, pressing
-    // Enter on a highlighted row, or picking from the bottom sheet) always
-    // reports `onChanged`, exactly once — including when `value` already
+    // A commit (tapping an option, pressing Enter on a highlighted row, or
+    // picking from the bottom sheet) always reports `onChanged`, exactly
+    // once — including when `value` already
     // matches the field's current text (typing an option's full text and
     // then tapping it, or re-selecting the option already shown). Writing
     // `_lastNotifiedText` and calling `onChanged` *before* touching the
@@ -536,27 +517,11 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     _fieldFocusNode.unfocus();
   }
 
-  /// Commits whichever row [_highlightedIndex] currently points at (the
-  /// custom-value row, if shown and highlighted at index 0, otherwise an
-  /// option), invoked on Enter.
+  /// Commits the option [_highlightedIndex] currently points at, invoked on Enter.
   void _commitHighlighted() {
     if (_highlightedIndex < 0) return;
 
-    final customValue = _getCustomValueCandidate();
     final filtered = _getFilteredOptions();
-
-    if (customValue != null) {
-      if (_highlightedIndex == 0) {
-        _commitValue(customValue);
-        return;
-      }
-      final optionIndex = _highlightedIndex - 1;
-      if (optionIndex >= 0 && optionIndex < filtered.length) {
-        _commitValue(filtered[optionIndex]);
-      }
-      return;
-    }
-
     if (_highlightedIndex < filtered.length) {
       _commitValue(filtered[_highlightedIndex]);
     }
@@ -720,12 +685,11 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     );
   }
 
-  /// Builds the panel's content: the live input row, the optional custom-value
-  /// row (Q4), and the filtered option list — see [LayrzComboBoxPanelContent].
+  /// Builds the panel's content: the live input row and the filtered option
+  /// list — see [LayrzComboBoxPanelContent].
   Widget _buildPanelContent(BuildContext context) {
     final filtered = _getFilteredOptions();
     final emptyText = widget.emptyOptionsText ?? context.l10n.comboboxEmpty;
-    final customValue = _getCustomValueCandidate();
 
     final fieldRow = _buildFieldChrome(
       context,
@@ -734,21 +698,10 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       isPanelRow: true,
     );
 
-    // With a custom-value row shown, index 0 is the custom row and option
-    // indices shift by one; without it, indices map directly onto `filtered`.
-    final optionHighlightOffset = customValue != null ? 1 : 0;
-
     return LayrzComboBoxPanelContent(
       fieldRow: fieldRow,
-      customValueRow: customValue == null
-          ? null
-          : LayrzComboBoxCustomValueRow(
-              typedText: customValue,
-              isHighlighted: _highlightedIndex == 0,
-              onCommit: _commitValue,
-            ),
       options: filtered,
-      highlightedIndex: _highlightedIndex - optionHighlightOffset,
+      highlightedIndex: _highlightedIndex,
       onSelected: _commitValue,
       emptyText: emptyText,
     );
@@ -866,8 +819,9 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   /// Wraps [child] -- the anchor passed to [Semantics]/[Focus] in [build] --
-  /// with the label above and the error/counter footer below, both rendered
-  /// OUTSIDE [child] entirely.
+  /// with the label above (when [LayrzComboBoxInput.labelText] is non-null)
+  /// and the error/counter footer below, both rendered OUTSIDE [child]
+  /// entirely.
   ///
   /// Mirrors `LayrzSelectInput._appendExtras` and
   /// `LayrzDurationInput._buildInteractiveField`'s identical composition, for
@@ -876,39 +830,45 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// to position the opened overlay via `coverAnchor: true`. A label or error
   /// footer rendered inside that anchor would grow its rect and shift the
   /// overlay off the field it is meant to cover.
+  ///
+  /// **The footer is never gated on the label.** An earlier version of this
+  /// method (copied from `LayrzSelectInput`, which carries the identical bug)
+  /// short-circuited to `return child` whenever [LayrzComboBoxInput.labelText]
+  /// was null, which meant [LayrzComboBoxInput.errors] rendered nothing at all
+  /// on a field with no label -- a field with an error and no label showed no
+  /// error text whatsoever. Only the label row itself is conditional now; this
+  /// method always wraps in the [Column] so [LayrzInputFooterSlot] renders
+  /// whenever it has something to show, independent of [labelText].
   Widget _appendExtras(Widget child, LayrzTokens tokens) {
-    if (widget.labelText == null) {
-      return child;
-    }
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
-          child: ExcludeSemantics(
-            child: RichText(
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: widget.labelText,
-                    style: tokens.typography.label.copyWith(
-                      color: tokens.colors.fg2,
-                    ),
-                  ),
-                  if (widget.isRequired)
+        if (widget.labelText != null)
+          Padding(
+            padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+            child: ExcludeSemantics(
+              child: RichText(
+                text: TextSpan(
+                  children: [
                     TextSpan(
-                      text: '*',
+                      text: widget.labelText,
                       style: tokens.typography.label.copyWith(
-                        color: tokens.colors.danger,
+                        color: tokens.colors.fg2,
                       ),
                     ),
-                ],
+                    if (widget.isRequired)
+                      TextSpan(
+                        text: '*',
+                        style: tokens.typography.label.copyWith(
+                          color: tokens.colors.danger,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
         child,
         LayrzInputFooterSlot(
           errors: widget.errors,

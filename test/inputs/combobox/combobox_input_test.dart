@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_ui/src/inputs/src/combobox/combobox_custom_value_row.dart';
 import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
@@ -942,7 +941,7 @@ void main() {
       });
     });
 
-    group('keyboard navigation and the custom-value row (Q4)', () {
+    group('keyboard navigation (custom-value row removed)', () {
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -966,7 +965,7 @@ void main() {
       // not wrapped by that `Shortcuts`), which is why arrow-key navigation
       // *while open* -- covered by the tests below -- works correctly.
 
-      testWidgets('the "use" row appears first and shifts option highlight indices by one', (tester) async {
+      testWidgets('arrow-down highlights the first option directly, with no index shift', (tester) async {
         setDesktopSize(tester);
 
         await pumpThemedApp(
@@ -979,38 +978,29 @@ void main() {
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        // "Ala" matches both options by prefix (so the option list stays
-        // populated) but is not an exact match to either (so the
-        // custom-value row is also shown) -- exercising both rows together.
+        // "Ala" matches both options by prefix but is not an exact match to
+        // either -- previously this also shown the custom-value row at index
+        // 0; the row is gone, so the list itself is the whole navigable set.
         await tester.enterText(find.byType(EditableText), 'Ala');
         await tester.pumpAndSettle();
 
-        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
         expect(find.byType(OptionItem), findsNWidgets(2));
 
-        // Arrow down once highlights the custom-value row (index 0); a
-        // second arrow down moves the highlight to the first option, which
-        // this asserts by reading `highlightedIndex` off the rendered
-        // `LayrzComboBoxPanelContent` -- the actual value `_handleKeyEvent`
-        // computed, not an inference from color.
+        // A single arrow-down must land directly on the first option (index
+        // 0) -- no longer requiring a second arrow-down to get past a row
+        // that no longer exists.
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pump();
         final afterFirstDown = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
-        expect(afterFirstDown.highlightedIndex, -1, reason: 'index 0 belongs to the custom-value row, not an option');
-
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pump();
-        final afterSecondDown = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
         expect(
-          afterSecondDown.highlightedIndex,
+          afterFirstDown.highlightedIndex,
           0,
-          reason: 'the second arrow-down must land on the first option, index-shifted by the custom-value row',
+          reason: 'with the custom-value row gone, the first arrow-down lands on the first option directly',
         );
       });
 
-      testWidgets('committing the custom-value row via Enter reports the typed value exactly once', (tester) async {
+      testWidgets('committing a highlighted option via Enter reports the option value exactly once', (tester) async {
         setDesktopSize(tester);
-        var changedCount = 0;
         var submitCount = 0;
         String? lastSubmitted;
 
@@ -1019,7 +1009,6 @@ void main() {
           LayrzComboBoxInput(
             labelText: 'Choose',
             options: const ['Alpha', 'Bravo'],
-            onChanged: (_) => changedCount++,
             onSubmit: (value) {
               submitCount++;
               lastSubmitted = value;
@@ -1029,60 +1018,56 @@ void main() {
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(EditableText), 'Custom option');
-        await tester.pumpAndSettle();
-        changedCount = 0; // isolate the commit's own notification
 
-        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
-
-        // The custom-value row is index 0: one arrow-down highlights it.
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pump();
         await tester.testTextInput.receiveAction(TextInputAction.done);
         await tester.pumpAndSettle();
 
-        expect(submitCount, 1, reason: 'Enter on the highlighted custom-value row must commit exactly once');
-        expect(lastSubmitted, 'Custom option');
-        expect(changedCount, 1, reason: 'the commit itself still reports onChanged exactly once');
+        expect(submitCount, 1, reason: 'Enter on the highlighted option must commit exactly once');
+        expect(lastSubmitted, 'Alpha');
       });
 
-      testWidgets('committing an option via Enter after arrowing past the custom-value row', (tester) async {
-        setDesktopSize(tester);
-        String? lastSubmitted;
+      testWidgets(
+        'typing a free-form value that matches no option is still retained via onChanged, with no committed row to confirm it',
+        (tester) async {
+          setDesktopSize(tester);
+          final changes = <String>[];
 
-        await pumpThemedApp(
-          tester,
-          LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: const ['Alpha', 'Bravo'],
-            onSubmit: (value) => lastSubmitted = value,
-          ),
-        );
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              labelText: 'Choose',
+              options: const ['Alpha', 'Bravo'],
+              onChanged: changes.add,
+            ),
+          );
 
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(EditableText), 'zzz-no-match');
-        await tester.pumpAndSettle();
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+          await tester.enterText(find.byType(EditableText), 'zzz-no-match');
+          await tester.pumpAndSettle();
 
-        expect(find.byType(LayrzComboBoxCustomValueRow), findsOneWidget);
-        expect(
-          find.byType(OptionItem),
-          findsNothing,
-          reason: 'the typed text matches no option, so the list is empty and only the custom row is navigable',
-        );
+          // The typed value is already the value -- reported live via
+          // onChanged as the user types, with no confirmation row rendered
+          // anywhere in the panel.
+          expect(changes, contains('zzz-no-match'));
+          expect(find.text('zzz-no-match', findRichText: true), findsWidgets);
+          expect(
+            find.byType(OptionItem),
+            findsNothing,
+            reason: 'the typed text matches no option, so the filtered list is empty',
+          );
 
-        // With no options to land on, arrowing wraps back onto the single
-        // navigable row (the custom-value row) rather than committing an
-        // option that does not exist.
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pump();
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pump();
-        await tester.testTextInput.receiveAction(TextInputAction.done);
-        await tester.pumpAndSettle();
-
-        expect(lastSubmitted, 'zzz-no-match');
-      });
+          // With no options in the navigable list, arrow-down is a no-op --
+          // there is nothing to highlight or commit via Enter.
+          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+          final panel = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
+          expect(panel.highlightedIndex, -1);
+        },
+      );
 
       testWidgets('escape closes the panel via the keyboard without committing', (tester) async {
         setDesktopSize(tester);
