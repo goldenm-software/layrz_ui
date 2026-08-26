@@ -1,6 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.0.13
+
+**The picker inputs now share one elevated panel, and its border sits on the panel instead of inside it.** `LayrzAnchoredPanel` gains an optional `border`, of type `LayrzAnchoredPanelBorder`, painted around the box that wraps its scroll view — the box actually bounded by `maxHeight`. Before, each caller hand-rolled a bordered container *inside* that scroll view, where `SingleChildScrollView` relaxes its child's height to unbounded: with 30 items in a 300px-capped panel the border box measured 1260px, so the stroke ran 960px past the visible edge and cut horizontally through a list row. `LayrzSelectInput` and `LayrzSearchInput` both drop their own bordered box and consume the panel's. The border is painted with `strokeAlignOutside`, so it occupies no layout space and the panel's rect is unchanged.
+
+**`LayrzComboBoxInput` is rebuilt on `LayrzAnchoredPanel`, and the open panel's first row is the live text input.** The hand-rolled `RawMenuAnchor`, its private layout delegate, and its own background and shadow are gone; `LayrzComboBoxInput` now covers its anchor exactly as `LayrzSelectInput` does. Typing continues into the panel with no character loss and no caret jump — the closed field and the panel row are one element, reparented rather than rebuilt. The panel row draws no border of its own (a bordered box inside an already-bordered panel read as a search bar floating in a dropdown), with its padding compensated so the text stays aligned with the closed field.
+
+**`LayrzDurationInput` gets the same panel chrome, fills the anchor's width, and stays open while you edit it.** The panel matches the anchor's width instead of a fixed 280–480 band, and its unit fields wrap to additional rows rather than shrinking below a usable minimum. Tapping a field's `+`/`−` control, or typing into one, no longer dismisses the panel: every field edit and the Reset button previously shared a single `onChanged` callback that the owner treated as "close", so the panel closed on every keystroke. Reset now has its own `onReset` callback and is the only thing that closes it.
+
+**Label and error text move outside the anchor on `LayrzComboBoxInput`.** Both were rendered inside the widget handed to `LayrzAnchoredPanel` as its anchor, so the anchor's rect included the label and the panel opened 24 logical pixels too high, covering the label instead of the field. They now compose around the anchor, matching `LayrzSelectInput` and `LayrzDurationInput`.
+
+### Fixed
+
+- `LayrzDurationInput`'s closed field rendered its summary as blank for any non-null value. The summary text was wrapped in its own padding inside `LayrzInputChrome`'s fixed-height content box, leaving about 4 logical pixels of paintable height — the text was present and correct, and invisible.
+- `LayrzDurationInput` never styled itself as errored. It passed `readOnly: true` into its own style resolution, and `readOnly` outranks `error` in the resolver's precedence, so the danger border and fill could never paint however many errors were supplied. `LayrzDurationInput` exposes no `readOnly` parameter — the flag described an internal fact about the field and silently discarded the caller's error state.
+- `LayrzDurationInput`'s field cropped its rounded corners square on the left. The chrome paints an opaque fill flush against the outer container's physical edge, and the outer clip does not reshape a child's own square-cornered fill sitting inside its bounds. The chrome now carries the inset-corrected radius on its outer-facing corners, matching `LayrzNumberInput`'s step caps and `LayrzSelectInput`'s caret.
+- `LayrzDurationInput`'s unit fields rendered as decimals (`2.0` hours) and accepted a typed decimal separator. They now render as integers and reject fractional entry at the formatter.
+- The error footer on `LayrzSelectInput` and `LayrzComboBoxInput` was gated on `labelText` being non-null, so a field with an error and no label showed no error text at all.
+- Text selection is disabled inside checkbox, radio and input chrome content, so a page-wide `SelectableRegion` no longer selects control labels.
+
+### Breaking
+
+**`LayrzComboBoxInput` no longer shows a custom-value confirmation row.** The open panel previously rendered a `Use "…"` row above the suggestions, which committed the typed text when tapped. It is gone: the typed text is already the value, reported live through `onChanged`, and the options below are suggestions rather than a choice that must be made. Free-form entry is otherwise unchanged, and `allowFreeForm` keeps its meaning. Keyboard navigation shifts accordingly — arrow-down now lands on the first suggestion instead of on the confirmation row.
+
+**`LayrzDurationInput`'s panel no longer sizes itself to its content.** It matches the anchor's width. A caller relying on the previous 280–480 logical-pixel band will see a panel as wide as the field.
+
+---
 
 **`LayrzSelectInput`: the field is now the searcher — a deliberate, maintainer-directed spec change, not a bug fix.** `LayrzSelectInput` was behaving correctly as specified: it was a strictly *controlled* component whose field rendered `value` directly, and a caller that did not feed an updated `value` back after `onChanged` saw no visible update on selection — the contract working as designed, reproduced on both the desktop and mobile presentation, with `onChanged` firing exactly once in every case. The maintainer chose to change that contract anyway, knowingly. The field is now editable and is the searcher when `enableSearch` is `true` (the default): there is no longer a separate search box inside the opened surface, and typing directly into the field filters the list live, showing the selected item's label while idle, the typed query while typing, and reverting to the label on blur if nothing was picked. Both `enableSearch` values now self-display from internal state — a pick updates the field's own display immediately, whether or not the caller feeds an updated `value` back — and the dropdown chevron moved out of `suffixSlot` to an external sibling, following `LayrzNumberInput`'s step-button composition, so a caller-supplied suffix no longer displaces it (or is displaced by it). See the Breaking section for the full migration note.
 
