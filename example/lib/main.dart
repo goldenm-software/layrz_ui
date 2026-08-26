@@ -34,8 +34,9 @@ import 'src/sections/typography_section.dart';
 /// completes without I/O.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final font = const OpenSansFont();
+  // final font = const OpenSansFont();
   // final font = const FiraSansFont();
+  final font = const NotoSansFont();
   await font.load();
   runApp(ShowroomApp(font: font));
 }
