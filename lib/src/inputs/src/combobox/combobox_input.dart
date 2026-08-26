@@ -4,9 +4,11 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import '../shared/editable_field.dart';
 import '../shared/input_chrome.dart';
+import '../shared/input_footer_slot.dart';
 import '../shared/input_slot.dart';
 import 'combobox_custom_value_row.dart';
 import 'combobox_surface.dart';
@@ -567,10 +569,40 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// `coverAnchor: true` means the panel already renders the real, focused
   /// field in exactly the same position; mounting a second [EditableText]
   /// bound to the same [FocusNode] there would conflict with the panel's.
+  ///
+  /// [isPanelRow] distinguishes the panel's own first row from every other
+  /// caller of this function (the closed desktop field, and the compact/mobile
+  /// field, both of which render standalone and need their own border to read
+  /// as an input at all). The user's own framing: "the panel's input IS the
+  /// field's input, continuing" -- so when this row sits *inside*
+  /// `LayrzAnchoredPanel`'s already-bordered, already-rounded container, it
+  /// must not draw a second border and a second rounded rect of its own. Doing
+  /// so drew a bordered, rounded box nested inside the panel's own bordered,
+  /// rounded box -- a self-contained "field" floating in the dropdown, which
+  /// read as a search bar sitting above a results list (the user's own words:
+  /// "partially search, partially just a TextInput") rather than the closed
+  /// field's border simply continuing uninterrupted into the panel. Mirrors
+  /// how `LayrzSelectInputSurface._buildSearchField` suppresses its own border
+  /// for the identical reason (`showBorder: false`) -- see
+  /// `select_input_surface.dart:307`.
+  ///
+  /// **`labelText`/`errors` are never passed to the inner [LayrzInputChrome]
+  /// here** (`labelText: null`, `hideDetails: true`) -- [build] renders both
+  /// outside this row instead, mirroring `LayrzSelectInput._appendExtras` and
+  /// `LayrzDurationInput._buildInteractiveField`. This is load-bearing, not
+  /// cosmetic: on desktop this chrome IS the anchor handed to
+  /// `LayrzAnchoredPanel.builder`, and with `coverAnchor: true` the opened
+  /// panel positions itself against that anchor's own rect. A label rendered
+  /// *inside* the chrome extends the anchor's rect upward by the label's own
+  /// height, so the panel would land on top of the label instead of the field
+  /// underneath it -- measured directly before this fix: the panel's top
+  /// landed exactly on the label's top, 24.0 logical pixels above the actual
+  /// bordered field box, at the showroom's own configuration.
   Widget _buildFieldChrome(
     BuildContext context, {
     required VoidCallback onOpen,
     required bool readOnlyPlaceholder,
+    bool isPanelRow = false,
   }) {
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
@@ -634,8 +666,29 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       expands: false,
     );
 
+    // `LayrzInputChrome` paints its border with the SDK's default
+    // `BorderSide.strokeAlignInside`, so on the closed field the border
+    // occupies space *inside* the padded box -- the content's effective inset
+    // from the field's own outer edge is `padding + tokens.border.base`, not
+    // `padding` alone (confirmed directly: a bare `Container` with the same
+    // padding shifts its child by exactly the border's own width depending on
+    // whether a border is painted). Suppressing the border for the panel row
+    // (below) removes that inset, so it is added back here as extra padding
+    // -- otherwise the panel row's text would sit `tokens.border.base` closer
+    // to the edge than the closed field's does, a small but real misalignment
+    // the governing "the panel's input IS the field's input, continuing" rule
+    // does not allow. The base padding matches what `LayrzInputChrome` itself
+    // would default to (`pd3` compact / `pd2` regular) when [padding] is null,
+    // computed here because that default lives in a private class local to
+    // `input_chrome.dart` this file cannot reach.
+    final tokens = context.tokens;
+    final basePadding = widget.padding ?? (context.isCompact ? tokens.spacing.pd3 : tokens.spacing.pd2);
+    final panelRowPadding = isPanelRow ? basePadding + EdgeInsets.all(tokens.border.base) : widget.padding;
+
     return LayrzInputChrome(
-      labelText: widget.labelText,
+      // Deliberately null/true -- see the doc comment above on why the label
+      // and error footer must never live inside this chrome.
+      labelText: null,
       hintText: widget.hintText,
       isRequired: widget.isRequired,
       prefixSlot: prefixSlot,
@@ -643,12 +696,17 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       disabled: widget.disabled,
       readOnly: widget.readOnly,
       errors: widget.errors,
-      hideDetails: widget.hideDetails,
+      hideDetails: true,
       states: _states,
       helpTitleText: widget.helpTitleText,
       helpContentText: widget.helpContentText,
       controller: _controller,
-      padding: widget.padding,
+      padding: panelRowPadding,
+      // Only the panel's own row suppresses its border/radius (see the class
+      // doc on `isPanelRow`) -- the closed field (desktop or compact) always
+      // keeps both, since nothing else draws a border around it.
+      showBorder: !isPanelRow,
+      borderRadius: isPanelRow ? BorderRadius.zero : null,
       child: readOnlyPlaceholder
           ? ValueListenableBuilder<TextEditingValue>(
               valueListenable: _controller,
@@ -673,6 +731,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       context,
       onOpen: () {},
       readOnlyPlaceholder: false,
+      isPanelRow: true,
     );
 
     // With a custom-value row shown, index 0 is the custom row and option
@@ -744,6 +803,55 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   Widget build(BuildContext context) {
     final isCompact = context.isCompact;
 
+    final Widget anchor = isCompact
+        ? _buildFieldChrome(context, onOpen: _openOverlay, readOnlyPlaceholder: false)
+        : LayrzAnchoredPanel(
+            widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
+            coverAnchor: true,
+            maxHeight: _kComboBoxOverlayMaxHeight,
+            childFocusNode: _fieldFocusNode,
+            onOpen: () {
+              setState(() {
+                _highlightedIndex = -1;
+              });
+
+              // Focus must land on the panel's own input (Q3), not on
+              // `LayrzAnchoredPanel`'s internal `_panelFocusNode`. The
+              // panel requests focus on its own node via a post-frame
+              // callback in `_handlePanelOpenRequested`, registered
+              // *before* `widget.onOpen` (this callback) runs — so a
+              // single post-frame callback here would lose that race
+              // (fire first, get stolen from one tick later). Nesting a
+              // second callback inside the first pushes this request to
+              // the frame after that steal, mirroring the exact fix
+              // `LayrzSelectInputSurface` uses for the same race.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _fieldFocusNode.requestFocus();
+                });
+              });
+            },
+            onClose: () {
+              setState(() {
+                _highlightedIndex = -1;
+              });
+            },
+            builder: (context, controller) {
+              _panelController = controller;
+              return _buildFieldChrome(
+                context,
+                onOpen: controller.open,
+                readOnlyPlaceholder: controller.isOpen,
+              );
+            },
+            border: LayrzAnchoredPanelBorder(
+              color: widget.errors.isNotEmpty ? context.tokens.colors.danger : context.tokens.colors.primary,
+              width: context.tokens.border.base,
+            ),
+            child: Builder(builder: _buildPanelContent),
+          );
+
     return Semantics(
       label: widget.labelText,
       button: true,
@@ -752,55 +860,63 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       onTap: (widget.disabled || widget.readOnly) ? null : _openOverlay,
       child: Focus(
         onKeyEvent: _handleKeyEvent,
-        child: isCompact
-            ? _buildFieldChrome(context, onOpen: _openOverlay, readOnlyPlaceholder: false)
-            : LayrzAnchoredPanel(
-                widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-                coverAnchor: true,
-                maxHeight: _kComboBoxOverlayMaxHeight,
-                childFocusNode: _fieldFocusNode,
-                onOpen: () {
-                  setState(() {
-                    _highlightedIndex = -1;
-                  });
-
-                  // Focus must land on the panel's own input (Q3), not on
-                  // `LayrzAnchoredPanel`'s internal `_panelFocusNode`. The
-                  // panel requests focus on its own node via a post-frame
-                  // callback in `_handlePanelOpenRequested`, registered
-                  // *before* `widget.onOpen` (this callback) runs — so a
-                  // single post-frame callback here would lose that race
-                  // (fire first, get stolen from one tick later). Nesting a
-                  // second callback inside the first pushes this request to
-                  // the frame after that steal, mirroring the exact fix
-                  // `LayrzSelectInputSurface` uses for the same race.
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      _fieldFocusNode.requestFocus();
-                    });
-                  });
-                },
-                onClose: () {
-                  setState(() {
-                    _highlightedIndex = -1;
-                  });
-                },
-                builder: (context, controller) {
-                  _panelController = controller;
-                  return _buildFieldChrome(
-                    context,
-                    onOpen: controller.open,
-                    readOnlyPlaceholder: controller.isOpen,
-                  );
-                },
-                border: LayrzAnchoredPanelBorder(
-                  color: widget.errors.isNotEmpty ? context.tokens.colors.danger : context.tokens.colors.primary,
-                  width: context.tokens.border.base,
-                ),
-                child: Builder(builder: _buildPanelContent),
-              ),
+        child: _appendExtras(anchor, context.tokens),
       ),
+    );
+  }
+
+  /// Wraps [child] -- the anchor passed to [Semantics]/[Focus] in [build] --
+  /// with the label above and the error/counter footer below, both rendered
+  /// OUTSIDE [child] entirely.
+  ///
+  /// Mirrors `LayrzSelectInput._appendExtras` and
+  /// `LayrzDurationInput._buildInteractiveField`'s identical composition, for
+  /// the identical reason (see the doc comment on [_buildFieldChrome]):
+  /// [child] is -- on desktop -- the exact anchor [LayrzAnchoredPanel] reads
+  /// to position the opened overlay via `coverAnchor: true`. A label or error
+  /// footer rendered inside that anchor would grow its rect and shift the
+  /// overlay off the field it is meant to cover.
+  Widget _appendExtras(Widget child, LayrzTokens tokens) {
+    if (widget.labelText == null) {
+      return child;
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+          child: ExcludeSemantics(
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: widget.labelText,
+                    style: tokens.typography.label.copyWith(
+                      color: tokens.colors.fg2,
+                    ),
+                  ),
+                  if (widget.isRequired)
+                    TextSpan(
+                      text: '*',
+                      style: tokens.typography.label.copyWith(
+                        color: tokens.colors.danger,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        child,
+        LayrzInputFooterSlot(
+          errors: widget.errors,
+          hideDetails: widget.hideDetails,
+          maxLength: null,
+          controller: _controller,
+        ),
+      ],
     );
   }
 }

@@ -204,6 +204,119 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets(
+      'the panel row paints no border of its own -- the closed field does (no box-within-a-box)',
+      (tester) async {
+        // The defect the maintainer actually meant by "partially search,
+        // partially just a TextInput": before this fix, `_buildFieldChrome`
+        // never overrode `LayrzInputChrome`'s `showBorder`/`borderRadius`
+        // defaults, so the panel's field row painted its own full, rounded
+        // border INSIDE `LayrzAnchoredPanel`'s own already-bordered, already-
+        // rounded container -- a box drawn inside a box, reading as a
+        // self-contained search field floating in the dropdown rather than
+        // the closed field's own border simply continuing into the panel.
+        // Mirrors `LayrzSelectInputSurface._buildSearchField`'s
+        // `showBorder: false` (select_input_surface.dart:307), which
+        // suppresses the identical defect for the identical reason.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzComboBoxInput(
+            labelText: 'Country',
+            hintText: 'Select or type a country',
+            options: ['United States', 'Canada', 'Mexico'],
+          ),
+        );
+
+        // Closed field: its `LayrzInputChrome` paints a real border -- this is
+        // the only thing that makes it read as an input field at all, since
+        // nothing else in the tree draws one around it.
+        final closedChromeContainer = tester.widget<Container>(
+          find.descendant(of: find.byType(LayrzInputChrome), matching: find.byType(Container)).first,
+        );
+        final closedDecoration = closedChromeContainer.decoration as BoxDecoration;
+        expect(closedDecoration.border, isNotNull, reason: 'the closed field must keep its own border');
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        // Open panel's field row: same function, same widget type, but no
+        // border and no rounded corners of its own -- it sits flush inside
+        // the panel's own already-bordered, already-rounded container.
+        final panelChromeContainer = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.descendant(
+                  of: find.byType(LayrzComboBoxPanelContent),
+                  matching: find.byType(LayrzInputChrome),
+                ),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final panelDecoration = panelChromeContainer.decoration as BoxDecoration;
+        expect(
+          panelDecoration.border,
+          isNull,
+          reason: 'the panel row must not paint a second border inside the panel\'s own bordered container',
+        );
+        expect(
+          panelDecoration.borderRadius,
+          equals(BorderRadius.zero),
+          reason: 'the panel row must not paint its own rounded corners inside the panel\'s own rounded container',
+        );
+      },
+    );
+
+    testWidgets(
+      "the panel row's text sits at the same horizontal inset as the closed field's (border removal is compensated)",
+      (tester) async {
+        // Removing the panel row's border (previous test) also removes the
+        // `tokens.border.base` inset that border occupied inside the padded
+        // box (Flutter's default `BorderSide.strokeAlignInside` paints the
+        // border INSIDE the padding, not outside it -- confirmed directly
+        // against a bare `Container` before this fix: adding a 1.5px border
+        // with identical padding shifts the child by exactly 1.5px). Left
+        // uncompensated, the panel row's text would sit `tokens.border.base`
+        // closer to the field's own outer edge than the closed field's text
+        // does -- a small but real violation of "the panel's input IS the
+        // field's input, continuing". `_buildFieldChrome` compensates by
+        // adding that same width back as extra padding for the panel row only.
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzComboBoxInput(
+            labelText: 'Country',
+            hintText: 'Select or type a country',
+            options: ['United States', 'Canada', 'Mexico'],
+          ),
+        );
+
+        final closedFieldLeft = tester.getTopLeft(find.byType(LayrzComboBoxInput)).dx;
+        final closedTextLeft = tester.getTopLeft(find.byType(EditableText)).dx;
+        final closedInset = closedTextLeft - closedFieldLeft;
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        final panelLeft = tester.getTopLeft(find.byType(LayrzComboBoxPanelContent)).dx;
+        final panelTextLeft = tester.getTopLeft(find.byType(EditableText)).dx;
+        final panelInset = panelTextLeft - panelLeft;
+
+        expect(
+          panelInset,
+          closeTo(closedInset, 0.5),
+          reason: "the panel row's text must align with the closed field's, not sit closer to the edge",
+        );
+      },
+    );
   });
 
   // DESIGN-145/Q9 parity: pinned again here (in addition to the existing
