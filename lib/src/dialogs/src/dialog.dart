@@ -43,8 +43,10 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 /// edge of the title row, vertically centered with the title text. When it is not
 /// (including the [child] escape hatch), the icon instead floats over the panel's
 /// top-right corner, inset from the edge, so every dialog keeps a visible close
-/// affordance regardless of which slots are used. This is currently always shown —
-/// see [show] for why that is not yet caller-configurable.
+/// affordance regardless of which slots are used. This is always shown and always
+/// dismisses on tap — there is no parameter to suppress it, and none is planned.
+/// See [show]'s [barrierDismissible] doc for why that is intentional rather than
+/// an oversight, even for a dialog whose barrier is not dismissible.
 ///
 /// **Example usage** (a confirm/cancel dialog):
 /// ```dart
@@ -72,19 +74,38 @@ class LayrzDialog {
   /// - [title]: optional widget rendered in the dialog's title slot, above [content].
   ///   Typically a [Text] styled by the caller, or any widget.
   /// - [content]: optional widget rendered in the dialog's body slot, below [title] and
-  ///   above [actions]. Wrapped in a [LayrzScrollbar] over a scroll view so content taller
-  ///   than the dialog's max height scrolls internally instead of overflowing, and in its
-  ///   own [SelectableRegion] so text inside it is selectable and copyable -- matching
-  ///   `DetailPane`'s pattern (always on, no opt-out), since dialog content is presented,
-  ///   read-oriented text rather than an interactive canvas that selection gestures could
-  ///   conflict with. Touch selection handles and the copy toolbar are gated to Android/iOS
-  ///   only, per DESIGN-147 (see [LayrzPlatform.isTouchOS]).
+  ///   above [actions]. Not limited to text -- any widget is accepted, including a
+  ///   [Column], a form, or a mix of widgets. It sizes to its content and scrolls
+  ///   automatically once it exceeds the dialog's max height, with [title] and [actions]
+  ///   staying pinned outside the scroll area. Wrapped in a [LayrzScrollbar] over a scroll
+  ///   view to do this, and in its own [SelectableRegion] so text inside it is selectable
+  ///   and copyable -- matching `DetailPane`'s pattern (always on, no opt-out), since
+  ///   dialog content is presented, read-oriented text rather than an interactive canvas
+  ///   that selection gestures could conflict with. Touch selection handles and the copy
+  ///   toolbar are gated to Android/iOS only, per DESIGN-147 (see [LayrzPlatform.isTouchOS]).
+  ///   **[content] receives unbounded height** from that scroll view -- this is exactly
+  ///   what lets `content: Text(...)` scroll past the max height instead of overflowing,
+  ///   but it means anything inside [content] that tries to fill the space it is given
+  ///   (`Expanded`, `Flexible`, a bare `ListView`/`GridView` with no bound of its own) will
+  ///   throw, since there is no bound to fill. Give such a child an explicit height (e.g.
+  ///   `SizedBox(height: 300, child: ListView(...))`) or set `shrinkWrap: true` on it. For a
+  ///   layout that genuinely needs to fill the dialog's height, use [child] instead --
+  ///   see its own doc for why.
   /// - [actions]: optional list of widgets (typically `LayrzButton`s) rendered in a row
   ///   at the bottom of the dialog, right-aligned with spacing between them.
-  /// - [child]: an escape hatch for content that does not fit the [title]/[content]/[actions]
-  ///   shape. When supplied, it replaces the entire body — [title], [content], and [actions]
-  ///   must all be null. An assertion enforces this at the call site, because mixing the two
-  ///   composition modes would leave it ambiguous which one governs layout.
+  /// - [child]: an escape hatch for layouts the [title]/[content]/[actions] slots cannot
+  ///   express. The main case this exists for is genuinely fill-height content -- an
+  ///   `Expanded`/`Flexible` child, a bare `ListView`/`GridView`, or any layout that needs to
+  ///   occupy the dialog's available height rather than size to its own content. [content]
+  ///   cannot do this (see its own doc: it hands its child unbounded height, so a fill-height
+  ///   widget inside it throws), but [child] hands the caller the whole panel body directly,
+  ///   already bounded by [maxWidth]/[maxHeight], with no intermediate scroll view imposing
+  ///   its own constraint. When supplied, it replaces the entire body — [title], [content],
+  ///   and [actions] must all be null; an assertion enforces this at the call site, because
+  ///   mixing the two composition modes would leave it ambiguous which one governs layout.
+  ///   The trade-off: [child] gets no title row or action row for free, so a caller reaching
+  ///   for it to solve a sizing problem also takes on rebuilding those parts itself if it
+  ///   needs them.
   /// - [barrierDismissible]: whether tapping the barrier outside the dialog dismisses it.
   ///   Defaults to `true` when [actions] is null (an informational dialog with nothing to
   ///   lose), and `false` when [actions] is non-null (a dialog offering a decision should not
@@ -92,11 +113,15 @@ class LayrzDialog {
   ///   explicitly to opt back in, e.g. for a non-destructive confirm/cancel pair). This is a
   ///   deliberate default, not a guess: a dialog holding meaningful input or an unmade
   ///   decision must not treat an accidental barrier tap the same as an explicit dismissal.
-  ///   **Note**: the dismiss ("X") icon described below is currently always rendered and
-  ///   always dismisses on tap, regardless of this value — a decision-bearing dialog that
-  ///   sets `barrierDismissible: false` still exposes a one-tap way out via the X, which
-  ///   bypasses the protection this parameter is meant to give. There is no parameter yet
-  ///   to suppress the X independently; treat this as a known gap rather than an oversight.
+  ///   **This does not gate the close ("X") icon, and is not meant to.** The icon always
+  ///   dismisses on tap, in every dialog, regardless of this value or whether [actions] is
+  ///   supplied — this is intentional, not an inconsistency to fix. The distinction that
+  ///   makes both true at once is: **a stray click outside the panel is accidental, while
+  ///   the X, Escape, and a Cancel action are deliberate.** Blocking the barrier stops a
+  ///   misclick from discarding a decision or half-entered input; it was never meant to
+  ///   remove every way out. A dialog with `actions` still leaves three intentional exits
+  ///   available (X, Escape, Cancel) — it just refuses to be dismissed by accident. There is
+  ///   no parameter to suppress the X, and none is planned.
   /// - [semanticLabel]: optional semantic label describing the dialog's purpose for screen
   ///   readers, announced alongside the barrier label when the dialog opens. If not provided,
   ///   only the barrier label (from [BuildContext.l10n]) is announced.
@@ -125,7 +150,10 @@ class LayrzDialog {
     assert(
       child == null || (title == null && content == null && actions == null),
       'LayrzDialog.show: child is an escape hatch that replaces the entire body. '
-      'Pass either child alone, or title/content/actions — not both.',
+      'Pass either child alone, or title/content/actions — not both. If you reached for '
+      'child because content threw on a fill-height widget (Expanded/Flexible/a bare '
+      'ListView) inside it, that is content\'s unbounded-height constraint working as '
+      'intended -- see LayrzDialog.show\'s content and child doc comments for the difference.',
     );
 
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -177,13 +205,16 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
   /// Optional title slot content.
   final Widget? title;
 
-  /// Optional body slot content.
+  /// Optional body slot content. Receives unbounded height from its scroll view --
+  /// see [LayrzDialog.show]'s `content` doc for the fill-height-widget pitfall this
+  /// implies and why `child` is the escape hatch for it.
   final Widget? content;
 
   /// Optional action row content.
   final List<Widget>? actions;
 
-  /// Escape-hatch content replacing the entire body.
+  /// Escape-hatch content replacing the entire body -- see [LayrzDialog.show]'s `child`
+  /// doc for what it is for (mainly fill-height layouts `content` cannot express).
   final Widget? child;
 
   /// Optional semantic label for screen readers (caller-supplied).
@@ -321,13 +352,16 @@ class _DialogContent extends StatefulWidget {
   /// Optional title slot content.
   final Widget? title;
 
-  /// Optional body slot content.
+  /// Optional body slot content. Receives unbounded height from its scroll view --
+  /// see [LayrzDialog.show]'s `content` doc for the fill-height-widget pitfall this
+  /// implies and why `child` is the escape hatch for it.
   final Widget? content;
 
   /// Optional action row content.
   final List<Widget>? actions;
 
-  /// Escape-hatch content replacing the entire body.
+  /// Escape-hatch content replacing the entire body -- see [LayrzDialog.show]'s `child`
+  /// doc for what it is for (mainly fill-height layouts `content` cannot express).
   final Widget? child;
 
   /// Optional semantic label for screen readers.

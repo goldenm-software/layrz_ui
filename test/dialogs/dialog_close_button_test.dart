@@ -354,54 +354,67 @@ void main() {
       );
     });
 
-    guardedTestWidgets('dismisses through popIfCurrent even when barrierDismissible is false', (tester) async {
-      await tester.pumpWidget(
-        LayrzApp(
-          navigatorObservers: [observer],
-          theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
-          home: Center(
-            child: Builder(
-              builder: (context) => GestureDetector(
-                onTap: () {
-                  LayrzDialog.show<void>(
-                    context,
-                    title: const Text('Decision required'),
-                    content: const Text('Body'),
-                    actions: const [SizedBox(width: 10, height: 10, child: Text('Confirm'))],
-                  );
-                },
-                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+    // This is the intended asymmetry, confirmed by the maintainer, not a bug:
+    // a decision-bearing dialog (actions present) blocks an ACCIDENTAL barrier
+    // tap from silently discarding the decision, but still leaves DELIBERATE
+    // exits open -- the X (this test), Escape, and any Cancel action the
+    // caller supplies. See the doc comment on LayrzDialog.show's
+    // barrierDismissible parameter for the full accidental-vs-deliberate
+    // rationale. A future "simplification" that makes the X respect
+    // barrierDismissible too would silently remove one of those three
+    // deliberate exits -- this test exists to catch exactly that.
+    guardedTestWidgets(
+      'with actions present, the barrier is blocked but the X still dismisses (intended asymmetry)',
+      (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            navigatorObservers: [observer],
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzDialog.show<void>(
+                      context,
+                      title: const Text('Decision required'),
+                      content: const Text('Body'),
+                      actions: const [SizedBox(width: 10, height: 10, child: Text('Confirm'))],
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      expect(find.text('Decision required'), findsOneWidget);
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Decision required'), findsOneWidget);
 
-      // The barrier itself must resist a stray tap (actions present ->
-      // barrierDismissible defaults to false) -- confirming the dialog's
-      // default protection is active for this test to mean anything.
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Decision required'),
-        findsOneWidget,
-        reason: 'barrier must not dismiss a decision-bearing dialog, for this test setup to be valid',
-      );
+        // The barrier itself must resist a stray tap (actions present ->
+        // barrierDismissible defaults to false) -- confirming the dialog's
+        // default protection is active for this test to mean anything.
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Decision required'),
+          findsOneWidget,
+          reason: 'barrier must not dismiss a decision-bearing dialog, for this test setup to be valid',
+        );
+        expect(observer.pops, equals(0), reason: 'the blocked barrier tap must not have popped anything');
 
-      // The X, however, always dismisses -- see the doc-comment tension
-      // noted on LayrzDialog.show's barrierDismissible parameter.
-      await tester.tap(findDialogCloseButton());
-      await tester.pumpAndSettle();
+        // The X, however, always dismisses -- this is the deliberate
+        // asymmetry, not an inconsistency to be "fixed" later.
+        await tester.tap(findDialogCloseButton());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Decision required'), findsNothing);
-      expect(observer.pops, equals(1));
-    });
+        expect(find.text('Decision required'), findsNothing);
+        expect(observer.pops, equals(1));
+      },
+    );
   });
 
   group('LayrzDialog close (X) button accessibility', () {
