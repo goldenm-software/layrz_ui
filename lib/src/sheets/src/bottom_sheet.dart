@@ -229,29 +229,44 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
            final disableAnimations = MediaQuery.of(context).disableAnimations;
            final effectiveAnimation = disableAnimations ? AlwaysStoppedAnimation(1.0) : animation;
 
-           // Push the whole sheet up above the keyboard, Scaffold-style (D65's
-           // pattern in layout.dart/drawer_scaffold.dart), but with a different
-           // mechanism: D65 SHRINKS a full-height body in place. A bottom sheet
-           // is anchored to the bottom edge via Align(bottomCenter) below, so
-           // shrinking its own height would just make it shorter without
-           // moving it — the keyboard would still cover the same slice of
-           // screen the sheet no longer occupies. Padding the STACK's available
-           // height by viewInsets.bottom instead moves the Align's "bottom"
-           // reference point itself: the sheet's bottomCenter anchor now sits
-           // viewInsets.bottom above the true screen edge, so the whole sheet
-           // slides up, not just shrinks. Its own DraggableScrollableSheet
-           // fractions (initialSize/minSize/maxSize) are relative to this
-           // (now-reduced) available height, so if the sheet is taller than
-           // the remaining space above the keyboard, it naturally clamps to
-           // maxSize of that smaller height and its own existing
-           // SingleChildScrollView (see _BottomSheetContentState.build)
-           // handles the rest by scrolling -- no new scroll mechanism needed,
-           // this is the sheet's existing overflow behavior, just operating
-           // on a smaller available height. MediaQuery.removeViewInsets zeroes
-           // the inset for the sheet's own subtree so nested readers (a
-           // caller's own MediaQuery.viewInsetsOf) do not double-count the
-           // same inset this Padding already consumed.
+           // D65's SHRINK pattern (layout.dart/drawer_scaffold.dart), applied
+           // here directly rather than the offset/push-up approach an earlier
+           // revision of this fix used. The maintainer's own decision,
+           // verbatim: "on open keyboard, just use the remaining space
+           // available, disabling the expansion controls because, with an
+           // open keyboard, there is not much space available there" -- his
+           // form is a tall scroller, so pushing the whole sheet up wholesale
+           // (which only repositions it, without changing how much of it is
+           // visible above the fold) was never the right shape for that
+           // content. Padding the Stack's available height by
+           // viewInsets.bottom reduces the box DraggableScrollableSheet sizes
+           // itself against; Align(bottomCenter) then keeps the sheet's
+           // bottom edge pinned to the BOTTOM OF THAT REDUCED BOX (i.e. right
+           // above the keyboard) rather than the true screen edge -- so this
+           // is the shrink itself, not a push, once the size that shrinks is
+           // pinned at 1.0 of the reduced box (see keyboardVisible below).
+           // MediaQuery.removeViewInsets zeroes the inset for the sheet's own
+           // subtree so nested readers (a caller's own
+           // MediaQuery.viewInsetsOf) do not double-count the same inset this
+           // Padding already consumed.
+           //
+           // keyboardVisible is threaded down to _BottomSheetContentState via
+           // _KeyboardVisibility (an InheritedWidget wrapped around `child`
+           // below), NOT read again as MediaQuery.viewInsetsOf(context) inside
+           // that State. _BottomSheetContent is built once by
+           // _BottomSheetRoute's pageBuilder and then cached as ModalRoute's
+           // own `_page` widget, handed to this transitionBuilder as `child`
+           // rather than rebuilt by it -- and MediaQuery.removeViewInsets
+           // below sits strictly ABOVE that State's own context in the
+           // resulting element tree. Reading MediaQuery.viewInsetsOf directly
+           // inside _BottomSheetContentState was tried first and confirmed,
+           // empirically, to never update once the sheet is open (its
+           // didChangeDependencies simply never re-fires when the keyboard
+           // opens) -- unlike THIS context, which is exactly what the
+           // Padding/removeViewInsets above already rely on and is confirmed
+           // to update correctly.
            final viewInsets = MediaQuery.viewInsetsOf(context);
+           final keyboardVisible = viewInsets.bottom > 0;
 
            return Stack(
              children: [
@@ -308,7 +323,10 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                          ),
                      child: Align(
                        alignment: Alignment.bottomCenter,
-                       child: child,
+                       child: _KeyboardVisibility(
+                         visible: keyboardVisible,
+                         child: child,
+                       ),
                      ),
                    ),
                  ),
@@ -318,6 +336,45 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
          },
          settings: const RouteSettings(name: '/bottom_sheet'),
        );
+}
+
+/// Carries whether the on-screen keyboard is currently covering part of the
+/// screen down to [_BottomSheetContentState], from [_BottomSheetRoute]'s
+/// [_BottomSheetRoute.transitionBuilder].
+///
+/// This exists because [_BottomSheetContent] cannot read
+/// `MediaQuery.viewInsetsOf(context)` directly and see it update: it is built
+/// once by [_BottomSheetRoute]'s `pageBuilder` and then cached as
+/// `ModalRoute`'s own internal `_page` widget, handed to `transitionBuilder`
+/// as its `child` parameter rather than rebuilt by it -- and
+/// `MediaQuery.removeViewInsets` in `transitionBuilder` sits strictly ABOVE
+/// that state's own context in the resulting element tree. An
+/// [InheritedWidget] wrapped directly around `child`, computed from
+/// `transitionBuilder`'s own context (confirmed to update correctly, since
+/// that is exactly what the existing keyboard-avoidance `Padding` already
+/// relies on), sidesteps that entirely: the dependency genuinely lives inside
+/// the subtree that rebuilds when `viewInsets` changes.
+class _KeyboardVisibility extends InheritedWidget {
+  /// Whether the keyboard is currently open (`viewInsets.bottom > 0`) as of
+  /// the most recent [_BottomSheetRoute.transitionBuilder] rebuild.
+  final bool visible;
+
+  /// Creates a [_KeyboardVisibility] scope.
+  const _KeyboardVisibility({
+    required this.visible,
+    required super.child,
+  });
+
+  /// Reads the nearest [_KeyboardVisibility.visible] value, establishing a
+  /// rebuild dependency on it. Defaults to `false` if none is found (should
+  /// not happen in practice -- [_BottomSheetContent] is always built inside
+  /// one -- but avoids a hard crash if the widget tree is ever restructured).
+  static bool of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<_KeyboardVisibility>()?.visible ?? false;
+  }
+
+  @override
+  bool updateShouldNotify(_KeyboardVisibility oldWidget) => visible != oldWidget.visible;
 }
 
 /// The actual content widget displayed inside the bottom sheet route.
@@ -379,6 +436,23 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
   /// and dismiss it the same way dragging the sheet's own content does.
   late DraggableScrollableController _sheetController;
 
+  /// Whether the keyboard was visible ([MediaQuery.viewInsetsOf] `.bottom > 0`)
+  /// the last time [build] ran. Tracked purely to detect the hidden->visible
+  /// EDGE, not the level -- the sheet is only ever driven to fill the
+  /// remaining space at the MOMENT the keyboard opens (see [build]); once
+  /// there, ordinary drag-to-dismiss can move it away again, and re-pinning it
+  /// on every subsequent rebuild while the keyboard stays up would fight that.
+  bool _wasKeyboardVisible = false;
+
+  /// The sheet's own fractional size at the moment the keyboard opened, so
+  /// closing the keyboard can restore it exactly rather than leaving the
+  /// sheet clamped at `maxSize` (pinning sets the internal size to `1.0`,
+  /// which -- once maxSize reverts to its normal value on keyboard close --
+  /// would otherwise just clamp DOWN to maxSize instead of back to whatever
+  /// the user had before, a visibly jarring jump for anything smaller than
+  /// maxSize). `null` when the keyboard is not open / has not been pinned.
+  double? _sizeBeforeKeyboard;
+
   @override
   void initState() {
     super.initState();
@@ -405,6 +479,79 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     // rather than resizing further, matching the natural end of a continuous drag.
     final lowSnapSize = widget.snapSizes.isNotEmpty ? widget.snapSizes.first : widget.minSize;
 
+    // The maintainer's decision, verbatim: "on open keyboard, just use the
+    // remaining space available, disabling the expansion controls because,
+    // with an open keyboard, there is not much space available there." The
+    // Padding in _BottomSheetRoute.transitionBuilder already reduces the box
+    // this sheet sizes itself against by viewInsets.bottom -- what's missing
+    // is PINNING the sheet to fill that reduced box (rather than staying at
+    // whatever fraction it happened to be at when the keyboard opened) and
+    // SUPPRESSING drag-to-expand/snap while it stays open. minChildSize ==
+    // maxChildSize == 1.0 makes the DraggableScrollableSheet's own drag
+    // handling a structural no-op for resizing (there is no range left to
+    // drag within), which is a stronger and simpler guarantee than trying to
+    // intercept the gesture. Drag-to-DISMISS is deliberately preserved
+    // through a *different* path -- see _DragHandle's dismissOnly mode below
+    // -- since disabling expansion has nothing to do with taking away the
+    // user's ability to swipe the sheet away while typing.
+    //
+    // This reads _KeyboardVisibility, NOT MediaQuery.viewInsetsOf(context)
+    // directly. _BottomSheetContent is built once by _BottomSheetRoute's
+    // pageBuilder and then CACHED as ModalRoute's own `_page` widget --
+    // handed to transitionBuilder as its `child` parameter rather than
+    // rebuilt by it. MediaQuery.removeViewInsets(removeBottom: true, ...) in
+    // transitionBuilder also sits strictly ABOVE this State's own context in
+    // the resulting element tree (confirmed empirically: this State's own
+    // MediaQuery.viewInsetsOf(context) never changes, and didChangeDependencies
+    // never re-fires, once the keyboard opens -- unlike an ordinary widget in
+    // the same app, which rebuilds correctly). _KeyboardVisibility is an
+    // InheritedWidget transitionBuilder wraps `child` with, computed from ITS
+    // OWN context (confirmed to update correctly, since that context is what
+    // the original keyboard-avoidance Padding/removeViewInsets already relies
+    // on) -- so this dependency genuinely lives inside the subtree that
+    // actually rebuilds when viewInsets changes.
+    final keyboardVisible = _KeyboardVisibility.of(context);
+    if (keyboardVisible && !_wasKeyboardVisible) {
+      // Rising edge: remember the sheet's own size BEFORE pinning it, so
+      // closing the keyboard can restore this exact value instead of merely
+      // clamping down to maxSize (see _sizeBeforeKeyboard's own doc).
+      // sheetController.isAttached guards against the sheet not yet having
+      // laid out on the very first frame it opens simultaneously with the
+      // keyboard (e.g. a caller that auto-focuses a field) -- in that case
+      // there is no prior on-screen size to preserve, so pinning alone
+      // (no restore value recorded) is correct.
+      if (_sheetController.isAttached) {
+        _sizeBeforeKeyboard = _sheetController.size;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_sheetController.isAttached) {
+          _sheetController.jumpTo(1.0);
+        }
+      });
+    } else if (!keyboardVisible && _wasKeyboardVisible) {
+      // Falling edge: restore the sheet to whatever size it was showing
+      // before the keyboard opened, now that effectiveMinSize/maxSize below
+      // have reverted to widget.minSize/maxSize for this same build --
+      // without this, the pinned internal size (1.0) would just clamp DOWN
+      // to maxSize once unpinned, which for any initialSize/size smaller
+      // than maxSize is a visibly jarring jump instead of a return to rest.
+      final restoreSize = _sizeBeforeKeyboard;
+      _sizeBeforeKeyboard = null;
+      if (restoreSize != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_sheetController.isAttached) {
+            _sheetController.jumpTo(restoreSize);
+          }
+        });
+      }
+    }
+    _wasKeyboardVisible = keyboardVisible;
+
+    final effectiveMinSize = keyboardVisible ? 1.0 : widget.minSize;
+    final effectiveMaxSize = keyboardVisible ? 1.0 : widget.maxSize;
+    final effectiveInitialSize = keyboardVisible ? 1.0 : widget.initialSize;
+    final effectiveSnapSizes = keyboardVisible ? const [1.0] : widget.snapSizes;
+
     final focusChild = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
@@ -426,10 +573,10 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
       child: DraggableScrollableSheet(
         controller: _sheetController,
         snap: true,
-        snapSizes: widget.snapSizes,
-        initialChildSize: widget.initialSize,
-        minChildSize: widget.minSize,
-        maxChildSize: widget.maxSize,
+        snapSizes: effectiveSnapSizes,
+        initialChildSize: effectiveInitialSize,
+        minChildSize: effectiveMinSize,
+        maxChildSize: effectiveMaxSize,
         builder: (context, scrollController) {
           // The decoration is built here, inside the sheet's own builder, so that it
           // is sized by the sheet's FractionallySizedBox — i.e. to the sheet's own
@@ -488,6 +635,17 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                         controller: _sheetController,
                         snapSizes: widget.snapSizes,
                         lowSnapSize: lowSnapSize,
+                        // With the keyboard up, effectiveMinSize/maxSize above
+                        // already make ordinary resizing a structural no-op --
+                        // dismissOnly switches the handle to a SEPARATE
+                        // dismiss-by-drag path that does not go through
+                        // sheetController.jumpTo/the min/max-locked size at
+                        // all (see _DragHandle._onDragUpdate), so a deliberate
+                        // downward swipe still closes the sheet even though
+                        // "expand/resize" is inert. The maintainer's brief
+                        // asked only to disable EXPANSION; nothing about
+                        // taking away dismissal while typing.
+                        dismissOnly: keyboardVisible,
                       ),
                     // Content
                     Expanded(
@@ -550,7 +708,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
 /// past [lowSnapSize] on release dismisses the sheet. The hit region is a fixed
 /// size regardless of hover/press state (per D15, interaction states never change
 /// geometry); only the pill's colour may vary with theme.
-class _DragHandle extends StatelessWidget {
+class _DragHandle extends StatefulWidget {
   /// Whether this handle responds to vertical drag gestures. When false (or when
   /// [controller] is null), the handle is purely visual.
   final bool draggable;
@@ -560,14 +718,29 @@ class _DragHandle extends StatelessWidget {
 
   /// The sheet's snap point fractions, in ascending order. On drag release, the
   /// sheet animates to whichever of these is nearest its current size. Ignored
-  /// when [draggable] is false.
+  /// when [draggable] is false or [dismissOnly] is true.
   final List<double> snapSizes;
 
   /// The lowest existing snap point fraction. Releasing the drag with the sheet's
   /// current size below this dismisses the sheet instead of snapping back to it —
   /// this is how dismissal "falls out of" dragging past the low end, rather than
-  /// being a separate dismiss-only gesture. Ignored when [draggable] is false.
+  /// being a separate dismiss-only gesture. Ignored when [draggable] is false or
+  /// [dismissOnly] is true.
   final double lowSnapSize;
+
+  /// When true, the handle no longer resizes the sheet at all (expansion is
+  /// suppressed -- there is nothing to resize INTO with the keyboard up,
+  /// per the maintainer's decision), but a downward drag past a fixed pixel
+  /// threshold still dismisses the sheet. This is a genuinely separate drag
+  /// path from the ordinary resize-then-check-lowSnapSize one: with the
+  /// keyboard open, [DraggableScrollableSheet]'s own min/max are pinned to
+  /// `1.0` (see `_BottomSheetContentState.build`), so driving this through
+  /// [DraggableScrollableController.jumpTo] the normal way would either be a
+  /// no-op (nowhere to move the size to) or, worse, briefly violate the
+  /// pinned bounds mid-drag. Tracking raw drag distance instead sidesteps the
+  /// sheet's own size entirely -- dismissal here is a decision made from the
+  /// gesture, not from the sheet's current fractional size.
+  final bool dismissOnly;
 
   /// Creates a drag handle.
   const _DragHandle({
@@ -575,7 +748,23 @@ class _DragHandle extends StatelessWidget {
     this.controller,
     this.snapSizes = const [],
     this.lowSnapSize = 0.0,
+    this.dismissOnly = false,
   });
+
+  @override
+  State<_DragHandle> createState() => _DragHandleState();
+}
+
+class _DragHandleState extends State<_DragHandle> {
+  /// Accumulated downward drag distance in the current gesture, used only by
+  /// [widget.dismissOnly] mode. Reset on every drag start/end.
+  double _dismissDragDistance = 0.0;
+
+  /// The pixel distance a downward drag must cover, in [widget.dismissOnly]
+  /// mode, before releasing dismisses the sheet. Chosen to require a
+  /// deliberate swipe (roughly a third of the drag handle's own visual travel
+  /// on a typical phone), not an incidental jitter while trying to type.
+  static const double _dismissOnlyThreshold = 80.0;
 
   @override
   Widget build(BuildContext context) {
@@ -594,9 +783,19 @@ class _DragHandle extends StatelessWidget {
       ),
     );
 
-    final sheetController = controller;
-    if (!draggable || sheetController == null) {
+    final sheetController = widget.controller;
+    if (!widget.draggable || sheetController == null) {
       return header;
+    }
+
+    if (widget.dismissOnly) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: (_) => _dismissDragDistance = 0.0,
+        onVerticalDragUpdate: (details) => _dismissDragDistance += details.delta.dy,
+        onVerticalDragEnd: (_) => _onDismissOnlyDragEnd(context),
+        child: header,
+      );
     }
 
     return GestureDetector(
@@ -620,6 +819,8 @@ class _DragHandle extends StatelessWidget {
   /// the full screen — a single fast drag can land `newSize` past 1.0 (or below
   /// 0.0) well before the finger physically leaves the sheet. Clamp here so this
   /// holds for any large-enough delta, keyboard-driven or not.
+  ///
+  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
   void _onDragUpdate(DraggableScrollableController sheetController, DragUpdateDetails details) {
     if (!sheetController.isAttached) {
       return;
@@ -628,18 +829,37 @@ class _DragHandle extends StatelessWidget {
     sheetController.jumpTo(newSize.clamp(0.0, 1.0));
   }
 
-  /// On release, either dismisses the sheet (current size below [lowSnapSize]) or
-  /// animates it to the nearest snap point. [DraggableScrollableController.jumpTo]
+  /// Dismisses the sheet if the just-completed drag moved downward by at
+  /// least [_dismissOnlyThreshold] pixels; otherwise leaves the sheet exactly
+  /// where it is -- there is no snap-back animation to play, since the
+  /// sheet's own size was never touched by this gesture in the first place.
+  void _onDismissOnlyDragEnd(BuildContext context) {
+    final distance = _dismissDragDistance;
+    _dismissDragDistance = 0.0;
+    if (distance < _dismissOnlyThreshold) {
+      return;
+    }
+    // Guarded the same way as every other pop site in this file -- see the
+    // barrier's onTap for the full rationale.
+    if (ModalRoute.of(context)?.isCurrent ?? false) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  /// On release, either dismisses the sheet (current size below [widget.lowSnapSize])
+  /// or animates it to the nearest snap point. [DraggableScrollableController.jumpTo]
   /// does not snap on its own — snapping only happens after a drag through the
   /// sheet's own [DraggableScrollableSheet.snap], which this handle drives manually
   /// so it matches what dragging the content already does.
+  ///
+  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
   void _onDragEnd(BuildContext context, DraggableScrollableController sheetController) {
     if (!sheetController.isAttached) {
       return;
     }
 
     final currentSize = sheetController.size;
-    if (currentSize < lowSnapSize) {
+    if (currentSize < widget.lowSnapSize) {
       // Guarded the same way as the barrier's onTap and the Escape handler, for
       // consistency across every pop site in this file. In practice a second
       // drag-to-dismiss during the exit animation was not reproducible as a
@@ -652,9 +872,9 @@ class _DragHandle extends StatelessWidget {
       return;
     }
 
-    var nearestSnapSize = snapSizes.isNotEmpty ? snapSizes.first : currentSize;
+    var nearestSnapSize = widget.snapSizes.isNotEmpty ? widget.snapSizes.first : currentSize;
     var smallestDiff = (currentSize - nearestSnapSize).abs();
-    for (final snapSize in snapSizes) {
+    for (final snapSize in widget.snapSizes) {
       final diff = (currentSize - snapSize).abs();
       if (diff < smallestDiff) {
         smallestDiff = diff;
