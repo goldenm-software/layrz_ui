@@ -2,6 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/drag_handle.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 /// A modal or persistent bottom sheet component for presenting content above the page.
 ///
@@ -178,14 +180,13 @@ class LayrzBottomSheet {
 
 /// Internal route class for managing the bottom sheet presentation.
 ///
-/// Extends [RawDialogRoute] to leverage the barrier painting, focus management,
-/// and transition infrastructure already built into the SDK's dialog system.
-/// [RawDialogRoute] provides:
-/// - Barrier painting and dismissal on tap
-/// - Automatic focus trap and restoration
-/// - Transition builders and page builders
-/// - Semantic semantics for accessibility
-class _BottomSheetRoute<T> extends RawDialogRoute<T> {
+/// Extends [LayrzModalRoute] to share the barrier, reduce-motion, and
+/// double-pop-guard machinery common to every modal surface in the design
+/// system. Sheet-specific behaviour — snap sizes, the drag handle, the
+/// slide-from-bottom transition, and the keyboard-inset workaround's own
+/// widget wiring — stays here rather than in the shared base, because it is
+/// meaningless for a non-sheet modal surface such as a dialog.
+class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
   /// Whether the sheet is persistent (no barrier) or modal.
   final bool isPersistent;
 
@@ -226,8 +227,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                : const Color(0x00000000);
 
            // Respect reduce-motion by shortening or skipping the transition
-           final disableAnimations = MediaQuery.of(context).disableAnimations;
-           final effectiveAnimation = disableAnimations ? AlwaysStoppedAnimation(1.0) : animation;
+           final effectiveAnimation = LayrzModalRoute.resolveAnimation(context, animation);
 
            // D65's SHRINK pattern (layout.dart/drawer_scaffold.dart), applied
            // here directly rather than the offset/push-up approach an earlier
@@ -266,7 +266,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
            // Padding/removeViewInsets above already rely on and is confirmed
            // to update correctly.
            final viewInsets = MediaQuery.viewInsetsOf(context);
-           final keyboardVisible = viewInsets.bottom > 0;
+           final keyboardVisible = LayrzModalRoute.keyboardViewInsetsOf(context) > 0;
 
            return Stack(
              children: [
@@ -292,13 +292,9 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                      // on a route that is already popping, which — under go_router —
                      // throws 'currentConfiguration.isNotEmpty' trying to remove the
                      // last page off the stack, or re-enters the Navigator mid-pop
-                     // ('!_debugLocked'). ModalRoute.of(context)?.isCurrent is the
-                     // SDK's own purpose-built answer to "is this route still the one
-                     // to pop" — it is what the barrier's onTap should have always been
-                     // conditioned on, independent of the opaque fix above.
-                     if (ModalRoute.of(context)?.isCurrent ?? false) {
-                       Navigator.of(context).pop();
-                     }
+                     // ('!_debugLocked'). LayrzModalRoute.popIfCurrent is the shared
+                     // guard against exactly that -- see its own doc comment.
+                     LayrzModalRoute.popIfCurrent(context);
                    },
                    child: Container(
                      color: barrierColor,
@@ -340,7 +336,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
 
 /// Carries whether the on-screen keyboard is currently covering part of the
 /// screen down to [_BottomSheetContentState], from [_BottomSheetRoute]'s
-/// [_BottomSheetRoute.transitionBuilder].
+/// `transitionBuilder`.
 ///
 /// This exists because [_BottomSheetContent] cannot read
 /// `MediaQuery.viewInsetsOf(context)` directly and see it update: it is built
@@ -354,6 +350,9 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
 /// that is exactly what the existing keyboard-avoidance `Padding` already
 /// relies on), sidesteps that entirely: the dependency genuinely lives inside
 /// the subtree that rebuilds when `viewInsets` changes.
+///
+/// See [LayrzModalRoute.keyboardViewInsetsOf] for the shared read this value
+/// is derived from.
 class _KeyboardVisibility extends InheritedWidget {
   /// Whether the keyboard is currently open (`viewInsets.bottom > 0`) as of
   /// the most recent [_BottomSheetRoute.transitionBuilder] rebuild.
@@ -491,7 +490,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     // handling a structural no-op for resizing (there is no range left to
     // drag within), which is a stronger and simpler guarantee than trying to
     // intercept the gesture. Drag-to-DISMISS is deliberately preserved
-    // through a *different* path -- see _DragHandle's dismissOnly mode below
+    // through a *different* path -- see DragHandle's dismissOnly mode below
     // -- since disabling expansion has nothing to do with taking away the
     // user's ability to swipe the sheet away while typing.
     //
@@ -565,7 +564,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
         if (!widget.isPersistent &&
             event.logicalKey == LogicalKeyboardKey.escape &&
             (ModalRoute.of(context)?.isCurrent ?? false)) {
-          Navigator.of(context).pop();
+          LayrzModalRoute.popIfCurrent(context);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -630,7 +629,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                   children: [
                     // Drag handle
                     if (widget.showDragHandle)
-                      _DragHandle(
+                      DragHandle(
                         draggable: true,
                         controller: _sheetController,
                         snapSizes: widget.snapSizes,
@@ -640,7 +639,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                         // dismissOnly switches the handle to a SEPARATE
                         // dismiss-by-drag path that does not go through
                         // sheetController.jumpTo/the min/max-locked size at
-                        // all (see _DragHandle._onDragUpdate), so a deliberate
+                        // all (see DragHandle's _onDragUpdate), so a deliberate
                         // downward swipe still closes the sheet even though
                         // "expand/resize" is inert. The maintainer's brief
                         // asked only to disable EXPANSION; nothing about
@@ -696,193 +695,5 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     }
 
     return focusChild;
-  }
-}
-
-/// Visual drag handle widget.
-///
-/// Renders a centered pill-shaped indicator that signals the sheet is draggable.
-/// When [draggable] is true, the entire header region — not just the visible
-/// 40x4 pill — is the drag target: dragging it resizes the attached sheet across
-/// [snapSizes], the same way dragging the sheet's own content does, and dragging
-/// past [lowSnapSize] on release dismisses the sheet. The hit region is a fixed
-/// size regardless of hover/press state (per D15, interaction states never change
-/// geometry); only the pill's colour may vary with theme.
-class _DragHandle extends StatefulWidget {
-  /// Whether this handle responds to vertical drag gestures. When false (or when
-  /// [controller] is null), the handle is purely visual.
-  final bool draggable;
-
-  /// Controls the sheet this handle drags. Required for [draggable] to have effect.
-  final DraggableScrollableController? controller;
-
-  /// The sheet's snap point fractions, in ascending order. On drag release, the
-  /// sheet animates to whichever of these is nearest its current size. Ignored
-  /// when [draggable] is false or [dismissOnly] is true.
-  final List<double> snapSizes;
-
-  /// The lowest existing snap point fraction. Releasing the drag with the sheet's
-  /// current size below this dismisses the sheet instead of snapping back to it —
-  /// this is how dismissal "falls out of" dragging past the low end, rather than
-  /// being a separate dismiss-only gesture. Ignored when [draggable] is false or
-  /// [dismissOnly] is true.
-  final double lowSnapSize;
-
-  /// When true, the handle no longer resizes the sheet at all (expansion is
-  /// suppressed -- there is nothing to resize INTO with the keyboard up,
-  /// per the maintainer's decision), but a downward drag past a fixed pixel
-  /// threshold still dismisses the sheet. This is a genuinely separate drag
-  /// path from the ordinary resize-then-check-lowSnapSize one: with the
-  /// keyboard open, [DraggableScrollableSheet]'s own min/max are pinned to
-  /// `1.0` (see `_BottomSheetContentState.build`), so driving this through
-  /// [DraggableScrollableController.jumpTo] the normal way would either be a
-  /// no-op (nowhere to move the size to) or, worse, briefly violate the
-  /// pinned bounds mid-drag. Tracking raw drag distance instead sidesteps the
-  /// sheet's own size entirely -- dismissal here is a decision made from the
-  /// gesture, not from the sheet's current fractional size.
-  final bool dismissOnly;
-
-  /// Creates a drag handle.
-  const _DragHandle({
-    required this.draggable,
-    this.controller,
-    this.snapSizes = const [],
-    this.lowSnapSize = 0.0,
-    this.dismissOnly = false,
-  });
-
-  @override
-  State<_DragHandle> createState() => _DragHandleState();
-}
-
-class _DragHandleState extends State<_DragHandle> {
-  /// Accumulated downward drag distance in the current gesture, used only by
-  /// [widget.dismissOnly] mode. Reset on every drag start/end.
-  double _dismissDragDistance = 0.0;
-
-  /// The pixel distance a downward drag must cover, in [widget.dismissOnly]
-  /// mode, before releasing dismisses the sheet. Chosen to require a
-  /// deliberate swipe (roughly a third of the drag handle's own visual travel
-  /// on a typical phone), not an incidental jitter while trying to type.
-  static const double _dismissOnlyThreshold = 80.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    final header = Container(
-      padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp3),
-      alignment: Alignment.center,
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: tokens.colors.fg3,
-          borderRadius: tokens.radius.br5,
-        ),
-      ),
-    );
-
-    final sheetController = widget.controller;
-    if (!widget.draggable || sheetController == null) {
-      return header;
-    }
-
-    if (widget.dismissOnly) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) => _dismissDragDistance = 0.0,
-        onVerticalDragUpdate: (details) => _dismissDragDistance += details.delta.dy,
-        onVerticalDragEnd: (_) => _onDismissOnlyDragEnd(context),
-        child: header,
-      );
-    }
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: (details) => _onDragUpdate(sheetController, details),
-      onVerticalDragEnd: (details) => _onDragEnd(context, sheetController),
-      child: header,
-    );
-  }
-
-  /// Resizes the sheet by the drag delta. Dragging up (negative `dy`) grows the
-  /// sheet; dragging down shrinks it. [DraggableScrollableController.jumpTo] clamps
-  /// the result to the sheet's own `minSize`/`maxSize` internally (inside
-  /// `updateSize`), but only AFTER its own `assert(size >= 0 && size <= 1)` — that
-  /// assert fires on the raw, unclamped value, so a `newSize` outside `[0, 1]`
-  /// crashes before the minSize/maxSize clamping this comment used to (wrongly)
-  /// credit with covering this. `pixelsToSize` converts by dividing by the sheet's
-  /// parent height; with the keyboard open, the bottom-sheet keyboard-avoidance
-  /// Padding (see `_BottomSheetRoute`) reduces that parent height, so the same
-  /// drag delta in pixels now converts to a larger fraction than it did against
-  /// the full screen — a single fast drag can land `newSize` past 1.0 (or below
-  /// 0.0) well before the finger physically leaves the sheet. Clamp here so this
-  /// holds for any large-enough delta, keyboard-driven or not.
-  ///
-  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
-  void _onDragUpdate(DraggableScrollableController sheetController, DragUpdateDetails details) {
-    if (!sheetController.isAttached) {
-      return;
-    }
-    final newSize = sheetController.size - sheetController.pixelsToSize(details.delta.dy);
-    sheetController.jumpTo(newSize.clamp(0.0, 1.0));
-  }
-
-  /// Dismisses the sheet if the just-completed drag moved downward by at
-  /// least [_dismissOnlyThreshold] pixels; otherwise leaves the sheet exactly
-  /// where it is -- there is no snap-back animation to play, since the
-  /// sheet's own size was never touched by this gesture in the first place.
-  void _onDismissOnlyDragEnd(BuildContext context) {
-    final distance = _dismissDragDistance;
-    _dismissDragDistance = 0.0;
-    if (distance < _dismissOnlyThreshold) {
-      return;
-    }
-    // Guarded the same way as every other pop site in this file -- see the
-    // barrier's onTap for the full rationale.
-    if (ModalRoute.of(context)?.isCurrent ?? false) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  /// On release, either dismisses the sheet (current size below [widget.lowSnapSize])
-  /// or animates it to the nearest snap point. [DraggableScrollableController.jumpTo]
-  /// does not snap on its own — snapping only happens after a drag through the
-  /// sheet's own [DraggableScrollableSheet.snap], which this handle drives manually
-  /// so it matches what dragging the content already does.
-  ///
-  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
-  void _onDragEnd(BuildContext context, DraggableScrollableController sheetController) {
-    if (!sheetController.isAttached) {
-      return;
-    }
-
-    final currentSize = sheetController.size;
-    if (currentSize < widget.lowSnapSize) {
-      // Guarded the same way as the barrier's onTap and the Escape handler, for
-      // consistency across every pop site in this file. In practice a second
-      // drag-to-dismiss during the exit animation was not reproducible as a
-      // double-pop in testing: `sheetController.isAttached` (checked above)
-      // already returns early once the sheet detaches, before this line is
-      // ever reached — but the guard costs nothing and removes the asymmetry.
-      if (ModalRoute.of(context)?.isCurrent ?? false) {
-        Navigator.of(context).pop();
-      }
-      return;
-    }
-
-    var nearestSnapSize = widget.snapSizes.isNotEmpty ? widget.snapSizes.first : currentSize;
-    var smallestDiff = (currentSize - nearestSnapSize).abs();
-    for (final snapSize in widget.snapSizes) {
-      final diff = (currentSize - snapSize).abs();
-      if (diff < smallestDiff) {
-        smallestDiff = diff;
-        nearestSnapSize = snapSize;
-      }
-    }
-
-    final motion = context.tokens.motion;
-    sheetController.animateTo(nearestSnapSize, duration: motion.dTransition, curve: motion.easing);
   }
 }
