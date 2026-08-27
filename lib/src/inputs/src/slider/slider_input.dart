@@ -8,6 +8,7 @@ import '../shared/input_footer_slot.dart';
 import 'slider_geometry.dart';
 import 'slider_painter.dart';
 import 'slider_style.dart';
+import 'slider_track_area.dart';
 
 /// A Material-free, hand-rolled single-value slider control in the layrz_ui design system.
 ///
@@ -43,6 +44,22 @@ import 'slider_style.dart';
 /// not cover it), which updates live on every drag delta, not only on
 /// release. This label is controlled by [showValueLabel] but defaults to
 /// visible, because a visible current value is required, not optional, for v1.
+///
+/// **Drag value bubble**: while a drag is active, a small floating
+/// [LayrzSliderValueBubble] additionally appears directly above the thumb,
+/// tracking its horizontal position and showing the same formatted value as
+/// the static label. It supplements that static label rather than replacing
+/// it — the static label stays the reliable fallback for touch users whose
+/// fingertip may be covering the bubble, while desktop/mouse users get an
+/// affordance anchored to the thing they are actually dragging. The bubble is
+/// laid out as a [Positioned] child of a [Stack] configured with
+/// `clipBehavior: Clip.none`, so it paints outside the track's normal layout
+/// box instead of being counted in it — its appearance and disappearance
+/// across a drag never changes the slider's laid-out height, which is the
+/// exact reflow D15 exists to prevent. It honours [showValueLabel] (no
+/// bubble when the caller has suppressed value display) and is wrapped in
+/// [ExcludeSemantics] since the value is already announced via
+/// `Semantics.value`.
 ///
 /// **Hit-slop**: the invisible [GestureDetector] hit region is taller than the
 /// painted track (see [_trackHeight] vs. the actual drawn line), so a touch
@@ -194,8 +211,22 @@ class _LayrzSliderState extends State<LayrzSlider> {
   bool _isDragging = false;
 
   static const double _trackVisualHeight = 4.0;
-  static const double _thumbRadius = 8.0;
+  static const double _thumbSize = 16.0;
   static const double _thumbBorderWidth = 2.0;
+
+  /// The half-height of the thumb, kept for the track/hit-test geometry that
+  /// used to read off a circular thumb's radius directly.
+  ///
+  /// The thumb itself is now a rounded square (see `LayrzSliderPainter`), but
+  /// its bounding box is still square, so half of [_thumbSize] is exactly the
+  /// inset the track and hit-test math need on each side.
+  static const double _thumbHalfSize = _thumbSize / 2;
+
+  /// The bubble's vertical gap above the top of the thumb, and its own
+  /// height allowance reserved in the invisible overlay region above the
+  /// track — see the class doc's "Live value feedback" section and the
+  /// `_buildBubbleOverlay` doc for why this never affects layout height.
+  static const double _bubbleClearance = 28.0;
 
   /// The height of the invisible gesture-detection region.
   ///
@@ -287,9 +318,9 @@ class _LayrzSliderState extends State<LayrzSlider> {
   }
 
   double _positionToValue(double dx, double trackWidth) {
-    final usableWidth = trackWidth - _thumbRadius * 2;
+    final usableWidth = trackWidth - _thumbSize;
     if (usableWidth <= 0) return widget.min;
-    final fraction = ((dx - _thumbRadius) / usableWidth).clamp(0.0, 1.0);
+    final fraction = ((dx - _thumbHalfSize) / usableWidth).clamp(0.0, 1.0);
     return layrzSliderFractionToValue(fraction: fraction, min: widget.min, max: widget.max);
   }
 
@@ -425,17 +456,19 @@ class _LayrzSliderState extends State<LayrzSlider> {
                     decreasedValue: _formatValue((_clampedValue - _stepSize).clamp(widget.min, widget.max)),
                     onIncrease: isDisabled ? null : _increase,
                     onDecrease: isDisabled ? null : _decrease,
-                    child: SizedBox(
-                      height: _hitSlopHeight,
-                      width: double.infinity,
-                      child: Center(
-                        child: ExcludeSemantics(
-                          child: CustomPaint(
-                            size: Size(trackWidth, _trackVisualHeight + _thumbRadius * 2),
-                            painter: _buildPainter(tokens, isDisabled, fraction),
-                          ),
-                        ),
-                      ),
+                    child: LayrzSliderTrackArea(
+                      trackWidth: trackWidth,
+                      hitSlopHeight: _hitSlopHeight,
+                      paintHeight: _trackVisualHeight + _thumbSize,
+                      fraction: fraction,
+                      painter: _buildPainter(tokens, isDisabled, fraction),
+                      thumbHalfSize: _thumbHalfSize,
+                      bubbleClearance: _bubbleClearance,
+                      isDragging: _isDragging,
+                      showValueLabel: widget.showValueLabel,
+                      formattedValue: _formatValue(_clampedValue),
+                      isDisabled: isDisabled,
+                      tokens: tokens,
                     ),
                   ),
                 ),
@@ -465,15 +498,22 @@ class _LayrzSliderState extends State<LayrzSlider> {
       isFocusVisible: isFocusVisible,
     );
 
+    final shadowTokens = tokens.shadow;
+    final thumbShadows = colors.thumbElevation > 0
+        ? shadowTokens.elevation(elevation: colors.thumbElevation, radius: 0).boxShadow ?? const []
+        : const <BoxShadow>[];
+
     return LayrzSliderPainter(
       fraction: fraction,
       trackThickness: _trackVisualHeight,
-      thumbRadius: _thumbRadius,
+      thumbSize: _thumbSize,
+      thumbCornerRadius: tokens.radius.r1,
       thumbBorderWidth: _thumbBorderWidth,
       trackColor: colors.trackColor,
       activeTrackColor: colors.activeTrackColor,
       thumbColor: colors.thumbColor,
       thumbBorderColor: colors.thumbBorderColor,
+      thumbShadows: thumbShadows,
     );
   }
 }

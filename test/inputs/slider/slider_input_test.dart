@@ -459,4 +459,176 @@ void main() {
       expect(callerNode.hasFocus, isTrue);
     });
   });
+
+  group('LayrzSlider drag value bubble', () {
+    guardedTestWidgets('is not present at rest', (tester) async {
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 300,
+          child: LayrzSlider(value: 50, onChanged: (_) {}),
+        ),
+      );
+
+      expect(find.byType(LayrzSliderValueBubble), findsNothing);
+    });
+
+    guardedTestWidgets('appears while dragging and disappears on release', (tester) async {
+      double value = 0;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final trackFinder = find.byType(CustomPaint).last;
+      final start = tester.getTopLeft(trackFinder) + const Offset(10, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+
+      // First move only resolves the gesture arena's pan slop (see the
+      // similarly-commented drag test above in the main widget group).
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+
+      expect(find.byType(LayrzSliderValueBubble), findsOneWidget);
+
+      await gesture.up();
+      await tester.pump();
+
+      expect(find.byType(LayrzSliderValueBubble), findsNothing);
+    });
+
+    guardedTestWidgets('respects showValueLabel: false and stays hidden during a drag', (tester) async {
+      double value = 0;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                showValueLabel: false,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final trackFinder = find.byType(CustomPaint).last;
+      final start = tester.getTopLeft(trackFinder) + const Offset(10, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+
+      expect(find.byType(LayrzSliderValueBubble), findsNothing);
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    guardedTestWidgets('shows the same valueFormatter-formatted text as the static label', (tester) async {
+      double value = 0.2;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0.0,
+                max: 1.0,
+                valueFormatter: (v) => '${(v * 100).round()}%',
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      // The static label above the track shows the formatted percentage.
+      expect(find.text('20%'), findsOneWidget);
+
+      final trackFinder = find.byType(CustomPaint).last;
+      final start = tester.getTopLeft(trackFinder) + const Offset(10, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+
+      // Both the static label and the bubble show the formatter's output --
+      // one instance for the static label, one for the bubble.
+      final expectedText = '${(value * 100).round()}%';
+      expect(find.text(expectedText), findsNWidgets(2));
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    guardedTestWidgets('does not change the slider\'s laid-out height while showing', (tester) async {
+      double value = 0;
+      final key = GlobalKey();
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              key: key,
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final heightAtRest = (key.currentContext!.findRenderObject() as RenderBox).size.height;
+
+      final trackFinder = find.byType(CustomPaint).last;
+      final start = tester.getTopLeft(trackFinder) + const Offset(10, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+
+      expect(find.byType(LayrzSliderValueBubble), findsOneWidget);
+      final heightWhileDragging = (key.currentContext!.findRenderObject() as RenderBox).size.height;
+      expect(heightWhileDragging, heightAtRest);
+
+      await gesture.up();
+      await tester.pump();
+
+      final heightAfterRelease = (key.currentContext!.findRenderObject() as RenderBox).size.height;
+      expect(heightAfterRelease, heightAtRest);
+    });
+  });
 }

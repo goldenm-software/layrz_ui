@@ -24,12 +24,21 @@ class LayrzSliderColors {
   /// The colour of the thumb's border ring.
   final Color thumbBorderColor;
 
+  /// The thumb's elevation level, from 0 (flush, no shadow) to 5, fed to
+  /// `LayrzShadowTokens.elevation()` to produce the thumb's drop shadow.
+  ///
+  /// Per D15, this is a colour/shadow-tier concern, not a geometry one — the
+  /// thumb's painted size and corner radius never change with state, only how
+  /// strongly it appears to lift off the track.
+  final double thumbElevation;
+
   /// Creates a resolved colour set for one paint frame of a [LayrzSlider].
   const LayrzSliderColors({
     required this.trackColor,
     required this.activeTrackColor,
     required this.thumbColor,
     required this.thumbBorderColor,
+    required this.thumbElevation,
   });
 
   @override
@@ -40,10 +49,11 @@ class LayrzSliderColors {
           trackColor == other.trackColor &&
           activeTrackColor == other.activeTrackColor &&
           thumbColor == other.thumbColor &&
-          thumbBorderColor == other.thumbBorderColor;
+          thumbBorderColor == other.thumbBorderColor &&
+          thumbElevation == other.thumbElevation;
 
   @override
-  int get hashCode => Object.hash(trackColor, activeTrackColor, thumbColor, thumbBorderColor);
+  int get hashCode => Object.hash(trackColor, activeTrackColor, thumbColor, thumbBorderColor, thumbElevation);
 }
 
 /// Resolves the track and thumb colours for a [LayrzSlider] frame from its
@@ -59,8 +69,15 @@ class LayrzSliderColors {
 /// larger hit-slop region must keep showing pressed feedback; [isFocusVisible]
 /// distinguishes keyboard focus (shown) from pointer-acquired focus (not
 /// shown), matching the `_focusFromPointer` convention used elsewhere in this
-/// module. Per decision D15, only colour varies here — no geometry value is
-/// read or returned by this function.
+/// module. Per decision D15, only colour and the [LayrzSliderColors.thumbElevation]
+/// tier vary here — no geometry value is read or returned by this function.
+///
+/// Elevation follows the same precedence as colour: a **disabled** thumb sits
+/// flush with no shadow (0); an **error** thumb rests at the base elevation
+/// (1), matching default, since an error is a colour concern, not a lift
+/// concern; a **pressed/dragging** or **hovered/focus-visible** thumb lifts
+/// one level higher (2) than resting (1), giving the "elevated" affordance a
+/// slightly stronger shadow while the pointer is actively engaging it.
 LayrzSliderColors resolveLayrzSliderColors({
   required LayrzTokens tokens,
   required Set<WidgetState> states,
@@ -75,6 +92,7 @@ LayrzSliderColors resolveLayrzSliderColors({
       activeTrackColor: tokens.colors.fg4,
       thumbColor: tokens.colors.fg4,
       thumbBorderColor: tokens.colors.sf1,
+      thumbElevation: 0,
     );
   }
 
@@ -84,6 +102,7 @@ LayrzSliderColors resolveLayrzSliderColors({
       activeTrackColor: tokens.colors.danger,
       thumbColor: tokens.colors.danger,
       thumbBorderColor: tokens.colors.sf1,
+      thumbElevation: 1,
     );
   }
 
@@ -93,6 +112,7 @@ LayrzSliderColors resolveLayrzSliderColors({
       activeTrackColor: tokens.colors.primary.shade600,
       thumbColor: tokens.colors.primary.shade600,
       thumbBorderColor: tokens.colors.sf1,
+      thumbElevation: 2,
     );
   }
 
@@ -102,6 +122,7 @@ LayrzSliderColors resolveLayrzSliderColors({
       activeTrackColor: tokens.colors.primary,
       thumbColor: tokens.colors.primary,
       thumbBorderColor: isFocusVisible ? tokens.colors.primary.shade700 : tokens.colors.sf1,
+      thumbElevation: 2,
     );
   }
 
@@ -110,5 +131,6 @@ LayrzSliderColors resolveLayrzSliderColors({
     activeTrackColor: tokens.colors.primary,
     thumbColor: tokens.colors.primary,
     thumbBorderColor: tokens.colors.sf1,
+    thumbElevation: 1,
   );
 }

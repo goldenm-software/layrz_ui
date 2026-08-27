@@ -14,4 +14,15 @@ mixin LayrzUiL10nDialogsMixin {
   ///
   /// English default: "Dialog box"
   String get dialogsBarrierLabel => 'Dialog box';
+
+  /// Semantic label for the dismiss ("X") affordance rendered on [LayrzDialog].
+  ///
+  /// Announced by screen readers on the tappable icon that closes the dialog,
+  /// whether it sits in the title row (when a title is supplied) or floats
+  /// over the panel's top-right corner (when it is not). Distinct from
+  /// [dialogsBarrierLabel]: that label describes the barrier region behind
+  /// the panel, while this one names the specific control that dismisses it.
+  ///
+  /// English default: "Close dialog"
+  String get dialogsCloseButtonLabel => 'Close dialog';
 }

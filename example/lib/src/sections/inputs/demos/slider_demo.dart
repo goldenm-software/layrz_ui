@@ -8,6 +8,10 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// displaying validation [LayrzSlider.errors]. Every interactive slider is wired
 /// to state via `onChanged` + `setState` so the live value label at the top of
 /// the track can be watched updating on every drag delta, not only on release.
+///
+/// Dragging any enabled slider also shows the drag-only value bubble directly
+/// above the thumb (a mouse click-and-drag, not a single tap, is needed to
+/// see it — a tap alone does not enter the dragging state).
 class SliderDemo extends StatefulWidget {
   /// Creates a new [SliderDemo].
   const SliderDemo({super.key});
@@ -37,7 +41,8 @@ class _SliderDemoState extends State<SliderDemo> {
             // Continuous slider
             Text('Continuous', style: tokens.typography.title),
             Text(
-              'Drag, click, or use the arrow keys once focused to move the value.',
+              'Drag, click, or use the arrow keys once focused to move the value. '
+              'While dragging, a value bubble also appears above the thumb.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             tokens.spacing.sb1,

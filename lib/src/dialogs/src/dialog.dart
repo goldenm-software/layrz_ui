@@ -1,11 +1,13 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
 /// A modal dialog surface for presenting focused, page-relative interruptions.
 ///
@@ -20,11 +22,29 @@ import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 /// shared by construction rather than reimplemented. See [LayrzModalRoute.popIfCurrent]
 /// for the release-only data-loss bug this guards against.
 ///
+/// **Navigator**: [show] always pushes on the root navigator ([Navigator.of] with
+/// `rootNavigator: true`). This is intrinsic, not caller-configurable — a dialog
+/// shown from a context whose nearest navigator is nested inside the page body
+/// (e.g. a `go_router` `ShellRoute`) would otherwise land inside that page's own
+/// layout instead of covering the whole screen, with a barrier that does not
+/// cover chrome (such as a top bar) living outside the nested navigator. Every
+/// real call site needs the root navigator, so there is no configuration to get
+/// wrong.
+///
 /// **Structure**: the dialog offers named [title], [content], and [actions] slots
 /// covering the overwhelmingly common shape ("title + body + confirm/cancel"), plus
 /// a [child] escape hatch for content that fits none of them. Supplying [child]
 /// together with any of [title]/[content]/[actions] is not supported — an assertion
 /// enforces the choice at the call site.
+///
+/// **Dismiss ("X") affordance**: every dialog renders a tappable close icon that
+/// dismisses it through [LayrzModalRoute.popIfCurrent] — the same guard the barrier
+/// and Escape handler use. When [title] is supplied, the icon sits at the trailing
+/// edge of the title row, vertically centered with the title text. When it is not
+/// (including the [child] escape hatch), the icon instead floats over the panel's
+/// top-right corner, inset from the edge, so every dialog keeps a visible close
+/// affordance regardless of which slots are used. This is currently always shown —
+/// see [show] for why that is not yet caller-configurable.
 ///
 /// **Example usage** (a confirm/cancel dialog):
 /// ```dart
@@ -72,14 +92,14 @@ class LayrzDialog {
   ///   explicitly to opt back in, e.g. for a non-destructive confirm/cancel pair). This is a
   ///   deliberate default, not a guess: a dialog holding meaningful input or an unmade
   ///   decision must not treat an accidental barrier tap the same as an explicit dismissal.
+  ///   **Note**: the dismiss ("X") icon described below is currently always rendered and
+  ///   always dismisses on tap, regardless of this value — a decision-bearing dialog that
+  ///   sets `barrierDismissible: false` still exposes a one-tap way out via the X, which
+  ///   bypasses the protection this parameter is meant to give. There is no parameter yet
+  ///   to suppress the X independently; treat this as a known gap rather than an oversight.
   /// - [semanticLabel]: optional semantic label describing the dialog's purpose for screen
   ///   readers, announced alongside the barrier label when the dialog opens. If not provided,
   ///   only the barrier label (from [BuildContext.l10n]) is announced.
-  /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
-  ///   Defaults to `false`. Set to `true` when showing from a context whose nearest navigator
-  ///   is nested inside the page body (e.g. a `go_router` `ShellRoute`) — otherwise the dialog
-  ///   can land inside that page's own layout instead of covering the whole screen, and its
-  ///   barrier may not cover chrome (such as a top bar) that lives outside the nested navigator.
   /// - [maxWidth]: the maximum width the dialog's panel may occupy, in logical pixels.
   ///   Defaults to `480`. The panel also respects the viewport, so a narrow window still
   ///   clamps below this value.
@@ -99,7 +119,6 @@ class LayrzDialog {
     Widget? child,
     bool? barrierDismissible,
     String? semanticLabel,
-    bool useRootNavigator = false,
     double maxWidth = 480,
     double maxHeight = 640,
   }) {
@@ -109,7 +128,7 @@ class LayrzDialog {
       'Pass either child alone, or title/content/actions — not both.',
     );
 
-    final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     // Stacking guard: a second LayrzDialog opened while one is already the
     // current route would compound two semi-transparent barriers into one
@@ -244,6 +263,53 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
          },
          settings: const RouteSettings(name: '/dialog'),
        );
+}
+
+/// A tappable "X" icon that dismisses the enclosing [LayrzDialog].
+///
+/// Deliberately not a [LayrzButton] — the icon is a bare dismiss affordance, not
+/// an action with a label, so it is built from [LayrzTappable] (the same hover/
+/// press/focus-free building block [LayrzButton] itself is built on) directly
+/// wrapping an [Icon]. Dismissal always goes through
+/// [LayrzModalRoute.popIfCurrent], exactly like the barrier tap and Escape
+/// handler, so a fast repeated tap during the exit transition cannot pop the
+/// route underneath this one — see [LayrzModalRoute.popIfCurrent] for the
+/// release-only bug that guard fixed.
+class _DialogCloseButton extends StatelessWidget {
+  /// Creates a dialog close button.
+  const _DialogCloseButton();
+
+  /// The hit target's side length, in logical pixels. Matches the icon's own
+  /// visual size plus enough padding to keep the tap target comfortable
+  /// without growing the title row's height noticeably.
+  static const double _tapTargetSize = 28;
+
+  /// The icon's size, in logical pixels.
+  static const double _iconSize = 18;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Semantics(
+      button: true,
+      label: context.l10n.dialogsCloseButtonLabel,
+      excludeSemantics: true,
+      child: LayrzTappable(
+        onTap: () => LayrzModalRoute.popIfCurrent(context),
+        borderRadius: tokens.radius.br1,
+        child: SizedBox(
+          width: _tapTargetSize,
+          height: _tapTargetSize,
+          child: Icon(
+            MdiIcons.close,
+            size: _iconSize,
+            color: tokens.colors.fg3,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The actual content widget displayed inside the dialog route.
@@ -382,10 +448,39 @@ class _DialogContentState extends State<_DialogContent> {
             borderRadius: BorderRadius.circular(tokens.radius.r3),
             boxShadow: tokens.shadow.elevation3,
           ),
-          child: Padding(
-            padding: EdgeInsets.all(tokens.spacing.sp3),
-            child: widget.child ?? _buildSlots(context),
-          ),
+          child: widget.title != null
+              // Title present: the close button is composed into the title
+              // row itself (see _buildSlots), so no floating overlay is
+              // needed here.
+              ? Padding(
+                  padding: EdgeInsets.all(tokens.spacing.sp3),
+                  child: _buildSlots(context),
+                )
+              // No title -- either bare slots (content/actions only) or the
+              // child escape hatch. Both cases still need a visible close
+              // affordance (that is the whole point of always showing it),
+              // so it floats over the panel's top-right corner via a Stack
+              // rather than being composed into a title row that does not
+              // exist. Painted AFTER (so visually above) the body, and inset
+              // from the corner rather than flush with it, so it reads as an
+              // overlay rather than colliding edge-to-edge with a `child`
+              // that may paint its own content right up to the panel's
+              // bounds -- callers using `child` should still leave a little
+              // top-right clearance of their own, since this affordance
+              // necessarily sits on top of whatever they placed there.
+              : Stack(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(tokens.spacing.sp3),
+                      child: widget.child ?? _buildSlots(context),
+                    ),
+                    Positioned(
+                      top: tokens.spacing.sp2,
+                      right: tokens.spacing.sp2,
+                      child: const _DialogCloseButton(),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -482,9 +577,18 @@ class _DialogContentState extends State<_DialogContent> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.title != null) ...[
-          DefaultTextStyle.merge(
-            style: tokens.typography.title,
-            child: widget.title!,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: DefaultTextStyle.merge(
+                  style: tokens.typography.title,
+                  child: widget.title!,
+                ),
+              ),
+              SizedBox(width: tokens.spacing.sp2),
+              const _DialogCloseButton(),
+            ],
           ),
           SizedBox(height: tokens.spacing.sp3),
         ],
