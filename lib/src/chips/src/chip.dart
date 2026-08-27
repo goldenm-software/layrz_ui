@@ -134,7 +134,7 @@ class _LayrzChipState extends State<LayrzChip> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
+      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1 / 2),
       decoration: BoxDecoration(
         color: spec.backgroundColor,
         border: widget.style.hasBorder
