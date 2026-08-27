@@ -4,6 +4,7 @@ export 'src/buttons/buttons.dart';
 export 'src/cards/cards.dart';
 export 'src/chips/chips.dart';
 export 'src/constants/constants.dart';
+export 'src/dialogs/dialogs.dart';
 export 'src/extensions/extensions.dart';
 export 'src/fonts/fonts.dart';
 export 'src/grid/grid.dart';

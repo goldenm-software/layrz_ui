@@ -1,0 +1,431 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+
+/// A modal dialog surface for presenting focused, page-relative interruptions.
+///
+/// [LayrzDialog] provides a centered, size-bounded panel behind a modal barrier —
+/// distinct from [LayrzBottomSheet] (which drops in from the bottom edge, sized to
+/// the viewport height) and from an anchored overlay (which is field-relative and
+/// tethered to the widget that opened it). A dialog interrupts the whole page; it
+/// never adapts into another surface based on viewport size — see [show] for why.
+///
+/// Built on [LayrzModalRoute], the same shared base [LayrzBottomSheet] uses, so the
+/// barrier, reduce-motion handling, and — critically — the double-pop guard are
+/// shared by construction rather than reimplemented. See [LayrzModalRoute.popIfCurrent]
+/// for the release-only data-loss bug this guards against.
+///
+/// **Structure**: the dialog offers named [title], [content], and [actions] slots
+/// covering the overwhelmingly common shape ("title + body + confirm/cancel"), plus
+/// a [child] escape hatch for content that fits none of them. Supplying [child]
+/// together with any of [title]/[content]/[actions] is not supported — an assertion
+/// enforces the choice at the call site.
+///
+/// **Example usage** (a confirm/cancel dialog):
+/// ```dart
+/// final confirmed = await LayrzDialog.show<bool>(
+///   context,
+///   title: const Text('Delete item?'),
+///   content: const Text('This cannot be undone.'),
+///   actions: [
+///     LayrzButton.cancel(labelText: 'Cancel', onTap: () => Navigator.of(context).pop(false)),
+///     LayrzButton.delete(labelText: 'Delete', onTap: () => Navigator.of(context).pop(true)),
+///   ],
+/// );
+/// ```
+class LayrzDialog {
+  LayrzDialog._();
+
+  /// Shows a dialog and returns the result.
+  ///
+  /// Returns `Future<T?>` that completes with the value passed to [Navigator.pop]
+  /// in the dialog, or `null` if the dialog is dismissed without a value (barrier
+  /// tap, Escape, or a close action that pops with no value).
+  ///
+  /// **Parameters:**
+  /// - [context]: the build context from which to show the dialog. Must contain a Navigator.
+  /// - [title]: optional widget rendered in the dialog's title slot, above [content].
+  ///   Typically a [Text] styled by the caller, or any widget.
+  /// - [content]: optional widget rendered in the dialog's body slot, below [title] and
+  ///   above [actions]. Wrapped in a [LayrzScrollbar] over a scroll view so content taller
+  ///   than the dialog's max height scrolls internally instead of overflowing.
+  /// - [actions]: optional list of widgets (typically `LayrzButton`s) rendered in a row
+  ///   at the bottom of the dialog, right-aligned with spacing between them.
+  /// - [child]: an escape hatch for content that does not fit the [title]/[content]/[actions]
+  ///   shape. When supplied, it replaces the entire body — [title], [content], and [actions]
+  ///   must all be null. An assertion enforces this at the call site, because mixing the two
+  ///   composition modes would leave it ambiguous which one governs layout.
+  /// - [barrierDismissible]: whether tapping the barrier outside the dialog dismisses it.
+  ///   Defaults to `true` when [actions] is null (an informational dialog with nothing to
+  ///   lose), and `false` when [actions] is non-null (a dialog offering a decision should not
+  ///   silently discard it on a stray click outside it — the caller can still pass `true`
+  ///   explicitly to opt back in, e.g. for a non-destructive confirm/cancel pair). This is a
+  ///   deliberate default, not a guess: a dialog holding meaningful input or an unmade
+  ///   decision must not treat an accidental barrier tap the same as an explicit dismissal.
+  /// - [semanticLabel]: optional semantic label describing the dialog's purpose for screen
+  ///   readers, announced alongside the barrier label when the dialog opens. If not provided,
+  ///   only the barrier label (from [BuildContext.l10n]) is announced.
+  /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
+  ///   Defaults to `false`. Set to `true` when showing from a context whose nearest navigator
+  ///   is nested inside the page body (e.g. a `go_router` `ShellRoute`) — otherwise the dialog
+  ///   can land inside that page's own layout instead of covering the whole screen, and its
+  ///   barrier may not cover chrome (such as a top bar) that lives outside the nested navigator.
+  /// - [maxWidth]: the maximum width the dialog's panel may occupy, in logical pixels.
+  ///   Defaults to `480`. The panel also respects the viewport, so a narrow window still
+  ///   clamps below this value.
+  /// - [maxHeight]: the maximum height the dialog's panel may occupy, in logical pixels.
+  ///   Defaults to `640`. Content taller than this scrolls internally rather than growing
+  ///   the panel or overflowing.
+  ///
+  /// **Stacking**: opening a second [LayrzDialog] while one is already open is not
+  /// supported in this version — an assertion fires rather than silently stacking two
+  /// barriers into one visually-compounded overlay. Dismiss the current dialog before
+  /// opening another.
+  static Future<T?> show<T>(
+    BuildContext context, {
+    Widget? title,
+    Widget? content,
+    List<Widget>? actions,
+    Widget? child,
+    bool? barrierDismissible,
+    String? semanticLabel,
+    bool useRootNavigator = false,
+    double maxWidth = 480,
+    double maxHeight = 640,
+  }) {
+    assert(
+      child == null || (title == null && content == null && actions == null),
+      'LayrzDialog.show: child is an escape hatch that replaces the entire body. '
+      'Pass either child alone, or title/content/actions — not both.',
+    );
+
+    final navigator = Navigator.of(context, rootNavigator: useRootNavigator);
+
+    // Stacking guard: a second LayrzDialog opened while one is already the
+    // current route would compound two semi-transparent barriers into one
+    // visually darker layer (each Stack paints its own scrim), which is
+    // confusing and was called out explicitly as something to avoid rather
+    // than leave undefined. v1 does not support dialog-over-dialog, so this
+    // fails loudly instead of silently rendering it.
+    assert(() {
+      final current = ModalRoute.of(context);
+      if (current is _DialogRoute) {
+        throw FlutterError(
+          'LayrzDialog.show was called while a LayrzDialog is already open. '
+          'Stacking dialogs is not supported in this version — dismiss the '
+          'current dialog before opening another.',
+        );
+      }
+      return true;
+    }());
+
+    final effectiveBarrierDismissible = barrierDismissible ?? (actions == null);
+
+    return navigator.push<T>(
+      _DialogRoute<T>(
+        title: title,
+        content: content,
+        actions: actions,
+        child: child,
+        barrierDismissible: effectiveBarrierDismissible,
+        barrierLabel: context.l10n.dialogsBarrierLabel,
+        semanticLabel: semanticLabel,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+      ),
+    );
+  }
+}
+
+/// Internal route class for managing the dialog presentation.
+///
+/// Extends [LayrzModalRoute] to share the barrier, reduce-motion, and
+/// double-pop-guard machinery common to every modal surface in the design
+/// system. Dialog-specific behaviour — the centered panel, its size bounds,
+/// and the slot composition — stays here rather than in the shared base,
+/// because it is meaningless for a non-dialog modal surface such as the sheet.
+class _DialogRoute<T> extends LayrzModalRoute<T> {
+  /// Optional title slot content.
+  final Widget? title;
+
+  /// Optional body slot content.
+  final Widget? content;
+
+  /// Optional action row content.
+  final List<Widget>? actions;
+
+  /// Escape-hatch content replacing the entire body.
+  final Widget? child;
+
+  /// Optional semantic label for screen readers (caller-supplied).
+  final String? semanticLabel;
+
+  /// Maximum panel width in logical pixels.
+  final double maxWidth;
+
+  /// Maximum panel height in logical pixels.
+  final double maxHeight;
+
+  /// Creates a new dialog route.
+  _DialogRoute({
+    required this.title,
+    required this.content,
+    required this.actions,
+    required this.child,
+    required super.barrierDismissible,
+    required super.barrierLabel,
+    required this.semanticLabel,
+    required this.maxWidth,
+    required this.maxHeight,
+  }) : super(
+         pageBuilder: (context, animation, secondaryAnimation) {
+           return _DialogContent(
+             title: title,
+             content: content,
+             actions: actions,
+             semanticLabel: semanticLabel,
+             maxWidth: maxWidth,
+             maxHeight: maxHeight,
+             child: child,
+           );
+         },
+         barrierColor: const Color(0x00000000), // Transparent initially; real color painted below.
+         transitionDuration: const Duration(milliseconds: 200),
+         transitionBuilder: (context, animation, secondaryAnimation, pageChild) {
+           final barrierColor = context.tokens.colors.overlay.withValues(alpha: 0.5);
+           final effectiveAnimation = LayrzModalRoute.resolveAnimation(context, animation);
+
+           return Stack(
+             children: [
+               // Barrier. Mirrors LayrzBottomSheet's own barrier: an opaque
+               // GestureDetector over a colored box, guarded by popIfCurrent
+               // rather than a bare Navigator.pop so a fast second tap during
+               // the dismiss transition (the barrier stays mounted and
+               // hit-testable for the whole exit animation) cannot pop the
+               // route underneath this one. See LayrzModalRoute.popIfCurrent.
+               if (barrierDismissible)
+                 GestureDetector(
+                   behavior: HitTestBehavior.opaque,
+                   onTap: () {
+                     LayrzModalRoute.popIfCurrent(context);
+                   },
+                   child: Container(color: barrierColor),
+                 )
+               else
+                 // Non-dismissible barrier: still painted (the page behind
+                 // must read as non-interactive) but does not itself handle
+                 // taps, so a stray click does not need a guard at all.
+                 IgnorePointer(
+                   child: Container(color: barrierColor),
+                 ),
+               Center(
+                 child: FadeTransition(
+                   opacity: effectiveAnimation,
+                   child: ScaleTransition(
+                     scale: Tween<double>(begin: 0.96, end: 1.0).animate(
+                       CurvedAnimation(parent: effectiveAnimation, curve: Curves.easeOut),
+                     ),
+                     child: pageChild,
+                   ),
+                 ),
+               ),
+             ],
+           );
+         },
+         settings: const RouteSettings(name: '/dialog'),
+       );
+}
+
+/// The actual content widget displayed inside the dialog route.
+///
+/// Manages focus (moving in on open, restoring to the invoker on close),
+/// Escape-to-dismiss, and composes the [title]/[content]/[actions] slots or
+/// the [child] escape hatch into a bounded, centered panel.
+class _DialogContent extends StatefulWidget {
+  /// Optional title slot content.
+  final Widget? title;
+
+  /// Optional body slot content.
+  final Widget? content;
+
+  /// Optional action row content.
+  final List<Widget>? actions;
+
+  /// Escape-hatch content replacing the entire body.
+  final Widget? child;
+
+  /// Optional semantic label for screen readers.
+  final String? semanticLabel;
+
+  /// Maximum panel width in logical pixels.
+  final double maxWidth;
+
+  /// Maximum panel height in logical pixels.
+  final double maxHeight;
+
+  /// Creates a dialog content widget.
+  const _DialogContent({
+    required this.title,
+    required this.content,
+    required this.actions,
+    required this.child,
+    required this.semanticLabel,
+    required this.maxWidth,
+    required this.maxHeight,
+  });
+
+  @override
+  State<_DialogContent> createState() => _DialogContentState();
+}
+
+/// State for [_DialogContent].
+///
+/// Owns focus restoration: [PopupRoute] (the base of [RawDialogRoute], which
+/// [LayrzModalRoute] extends) traps focus inside the route while it is open,
+/// but does not itself restore focus to whatever held it before the route was
+/// pushed — a dialog that does not handle this leaves keyboard and
+/// screen-reader users stranded with no focused element once it closes. This
+/// State captures the previously-focused node in [initState] and explicitly
+/// restores it in [dispose], which runs when the route is popped and its page
+/// is removed from the tree.
+class _DialogContentState extends State<_DialogContent> {
+  late final FocusNode _focusNode;
+
+  /// The node that held focus immediately before this dialog opened, captured
+  /// in [initState] before this dialog's own [_focusNode] requests focus.
+  /// Restored to it in [dispose]. `null` if nothing held focus (or the
+  /// previously-focused node was disposed of independently in the meantime,
+  /// in which case there is nothing safe to restore focus to).
+  FocusNode? _previouslyFocused;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode(debugLabel: 'LayrzDialog');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _previouslyFocused = FocusManager.instance.primaryFocus;
+      FocusScope.of(context).autofocus(_focusNode);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Restore focus to the invoker. Guarded because the previously-focused
+    // node may have been disposed of independently while this dialog was
+    // open (e.g. the widget that held it was removed from the tree by some
+    // unrelated rebuild) -- FocusNode.canRequestFocus is false on a disposed
+    // node rather than throwing, so this check is enough to make the
+    // restoration a no-op in that case instead of crashing on teardown.
+    final previouslyFocused = _previouslyFocused;
+    if (previouslyFocused != null && previouslyFocused.canRequestFocus) {
+      previouslyFocused.requestFocus();
+    }
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    final panel = Focus(
+      focusNode: _focusNode,
+      onKeyEvent: (node, event) {
+        // Escape dismisses the dialog. isCurrent is checked at the call site
+        // (not only inside popIfCurrent) so this handler can return `handled`
+        // vs `ignored` BEFORE popping -- mirroring LayrzBottomSheet's own
+        // Escape handler exactly (see bottom_sheet.dart), because the return
+        // value decides whether Escape stops propagating here or keeps
+        // bubbling to an ancestor that might otherwise also act on it.
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape &&
+            (ModalRoute.of(context)?.isCurrent ?? false)) {
+          LayrzModalRoute.popIfCurrent(context);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: widget.maxWidth, maxHeight: widget.maxHeight),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: tokens.colors.sf1,
+            borderRadius: BorderRadius.circular(tokens.radius.r3),
+            boxShadow: tokens.shadow.elevation3,
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(tokens.spacing.sp3),
+            child: widget.child ?? _buildSlots(context),
+          ),
+        ),
+      ),
+    );
+
+    // Route semantics, mirroring LayrzBottomSheet: only added when a label is
+    // supplied, so a caller that omits semanticLabel does not get a focus
+    // trap silently announced as an unnamed route.
+    if (widget.semanticLabel != null) {
+      return Semantics(
+        label: widget.semanticLabel,
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        enabled: true,
+        child: panel,
+      );
+    }
+
+    return panel;
+  }
+
+  /// Builds the [title]/[content]/[actions] slot layout used whenever
+  /// [_DialogContent.child] is not supplied.
+  Widget _buildSlots(BuildContext context) {
+    final tokens = context.tokens;
+
+    return IntrinsicWidth(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (widget.title != null) ...[
+            DefaultTextStyle.merge(
+              style: tokens.typography.title,
+              child: widget.title!,
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+          ],
+          if (widget.content != null)
+            Flexible(
+              child: LayrzScrollbar(
+                child: SingleChildScrollView(
+                  child: DefaultTextStyle.merge(
+                    style: tokens.typography.body,
+                    child: widget.content!,
+                  ),
+                ),
+              ),
+            ),
+          if (widget.actions != null && widget.actions!.isNotEmpty) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                for (int i = 0; i < widget.actions!.length; i++) ...[
+                  if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                  widget.actions![i],
+                ],
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
