@@ -23,13 +23,16 @@ This is the **first components milestone** after M1 Foundation. All M2 component
 | 10 | LayrzButtonGroup (overflow actions menu) | Done |
 | 11 | LayrzAvatar and LayrzImage | Done |
 | 12 | LayrzText (selectable text) | Done |
-| 13 | Material-free text selection (drag handles, toolbar, magnifier) | Done |
+| 13 | Material-free text selection (drag handles, toolbar, magnifier) — DESIGN-74 / DESIGN-147 | Done |
+| 14 | LayrzDialog (modal dialog surface, DESIGN-96) | In progress · implemented and tested on `feat/dialogs/DESIGN-96`, not yet merged |
+| 15 | LayrzResponsiveModal (viewport-driven dialog/sheet chooser, DESIGN-99) | In progress · implemented and tested on `feat/dialogs/DESIGN-96`, not yet merged |
 
-**Note**: This table is the authoritative record of M2 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items.
+**Note**: This table is the authoritative record of M2 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Item 2 (LayrzCard) is new scope added after the original milestone plan; it was not in the original eleven items. Row 13 originally shipped only the magnifier's platform gate; DESIGN-147 completed the drag-handle and selection-menu gate that DESIGN-74 specified but had left unbuilt, and **DESIGN-74 closes together with DESIGN-147** as a result — DESIGN-147 was its last remaining piece. Rows 14 and 15 are new scope added after the original milestone plan, added by this run alongside DESIGN-147; both are in active development.
 
 ## Definition of Done
 
-- All 12 items below complete
+- All 15 items in the Status table above complete (items 14 and 15 are new scope added after the
+  original milestone plan — see the Status table's Note)
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass on all M2 tests
 - Coverage floor (90%) not breached
