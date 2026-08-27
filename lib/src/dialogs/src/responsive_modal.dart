@@ -140,7 +140,13 @@ class LayrzResponsiveModal {
   ///   built widget is passed as [LayrzDialog.show]'s `child` escape hatch —
   ///   [LayrzResponsiveModal] does not compose the dialog's `title`/`content`/
   ///   `actions` slots, since a single [builder] must describe one piece of
-  ///   content usable on both surfaces.
+  ///   content usable on both surfaces. **This is a deliberate API limitation,
+  ///   not an oversight**: a caller that wants the dialog branch's structured
+  ///   `title`/`content`/`actions` slots — rather than one freeform widget —
+  ///   cannot get them through this wrapper, because the same [builder] result
+  ///   is also handed to [LayrzBottomSheet.show], which has no equivalent
+  ///   slotted shape to receive them. Call [LayrzDialog.show] directly when
+  ///   those slots matter more than responsive presentation.
   /// - [isCompact]: overrides which surface is chosen, regardless of viewport
   ///   width. Defaults to `context.isCompact` (`true` below the `sm`/`md`
   ///   breakpoint boundary at 960 logical pixels — see
