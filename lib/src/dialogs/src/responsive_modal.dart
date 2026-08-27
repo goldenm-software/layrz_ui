@@ -131,6 +131,10 @@ class LayrzResponsiveModal {
   /// [LayrzBottomSheet.show] exactly, so callers do not need to branch on
   /// which surface was actually used.
   ///
+  /// **Navigator**: both branches always push on the root navigator — see
+  /// [LayrzDialog]'s and [LayrzBottomSheet]'s own class docs. This is
+  /// intrinsic to each branch, not a choice this wrapper makes or forwards.
+  ///
   /// **Parameters:**
   /// - [context]: the build context from which to show the modal. Must
   ///   contain a Navigator.
@@ -167,9 +171,6 @@ class LayrzResponsiveModal {
   ///   equivalent regardless of which surface is presented, since an
   ///   assistive-technology user must hear the same description whether the
   ///   breakpoint put them on a dialog or a sheet.
-  /// - [useRootNavigator]: whether to use the root navigator instead of the
-  ///   nearest one. Forwarded to whichever branch is chosen. Defaults to
-  ///   `false`.
   /// - [dialog]: dialog-branch-only configuration (max width/height). Ignored
   ///   when the sheet branch is chosen. Defaults to `const LayrzDialogConfig()`.
   /// - [sheet]: sheet-branch-only configuration (snap sizes, initial/min/max
@@ -181,7 +182,6 @@ class LayrzResponsiveModal {
     bool? isCompact,
     bool? barrierDismissible,
     String? semanticLabel,
-    bool useRootNavigator = false,
     LayrzDialogConfig dialog = const LayrzDialogConfig(),
     LayrzBottomSheetConfig sheet = const LayrzBottomSheetConfig(),
   }) {
@@ -197,7 +197,6 @@ class LayrzResponsiveModal {
         minSize: sheet.minSize,
         maxSize: sheet.maxSize,
         showDragHandle: sheet.showDragHandle,
-        useRootNavigator: useRootNavigator,
         scrollable: sheet.scrollable,
         isPersistent: false,
       );
@@ -208,7 +207,6 @@ class LayrzResponsiveModal {
       child: Builder(builder: builder),
       barrierDismissible: barrierDismissible,
       semanticLabel: semanticLabel,
-      useRootNavigator: useRootNavigator,
       maxWidth: dialog.maxWidth,
       maxHeight: dialog.maxHeight,
     );

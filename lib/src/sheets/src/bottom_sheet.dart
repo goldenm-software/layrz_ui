@@ -27,6 +27,14 @@ import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 /// - The drag must never be the only route to content; the initial size shows the primary
 ///   content, and content scrolls independently of the drag
 ///
+/// **Navigator**: [show] always pushes on the root navigator ([Navigator.of] with
+/// `rootNavigator: true`). This is intrinsic, not caller-configurable — a sheet shown
+/// from a context whose nearest navigator is nested inside the page body (e.g. a
+/// `go_router` `ShellRoute`) would otherwise land inside that page's own layout
+/// instead of covering the whole screen, with a barrier that does not cover chrome
+/// (such as a top bar) living outside the nested navigator. Every real call site
+/// needs the root navigator, so there is no configuration to get wrong.
+///
 /// **Example usage** (a simple picker):
 /// ```dart
 /// final selected = await LayrzBottomSheet.show<String>(
@@ -76,9 +84,6 @@ class LayrzBottomSheet {
   ///   pill) is draggable, and dragging it resizes the sheet the same way dragging the
   ///   content does — more forgiving than a handle-only hit target, which is easy to
   ///   miss on touch.
-  /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
-  ///   Defaults to `false`. Set to `true` when showing from a context that does not have
-  ///   its own navigator (e.g. a nested route on desktop).
   /// - [scrollable]: whether the sheet wraps [builder]'s content in its own
   ///   [SingleChildScrollView]. Defaults to `true`, which preserves this method's original
   ///   behaviour exactly: the content is wrapped and the sheet's drag/scroll-handoff
@@ -114,7 +119,6 @@ class LayrzBottomSheet {
     double minSize = 0.25,
     double maxSize = 0.95,
     bool showDragHandle = true,
-    bool useRootNavigator = false,
     bool scrollable = true,
   }) {
     // Validate sizing constraints
@@ -159,7 +163,7 @@ class LayrzBottomSheet {
 
     final navigator = Navigator.of(
       context,
-      rootNavigator: useRootNavigator,
+      rootNavigator: true,
     );
 
     return navigator.push<T>(

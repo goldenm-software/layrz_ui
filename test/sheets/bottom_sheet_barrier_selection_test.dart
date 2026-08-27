@@ -89,7 +89,6 @@ void main() {
       unawaited(
         LayrzBottomSheet.show<void>(
           context,
-          useRootNavigator: true,
           initialSize: 0.5,
           builder: (context) => const SizedBox(
             height: 100,
@@ -138,7 +137,6 @@ void main() {
       unawaited(
         LayrzBottomSheet.show<void>(
           context,
-          useRootNavigator: true,
           initialSize: 0.5,
           builder: (context) => const SizedBox(
             height: 100,
@@ -165,7 +163,6 @@ void main() {
       unawaited(
         LayrzBottomSheet.show<void>(
           context,
-          useRootNavigator: true,
           isPersistent: true,
           initialSize: 0.5,
           builder: (context) => const SizedBox(
@@ -202,7 +199,6 @@ void main() {
       unawaited(
         LayrzBottomSheet.show<void>(
           context,
-          useRootNavigator: true,
           initialSize: 0.5,
           builder: (context) => Padding(
             padding: const EdgeInsets.all(24),

@@ -275,7 +275,6 @@ void main() {
                     options: ['First', 'Second'],
                     emptyText: 'Nothing here',
                   ),
-                  useRootNavigator: true,
                   scrollable: false,
                 );
               },

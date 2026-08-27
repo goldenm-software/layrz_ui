@@ -10,10 +10,11 @@ import '../common/showroom_section.dart';
 /// [LayrzResponsiveModal] (which resolves once, at `show()` time, to either a
 /// [LayrzDialog] or a `LayrzBottomSheet` depending on viewport width).
 ///
-/// Every showcase here calls `.show()` with `useRootNavigator: true`, since
-/// this section is rendered inside `ShowroomLayout`'s `ShellRoute` — a nested
-/// `Navigator` — and a dialog opened on the nearest navigator would be
-/// confined to the page body instead of covering the whole shell.
+/// Every showcase here opens on the root navigator automatically — both
+/// components always push there intrinsically, which matters because this
+/// section is rendered inside `ShowroomLayout`'s `ShellRoute` — a nested
+/// `Navigator` — and a dialog opened on the nearest navigator would otherwise
+/// be confined to the page body instead of covering the whole shell.
 class DialogsSection extends StatefulWidget {
   /// Creates a new [DialogsSection].
   const DialogsSection({super.key});
@@ -55,7 +56,6 @@ class _DialogsSectionState extends State<DialogsSection> {
                   onTap: () async {
                     final result = await LayrzDialog.show<bool>(
                       context,
-                      useRootNavigator: true,
                       title: Text('Delete item?', style: tokens.typography.title),
                       content: Text(
                         'This action cannot be undone.',
@@ -96,7 +96,6 @@ class _DialogsSectionState extends State<DialogsSection> {
               onTap: () {
                 LayrzDialog.show<void>(
                   context,
-                  useRootNavigator: true,
                   title: Text('Did you know?', style: tokens.typography.title),
                   content: Text(
                     'This dialog has no actions, so tapping the barrier or pressing '
@@ -118,7 +117,6 @@ class _DialogsSectionState extends State<DialogsSection> {
               onTap: () {
                 LayrzDialog.show<void>(
                   context,
-                  useRootNavigator: true,
                   semanticLabel: 'Custom dialog',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -247,7 +245,6 @@ class _ResponsiveModalShowcase extends StatelessWidget {
 
     await LayrzResponsiveModal.show<void>(
       context,
-      useRootNavigator: true,
       isCompact: isCompact,
       semanticLabel: 'Responsive modal',
       builder: (sheetContext) {
