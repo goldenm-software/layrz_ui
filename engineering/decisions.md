@@ -4066,3 +4066,351 @@ value in hand rather than retrofitted around a binary flag.
 Also revisit if a consuming app reports needing an arbitrary (non-density) padding override on
 any of the 10 widgets in this decision — see the capability-loss note above.
 
+---
+
+## D67: The DESIGN-147 Selection-Tool Gate — Platform-Only, With Recorded Reservations
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Design / Selection Framework
+
+### Context
+
+`LayrzTextSelectionControls`, the drag handles, the magnifier, and the selection action menu
+shipped under DESIGN-74 with a stated but only half-implemented intent: DESIGN-74's own
+acceptance criteria already said *"Magnifier appears on long-press drag on touch platforms
+only"* and *"Touch drag handles adjust the selection on Android and iOS"*. Only the magnifier
+half was ever gated (`selection_magnifier.dart:176`, `if (!LayrzPlatform.isMobile)`); the handles
+and the selection action menu rendered unconditionally on every platform, including native
+desktop and desktop web.
+
+DESIGN-147 was opened to close that gap. Its Notion page body, written 2026-08-24/25, proposed a
+two-level predicate — desktop OS first, then `MediaQuery.sizeOf(context).shortestSide < 960` for
+the rest, so a large touch tablet would still count as touch. That proposal was superseded before
+implementation by a team vote.
+
+### The Vote, Verbatim
+
+Posted 2026-08-26 by the maintainer, after voting among five team members:
+
+> After voting (Voters: [5 users]), the decision is to preserve the magnifier, drops and anything
+> related to text selection tools only on android and iOS, via web or native
+
+Two things about this wording matter for the implementation:
+
+- **The predicate is platform-only. There is no size term.** The vote does not mention a
+  breakpoint, a `shortestSide` threshold, or tablets at all — it supersedes the page body's
+  two-level predicate outright, not just its threshold value.
+- **"Via web or native"** means the gate is on the underlying OS, not on `kIsWeb`. Android and iOS
+  keep every selection affordance whether running natively or inside a mobile browser; every other
+  platform — Windows, Linux, macOS, and **desktop web** — loses all three: the magnifier, the drag
+  handles ("drops"), and the selection action menu ("anything related to text selection tools").
+
+### Decision
+
+**The gate is `LayrzPlatform.isTouchOS`, a new getter that reads `defaultTargetPlatform` directly
+and does not route through `LayrzPlatform.current`:**
+
+```dart
+static bool get isTouchOS =>
+    defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+```
+
+`LayrzPlatform.current` short-circuits on `kIsWeb` before `defaultTargetPlatform` is ever
+consulted, discarding the real OS — which is exactly why the existing `isMobile` getter
+(`isAndroid || isIOS` under `current`) cannot express "via web or native" and fails the vote on
+mobile web. `isTouchOS` bypasses that short-circuit deliberately. `isMobile` keeps its existing
+meaning and its five existing call sites are untouched; the two getters differ only on web, and
+both now carry doc comments saying so.
+
+This is a confirmation, not a new policy: DESIGN-147 completes the intent DESIGN-74 already
+specified and only half-built. Both rows close together as a result — DESIGN-147 is DESIGN-74's
+last remaining piece.
+
+`LayrzPlatform.isTouchOS` was added — rather than reading `defaultTargetPlatform` directly at each
+of the four gate sites — because it also fixes a bug already present in the shipped magnifier gate
+at the same time: `!LayrzPlatform.isMobile` strips the magnifier from mobile web today, which the
+vote requires to keep. Replacing it with `!LayrzPlatform.isTouchOS` fixes that latent bug at its
+source, in the same edit, rather than leaving a second, subtly different predicate next to a newly
+correct one.
+
+### Rationale — The Reservations, Recorded As A Required Deliverable
+
+The vote is deliberate and is not being relitigated here. But it has a real usability cost on one
+platform, and the team's own reasoning for recording it was explicit: **a future "why doesn't
+right-click work?" triage must find a documented answer here, not a mystery.**
+
+**The cost.** On native desktop and desktop web, this gate removes the selection handles, the
+magnifier, and the selection action menu together. The selection action menu is, in practice, this
+package's replacement for right-click copy/paste on native desktop — removing it plausibly leaves
+**keyboard shortcuts (Ctrl+C / Cmd+C, etc.) as the only remaining route** to copy or paste
+selected text on a mouse-driven desktop app built on layrz_ui. The person who pays this cost is not
+the team making the decision — it is **the end user of a downstream application**, who never chose
+this trade-off and has no UI affordance from which to discover that Ctrl+C still works. Unlike
+touch platforms, which lose nothing (Android/iOS keep everything), a native desktop mouse user is
+left with strictly less than before, and no in-UI hint pointing at the keyboard alternative.
+
+**The milder option that was knowingly set aside.** A less disruptive gate exists: suppress only
+the *automatic* selection toolbar/action menu, while leaving right-click free to open whatever
+native desktop apps conventionally offer at that gesture. That option was considered and explicitly
+not chosen — the vote's wording ("anything related to text selection tools") covers the action menu
+along with the handles and magnifier, not a partial suppression of just the automatic popup.
+Recording this here so the narrower option is not later mistaken for something nobody thought of.
+
+**The touchscreen-laptop / 2-in-1 gap.** A touchscreen Windows laptop or a 2-in-1 device reports
+`TargetPlatform.windows` under `defaultTargetPlatform` regardless of how it is actually being
+used. Under this platform-only predicate, such a device **loses the touch-shaped selection
+affordances** (handles, magnifier, action menu) **and has no mouse to fall back on** for
+right-click — a finger-driven device with neither its touch UI nor a viable substitute. This is
+the sharpest edge of choosing a platform predicate with no size or input-method term, and it is
+recorded here rather than discovered later via a support ticket from exactly this device class.
+
+### Consequences
+
+- `selection_magnifier.dart:176` changes from `if (!LayrzPlatform.isMobile)` to
+  `if (!LayrzPlatform.isTouchOS)` — a bug fix (restores mobile web), not a copy.
+- Four gate sites move together, not just the two the original Notion page described: the five
+  inputs behind `editable_field.dart`, `LayrzLayout`'s expanded and drawer `SelectableRegion`
+  constructions, and `DetailPane`'s own `SelectableRegion` (added in 0.0.14, after the Notion page
+  was written — its absence from the page is a staleness gap, not a scope decision).
+- The "off" state is `selectionControls: null` together with `contextMenuBuilder: null`, not
+  `emptyTextSelectionControls` — the latter does not mix in `TextSelectionHandleControls`, so per
+  **D50**'s Trap 3 it yields a toolbar that renders and is visibly blank, rather than no toolbar at
+  all. See D50 for the full trap analysis.
+- Revisiting this predicate to soften the desktop cost (e.g. adopting the milder toolbar-only
+  suppression, or adding a size term back) is a separate, future row — not a reopening of this
+  vote.
+
+### Related Decisions
+
+- **D50**: Material-free text selection traps — Trap 2 (stable instance identity for
+  `selectionControls`/`magnifierConfiguration`) and Trap 3 (`emptyTextSelectionControls` blank
+  toolbar) both bind this gate's implementation directly.
+- **D15**: Not directly applicable, but the same "state changes affordance, not geometry"
+  discipline informs why the gate touches visibility, not size, of the handles.
+
+### Review Trigger
+
+Revisit if Flutter's selection API changes `TextSelectionControls`/`SelectableRegion` in a future
+SDK version — `isTouchOS`'s correctness depends on `defaultTargetPlatform` continuing to report the
+real OS underneath `kIsWeb`, which is the exact behaviour `LayrzPlatform.current` does not have.
+
+---
+
+## D68: Shared Modal Route Base — `LayrzModalRoute` Extracted From The Sheet
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Architecture / Component Design
+
+### Context
+
+`LayrzBottomSheet` (shipped 0.0.14) already builds on `RawDialogRoute<T>`
+(`_BottomSheetRoute<T> extends RawDialogRoute<T>`, `bottom_sheet.dart:188`) and, in that one file,
+solves twelve concerns common to any modal surface: the barrier, reduce-motion handling, the
+barrier-dismissible wiring, Escape-to-dismiss, focus-in, route semantics, and a keyboard-inset
+workaround built around `ModalRoute`'s page-caching behaviour. Chief among them is a four-site
+`ModalRoute.isCurrent` guard before every `Navigator.pop()` call (barrier tap, Escape, and two
+drag-dismiss sites) — the fix for a release-only data-loss bug shipped in 0.0.14: a fast double tap
+on the barrier could pop the route underneath the sheet as well as the sheet itself, silently
+dismissing the caller's own page with no error in a release build.
+
+`LayrzDialog` (DESIGN-96) needed the same barrier, the same reduce-motion handling, and — most
+importantly — the same double-pop guard. Two paths existed: duplicate this machinery into the
+dialog's own route subclass, or extract it once and have both surfaces depend on the extraction.
+
+### Decision
+
+**Extract `LayrzModalRoute<T> extends RawDialogRoute<T>` into `lib/src/sheets/src/modal_route.dart`,
+carrying the guard and the other genuinely shared concerns as instance methods and static helpers.
+`LayrzBottomSheet`'s route becomes `_BottomSheetRoute<T> extends LayrzModalRoute<T>`, and
+`LayrzDialog`'s route becomes `_DialogRoute<T> extends LayrzModalRoute<T>`.** The guard itself is
+exposed as a single static helper, `LayrzModalRoute.popIfCurrent(BuildContext)`, so every dismiss
+site on every subclass calls the same implementation rather than re-typing the `isCurrent` check.
+
+**This unit changed no public API and no behaviour of the shipped sheet.**
+`LayrzBottomSheet.show<T>()`'s signature, defaults, and semantics are unchanged; the extraction
+moved code between files and into a shared superclass, nothing else. Sheet-specific concerns —
+snap sizes, the drag handle, `DraggableScrollableSheet` — stay in `bottom_sheet.dart`, because they
+are meaningless for a dialog.
+
+### Rationale
+
+**The guard must exist in exactly one place, reachable as a static from any subclass, for the
+guarantee to actually hold.** Duplicating the four-site guard into the dialog's own route class was
+rejected because it recreates the exact condition that let the original bug ship once already: a
+correctness-critical check, hand-typed at every dismiss site, with no structural guarantee that a
+future modal surface (a third family member, or a future edit to either existing one) repeats it
+correctly. Extracting it means every subclass gets the guard **by construction** — a future modal
+surface that extends `LayrzModalRoute` cannot forget it, because there is nothing to forget; it
+calls the one existing helper.
+
+**This was accepted as present risk to protect future correctness.** `LayrzBottomSheet` was
+shipped, working, and tested code; this extraction touched it to serve a component (`LayrzDialog`)
+that did not exist yet. That is a real trade-off, worth stating plainly rather than treating as
+free: a reviewer could reasonably ask why a working component was modified at all. The honest
+answer is that duplicating the guard, or converging the two "later" once both existed
+independently, both leave a window where the guard exists in two places and can drift or be
+forgotten in the copy — and "converge later" is a step that, empirically, tends not to happen once
+each surface already works on its own.
+
+**The mitigation was that all eight existing `test/sheets/` files pass completely unmodified.**
+That was the acceptance bar set for this extraction specifically because it is the only way to
+demonstrate the refactor changed no behaviour: if any existing sheet test had needed editing to
+keep passing, that would have been the signal the extraction altered behaviour rather than merely
+relocating it. `bottom_sheet_double_pop_test.dart` is the specific canary for the guard itself.
+
+**Splitting `bottom_sheet.dart` was a secondary, independent benefit.** The file was 888 lines
+against this repo's ~400-line splitting guidance before the extraction; moving the shared base out
+is the natural, no-extra-cost moment to bring it back down, rather than a separate future refactor.
+
+### Consequences
+
+- `lib/src/sheets/sheets.dart` now also exports `LayrzModalRoute`, so `lib/src/dialogs/` can import
+  it via the absolute `package:layrz_ui/src/sheets/sheets.dart` form.
+- The shared base lives in `sheets/`, not `dialogs/`, specifically so `sheets/` does not depend on
+  `dialogs/` for its own foundation — the sheet is the base's first consumer and existed first.
+- Any future modal-surface component (a persistent side panel, for instance) extends
+  `LayrzModalRoute` and inherits the guard, reduce-motion handling, and keyboard-inset workaround
+  without re-deriving any of them.
+
+### Related Decisions
+
+- **D65**: `LayrzLayout` resizes its body for the keyboard — the same inset-handling problem
+  family `LayrzModalRoute.keyboardViewInsetsOf` addresses for modal surfaces specifically.
+
+---
+
+## D69: `LayrzResponsiveModal` — Viewport Width, Decided Once, Never Re-Evaluated
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: API Design / Interaction Design
+
+### Context
+
+DESIGN-99 asked for a component that presents its content as `LayrzDialog` on wide viewports and
+`LayrzBottomSheet` on narrow ones, so that consumers stop duplicating that breakpoint branch
+themselves. Two design questions had to be settled before implementation: what width source drives
+the choice, and whether the choice, once made, can change while the modal is open.
+
+### Decision
+
+**Width source: viewport width via `context.isCompact`, not container width via `LayoutBuilder`
+constraint width.** `LayrzLayout`'s own `resolveLayrzLayoutPresentation` deliberately reads
+`LayoutBuilder` constraint width, because `LayrzLayout` can be embedded inside a constrained
+container and its presentation should respond to the space it is actually given there. A modal is
+a different case: it is presented over the whole screen regardless of where `show()` was called
+from, so the viewport itself — not an accident of where the calling widget sits in the tree — is
+the honest input. This also matches **D52**, which already uses the same `isCompact` (< 960px)
+boundary for the identical dialog-vs-sheet choice in the M3 picker family.
+
+**Presentation is resolved exactly once, at `show()` call time, and is never re-evaluated for the
+life of the route.** There is no `LayoutBuilder`, no `MediaQuery` listener, and nothing installed
+in the widget tree that could rebuild across the breakpoint. A modal opened on a wide viewport and
+then resized narrow stays on the surface it opened with for the entire life of that route.
+
+**The component is named `LayrzResponsiveModal`, not `LayrzAdaptiveModal`.** Flutter reserves
+"adaptive" for platform-switching (`Switch.adaptive`); this component switches on breakpoint, which
+is what "responsive" means in this codebase's existing vocabulary (`LayrzBreakpoint`, `LayrzRow`).
+The rename was taken now, before publication, because renaming a published 0.x API is a breaking
+change and this was the last free moment to make it.
+
+### Rationale
+
+**Re-evaluating across a resize is itself behaviour, and this component's premise is that it adds
+none.** Its entire job is to pick a presentation once and forward to the chosen surface; anything
+that cannot be expressed as "forward to one branch or the other" — including "swap the branch
+mid-route" — does not belong on it. Tearing down one route and pushing the other mid-flight also
+risks the same class of transition-state bug the sheet's own `_KeyboardVisibility` workaround exists
+to avoid, since `ModalRoute` caches its page widget rather than rebuilding it on every inset or
+layout change.
+
+**There is shipped precedent for the exact failure this rule avoids.** Version 0.0.14 fixed
+`LayrzScaffoldShell` throwing `setState() or markNeedsBuild() called during build` when the
+viewport crossed the compact breakpoint while its detail sheet was open — a bug produced by
+exactly the "re-evaluate presentation across a live breakpoint crossing" design this decision
+rules out from the start.
+
+**The name makes the non-goal more important to state, not less.** "Responsive" invites the
+live-resize assumption harder than "adaptive" did, precisely because "responsive" is the word this
+codebase already uses for `LayrzRow`'s live-reflowing grid behaviour. The decide-once rule is
+therefore documented as an explicit, prominent non-goal on the component itself — in the class doc
+comment and as the lead section of its wiki page — rather than left to be inferred, and it is
+enforced by tests confirming the presentation does not change when the viewport crosses the
+breakpoint in either direction while the route is open.
+
+### Consequences
+
+- `LayrzResponsiveModal.show<T>()` reads `context.isCompact` (or the `isCompact` override, if
+  supplied) exactly once, before pushing to either `LayrzDialog.show` or `LayrzBottomSheet.show`.
+- `LayrzModalPresentation` (`dialog` / `sheet`) is its own enum, deliberately not a reuse of
+  `LayrzLayoutPresentation` (`expanded` / `drawer`), which means navigation chrome and has no
+  member that could stand for a modal surface without redefining the enum.
+- The Notion row DESIGN-99 remains titled `LayrzAdaptiveModal`; the rename is not being pushed back
+  into Notion as part of this work — that is a separate housekeeping follow-up.
+
+### Related Decisions
+
+- **D52**: Establishes the `isCompact` (< 960px) boundary this component reuses, and is the
+  decision this component's own amendment note (below) attaches to.
+- **D68**: The shared `LayrzModalRoute` base both of this component's branches ultimately build on.
+
+---
+
+## D70: Amendment to D52 — `LayrzDialog`/`LayrzResponsiveModal` Built; Shipped M3 Pickers Not Migrated
+
+**Date**: 2026-08-27
+**Status**: Decided (amends D52)
+**Category**: API Design / Interaction Design
+
+### Context
+
+**D52** (2026-08-21) deferred `LayrzDialog` (DESIGN-96) and `LayrzResponsiveModal`
+(then `LayrzAdaptiveModal`, DESIGN-99) to "M4 or later", and prescribed the anchored overlay
+(`LayrzAnchoredPanel`) as the desktop surface for M3's picker-style inputs
+(`LayrzComboBoxInput`, `LayrzSelectInput`, `LayrzDurationInput`). Both components have now been
+built, in this run, ahead of that original M4+ timeline. This entry records what that does — and
+explicitly does not do — to D52's standing decision.
+
+### Decision
+
+**D52 stands. Building `LayrzDialog` and `LayrzResponsiveModal` did not migrate any shipped M3
+picker off its anchored-overlay desktop surface.** The three M3 pickers named in D52 keep
+`LayrzAnchoredPanel` on desktop and `LayrzBottomSheet` below `isCompact`, exactly as D52
+prescribes, with no `position`/`surface` parameter added to any of them. Only D52's "deferred to
+M4 or later" line is superseded by this run's delivery — its prescription for the M3 pickers
+themselves is unchanged and remains binding.
+
+### Rationale
+
+**A dialog and an anchored overlay are different product surfaces, not two competing idioms for
+the same job.** An anchored overlay is field-relative disclosure: it is tethered to the field that
+opened it, flips up or down based on available space, and matches that field's width — appropriate
+for inline form picking, where the user's attention stays anchored to the field they were already
+interacting with. A dialog is a page-relative interruption: centered, barriered, and deliberately
+disconnected from any one field's position. D52's own rationale — *"the anchored overlay is
+lighter-weight and appropriate for inline form picking"* — was a statement about why pickers get a
+lighter surface, not a placeholder standing in for "the dialog didn't exist yet." Now that the
+dialog exists, the reason for the anchored overlay has not gone away.
+
+**A future M4 picker may still choose a dialog on its own merits — that is a per-component
+decision, not a blanket migration.** A picker whose content is genuinely a small multi-field form
+with its own validation may reasonably prefer a dialog's page-relative interruption over an
+anchored overlay's field-relative disclosure. That choice belongs to whichever future row plans
+that specific component, made against that component's actual content — not decided here, in
+advance, for every future picker as a category.
+
+### Consequences
+
+- No M3 picker's public API changed as a result of `LayrzDialog`/`LayrzResponsiveModal` landing.
+- This entry must not be read as "pickers may never use a dialog" — it records that none were
+  migrated *in this run*, and leaves the door open, narrowly, for a future row to choose
+  differently on its own merits.
+
+### Related Decisions
+
+- **D52**: The decision this entry amends.
+- **D69**: `LayrzResponsiveModal`'s own decide-once/viewport-width rules, built on the same
+  `isCompact` boundary D52 established.
+
