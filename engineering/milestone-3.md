@@ -22,8 +22,9 @@ This is the **second components milestone** after M1 Foundation and M2 Core Prim
 | 10 | LayrzBottomSheet (modal/persistent sheet, mobile half of D52) | Merged · Review required |
 | 11 | LayrzAnchoredPanel (smart overlay with flip and width control) | Merged (as prerequisite) · Review required |
 | 12 | LayrzSelectItem<T> (shared item type for radio/select/combobox) | Merged (as supporting work) · Review required |
+| 13 | LayrzSlider (single-value slider, drag/tap/keyboard, DESIGN-86) | In progress · implemented and tested on `feat/inputs/DESIGN-86`, not yet merged |
 
-**Note**: This table is the authoritative record of M3 work items, kept in step with the code in the same commit. Rows 1–5 and 7–12 are merged into `development` and marked `Review required`. Rows 6 and 8 are in active development. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference).
+**Note**: This table is the authoritative record of M3 work items, kept in step with the code in the same commit. Rows 1–5 and 7–12 are merged into `development` and marked `Review required`. Rows 6, 8, and 13 are in active development. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference).
 
 ### Outstanding Accessibility Work
 
