@@ -94,11 +94,11 @@ void main() {
       final renderedHeight = tester.getSize(textFinder).height;
       expect(
         renderedHeight,
-        greaterThan(15.0),
+        greaterThan(13.0),
         reason:
-            'a real line of 16px body text needs at least ~16px of rendered height; the '
-            'reported bug clipped this to ~4px, which is invisible even though the text data '
-            'itself was correct',
+            'a real line of 14px body text (LayrzTextTheme.body, DESIGN-105) needs at least '
+            '~14px of rendered height; the reported bug clipped this to ~4px, which is '
+            'invisible even though the text data itself was correct',
       );
     });
 

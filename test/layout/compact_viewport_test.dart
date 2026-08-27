@@ -108,7 +108,7 @@ void main() {
       // 1. Top bar height (56 → 64)
       // 2. Top bar icon button (40 → 48)
       // 3. Nav item icon (18 → 20)
-      // 4. Nav item font (label 14 → body 16)
+      // 4. Nav item font (label 12 → body 14)
       // 5. Nav item padding (sp2 10 → sp3 14)
       // 6. User avatar (30 → 40)
       // 7. Notifications row height (32 → 40)
@@ -132,8 +132,8 @@ void main() {
       );
 
       // Verify the token ramps exist and have the expected values
-      expect(tokens.typography.label.fontSize, equals(14.0));
-      expect(tokens.typography.body.fontSize, equals(16.0));
+      expect(tokens.typography.label.fontSize, equals(12.0));
+      expect(tokens.typography.body.fontSize, equals(14.0));
       expect(tokens.spacing.sp2, equals(10.0));
       expect(tokens.spacing.sp3, equals(14.0));
       expect(tokens.spacing.pd2.top, equals(10.0));
