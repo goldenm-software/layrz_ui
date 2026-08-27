@@ -180,9 +180,42 @@ class _LayrzLayoutDrawerScaffoldState extends State<LayrzLayoutDrawerScaffold> w
     final viewInsets = MediaQuery.viewInsetsOf(context);
     final resizedBody = Padding(
       padding: EdgeInsets.only(bottom: viewInsets.bottom),
-      child: MediaQuery.removeViewInsets(
-        context: context,
-        removeBottom: true,
+      // Both removals are composed in one MediaQuery, built by chaining on the
+      // MediaQueryData itself (removeViewInsets(...).removePadding(...)) rather than
+      // nesting two MediaQuery.removeXxx(context: context, ...) widgets. Each of those
+      // factories independently re-reads MediaQuery.of(context) from the SAME outer
+      // context -- neither widget is in the tree yet when context is captured here --
+      // so a nested inner removeXxx would rebuild from the untouched ambient data and
+      // silently discard whatever the outer removal already stripped.
+      //
+      // The body sits BELOW widget.topBarBuilder(...) in the Column below -- a sibling,
+      // not a descendant of it -- and the top bar consumes padding.top for itself via
+      // its own internal SafeArea(bottom: false) (top_bar.dart:60). That SafeArea only
+      // affects the top bar's own subtree; it does not remove padding.top from the
+      // MediaQuery this body still receives. Without this, any scrollable in the body
+      // that reads MediaQuery.padding when its own padding is null -- e.g. a bare
+      // ListView.builder, per the SDK's ScrollView.buildSlivers fallback
+      // (scroll_view.dart:897-925), unconditional whenever an ancestor MediaQuery
+      // exists, applying the FULL padding on the scroll axis (both top and bottom for a
+      // vertical list) -- ends up insetting AGAIN by the same status-bar height the top
+      // bar already physically occupies: a double-inset, visible only on a platform
+      // that actually reports a non-zero padding.top (i.e. never caught by this repo's
+      // test suite until a test explicitly sets tester.view.padding, since it defaults
+      // to zero).
+      //
+      // removePadding(removeTop: true) is the general fix, not a ListView-local one: it
+      // corrects the MediaQuery every scrollable (and anything else that reads
+      // padding.top) in the body sees, rather than patching one call site. The bottom
+      // edge is deliberately untouched -- padding.bottom is not double-consumed by
+      // anything upstream, so a scrollable's own auto-applied bottom padding there is
+      // correct and must survive.
+      //
+      // Only the BODY needs this. The drawer panel (drawerWidget below) is a
+      // full-height Positioned overlay with no chrome above it -- navigator_panel.dart's
+      // own SafeArea(right: false) is the only thing that ever needed to consume
+      // padding.top there, and it does, correctly, on its own.
+      child: MediaQuery(
+        data: MediaQuery.of(context).removeViewInsets(removeBottom: true).removePadding(removeTop: true),
         child: widget.body,
       ),
     );
