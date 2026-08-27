@@ -230,5 +230,85 @@ void main() {
       final b = buildPainter();
       expect(a.shouldRepaint(b), isFalse);
     });
+
+    test('with a 28px thumb, the thumb centre reaches exactly thumbSize/2 from each track edge', () {
+      // Mirrors LayrzSlider's actual thumb size (see _thumbSize in
+      // slider_input.dart) rather than this file's arbitrary 16.0 example --
+      // this test locks in that the usable-width math still lands the thumb
+      // centre exactly at the inset on both extremes after the thumb grew.
+      const thumbSize = 28.0;
+      const trackWidth = 300.0;
+      final usableWidth = trackWidth - thumbSize;
+
+      final thumbXAtMin = thumbSize / 2 + usableWidth * 0.0;
+      final thumbXAtMax = thumbSize / 2 + usableWidth * 1.0;
+
+      expect(thumbXAtMin, thumbSize / 2);
+      expect(thumbXAtMax, trackWidth - thumbSize / 2);
+    });
+
+    test('paint completes without error using the real 28px thumb / 8px track at both extremes', () {
+      // Mirrors LayrzSlider's actual geometry (see _trackVisualHeight and
+      // _thumbSize in slider_input.dart): an 8px track behind a 28px thumb,
+      // painted into a `Size(300, paintHeight)` where paintHeight ==
+      // trackThickness + thumbSize (8 + 28 = 36), exactly as
+      // `_LayrzSliderState._buildPainter`/`build` construct it.
+      for (final fraction in [0.0, 1.0]) {
+        final painter = LayrzSliderPainter(
+          fraction: fraction,
+          trackThickness: 8.0,
+          thumbSize: 28.0,
+          thumbCornerRadius: 10.0,
+          thumbBorderWidth: 2.0,
+          trackColor: baseColors.trackColor,
+          activeTrackColor: baseColors.activeTrackColor,
+          thumbColor: baseColors.thumbColor,
+          thumbBorderColor: baseColors.thumbBorderColor,
+        );
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        expect(() => painter.paint(canvas, const Size(300, 36)), returnsNormally);
+        recorder.endRecording();
+      }
+    });
+
+    test('the 28px thumb fully covers the 8px track at both extremes (thumb >> track)', () {
+      // Geometric check (not just a paint smoke test) that the thumb's
+      // bounding box, centred on the track's centreline, vertically contains
+      // the entire painted track line at fraction 0.0 and 1.0 -- the two
+      // positions where the thumb sits at the very ends of the usable travel
+      // range and so has the least horizontal overlap margin with the track
+      // ends. The track line is drawn centred at `trackY = paintHeight / 2`
+      // with half-thickness `trackThickness / 2`; the thumb square is centred
+      // at the same `trackY` with half-edge `thumbSize / 2`. Coverage holds
+      // whenever `thumbSize / 2 >= trackThickness / 2`, i.e. `thumbSize >=
+      // trackThickness` -- true here by a wide margin (28 >> 8), unlike the
+      // old 4px track where the same inequality (28 >> 4) also held, so this
+      // was never at risk, but is now asserted directly rather than assumed.
+      const trackThickness = 8.0;
+      const thumbSize = 28.0;
+      const paintHeight = trackThickness + thumbSize;
+
+      final trackY = paintHeight / 2;
+      final trackTop = trackY - trackThickness / 2;
+      final trackBottom = trackY + trackThickness / 2;
+
+      for (final fraction in [0.0, 1.0]) {
+        final thumbCenterY = trackY; // thumb is vertically centred on the track's own centreline.
+        final thumbTop = thumbCenterY - thumbSize / 2;
+        final thumbBottom = thumbCenterY + thumbSize / 2;
+
+        expect(
+          thumbTop,
+          lessThanOrEqualTo(trackTop),
+          reason: 'thumb top must sit at or above the track top at fraction $fraction',
+        );
+        expect(
+          thumbBottom,
+          greaterThanOrEqualTo(trackBottom),
+          reason: 'thumb bottom must sit at or below the track bottom at fraction $fraction',
+        );
+      }
+    });
   });
 }

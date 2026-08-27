@@ -45,13 +45,14 @@ import 'slider_track_area.dart';
 /// release. This label is controlled by [showValueLabel] but defaults to
 /// visible, because a visible current value is required, not optional, for v1.
 ///
-/// **Drag value bubble**: while a drag is active, a small floating
+/// **Drag value bubble**: while a drag is active, a small
 /// [LayrzSliderValueBubble] additionally appears directly above the thumb,
-/// tracking its horizontal position and showing the same formatted value as
-/// the static label. It supplements that static label rather than replacing
-/// it — the static label stays the reliable fallback for touch users whose
-/// fingertip may be covering the bubble, while desktop/mouse users get an
-/// affordance anchored to the thing they are actually dragging. The bubble is
+/// its downward-pointing tail connecting it visually to the thumb it
+/// tracks, and showing the same formatted value as the static label. It
+/// supplements that static label rather than replacing it — the static
+/// label stays the reliable fallback for touch users whose fingertip may be
+/// covering the bubble, while desktop/mouse users get an affordance anchored
+/// to the thing they are actually dragging. The bubble is
 /// laid out as a [Positioned] child of a [Stack] configured with
 /// `clipBehavior: Clip.none`, so it paints outside the track's normal layout
 /// box instead of being counted in it — its appearance and disappearance
@@ -210,8 +211,16 @@ class _LayrzSliderState extends State<LayrzSlider> {
   /// stayed within the larger hit-slop region must keep updating the value.
   bool _isDragging = false;
 
-  static const double _trackVisualHeight = 4.0;
-  static const double _thumbSize = 16.0;
+  static const double _trackVisualHeight = 8.0;
+
+  /// The edge length, in logical pixels, of the painted thumb square.
+  ///
+  /// Raised from an earlier `16.0` to `28.0` so the thumb is comfortably
+  /// grabbable on touch devices — a 16px hit target is too small to drag
+  /// reliably with a fingertip. This is a shared constant applied identically
+  /// across every interaction state (per D15: only colour/border/shadow vary
+  /// with state, never size), not a per-state value.
+  static const double _thumbSize = 28.0;
   static const double _thumbBorderWidth = 2.0;
 
   /// The half-height of the thumb, kept for the track/hit-test geometry that
@@ -226,7 +235,41 @@ class _LayrzSliderState extends State<LayrzSlider> {
   /// height allowance reserved in the invisible overlay region above the
   /// track — see the class doc's "Live value feedback" section and the
   /// `_buildBubbleOverlay` doc for why this never affects layout height.
-  static const double _bubbleClearance = 28.0;
+  ///
+  /// Derived so the bubble's downward tail tip lands 3px above the thumb's
+  /// painted top edge (close enough to read as attached, without overlapping
+  /// it). Re-worked from the actual stacking in [LayrzSliderTrackArea] after
+  /// [_trackVisualHeight] moved from `4.0` to `8.0`:
+  /// - The [CustomPaint] (track+thumb) is centred in a
+  ///   `SizedBox(height: _hitSlopHeight)` (44) and sized to `paintHeight =
+  ///   _trackVisualHeight + _thumbSize` (8 + 28 = 36).
+  /// - Centring that 36px paint box inside the 44px `SizedBox` leaves 4px of
+  ///   slack above it: `(44 - 36) / 2 = 4`.
+  /// - Inside the paint box, `LayrzSliderPainter` draws the track centreline
+  ///   at `paintHeight / 2` (18) and the thumb's top edge at
+  ///   `trackY - thumbSize / 2 == _trackVisualHeight / 2` (4px) below the
+  ///   paint box's own top — this identity holds for any track thickness,
+  ///   since `paintHeight / 2 - thumbSize / 2` always reduces to
+  ///   `_trackVisualHeight / 2` given `paintHeight = _trackVisualHeight +
+  ///   _thumbSize`.
+  /// - So the thumb's top edge sits `4 + 4 = 8px` below the `SizedBox`'s top
+  ///   — the same origin the bubble's `Positioned(top: -bubbleClearance)` is
+  ///   measured from in [LayrzSliderTrackArea]. Note this 8px figure is
+  ///   unchanged from the old 4px-track geometry: it algebraically reduces to
+  ///   `(_hitSlopHeight - _thumbSize) / 2` (`(44 - 28) / 2 = 8`), which never
+  ///   involves the track thickness at all — only the intermediate slack/
+  ///   thumb-top-offset split between them changed.
+  /// - [LayrzSliderValueBubble] itself renders at a fixed 24px tall (18px
+  ///   body + the 6px tail reserved by its own bottom padding), regardless of
+  ///   the formatted value's text — unaffected by the track-thickness change,
+  ///   since the bubble has no dependency on [_trackVisualHeight] — so its
+  ///   bottom edge (the tail's tip) sits at `-bubbleClearance + 24` in the
+  ///   same coordinate space.
+  /// - Solving `-bubbleClearance + 24 == 8 - 3` (tip 3px above the thumb top)
+  ///   gives `bubbleClearance == 19.0` — the same numeric value as before the
+  ///   track-thickness change, because the thumb-top-offset it is solved
+  ///   against did not move.
+  static const double _bubbleClearance = 19.0;
 
   /// The height of the invisible gesture-detection region.
   ///
@@ -507,7 +550,12 @@ class _LayrzSliderState extends State<LayrzSlider> {
       fraction: fraction,
       trackThickness: _trackVisualHeight,
       thumbSize: _thumbSize,
-      thumbCornerRadius: tokens.radius.r1,
+      // r2 (10px), not r1 (6px): on the old 16px thumb, r1 gave a
+      // corner-to-edge ratio of 6/16 = 0.375. Keeping that literal radius on
+      // the new 28px thumb would drop the ratio to 6/28 ~= 0.21, reading as
+      // nearly square. r2's 10px keeps 10/28 ~= 0.36 -- close to the original
+      // roundness character at the new size.
+      thumbCornerRadius: tokens.radius.r2,
       thumbBorderWidth: _thumbBorderWidth,
       trackColor: colors.trackColor,
       activeTrackColor: colors.activeTrackColor,

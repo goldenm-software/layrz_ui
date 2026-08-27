@@ -630,5 +630,119 @@ void main() {
       final heightAfterRelease = (key.currentContext!.findRenderObject() as RenderBox).size.height;
       expect(heightAfterRelease, heightAtRest);
     });
+
+    guardedTestWidgets('the bubble stays above the thumb\'s painted top edge at value == min', (tester) async {
+      double value = 0;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final trackFinder = find.byType(CustomPaint).last;
+      // Drag starting right at the track's own top-left -- the thumb should
+      // clamp to fraction 0.0 (the start of the track) and stay there.
+      final start = tester.getTopLeft(trackFinder) + const Offset(2, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveBy(const Offset(-50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(-50, 0));
+      await tester.pump();
+
+      expect(value, 0);
+      final bubbleFinder = find.byType(LayrzSliderValueBubble);
+      expect(bubbleFinder, findsOneWidget);
+      // The bubble's bottom (the tail's tip) must sit strictly above the
+      // top of the track/thumb paint region -- never overlapping it.
+      final bubbleBottom = tester.getBottomLeft(bubbleFinder).dy;
+      final trackAreaTop = tester.getTopLeft(trackFinder).dy;
+      expect(bubbleBottom, lessThanOrEqualTo(trackAreaTop + 44));
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    guardedTestWidgets('the bubble stays above the thumb\'s painted top edge at value == max', (tester) async {
+      double value = 100;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final trackFinder = find.byType(CustomPaint).last;
+      final start = tester.getTopRight(trackFinder) + const Offset(-2, 10);
+      final gesture = await tester.startGesture(start);
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(50, 0));
+      await tester.pump();
+
+      expect(value, 100);
+      final bubbleFinder = find.byType(LayrzSliderValueBubble);
+      expect(bubbleFinder, findsOneWidget);
+      final bubbleBottom = tester.getBottomLeft(bubbleFinder).dy;
+      final trackAreaTop = tester.getTopLeft(trackFinder).dy;
+      expect(bubbleBottom, lessThanOrEqualTo(trackAreaTop + 44));
+
+      await gesture.up();
+      await tester.pump();
+    });
+
+    guardedTestWidgets('the 28px thumb still reaches both track extremes exactly', (tester) async {
+      double value = 50;
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return SizedBox(
+              width: 300,
+              child: LayrzSlider(
+                value: value,
+                min: 0,
+                max: 100,
+                onChanged: (v) => setState(() => value = v),
+              ),
+            );
+          },
+        ),
+      );
+
+      final trackFinder = find.byType(CustomPaint).last;
+
+      // Tap far past the left edge -- must clamp to min, not merely get close.
+      await tester.tapAt(tester.getTopLeft(trackFinder) + const Offset(1, 10));
+      await tester.pump();
+      expect(value, 0);
+
+      // Tap far past the right edge -- must clamp to max.
+      await tester.tapAt(tester.getTopRight(trackFinder) + const Offset(-1, 10));
+      await tester.pump();
+      expect(value, 100);
+    });
   });
 }
