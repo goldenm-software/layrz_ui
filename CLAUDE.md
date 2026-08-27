@@ -111,7 +111,7 @@ lib/
         tooltip.dart             # LayrzTooltip component
 .github/
   workflows/
-    checks.yaml                  # CI gates: analyze, test, Material/Cupertino guard, GoogleFonts guard, coverage (90% floor)
+    checks.yaml                  # CI gates: analyze, test, Material/Cupertino guard, GoogleFonts guard, coverage floor
     publish.yaml                 # Release workflow: tag validation, pub.dev publication, GitHub release, web showroom build
 tool/
   deploy_web.py                  # Deploy web showroom to hosting after release
@@ -252,12 +252,12 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 
 The convention of mirroring `lib/src/<module>/` structure under `test/<module>/` is now **enforced by code review**, not by CI. It remains a required pattern, but the `tool/check_test_mirror.sh` script that enforced it in CI has been removed. Maintain this structure on every PR.
 
-**CI enforces a 90% coverage floor** via the shared `goldenm-software/layrz-actions/check-dart` action, which runs:
+**CI enforces a coverage floor** via the shared `goldenm-software/layrz-actions/check-dart` action, which runs:
 1. **flutter analyze** — linting must be clean
 2. **flutter test --coverage** — all tests pass and coverage is reported
 3. **Material/Cupertino guard** (`grep` inline) — no Material or Cupertino imports in lib/
 4. **GoogleFonts TextTheme guard** (`grep` inline) — no Material-coupled font methods
-5. **Coverage floor at 90%** — shared action enforces minimum coverage; current coverage is 91.12%. Headroom above the floor is thin (~1 point), so aim to maintain or improve coverage on every change
+5. **Coverage floor** — the shared action enforces a minimum coverage threshold. Run `flutter test --coverage` to see where the repository currently stands; aim to maintain or improve coverage on every change, and never let a change take it downward
 
 **Local-only convention**: `dart format` is **not** a CI gate. Code formatting is a local-development concern, not a pipeline gate. Run `dart format -w lib/ test/` before committing.
 
