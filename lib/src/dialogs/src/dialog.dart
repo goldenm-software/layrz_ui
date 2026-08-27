@@ -37,16 +37,19 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 /// together with any of [title]/[content]/[actions] is not supported — an assertion
 /// enforces the choice at the call site.
 ///
-/// **Dismiss ("X") affordance**: every dialog renders a tappable close icon that
-/// dismisses it through [LayrzModalRoute.popIfCurrent] — the same guard the barrier
-/// and Escape handler use. When [title] is supplied, the icon sits at the trailing
-/// edge of the title row, vertically centered with the title text. When it is not
-/// (including the [child] escape hatch), the icon instead floats over the panel's
-/// top-right corner, inset from the edge, so every dialog keeps a visible close
-/// affordance regardless of which slots are used. This is always shown and always
-/// dismisses on tap — there is no parameter to suppress it, and none is planned.
-/// See [show]'s [barrierDismissible] doc for why that is intentional rather than
-/// an oversight, even for a dialog whose barrier is not dismissible.
+/// **Dismiss ("X") affordance**: when the dialog is dismissible (see [show]'s
+/// [canDismiss] doc), it renders a tappable close icon that dismisses it
+/// through [LayrzModalRoute.popIfCurrent] — the same guard the barrier, Escape, and
+/// back-gesture handlers use. When [title] is supplied, the icon sits at the
+/// trailing edge of the title row, vertically centered with the title text. When it
+/// is not (including the [child] escape hatch), the icon instead floats over the
+/// panel's top-right corner, inset from the edge, so every dismissible dialog keeps
+/// a visible close affordance regardless of which slots are used. **When the dialog
+/// is not dismissible (`actions` present and `canDismiss` not overridden to
+/// `true`), the icon is not rendered at all** — a decision-bearing dialog is
+/// answered through its own [actions], not escaped through an icon that would
+/// otherwise look like a free exit. There is no parameter to suppress it
+/// independently of the dialog's overall dismissibility.
 ///
 /// **Example usage** (a confirm/cancel dialog):
 /// ```dart
@@ -106,22 +109,28 @@ class LayrzDialog {
   ///   The trade-off: [child] gets no title row or action row for free, so a caller reaching
   ///   for it to solve a sizing problem also takes on rebuilding those parts itself if it
   ///   needs them.
-  /// - [barrierDismissible]: whether tapping the barrier outside the dialog dismisses it.
-  ///   Defaults to `true` when [actions] is null (an informational dialog with nothing to
-  ///   lose), and `false` when [actions] is non-null (a dialog offering a decision should not
-  ///   silently discard it on a stray click outside it — the caller can still pass `true`
-  ///   explicitly to opt back in, e.g. for a non-destructive confirm/cancel pair). This is a
-  ///   deliberate default, not a guess: a dialog holding meaningful input or an unmade
-  ///   decision must not treat an accidental barrier tap the same as an explicit dismissal.
-  ///   **This does not gate the close ("X") icon, and is not meant to.** The icon always
-  ///   dismisses on tap, in every dialog, regardless of this value or whether [actions] is
-  ///   supplied — this is intentional, not an inconsistency to fix. The distinction that
-  ///   makes both true at once is: **a stray click outside the panel is accidental, while
-  ///   the X, Escape, and a Cancel action are deliberate.** Blocking the barrier stops a
-  ///   misclick from discarding a decision or half-entered input; it was never meant to
-  ///   remove every way out. A dialog with `actions` still leaves three intentional exits
-  ///   available (X, Escape, Cancel) — it just refuses to be dismissed by accident. There is
-  ///   no parameter to suppress the X, and none is planned.
+  /// - [canDismiss]: whether the dialog can be dismissed by any route OTHER than one of its
+  ///   own [actions]. A single flag governs exactly four routes, together:
+  ///     1. tapping the barrier outside the panel,
+  ///     2. the Escape key,
+  ///     3. the close ("X") icon, and
+  ///     4. the system/Android back gesture.
+  ///   `null` (the default) infers from [actions]: dismissable (`true`) when [actions] is
+  ///   null (an informational dialog with nothing to lose), not dismissable (`false`) when
+  ///   [actions] is non-null (a dialog offering a decision should not be escapable by anything
+  ///   other than answering it). Passing `true` explicitly with [actions] present deliberately
+  ///   re-opens all four routes at once — an escape hatch for a caller who wants both actions
+  ///   and free dismissal, e.g. a non-destructive confirm/cancel pair. The reasoning: a dialog
+  ///   carrying actions is meant to be **answered**, not escaped, so a stray click, a reflexive
+  ///   Escape, an incidental X tap, or a back-button swipe must not stand in for actually
+  ///   choosing — unless the caller explicitly says otherwise.
+  ///   **When [actions] is non-null and this stays `false`, the close ("X") icon is not
+  ///   rendered at all** — it is not merely inert, since a visible-but-disabled dismiss icon
+  ///   next to buttons that are the only way out would be misleading UI. The only way out of
+  ///   such a dialog is one of its own [actions]. This parameter used to be named
+  ///   `barrierDismissible` and governed only the barrier; it was renamed and broadened to a
+  ///   single switch governing every non-action exit at once, specifically so a decision-bearing
+  ///   dialog cannot be half-escaped through whichever route someone forgot to gate.
   /// - [semanticLabel]: optional semantic label describing the dialog's purpose for screen
   ///   readers, announced alongside the barrier label when the dialog opens. If not provided,
   ///   only the barrier label (from [BuildContext.l10n]) is announced.
@@ -142,7 +151,7 @@ class LayrzDialog {
     Widget? content,
     List<Widget>? actions,
     Widget? child,
-    bool? barrierDismissible,
+    bool? canDismiss,
     String? semanticLabel,
     double maxWidth = 480,
     double maxHeight = 640,
@@ -176,7 +185,12 @@ class LayrzDialog {
       return true;
     }());
 
-    final effectiveBarrierDismissible = barrierDismissible ?? (actions == null);
+    // Single source of truth for every non-action dismissal route (barrier,
+    // Escape, the X icon, and the system/Android back gesture) -- see [show]'s
+    // [canDismiss] doc for the reasoning. Computed once, here, and threaded
+    // down through _DialogRoute/_DialogContent rather than recomputed at each
+    // of the four call sites, so they cannot drift apart.
+    final effectiveCanDismiss = canDismiss ?? (actions == null);
 
     return navigator.push<T>(
       _DialogRoute<T>(
@@ -184,7 +198,7 @@ class LayrzDialog {
         content: content,
         actions: actions,
         child: child,
-        barrierDismissible: effectiveBarrierDismissible,
+        dismissible: effectiveCanDismiss,
         barrierLabel: context.l10n.dialogsBarrierLabel,
         semanticLabel: semanticLabel,
         maxWidth: maxWidth,
@@ -217,6 +231,16 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
   /// doc for what it is for (mainly fill-height layouts `content` cannot express).
   final Widget? child;
 
+  /// Whether the dialog can be dismissed by any route other than one of its own
+  /// [actions] -- the barrier, Escape, the X icon, and the system/Android back
+  /// gesture all read this single value. See [LayrzDialog.show]'s
+  /// `canDismiss` doc for the full contract; this is that same resolved
+  /// value, forwarded verbatim to [RawDialogRoute]'s own `barrierDismissible` (the
+  /// SDK's own parameter name, unrelated to the layrz-level `canDismiss` rename --
+  /// only the framework's barrier hit-testing reads it) and re-read by name here for
+  /// every other route this class or [_DialogContent] gates.
+  final bool dismissible;
+
   /// Optional semantic label for screen readers (caller-supplied).
   final String? semanticLabel;
 
@@ -232,17 +256,19 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
     required this.content,
     required this.actions,
     required this.child,
-    required super.barrierDismissible,
+    required this.dismissible,
     required super.barrierLabel,
     required this.semanticLabel,
     required this.maxWidth,
     required this.maxHeight,
   }) : super(
+         barrierDismissible: dismissible,
          pageBuilder: (context, animation, secondaryAnimation) {
            return _DialogContent(
              title: title,
              content: content,
              actions: actions,
+             dismissible: dismissible,
              semanticLabel: semanticLabel,
              maxWidth: maxWidth,
              maxHeight: maxHeight,
@@ -263,7 +289,7 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
                // the dismiss transition (the barrier stays mounted and
                // hit-testable for the whole exit animation) cannot pop the
                // route underneath this one. See LayrzModalRoute.popIfCurrent.
-               if (barrierDismissible)
+               if (dismissible)
                  GestureDetector(
                    behavior: HitTestBehavior.opaque,
                    onTap: () {
@@ -364,6 +390,13 @@ class _DialogContent extends StatefulWidget {
   /// doc for what it is for (mainly fill-height layouts `content` cannot express).
   final Widget? child;
 
+  /// Whether the dialog can be dismissed by any route other than one of its own
+  /// [actions] -- gates Escape, the X icon's render, and the system/Android back
+  /// gesture here. See [LayrzDialog.show]'s `canDismiss` doc for the full
+  /// contract; this is the same resolved value the enclosing [_DialogRoute] also
+  /// used for the barrier.
+  final bool dismissible;
+
   /// Optional semantic label for screen readers.
   final String? semanticLabel;
 
@@ -379,6 +412,7 @@ class _DialogContent extends StatefulWidget {
     required this.content,
     required this.actions,
     required this.child,
+    required this.dismissible,
     required this.semanticLabel,
     required this.maxWidth,
     required this.maxHeight,
@@ -460,13 +494,20 @@ class _DialogContentState extends State<_DialogContent> {
     final panel = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
-        // Escape dismisses the dialog. isCurrent is checked at the call site
+        // Escape dismisses the dialog, but only when it is dismissible --
+        // gated on the same widget.dismissible value the barrier, the X, and
+        // the PopScope below all read, so a decision-bearing dialog closes
+        // this one remaining route too. isCurrent is checked at the call site
         // (not only inside popIfCurrent) so this handler can return `handled`
         // vs `ignored` BEFORE popping -- mirroring LayrzBottomSheet's own
         // Escape handler exactly (see bottom_sheet.dart), because the return
         // value decides whether Escape stops propagating here or keeps
-        // bubbling to an ancestor that might otherwise also act on it.
-        if (event is KeyDownEvent &&
+        // bubbling to an ancestor that might otherwise also act on it. When
+        // not dismissible, this returns `ignored` unconditionally so Escape
+        // keeps propagating exactly as if this dialog were not listening at
+        // all, rather than silently swallowing a keypress it declines to act on.
+        if (widget.dismissible &&
+            event is KeyDownEvent &&
             event.logicalKey == LogicalKeyboardKey.escape &&
             (ModalRoute.of(context)?.isCurrent ?? false)) {
           LayrzModalRoute.popIfCurrent(context);
@@ -483,40 +524,59 @@ class _DialogContentState extends State<_DialogContent> {
             boxShadow: tokens.shadow.elevation3,
           ),
           child: widget.title != null
-              // Title present: the close button is composed into the title
-              // row itself (see _buildSlots), so no floating overlay is
-              // needed here.
+              // Title present: the close button (when dismissible) is
+              // composed into the title row itself (see _buildSlots), so no
+              // floating overlay is needed here.
               ? Padding(
                   padding: EdgeInsets.all(tokens.spacing.sp3),
                   child: _buildSlots(context),
                 )
               // No title -- either bare slots (content/actions only) or the
-              // child escape hatch. Both cases still need a visible close
-              // affordance (that is the whole point of always showing it),
-              // so it floats over the panel's top-right corner via a Stack
-              // rather than being composed into a title row that does not
-              // exist. Painted AFTER (so visually above) the body, and inset
-              // from the corner rather than flush with it, so it reads as an
-              // overlay rather than colliding edge-to-edge with a `child`
-              // that may paint its own content right up to the panel's
-              // bounds -- callers using `child` should still leave a little
-              // top-right clearance of their own, since this affordance
-              // necessarily sits on top of whatever they placed there.
+              // child escape hatch. When dismissible, both cases still need a
+              // visible close affordance, so it floats over the panel's
+              // top-right corner via a Stack rather than being composed into
+              // a title row that does not exist. Painted AFTER (so visually
+              // above) the body, and inset from the corner rather than flush
+              // with it, so it reads as an overlay rather than colliding
+              // edge-to-edge with a `child` that may paint its own content
+              // right up to the panel's bounds -- callers using `child`
+              // should still leave a little top-right clearance of their
+              // own, since this affordance necessarily sits on top of
+              // whatever they placed there. When NOT dismissible, no icon is
+              // rendered at all (see widget.dismissible's own doc), so the
+              // Stack collapses to just the body.
               : Stack(
                   children: [
                     Padding(
                       padding: EdgeInsets.all(tokens.spacing.sp3),
                       child: widget.child ?? _buildSlots(context),
                     ),
-                    Positioned(
-                      top: tokens.spacing.sp2,
-                      right: tokens.spacing.sp2,
-                      child: const _DialogCloseButton(),
-                    ),
+                    if (widget.dismissible)
+                      Positioned(
+                        top: tokens.spacing.sp2,
+                        right: tokens.spacing.sp2,
+                        child: const _DialogCloseButton(),
+                      ),
                   ],
                 ),
         ),
       ),
+    );
+
+    // System/Android back gesture. canPop mirrors every other dismissal
+    // route on widget.dismissible: `true` lets the framework pop normally
+    // (identical to there being no PopScope at all), `false` intercepts the
+    // pop attempt and does nothing -- no partial dismissal, no popped route,
+    // no swallowed gesture reaching past this dialog to an ancestor, since a
+    // non-poppable PopScope simply reports the back attempt as handled and
+    // stops there. onPopInvokedWithResult is intentionally a no-op: unlike
+    // LayrzLayoutDrawerScaffold's PopScope (which uses a blocked pop to run a
+    // side effect -- closing the drawer instead), a blocked back gesture here
+    // has no secondary action to perform; the dialog simply stays open,
+    // exactly as a blocked barrier tap or Escape press already leaves it.
+    final popScoped = PopScope(
+      canPop: widget.dismissible,
+      child: panel,
     );
 
     // Route semantics, mirroring LayrzBottomSheet: only added when a label is
@@ -529,11 +589,11 @@ class _DialogContentState extends State<_DialogContent> {
         namesRoute: true,
         explicitChildNodes: true,
         enabled: true,
-        child: panel,
+        child: popScoped,
       );
     }
 
-    return panel;
+    return popScoped;
   }
 
   /// The [TextSelectionControls] used by the [content] slot's [SelectableRegion].
@@ -620,8 +680,14 @@ class _DialogContentState extends State<_DialogContent> {
                   child: widget.title!,
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp2),
-              const _DialogCloseButton(),
+              // The close icon is only rendered when the dialog is
+              // dismissible -- a decision-bearing, non-dismissible dialog
+              // must be answered through its own actions, not escaped
+              // through an X that would otherwise sit right next to them.
+              if (widget.dismissible) ...[
+                SizedBox(width: tokens.spacing.sp2),
+                const _DialogCloseButton(),
+              ],
             ],
           ),
           SizedBox(height: tokens.spacing.sp3),

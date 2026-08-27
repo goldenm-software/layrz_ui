@@ -115,7 +115,7 @@ void main() {
               result = await LayrzResponsiveModal.show<String>(
                 context,
                 builder: (context) => const Text('Modal content'),
-                barrierDismissible: true,
+                canDismiss: true,
               );
               sentinel = null;
             },

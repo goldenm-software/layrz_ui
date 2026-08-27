@@ -170,36 +170,45 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    guardedTestWidgets('appears with actions present too (title + content + actions)', (tester) async {
-      await tester.pumpWidget(
-        LayrzApp(
-          theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
-          home: Center(
-            child: Builder(
-              builder: (context) => GestureDetector(
-                onTap: () {
-                  LayrzDialog.show<void>(
-                    context,
-                    title: const Text('Confirm'),
-                    content: const Text('Body'),
-                    actions: const [SizedBox(width: 10, height: 10, child: Text('OK'))],
-                  );
-                },
-                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+    // Inverted from the original assertion here (which expected the X to be
+    // present with actions supplied and no canDismiss override). A
+    // dialog in that configuration is non-dismissible by anything but its
+    // own actions -- see LayrzDialog.show's canDismiss doc -- so the
+    // X must not render. canDismiss: true still re-enables it; that
+    // configuration is covered separately below.
+    guardedTestWidgets(
+      'does NOT appear with actions present and canDismiss not overridden (title + content + actions)',
+      (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzDialog.show<void>(
+                      context,
+                      title: const Text('Confirm'),
+                      content: const Text('Body'),
+                      actions: const [SizedBox(width: 10, height: 10, child: Text('OK'))],
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pump();
+        );
+        await tester.pump();
 
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
 
-      expect(findDialogCloseButton(), findsOneWidget);
-      expect(find.text('OK'), findsOneWidget);
-    });
+        expect(findDialogCloseButton(), findsNothing);
+        expect(find.text('OK'), findsOneWidget);
+      },
+    );
   });
 
   group('LayrzDialog close (X) button dismissal', () {
@@ -354,17 +363,18 @@ void main() {
       );
     });
 
-    // This is the intended asymmetry, confirmed by the maintainer, not a bug:
-    // a decision-bearing dialog (actions present) blocks an ACCIDENTAL barrier
-    // tap from silently discarding the decision, but still leaves DELIBERATE
-    // exits open -- the X (this test), Escape, and any Cancel action the
-    // caller supplies. See the doc comment on LayrzDialog.show's
-    // barrierDismissible parameter for the full accidental-vs-deliberate
-    // rationale. A future "simplification" that makes the X respect
-    // barrierDismissible too would silently remove one of those three
-    // deliberate exits -- this test exists to catch exactly that.
+    // Inverted from the original assertion here (which expected the X to
+    // dismiss even with actions present). The maintainer's rule, stated
+    // explicitly: "if actions are set, the dialog shouldn't be dismissable by
+    // using the X or Esc or Android back button" -- a decision-bearing dialog
+    // is answered through its own actions only. The X icon is not merely
+    // inert in that state; it is not rendered at all (see
+    // LayrzDialog.show's canDismiss doc), so this test asserts its
+    // absence rather than a no-op tap. A future regression that brings the X
+    // back (rendered, and/or dismissing) for a non-dismissible dialog is
+    // exactly what this test exists to catch.
     guardedTestWidgets(
-      'with actions present, the barrier is blocked but the X still dismisses (intended asymmetry)',
+      'with actions present and canDismiss not overridden, the X is not rendered at all',
       (tester) async {
         await tester.pumpWidget(
           LayrzApp(
@@ -379,7 +389,12 @@ void main() {
                       context,
                       title: const Text('Decision required'),
                       content: const Text('Body'),
-                      actions: const [SizedBox(width: 10, height: 10, child: Text('Confirm'))],
+                      actions: [
+                        GestureDetector(
+                          onTap: () => Navigator.of(context, rootNavigator: true).pop(),
+                          child: const SizedBox(width: 40, height: 40, child: Text('Confirm')),
+                        ),
+                      ],
                     );
                   },
                   child: const SizedBox(width: 100, height: 100, child: Text('Open')),
@@ -395,7 +410,7 @@ void main() {
         expect(find.text('Decision required'), findsOneWidget);
 
         // The barrier itself must resist a stray tap (actions present ->
-        // barrierDismissible defaults to false) -- confirming the dialog's
+        // canDismiss defaults to false) -- confirming the dialog's
         // default protection is active for this test to mean anything.
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
@@ -406,12 +421,67 @@ void main() {
         );
         expect(observer.pops, equals(0), reason: 'the blocked barrier tap must not have popped anything');
 
-        // The X, however, always dismisses -- this is the deliberate
-        // asymmetry, not an inconsistency to be "fixed" later.
-        await tester.tap(findDialogCloseButton());
+        // The X icon itself must not exist in the tree -- not merely
+        // unresponsive to a tap.
+        expect(
+          findDialogCloseButton(),
+          findsNothing,
+          reason:
+              'a non-dismissible dialog (actions present, canDismiss not overridden to true) '
+              'must not render the X affordance at all',
+        );
+
+        // Only the dialog's own action dismisses it.
+        await tester.tap(find.text('Confirm'));
         await tester.pumpAndSettle();
 
         expect(find.text('Decision required'), findsNothing);
+        expect(observer.pops, equals(1));
+      },
+    );
+
+    guardedTestWidgets(
+      'with actions present but canDismiss: true, the X renders and dismisses',
+      (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            navigatorObservers: [observer],
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzDialog.show<void>(
+                      context,
+                      title: const Text('Non-destructive confirm'),
+                      content: const Text('Body'),
+                      canDismiss: true,
+                      actions: const [SizedBox(width: 10, height: 10, child: Text('Confirm'))],
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Non-destructive confirm'), findsOneWidget);
+
+        expect(
+          findDialogCloseButton(),
+          findsOneWidget,
+          reason: 'canDismiss: true re-enables the X even with actions present',
+        );
+
+        await tester.tap(findDialogCloseButton());
+        await tester.pumpAndSettle();
+
+        expect(find.text('Non-destructive confirm'), findsNothing);
         expect(observer.pops, equals(1));
       },
     );

@@ -159,13 +159,14 @@ class LayrzResponsiveModal {
   ///   [LayrzModalPresentation.dialog] regardless of the actual viewport —
   ///   useful, for example, when a picker with a long option list wants the
   ///   sheet even at a wider breakpoint than a two-button confirm would.
-  /// - [barrierDismissible]: whether tapping the barrier outside the modal
-  ///   dismisses it. Only meaningful for the dialog branch — forwarded
-  ///   verbatim to [LayrzDialog.show]'s `barrierDismissible`, where a null
-  ///   value falls back to that method's own default (conservative when
-  ///   actions are present). [LayrzBottomSheet.show] has no equivalent
-  ///   parameter: a modal sheet's barrier is always dismissible, so this
-  ///   value is ignored entirely when the sheet branch is chosen.
+  /// - [canDismiss]: whether the modal can be dismissed by any route other than an
+  ///   explicit action (barrier tap, Escape, the X icon, and the system/Android back
+  ///   gesture). Only meaningful for the dialog branch — forwarded verbatim to
+  ///   [LayrzDialog.show]'s `canDismiss`, where a null value falls back to that
+  ///   method's own default (conservative when actions are present). [LayrzBottomSheet.show]
+  ///   has no equivalent parameter: a modal sheet's barrier is always dismissible, so this
+  ///   value is ignored entirely when the sheet branch is chosen. See [LayrzDialog.show]'s
+  ///   own `canDismiss` doc for the full four-route contract.
   /// - [semanticLabel]: semantic label describing the modal's purpose for
   ///   screen readers, forwarded to whichever branch is chosen. Must be
   ///   equivalent regardless of which surface is presented, since an
@@ -180,7 +181,7 @@ class LayrzResponsiveModal {
     BuildContext context, {
     required WidgetBuilder builder,
     bool? isCompact,
-    bool? barrierDismissible,
+    bool? canDismiss,
     String? semanticLabel,
     LayrzDialogConfig dialog = const LayrzDialogConfig(),
     LayrzBottomSheetConfig sheet = const LayrzBottomSheetConfig(),
@@ -205,7 +206,7 @@ class LayrzResponsiveModal {
     return LayrzDialog.show<T>(
       context,
       child: Builder(builder: builder),
-      barrierDismissible: barrierDismissible,
+      canDismiss: canDismiss,
       semanticLabel: semanticLabel,
       maxWidth: dialog.maxWidth,
       maxHeight: dialog.maxHeight,

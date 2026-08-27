@@ -45,8 +45,10 @@ class _DialogsSectionState extends State<DialogsSection> {
           _DialogShowcaseCard(
             title: 'Title + Content + Actions',
             description:
-                'Returns a value via show<bool>() -- confirm returns true, cancel returns false, '
-                'and dismissing via the barrier or Escape returns null.',
+                'Returns a value via show<bool>() -- confirm returns true, cancel returns false. '
+                'With actions present, this dialog is answered only through its own buttons: the '
+                'barrier, Escape, the X, and the back gesture are all disabled, so it never resolves '
+                'with null.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               spacing: tokens.spacing.sp2,
@@ -89,7 +91,7 @@ class _DialogsSectionState extends State<DialogsSection> {
           _DialogShowcaseCard(
             title: 'Informational (no actions)',
             description:
-                'actions is omitted, so barrierDismissible defaults to true -- '
+                'actions is omitted, so canDismiss defaults to true -- '
                 'tapping outside the panel or pressing Escape dismisses it.',
             child: LayrzButton.info(
               labelText: 'Open Info Dialog',

@@ -30,8 +30,8 @@ void main() {
     /// Pumps a [LayrzApp] whose home page can be tapped to open the dialog,
     /// wired to [observer] so pops on the app's single Navigator can be
     /// counted. The home page itself is the "route underneath" that a
-    /// double-pop would incorrectly remove. barrierDismissible is forced
-    /// true (no actions) so the barrier tap path is exercised directly.
+    /// double-pop would incorrectly remove. canDismiss is forced true (no
+    /// actions) so the barrier tap path is exercised directly.
     Future<void> pumpApp(WidgetTester tester) async {
       await tester.pumpWidget(
         LayrzApp(
@@ -214,8 +214,8 @@ void main() {
     });
   });
 
-  group('LayrzDialog barrierDismissible: false does not dismiss on barrier tap', () {
-    testWidgets('a barrier tap is a no-op when barrierDismissible is false', (tester) async {
+  group('LayrzDialog canDismiss: false does not dismiss on barrier tap', () {
+    testWidgets('a barrier tap is a no-op when canDismiss is false', (tester) async {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
@@ -249,7 +249,7 @@ void main() {
         find.text('Dialog body'),
         findsOneWidget,
         reason:
-            'a dialog with actions defaults to barrierDismissible: false, so a stray barrier tap must not '
+            'a dialog with actions defaults to canDismiss: false, so a stray barrier tap must not '
             'discard an unmade decision',
       );
     });
