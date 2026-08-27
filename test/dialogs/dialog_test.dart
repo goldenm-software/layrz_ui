@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../helpers/find_button_label.dart';
 import '../helpers/no_overflow.dart';
 
 void main() {
@@ -36,6 +37,94 @@ void main() {
       expect(find.text('My title'), findsOneWidget);
       expect(find.text('My content'), findsOneWidget);
       expect(find.text('OK'), findsOneWidget);
+    });
+
+    // Regression test for a crash where opening a dialog whose `actions`
+    // contained a real LayrzButton threw "LayoutBuilder does not support
+    // returning intrinsic dimensions." The slot Column used to be wrapped in
+    // an IntrinsicWidth, which must query intrinsic width across its whole
+    // subtree -- and LayrzButton builds its content through a LayoutBuilder,
+    // which refuses that query by design. Every prior test in this group used
+    // bare widgets (Text/SizedBox) as actions, so a LayoutBuilder never
+    // entered the subtree and none of them caught this. This test must use a
+    // real LayrzButton (not a stand-in) to reproduce the crash and to prove
+    // the fix -- verified by reverting the dialog.dart fix locally and
+    // confirming this test fails with exactly that FlutterError before the
+    // fix, and passes after it.
+    guardedTestWidgets('opens without crashing when actions contain real LayrzButtons', (tester) async {
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzDialog.show<bool>(
+                    context,
+                    title: const Text('Confirm removal'),
+                    content: const Text('This cannot be undone.'),
+                    actions: [
+                      LayrzButton.cancel(labelText: 'Cancel', onTap: () => Navigator.of(context).pop(false)),
+                      LayrzButton.delete(labelText: 'Delete', onTap: () => Navigator.of(context).pop(true)),
+                    ],
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Confirm removal'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
+      expect(findButtonLabel('Delete'), findsOneWidget);
+    });
+
+    // Same crash class, but with the LayrzButton living in the `content`
+    // slot instead of `actions` -- the IntrinsicWidth wrapped the whole slot
+    // Column, so a LayrzButton anywhere inside title/content/actions could
+    // trigger it, not only in the actions row.
+    guardedTestWidgets('opens without crashing when content contains a real LayrzButton', (tester) async {
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzDialog.show<void>(
+                    context,
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Retry the operation?'),
+                        LayrzButton.info(labelText: 'Learn more', onTap: () {}),
+                      ],
+                    ),
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Retry the operation?'), findsOneWidget);
+      expect(findButtonLabel('Learn more'), findsOneWidget);
     });
 
     guardedTestWidgets('renders only the slots that are supplied', (tester) async {

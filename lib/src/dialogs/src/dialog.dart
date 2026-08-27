@@ -386,46 +386,59 @@ class _DialogContentState extends State<_DialogContent> {
 
   /// Builds the [title]/[content]/[actions] slot layout used whenever
   /// [_DialogContent.child] is not supplied.
+  ///
+  /// The slot [Column] is sized directly against the [ConstrainedBox] the
+  /// panel is already wrapped in (see `build`, which bounds it to
+  /// [_DialogContent.maxWidth]/[_DialogContent.maxHeight]) rather than through
+  /// an `IntrinsicWidth` shrink-to-fit. `IntrinsicWidth` must query the
+  /// intrinsic width of its entire subtree, and `LayrzButton` builds its
+  /// content through a `LayoutBuilder` (see button.dart), which by design
+  /// throws rather than answer an intrinsic-dimension query — so any dialog
+  /// with a `LayrzButton` anywhere in `title`/`content`/`actions` used to
+  /// crash on open. Since the panel was already width-bounded by the
+  /// `ConstrainedBox`, the `IntrinsicWidth` was shrink-to-fit polish, not a
+  /// bounding requirement — dropping it means the panel now consistently
+  /// takes [_DialogContent.maxWidth] instead of shrinking for small content,
+  /// which matches the conventional dialog sizing that `maxWidth: 480`
+  /// already implies.
   Widget _buildSlots(BuildContext context) {
     final tokens = context.tokens;
 
-    return IntrinsicWidth(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (widget.title != null) ...[
-            DefaultTextStyle.merge(
-              style: tokens.typography.title,
-              child: widget.title!,
-            ),
-            SizedBox(height: tokens.spacing.sp3),
-          ],
-          if (widget.content != null)
-            Flexible(
-              child: LayrzScrollbar(
-                child: SingleChildScrollView(
-                  child: DefaultTextStyle.merge(
-                    style: tokens.typography.body,
-                    child: widget.content!,
-                  ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.title != null) ...[
+          DefaultTextStyle.merge(
+            style: tokens.typography.title,
+            child: widget.title!,
+          ),
+          SizedBox(height: tokens.spacing.sp3),
+        ],
+        if (widget.content != null)
+          Flexible(
+            child: LayrzScrollbar(
+              child: SingleChildScrollView(
+                child: DefaultTextStyle.merge(
+                  style: tokens.typography.body,
+                  child: widget.content!,
                 ),
               ),
             ),
-          if (widget.actions != null && widget.actions!.isNotEmpty) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                for (int i = 0; i < widget.actions!.length; i++) ...[
-                  if (i > 0) SizedBox(width: tokens.spacing.sp2),
-                  widget.actions![i],
-                ],
+          ),
+        if (widget.actions != null && widget.actions!.isNotEmpty) ...[
+          SizedBox(height: tokens.spacing.sp3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              for (int i = 0; i < widget.actions!.length; i++) ...[
+                if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                widget.actions![i],
               ],
-            ),
-          ],
+            ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
