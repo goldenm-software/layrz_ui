@@ -268,9 +268,25 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             end: 0,
             top: 0,
             bottom: viewInsets.bottom,
-            child: MediaQuery.removeViewInsets(
-              context: context,
-              removeBottom: true,
+            // Both removals are composed in one MediaQuery, built by chaining on the
+            // MediaQueryData itself (removeViewInsets(...).removePadding(...)) rather than
+            // nesting two MediaQuery.removeXxx(context: context, ...) widgets -- each of
+            // those factories independently re-reads MediaQuery.of(context) from the same
+            // outer context, so a nested inner call would rebuild from the untouched
+            // ambient data and silently discard the outer removal (see
+            // LayrzLayoutDrawerScaffold for the same fix and its full derivation).
+            //
+            // Unlike the drawer presentation, this body is a Positioned sibling of the
+            // rail panel in a Stack, with no SafeArea or other chrome of its own consuming
+            // padding.top before the body sees it. The rail panel (below) does consume its
+            // OWN padding.top, via navigator_panel.dart's SafeArea(right: false) -- but
+            // that only affects the panel's own subtree, not this sibling. So a bare
+            // ListView.builder in the body still falls back to the ambient
+            // MediaQuery.padding for its scroll axis (scroll_view.dart:897-925) and
+            // double-insets by the same status-bar height, exactly as in the drawer
+            // presentation, just via a Stack instead of a Column.
+            child: MediaQuery(
+              data: MediaQuery.of(context).removeViewInsets(removeBottom: true).removePadding(removeTop: true),
               child: bodyWidget,
             ),
           ),
