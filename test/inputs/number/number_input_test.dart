@@ -667,6 +667,59 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsOneWidget);
     });
 
+    /// Per DESIGN-126, `dense` forwards to both of this widget's `LayrzInputChrome` call
+    /// sites (the fixed-height field and its `showBorder: false` inner variant).
+    testWidgets('dense: true forwards to both internal chrome instances', (tester) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemed(
+        tester,
+        const LayrzNumberInput(
+          labelText: 'Number',
+          dense: true,
+        ),
+      );
+
+      final chromes = tester.widgetList<LayrzInputChrome>(find.byType(LayrzInputChrome));
+      expect(chromes, isNotEmpty);
+      for (final chrome in chromes) {
+        expect(chrome.dense, isTrue);
+      }
+    });
+
+    /// Affordance check (liliana's criterion): the increment/decrement step buttons sit as a
+    /// smaller tap target inside the chrome. At `dense: true` they must still be independently
+    /// hittable, and a tap on the affordance must activate the affordance, not the field.
+    testWidgets('dense: true keeps the step buttons independently hittable (affordance check)', (
+      tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      num? changedValue;
+      await pumpThemed(
+        tester,
+        LayrzNumberInput(
+          labelText: 'Number',
+          value: 5,
+          step: 2,
+          dense: true,
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(NumberFieldControl).last);
+      await tester.pumpAndSettle();
+      expect(changedValue, 7, reason: 'tapping the increment control at dense must increment, not focus the field');
+
+      await tester.tap(find.byType(NumberFieldControl).first);
+      await tester.pumpAndSettle();
+      expect(changedValue, 5, reason: 'tapping the decrement control at dense must decrement, not focus the field');
+    });
+
     testWidgets('field box baseline-aligns with sibling LayrzTextInput', (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);

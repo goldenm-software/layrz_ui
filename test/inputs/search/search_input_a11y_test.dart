@@ -54,7 +54,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
           ),
         );
 
@@ -112,7 +112,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search products',
+            hintText: 'Search products',
           ),
         );
 
@@ -280,7 +280,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Custom search',
+            hintText: 'Custom search',
           ),
         );
 
@@ -297,7 +297,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.icon,
-            labelText: 'Custom button',
+            hintText: 'Custom button',
           ),
         );
 
@@ -306,32 +306,84 @@ void main() {
         handle.dispose();
       });
 
-      testWidgets('icon mode panel field does not inherit button label', (tester) async {
-        final handle = tester.ensureSemantics();
+      // Regression test for a real accessibility defect: the panel field used
+      // to genuinely re-announce the trigger button's label. Root cause: the
+      // chrome's hint Text (painting [hintText] as a placeholder) is a
+      // SIBLING of the field content in a Stack, not a descendant of it --
+      // so no Semantics wrapper placed around the field content could reach
+      // or suppress it (verified empirically: neither an ancestor `label`
+      // nor `container: true` stops a sibling Text's own semantics
+      // contribution, and `excludeSemantics: true` does stop it but also
+      // deletes EditableText's own dynamic value/focus semantics, which is
+      // worse than the duplicate -- a screen reader would then never hear
+      // what is typed or that the field gained focus).
+      //
+      // Fixed by not asking the chrome to render a hint at all in icon mode
+      // (`hintText: null` there skips both of input_chrome.dart's hint
+      // branches) and instead painting an equivalent hint inside the field's
+      // own subtree, wrapped in `ExcludeSemantics` -- safe here specifically
+      // because this hint is not a sibling of EditableText's semantics, it
+      // is independent and scoped to itself. Same visual result (verified
+      // below), only its semantics changed. The field itself is wrapped in
+      // an explicit `Semantics(textField: true, label:
+      // l10n.inputsSearchFieldLabel, ...)`, giving it a real, distinct,
+      // localized name instead of an inferred or empty one.
+      testWidgets(
+        'icon mode panel field does not inherit button label',
+        (tester) async {
+          final handle = tester.ensureSemantics();
 
-        await pumpThemedApp(
-          tester,
-          const LayrzSearchInput(
-            mode: LayrzSearchInputMode.icon,
-            labelText: 'Button label',
-          ),
-        );
+          await pumpThemedApp(
+            tester,
+            const LayrzSearchInput(
+              mode: LayrzSearchInputMode.icon,
+              hintText: 'Button label',
+            ),
+          );
 
-        // Button has the label
-        expect(find.bySemanticsLabel('Button label'), findsOneWidget);
+          // Button has the label
+          expect(find.bySemanticsLabel('Button label'), findsOneWidget);
 
-        // Open panel
-        await tester.tap(find.byType(LayrzButton));
-        await tester.pumpAndSettle();
+          // Open panel
+          await tester.tap(find.byType(LayrzButton));
+          await tester.pumpAndSettle();
 
-        // The chrome is present
-        expect(find.byType(LayrzInputChrome), findsOneWidget);
+          // The chrome is present
+          expect(find.byType(LayrzInputChrome), findsOneWidget);
 
-        // Button label should still only appear once (on button, not panel)
-        expect(find.bySemanticsLabel('Button label'), findsOneWidget);
+          // The visible hint is unchanged: still shown, inside the chrome, while
+          // the field is empty. Scoped to the chrome specifically -- checking a
+          // bare `find.text('Button label')` count here would also depend on how
+          // LayrzButton happens to render its own label, which is unrelated to
+          // this hint and not what this assertion means to cover.
+          expect(
+            find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Button label')),
+            findsOneWidget,
+          );
 
-        handle.dispose();
-      });
+          // The button's label must not be duplicated onto the panel field.
+          expect(countSemanticsWithLabel(tester, 'Button label'), 1);
+
+          // The field must not have been silenced in the process of fixing the
+          // duplication above -- it must still be identifiable as exactly one
+          // accessible text field, carrying its own distinct, non-empty label.
+          expect(countSemanticsWithLabel(tester, 'Search field'), 1);
+          final fieldSemantics = tester.getSemantics(find.byType(LayrzInputChrome));
+          expect(fieldSemantics.getSemanticsData().flagsCollection.isTextField, isTrue);
+
+          // The field is still genuinely usable: it accepts focus and typed input,
+          // and the hint disappears once there is a value, same as before.
+          await tester.enterText(find.byType(LayrzInputChrome), 'query');
+          await tester.pump();
+          expect(find.text('query'), findsOneWidget);
+          expect(
+            find.descendant(of: find.byType(LayrzInputChrome), matching: find.text('Button label')),
+            findsNothing,
+          );
+
+          handle.dispose();
+        },
+      );
     });
 
     group('new parameters', () {
@@ -342,30 +394,13 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             errors: ['Something went wrong'],
           ),
         );
 
         expect(find.text('Something went wrong'), findsOneWidget);
         expect(find.byIcon(MdiIcons.alertOutline), findsOneWidget);
-        handle.dispose();
-      });
-
-      testWidgets('isRequired renders the required marker', (tester) async {
-        final handle = tester.ensureSemantics();
-
-        await pumpThemedApp(
-          tester,
-          const LayrzSearchInput(
-            mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
-            isRequired: true,
-          ),
-        );
-
-        final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
-        expect(chrome.isRequired, isTrue);
         handle.dispose();
       });
 
@@ -376,7 +411,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             helpTitleText: 'Help',
             helpContentText: 'This searches all products.',
           ),
@@ -393,7 +428,7 @@ void main() {
           tester,
           const LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
-            labelText: 'Search',
+            hintText: 'Search',
             readOnly: true,
           ),
         );

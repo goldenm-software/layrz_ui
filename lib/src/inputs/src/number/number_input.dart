@@ -211,10 +211,12 @@ class LayrzNumberInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (10px on regular viewports, 14px on compact).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// Whether the input should request focus on creation.
   final bool autofocus;
@@ -258,7 +260,7 @@ class LayrzNumberInput extends StatefulWidget {
     this.onSubmit,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.autofocus = false,
     this.inputFormatters,
   }) : assert(
@@ -712,7 +714,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
           helpTitleText: widget.helpTitleText,
           helpContentText: widget.helpContentText,
           controller: _controller,
-          padding: widget.padding,
+          dense: widget.dense,
           helperText: widget.helperText,
           child: LayrzEditableField(config: fieldConfig),
         ),
@@ -903,7 +905,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
                     helpTitleText: widget.helpTitleText,
                     helpContentText: widget.helpContentText,
                     controller: _controller,
-                    padding: widget.padding,
+                    dense: widget.dense,
                     borderRadius: BorderRadius.zero,
                     showBorder: false,
                     child: LayrzEditableField(config: fieldConfig),

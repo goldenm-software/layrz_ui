@@ -94,11 +94,11 @@ void main() {
       final renderedHeight = tester.getSize(textFinder).height;
       expect(
         renderedHeight,
-        greaterThan(15.0),
+        greaterThan(13.0),
         reason:
-            'a real line of 16px body text needs at least ~16px of rendered height; the '
-            'reported bug clipped this to ~4px, which is invisible even though the text data '
-            'itself was correct',
+            'a real line of 14px body text (LayrzTextTheme.body, DESIGN-105) needs at least '
+            '~14px of rendered height; the reported bug clipped this to ~4px, which is '
+            'invisible even though the text data itself was correct',
       );
     });
 
@@ -1348,6 +1348,44 @@ void main() {
       final icon = tester.widget<Icon>(iconFinder);
       expect(icon.color, tokens.colors.fg1);
       expect(icon.size, tokens.typography.body.fontSize);
+    });
+
+    /// Per DESIGN-126, `dense` forwards to the field's inner chrome and shrinks its padding.
+    /// The clock affordance icon lives *outside* the chrome (an external sibling in the row,
+    /// per the class doc above), so this also serves as the affordance check: the icon must
+    /// stay visible and correctly sized, and tapping the field row -- including the area right
+    /// beside the icon -- must still open the picker rather than silently doing nothing.
+    guardedTestWidgets('dense: true forwards to the inner chrome and keeps the clock affordance hittable', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.resetPhysicalSize);
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          dense: true,
+        ),
+      );
+
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+      expect(chrome.dense, isTrue);
+
+      final iconFinder = find.byIcon(MdiIcons.clockOutline);
+      expect(iconFinder, findsOneWidget);
+
+      final tokens = LayrzTokens.light();
+      final icon = tester.widget<Icon>(iconFinder);
+      expect(icon.size, tokens.typography.body.fontSize, reason: 'dense must not change icon size (padding-only)');
+
+      // Tapping the field row (anywhere, including near the affordance icon) must still open
+      // the picker -- the icon has no tap target of its own, it is decorative.
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
     });
 
     guardedTestWidgets('dims the affordance icon to fg4 when disabled, matching the chrome text color', (

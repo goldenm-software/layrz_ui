@@ -454,5 +454,61 @@ void main() {
 
       controller.dispose();
     });
+
+    testWidgets("list row's LayrzTappable fills its full row extent with no gap", (tester) async {
+      /// list_panel.dart's _buildListItem used to wrap LayrzTappable in a
+      /// Container(margin: EdgeInsets.only(bottom: sp1)). The surrounding ListView.builder
+      /// uses a fixed itemExtent (widget.itemExtent + pd2.vertical, computed in
+      /// scaffold_shell.dart's _itemExtent), which has no allowance for that margin — so the
+      /// margin ate into the fixed slot instead of adding space between rows, making the
+      /// tappable's fill/hit area (and its isSelected indicator bar, which uses
+      /// height: double.infinity) 6px (sp1) shorter than the row itself, with an unstyled
+      /// gap showing at the bottom of every row. This asserts the tappable now fills its row
+      /// exactly, with the row-to-row delta as the independent measure of the true fixed
+      /// extent.
+      final controller = LayrzScaffoldController();
+      final items = [
+        const LayrzScaffoldItem(
+          key: ValueKey("1"),
+          item: _TestItem("1", "Alpha"),
+          tile: SizedBox(child: Text("Alpha")),
+          searchableStrings: {"Alpha"},
+        ),
+        const LayrzScaffoldItem(
+          key: ValueKey("2"),
+          item: _TestItem("2", "Beta"),
+          tile: SizedBox(child: Text("Beta")),
+          searchableStrings: {"Beta"},
+        ),
+      ];
+
+      await _pumpShell(
+        tester,
+        items: items,
+        controller: controller,
+        size: const Size(1500, 950),
+      );
+
+      final tappables = find.byType(LayrzTappable);
+      expect(tappables, findsNWidgets(2), reason: "both rows must render as LayrzTappable");
+
+      final rect0 = tester.getRect(tappables.at(0));
+      final rect1 = tester.getRect(tappables.at(1));
+      final rowDelta = rect1.top - rect0.top;
+
+      /// CRITICAL ASSERTION: the tappable's own height must equal the row-to-row delta (the
+      /// true fixed itemExtent) — no residual gap eaten by a stray margin.
+      expect(
+        rect0.height,
+        closeTo(rowDelta, 0.5),
+        reason:
+            "LayrzTappable height (${rect0.height}) must equal the row-to-row delta "
+            "($rowDelta) with no gap between them. A gap here means something inside the "
+            "fixed-extent row slot (e.g. a margin) is eating into the tappable instead of "
+            "the tappable filling the row.",
+      );
+
+      controller.dispose();
+    });
   });
 }

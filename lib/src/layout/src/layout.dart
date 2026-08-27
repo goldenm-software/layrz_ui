@@ -253,6 +253,11 @@ class _LayrzLayoutState extends State<LayrzLayout> {
           )
         : widget.body;
 
+    // Scaffold-style keyboard handling: reduce the bottom of both the body and the rail
+    // panel by viewInsets.bottom, then zero viewInsets for their subtrees so nested widgets
+    // that read MediaQuery.viewInsetsOf do not double-count the same inset.
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+
     return Container(
       color: backgroundColor,
       child: Stack(
@@ -262,25 +267,49 @@ class _LayrzLayoutState extends State<LayrzLayout> {
             start: kLayrzLayoutRailWidth,
             end: 0,
             top: 0,
-            bottom: 0,
-            child: bodyWidget,
+            bottom: viewInsets.bottom,
+            // Both removals are composed in one MediaQuery, built by chaining on the
+            // MediaQueryData itself (removeViewInsets(...).removePadding(...)) rather than
+            // nesting two MediaQuery.removeXxx(context: context, ...) widgets -- each of
+            // those factories independently re-reads MediaQuery.of(context) from the same
+            // outer context, so a nested inner call would rebuild from the untouched
+            // ambient data and silently discard the outer removal (see
+            // LayrzLayoutDrawerScaffold for the same fix and its full derivation).
+            //
+            // Unlike the drawer presentation, this body is a Positioned sibling of the
+            // rail panel in a Stack, with no SafeArea or other chrome of its own consuming
+            // padding.top before the body sees it. The rail panel (below) does consume its
+            // OWN padding.top, via navigator_panel.dart's SafeArea(right: false) -- but
+            // that only affects the panel's own subtree, not this sibling. So a bare
+            // ListView.builder in the body still falls back to the ambient
+            // MediaQuery.padding for its scroll axis (scroll_view.dart:897-925) and
+            // double-insets by the same status-bar height, exactly as in the drawer
+            // presentation, just via a Stack instead of a Column.
+            child: MediaQuery(
+              data: MediaQuery.of(context).removeViewInsets(removeBottom: true).removePadding(removeTop: true),
+              child: bodyWidget,
+            ),
           ),
           PositionedDirectional(
             start: 0,
             top: 0,
-            bottom: 0,
-            child: LayrzLayoutNavigatorPanel(
-              tokens: tokens,
-              width: kLayrzLayoutRailWidth,
-              items: widget.items,
-              logo: widget.logo,
-              userName: widget.userName,
-              userAvatar: widget.userAvatar,
-              userMenuItems: widget.userMenuItems,
-              notifications: widget.notifications,
-              onNotificationTap: widget.onNotificationTap,
-              onClose: null,
-              getInitials: _getInitials,
+            bottom: viewInsets.bottom,
+            child: MediaQuery.removeViewInsets(
+              context: context,
+              removeBottom: true,
+              child: LayrzLayoutNavigatorPanel(
+                tokens: tokens,
+                width: kLayrzLayoutRailWidth,
+                items: widget.items,
+                logo: widget.logo,
+                userName: widget.userName,
+                userAvatar: widget.userAvatar,
+                userMenuItems: widget.userMenuItems,
+                notifications: widget.notifications,
+                onNotificationTap: widget.onNotificationTap,
+                onClose: null,
+                getInitials: _getInitials,
+              ),
             ),
           ),
         ],

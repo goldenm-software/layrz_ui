@@ -542,10 +542,22 @@ void main() {
         reason: 'the ClipRRect radii must match the decoration\'s radii exactly',
       );
 
+      // The ClipRRect's direct child is now a SafeArea (inset the sheet's
+      // CONTENT clear of system bars while the surface -- decorated and
+      // clipped above -- stays edge-to-edge; see bottom_sheet_safe_area_test.dart),
+      // wrapping the same content Column this test originally asserted
+      // directly beneath the ClipRRect.
       expect(
         clipRRect.child,
+        isA<SafeArea>(),
+        reason: 'the ClipRRect must sit directly above the content SafeArea',
+      );
+
+      final safeArea = clipRRect.child! as SafeArea;
+      expect(
+        safeArea.child,
         isA<Column>(),
-        reason: 'the ClipRRect must sit directly between the decoration and the content Column',
+        reason: 'the SafeArea must wrap the content Column directly',
       );
     });
 

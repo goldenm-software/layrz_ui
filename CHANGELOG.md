@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.0.14
+
+**Bottom sheets now respect the system bars and the keyboard.** `LayrzBottomSheet`'s surface still runs edge-to-edge under the status and navigation bars, but its content is inset clear of them — previously the first field was clipped under the status bar and the last one sat behind the navigation bar. When the keyboard opens, the sheet shrinks to the space remaining above it and pins itself there: its expansion controls go inert for as long as the keyboard is up, since there is nothing left to expand into, while drag-to-dismiss keeps working so a sheet can still be swiped away mid-typing. Closing the keyboard restores the sheet's exact previous size rather than snapping it to full height.
+
+**`LayrzScaffoldShell`'s narrow detail sheet is presented on the root navigator.** It was pushed to the nearest navigator instead, which — under a `go_router` `ShellRoute`, whose nested navigator is built inside the page body — placed the sheet's overlay *inside* the page's `SelectableRegion`. Two consequences went with it: a gesture on the sheet's own text could resolve against the page content behind it, selecting a list row instead; and the sheet's barrier was bounded by the page body, so it never covered the top bar. Both are fixed by the same change.
+
+**`DetailPane` content is selectable in its own scope.** Text in the detail pane can now be selected and copied — in the side-by-side layout and in the narrow sheet alike — scoped to the pane, so a selection there can no longer reach the page behind it.
+
+### Fixed
+
+- `LayrzLayout` did not resize for the keyboard: the body was anchored to a viewport that never shrank, so an open keyboard covered page content with nothing to scroll to. The body's available height is now reduced by the keyboard inset and the inset is zeroed for its subtree, in both the rail and drawer presentations (see decision D65).
+- A phantom leading gap — the height of the status bar — appeared above the first item of any scrollable in the page body on Android. The top bar consumed the status-bar inset for itself without removing it from the `MediaQuery` the body received, so a `ListView` with no explicit padding applied it a second time. Fixed for both the drawer and expanded presentations.
+- `LayrzScaffoldShell` threw `setState() or markNeedsBuild() called during build` when the viewport crossed the compact breakpoint with its detail sheet open.
+- Tapping a bottom sheet's barrier twice in quick succession popped the route underneath it as well as the sheet. In a release build this silently dismissed the caller's own page.
+- `LayrzSearchInput` in icon mode announced its label twice to screen readers: the panel field's hint and the trigger button's label are the same string by construction, and the hint was contributing its own accessible name.
+- Every `LayrzTappable` row in `LayrzScaffoldShell`'s list rendered 6 logical pixels shorter than its own row. The row's outer margin was subtracted from a fixed `itemExtent` rather than adding space between rows, leaving an unstyled gap and an undersized tap target.
+- `LayrzTextTheme` font sizes were reduced: `display` 40→30, `title` 20→18, `body` 16→14, `label` 14→12.
+
+### Breaking
+
+**`isCompact` no longer varies input padding.** `LayrzInputChrome` previously used a larger internal padding on compact viewports (14px, versus 10px on wide) to keep touch targets comfortable on mobile. That branch is removed: padding is now 10px by default and 6px with `dense: true`, identically on every viewport. Field heights are correspondingly flat at 43px default and 35px dense, where compact fields were previously 55px. **Every input now renders below the 44–48px minimum commonly recommended for touch targets, on mobile as well as desktop.** This was accepted deliberately in favour of a uniform, denser scale; a caller who needs larger targets on mobile must now size around the field rather than relying on the chrome. Decision D66 records the measured heights and the trade-off, and supersedes its own earlier rationale for keeping the compact branch.
+
+**Icon size no longer tracks the type scale.** `LayrzInputChrome` derived its icon size from `LayrzTextTheme.body.fontSize`, so icons grew and shrank with the type scale. It is now a fixed value. A future change to `body` will not propagate to input icons.
+
 ## 0.0.13
 
 **The picker inputs now share one elevated panel, and its border sits on the panel instead of inside it.** `LayrzAnchoredPanel` gains an optional `border`, of type `LayrzAnchoredPanelBorder`, painted around the box that wraps its scroll view — the box actually bounded by `maxHeight`. Before, each caller hand-rolled a bordered container *inside* that scroll view, where `SingleChildScrollView` relaxes its child's height to unbounded: with 30 items in a 300px-capped panel the border box measured 1260px, so the stroke ran 960px past the visible edge and cut horizontally through a list row. `LayrzSelectInput` and `LayrzSearchInput` both drop their own bordered box and consume the panel's. The border is painted with `strokeAlignOutside`, so it occupies no layout space and the panel's rect is unchanged.
@@ -24,6 +48,10 @@
 **`LayrzComboBoxInput` no longer shows a custom-value confirmation row.** The open panel previously rendered a `Use "…"` row above the suggestions, which committed the typed text when tapped. It is gone: the typed text is already the value, reported live through `onChanged`, and the options below are suggestions rather than a choice that must be made. Free-form entry is otherwise unchanged, and `allowFreeForm` keeps its meaning. Keyboard navigation shifts accordingly — arrow-down now lands on the first suggestion instead of on the confirmation row.
 
 **`LayrzDurationInput`'s panel no longer sizes itself to its content.** It matches the anchor's width. A caller relying on the previous 280–480 logical-pixel band will see a panel as wide as the field.
+
+**`EdgeInsets? padding` removed from all 10 input widgets — replaced by `dense: true` for the density use case, with no replacement for anything else.** `LayrzTextInput`, `LayrzTextAreaInput`, `LayrzSearchInput`, `LayrzNumberInput`, `LayrzSelectInput`, `LayrzDurationInput`, `LayrzComboBoxInput`, `LayrzCheckboxInput`, `LayrzSwitchInput`, and `LayrzRadioInput` all lose their public `padding` parameter. The 7 chrome-owning widgets in that list (all but the checkbox, switch, and radio) gain a new `bool dense` parameter (default `false`) instead: `dense: true` shrinks the field's internal padding from 14px compact / 10px wide down to 10px compact / 6px wide, for dense data-entry contexts — tables of similar fields, admin/ops consoles, filter bars. `LayrzCheckboxInput`, `LayrzSwitchInput`, and `LayrzRadioInput` have no chrome and no `dense` — they simply lose `padding` with no replacement, for API uniformity across the input family. **If a caller was passing `padding` for anything other than reproducing the default or requesting a denser field — an arbitrary value like `EdgeInsets.all(16)` — there is no migration path; the override must be deleted.** This is a pre-1.0 (0.0.13) breaking change, so no deprecation cycle was offered. Migration: replace `padding:` with `dense: true` where the intent was a denser field; delete `padding:` entirely everywhere else. See decision D66 for the full rationale, including the accepted trade-offs on tap-target sizing and on `LayrzComboBoxInput`'s panel-row inset.
+
+**`isRequired` removed from `LayrzSearchInput`.** `LayrzSearchInput` dropped its `labelText` parameter, and `isRequired` existed only to render a required marker (`*`) next to that label — with no label, it had nothing to mark and had already become a no-op. There is no replacement; delete the parameter from any call site.
 
 ---
 

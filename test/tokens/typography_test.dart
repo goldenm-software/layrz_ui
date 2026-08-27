@@ -20,11 +20,11 @@ void main() {
     test('defaults factory uses correct font sizes', () {
       final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
 
-      expect(theme.display.fontSize, equals(40));
+      expect(theme.display.fontSize, equals(30));
       expect(theme.headline.fontSize, equals(24));
-      expect(theme.title.fontSize, equals(20));
-      expect(theme.body.fontSize, equals(16));
-      expect(theme.label.fontSize, equals(14));
+      expect(theme.title.fontSize, equals(18));
+      expect(theme.body.fontSize, equals(14));
+      expect(theme.label.fontSize, equals(12));
     });
 
     test('defaults factory uses correct font weights', () {
@@ -69,7 +69,7 @@ void main() {
 
       expect(modified.body.fontSize, equals(20));
       expect(modified.display, equals(original.display));
-      expect(original.body.fontSize, equals(16)); // original unchanged
+      expect(original.body.fontSize, equals(14)); // original unchanged
     });
 
     test('equality works for identical factories', () {
@@ -140,7 +140,7 @@ void main() {
 
       // Verify that size and color are overridden from the font style
       expect(theme.display.color, equals(testColor));
-      expect(theme.display.fontSize, equals(40));
+      expect(theme.display.fontSize, equals(30));
       expect(theme.headline.color, equals(testColor));
       expect(theme.headline.fontSize, equals(24));
     });

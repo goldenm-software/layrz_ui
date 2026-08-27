@@ -111,9 +111,23 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       oldWidget.controller.removeListener(_controllerListener);
       widget.controller.addListener(_controllerListener);
     }
-    // Notify when items list instance changes (handles refetches with same keys but new instances)
-    if (!identical(oldWidget.items, widget.items)) {
-      _itemsChangeNotifier.value++;
+    // Notify when items list instance changes (handles refetches with same keys but new instances),
+    // but only while the narrow sheet's ListenableBuilder is actually listening to this notifier —
+    // otherwise the bump is both unobserved and unsafe.
+    //
+    // The bump is deferred to a post-frame callback rather than applied synchronously here: this
+    // notifier is merged into the Listenable driving the sheet's ListenableBuilder, so an immediate
+    // `.value++` fires `notifyListeners()` -> `setState()` on that (possibly still-mounted, e.g.
+    // mid exit-animation) builder while the framework may already be building this shell's own
+    // subtree (e.g. from a LayoutBuilder-driven breakpoint change). That is an illegal
+    // setState-during-build. Deferring costs at most one extra frame, and only when the sheet is
+    // actually open to observe it.
+    if (_sheetOpen && !identical(oldWidget.items, widget.items)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _sheetOpen) {
+          _itemsChangeNotifier.value++;
+        }
+      });
     }
   }
 
@@ -242,8 +256,14 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     // Mark the sheet as open before checking anything else
     _sheetOpen = true;
 
-    // Guard: check if there's a Navigator available
-    final navigator = Navigator.maybeOf(context);
+    // Guard: check if the ROOT Navigator is reachable -- the sheet below is
+    // pushed there (useRootNavigator: true), so this must validate the same
+    // Navigator it pushes to. Checking the nearest one instead would pass
+    // here and still throw at the push if only a nested Navigator exists
+    // with no root above it (impossible under LayrzApp in practice, but the
+    // guard should not claim success for a Navigator it isn't actually
+    // going to use).
+    final navigator = Navigator.maybeOf(context, rootNavigator: true);
     if (navigator == null) {
       assert(
         false,
@@ -264,8 +284,30 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     }
 
     // Show the sheet
+    //
+    // useRootNavigator: true is required, not optional. This shell is meant
+    // to be composed under an app shell that owns its own nested Navigator
+    // (e.g. go_router's ShellRoute -- "All ShellRoutes build a Navigator by
+    // default. Child GoRoutes are placed onto this Navigator instead of the
+    // root Navigator.") sitting inside a LayrzLayout ancestor. Without this
+    // flag, LayrzBottomSheet.show's default (nearest Navigator) resolves to
+    // that nested one, whose Overlay is a descendant of LayrzLayout's own
+    // SelectableRegion -- so the sheet's content is a genuine widget-tree
+    // descendant of the page's selection scope, and a double-tap physically
+    // on the sheet's own text can resolve against a page-body row behind it
+    // instead. The nested Overlay is also bounded by LayrzLayout's body, not
+    // the full physical screen, so the sheet's own barrier cannot cover
+    // LayrzLayout's own chrome (e.g. the narrow-mode top bar) either -- a tap
+    // on that chrome while the sheet is open reaches the chrome's own
+    // controls instead of being blocked by the modal scrim. Pushing to the
+    // root Navigator escapes both: the sheet's Overlay entry then sits above
+    // LayrzLayout entirely, genuinely outside its SelectableRegion and
+    // genuinely covering the full screen. A modal sheet belongs above the
+    // app's chrome, not nested inside the page's own subtree, independent of
+    // either symptom.
     await LayrzBottomSheet.show<void>(
       context,
+      useRootNavigator: true,
       builder: (sheetContext) {
         _narrowSheetContext = sheetContext;
         return ListenableBuilder(

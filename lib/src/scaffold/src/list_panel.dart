@@ -128,6 +128,8 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
             LayrzSearchInput(
               controller: _searchController,
               hintText: 'Search items',
+              dense: true,
+              mode: LayrzSearchInputMode.field,
             ),
           Expanded(
             child: _filteredItems.isEmpty
@@ -155,33 +157,30 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
   Widget _buildListItem(BuildContext context, LayrzTokens tokens, LayrzScaffoldItem<T> item) {
     final isSelected = item.key == widget.openedKey;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: tokens.spacing.sp1),
-      child: LayrzTappable(
-        disabled: isSelected,
-        onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
-        borderRadius: tokens.radius.br2,
-        color: isSelected ? tokens.colors.sf4 : tokens.colors.sf1,
-        child: Padding(
-          padding: tokens.spacing.pd2,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // The tappable tile
-              Expanded(child: item.tile),
-              if (isSelected) ...[
-                // Indicator bar — reserved space always (same width whether selected or not)
-                Container(
-                  width: 3,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: tokens.colors.primary,
-                    borderRadius: tokens.radius.br3,
-                  ),
+    return LayrzTappable(
+      disabled: isSelected,
+      onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
+      borderRadius: tokens.radius.br2,
+      color: isSelected ? tokens.colors.sf4 : tokens.colors.sf1,
+      child: Padding(
+        padding: tokens.spacing.pd2,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // The tappable tile
+            Expanded(child: item.tile),
+            if (isSelected) ...[
+              // Indicator bar — reserved space always (same width whether selected or not)
+              Container(
+                width: 3,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  color: tokens.colors.primary,
+                  borderRadius: tokens.radius.br3,
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
       ),
     );

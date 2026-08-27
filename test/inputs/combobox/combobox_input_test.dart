@@ -58,6 +58,40 @@ void main() {
       expect(lastValue, 'test');
     });
 
+    /// Per DESIGN-126, `dense` forwards to the field's chrome (closed field and, per
+    /// `combobox_input_chrome_test.dart`, the open panel row read the same density).
+    ///
+    /// Affordance check (liliana's criterion): the field itself is the dropdown trigger --
+    /// tapping it must still open the panel, and selecting an option must still commit
+    /// correctly, at `dense: true`.
+    testWidgets('dense: true forwards to the chrome and keeps the field trigger + option selection working', (
+      tester,
+    ) async {
+      final options = ['Option 1', 'Option 2', 'Option 3'];
+      String? lastValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzComboBoxInput(
+          labelText: 'Select an option',
+          options: options,
+          dense: true,
+          onChanged: (value) => lastValue = value,
+        ),
+      );
+
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+      expect(chrome.dense, isTrue);
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option 2').last);
+      await tester.pumpAndSettle();
+
+      expect(lastValue, 'Option 2', reason: 'tapping an option at dense must still commit the selection');
+    });
+
     testWidgets('respects disabled state', (tester) async {
       final options = ['Option 1', 'Option 2'];
 

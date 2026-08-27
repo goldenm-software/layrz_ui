@@ -860,8 +860,29 @@ void main() {
       expect(state.selectedValue, equals('a'));
     });
 
-    testWidgets('padding parameter is applied', (tester) async {
-      const customPadding = EdgeInsets.symmetric(horizontal: 20, vertical: 12);
+    /// Per DESIGN-126, the public `padding` escape hatch was removed; density is now
+    /// expressible only via `dense`, forwarded to the field's chrome.
+    testWidgets('dense parameter is applied', (tester) async {
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          itemExtent: 40,
+          items: items,
+          labelText: 'Choose one',
+          dense: true,
+        ),
+      );
+
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
+      expect(chrome.dense, isTrue);
+    });
+
+    /// Affordance check (liliana's criterion): the dropdown chevron is a second, smaller tap
+    /// target beside the chrome. At `dense: true` it must still be independently hittable and
+    /// open the picker -- the failure mode to guard against is the tap missing the chevron and
+    /// landing on the field instead, not merely "harder to tap".
+    testWidgets('dense: true keeps the dropdown chevron hittable and it opens the picker', (tester) async {
+      String? selected;
 
       await pumpThemedApp(
         tester,
@@ -869,12 +890,21 @@ void main() {
           itemExtent: 40,
           items: items,
           labelText: 'Choose one',
-          padding: customPadding,
+          dense: true,
+          onChanged: (item) => selected = item?.value,
         ),
       );
 
-      // Widget should accept padding parameter
-      expect(find.byType(LayrzSelectInput<String>), findsOneWidget);
+      final chevron = find.byIcon(MdiIcons.chevronDown);
+      expect(chevron, findsOneWidget);
+
+      await tester.tap(chevron);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option A'));
+      await tester.pumpAndSettle();
+
+      expect(selected, equals('a'), reason: 'tapping the chevron at dense must open the picker and commit a choice');
     });
 
     testWidgets('arrow down navigates through items', (tester) async {

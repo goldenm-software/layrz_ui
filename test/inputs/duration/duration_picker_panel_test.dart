@@ -833,24 +833,59 @@ void main() {
     // RE-DERIVED for `matchAnchor` (previously pinned to a fixed 227px desktop
     // panel width -- see `duration_picker_panel.dart`'s class doc for why that
     // width no longer exists as a constant). The desktop case below now fixes
-    // a concrete `anchorWidth` (250.0) instead: since the panel's width is
+    // a concrete `anchorWidth` instead: since the panel's width is
     // caller-determined, the "measured safe boundary" is re-expressed as "at
     // this specific, still-realistic anchor width, a 7-char label fits and an
     // 8-char one overflows" -- the same underlying claim (a real capacity
     // ceiling exists, which is why the band-dependent key selection above
     // reads the short keys below `_kNarrowFieldWidth`), reproduced against the
-    // new width mechanism. Measured directly (temporary probes, deleted): at
-    // `anchorWidth: 250.0` (one field per row, ~230px per field), a 7-char
-    // synthetic suffix fits and an 8-char one ("Segundos", "Secondes",
-    // "Sekunden" among them) overflows -- the same boundary the old fixed
-    // 227px cap pinned, still reproducible, just at a caller-chosen width
-    // instead of a built-in one.
+    // new width mechanism.
+    //
+    // RE-DERIVED A SECOND TIME (2026-08-26) after `LayrzTextTheme.body.fontSize`
+    // dropped 16 -> 14 and `_InputComfortableSpec` lost its `isCompact` branch
+    // (both `53b8cf4`): both changes make text fit in less horizontal space,
+    // so this group's previous anchor width of 250.0 stopped being narrow
+    // enough to overflow an 8-char label at all -- capacity there grew from 7
+    // characters to 8. Measured directly (temporary probes, deleted): the
+    // 7-char/8-char boundary itself did not disappear, it moved narrower. A
+    // synthetic 7-char suffix ('Zzzzzzz') fits from 224px up; a real 8-char
+    // translation overflows through 236px and starts fitting at 238px. Note
+    // English itself was never the constraint here -- the longest English
+    // `durationField*` value is 7 characters ("Minutes"/"Seconds"), so it
+    // always fit and fitting was never in question for it. What the 8-char
+    // case protects is non-English translations: "Segundos" (Spanish),
+    // "Secondes" (French) and "Sekunden" (German) are all 8 characters and
+    // all still overflow in the [224px, 236px] window, confirmed individually.
+    // `narrowAnchorWidth` below is re-derived to 230.0, centered in that
+    // window (~6px of margin on each side against the two measured
+    // boundaries, rather than sitting on either one) so the trip-wire keeps
+    // pinning a real, reachable overflow rather than a boundary that no
+    // longer exists at the old value. `layrz_ui_i18n` (the actual translation
+    // package) is not checked out in this repo, so "Segundos"/"Secondes"/
+    // "Sekunden" are the best available real-word evidence, not the full
+    // locale set -- an untested translation could plausibly run a character
+    // or two longer, which is itself part of why the short-form abbreviation
+    // stays rather than being dropped now that English clears easily.
+    //
+    // If this trips again: re-run the same bisection (temporary probes,
+    // deleted) against `_pumpDesktopAnchoredWithSuffix` for a 7-char
+    // synthetic suffix and the real 8-char words above, at a spread of
+    // `anchorWidth` values bracketing the current `narrowAnchorWidth`. If the
+    // 7-char boundary and the 8-char boundary have drifted apart (capacity
+    // widened), re-center `narrowAnchorWidth` in the new window the same way.
+    // If capacity ever grows enough that even the real 8-char translations
+    // stop overflowing at a realistic anchor width, that is the point flagged
+    // by the trip-wire below: revisit whether the short-form abbreviation
+    // (`durationUnit*Short{Singular,Plural}`) is still earning its place, per
+    // the class doc comment on `_kNarrowFieldWidth` in
+    // `duration_picker_panel.dart`.
 
     /// The concrete anchor width this group's desktop cases pin, chosen
-    /// (temporary probes, deleted) as the widest anchor at which a 7-char
-    /// suffix still fits and an 8-char one still overflows -- see the group
-    /// doc comment above.
-    const narrowAnchorWidth = 250.0;
+    /// (temporary probes, deleted) as a width centered inside the window
+    /// where a 7-char suffix fits and an 8-char one still overflows -- see
+    /// the group doc comment above for the measured boundaries and the
+    /// 2026-08-26 re-derivation.
+    const narrowAnchorWidth = 230.0;
 
     guardedTestWidgets(
       'a 7-char synthetic suffix (the measured safe boundary) fits the real compact bottom-sheet flow',
@@ -898,20 +933,16 @@ void main() {
         // durationUnit*Short{Singular,Plural} keys precisely because this
         // capacity ceiling exists.
         //
-        // If this ever starts passing at `narrowAnchorWidth` (the fields'
-        // internal chrome changes, or this row's padding/spacing gets more
-        // room), that specific width's capacity would clear 8 characters and
-        // the long-form keys become viable there again — at which point this
-        // test should be inverted back to isNull (or `narrowAnchorWidth`
-        // re-derived narrower), and the band-dependent key selection above
-        // should be reconsidered rather than left as a now-unnecessary
-        // abbreviation.
+        // If this ever starts passing at `narrowAnchorWidth`, see the group
+        // doc comment above ("If this trips again") for the re-derivation
+        // procedure and what it would mean for the short-key decision.
         expect(
           tester.takeException(),
           isNotNull,
           reason:
-              'a $narrowAnchorWidth-wide anchor\'s layout capacity is currently 7 characters, not 8+; if this '
-              'starts passing, the capacity grew and the short-key decision above should be revisited',
+              'a $narrowAnchorWidth-wide anchor\'s layout capacity currently fits a real 7-char label but not a '
+              'real 8-char one (e.g. "Segundos"); if this starts passing, the capacity grew and the short-key '
+              'decision above should be revisited',
         );
       },
       // This test deliberately drives content past the layout's capacity and

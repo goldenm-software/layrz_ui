@@ -37,9 +37,10 @@ import '../shared/input_style_spec.dart';
 ///
 /// **Accessibility:**
 /// Both presentation forms (field and icon button) provide semantic labels. In field mode, the
-/// widget owns exactly one [Semantics] node carrying [labelText] (falling back to a localized
+/// widget owns exactly one [Semantics] node carrying [hintText] (falling back to a localized
 /// default); the trigger button in icon mode provides its own semantic label, and the panel field
-/// it opens is deliberately unlabelled so the button's label is not announced twice.
+/// it opens carries a distinct, localized label of its own (not [hintText], and not the button's
+/// label) so the two controls are never announced as the same thing.
 class LayrzSearchInput extends StatefulWidget {
   /// The presentation mode for the search input.
   ///
@@ -67,19 +68,10 @@ class LayrzSearchInput extends StatefulWidget {
   /// A pending debounce timer is always cancelled in `dispose`.
   final Duration? debounce;
 
-  /// The label text for the input field (field and icon modes).
-  final String? labelText;
-
   /// The hint text displayed when the field is empty.
   ///
   /// Defaults to a localized "Search" string if not provided.
   final String? hintText;
-
-  /// Whether the field is marked as required.
-  ///
-  /// When true, a required marker (`*`) is rendered next to [labelText] in field mode.
-  /// Has no visible effect in icon mode, where the panel field renders no label.
-  final bool isRequired;
 
   /// Whether the input field is disabled.
   final bool disabled;
@@ -117,10 +109,12 @@ class LayrzSearchInput extends StatefulWidget {
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The padding applied inside the input field.
+  /// Whether the field uses the dense density variant.
   ///
-  /// If null, defaults to `tokens.spacing.pd2` (8px all sides).
-  final EdgeInsets? padding;
+  /// When false (default), the field's internal padding is 14px on compact
+  /// viewports and 10px on regular viewports. When true, padding drops one
+  /// spacing level: 10px compact, 6px regular. No other dimension changes.
+  final bool dense;
 
   /// The maximum width of the input field.
   ///
@@ -145,9 +139,7 @@ class LayrzSearchInput extends StatefulWidget {
     this.value,
     this.onSearch,
     this.debounce = const Duration(milliseconds: 300),
-    this.labelText,
     this.hintText,
-    this.isRequired = false,
     this.disabled = false,
     this.readOnly = false,
     this.errors = const [],
@@ -155,7 +147,7 @@ class LayrzSearchInput extends StatefulWidget {
     this.helpContentText,
     this.controller,
     this.focusNode,
-    this.padding,
+    this.dense = false,
     this.maxWidth,
     this.preferredSide = LayrzPreferredSide.right,
   });
@@ -349,9 +341,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Otherwise, returns the specified mode.
   LayrzSearchInputMode _resolveMode(BuildContext context) {
     if (widget.mode == LayrzSearchInputMode.auto) {
-      return context.isCompact
-          ? LayrzSearchInputMode.icon
-          : LayrzSearchInputMode.field;
+      return context.isCompact ? LayrzSearchInputMode.icon : LayrzSearchInputMode.field;
     }
     return widget.mode;
   }
@@ -370,12 +360,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// [labelText] and [autofocus] differ between the two call sites; every other value
   /// is identical, so it is factored out to avoid the two modes drifting apart.
   LayrzEditableFieldConfig _buildFieldConfig({
-    required String? labelText,
     required String hintText,
     required bool autofocus,
   }) {
     return LayrzEditableFieldConfig(
-      labelText: labelText,
+      labelText: null,
       hintText: hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
@@ -414,7 +403,6 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
   /// Builds the field mode: inline text input with magnifier prefix and clear suffix.
   Widget _buildFieldMode(BuildContext context) {
     final hintText = widget.hintText ?? context.l10n.inputsSearchHint;
-    final resolvedLabel = widget.labelText ?? context.l10n.helperSearch;
 
     _syncDisabledState();
 
@@ -429,13 +417,12 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
     );
 
     final fieldConfig = _buildFieldConfig(
-      labelText: resolvedLabel,
       hintText: hintText,
       autofocus: false,
     );
 
     return Semantics(
-      label: resolvedLabel,
+      label: hintText,
       enabled: !widget.disabled,
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -445,9 +432,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           ),
         ),
         child: LayrzInputChrome(
-          labelText: resolvedLabel,
+          labelText: null,
           hintText: hintText,
-          isRequired: widget.isRequired,
+          // No label is ever rendered here (labelText is always null), so the
+          // required marker has nothing to attach to regardless of this value.
+          isRequired: false,
           prefixSlot: prefixSlot,
           suffixSlot: suffixSlot,
           disabled: widget.disabled,
@@ -458,7 +447,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           helpTitleText: widget.helpTitleText,
           helpContentText: widget.helpContentText,
           controller: _controller,
-          padding: widget.padding,
+          dense: widget.dense,
           child: LayrzEditableField(config: fieldConfig),
         ),
       ),
@@ -499,8 +488,12 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
 
     // No labelText here: the panel field must not inherit the trigger button's
     // label, or the label would be announced twice (button + panel field).
+    // Guarded, not merely hoped for: this method passes `hintText: null` to
+    // LayrzInputChrome (suppressing its own hint rendering) and instead paints
+    // an equivalent hint itself, excluded from semantics, wrapped in an
+    // explicit Semantics(textField: true, label: inputsSearchFieldLabel, ...)
+    // -- see the comment on that wrapper, below, for why.
     final fieldConfig = _buildFieldConfig(
-      labelText: null,
       hintText: hintText,
       autofocus: true,
     );
@@ -511,9 +504,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       hasErrors: hasErrors,
       readOnly: widget.readOnly,
     );
-    final showFocusRing =
-        !widget.disabled &&
-        (_states.contains(WidgetState.focused) || hasErrors);
+    final showFocusRing = !widget.disabled && (_states.contains(WidgetState.focused) || hasErrors);
 
     return LayrzAnchoredPanel(
       widthPolicy: LayrzAnchoredPanelWidthPolicy.contentSized,
@@ -525,7 +516,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       onOpen: _handlePanelOpened,
       builder: (context, controller) {
         return LayrzButton(
-          labelText: widget.labelText ?? context.l10n.helperSearch,
+          labelText: widget.hintText ?? context.l10n.helperSearch,
           icon: MdiIcons.magnify,
           onTap: widget.disabled ? null : controller.open,
           isDisabled: widget.disabled,
@@ -542,24 +533,93 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
               width: spec.borderWidth,
             )
           : null,
-      child: LayrzInputChrome(
-        labelText: null,
-        hintText: hintText,
-        isRequired: widget.isRequired,
-        prefixSlot: prefixSlot,
-        suffixSlot: suffixSlot,
-        disabled: widget.disabled,
-        readOnly: widget.readOnly,
-        errors: widget.errors,
-        hideDetails: false,
-        states: _states,
-        helpTitleText: widget.helpTitleText,
-        helpContentText: widget.helpContentText,
-        controller: _controller,
-        padding: widget.padding,
-        borderRadius: tokens.radius.br3,
-        showBorder: false,
-        child: LayrzEditableField(config: fieldConfig),
+      // Enforces the "No labelText here" contract above rather than just
+      // documenting it. The panel field renders its own hint (below) instead
+      // of handing `hintText` to LayrzInputChrome, and wraps the field in an
+      // explicit, named Semantics node -- two changes forced together, not a
+      // stylistic choice:
+      //
+      // LayrzInputChrome paints its hint as a plain Text layered in a Stack
+      // alongside `child` (see input_chrome.dart's `_buildRowContent`), a
+      // SIBLING of `child`, not a descendant of it. That Text creates its own
+      // leaf semantics node regardless of anything this widget wraps `child`
+      // in -- verified empirically (dumping the actual semantics tree): a
+      // Semantics ancestor around `child` with an explicit `label` does not
+      // suppress or absorb a sibling Text's own contribution, it only adds to
+      // it when they happen to merge, and `excludeSemantics: true` on that
+      // ancestor blocks the sibling too, but ALSO deletes EditableText's own
+      // dynamic value/focus semantics -- worse than the duplicate it was
+      // meant to fix, since a screen reader would then never hear what is
+      // typed or that the field gained focus. There is no way to reach or
+      // exclude specifically that sibling Text from here: it is chrome-internal,
+      // outside the `child` subtree this widget controls, and
+      // input_chrome.dart is off-limits (frozen).
+      //
+      // So instead: this widget stops asking the chrome to render a hint at
+      // all (`hintText: null` below skips both of input_chrome.dart's hint
+      // branches entirely -- they are gated on `hintText != null &&
+      // hintText.isNotEmpty`), and paints an equivalent hint itself, inside
+      // `child`, wrapped in `ExcludeSemantics` -- which is safe here
+      // specifically because this widget's own hint Text is not a sibling of
+      // EditableText's semantics, it is wrapped independently around itself
+      // with EditableText excluded from its own subtree. Same visual
+      // position, same style (mirrors input_chrome.dart's hint styling:
+      // `tokens.colors.fg3`, single line, ellipsis overflow), reactive to the
+      // same `controller.text.isEmpty` condition -- a caller cannot tell the
+      // hint moved. Only its semantics changed: now excluded, so the only
+      // label the field carries is the explicit, distinct one below.
+      child: Semantics(
+        container: true,
+        textField: true,
+        label: context.l10n.inputsSearchFieldLabel,
+        enabled: !widget.disabled,
+        child: LayrzInputChrome(
+          labelText: null,
+          hintText: null,
+          // No label is ever rendered here (labelText is always null), so the
+          // required marker has nothing to attach to regardless of this value.
+          isRequired: false,
+          prefixSlot: prefixSlot,
+          suffixSlot: suffixSlot,
+          disabled: widget.disabled,
+          readOnly: widget.readOnly,
+          errors: widget.errors,
+          hideDetails: false,
+          states: _states,
+          helpTitleText: widget.helpTitleText,
+          helpContentText: widget.helpContentText,
+          controller: _controller,
+          dense: widget.dense,
+          borderRadius: tokens.radius.br3,
+          showBorder: false,
+          child: Stack(
+            children: [
+              ExcludeSemantics(
+                child: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) => value.text.isEmpty
+                      ? Align(
+                          alignment: Alignment.centerLeft,
+                          child: SelectionContainer.disabled(
+                            child: Text(
+                              hintText,
+                              // Merges with the ambient DefaultTextStyle the chrome
+                              // applies around `child` (density-scaled body text),
+                              // matching input_chrome.dart's own hint styling exactly
+                              // -- only the color is overridden.
+                              style: DefaultTextStyle.of(context).style.copyWith(color: tokens.colors.fg3),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ),
+              LayrzEditableField(config: fieldConfig),
+            ],
+          ),
+        ),
       ),
     );
   }

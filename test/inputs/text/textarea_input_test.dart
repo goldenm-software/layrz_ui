@@ -531,16 +531,18 @@ void main() {
       expect(find.byType(LayrzTextAreaInput), findsOneWidget);
     });
 
-    testWidgets('padding override replaces token default', (tester) async {
+    /// Per DESIGN-126, the public `padding` escape hatch was removed; density is now
+    /// expressible only via `dense`, forwarded to the shared chrome's `.variableHeight`
+    /// constructor.
+    testWidgets('dense: true renders without error and forwards to the chrome', (tester) async {
       final controller = TextEditingController();
-      const customPadding = EdgeInsets.all(20);
 
       await pumpThemed(
         tester,
         LayrzTextAreaInput(
           labelText: 'Field',
           controller: controller,
-          padding: customPadding,
+          dense: true,
         ),
       );
 

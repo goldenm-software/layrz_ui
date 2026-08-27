@@ -27,7 +27,7 @@ class ShowroomLayout extends StatelessWidget {
         height: double.infinity,
         child: child,
       ),
-      logo: 'https://cdn.layrz.com/resources/com.layrz.one/logo/normal.png',
+      logo: 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?3',
       userName: 'John Doe',
       userMenuItems: [
         LayrzDropdownEntry(

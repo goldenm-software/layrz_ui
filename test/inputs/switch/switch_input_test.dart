@@ -239,19 +239,23 @@ void main() {
       expect(find.text('This field is required'), findsNothing);
     });
 
-    testWidgets('respects custom padding', (tester) async {
-      const customPadding = EdgeInsets.only(left: 20, right: 20);
-
+    testWidgets('applies the fixed control padding', (tester) async {
       await pumpThemed(
         tester,
         LayrzSwitchInput(
           value: false,
           onChanged: (_) {},
-          padding: customPadding,
         ),
       );
 
-      expect(find.byType(LayrzSwitchInput), findsOneWidget);
+      final paddingWidget = tester.widget<Padding>(
+        find.ancestor(
+          of: find.byType(GestureDetector),
+          matching: find.byType(Padding),
+        ),
+      );
+
+      expect(paddingWidget.padding, const EdgeInsets.all(10));
     });
 
     testWidgets('track has no border', (tester) async {
