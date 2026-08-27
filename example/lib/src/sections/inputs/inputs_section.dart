@@ -6,6 +6,7 @@ import 'input_demo.dart';
 import 'demos/text_input_demo.dart';
 import 'demos/textarea_input_demo.dart';
 import 'demos/number_input_demo.dart';
+import 'demos/slider_demo.dart';
 import 'demos/checkbox_input_demo.dart';
 import 'demos/switch_input_demo.dart';
 import 'demos/radio_input_demo.dart';
@@ -56,6 +57,13 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Numeric',
       details: NumberInputDemo(),
       icon: MdiIcons.numeric,
+    ),
+    InputDemo(
+      id: 'slider',
+      name: 'Slider',
+      category: 'Numeric',
+      details: SliderDemo(),
+      icon: MdiIcons.tuneVariant,
     ),
 
     // Boolean category
