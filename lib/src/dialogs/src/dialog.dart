@@ -2,7 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
+import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 /// A modal dialog surface for presenting focused, page-relative interruptions.
@@ -51,7 +53,12 @@ class LayrzDialog {
   ///   Typically a [Text] styled by the caller, or any widget.
   /// - [content]: optional widget rendered in the dialog's body slot, below [title] and
   ///   above [actions]. Wrapped in a [LayrzScrollbar] over a scroll view so content taller
-  ///   than the dialog's max height scrolls internally instead of overflowing.
+  ///   than the dialog's max height scrolls internally instead of overflowing, and in its
+  ///   own [SelectableRegion] so text inside it is selectable and copyable -- matching
+  ///   `DetailPane`'s pattern (always on, no opt-out), since dialog content is presented,
+  ///   read-oriented text rather than an interactive canvas that selection gestures could
+  ///   conflict with. Touch selection handles and the copy toolbar are gated to Android/iOS
+  ///   only, per DESIGN-147 (see [LayrzPlatform.isTouchOS]).
   /// - [actions]: optional list of widgets (typically `LayrzButton`s) rendered in a row
   ///   at the bottom of the dialog, right-aligned with spacing between them.
   /// - [child]: an escape hatch for content that does not fit the [title]/[content]/[actions]
@@ -301,10 +308,25 @@ class _DialogContentState extends State<_DialogContent> {
   /// in which case there is nothing safe to restore focus to).
   FocusNode? _previouslyFocused;
 
+  /// The controller backing the [content] slot's scroll view.
+  ///
+  /// Owned here (rather than left implicit) so the exact same instance can be
+  /// handed to both [LayrzScrollbar] and the [SingleChildScrollView] it
+  /// decorates in [_buildSlots] -- [LayrzScrollbar] paints a thumb by reading
+  /// a [ScrollPosition] off this controller, and a [Scrollbar]/[RawScrollbar]
+  /// asserts if the controller it was given has no [ScrollPosition] attached,
+  /// which is exactly what happened when neither widget was given an explicit
+  /// controller and the scrollbar fell back to (an unattached)
+  /// [PrimaryScrollController]. Mirrors [LayrzBottomSheet]'s own
+  /// `DraggableScrollableSheet`-provided `scrollController`, wired the same
+  /// way to its content's scroll view.
+  late final ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode(debugLabel: 'LayrzDialog');
+    _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -327,6 +349,7 @@ class _DialogContentState extends State<_DialogContent> {
       previouslyFocused.requestFocus();
     }
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -384,6 +407,56 @@ class _DialogContentState extends State<_DialogContent> {
     return panel;
   }
 
+  /// The [TextSelectionControls] used by the [content] slot's [SelectableRegion].
+  ///
+  /// DESIGN-147: touch selection handles and the selection action menu are
+  /// Android/iOS only, on web or native (per [LayrzPlatform.isTouchOS]).
+  /// [SelectableRegion.selectionControls] is required and non-nullable, so
+  /// [emptyTextSelectionControls] is used as the "off" value instead: it does
+  /// not mix in `TextSelectionHandleControls`, so [SelectableRegion] takes its
+  /// `is! TextSelectionHandleControls` branch internally and shows a toolbar
+  /// via the deprecated `buildToolbar()` path rather than force-unwrapping
+  /// [_buildContextMenu] -- which is still passed unconditionally below and
+  /// would otherwise null-check-crash on right-click. Mirrors
+  /// `DetailPane._selectionControls` and `LayrzLayout`'s own gate exactly, so
+  /// all [SelectableRegion] sites in the design system move together.
+  TextSelectionControls get _selectionControls =>
+      LayrzPlatform.isTouchOS ? LayrzTextSelectionControls.instance : emptyTextSelectionControls;
+
+  /// Builds the copy toolbar for the [content] slot's [SelectableRegion].
+  ///
+  /// Mirrors `DetailPane._buildContextMenu` and `LayrzLayout`'s own -- a bare
+  /// [SelectableRegion] with no `contextMenuBuilder` null-crashes on
+  /// long-press in this repo, since there is no Material default to fall back
+  /// on. On non-touch platforms this builder is never actually invoked -- see
+  /// [_selectionControls] -- but it must remain unconditionally wired for the
+  /// same reason.
+  Widget _buildContextMenu(BuildContext context, SelectableRegionState state) {
+    final tokens = context.tokens;
+    final anchors = state.contextMenuAnchors;
+
+    final toolbar = LayrzSelectionToolbar(
+      actions: {LayrzSelectableAction.copy},
+      anchorAbove: anchors.primaryAnchor,
+      anchorBelow: anchors.secondaryAnchor,
+      tokens: tokens,
+      onActionPressed: (actionType) {
+        if (actionType == 'copy') {
+          // ignore: deprecated_member_use
+          state.copySelection(SelectionChangedCause.toolbar);
+        }
+      },
+    );
+
+    return CustomSingleChildLayout(
+      delegate: TextSelectionToolbarLayoutDelegate(
+        anchorAbove: anchors.primaryAnchor,
+        anchorBelow: anchors.secondaryAnchor ?? Offset.zero,
+      ),
+      child: toolbar,
+    );
+  }
+
   /// Builds the [title]/[content]/[actions] slot layout used whenever
   /// [_DialogContent.child] is not supplied.
   ///
@@ -418,10 +491,16 @@ class _DialogContentState extends State<_DialogContent> {
         if (widget.content != null)
           Flexible(
             child: LayrzScrollbar(
+              controller: _scrollController,
               child: SingleChildScrollView(
-                child: DefaultTextStyle.merge(
-                  style: tokens.typography.body,
-                  child: widget.content!,
+                controller: _scrollController,
+                child: SelectableRegion(
+                  selectionControls: _selectionControls,
+                  contextMenuBuilder: _buildContextMenu,
+                  child: DefaultTextStyle.merge(
+                    style: tokens.typography.body,
+                    child: widget.content!,
+                  ),
                 ),
               ),
             ),
