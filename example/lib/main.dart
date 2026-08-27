@@ -13,6 +13,7 @@ import 'src/sections/button_group_section.dart';
 import 'src/sections/buttons_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
+import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
 import 'src/sections/grid_section.dart';
 import 'src/sections/images_section.dart';
@@ -99,6 +100,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/grid',
           pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
+        ),
+        GoRoute(
+          path: '/dialogs',
+          pageBuilder: (context, state) => NoTransitionPage(child: DialogsSection()),
         ),
         GoRoute(
           path: '/typography',

@@ -170,6 +170,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/menus'),
       ),
       LayrzNavigatorPage(
+        id: '/dialogs',
+        labelText: 'Dialogs',
+        icon: MdiIcons.windowMaximize,
+        isSelected: currentRoute == '/dialogs',
+        onTap: () => _navigateTo(context, '/dialogs'),
+      ),
+      LayrzNavigatorPage(
         id: '/chips',
         labelText: 'Chips',
         icon: MdiIcons.tagOutline,
