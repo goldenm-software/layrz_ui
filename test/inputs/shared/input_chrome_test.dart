@@ -1207,9 +1207,17 @@ void main() {
       });
 
       group('Compact viewport sizing — DESIGN-105', () {
-        /// Verifies that padding grows from pd2 (10px) to pd3 (14px) on compact viewports.
-        /// This increases the field's vertical height from ~42px to ~50px on compact (width < 960px).
-        testWidgets('compact viewport (width 400): padding is pd3 (14px all sides)', (tester) async {
+        /// DESIGN-105 originally grew padding from pd2 (10px) to pd3 (14px) on compact
+        /// viewports (< 960px), increasing field height from ~42px to ~50px for larger mobile
+        /// touch targets. The maintainer deliberately removed `_InputComfortableSpec`'s
+        /// `isCompact` branching (`padding` is now `dense ? pd1 : pd2`, unconditionally — see
+        /// `engineering/decisions.md` D66's amendment), so padding no longer varies by
+        /// viewport at all. This test now asserts the current, flat behaviour: a compact
+        /// viewport gets the same pd2 padding as a regular one (see the paired "regular
+        /// viewport" test directly below, which asserts the identical value).
+        testWidgets('compact viewport (width 400): padding is pd2 (10px all sides), same as regular', (
+          tester,
+        ) async {
           addTearDown(tester.view.resetPhysicalSize);
           tester.view.devicePixelRatio = 1.0;
           tester.view.physicalSize = const Size(400, 800);
@@ -1254,11 +1262,12 @@ void main() {
             }
           }
 
-          // Verify padding is pd3 on compact
-          expect(resolvedPadding.top, equals(tokens.spacing.sp3));
-          expect(resolvedPadding.bottom, equals(tokens.spacing.sp3));
-          expect(resolvedPadding.left, equals(tokens.spacing.sp3));
-          expect(resolvedPadding.right, equals(tokens.spacing.sp3));
+          // Verify padding is pd2 on compact — no longer pd3, per the maintainer's removal of
+          // isCompact from _InputComfortableSpec (D66 amendment).
+          expect(resolvedPadding.top, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.bottom, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.left, equals(tokens.spacing.sp2));
+          expect(resolvedPadding.right, equals(tokens.spacing.sp2));
         });
 
         /// Verifies that padding remains pd2 (10px) on regular viewports.
@@ -1306,11 +1315,21 @@ void main() {
           expect(resolvedPadding.right, equals(tokens.spacing.sp2));
         });
 
-        /// Verifies the exact boundary: width 959 (sm, compact) vs width 960 (md, regular).
-        testWidgets('compact/regular boundary: 959 is compact (pd3), 960 is regular (pd2)', (tester) async {
+        /// Originally verified the sm/md breakpoint boundary at width 959 vs 960 produced
+        /// different padding (pd3 vs pd2) — the entire premise this test existed to defend.
+        /// The maintainer deliberately removed `isCompact` from `_InputComfortableSpec` (see
+        /// `engineering/decisions.md` D66's amendment), so `padding` no longer reads viewport
+        /// width at all; it is `dense ? pd1 : pd2` unconditionally. There is no longer a
+        /// breakpoint boundary for padding to differ across, so this test is rewritten to
+        /// assert the new invariant directly: padding is identical on both sides of the old
+        /// 959/960 boundary. This still has regression value — if `isCompact` branching were
+        /// ever silently reintroduced to `padding`, this would catch the asymmetry reappearing.
+        testWidgets('compact/regular boundary: 959 and 960 both resolve to pd2 — no viewport-driven padding split', (
+          tester,
+        ) async {
           final tokens = LayrzTokens.light();
 
-          // Test at width 959 (compact)
+          // Test at width 959 (formerly compact)
           addTearDown(tester.view.resetPhysicalSize);
           tester.view.devicePixelRatio = 1.0;
           tester.view.physicalSize = const Size(959, 800);
@@ -1344,9 +1363,9 @@ void main() {
             }
           }
 
-          expect(padding959.top, equals(tokens.spacing.sp3), reason: 'Width 959 should be compact (pd3)');
+          expect(padding959.top, equals(tokens.spacing.sp2), reason: 'Width 959 now resolves to pd2, not pd3');
 
-          // Now test at width 960 (regular)
+          // Now test at width 960 (formerly regular)
           addTearDown(tester.view.resetPhysicalSize);
           tester.view.devicePixelRatio = 1.0;
           tester.view.physicalSize = const Size(960, 800);
@@ -1380,7 +1399,8 @@ void main() {
             }
           }
 
-          expect(padding960.top, equals(tokens.spacing.sp2), reason: 'Width 960 should be regular (pd2)');
+          expect(padding960.top, equals(tokens.spacing.sp2), reason: 'Width 960 remains pd2');
+          expect(padding959.top, equals(padding960.top), reason: 'no asymmetry across the old breakpoint');
         });
 
         /// Verifies that padding remains uniform (all four sides equal) on compact viewports.
@@ -1496,10 +1516,16 @@ void main() {
           }
         });
 
-        /// Verifies that `dense: true` drops padding one spacing level on a compact viewport
-        /// (pd3 14px → pd2 10px), per DESIGN-126. The `padding` escape hatch this test used to
-        /// exercise was removed in the same change; density is now expressible only via `dense`.
-        testWidgets('dense compact viewport (width 400): padding is pd2 (10px all sides)', (tester) async {
+        /// Originally verified that `dense: true` dropped padding one level on a compact
+        /// viewport (pd3 14px → pd2 10px), per DESIGN-126. The maintainer's removal of
+        /// `isCompact` from `_InputComfortableSpec` (see `engineering/decisions.md` D66's
+        /// amendment) means `padding` is now `dense ? pd1 : pd2` unconditionally — dense no
+        /// longer starts from a viewport-dependent base, so `dense: true` at any viewport
+        /// resolves straight to pd1 (6px). This test now asserts that current value, and
+        /// matches the paired "dense regular viewport" test directly below exactly.
+        testWidgets('dense compact viewport (width 400): padding is pd1 (6px all sides), same as dense regular', (
+          tester,
+        ) async {
           addTearDown(tester.view.resetPhysicalSize);
           tester.view.devicePixelRatio = 1.0;
           tester.view.physicalSize = const Size(400, 800);
@@ -1535,10 +1561,10 @@ void main() {
           }
 
           expect(resolvedPadding, isNotNull, reason: 'Bordered input container should have been found');
-          expect(resolvedPadding!.top, equals(10.0));
-          expect(resolvedPadding.bottom, equals(10.0));
-          expect(resolvedPadding.left, equals(10.0));
-          expect(resolvedPadding.right, equals(10.0));
+          expect(resolvedPadding!.top, equals(6.0));
+          expect(resolvedPadding.bottom, equals(6.0));
+          expect(resolvedPadding.left, equals(6.0));
+          expect(resolvedPadding.right, equals(6.0));
         });
 
         /// Verifies that `dense: true` drops padding one spacing level on a regular/wide viewport
