@@ -124,6 +124,7 @@ void main() {
       );
 
       final node = tester.getSemantics(sliderSemanticsFinder());
+      // ignore: deprecated_member_use
       tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.increase);
       await tester.pump();
 
@@ -169,6 +170,7 @@ void main() {
       );
 
       final node = tester.getSemantics(sliderSemanticsFinder());
+      // ignore: deprecated_member_use
       tester.binding.pipelineOwner.semanticsOwner!.performAction(node.id, SemanticsAction.decrease);
       await tester.pump();
 
