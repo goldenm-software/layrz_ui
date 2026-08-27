@@ -105,422 +105,419 @@ class TextAreaInputDemoSections extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return SizedBox(
-      height: double.infinity,
-      child: SingleChildScrollView(
-        child: Container(
-          padding: tokens.spacing.pd2,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            spacing: tokens.spacing.sp1,
-            children: [
-              // Field States
-              Text('Field States', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Comment',
-                      hintText: 'Enter your feedback here',
-                      controller: basicController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+    return SingleChildScrollView(
+      child: Container(
+        padding: tokens.spacing.pd2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          spacing: tokens.spacing.sp1,
+          children: [
+            // Field States
+            Text('Field States', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Comment',
+                    hintText: 'Enter your feedback here',
+                    controller: basicController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Required Field',
-                      hintText: 'This field is required',
-                      isRequired: true,
-                      controller: requiredController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Required Field',
+                    hintText: 'This field is required',
+                    isRequired: true,
+                    controller: requiredController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Disabled and Read-only', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Disabled',
-                      hintText: 'This is disabled',
-                      disabled: true,
-                      controller: disabledController,
-                    ),
+            tokens.spacing.sb3,
+            Text('Disabled and Read-only', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Disabled',
+                    hintText: 'This is disabled',
+                    disabled: true,
+                    controller: disabledController,
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Read-only',
-                      hintText: 'View only',
-                      readOnly: true,
-                      controller: readOnlyController,
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Read-only',
+                    hintText: 'View only',
+                    readOnly: true,
+                    controller: readOnlyController,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Error States', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Description',
-                      hintText: 'Enter a description',
-                      errors: ['Description is required', 'Must be at least 10 characters'],
-                      controller: errorController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Error States', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Description',
+                    hintText: 'Enter a description',
+                    errors: ['Description is required', 'Must be at least 10 characters'],
+                    controller: errorController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('With Character Limit', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Bio',
-                      hintText: 'Tell us about yourself (max 200 characters)',
-                      maxLength: 200,
-                      controller: charLimitController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('With Character Limit', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Bio',
+                    hintText: 'Tell us about yourself (max 200 characters)',
+                    maxLength: 200,
+                    controller: charLimitController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Variable Line Count', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Minimal',
-                      hintText: 'Few lines',
-                      minLines: 2,
-                      maxLines: 4,
-                      controller: minimalLinesController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Variable Line Count', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Minimal',
+                    hintText: 'Few lines',
+                    minLines: 2,
+                    maxLines: 4,
+                    controller: minimalLinesController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Expansive',
-                      hintText: 'Many lines',
-                      minLines: 5,
-                      maxLines: 15,
-                      controller: expansiveLinesController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Expansive',
+                    hintText: 'Many lines',
+                    minLines: 5,
+                    maxLines: 15,
+                    controller: expansiveLinesController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Prefix and Suffix Slots', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Prefix Icon',
-                      hintText: 'Icon on the left',
-                      prefixIcon: MdiIcons.pencil,
-                      controller: prefixIconController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Prefix and Suffix Slots', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Prefix Icon',
+                    hintText: 'Icon on the left',
+                    prefixIcon: MdiIcons.pencil,
+                    controller: prefixIconController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Suffix Icon',
-                      hintText: 'Icon on the right',
-                      suffixIcon: MdiIcons.check,
-                      onSuffixTap: () => onStateChanged(),
-                      controller: suffixIconController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Suffix Icon',
+                    hintText: 'Icon on the right',
+                    suffixIcon: MdiIcons.check,
+                    onSuffixTap: () => onStateChanged(),
+                    controller: suffixIconController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Prefix Text',
-                      hintText: 'Text prefix',
-                      prefixText: '>> ',
-                      controller: prefixTextController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Prefix Text',
+                    hintText: 'Text prefix',
+                    prefixText: '>> ',
+                    controller: prefixTextController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Suffix Text',
-                      hintText: 'Text suffix',
-                      suffixText: ' <<',
-                      controller: suffixTextController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Suffix Text',
+                    hintText: 'Text suffix',
+                    suffixText: ' <<',
+                    controller: suffixTextController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Custom Widget Prefix',
-                      hintText: 'Custom widget as prefix',
-                      prefix: Container(
-                        padding: EdgeInsets.only(right: tokens.spacing.sp1),
-                        child: Text('[Custom]', style: tokens.typography.label),
-                      ),
-                      controller: prefixWidgetController,
-                      onChanged: (_) => onStateChanged(),
+            tokens.spacing.sb3,
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Custom Widget Prefix',
+                    hintText: 'Custom widget as prefix',
+                    prefix: Container(
+                      padding: EdgeInsets.only(right: tokens.spacing.sp1),
+                      child: Text('[Custom]', style: tokens.typography.label),
                     ),
+                    controller: prefixWidgetController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Custom Widget Suffix',
-                      hintText: 'Custom widget as suffix',
-                      suffix: Container(
-                        padding: EdgeInsets.only(left: tokens.spacing.sp1),
-                        child: Text('[Info]', style: tokens.typography.label),
-                      ),
-                      controller: suffixWidgetController,
-                      onChanged: (_) => onStateChanged(),
+            tokens.spacing.sb3,
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Custom Widget Suffix',
+                    hintText: 'Custom widget as suffix',
+                    suffix: Container(
+                      padding: EdgeInsets.only(left: tokens.spacing.sp1),
+                      child: Text('[Info]', style: tokens.typography.label),
                     ),
+                    controller: suffixWidgetController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Help Affordance', style: tokens.typography.title),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Help Text',
-                      hintText: 'Enter additional details',
-                      helpTitleText: 'Help',
-                      helpContentText: 'This field accepts multiple lines of text. Be concise but descriptive.',
-                      controller: helpController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Help Affordance', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Help Text',
+                    hintText: 'Enter additional details',
+                    helpTitleText: 'Help',
+                    helpContentText: 'This field accepts multiple lines of text. Be concise but descriptive.',
+                    controller: helpController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Top Alignment Demo', style: tokens.typography.title),
-              Text(
-                'Left field has pre-filled lines to show content-top alignment. Right field is empty to show hint-top alignment.',
-                style: tokens.typography.label,
-              ),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'With Content',
-                      hintText: 'Placeholder text',
-                      minLines: 5,
-                      maxLines: 5,
-                      controller: topAlignWithContentController,
-                    ),
+            tokens.spacing.sb3,
+            Text('Top Alignment Demo', style: tokens.typography.title),
+            Text(
+              'Left field has pre-filled lines to show content-top alignment. Right field is empty to show hint-top alignment.',
+              style: tokens.typography.label,
+            ),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'With Content',
+                    hintText: 'Placeholder text',
+                    minLines: 5,
+                    maxLines: 5,
+                    controller: topAlignWithContentController,
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Empty (shows hint)',
-                      hintText: 'This hint starts at the top',
-                      minLines: 5,
-                      maxLines: 5,
-                      controller: topAlignEmptyController,
-                    ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Empty (shows hint)',
+                    hintText: 'This hint starts at the top',
+                    minLines: 5,
+                    maxLines: 5,
+                    controller: topAlignEmptyController,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Live Interaction', style: tokens.typography.title),
-              Text(
-                'Type in the field to see the character count update in real time.',
-                style: tokens.typography.label,
-              ),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Count Characters',
-                      hintText: 'Type here to see the count',
-                      controller: liveInteractionController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Live Interaction', style: tokens.typography.title),
+            Text(
+              'Type in the field to see the character count update in real time.',
+              style: tokens.typography.label,
+            ),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Count Characters',
+                    hintText: 'Type here to see the count',
+                    controller: liveInteractionController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        spacing: tokens.spacing.sp2,
-                        children: [
-                          Text(
-                            'Character count:',
-                            style: tokens.typography.label,
-                          ),
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: liveInteractionController,
-                            builder: (context, value, child) {
-                              return Text(
-                                '${value.text.length} characters',
-                                style: tokens.typography.body,
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              tokens.spacing.sb3,
-              Text('Input Formatters', style: tokens.typography.title),
-              Text(
-                'This field converts all input to uppercase using a custom formatter.',
-                style: tokens.typography.label,
-              ),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Uppercase Only',
-                      hintText: 'Type lowercase, it becomes uppercase',
-                      inputFormatters: [
-                        UppercaseFormatter(),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: tokens.spacing.sp2,
+                      children: [
+                        Text(
+                          'Character count:',
+                          style: tokens.typography.label,
+                        ),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: liveInteractionController,
+                          builder: (context, value, child) {
+                            return Text(
+                              '${value.text.length} characters',
+                              style: tokens.typography.body,
+                            );
+                          },
+                        ),
                       ],
-                      controller: formatterController,
-                      onChanged: (_) => onStateChanged(),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Keyboard Behaviour', style: tokens.typography.title),
-              Text(
-                'Press Enter to insert a newline (default TextInputAction.newline).',
-                style: tokens.typography.label,
-              ),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Multi-line Entry',
-                      hintText: 'Press Enter to create new lines',
-                      textInputAction: TextInputAction.newline,
-                      controller: keyboardController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Input Formatters', style: tokens.typography.title),
+            Text(
+              'This field converts all input to uppercase using a custom formatter.',
+              style: tokens.typography.label,
+            ),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Uppercase Only',
+                    hintText: 'Type lowercase, it becomes uppercase',
+                    inputFormatters: [
+                      UppercaseFormatter(),
+                    ],
+                    controller: formatterController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              tokens.spacing.sb3,
-              Text('Density', style: tokens.typography.title),
-              Text(
-                'Left field uses dense: true (smaller internal padding), right field uses the default density.',
-                style: tokens.typography.label,
-              ),
-              LayrzRow(
-                spacing: tokens.spacing.sp3,
-                children: [
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Dense',
-                      hintText: 'Reduced internal spacing',
-                      dense: true,
-                      controller: customPaddingController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+            tokens.spacing.sb3,
+            Text('Keyboard Behaviour', style: tokens.typography.title),
+            Text(
+              'Press Enter to insert a newline (default TextInputAction.newline).',
+              style: tokens.typography.label,
+            ),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Multi-line Entry',
+                    hintText: 'Press Enter to create new lines',
+                    textInputAction: TextInputAction.newline,
+                    controller: keyboardController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                  LayrzCol(
-                    xs: 12,
-                    md: 6,
-                    child: LayrzTextAreaInput(
-                      labelText: 'Default',
-                      hintText: 'Standard internal spacing',
-                      controller: defaultPaddingController,
-                      onChanged: (_) => onStateChanged(),
-                    ),
+                ),
+              ],
+            ),
+
+            tokens.spacing.sb3,
+            Text('Density', style: tokens.typography.title),
+            Text(
+              'Left field uses dense: true (smaller internal padding), right field uses the default density.',
+              style: tokens.typography.label,
+            ),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Dense',
+                    hintText: 'Reduced internal spacing',
+                    dense: true,
+                    controller: customPaddingController,
+                    onChanged: (_) => onStateChanged(),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzTextAreaInput(
+                    labelText: 'Default',
+                    hintText: 'Standard internal spacing',
+                    controller: defaultPaddingController,
+                    onChanged: (_) => onStateChanged(),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
