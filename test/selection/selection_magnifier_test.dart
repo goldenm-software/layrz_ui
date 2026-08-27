@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -211,6 +212,87 @@ void main() {
       final expectedFocalPointY = kStandardVerticalFocalPointShift + magnifierSize.height / 2 + focalPointAdjustmentY;
 
       expect(expectedFocalPointY, 40.95);
+    });
+
+    group('magnifierConfigurationFor platform gate (DESIGN-147)', () {
+      // The vote is platform-only: Android/iOS, on web or native. Before the
+      // fix, this method gated on LayrzPlatform.isMobile, which routes through
+      // LayrzPlatform.current and is unconditionally false on any web target
+      // -- stripping the magnifier from mobile web, which the vote requires
+      // to keep it. isTouchOS reads defaultTargetPlatform directly and has no
+      // such short-circuit, so this suite proves the gate by OS identity
+      // alone: each assertion below would fail against the old
+      // `!LayrzPlatform.isMobile` gate only in a genuine web environment,
+      // which a plain `flutter test` run cannot simulate -- but the
+      // non-null-on-touch / null-on-non-touch behavior asserted here is
+      // exactly the contract isMobile could not deliver on web, and is
+      // pinned here so a regression back to isMobile is caught the moment
+      // any web-flavored test harness exercises it.
+      test('is non-null for android', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNotNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is non-null for iOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNotNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is null for macOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is null for windows', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is null for linux', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is null for fuchsia', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+        try {
+          expect(LayrzSelectionMagnifier.magnifierConfigurationFor(), isNull);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('tracks LayrzPlatform.isTouchOS, not LayrzPlatform.isMobile', () {
+        for (final platform in TargetPlatform.values) {
+          debugDefaultTargetPlatformOverride = platform;
+          try {
+            final config = LayrzSelectionMagnifier.magnifierConfigurationFor();
+            expect(config != null, equals(LayrzPlatform.isTouchOS));
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        }
+      });
     });
 
     test('scale parameter drives magnification scale', () {

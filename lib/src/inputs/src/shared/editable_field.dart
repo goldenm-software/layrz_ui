@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -366,8 +367,18 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
             autofillHints: widget.config.autofillHints.isNotEmpty ? widget.config.autofillHints : null,
             paintCursorAboveText: true,
             showSelectionHandles: _showSelectionHandles,
-            selectionControls: LayrzTextSelectionControls.instance,
-            contextMenuBuilder: _cachedContextMenuBuilder,
+            // DESIGN-147: on non-touch OSes, both selectionControls and
+            // contextMenuBuilder are passed as null together. Per
+            // editable_text.dart:4522, EditableText disposes the selection
+            // overlay outright when both are null -- removing the drag
+            // handles and the selection action menu -- while caret placement,
+            // drag-selection and shift+arrow keyboard selection all keep
+            // working, exactly as the vote requires. Both branches resolve to
+            // stable references (the singleton instance, the cached method
+            // reference, or a literal null) across rebuilds, per D50 Trap 2:
+            // a changed identity here disposes the overlay mid-display.
+            selectionControls: LayrzPlatform.isTouchOS ? LayrzTextSelectionControls.instance : null,
+            contextMenuBuilder: LayrzPlatform.isTouchOS ? _cachedContextMenuBuilder : null,
             magnifierConfiguration: _cachedMagnifierConfiguration ?? const TextMagnifierConfiguration(),
             minLines: widget.config.minLines,
             maxLines: widget.config.maxLines,
@@ -402,7 +413,16 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
   /// - keyboard: hide handles (selection is driven by software keyboard)
   /// - readOnly + collapsed: hide handles (no editing possible)
   /// - disabled: hide handles (field is not editable)
+  /// - non-touch OS (DESIGN-147): hide handles regardless of cause -- the team vote
+  ///   restricts drag handles, the magnifier and the selection action menu to
+  ///   Android/iOS (web or native); every other platform keeps caret placement and
+  ///   keyboard/mouse-driven selection, just without the touch-shaped UI
   bool _shouldShowSelectionHandles(SelectionChangedCause? cause) {
+    // DESIGN-147: touch selection handles are Android/iOS only, on web or native.
+    if (!LayrzPlatform.isTouchOS) {
+      return false;
+    }
+
     // Don't show handles if field is disabled
     if (widget.config.disabled) {
       return false;

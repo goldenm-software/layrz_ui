@@ -58,7 +58,6 @@ lib/
       constants.dart             # Per-module barrel
       src/
         colors.dart              # kPrimaryColor, kLightBackgroundColor
-        grid.dart                # kExtraSmallGrid … kLargeGrid breakpoints
         durations.dart           # kHoverDuration, kPageTransitionDuration
         app.dart                 # kAppTitle and other app-level defaults
     extensions/
@@ -309,7 +308,8 @@ If you believe you have hit the extreme condition, **stop and report it. Do not 
 - **No comments explaining what the code does** — only document *why* when the reason is non-obvious. Arg docs are mandatory (rule #1); inline comments explaining logic are not.
 - **Immutable data classes** — annotate with `@immutable`, implement `==` and `hashCode` via `Object.hash`, provide `copyWith`.
 - **Theming** — always read colors and styles from `LayrzTheme.of(context)` / `context.theme`. Never hardcode design values inside widgets.
-- **Responsive grid** — use the breakpoint constants from `package:layrz_ui/constants.dart` (`kExtraSmallGrid`, etc.).
+- **Responsive breakpoints** — the system is `LayrzBreakpointTokens` (`lib/src/tokens/src/breakpoints.dart`), which defines the `LayrzBreakpoint` bands `xs`/`sm`/`md`/`lg`/`xl` with thresholds at 600/960/1264/1904px. Read them through the `BuildContext` extensions in `lib/src/extensions/src/context.dart`: `context.breakpoint` for the specific band, and `context.isCompact` for the compact/wide decision (`true` for `xs`+`sm`, i.e. viewport < 960px). `context.isCompact` is the single source of truth for responsive sizing decisions across the design system. There are no `kExtraSmallGrid`/`kLargeGrid` constants and no `constants/src/grid.dart` file — do not look for them.
+- **`context.isCompact` is width-based; `LayrzPlatform.isMobile` is OS-based. Never substitute one for the other.** A narrow desktop window is compact; a landscape tablet is not. Use `isCompact` for layout and sizing, and the `LayrzPlatform` getters for platform behaviour (keyboard shortcuts, touch affordances).
 - **Platform checks** — use `LayrzPlatform` from `platform.dart`, not `Platform` from `dart:io` directly.
 - **Interaction states** — hover, press, focus, and disabled states must vary colour, border colour, shadow, opacity, and cursor only; never size, border width, padding, margin, or scale. Geometry changes cause flicker and reflow. See decision D15 in `engineering/decisions.md`.
 - **Cross-module imports use `package:layrz_ui/src/`** — within `lib/`, use the absolute form `import 'package:layrz_ui/src/constants/constants.dart';` to reach other modules' per-module barrels, never relative paths. Same-module imports within `src/` may remain relative. Consumers in `test/` and `example/lib/` import the root barrel `import 'package:layrz_ui/layrz_ui.dart';`. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.

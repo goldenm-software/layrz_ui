@@ -134,14 +134,16 @@ class _LayrzMagnifierWidget extends StatelessWidget {
 /// A Material-free text magnifier for touch platform selection.
 ///
 /// [LayrzSelectionMagnifier] provides a magnified view of text around the current
-/// selection point. It is only enabled on touch platforms (iOS and Android) and is
-/// disabled on desktop platforms.
+/// selection point. It is enabled only when the host OS is Android or iOS -- on
+/// web or native, per [LayrzPlatform.isTouchOS] -- and disabled on every other
+/// platform.
 ///
 /// The magnifier is positioned above the cursor/selection point and displays a
 /// zoomed portion of the text being edited, helping users make precise selections.
 ///
-/// **Platform gating**: This magnifier is only available on iOS and Android.
-/// On desktop platforms (Windows, macOS, Linux) and web, the configuration
+/// **Platform gating**: This magnifier is only available when [LayrzPlatform.isTouchOS]
+/// is true, i.e. Android or iOS, whether running natively or in a mobile browser.
+/// On desktop platforms (Windows, macOS, Linux) and desktop web, the configuration
 /// will be null.
 class LayrzSelectionMagnifier extends StatelessWidget {
   /// The magnification scale factor applied to the magnified view.
@@ -172,8 +174,13 @@ class LayrzSelectionMagnifier extends StatelessWidget {
   static TextMagnifierConfiguration? magnifierConfigurationFor({
     double scale = 1.25,
   }) {
-    // Magnifier is only enabled on touch platforms
-    if (!LayrzPlatform.isMobile) {
+    // Magnifier is gated on OS identity alone (DESIGN-147): Android/iOS, on web
+    // or native. [LayrzPlatform.isTouchOS] is used deliberately instead of
+    // [LayrzPlatform.isMobile] -- the latter routes through [LayrzPlatform.current],
+    // which short-circuits on kIsWeb and would incorrectly report false for
+    // Android/iOS running in a mobile browser, stripping the magnifier from
+    // exactly the platforms the team vote requires it to keep.
+    if (!LayrzPlatform.isTouchOS) {
       return null;
     }
 
