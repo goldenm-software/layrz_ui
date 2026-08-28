@@ -23,6 +23,7 @@ import 'src/sections/motion_section.dart';
 import 'src/sections/radius_section.dart';
 import 'src/sections/sheets_section.dart';
 import 'src/sections/spacing_section.dart';
+import 'src/sections/steppers_section.dart';
 import 'src/sections/text_section.dart';
 import 'src/sections/tooltips_section.dart';
 import 'src/sections/typography_section.dart';
@@ -109,6 +110,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/sheets',
           pageBuilder: (context, state) => NoTransitionPage(child: SheetsSection()),
+        ),
+        GoRoute(
+          path: '/steppers',
+          pageBuilder: (context, state) => NoTransitionPage(child: StepperSection()),
         ),
         GoRoute(
           path: '/typography',

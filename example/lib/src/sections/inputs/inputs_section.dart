@@ -14,7 +14,6 @@ import 'demos/search_input_demo.dart';
 import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
 import 'demos/duration_input_demo.dart';
-import 'demos/stepper_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
 ///
@@ -120,15 +119,6 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Search',
       details: SearchInputDemo(),
       icon: MdiIcons.magnify,
-    ),
-
-    // Flow category
-    InputDemo(
-      id: 'stepper',
-      name: 'Stepper',
-      category: 'Flow',
-      details: StepperDemo(),
-      icon: MdiIcons.formatListNumberedRtl,
     ),
   ];
 
