@@ -63,9 +63,13 @@ void main() {
         );
 
         // A single merged Semantics node carries date, today, disabled and
-        // event count together -- never separate unlabeled child nodes for
-        // the event chips or the date number (the inner ExcludeSemantics on
-        // the visual content is what forces this merge).
+        // event count together -- never a separate unlabeled child node for
+        // the event chips (the inner ExcludeSemantics on the visual content
+        // is what forces this merge). The date number stays merged into this
+        // same node here specifically because no `onDateNumberTap` is passed
+        // above -- it is inert in this test, not because the date number is
+        // architecturally excluded; see calendar_day_cell_test.dart for the
+        // date number's own live-semantics node when it is interactive.
         final semantics = tester.getSemantics(find.byType(LayrzCalendarDayCell));
         expect(semantics.label, contains('today'));
         expect(semantics.label, contains('disabled'));
@@ -119,8 +123,9 @@ void main() {
 
         final handle = tester.ensureSemantics();
         try {
-          // August 10-12, 2026 is Monday-Wednesday of the same week row --
-          // one continuous bar, rendered once, crossing three day cells.
+          // August 10-12, 2026 falls entirely within one week row under both
+          // Monday-first and the default Sunday-first grid -- one continuous
+          // bar, rendered once, crossing three day cells.
           await pumpThemed(
             tester,
             SizedBox(
@@ -152,6 +157,111 @@ void main() {
             find.byWidgetPredicate((w) => w is LayrzCalendarDayCell && w.date.day == 13 && !w.isOutsideMonth),
           );
           expect(unrelatedDay.label, isNot(contains('event')));
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'RISK-11: a cell with an interactive overflow chip exposes both the cell label AND a live, separate '
+      'semantics node for the chip -- the blanket exclusion narrows to the chrome only',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final handle = tester.ensureSemantics();
+        try {
+          final date = DateTime(2026, 8, 28);
+          final entries = List.generate(5, (i) => LayrzCalendarEntry(title: 'Event $i', start: date, end: date));
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 160,
+              height: 200,
+              child: LayrzCalendarDayCell(
+                date: date,
+                isToday: false,
+                isOutsideMonth: false,
+                isDisabled: false,
+                entries: entries,
+                maxVisibleSlots: 3,
+                onOverflowTap: (_) {},
+              ),
+            ),
+          );
+
+          final cellSemantics = tester.getSemantics(find.byType(LayrzCalendarDayCell));
+          // The cell-level label still summarizes the date and total count --
+          // the first-read summary a screen reader hits before descending.
+          expect(cellSemantics.label, contains('August 28'));
+          expect(cellSemantics.label, contains('5 events'));
+
+          // The overflow chip's own node is reachable, separate from the
+          // cell's merged label, with a concrete action -- proving the
+          // blanket ExcludeSemantics no longer swallows it.
+          final chipSemantics = tester.getSemantics(find.text('+3'));
+          expect(chipSemantics.label, contains('opens day view'));
+          expect(
+            chipSemantics,
+            matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: true, hasTapAction: true),
+          );
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'RISK-11 extension: a cell with BOTH the date number and the overflow chip interactive exposes the cell '
+      'label AND two separate live semantics nodes',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final handle = tester.ensureSemantics();
+        try {
+          final date = DateTime(2026, 8, 28);
+          final entries = List.generate(5, (i) => LayrzCalendarEntry(title: 'Event $i', start: date, end: date));
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 160,
+              height: 200,
+              child: LayrzCalendarDayCell(
+                date: date,
+                isToday: false,
+                isOutsideMonth: false,
+                isDisabled: false,
+                entries: entries,
+                maxVisibleSlots: 3,
+                onOverflowTap: (_) {},
+                onDateNumberTap: (_) {},
+              ),
+            ),
+          );
+
+          final cellSemantics = tester.getSemantics(find.byType(LayrzCalendarDayCell));
+          expect(cellSemantics.label, contains('August 28'));
+          expect(cellSemantics.label, contains('5 events'));
+
+          final dateNumberSemantics = tester.getSemantics(find.text('28'));
+          expect(dateNumberSemantics.label, contains('opens day view'));
+          expect(
+            dateNumberSemantics,
+            matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: true, hasTapAction: true),
+          );
+
+          final chipSemantics = tester.getSemantics(find.text('+3'));
+          expect(chipSemantics.label, contains('opens day view'));
+          expect(
+            chipSemantics,
+            matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: true, hasTapAction: true),
+          );
         } finally {
           handle.dispose();
         }
@@ -207,7 +317,7 @@ void main() {
       }
     });
 
-    testWidgets('disabled view-mode switcher entries announce as disabled, not merely absent an onTap', (
+    testWidgets('all three view-mode switcher entries announce as enabled buttons', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -225,14 +335,51 @@ void main() {
           ),
         );
 
-        final weekButton = find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'View as week');
-        expect(
-          tester.getSemantics(weekButton),
-          matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: false),
-        );
+        for (final label in ['View as month', 'View as week', 'View as day']) {
+          final button = find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == label);
+          expect(
+            tester.getSemantics(button),
+            matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: true),
+            reason: '$label should announce as an enabled button',
+          );
+        }
       } finally {
         handle.dispose();
       }
+    });
+
+    testWidgets('the active view-mode switcher entry is visually distinguishable (elevated) from the others', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final controller = LayrzCalendarController(
+        initialDate: DateTime(2026, 8, 15),
+        initialMode: LayrzCalendarMode.week,
+      );
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1200,
+          height: 900,
+          child: LayrzCalendar(controller: controller),
+        ),
+      );
+
+      final monthButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'View as month'),
+      );
+      final weekButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'View as week'),
+      );
+
+      expect(weekButton.style, LayrzButtonStyle.elevated);
+      expect(monthButton.style, LayrzButtonStyle.outlined);
+
+      controller.dispose();
     });
   });
 }

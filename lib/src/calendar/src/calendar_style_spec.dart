@@ -103,3 +103,35 @@ class LayrzCalendarDayCellStyleSpec {
   @override
   int get hashCode => Object.hash(backgroundColor, borderColor, dateColor, eventColor);
 }
+
+/// Composes [LayrzTokens.typography]'s `body` size with `title`'s emphasis
+/// for the month grid's structural text (the weekday header row and each
+/// day-of-month number).
+///
+/// **Ruling (Kenny): "titleStyle is too big for the days on month mode,
+/// let's use the body style, but inherit the title weight and features."**
+/// `title` (18px, w600) read as oversized once actually rendered in a month
+/// cell; `body` (14px, w400) is the right size, but plain `body` is what
+/// looked muted in the first place. This composes the two rather than
+/// hardcoding a weight value, so the result tracks [LayrzTokens.typography]
+/// automatically if the design system's font changes — never
+/// `FontWeight.w600` as a literal.
+///
+/// **What carries over from `title`:** [TextStyle.fontWeight],
+/// [TextStyle.fontFamily], and [TextStyle.letterSpacing] — the properties
+/// that make title read as a heading rather than a numeric value.
+/// **What does NOT carry over:** [TextStyle.fontSize] (this is the whole
+/// point — body's size, not title's), [TextStyle.color] and
+/// [TextStyle.decoration] (both resolved separately per the caller's own
+/// state, e.g. disabled/outside-month/today), and [TextStyle.height] — title
+/// and body are tuned for their own size in this scale, so carrying title's
+/// line-height ratio across to a smaller font size would not reproduce the
+/// same visual rhythm; body's own height is left alone.
+TextStyle titleWeightedBodyStyle(LayrzTokens tokens) {
+  final title = tokens.typography.title;
+  return tokens.typography.body.copyWith(
+    fontWeight: title.fontWeight,
+    fontFamily: title.fontFamily,
+    letterSpacing: title.letterSpacing,
+  );
+}

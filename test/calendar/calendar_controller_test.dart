@@ -135,5 +135,79 @@ void main() {
 
       controller.dispose();
     });
+
+    test('nextWeek advances focusedDate by exactly 7 calendar days and notifies', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 8, 28));
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.nextWeek();
+
+      expect(controller.focusedDate, DateTime(2026, 9, 4));
+      expect(notified, isTrue);
+
+      controller.dispose();
+    });
+
+    test('previousWeek moves focusedDate back by exactly 7 calendar days and notifies', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 8, 28));
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.previousWeek();
+
+      expect(controller.focusedDate, DateTime(2026, 8, 21));
+      expect(notified, isTrue);
+
+      controller.dispose();
+    });
+
+    test('nextDay advances focusedDate by exactly 1 calendar day and notifies', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 8, 28));
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.nextDay();
+
+      expect(controller.focusedDate, DateTime(2026, 8, 29));
+      expect(notified, isTrue);
+
+      controller.dispose();
+    });
+
+    test('previousDay moves focusedDate back by exactly 1 calendar day and notifies', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 8, 28));
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.previousDay();
+
+      expect(controller.focusedDate, DateTime(2026, 8, 27));
+      expect(notified, isTrue);
+
+      controller.dispose();
+    });
+
+    test('nextWeek rolls over a month boundary via calendar-date stepping, not Duration', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 8, 29));
+
+      controller.nextWeek();
+
+      // August has 31 days: Aug 29 + 7 = Sept 5, via DateTime field overflow
+      // normalization -- never `add(Duration(days: 7))`.
+      expect(controller.focusedDate, DateTime(2026, 9, 5));
+
+      controller.dispose();
+    });
+
+    test('nextDay rolls over a year boundary via calendar-date stepping, not Duration', () {
+      final controller = LayrzCalendarController(initialDate: DateTime(2026, 12, 31));
+
+      controller.nextDay();
+
+      expect(controller.focusedDate, DateTime(2027, 1, 1));
+
+      controller.dispose();
+    });
   });
 }

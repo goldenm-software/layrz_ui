@@ -1,26 +1,20 @@
 /// The granularity a [LayrzCalendar] renders its grid at.
 ///
-/// All three values ship as public API from pass 1 so a caller's `switch` and
-/// any [LayrzCalendarController] wiring compile against the final surface
-/// area without a breaking change once week and day views land. **Only
-/// [month] renders in this pass** — see the class doc on `LayrzCalendar` for
-/// the exact behaviour of the other two in the meantime.
+/// All three values render as of this pass — the month grid, plus new week
+/// and day surfaces. `engineering/decisions.md`'s D11 names a fourth mode,
+/// year, as part of the original four-mode scope review; it does not ship
+/// here (see the class doc on `LayrzCalendar` for the correction and the
+/// reasoning for shipping three of the four).
 enum LayrzCalendarMode {
   /// Renders a full month grid: one row per week, one column per weekday,
   /// with leading/trailing days from the adjacent months filling the grid.
-  ///
-  /// The only mode implemented in this pass.
   month,
 
-  /// Renders a single week as a row of day columns.
-  ///
-  /// Not implemented in this pass — selecting it throws an
-  /// [UnimplementedError] rather than silently rendering an empty box.
+  /// Renders a single week as seven day columns sharing one hour axis and one
+  /// all-day/multi-day band across the top.
   week,
 
-  /// Renders a single day's detail (e.g. an hour-by-hour agenda).
-  ///
-  /// Not implemented in this pass — selecting it throws an
-  /// [UnimplementedError] rather than silently rendering an empty box.
+  /// Renders a single day's hour-by-hour detail as one column with a fixed
+  /// 00:00–23:00 axis.
   day,
 }

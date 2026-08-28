@@ -23,7 +23,8 @@ import 'calendar_mode.dart';
 /// lifecycle.
 ///
 /// This pass exposes navigation only — no selected-date concept exists here,
-/// since pass 1 is display-only (no date selection, no return value).
+/// since [LayrzCalendar] remains display-only (no date selection, no return
+/// value).
 class LayrzCalendarController extends ChangeNotifier {
   /// Creates a [LayrzCalendarController].
   ///
@@ -48,10 +49,10 @@ class LayrzCalendarController extends ChangeNotifier {
 
   /// The view mode currently selected.
   ///
-  /// Only [LayrzCalendarMode.month] renders content in this pass; setting
-  /// [LayrzCalendarMode.week] or [LayrzCalendarMode.day] via [setMode] is
-  /// still tracked here (so a caller's view-switcher chrome has somewhere to
-  /// write), but [LayrzCalendar] itself throws when asked to render either.
+  /// All three [LayrzCalendarMode] values render as of this pass; see
+  /// [LayrzCalendarHeader] for how the active mode selects which of
+  /// [nextMonth]/[nextWeek]/[nextDay] (and their `previous*` counterparts)
+  /// the navigation buttons dispatch to.
   LayrzCalendarMode get mode => _mode;
   LayrzCalendarMode _mode;
 
@@ -66,6 +67,40 @@ class LayrzCalendarController extends ChangeNotifier {
   /// notifies listeners.
   void previousMonth() {
     _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+    notifyListeners();
+  }
+
+  /// Moves [focusedDate] forward by exactly 7 calendar days and notifies
+  /// listeners.
+  ///
+  /// Steps via the [DateTime] constructor's field-overflow normalization
+  /// (`DateTime(y, m, day + 7)`), never `Duration(days: 7)` — `Duration`
+  /// arithmetic is absolute elapsed time and silently lands on the wrong
+  /// local day across a DST transition. See `LayrzCalendarMonthSurface` for
+  /// the same rule applied to grid-start math.
+  void nextWeek() {
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day + 7);
+    notifyListeners();
+  }
+
+  /// Moves [focusedDate] back by exactly 7 calendar days and notifies
+  /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
+  void previousWeek() {
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day - 7);
+    notifyListeners();
+  }
+
+  /// Moves [focusedDate] forward by exactly one calendar day and notifies
+  /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
+  void nextDay() {
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day + 1);
+    notifyListeners();
+  }
+
+  /// Moves [focusedDate] back by exactly one calendar day and notifies
+  /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
+  void previousDay() {
+    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day - 1);
     notifyListeners();
   }
 
@@ -85,11 +120,8 @@ class LayrzCalendarController extends ChangeNotifier {
 
   /// Sets [mode] and notifies listeners.
   ///
-  /// Setting a mode does not itself validate that the mode is implemented —
-  /// [LayrzCalendar] is what throws for [LayrzCalendarMode.week] and
-  /// [LayrzCalendarMode.day] when it next builds. Setting the mode here
-  /// always succeeds so a view-switcher's own state stays consistent even
-  /// before the calendar rebuilds.
+  /// All three [LayrzCalendarMode] values are valid and render as of this
+  /// pass, so this always succeeds.
   void setMode(LayrzCalendarMode newMode) {
     if (newMode == _mode) return;
     _mode = newMode;
