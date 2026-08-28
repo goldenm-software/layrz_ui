@@ -56,22 +56,45 @@ class LayrzBottomSheet {
   /// - [context]: the build context from which to show the sheet. Must contain a Navigator.
   /// - [builder]: a builder function that constructs the sheet's content. The builder
   ///   receives the sheet context as an argument.
+  /// - [actions]: optional list of widgets (typically `LayrzButton`s), rendered in a row
+  ///   at the bottom of the sheet, right-aligned with spacing between them -- matching
+  ///   [LayrzDialog.show]'s own `actions` slot's spacing, alignment, and position so the
+  ///   two components' action rows read as siblings rather than cousins. `null` (the
+  ///   default) renders nothing and changes no layout: the sheet's `Column` simply has no
+  ///   third child, identical to every existing caller today.
+  ///
+  ///   **Pinned below the scrollable content, never inside it.** [actions] is a sibling of
+  ///   the `Expanded` content area in the sheet's own `Column`, not nested inside whatever
+  ///   scroll view wraps [builder] (see [scrollable]) -- so a tall [builder] scrolls
+  ///   independently while [actions] stays fixed at the bottom, exactly like [title] and
+  ///   [actions] stay pinned outside [LayrzDialog.show]'s own content scroll view. This
+  ///   also means [actions] is never pushed behind the on-screen keyboard: the keyboard
+  ///   avoidance that shrinks/pins the whole sheet above the keyboard (see
+  ///   [_BottomSheetRoute]'s `transitionBuilder`) applies to the entire `Column`, this row
+  ///   included, not only to the `Expanded` content.
+  ///
+  ///   **Does not change [canDismiss]'s default.** Unlike [LayrzDialog.show], which infers
+  ///   its own dismissibility from whether `actions` is null, a sheet with [actions] present
+  ///   is still freely dismissible unless the caller also passes `canDismiss: false`. This
+  ///   is deliberate, not an oversight: [builder] can already contain its own buttons with
+  ///   or without this parameter, so the mere presence of [actions] is a weaker signal here
+  ///   than it is for a dialog whose *only* way to offer a decision is this slot.
   /// - [isPersistent]: whether the sheet is persistent (no barrier, page stays interactive)
   ///   or modal (barrier present, page not interactive). Defaults to `false` (modal).
   /// - [canDismiss]: whether the sheet can be dismissed by any route other than an explicit
-  ///   caller action (e.g. a button inside [builder] that pops the sheet itself). Governs
-  ///   three routes, together:
+  ///   caller action (e.g. a tap on one of [actions], or a button inside [builder] that pops
+  ///   the sheet itself). Governs three routes, together:
   ///     1. tapping the barrier outside the sheet (meaningless when [isPersistent] is
   ///        `true`, since a persistent sheet paints no barrier at all — see below),
   ///     2. the Escape key, and
   ///     3. the system/Android back gesture.
   ///   Defaults to `true`, preserving this method's original behaviour exactly — every
   ///   existing caller keeps a freely-dismissible sheet with no change. Pass `false` for a
-  ///   sheet that must be answered through its own content rather than escaped, mirroring
-  ///   [LayrzDialog.show]'s `canDismiss` contract as closely as this component's shape
-  ///   allows. Unlike the dialog, there is no `actions` slot to infer a default from (the
-  ///   sheet's body is a single freeform [builder]), so this defaults to `true` rather than
-  ///   inferring `false` from anything -- an opt-in flag, not an opt-out one.
+  ///   sheet that must be answered through its own content (typically one of [actions] or a
+  ///   button inside [builder]) rather than escaped, mirroring [LayrzDialog.show]'s
+  ///   `canDismiss` contract as closely as this component's shape allows. This stays an
+  ///   explicit, caller-set flag rather than being inferred from [actions] -- see [actions]'s
+  ///   own doc for why the two are independent here, unlike on the dialog.
   ///
   ///   **Composes with [isPersistent] on a separate axis, not collapsed into it.**
   ///   [isPersistent] decides whether a barrier exists at all; [canDismiss] decides whether
@@ -150,6 +173,7 @@ class LayrzBottomSheet {
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
+    List<Widget>? actions,
     bool isPersistent = false,
     bool canDismiss = true,
     String? semanticLabel,
@@ -208,6 +232,7 @@ class LayrzBottomSheet {
     return navigator.push<T>(
       _BottomSheetRoute<T>(
         builder: builder,
+        actions: actions,
         isPersistent: isPersistent,
         canDismiss: canDismiss,
         semanticLabel: semanticLabel,
@@ -249,6 +274,7 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
   /// Creates a new bottom sheet route.
   _BottomSheetRoute({
     required WidgetBuilder builder,
+    required List<Widget>? actions,
     required this.isPersistent,
     required this.canDismiss,
     required this.semanticLabel,
@@ -262,6 +288,7 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
          pageBuilder: (context, animation, secondaryAnimation) {
            return _BottomSheetContent(
              builder: builder,
+             actions: actions,
              isPersistent: isPersistent,
              canDismiss: canDismiss,
              semanticLabel: semanticLabel,
@@ -455,6 +482,10 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// The builder function that constructs the sheet's content.
   final WidgetBuilder builder;
 
+  /// Optional action row content, pinned below [builder]'s content. See
+  /// [LayrzBottomSheet.show]'s `actions` doc for the full contract.
+  final List<Widget>? actions;
+
   /// Whether the sheet is persistent (no barrier, page interactive) or modal.
   final bool isPersistent;
 
@@ -489,6 +520,7 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
     required this.builder,
+    required this.actions,
     required this.isPersistent,
     required this.canDismiss,
     required this.semanticLabel,
@@ -759,6 +791,35 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                               child: widget.builder(context),
                             ),
                     ),
+                    // Actions -- deliberately a THIRD, non-expanded Column child, sibling to
+                    // the Expanded content above rather than nested inside it. This pins the
+                    // row outside whatever scroll view widget.scrollable wraps the content in
+                    // (or outside the caller's own scrollable, when widget.scrollable is
+                    // false) -- mirroring LayrzDialog's title/actions staying outside its own
+                    // content scroll view (dialog.dart's _buildSlots). A caller with actions
+                    // taller than the sheet's content wants them to stay reachable, not scroll
+                    // away with a long builder; matching the dialog's own choice here, per the
+                    // maintainer's explicit preference, keeps the two components' actions rows
+                    // behaving identically regardless of which surface a LayrzResponsiveModal
+                    // resolves to. This placement also means actions sit ABOVE the keyboard
+                    // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance Padding
+                    // and this State's own effectiveMinSize/maxSize/1.0 pinning above: both
+                    // apply to the WHOLE sheet (including this Column), not just the
+                    // Expanded/scrollable content, so the actions row is never pushed behind
+                    // the keyboard by this sheet's own layout.
+                    if (widget.actions != null && widget.actions!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.all(tokens.spacing.sp3),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            for (int i = 0; i < widget.actions!.length; i++) ...[
+                              if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                              widget.actions![i],
+                            ],
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
