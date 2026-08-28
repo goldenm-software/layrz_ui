@@ -146,6 +146,100 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
+    testWidgets('stops the ticker when reduce-motion turns on at runtime while indeterminate', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      bool disableAnimations = false;
+      late StateSetter setter;
+
+      // A MediaQuery override rebuilt via StatefulBuilder, rather than two
+      // separate pumpThemed calls: pumpThemed's Overlay only consumes
+      // initialEntries on its first mount, so a second call in the same test
+      // would leave the first bar's ticker alive underneath instead of
+      // exercising the false->true transition on the same widget instance.
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setter = setState;
+            return MediaQuery(
+              data: MediaQueryData(disableAnimations: disableAnimations),
+              child: Localizations(
+                locale: const Locale('en'),
+                delegates: const [
+                  DefaultWidgetsLocalizations.delegate,
+                  LayrzUiL10nDelegate(),
+                ],
+                child: LayrzTheme(
+                  data: LayrzThemeData.light(),
+                  child: const Center(child: LayrzProgressBar()),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pump();
+
+      // Sanity check: the sweep is running before reduce-motion is toggled on.
+      expect(find.byType(AnimatedBuilder), findsOneWidget);
+
+      setter(() => disableAnimations = true);
+      await tester.pump();
+      await tester.pump();
+
+      // The reduce-motion branch stops building an AnimatedBuilder...
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      // ...and the controller behind it must be stopped too, not merely
+      // unconsumed — otherwise it keeps scheduling frames forever with
+      // nothing reading its value (the leak this test guards against).
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('resumes the ticker when reduce-motion turns off at runtime while indeterminate', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      bool disableAnimations = true;
+      late StateSetter setter;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setter = setState;
+            return MediaQuery(
+              data: MediaQueryData(disableAnimations: disableAnimations),
+              child: Localizations(
+                locale: const Locale('en'),
+                delegates: const [
+                  DefaultWidgetsLocalizations.delegate,
+                  LayrzUiL10nDelegate(),
+                ],
+                child: LayrzTheme(
+                  data: LayrzThemeData.light(),
+                  child: const Center(child: LayrzProgressBar()),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      setter(() => disableAnimations = false);
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsOneWidget);
+
+      // Stop the repeating ticker before the test ends.
+      await tester.pump(const Duration(milliseconds: 10));
+    });
+
     testWidgets('disposes its ticker when removed from the tree', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;

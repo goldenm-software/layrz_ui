@@ -135,16 +135,23 @@ class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerPr
   ///
   /// The controller is created lazily, only while indeterminate mode is
   /// active, so the ticker never stays alive once the bar becomes determinate
-  /// or is removed from the tree.
+  /// or is removed from the tree. When reduce-motion is active, any
+  /// previously-created controller is torn down instead of merely left
+  /// unstarted — `build()`'s reduce-motion branch never reads it, so keeping
+  /// it alive would only leak a ticker that repeats forever with nothing
+  /// consuming its output. A later call (e.g. reduce-motion switching back
+  /// off) recreates it via the `??=` above.
   void _startSweep() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _stopSweep();
+      return;
+    }
     final tokens = context.tokens;
     _sweepController ??= AnimationController(
       duration: tokens.motion.dDialog,
       vsync: this,
     );
-    if (!MediaQuery.disableAnimationsOf(context)) {
-      _sweepController!.repeat();
-    }
+    _sweepController!.repeat();
   }
 
   /// Stops and disposes the indeterminate sweep ticker.
