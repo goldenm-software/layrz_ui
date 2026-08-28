@@ -47,16 +47,21 @@ library;
 /// Verified against known values: `isoWeekNumberOf(DateTime(2026, 1, 1))` is
 /// `1`, and `isoWeekNumberOf(DateTime(2026, 8, 28))` is `35`.
 int isoWeekNumberOf(DateTime date) {
-  final day = DateTime(date.year, date.month, date.day);
+  // Built with `DateTime.utc` rather than the local-time constructor used
+  // above this line's history: only the calendar fields (year/month/day) of
+  // [date] matter for an ISO week number, and UTC has no DST transitions, so
+  // every arithmetic step below is immune to the host's timezone by
+  // construction. This is deliberate, not a stray `.toUtc()` -- see this
+  // file's class doc and the fix that replaced local-time `.difference()`.
+  final day = DateTime.utc(date.year, date.month, date.day);
 
   // ISO weeks run Monday(1)..Sunday(7); shift so Thursday of this date's own
   // week can be found by stepping to the Monday of the week first, then
   // forward 3 days -- this is the standard "nearest Thursday" ISO algorithm,
   // expressed with calendar-field stepping (never `Duration`, per this
-  // library's DST rule) rather than day-of-year arithmetic, so it stays
-  // correct across a DST transition landing inside the shift.
-  final mondayOfWeek = DateTime(day.year, day.month, day.day - (day.weekday - DateTime.monday));
-  final thursdayOfWeek = DateTime(mondayOfWeek.year, mondayOfWeek.month, mondayOfWeek.day + 3);
+  // library's DST rule) rather than day-of-year arithmetic.
+  final mondayOfWeek = DateTime.utc(day.year, day.month, day.day - (day.weekday - DateTime.monday));
+  final thursdayOfWeek = DateTime.utc(mondayOfWeek.year, mondayOfWeek.month, mondayOfWeek.day + 3);
 
   // The ISO year is the year that Thursday falls in -- this is what makes
   // the late-December/early-January boundary cases resolve correctly, since
@@ -64,13 +69,22 @@ int isoWeekNumberOf(DateTime date) {
   final isoYear = thursdayOfWeek.year;
   final firstThursdayOfIsoYear = _firstThursdayOfYear(isoYear);
 
+  // Both operands are UTC `DateTime`s constructed from calendar fields only,
+  // so this difference is an exact whole number of 24-hour days regardless
+  // of the host timezone's DST rules -- unlike a local-time `.difference()`,
+  // which silently returns a 23- or 25-hour "day" across a spring-forward or
+  // fall-back transition and truncates to the wrong integer.
   final daysBetweenThursdays = thursdayOfWeek.difference(firstThursdayOfIsoYear).inDays;
   return (daysBetweenThursdays / 7).floor() + 1;
 }
 
 /// Returns the first Thursday of [year] — the anchor date ISO 8601 defines
 /// week 1 to contain, equivalently the week containing [year]'s January 4th.
+///
+/// Constructed with `DateTime.utc` for the same timezone-independence reason
+/// as [isoWeekNumberOf] itself: this value is later fed into a `.difference`
+/// call that must always land on a whole number of days.
 DateTime _firstThursdayOfYear(int year) {
-  final jan4 = DateTime(year, 1, 4);
-  return DateTime(jan4.year, jan4.month, jan4.day - (jan4.weekday - DateTime.thursday));
+  final jan4 = DateTime.utc(year, 1, 4);
+  return DateTime.utc(jan4.year, jan4.month, jan4.day - (jan4.weekday - DateTime.thursday));
 }
