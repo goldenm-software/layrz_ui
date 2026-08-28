@@ -26,7 +26,26 @@ import 'refresh_controller.dart';
 /// **v1 has no resistance/overscroll physics.** [dragProgress] is a linear
 /// mapping of drag distance to [triggerDistance] — an eased/resisted curve is
 /// a polish pass, not required for a working first version.
-class LayrzRefreshGestureDetector extends StatelessWidget {
+///
+/// **Reversal-aware by construction.** Under [ClampingScrollPhysics] (and any
+/// physics that clamps [ScrollMetrics.pixels] at the boundary), overscroll is
+/// a one-way ratchet with no persisted magnitude: [ScrollMetrics.pixels]
+/// stays pinned exactly at `minScrollExtent` for the entire pull, and the
+/// *only* place the pulled distance ever appears is the transient
+/// `overscroll` field of each [OverscrollNotification]. The instant the user
+/// reverses direction by any amount at all — even a single logical pixel —
+/// the boundary condition clears completely and the scrollable resumes
+/// normal scrolling from `pixels == minScrollExtent`; there is no
+/// intermediate "still pulling, but less" state to read back from the
+/// notification stream. This widget is therefore stateful only in the sense
+/// that it accumulates the incoming pull across consecutive
+/// [OverscrollNotification]s within one gesture (so a multi-frame pull adds
+/// up instead of resetting every frame), while treating any other
+/// [ScrollNotification] seen at the top of the list — a plain
+/// [ScrollUpdateNotification] once the reversal has cleared the boundary, or
+/// [ScrollStartNotification] for a brand new gesture — as the signal that the
+/// pull has ended and [_dragDistance] must snap back to zero.
+class LayrzRefreshGestureDetector extends StatefulWidget {
   /// Creates a [LayrzRefreshGestureDetector].
   const LayrzRefreshGestureDetector({
     required this.controller,
@@ -61,27 +80,70 @@ class LayrzRefreshGestureDetector extends StatelessWidget {
   final double triggerDistance;
 
   @override
+  State<LayrzRefreshGestureDetector> createState() => _LayrzRefreshGestureDetectorState();
+}
+
+class _LayrzRefreshGestureDetectorState extends State<LayrzRefreshGestureDetector> {
+  /// How far, in logical pixels, the current gesture has dragged past the
+  /// top of the scroll extent.
+  ///
+  /// Accumulated from each top-side [OverscrollNotification]'s `overscroll`
+  /// delta across the life of one gesture. Reset to `0.0` the instant the
+  /// pull ends for any reason -- a fresh [ScrollStartNotification], or any
+  /// notification other than a top-side overscroll (which, per the
+  /// class-level doc, is exactly what a reversal produces the moment it
+  /// clears the boundary) -- so neither a new gesture nor a cancelled one
+  /// ever inherits a stale distance.
+  double _dragDistance = 0.0;
+
+  @override
   Widget build(BuildContext context) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
-        if (notification is OverscrollNotification && notification.dragDetails != null) {
+        if (notification is OverscrollNotification && notification.dragDetails != null && _isTopSide(notification)) {
           _handleOverscroll(notification);
         } else if (notification is ScrollEndNotification && notification.dragDetails != null) {
-          controller.releaseDrag(onRefresh);
+          widget.controller.releaseDrag(widget.onRefresh);
+          _dragDistance = 0.0;
+        } else {
+          // A new gesture starting, or the list resuming normal scroll after
+          // a reversal cleared the boundary (see the class-level doc) --
+          // either way the pull is over and must not leave a stale distance
+          // for the next [OverscrollNotification] to build on.
+          _resetDrag();
         }
         return false;
       },
-      child: child,
+      child: widget.child,
     );
   }
 
-  void _handleOverscroll(OverscrollNotification notification) {
-    // Only the top-side overscroll (negative) drives pull-to-refresh; bottom
-    // overscroll is not this widget's concern.
-    if (notification.overscroll >= 0) return;
-    if (notification.metrics.pixels > notification.metrics.minScrollExtent) return;
+  /// Whether [notification] reports overscroll at the top of the list.
+  ///
+  /// This check alone is what distinguishes top-side pull-to-refresh
+  /// overscroll from bottom-side overscroll -- the sign of `overscroll` is
+  /// not sufficient on its own to make that distinction.
+  bool _isTopSide(OverscrollNotification notification) {
+    return notification.metrics.pixels <= notification.metrics.minScrollExtent;
+  }
 
-    final draggedSoFar = controller.dragProgress * triggerDistance - notification.overscroll;
-    controller.updateDragProgress(draggedSoFar / triggerDistance);
+  void _handleOverscroll(OverscrollNotification notification) {
+    _dragDistance -= notification.overscroll;
+    widget.controller.updateDragProgress(_dragDistance / widget.triggerDistance);
+  }
+
+  /// Ends the current pull, if any, snapping [_dragDistance] and the
+  /// controller's `dragProgress` back to zero.
+  ///
+  /// Called whenever the notification stream reports anything other than an
+  /// ongoing top-side overscroll: a new gesture starting, the list resuming
+  /// normal scroll after a reversal, or the gesture ending. Guarded by
+  /// [_dragDistance] being non-zero so it does not fight the "armed" state
+  /// with a redundant zero update on every unrelated notification (e.g. a
+  /// bottom-side overscroll) once the pull is already at rest.
+  void _resetDrag() {
+    if (_dragDistance == 0.0) return;
+    _dragDistance = 0.0;
+    widget.controller.updateDragProgress(0.0);
   }
 }
