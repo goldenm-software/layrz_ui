@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -278,6 +279,14 @@ void main() {
       final row = tester.widget<LayrzTreeRow<String>>(find.byType(LayrzTreeRow<String>).first);
       expect(row.isPartiallySelected, isTrue);
       expect(row.isSelected, isFalse);
+
+      // The boolean flags above only prove the value was plumbed to the
+      // widget -- they say nothing about what actually painted. Assert the
+      // indeterminate glyph itself is rendered, and the fully-selected glyph
+      // is not, so an inverted or dropped ternary in the row's build method
+      // is caught here too.
+      expect(find.byIcon(MdiIcons.minus), findsOneWidget);
+      expect(find.byIcon(MdiIcons.check), findsNothing);
     });
 
     guardedTestWidgets('a custom nodeBuilder is used for row content', (tester) async {

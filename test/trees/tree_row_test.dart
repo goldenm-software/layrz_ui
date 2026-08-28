@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -175,6 +176,78 @@ void main() {
 
       final guide = tester.widget<LayrzTreeIndentGuide>(find.byType(LayrzTreeIndentGuide));
       expect(guide.depth, 3);
+    });
+
+    guardedTestWidgets('an unselected row renders neither the check nor the minus checkbox glyph', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: false,
+          isPartiallySelected: false,
+          totalDepth: 0,
+          onSelect: () {},
+          child: const Text('Alpha'),
+        ),
+      );
+
+      expect(find.byIcon(MdiIcons.check), findsNothing);
+      expect(find.byIcon(MdiIcons.minus), findsNothing);
+    });
+
+    guardedTestWidgets('a fully-selected row renders the check glyph and not the minus glyph', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: true,
+          isPartiallySelected: false,
+          totalDepth: 0,
+          onSelect: () {},
+          child: const Text('Alpha'),
+        ),
+      );
+
+      expect(find.byIcon(MdiIcons.check), findsOneWidget);
+      expect(find.byIcon(MdiIcons.minus), findsNothing);
+    });
+
+    guardedTestWidgets('a partially-selected row renders the minus glyph and not the check glyph', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: false,
+          isPartiallySelected: true,
+          totalDepth: 0,
+          onSelect: () {},
+          child: const Text('Alpha'),
+        ),
+      );
+
+      expect(find.byIcon(MdiIcons.minus), findsOneWidget);
+      expect(find.byIcon(MdiIcons.check), findsNothing);
     });
   });
 }
