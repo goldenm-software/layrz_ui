@@ -250,6 +250,31 @@ Testing is a hard requirement, not guidance. Every public API — widget, extens
 - Test edge cases: null-safe fields, empty inputs, boundary values
 - Every visual component additionally requires accessibility tests
 
+#### Two traps that make a green suite prove nothing
+
+**1. Set an explicit viewport in every `testWidgets`.** `context.isCompact` is `< 960px` and Flutter's default test surface is **800×600**, so a test that sets no viewport silently exercises the **compact** branch only. A wide-layout assertion then fails against correct code, and a "renders without error" assertion passes without ever reaching the desktop path.
+
+```dart
+tester.view.physicalSize = const Size(1600, 1200);  // or Size(400, 800) for compact
+tester.view.devicePixelRatio = 1.0;
+addTearDown(tester.view.reset);   // without this the size leaks into later tests
+```
+
+For anything branching on `isCompact`, **assert both directions** — the expected layout present *and* the other absent, at a wide size and a narrow one. A test that only checks the expected form is present also passes against a widget rendering both. Better still, pair a *narrow* viewport with an `isCompact: false` override (and vice versa), which additionally proves the override wins over the derived value.
+
+**2. `SemanticsHandle` must be disposed with `try`/`finally`, never `addTearDown`.** On the pinned Flutter SDK, `addTearDown(handle.dispose)` does **not** dispose before `_endOfTestVerifications` runs, and every test using it fails with *"A SemanticsHandle was active at the end of the test."* Bisected against a minimal repro. Match the existing suites:
+
+```dart
+final handle = tester.ensureSemantics();
+try {
+  // ... assertions ...
+} finally {
+  handle.dispose();
+}
+```
+
+And assert **real properties** via `matchesSemantics(...)` — never `expect(semantics, isNotNull)`, never `expect(() => x.dispose(), returnsNormally)`, never a bare `expect(find.byType(Foo), findsOneWidget)` as a test's substantive assertion. Prefer dumping the semantics tree over `find.bySemanticsLabel`, which has produced a false green here. Each of these patterns has shipped tests in this repo that verify nothing while reading as a safety net.
+
 The convention of mirroring `lib/src/<module>/` structure under `test/<module>/` is now **enforced by code review**, not by CI. It remains a required pattern, but the `tool/check_test_mirror.sh` script that enforced it in CI has been removed. Maintain this structure on every PR.
 
 **CI enforces a coverage floor** via the shared `goldenm-software/layrz-actions/check-dart` action, which runs:
