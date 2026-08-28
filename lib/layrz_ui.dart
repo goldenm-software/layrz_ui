@@ -25,6 +25,7 @@ export 'src/state/state.dart';
 export 'src/steppers/steppers.dart';
 export 'src/tappable/tappable.dart';
 export 'src/theme/theme.dart';
+export 'src/timelines/timelines.dart';
 export 'src/tokenizer/tokenizer.dart';
 export 'src/tokens/tokens.dart';
 export 'src/tooltips/tooltips.dart';
