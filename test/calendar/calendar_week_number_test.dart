@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/calendar/src/calendar_week_number.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 /// An independent, `DateTime`-free ISO 8601 week-number oracle used only in
 /// this test file to cross-check [isoWeekNumberOf].
@@ -71,6 +73,15 @@ int _weekdayOfIsoDate(int year, int month, int day) {
 }
 
 void main() {
+  // Loads the IANA tzdata bundled with `package:timezone` once for this test
+  // file's isolate. Test-only: nothing under `lib/` calls this, and nothing
+  // under `lib/` depends on `package:timezone` at all -- see the DST guard
+  // below for why. `flutter test` runs each test *file* in its own isolate,
+  // so this must be repeated per file rather than shared; the call is
+  // documented as idempotent by the package itself, so re-running it here
+  // for a file that also uses it (none currently do) would be harmless too.
+  setUpAll(tzdata.initializeTimeZones);
+
   group('isoWeekNumberOf', () {
     test('known values from the plan are correct', () {
       expect(isoWeekNumberOf(DateTime(2026, 1, 1)), 1);
@@ -158,19 +169,61 @@ void main() {
       },
     );
 
-    test('never steps across a DST transition incorrectly (uses calendar-field stepping)', () {
-      // A rough regression guard: computing the ISO week for dates that
-      // straddle a US DST transition (2026-03-08) must not throw or produce
-      // an out-of-range week number, which a `Duration`-based bug could.
-      final beforeTransition = DateTime(2026, 3, 7);
-      final afterTransition = DateTime(2026, 3, 9);
+    test(
+      'never steps across a DST transition incorrectly, for named transitions '
+      'in both hemispheres and a fractional-hour zone',
+      () {
+        // Each entry names a real, historical transition in a specific IANA
+        // zone, located via `package:timezone` -- not by scanning the host's
+        // own local timezone for one, which is what made the previous
+        // version of this test host-dependent (it could only run its DST
+        // assertions on a machine whose `TZ` happened to observe DST, and
+        // silently degraded to a no-op range check everywhere else).
+        //
+        // Northern spring-forward (America/New_York, 2024-03-10: offset
+        // -05:00 -> -04:00), southern spring-forward (Pacific/Auckland,
+        // 2024-09-29: DST runs opposite through the year there), and the
+        // 30-minute shift (Australia/Lord_Howe, 2024-10-06: 10:30 -> 11:00)
+        // are all covered, so this no longer depends on which single
+        // transition shape the host happens to offer.
+        //
+        // Honesty note, per this file's own oracle-sweep finding above:
+        // `isoWeekNumberOf` is a pure function of (year, month, day) after
+        // the fix in calendar_week_number.dart, so it treats a date that
+        // happens to be a real-world DST transition exactly like any other
+        // date -- the fix does not special-case transition dates, and this
+        // test does not exercise a code path that a non-transition date
+        // would skip. This test therefore adds no bug-catching power beyond
+        // the oracle sweep above; the oracle sweep is what actually proves
+        // timezone-independence. What this test buys instead is documented,
+        // named regression coverage of the specific real-world dates that
+        // motivated the fix, expressed without depending on the host's `TZ`
+        // to find them.
+        final ny = tz.getLocation('America/New_York');
+        final auckland = tz.getLocation('Pacific/Auckland');
+        final lordHowe = tz.getLocation('Australia/Lord_Howe');
 
-      final before = isoWeekNumberOf(beforeTransition);
-      final after = isoWeekNumberOf(afterTransition);
+        final transitions = <(tz.Location, int, int, int)>[
+          (ny, 2024, 3, 9),
+          (ny, 2024, 3, 11),
+          (auckland, 2024, 9, 28),
+          (auckland, 2024, 9, 30),
+          (lordHowe, 2024, 10, 5),
+          (lordHowe, 2024, 10, 7),
+        ];
 
-      expect(before, inInclusiveRange(1, 53));
-      expect(after, inInclusiveRange(1, 53));
-    });
+        for (final (location, year, month, day) in transitions) {
+          final date = tz.TZDateTime(location, year, month, day);
+          final week = isoWeekNumberOf(date);
+          final expected = _isoWeekOracle(date.year, date.month, date.day);
+          expect(
+            week,
+            expected,
+            reason: '${location.name} $year-$month-$day: expected week $expected (per the oracle), got $week',
+          );
+        }
+      },
+    );
 
     test(
       'matches a DateTime-free integer-arithmetic oracle for every day of 2020-2027, '

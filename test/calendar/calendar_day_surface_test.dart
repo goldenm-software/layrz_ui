@@ -1,11 +1,47 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
 
+/// Real, historical fall-back DST transitions (offset decreases) named by
+/// IANA zone and the month they fall in, mirroring
+/// `calendar_month_surface_test.dart`'s `_dstFallBackTransitions` -- see
+/// that file's doc for why fall-back specifically and why these three
+/// zones.
+final _dstFallBackTransitionMonths = <(String zoneName, int year, int month)>[
+  ('America/New_York', 2024, 11),
+  ('Pacific/Auckland', 2024, 4),
+  ('Australia/Lord_Howe', 2024, 4),
+];
+
+/// The exact day within [year]/[month] on which [zoneName] falls back
+/// (offset decreases from the previous day), located via `package:timezone`
+/// rather than assumed or hardcoded -- so this is resolved from the tzdata
+/// the package ships, not from a human's precomputed magic number.
+int _fallBackDayIn(String zoneName, int year, int month) {
+  final location = tz.getLocation(zoneName);
+  final daysInMonth = DateTime(year, month + 1, 0).day;
+  for (var day = 2; day <= daysInMonth; day++) {
+    final date = tz.TZDateTime(location, year, month, day);
+    final previous = tz.TZDateTime(location, year, month, day - 1);
+    if (date.timeZoneOffset < previous.timeZoneOffset) return day;
+  }
+  throw StateError('No fall-back transition found in $zoneName $year-$month');
+}
+
 void main() {
+  // Must run before the `for` loop below calls `_fallBackDayIn` during test
+  // *declaration* (which happens before any `setUpAll` body executes), so
+  // this cannot be a `setUpAll` call -- see
+  // calendar_month_surface_test.dart's `main` for the same constraint.
+  // Test-only: nothing under `lib/` calls this or depends on
+  // `package:timezone`.
+  tzdata.initializeTimeZones();
+
   group('LayrzCalendarDaySurface', () {
     guardedTestWidgets('renders a fixed 24-row hour axis in h24 format', (tester) async {
       tester.view.physicalSize = const Size(800, 1200);
@@ -248,41 +284,52 @@ void main() {
       expect(positioned.height, kLayrzCalendarMinEventBlockHeight);
     });
 
-    guardedTestWidgets('does not step across a DST transition day incorrectly', (tester) async {
-      tester.view.physicalSize = const Size(800, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    for (final (zoneName, year, month) in _dstFallBackTransitionMonths) {
+      final day = _fallBackDayIn(zoneName, year, month);
 
-      // Regression guard mirroring the month surface's: the day surface must
-      // never assume a transition day has exactly 24 elapsed hours, but its
-      // hour-of-day AXIS is always the ordinary fixed 24 rows regardless.
-      // Renders without throwing and shows all 24 axis rows on a
-      // DST-transition day itself.
-      DateTime? transitionMonth;
-      for (var year = 2015; year <= 2030 && transitionMonth == null; year++) {
-        for (var month = 1; month <= 12; month++) {
-          final start = DateTime(year, month, 1);
-          final end = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
-          if (end.timeZoneOffset < start.timeZoneOffset) transitionMonth = DateTime(year, month, 1);
-        }
-      }
-      expect(transitionMonth, isNotNull);
+      guardedTestWidgets(
+        'does not step across a DST transition day incorrectly ($zoneName $year-$month-$day)',
+        (tester) async {
+          tester.view.physicalSize = const Size(800, 1200);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-      await pumpThemed(
-        tester,
-        SizedBox(
-          width: 600,
-          height: 900,
-          child: LayrzCalendarDaySurface(
-            focusedDate: transitionMonth!,
-            entries: const [],
-          ),
-        ),
+          // Regression guard mirroring the month surface's: the day surface
+          // must never assume a transition day has exactly 24 elapsed
+          // hours, but its hour-of-day AXIS is always the ordinary fixed 24
+          // rows regardless. Renders without throwing and shows all 24 axis
+          // rows on a real DST-transition day itself.
+          //
+          // The transition day is located via `package:timezone`
+          // ([_fallBackDayIn]) rather than by scanning the host's own local
+          // timezone -- see calendar_month_surface_test.dart's
+          // `_dstFallBackTransitions` for why fall-back specifically and
+          // why these three zones.
+          //
+          // Honesty note: the axis this surface renders is a fixed constant
+          // list of 24 hour labels (calendar_day_surface.dart never steps
+          // it by `Duration` or derives it from elapsed time at all), so no
+          // choice of date -- transition or otherwise -- can make this axis
+          // render differently. This test's value is in rendering without
+          // throwing on a date whose local day is genuinely 23 or 25
+          // elapsed hours, not in distinguishing a safe from a buggy axis.
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 600,
+              height: 900,
+              child: LayrzCalendarDaySurface(
+                focusedDate: DateTime(year, month, day),
+                entries: const [],
+              ),
+            ),
+          );
+
+          expect(find.text('00:00'), findsOneWidget);
+          expect(find.text('23:00'), findsOneWidget);
+        },
       );
-
-      expect(find.text('00:00'), findsOneWidget);
-      expect(find.text('23:00'), findsOneWidget);
-    });
+    }
 
     guardedTestWidgets('two overlapping timed events split the column width evenly', (tester) async {
       tester.view.physicalSize = const Size(800, 1200);

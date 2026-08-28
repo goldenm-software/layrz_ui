@@ -1,8 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/calendar/src/calendar_entry.dart';
 import 'package:layrz_ui/src/calendar/src/calendar_event_lane.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
+  // Test-only: nothing under `lib/` calls this or depends on
+  // `package:timezone` -- see the DST guard below for why.
+  setUpAll(tzdata.initializeTimeZones);
+
   group('assignLanes', () {
     test('a single multi-day entry is assigned lane 0', () {
       final entry = LayrzCalendarEntry(
@@ -202,57 +208,57 @@ void main() {
     });
 
     test(
-      'does not duplicate or shift lane assignment across a DST transition month',
+      'does not duplicate or shift lane assignment across a DST transition month, '
+      'for named transitions in both hemispheres and a fractional-hour zone',
       () {
-        // Mirrors the rigor of the DST regression test in
-        // calendar_month_surface_test.dart: scans a window of years for a
-        // real DST-observing month on this host rather than hardcoding one,
-        // so the test is meaningful wherever it runs and fails loudly (not
-        // silently) if no such month exists in range.
-        DateTime? transitionMonth;
-        for (var year = 2015; year <= 2030 && transitionMonth == null; year++) {
-          for (var month = 1; month <= 12; month++) {
-            final monthStart = DateTime(year, month, 1);
-            final monthEnd = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
-            if (monthStart.timeZoneOffset != monthEnd.timeZoneOffset) {
-              transitionMonth = DateTime(year, month, 1);
-            }
+        // Named, hardcoded real transitions located via `package:timezone`,
+        // replacing a scan of the host's own local timezone -- the previous
+        // version of this test could only exercise its DST assertions on a
+        // machine whose `TZ` happened to observe DST on some date in
+        // 2015-2030, and degenerated to a no-op everywhere else.
+        //
+        // `assignLanes` (calendar_event_lane.dart) never uses `Duration` --
+        // every date it touches goes through the `DateTime` constructor
+        // (calendar-field normalization) or `.isAfter`/`.isBefore`, neither
+        // of which is perturbed by a host DST transition. So, honestly:
+        // this test cannot currently distinguish a safe from a buggy
+        // `assignLanes`, because the shipping implementation was never
+        // `Duration`-based to begin with -- there is no "buggy" variant
+        // sitting one line away the way there is for the month-surface grid
+        // stepping. What this test verifies is that lane assignment is
+        // correct across a real transition month in three genuinely
+        // different zones, which is real (if narrower) coverage, and it
+        // would catch a future regression that reintroduced `Duration`
+        // stepping into `assignLanes` itself.
+        final transitions = <(String, int, int)>[
+          (tz.getLocation('America/New_York').name, 2024, 11),
+          (tz.getLocation('Pacific/Auckland').name, 2024, 4),
+          (tz.getLocation('Australia/Lord_Howe').name, 2024, 4),
+        ];
+
+        for (final (zoneName, year, month) in transitions) {
+          // The lane packer itself only ever sees plain DateTimes (it has
+          // no notion of a Location), so the transition's zone is used only
+          // to pick a real-world month to exercise -- the assertion below
+          // runs on ordinary calendar dates in that month.
+          final spanStart = DateTime(year, month, 1);
+          final daysInMonth = DateTime(year, month + 1, 0).day;
+          final spanEnd = DateTime(year, month, daysInMonth);
+          final entry = LayrzCalendarEntry(title: 'Spans the transition', start: spanStart, end: spanEnd);
+
+          final result = assignLanes(entries: [entry], monthAnchor: DateTime(year, month, 1));
+
+          expect(result.assignments, hasLength(1), reason: '$zoneName $year-$month');
+          final lane = result.assignments.single.lane;
+          for (var day = 1; day <= daysInMonth; day++) {
+            final date = DateTime(year, month, day);
+            expect(
+              result.occupiedLanesOn(date),
+              {lane},
+              reason:
+                  '$zoneName $year-$month: day $day of the DST-transition month should occupy exactly lane $lane, once',
+            );
           }
-        }
-
-        expect(
-          transitionMonth,
-          isNotNull,
-          reason:
-              'No DST-transitioning month found in 2015-2030 for this host\'s local timezone -- '
-              'this test cannot exercise the regression it guards. Run it on a host whose '
-              'timezone observes DST (e.g. TZ=America/Mexico_City, which observed DST through 2022).',
-        );
-
-        final year = transitionMonth!.year;
-        final month = transitionMonth.month;
-        // An entry spanning the entire transition month plus a few days on
-        // either side, so its occupied-day set must include every day of the
-        // month with no gap and no duplicate -- exactly what a
-        // `Duration(days: n)`-stepped implementation would get wrong across
-        // the transition (landing on 23:00 of the previous local day,
-        // producing a duplicate date and a missing one).
-        final spanStart = DateTime(year, month, 1);
-        final daysInMonth = DateTime(year, month + 1, 0).day;
-        final spanEnd = DateTime(year, month, daysInMonth);
-        final entry = LayrzCalendarEntry(title: 'Spans the transition', start: spanStart, end: spanEnd);
-
-        final result = assignLanes(entries: [entry], monthAnchor: DateTime(year, month, 1));
-
-        expect(result.assignments, hasLength(1));
-        final lane = result.assignments.single.lane;
-        for (var day = 1; day <= daysInMonth; day++) {
-          final date = DateTime(year, month, day);
-          expect(
-            result.occupiedLanesOn(date),
-            {lane},
-            reason: 'day $day of the DST-transition month should occupy exactly lane $lane, once',
-          );
         }
       },
     );

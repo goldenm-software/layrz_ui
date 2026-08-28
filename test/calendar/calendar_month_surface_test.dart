@@ -2,11 +2,21 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
 
 void main() {
+  // Must run before `_dstFallBackTransitions` is first read below (it is a
+  // top-level `final`, evaluated the moment the `for` loop over it runs
+  // during test *declaration*, which happens before `setUpAll` bodies ever
+  // execute) -- so this cannot be a `setUpAll` call. See the DST guards
+  // below for why this is needed only in this test file's isolate, not in
+  // `lib/`.
+  tzdata.initializeTimeZones();
+
   group('LayrzCalendarMonthSurface', () {
     guardedTestWidgets('renders weekday header labels', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
@@ -547,121 +557,178 @@ void main() {
       },
     );
 
-    guardedTestWidgets('does not duplicate or shift a day across a DST transition (default Sunday-first grid)', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    for (final transition in _dstFallBackTransitions) {
+      guardedTestWidgets(
+        'does not duplicate or shift a day across a DST transition '
+        '(default Sunday-first grid, ${transition.label})',
+        (tester) async {
+          tester.view.physicalSize = const Size(1200, 900);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-      // Regression for a bug where the grid stepped cells via
-      // `gridStart.add(Duration(days: n))`. Duration arithmetic is absolute
-      // elapsed time, not calendar-day stepping: crossing a local DST
-      // transition lands a 24h step on 23:00 of the *previous* local day,
-      // duplicating that day's number and shifting every subsequent cell
-      // onto the wrong weekday column. The fix steps via the `DateTime`
-      // constructor (`DateTime(y, m, d + n)`), which normalizes by calendar
-      // date and is immune to the local UTC-offset change.
-      //
-      // Parameterized on firstDayOfWeek (this test uses the new default,
-      // Sunday) rather than hardcoding pass 1's Monday-only reference grid --
-      // re-derived and re-verified to still fail against a Duration-stepped
-      // implementation for this default (checked by execution before
-      // trusting this rewrite; see the Monday-parameterized sibling test
-      // below for the second value).
-      final transitionMonth = _findDstTransitionMonth();
-      expect(
-        transitionMonth,
-        isNotNull,
-        reason:
-            'No DST-transitioning month found in 2015-2030 for this host\'s local timezone -- '
-            'this test cannot exercise the regression it guards. Run it on a host whose '
-            'timezone observes DST (e.g. TZ=America/Mexico_City, which observed DST through 2022).',
+          // Regression for a bug where the grid stepped cells via
+          // `gridStart.add(Duration(days: n))`. Duration arithmetic is
+          // absolute elapsed time, not calendar-day stepping: crossing a
+          // local DST transition lands a 24h step on 23:00 of the
+          // *previous* local day, duplicating that day's number and
+          // shifting every subsequent cell onto the wrong weekday column.
+          // The fix steps via the `DateTime` constructor
+          // (`DateTime(y, m, d + n)`), which normalizes by calendar date
+          // and is immune to the local UTC-offset change.
+          //
+          // [transition] names a real, historical fall-back transition
+          // (offset decreases) in a specific IANA zone, located via
+          // `package:timezone` rather than by scanning the host's own local
+          // timezone for one -- see [_dstFallBackTransitions] for why
+          // fall-back specifically, and why three zones spanning both
+          // hemispheres plus a 30-minute shift.
+          //
+          // Honesty note, confirmed by direct execution before trusting
+          // this rewrite: this widget-pumping assertion is NOT immune to
+          // the host's own `TZ` the way the RISK-7 re-proof below is.
+          // `LayrzCalendarMonthSurface.focusedDate` is a plain `DateTime`,
+          // and `_buildWeekRow`'s own date stepping is plain host-local
+          // `DateTime` arithmetic -- it has no notion of [transition]'s
+          // `Location` at all, by design (the production fix only needed
+          // calendar-field stepping, never a zone parameter). So if this
+          // widget's stepping were ever reverted to `Duration`, THIS
+          // assertion would only fail under a host `TZ` that itself
+          // observes a transition inside [transition.year]/[transition.month]
+          // -- confirmed by reverting `_buildWeekRow` to
+          // `weekStart.add(Duration(...))` and re-running: 0 of these six
+          // widget tests failed under TZ=Etc/UTC, and only the two
+          // `America/New_York`-labeled tests failed under
+          // TZ=America/New_York. The RISK-7 re-proof is what is genuinely
+          // host-independent (it never pumps the widget, only compares two
+          // independently-computed `TZDateTime`-based reference grids), and
+          // is what should be trusted as the "does this stepping technique
+          // actually diverge" proof. This widget-level assertion is kept
+          // because it verifies the shipping widget renders correctly for
+          // these real, named dates -- genuine coverage, just not the
+          // timezone-independent regression guard it might look like.
+          final expectedCounts = _referenceGridCounts(transition.location, transition.year, transition.month, 7);
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 1000,
+              height: 800,
+              child: LayrzCalendarMonthSurface(
+                focusedDate: DateTime(transition.year, transition.month, 1),
+                entries: const [],
+              ),
+            ),
+          );
+
+          // Scoped to descend from a LayrzCalendarDayCell specifically --
+          // a bare find.text('$day') can also match a week-gutter label
+          // when a row's ISO week number happens to equal a day-of-month
+          // number rendered elsewhere in the same grid (e.g. April 2024
+          // begins in ISO week 13, and April also has a day 13).
+          final dayCellFinder = find.byType(LayrzCalendarDayCell);
+          for (final entry in expectedCounts.entries) {
+            expect(
+              find.descendant(of: dayCellFinder, matching: find.text('${entry.key}')),
+              findsNWidgets(entry.value),
+              reason: 'day-of-month ${entry.key} should render exactly ${entry.value} time(s) in this grid',
+            );
+          }
+        },
       );
 
-      final expectedCounts = _referenceGridCounts(transitionMonth!, DateTime.sunday);
+      guardedTestWidgets(
+        'does not duplicate or shift a day across a DST transition '
+        '(Monday-first grid, ${transition.label})',
+        (tester) async {
+          tester.view.physicalSize = const Size(1200, 900);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-      await pumpThemed(
-        tester,
-        SizedBox(
-          width: 1000,
-          height: 800,
-          child: LayrzCalendarMonthSurface(
-            focusedDate: transitionMonth,
-            entries: const [],
-          ),
-        ),
+          // See the Sunday-first sibling test's "Honesty note" above: this
+          // widget-pumping assertion is not host-`TZ`-independent either,
+          // for the same reason. The RISK-7 re-proof is the guard that
+          // actually is.
+          final expectedCounts = _referenceGridCounts(transition.location, transition.year, transition.month, 1);
+
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 1000,
+              height: 800,
+              child: LayrzCalendarMonthSurface(
+                focusedDate: DateTime(transition.year, transition.month, 1),
+                entries: const [],
+                firstDayOfWeek: DateTime.monday,
+              ),
+            ),
+          );
+
+          // See the Sunday-first sibling test above for why this must be
+          // scoped to LayrzCalendarDayCell rather than a bare find.text.
+          final dayCellFinder = find.byType(LayrzCalendarDayCell);
+          for (final entry in expectedCounts.entries) {
+            expect(
+              find.descendant(of: dayCellFinder, matching: find.text('${entry.key}')),
+              findsNWidgets(entry.value),
+              reason: 'day-of-month ${entry.key} should render exactly ${entry.value} time(s) in this grid',
+            );
+          }
+        },
       );
-
-      for (final entry in expectedCounts.entries) {
-        expect(
-          find.text('${entry.key}'),
-          findsNWidgets(entry.value),
-          reason: 'day-of-month ${entry.key} should render exactly ${entry.value} time(s) in this grid',
-        );
-      }
-    });
-
-    guardedTestWidgets('does not duplicate or shift a day across a DST transition (Monday-first grid)', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      final transitionMonth = _findDstTransitionMonth();
-      expect(transitionMonth, isNotNull);
-
-      final expectedCounts = _referenceGridCounts(transitionMonth!, DateTime.monday);
-
-      await pumpThemed(
-        tester,
-        SizedBox(
-          width: 1000,
-          height: 800,
-          child: LayrzCalendarMonthSurface(
-            focusedDate: transitionMonth,
-            entries: const [],
-            firstDayOfWeek: DateTime.monday,
-          ),
-        ),
-      );
-
-      for (final entry in expectedCounts.entries) {
-        expect(
-          find.text('${entry.key}'),
-          findsNWidgets(entry.value),
-          reason: 'day-of-month ${entry.key} should render exactly ${entry.value} time(s) in this grid',
-        );
-      }
-    });
+    }
 
     test(
       'RISK-7 re-proof: the parameterized DST reference grid actually fails against a Duration-stepped '
-      'implementation, for both Sunday and Monday first-day values',
+      'implementation, for both Sunday and Monday first-day values, in every named transition zone',
       () {
         // This is the re-proof the plan requires before trusting the
-        // rewritten regression test above: a rewritten guard that would pass
-        // against BOTH the safe DateTime-constructor stepping and the buggy
-        // Duration-based stepping proves nothing. Computed independently
-        // here (not by pumping the widget) to isolate exactly the stepping
-        // arithmetic the production code and the old bug share.
-        final transitionMonth = _findDstTransitionMonth();
-        expect(transitionMonth, isNotNull);
+        // rewritten regression tests above: a rewritten guard that would
+        // pass against BOTH the safe DateTime-constructor stepping and the
+        // buggy Duration-based stepping proves nothing. Computed
+        // independently here (not by pumping the widget) to isolate exactly
+        // the stepping arithmetic the production code and the old bug
+        // share.
+        //
+        // Both `_referenceGridCounts` and `_buggyDurationSteppedGridCounts`
+        // are deliberately built on `TZDateTime` in the transition's own
+        // named `Location`, not on plain `DateTime`: plain `DateTime`
+        // arithmetic only diverges across a transition that the *host
+        // process's* `TZ` actually observes on that date, so a
+        // plain-`DateTime` version of this proof would silently pass or
+        // fail depending on where the suite runs -- confirmed by execution:
+        // computing these two with plain `DateTime(year, month, day)`
+        // instead of `TZDateTime(location, year, month, day)` makes
+        // `differs` depend entirely on the host's own `TZ`, not on which
+        // zone this loop is iterating. Routing both through `TZDateTime`
+        // in the named zone is what makes the divergence reproducible
+        // under any host `TZ` -- verified identical under TZ=Etc/UTC,
+        // TZ=America/New_York and TZ=Australia/Lord_Howe before trusting
+        // this rewrite.
+        for (final transition in _dstFallBackTransitions) {
+          for (final firstDayOfWeek in [DateTime.sunday, DateTime.monday]) {
+            final safeCounts = _referenceGridCounts(
+              transition.location,
+              transition.year,
+              transition.month,
+              firstDayOfWeek,
+            );
+            final buggyCounts = _buggyDurationSteppedGridCounts(
+              transition.location,
+              transition.year,
+              transition.month,
+              firstDayOfWeek,
+            );
 
-        for (final firstDayOfWeek in [DateTime.sunday, DateTime.monday]) {
-          final safeCounts = _referenceGridCounts(transitionMonth!, firstDayOfWeek);
-          final buggyCounts = _buggyDurationSteppedGridCounts(transitionMonth, firstDayOfWeek);
-
-          expect(
-            safeCounts,
-            isNot(equals(buggyCounts)),
-            reason:
-                'The safe (DateTime-constructor-stepped) and buggy (Duration-stepped) reference grids '
-                'produced IDENTICAL day-count maps for firstDayOfWeek=$firstDayOfWeek -- this means the '
-                'DST regression test as written would pass even against reintroduced Duration stepping, '
-                'i.e. it has degenerated into a tautology.',
-          );
+            expect(
+              safeCounts,
+              isNot(equals(buggyCounts)),
+              reason:
+                  'The safe (DateTime-constructor-stepped) and buggy (Duration-stepped) reference grids '
+                  'produced IDENTICAL day-count maps for ${transition.label}, firstDayOfWeek=$firstDayOfWeek -- '
+                  'this means the DST regression test as written would pass even against reintroduced '
+                  'Duration stepping, i.e. it has degenerated into a tautology.',
+            );
+          }
         }
       },
     );
@@ -1076,59 +1143,80 @@ Finder _findHeaderRow() => find.byWidgetPredicate((widget) {
   );
 });
 
-/// Scans 2015-2030 for a month containing a **fall-back** DST transition
-/// (the UTC offset *decreases*, i.e. local clocks move backward) on this
-/// host.
+/// One real, historical **fall-back** DST transition (the UTC offset
+/// *decreases*, i.e. local clocks move backward), named explicitly by IANA
+/// zone and month rather than found by scanning any host's local timezone.
 ///
-/// Deliberately narrower than "any month whose offset changes": a
-/// spring-forward transition (offset increases, an hour is skipped) shifts
-/// the *time-of-day* on the transition day but never duplicates a
-/// day-of-month number when stepped with `Duration(days: 1)` from local
-/// midnight, since the lost hour only moves the wall-clock time within the
-/// same calendar date, not across a date boundary — verified by direct
-/// execution while writing this test (April 2015 in this host's timezone is
-/// exactly such a case, and the naive Duration-stepped and DateTime
-/// constructor-stepped grids produce IDENTICAL day-count maps for it,
-/// despite differing in time-of-day). A fall-back transition, by contrast,
-/// subtracts an hour from a local `add(Duration(days: n))` step and can land
-/// the result at 23:00 of the *previous* calendar day, which is precisely
-/// the duplicate-day bug this regression test exists to catch.
-DateTime? _findDstTransitionMonth() {
-  for (var year = 2015; year <= 2030; year++) {
-    for (var month = 1; month <= 12; month++) {
-      final monthStart = DateTime(year, month, 1);
-      final monthEnd = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
-      if (monthEnd.timeZoneOffset < monthStart.timeZoneOffset) {
-        return DateTime(year, month, 1);
-      }
-    }
-  }
-  return null;
-}
+/// [label] is only for test failure messages. [location] is resolved via
+/// `package:timezone`, and [year]/[month] name the month the transition
+/// falls in, in that zone's own calendar.
+typedef _DstFallBackTransition = ({tz.Location location, String label, int year, int month});
+
+/// Three real fall-back transitions spanning both hemispheres plus a
+/// fractional-hour shift, replacing the old host-timezone scan.
+///
+/// Deliberately fall-back specifically, not "any month whose offset
+/// changes": a spring-forward transition (offset increases, an hour is
+/// skipped) shifts the *time-of-day* on the transition day but never
+/// duplicates a day-of-month number when stepped with `Duration(days: 1)`
+/// from local midnight, since the lost hour only moves the wall-clock time
+/// within the same calendar date, not across a date boundary. A fall-back
+/// transition, by contrast, subtracts an hour from a local
+/// `add(Duration(days: n))` step and can land the result at 23:00 of the
+/// *previous* calendar day, which is precisely the duplicate-day bug this
+/// regression test exists to catch.
+///
+/// - `America/New_York`, November 2024 (2024-11-03: offset -04:00 → -05:00)
+///   — a northern-hemisphere fall-back.
+/// - `Pacific/Auckland`, April 2024 (2024-04-07: offset +13:00 → +12:00) —
+///   DST there runs opposite through the year, so this is a
+///   spring-into-southern-winter fall-back, not the same calendar season as
+///   the New York case.
+/// - `Australia/Lord_Howe`, April 2024 (2024-04-07: offset +11:00 →
+///   +10:30) — the 30-minute shift, which would defeat an implementation
+///   that assumed every DST delta is a whole hour.
+///
+/// All three verified, by direct execution, to make
+/// [_referenceGridCounts] and [_buggyDurationSteppedGridCounts] diverge for
+/// both `firstDayOfWeek` values — see the RISK-7 re-proof test.
+final _dstFallBackTransitions = <_DstFallBackTransition>[
+  (location: tz.getLocation('America/New_York'), label: 'America/New_York 2024-11', year: 2024, month: 11),
+  (location: tz.getLocation('Pacific/Auckland'), label: 'Pacific/Auckland 2024-04', year: 2024, month: 4),
+  (location: tz.getLocation('Australia/Lord_Howe'), label: 'Australia/Lord_Howe 2024-04', year: 2024, month: 4),
+];
 
 /// The correct, DST-immune calendar-date-stepped reference grid's per-day
-/// render counts for [month] under [firstDayOfWeek] — computed independently
-/// of production code, using only the `DateTime` constructor's field
-/// overflow, never `Duration`.
-Map<int, int> _referenceGridCounts(DateTime month, int firstDayOfWeek) {
-  final firstOfMonth = DateTime(month.year, month.month);
+/// render counts for [year]/[month] under [firstDayOfWeek] — computed
+/// independently of production code, using only the `TZDateTime` constructor
+/// field overflow (the same normalizing behaviour as the `DateTime`
+/// constructor, but resolved against [location]'s own offset rules rather
+/// than the host process's), never `Duration`.
+///
+/// Built on `TZDateTime` rather than plain `DateTime` so that this reference
+/// implementation actually exercises [location]'s transition regardless of
+/// the host process's own `TZ` — see [_dstFallBackTransitions]'s doc and the
+/// RISK-7 re-proof test for why a plain-`DateTime` version of this function
+/// would not do that.
+Map<int, int> _referenceGridCounts(tz.Location location, int year, int month, int firstDayOfWeek) {
+  final firstOfMonth = tz.TZDateTime(location, year, month);
   final offset = (firstOfMonth.weekday - firstDayOfWeek + 7) % 7;
-  final gridStart = DateTime(month.year, month.month, 1 - offset);
+  final gridStart = tz.TZDateTime(location, year, month, 1 - offset);
   final counts = <int, int>{};
   for (var i = 0; i < 42; i++) {
-    final date = DateTime(gridStart.year, gridStart.month, gridStart.day + i);
+    final date = tz.TZDateTime(location, gridStart.year, gridStart.month, gridStart.day + i);
     counts[date.day] = (counts[date.day] ?? 0) + 1;
   }
   return counts;
 }
 
 /// The buggy `Duration`-stepped equivalent of [_referenceGridCounts], used
-/// only to prove the DST regression test would actually fail against the bug
-/// it exists to guard.
-Map<int, int> _buggyDurationSteppedGridCounts(DateTime month, int firstDayOfWeek) {
-  final firstOfMonth = DateTime(month.year, month.month);
+/// only to prove the DST regression tests would actually fail against the
+/// bug they exist to guard. Also built on `TZDateTime` in [location], for
+/// the same host-independence reason as [_referenceGridCounts].
+Map<int, int> _buggyDurationSteppedGridCounts(tz.Location location, int year, int month, int firstDayOfWeek) {
+  final firstOfMonth = tz.TZDateTime(location, year, month);
   final offset = (firstOfMonth.weekday - firstDayOfWeek + 7) % 7;
-  final gridStart = DateTime(month.year, month.month, 1).subtract(Duration(days: offset));
+  final gridStart = tz.TZDateTime(location, year, month, 1).subtract(Duration(days: offset));
   final counts = <int, int>{};
   for (var i = 0; i < 42; i++) {
     final date = gridStart.add(Duration(days: i));
