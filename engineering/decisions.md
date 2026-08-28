@@ -4484,3 +4484,38 @@ Blast radius was independently re-checked before reverting: every consumer that 
 - `LayrzStepper.controller` carries the identical debug-only-`assert` pattern for its own no-swap contract (`stepper.dart`'s `didUpdateWidget`). That is **consistent with this decision**, not a second instance of the same defect — do not "fix" it to throw without re-confirming the `_InactiveElements` hazard no longer reproduces.
 - **Do not re-attempt option 2** without first reproducing that the corruption hazard is gone under the then-current Flutter SDK. This decision exists specifically so that the next reader does not rediscover "throw instead of assert" as an obvious-looking improvement and reintroduce a regression that was already measured and reverted once.
 
+---
+
+## D72: `LayrzCalendar` Declines to Become the M4 Date-Picker Base
+
+**Date**: 2026-08-28  
+**Status**: Decided  
+**Category**: Component Scope / API Design
+
+### Context
+
+While planning `LayrzCalendar` pass 2 (DESIGN-64), the question of whether `LayrzCalendar` should become the shared base for the M4 date pickers came up and was considered, then declined. D11 scheduled the pickers for M4 without settling this; pass 2's three-mode surface work made the question concrete enough to need an answer, since it is the obvious thing a future reader reaches for once `LayrzCalendar` looks feature-complete.
+
+A date picker needs three things `LayrzCalendar` does not have: a **selection model** (a persisted "chosen date," kept as state, with a return value to the caller), and a compact chrome-free month grid. `LayrzCalendar` is a **display surface** — mode switcher, week/day hour grids, lane packing for overlapping entries, and its own navigation chrome. Later in pass 2, `LayrzCalendar` gained `onTap(DateTime)`, and `LayrzCalendarEntry` (the event data class, not the calendar widget) gained its own `onTap` field: tapping empty cell space now hands the caller a coordinate, and tapping an event fires that entry's own callback — wired per-instance by whoever constructed it, not routed through the calendar at all. That addition does not cross the fence this decision draws, because **`onTap` hands the caller a coordinate; it does not make the calendar remember a selection.** There is still no persisted "chosen date" field, no highlighted/selected visual state, and no return value owned by this widget — the caller receiving `LayrzCalendar.onTap` is free to do nothing with it, same as it was always free to ignore `onModeChanged`. The `+N` overflow chip and the day-of-month number behave the same way they always did: they navigate the calendar's own controller into day view and fire the pre-existing `onModeChanged`, exposing nothing new.
+
+Set side by side, `LayrzCalendar` and a date picker share month-grid arithmetic and very little else.
+
+### Decision
+
+**`LayrzCalendar` will not become the shared base for the M4 date pickers.** In the maintainer's words: *"when M4 arrives, we'll build a Chrome just for this, because I dont want to over-complex the LayrzCalendar with functions that only will be used on pickers."*
+
+M4 gets its own purpose-built chrome, not an extraction from or a wrapper around `LayrzCalendar`.
+
+### Rationale
+
+The maintainer's reasoning was never that `LayrzCalendar` is incapable of the interaction a picker needs — it is scope discipline: sharing a base would mean growing `LayrzCalendar` with picker-only concerns, none of which the display surface needs for its own use, and all of which a picker needs. That is the shape of a component absorbing a second, unrelated contract to save writing a second, smaller one.
+
+`LayrzCalendar` now exposes real interaction — `onTap(DateTime)`, `LayrzCalendarEntry.onTap` (a plain, parameterless callback the caller wires per-entry at construction, not a callback owned by the calendar), internal day-view navigation from the date number and the `+N` chip, and `isPreview` rendering for a caller's own in-progress entry — and none of it closes the gap to a picker. What a picker still needs and this calendar deliberately does not have: a **selection model** (state this widget owns and persists — "this is the chosen date" — surfaced back to the caller as a return value, not just a notification callback), and a **compact chrome-free grid** (no mode switcher, no header navigation, no week/day hour grids, no lane packing — a picker's month grid is a much smaller, denser thing than this display surface). `onTap` narrows that gap not at all: it is a notification about where a pointer landed, fired and forgotten, with the calendar's own state completely unchanged afterward. The two components' real overlap (month-grid arithmetic) is small enough to duplicate cheaply; the divergence (a persisted selection with a return value, and picker-specific chrome) is exactly the part that resists sharing without one side compromising the other.
+
+### Consequences
+
+- M4 date pickers are built against a purpose-built chrome, independent of `LayrzCalendar`.
+- `LayrzCalendar` keeps its scope through M4: it may keep gaining caller-facing notifications (`onTap`, `LayrzCalendarEntry.onTap`, and whatever else a display surface legitimately needs), but never a persisted selection model or picker-specific chrome — pass 2's non-goals list is not provisional, it is the standing contract this decision confirms, now read as "no selection state," not "no callbacks."
+- Month-grid arithmetic may still be duplicated between the two rather than shared through an extracted primitive; this decision forecloses that extraction too — see the pass-2 plan's explicit non-goal, "no shared picker primitive extraction."
+- Any future M4 planning should treat this as settled rather than reopening it: the question was asked and answered here so it does not need rediscovering when the pickers actually start.
+

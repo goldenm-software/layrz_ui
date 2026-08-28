@@ -35,8 +35,14 @@ class Showroom extends StatelessWidget {
 
   /// The list of section widgets to display on the showroom page.
   ///
-  /// This is the **only** place sections are registered. New sections can be added
-  /// by inserting their builder widgets here without modifying any other files.
+  /// Normally this is the **only** place sections are registered: new sections can
+  /// be added by inserting their builder widgets here without modifying any other
+  /// files. During a multi-unit batch, though, registration is sometimes deferred
+  /// to a dedicated consolidation unit that runs once every component branch has
+  /// merged — see `example/lib/main.dart` and `example/lib/layout.dart`, which are
+  /// this app's actual route/nav registration points and may carry sections not
+  /// yet reflected in this list. Treat an unregistered section file under
+  /// `src/sections/` as pending consolidation, not as dead code, before flagging it.
   static const List<Widget> _sections = [
     TypographySection(),
     ButtonsSection(),

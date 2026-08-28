@@ -7,7 +7,7 @@ import '../common/showroom_section.dart';
 /// Builds a comprehensive showroom section demonstrating all chip features.
 ///
 /// This section displays:
-/// - All three style variants (filled, outlined, filledTonal)
+/// - Both style variants (filled, outlined)
 /// - All six semantic types (info, success, warning, danger, context, custom)
 /// - Features: leading icon and delete affordance
 /// - Interactive delete (with setState to remove from list)
@@ -104,11 +104,6 @@ class _ChipsStylesShowcase extends StatelessWidget {
               labelText: 'Outlined',
               style: LayrzChipStyle.outlined,
               type: LayrzChipType.success,
-            ),
-            const LayrzChip(
-              labelText: 'Filled Tonal',
-              style: LayrzChipStyle.filledTonal,
-              type: LayrzChipType.warning,
             ),
           ],
         ),

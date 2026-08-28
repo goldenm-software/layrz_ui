@@ -7,6 +7,12 @@ on:
 jobs:
   lint-dart:
     runs-on: ubuntu-latest
+    # The calendar's DST regression tests need a host timezone that actually
+    # observes DST: in UTC (the runner default) a broken DST-crossing
+    # implementation is indistinguishable from a correct one, and the tests
+    # fail rather than skip when they can't find a transition month.
+    env:
+      TZ: America/New_York
     steps:
       - uses: actions/checkout@v6
 

@@ -13,6 +13,7 @@ import 'namespaces/files.dart';
 import 'namespaces/helpers.dart';
 import 'namespaces/inputs.dart';
 import 'namespaces/map.dart';
+import 'namespaces/months.dart';
 import 'namespaces/notifications.dart';
 import 'namespaces/password.dart';
 import 'namespaces/required_fields.dart';
@@ -27,7 +28,7 @@ import 'namespaces/weekdays.dart';
 
 /// Abstract contract for all localized strings used throughout layrz_ui.
 ///
-/// All 134 localization keys are declared as getters across 18 namespace mixins,
+/// All 148 localization keys are declared as getters across 19 namespace mixins,
 /// each providing an English default value. Components read localization via
 /// [LayrzUiL10n.of] or the convenience extension [BuildContext.l10n]. When the
 /// user changes locale, Flutter's `Localizations` system automatically rebuilds
@@ -107,6 +108,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nHelpersMixin,
         LayrzUiL10nInputsMixin,
         LayrzUiL10nMapMixin,
+        LayrzUiL10nMonthsMixin,
         LayrzUiL10nNotificationsMixin,
         LayrzUiL10nPasswordMixin,
         LayrzUiL10nRequiredFieldsMixin,

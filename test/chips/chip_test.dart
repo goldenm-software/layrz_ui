@@ -124,37 +124,6 @@ void main() {
         }
         expect(foundOutlined, isTrue);
       });
-
-      testWidgets('filledTonal style produces tonal background', (tester) async {
-        await pumpThemed(
-          tester,
-          const LayrzChip(
-            labelText: 'Tonal',
-            style: LayrzChipStyle.filledTonal,
-            type: LayrzChipType.warning,
-          ),
-        );
-
-        expect(find.byType(LayrzChip), findsOneWidget);
-
-        // filledTonal should produce a background color with opacity
-        final containers = find.byType(Container);
-        expect(containers, findsWidgets);
-
-        bool foundTonal = false;
-        for (int i = 0; i < containers.evaluate().length; i++) {
-          final container = tester.widget<Container>(containers.at(i));
-          final decoration = container.decoration as BoxDecoration?;
-          if (decoration != null && decoration.color != null) {
-            // Check if it has some opacity (tonal)
-            if (decoration.color!.a < 1.0) {
-              foundTonal = true;
-              break;
-            }
-          }
-        }
-        expect(foundTonal, isTrue);
-      });
     });
 
     group('Type variants', () {

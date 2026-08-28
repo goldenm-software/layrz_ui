@@ -43,25 +43,7 @@ void main() {
         expect(spec.contentColor, equals(accent));
       });
 
-      testWidgets('filledTonal style produces tonal background', (tester) async {
-        await pumpThemed(tester, Container());
-
-        final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
-        final accent = tokens.colors.warning.shade500;
-
-        final spec = LayrzChipStyleSpec.resolve(
-          style: LayrzChipStyle.filledTonal,
-          accent: accent,
-          tokens: tokens,
-        );
-
-        expect(spec.backgroundColor.a, lessThan(accent.a));
-        expect(spec.borderWidth, equals(0));
-        expect(spec.borderColor, equals(const Color(0x00000000)));
-        expect(spec.contentColor, equals(accent));
-      });
-
-      testWidgets('all three styles produce different specs', (tester) async {
+      testWidgets('all two styles produce different specs', (tester) async {
         await pumpThemed(tester, Container());
 
         final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
@@ -78,17 +60,8 @@ void main() {
           accent: accent,
           tokens: tokens,
         );
-
-        final tonalSpec = LayrzChipStyleSpec.resolve(
-          style: LayrzChipStyle.filledTonal,
-          accent: accent,
-          tokens: tokens,
-        );
-
-        // All three should be different
+        // All two should be different
         expect(filledSpec, isNot(outlinedSpec));
-        expect(filledSpec, isNot(tonalSpec));
-        expect(outlinedSpec, isNot(tonalSpec));
       });
     });
 

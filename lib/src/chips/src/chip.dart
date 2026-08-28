@@ -13,8 +13,10 @@ import 'chip_type.dart';
 /// It supports optional leading icon and delete affordance. The chip itself has no tap,
 /// hover, focus, or selection state — only the optional delete icon is interactive.
 ///
-/// Chips are rendered at a fixed height with pill-shaped (full circular) border radius
-/// to match the design system's compact aesthetic.
+/// Chips are rendered at a fixed height with a rounded-box border radius
+/// ([LayrzRadiusTokens.r1]) to match the design system's compact aesthetic. The
+/// design system prefers rounded boxes over pills, so this is deliberately not
+/// [LayrzRadiusTokens.full].
 class LayrzChip extends StatefulWidget {
   /// The text label displayed in the chip.
   final String labelText;
@@ -54,7 +56,7 @@ class LayrzChip extends StatefulWidget {
     required this.labelText,
     this.leadingIcon,
     this.onDelete,
-    this.style = LayrzChipStyle.filledTonal,
+    this.style = LayrzChipStyle.filled,
     this.type = LayrzChipType.custom,
     this.color,
   }) : assert(
@@ -95,7 +97,7 @@ class LayrzChip extends StatefulWidget {
     }
 
     // Add horizontal padding
-    width += (tokens.spacing.sp1 * 2);
+    width += (tokens.spacing.sp2 * 2);
 
     return width;
   }

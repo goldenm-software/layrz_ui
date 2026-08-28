@@ -67,7 +67,7 @@ class LayrzChipStyleSpec {
 
   /// Resolves a [LayrzChipStyleSpec] from a style, accent color, and tokens.
   ///
-  /// [style] determines which visual treatment to apply (filled, outlined, filledTonal).
+  /// [style] determines which visual treatment to apply ([LayrzChipStyle.filled] or [LayrzChipStyle.outlined]).
   /// [accent] is the primary color for the chip (semantic color or custom).
   /// [tokens] provides design values like surface colors, borders, and opacity rules.
   static LayrzChipStyleSpec resolve({
@@ -75,7 +75,6 @@ class LayrzChipStyleSpec {
     required Color accent,
     required LayrzTokens tokens,
   }) {
-    final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
     final contrast = accent.contrastColor;
 
     switch (style) {
@@ -92,14 +91,6 @@ class LayrzChipStyleSpec {
           backgroundColor: const Color(0x00000000),
           borderColor: accent,
           borderWidth: tokens.border.stroke1,
-          contentColor: accent,
-        );
-
-      case LayrzChipStyle.filledTonal:
-        return LayrzChipStyleSpec(
-          backgroundColor: tonal,
-          borderColor: const Color(0x00000000),
-          borderWidth: 0,
           contentColor: accent,
         );
     }

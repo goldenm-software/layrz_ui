@@ -218,6 +218,55 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/grid',
         onTap: () => _navigateTo(context, '/grid'),
       ),
+      LayrzNavigatorPage(
+        id: '/calendar',
+        labelText: 'Calendar',
+        icon: MdiIcons.calendarOutline,
+        isSelected: currentRoute == '/calendar',
+        onTap: () => _navigateTo(context, '/calendar'),
+      ),
+      LayrzNavigatorPage(
+        id: '/progress',
+        labelText: 'Progress Bar',
+        icon: MdiIcons.progressClock,
+        isSelected: currentRoute == '/progress',
+        onTap: () => _navigateTo(context, '/progress'),
+      ),
+      LayrzNavigatorPage(
+        id: '/timeline',
+        labelText: 'Timeline',
+        icon: MdiIcons.timelineTextOutline,
+        isSelected: currentRoute == '/timeline',
+        onTap: () => _navigateTo(context, '/timeline'),
+      ),
+      LayrzNavigatorPage(
+        id: '/tree-view',
+        labelText: 'Tree View',
+        icon: MdiIcons.fileTreeOutline,
+        isSelected: currentRoute == '/tree-view',
+        onTap: () => _navigateTo(context, '/tree-view'),
+      ),
+      LayrzNavigatorPage(
+        id: '/badges',
+        labelText: 'Badges',
+        icon: MdiIcons.badgeAccountOutline,
+        isSelected: currentRoute == '/badges',
+        onTap: () => _navigateTo(context, '/badges'),
+      ),
+      LayrzNavigatorPage(
+        id: '/transitions',
+        labelText: 'Page Transitions',
+        icon: MdiIcons.swapHorizontal,
+        isSelected: currentRoute == '/transitions',
+        onTap: () => _navigateTo(context, '/transitions'),
+      ),
+      LayrzNavigatorPage(
+        id: '/refresh',
+        labelText: 'Refresh',
+        icon: MdiIcons.autorenew,
+        isSelected: currentRoute == '/refresh',
+        onTap: () => _navigateTo(context, '/refresh'),
+      ),
     ];
   }
 

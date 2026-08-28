@@ -8,9 +8,11 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'layout.dart';
 import 'src/sections/access_paths_section.dart';
 import 'src/sections/alerts_section.dart';
+import 'src/sections/badge_section.dart';
 import 'src/sections/borders_section.dart';
 import 'src/sections/button_group_section.dart';
 import 'src/sections/buttons_section.dart';
+import 'src/sections/calendar_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
 import 'src/sections/dialogs_section.dart';
@@ -20,12 +22,17 @@ import 'src/sections/images_section.dart';
 import 'src/sections/inputs_section.dart';
 import 'src/sections/menus_section.dart';
 import 'src/sections/motion_section.dart';
+import 'src/sections/progress_section.dart';
 import 'src/sections/radius_section.dart';
+import 'src/sections/refresh_section.dart';
 import 'src/sections/sheets_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
 import 'src/sections/text_section.dart';
+import 'src/sections/timeline_section.dart';
 import 'src/sections/tooltips_section.dart';
+import 'src/sections/transitions_section.dart';
+import 'src/sections/tree_view_section.dart';
 import 'src/sections/typography_section.dart';
 
 /// Run the showroom application with Open Sans font.
@@ -50,6 +57,20 @@ Future<void> main() async {
 /// swapping the body content during navigation. This avoids rebuilding the
 /// entire layout (rail, drawer, search, notifications) on every navigation,
 /// dramatically improving performance.
+///
+/// Most routes use [NoTransitionPage] since the shell's own body swap is the
+/// point of interest, not route animation. A representative subset — `/calendar`
+/// ([LayrzPageTransitions.fade]), `/tree-view` ([LayrzPageTransitions.slide]),
+/// and `/badges` ([LayrzPageTransitions.scale]) — instead use
+/// [CustomTransitionPage] with those builders, each passing
+/// `transitionDuration: LayrzPageTransitions.durationOf(context)` so the demo
+/// runs at the design system's own duration rather than go_router's default.
+/// This is deliberately a subset, not every route: leaving most routes
+/// transition-free keeps the contrast that makes the animated ones legible as
+/// a deliberate choice rather than the app's baseline behaviour. See the
+/// dedicated `/transitions` page (built on [TransitionsSection]) for every
+/// builder, including [LayrzPageTransitions.rotation] and
+/// [LayrzPageTransitions.none], driven interactively.
 ///
 /// To revert to the original named-route implementation, replace [ShowroomApp.build]
 /// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
@@ -146,6 +167,46 @@ final _router = GoRouter(
         GoRoute(
           path: '/access-paths',
           pageBuilder: (context, state) => NoTransitionPage(child: AccessPathsSection()),
+        ),
+        GoRoute(
+          path: '/calendar',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            child: CalendarSection(),
+            transitionsBuilder: LayrzPageTransitions.fade,
+            transitionDuration: LayrzPageTransitions.durationOf(context),
+          ),
+        ),
+        GoRoute(
+          path: '/progress',
+          pageBuilder: (context, state) => NoTransitionPage(child: ProgressSection()),
+        ),
+        GoRoute(
+          path: '/timeline',
+          pageBuilder: (context, state) => NoTransitionPage(child: TimelineSection()),
+        ),
+        GoRoute(
+          path: '/tree-view',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            child: TreeViewSection(),
+            transitionsBuilder: LayrzPageTransitions.slide,
+            transitionDuration: LayrzPageTransitions.durationOf(context),
+          ),
+        ),
+        GoRoute(
+          path: '/badges',
+          pageBuilder: (context, state) => CustomTransitionPage<void>(
+            child: BadgeSection(),
+            transitionsBuilder: LayrzPageTransitions.scale,
+            transitionDuration: LayrzPageTransitions.durationOf(context),
+          ),
+        ),
+        GoRoute(
+          path: '/transitions',
+          pageBuilder: (context, state) => NoTransitionPage(child: TransitionsSection()),
+        ),
+        GoRoute(
+          path: '/refresh',
+          pageBuilder: (context, state) => NoTransitionPage(child: RefreshSection()),
         ),
       ],
     ),

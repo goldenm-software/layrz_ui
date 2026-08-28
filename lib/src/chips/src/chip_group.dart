@@ -78,7 +78,7 @@ class LayrzChipGroup extends StatelessWidget {
         // Measure the +N chip upfront to reserve space
         final overflowChip = LayrzChip(
           labelText: '+9',
-          style: LayrzChipStyle.filledTonal,
+          style: LayrzChipStyle.filled,
           type: LayrzChipType.context,
         );
         double requiredRemainingWidth = overflowChip.computeWidth(context);
@@ -117,7 +117,7 @@ class LayrzChipGroup extends StatelessWidget {
                   contentText: hiddenLabels.join('\n'),
                   child: LayrzChip(
                     labelText: '+$clampedHiddenCount',
-                    style: LayrzChipStyle.filledTonal,
+                    style: LayrzChipStyle.filled,
                     type: LayrzChipType.context,
                   ),
                 ),
