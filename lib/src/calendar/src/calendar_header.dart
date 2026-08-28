@@ -8,8 +8,13 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'calendar_mode.dart';
 
 /// The navigation chrome rendered above a [LayrzCalendar]'s active surface:
-/// previous/next buttons, a "Today" shortcut, the focused period's label,
-/// and a view-mode switcher row.
+/// previous/next buttons flanking the focused period's label (`[◀] August
+/// 2026 [▶]`), a "Today" shortcut, and a view-mode switcher row.
+///
+/// The previous/next buttons render as [LayrzButtonStyle.outlinedTonalFab] —
+/// tonal rather than plain outlined, so the navigation chrome reads as a
+/// cohesive, lower-emphasis unit around the period label. See [focusedDate]'s
+/// field doc for how the "Today" button's own style is chosen.
 ///
 /// **The switcher renders all three [LayrzCalendarMode] affordances even
 /// though only [LayrzCalendarMode.month] is selectable in this pass** — week
@@ -32,6 +37,17 @@ class LayrzCalendarHeader extends StatelessWidget {
 
   /// The date currently focused, used to render the period label (e.g.
   /// "August 2026" for the month view).
+  ///
+  /// Also drives the "Today" button's style: the button reads as
+  /// [LayrzButtonStyle.elevated] (attention-grabbing) whenever [focusedDate]
+  /// is not today's calendar date, and as [LayrzButtonStyle.outlinedTonal]
+  /// (de-emphasised) when it is — comparing year/month/day only, the same
+  /// granularity `LayrzCalendarController.focusedDate` is normalized to.
+  /// This reads "focused on today" as "the month currently in view is the
+  /// current month, on the exact day the calendar was last navigated to or
+  /// created with" — there is no separate "selected date" concept in this
+  /// pass (see `LayrzCalendar`'s class doc), so [focusedDate] is the only
+  /// candidate for this comparison.
   final DateTime focusedDate;
 
   /// The currently selected view mode.
@@ -58,6 +74,9 @@ class LayrzCalendarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final l10n = LayrzUiL10n.of(context);
+    final today = DateTime.now();
+    final isFocusedOnToday =
+        focusedDate.year == today.year && focusedDate.month == today.month && focusedDate.day == today.day;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,17 +86,10 @@ class LayrzCalendarHeader extends StatelessWidget {
             LayrzButton(
               labelText: l10n.calendarMonthBack,
               icon: MdiIcons.chevronLeft,
-              style: LayrzButtonStyle.outlinedFab,
+              style: LayrzButtonStyle.outlinedTonalFab,
               onTap: onPrevious,
             ),
             SizedBox(width: tokens.spacing.sp1),
-            LayrzButton(
-              labelText: l10n.calendarMonthNext,
-              icon: MdiIcons.chevronRight,
-              style: LayrzButtonStyle.outlinedFab,
-              onTap: onNext,
-            ),
-            SizedBox(width: tokens.spacing.sp2),
             Expanded(
               child: Text(
                 _periodLabel(),
@@ -85,10 +97,22 @@ class LayrzCalendarHeader extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ),
+            SizedBox(width: tokens.spacing.sp1),
+            LayrzButton(
+              labelText: l10n.calendarMonthNext,
+              icon: MdiIcons.chevronRight,
+              style: LayrzButtonStyle.outlinedTonalFab,
+              onTap: onNext,
+            ),
             SizedBox(width: tokens.spacing.sp2),
             LayrzButton(
               labelText: l10n.calendarToday,
-              style: LayrzButtonStyle.outlined,
+              // Elevated draws attention back to today when the calendar is
+              // focused elsewhere; outlinedTonal de-emphasises the button
+              // once the caller is already looking at today, since tapping
+              // it again would be a no-op. See `focusedDate`'s field doc for
+              // what "focused on today" means here.
+              style: isFocusedOnToday ? LayrzButtonStyle.outlinedTonal : LayrzButtonStyle.elevated,
               onTap: onToday,
             ),
           ],

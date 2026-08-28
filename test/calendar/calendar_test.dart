@@ -158,7 +158,7 @@ void main() {
       expect(find.text('${monthNames[now.month - 1]} ${now.year}'), findsOneWidget);
     });
 
-    guardedTestWidgets('renders single-day and multi-day events without breaking the grid', (tester) async {
+    guardedTestWidgets('the previous/next navigation buttons use the outlinedTonalFab style', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -168,19 +168,167 @@ void main() {
         SizedBox(
           width: 1200,
           height: 900,
-          child: LayrzCalendar(
-            initialDate: DateTime(2026, 8, 15),
-            entries: [
-              LayrzCalendarEntry(title: 'Standup', start: DateTime(2026, 8, 15), end: DateTime(2026, 8, 15)),
-              LayrzCalendarEntry(title: 'Offsite', start: DateTime(2026, 8, 17), end: DateTime(2026, 8, 19)),
-            ],
-          ),
+          child: LayrzCalendar(initialDate: DateTime(2026, 8, 15)),
         ),
       );
 
-      expect(find.text('Standup'), findsOneWidget);
-      expect(find.text('Offsite'), findsNWidgets(3));
+      final previousButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Previous month'),
+      );
+      final nextButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Next month'),
+      );
+
+      expect(previousButton.style, LayrzButtonStyle.outlinedTonalFab);
+      expect(nextButton.style, LayrzButtonStyle.outlinedTonalFab);
     });
+
+    guardedTestWidgets('the period label sits between the previous and next buttons', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1200,
+          height: 900,
+          child: LayrzCalendar(initialDate: DateTime(2026, 8, 15)),
+        ),
+      );
+
+      final rowFinder = find.ancestor(
+        of: find.text('August 2026'),
+        matching: find.byType(Row),
+      );
+      final row = tester.widget<Row>(rowFinder.first);
+      final children = row.children;
+
+      // The label sits strictly between the previous and next buttons in the
+      // navigation row's child order -- [previous, ..., label, ..., next,
+      // ..., Today].
+      bool isPrevious(Widget w) => w is LayrzButton && w.labelText == 'Previous month';
+      bool isNext(Widget w) => w is LayrzButton && w.labelText == 'Next month';
+      bool isLabel(Widget w) => w is Expanded && w.child is Text && (w.child as Text).data == 'August 2026';
+
+      final previousIndex = children.indexWhere(isPrevious);
+      final nextIndex = children.indexWhere(isNext);
+      final labelIndex = children.indexWhere(isLabel);
+
+      expect(previousIndex, greaterThanOrEqualTo(0));
+      expect(nextIndex, greaterThan(previousIndex));
+      expect(labelIndex, greaterThan(previousIndex));
+      expect(labelIndex, lessThan(nextIndex));
+    });
+
+    guardedTestWidgets('the Today button is elevated when the focused month is not the current month', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1200,
+          height: 900,
+          child: LayrzCalendar(initialDate: DateTime(2020, 1, 1)),
+        ),
+      );
+
+      final todayButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today'),
+      );
+      expect(todayButton.style, LayrzButtonStyle.elevated);
+    });
+
+    guardedTestWidgets('the Today button is outlinedTonal when the focused date is today', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1200,
+          height: 900,
+          // No initialDate -- LayrzCalendarController defaults focusedDate to
+          // today, so the "Today" button should already read as de-emphasised.
+          child: LayrzCalendar(),
+        ),
+      );
+
+      final todayButton = tester.widget<LayrzButton>(
+        find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today'),
+      );
+      expect(todayButton.style, LayrzButtonStyle.outlinedTonal);
+    });
+
+    guardedTestWidgets('the Today button switches from elevated to outlinedTonal once navigation reaches today', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final now = DateTime.now();
+      final controller = LayrzCalendarController(initialDate: DateTime(now.year, now.month == 1 ? 12 : now.month - 1));
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1200,
+          height: 900,
+          child: LayrzCalendar(controller: controller),
+        ),
+      );
+
+      expect(
+        tester.widget<LayrzButton>(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today')).style,
+        LayrzButtonStyle.elevated,
+      );
+
+      controller.goToToday();
+      await tester.pump();
+
+      expect(
+        tester.widget<LayrzButton>(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today')).style,
+        LayrzButtonStyle.outlinedTonal,
+      );
+
+      controller.dispose();
+    });
+
+    guardedTestWidgets(
+      'renders single-day events as chips and a multi-day event as one continuous bar, not a chip per day',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        // August 17-19, 2026 is Monday-Wednesday of the same week row, so
+        // 'Offsite' must render as exactly one bar with its label shown
+        // once, not three separate per-day chips.
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 1200,
+            height: 900,
+            child: LayrzCalendar(
+              initialDate: DateTime(2026, 8, 15),
+              entries: [
+                LayrzCalendarEntry(title: 'Standup', start: DateTime(2026, 8, 15), end: DateTime(2026, 8, 15)),
+                LayrzCalendarEntry(title: 'Offsite', start: DateTime(2026, 8, 17), end: DateTime(2026, 8, 19)),
+              ],
+            ),
+          ),
+        );
+
+        expect(find.text('Standup'), findsOneWidget);
+        expect(find.text('Offsite'), findsOneWidget);
+      },
+    );
 
     guardedTestWidgets('view-mode switcher renders month/week/day and week/day are disabled', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);

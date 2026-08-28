@@ -78,11 +78,16 @@ void main() {
       expect(find.text('Single day event'), findsOneWidget);
     });
 
-    guardedTestWidgets('places a multi-day event on every date it spans without breaking the grid', (tester) async {
+    guardedTestWidgets('places a multi-day event within one week as a single continuous bar, not one chip per day', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      // August 10-12, 2026 is Monday-Wednesday of the same week row, so this
+      // entry never crosses a week boundary and must render as exactly one
+      // bar with its label shown once -- not three separate per-day chips.
       await pumpThemed(
         tester,
         SizedBox(
@@ -97,8 +102,36 @@ void main() {
         ),
       );
 
-      // Rendered once per occupied date -- three day cells, three chips.
-      expect(find.text('Multi day'), findsNWidgets(3));
+      expect(find.text('Multi day'), findsOneWidget);
+    });
+
+    guardedTestWidgets('a multi-day event that crosses a week boundary renders one bar per week row, not a single '
+        'bar or a chip per day', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // August 1, 2026 is a Saturday, so the grid's first week row ends on
+      // Sunday August 2 and the second begins Monday August 3. An entry
+      // spanning August 1-4 crosses that boundary: one bar segment in the
+      // first week row (Sat-Sun), a second independent segment in the next
+      // (Mon-Tue) -- two bars total, the label shown once per bar/row, never
+      // once per occupied day (which would be four).
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1000,
+          height: 800,
+          child: LayrzCalendarMonthSurface(
+            focusedDate: DateTime(2026, 8, 1),
+            entries: [
+              LayrzCalendarEntry(title: 'Spans weeks', start: DateTime(2026, 8, 1), end: DateTime(2026, 8, 4)),
+            ],
+          ),
+        ),
+      );
+
+      expect(find.text('Spans weeks'), findsNWidgets(2));
     });
 
     guardedTestWidgets('applies isDateDisabled per date without affecting days that have no events', (tester) async {
@@ -147,6 +180,71 @@ void main() {
 
       // July has 31 days; the last few (27-31) fill the leading grid cells.
       expect(find.text('31'), findsWidgets);
+    });
+
+    guardedTestWidgets('wraps the grid in a divider-colored container instead of per-cell borders', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1000,
+          height: 800,
+          child: LayrzCalendarMonthSurface(
+            focusedDate: DateTime(2026, 8, 1),
+            entries: const [],
+          ),
+        ),
+      );
+
+      // The grid-line container is the plain (undecorated-otherwise)
+      // Container directly wrapping the week-row Column, painted with the
+      // divider color -- this is what shows through the gaps between cells
+      // as the uniform grid line, replacing the old per-cell Border.all.
+      final gridContainer = tester.widget<Container>(find.byType(Container).first);
+      expect(gridContainer.color, LayrzThemeData.light().tokens.colors.divider);
+    });
+
+    guardedTestWidgets('a multi-day bar renders filled, identically to a single-day chip of the same color', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const accent = Color(0xFFFF9800);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1000,
+          height: 800,
+          child: LayrzCalendarMonthSurface(
+            focusedDate: DateTime(2026, 8, 1),
+            entries: [
+              LayrzCalendarEntry(
+                title: 'Filled bar',
+                start: DateTime(2026, 8, 10),
+                end: DateTime(2026, 8, 12),
+                color: accent,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final barContainer = tester.widget<Container>(
+        find.ancestor(of: find.text('Filled bar'), matching: find.byType(Container)).first,
+      );
+      final decoration = barContainer.decoration as BoxDecoration;
+
+      // Same filled treatment as `_EventChip`: full-opacity accent
+      // background, contrast-color text, no alpha blend.
+      expect(decoration.color, accent);
+      final textStyle = tester.widget<Text>(find.text('Filled bar')).style;
+      expect(textStyle?.color, accent.contrastColor);
     });
 
     guardedTestWidgets('does not duplicate or shift a day across a DST transition', (tester) async {

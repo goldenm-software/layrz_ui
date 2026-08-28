@@ -109,6 +109,55 @@ void main() {
       }
     });
 
+    testWidgets(
+      'a multi-day event bar announces once per day cell it crosses, via the cell label, not as its own '
+      'separate node',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 900);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final handle = tester.ensureSemantics();
+        try {
+          // August 10-12, 2026 is Monday-Wednesday of the same week row --
+          // one continuous bar, rendered once, crossing three day cells.
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 1000,
+              height: 800,
+              child: LayrzCalendarMonthSurface(
+                focusedDate: DateTime(2026, 8, 1),
+                entries: [
+                  LayrzCalendarEntry(title: 'Offsite', start: DateTime(2026, 8, 10), end: DateTime(2026, 8, 12)),
+                ],
+              ),
+            ),
+          );
+
+          // Every day cell the bar crosses announces the event exactly once,
+          // through the ordinary LayrzCalendarDayCell merged label -- the
+          // bar itself is wrapped in ExcludeSemantics and contributes no
+          // semantics node of its own, so the event is never announced
+          // twice for a single day, nor once per day plus once for the bar.
+          for (final day in [10, 11, 12]) {
+            final semantics = tester.getSemantics(
+              find.byWidgetPredicate((w) => w is LayrzCalendarDayCell && w.date.day == day && !w.isOutsideMonth),
+            );
+            expect(semantics.label, contains('1 event'), reason: 'day $day should announce exactly one event');
+          }
+
+          // A day outside the span announces no event at all.
+          final unrelatedDay = tester.getSemantics(
+            find.byWidgetPredicate((w) => w is LayrzCalendarDayCell && w.date.day == 13 && !w.isOutsideMonth),
+          );
+          expect(unrelatedDay.label, isNot(contains('event')));
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
     testWidgets('navigation buttons in the header are labelled and reachable', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
