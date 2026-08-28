@@ -58,6 +58,44 @@ class LayrzBottomSheet {
   ///   receives the sheet context as an argument.
   /// - [isPersistent]: whether the sheet is persistent (no barrier, page stays interactive)
   ///   or modal (barrier present, page not interactive). Defaults to `false` (modal).
+  /// - [canDismiss]: whether the sheet can be dismissed by any route other than an explicit
+  ///   caller action (e.g. a button inside [builder] that pops the sheet itself). Governs
+  ///   three routes, together:
+  ///     1. tapping the barrier outside the sheet (meaningless when [isPersistent] is
+  ///        `true`, since a persistent sheet paints no barrier at all — see below),
+  ///     2. the Escape key, and
+  ///     3. the system/Android back gesture.
+  ///   Defaults to `true`, preserving this method's original behaviour exactly — every
+  ///   existing caller keeps a freely-dismissible sheet with no change. Pass `false` for a
+  ///   sheet that must be answered through its own content rather than escaped, mirroring
+  ///   [LayrzDialog.show]'s `canDismiss` contract as closely as this component's shape
+  ///   allows. Unlike the dialog, there is no `actions` slot to infer a default from (the
+  ///   sheet's body is a single freeform [builder]), so this defaults to `true` rather than
+  ///   inferring `false` from anything -- an opt-in flag, not an opt-out one.
+  ///
+  ///   **Composes with [isPersistent] on a separate axis, not collapsed into it.**
+  ///   [isPersistent] decides whether a barrier exists at all; [canDismiss] decides whether
+  ///   the routes that remain (Escape, the system back gesture, and the barrier tap when one
+  ///   exists) are allowed to act. A persistent, non-dismissible sheet
+  ///   (`isPersistent: true, canDismiss: false`) has no barrier to gate in the first place,
+  ///   but still blocks Escape and the back gesture -- it behaves like a fixed panel that
+  ///   only its own content can close. A modal, non-dismissible sheet
+  ///   (`isPersistent: false, canDismiss: false`) additionally paints a barrier that
+  ///   visually blocks the page behind it but does not itself handle taps (mirroring
+  ///   [LayrzDialog.show]'s own non-dismissible barrier).
+  ///
+  ///   **Drag-to-dismiss is gated by this flag too.** A sheet the caller marked
+  ///   non-dismissible would otherwise be trivially escaped by a downward swipe -- the same
+  ///   problem [LayrzDialog.show]'s `canDismiss` solved for its close ("X") icon. When
+  ///   `false`, dragging past the lowest snap point (or, with the keyboard open, past the
+  ///   dismiss-only threshold) snaps the sheet back instead of dismissing it. **The drag
+  ///   handle still renders** when [showDragHandle] is `true` -- unlike the dialog's X icon,
+  ///   which is suppressed entirely when non-dismissible, the handle's primary job is
+  ///   resizing across [snapSizes]/[minSize]/[maxSize], which stays fully available; only the
+  ///   dismiss-by-dragging-past-the-end behaviour is disabled. Hiding a handle that still
+  ///   resizes correctly would remove a working affordance to avoid a secondary one, and
+  ///   the visible-but-inert failure mode the dialog's X was avoiding does not apply here --
+  ///   the handle-as-a-resize-control is not being aimed at anything it silently declines.
   /// - [semanticLabel]: optional semantic label for screen readers announcing the sheet.
   ///   For modal sheets, this should describe the purpose and exit mechanism
   ///   (e.g., "Choose an option. Press Escape to close."). This label is required
@@ -113,6 +151,7 @@ class LayrzBottomSheet {
     BuildContext context, {
     required WidgetBuilder builder,
     bool isPersistent = false,
+    bool canDismiss = true,
     String? semanticLabel,
     List<double>? snapSizes,
     double initialSize = 0.5,
@@ -170,6 +209,7 @@ class LayrzBottomSheet {
       _BottomSheetRoute<T>(
         builder: builder,
         isPersistent: isPersistent,
+        canDismiss: canDismiss,
         semanticLabel: semanticLabel,
         snapSizes: effectiveSnapSizes,
         initialSize: initialSize,
@@ -194,6 +234,15 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
   /// Whether the sheet is persistent (no barrier) or modal.
   final bool isPersistent;
 
+  /// Whether the sheet can be dismissed by any route other than an explicit caller
+  /// action -- the barrier (when one exists), Escape, drag-dismiss, and the
+  /// system/Android back gesture all read this single value. See [LayrzBottomSheet.show]'s
+  /// `canDismiss` doc for the full contract; this is that same resolved value, forwarded
+  /// verbatim to [RawDialogRoute]'s own `barrierDismissible` (composed with [isPersistent]
+  /// below, since a persistent sheet has no barrier to gate regardless of this flag) and
+  /// re-read by name here for every other route this class or [_BottomSheetContent] gates.
+  final bool canDismiss;
+
   /// Semantic label for screen readers (caller-supplied, optional).
   final String? semanticLabel;
 
@@ -201,6 +250,7 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
   _BottomSheetRoute({
     required WidgetBuilder builder,
     required this.isPersistent,
+    required this.canDismiss,
     required this.semanticLabel,
     required List<double> snapSizes,
     required double initialSize,
@@ -213,6 +263,7 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
            return _BottomSheetContent(
              builder: builder,
              isPersistent: isPersistent,
+             canDismiss: canDismiss,
              semanticLabel: semanticLabel,
              snapSizes: snapSizes,
              initialSize: initialSize,
@@ -222,7 +273,10 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
              scrollable: scrollable,
            );
          },
-         barrierDismissible: !isPersistent,
+         // A persistent sheet paints no barrier at all (see the Stack below), so
+         // barrierDismissible is moot for it regardless of canDismiss -- only a modal
+         // sheet's barrier tap is actually gated by canDismiss here.
+         barrierDismissible: !isPersistent && canDismiss,
          barrierColor: const Color(0x00000000), // Transparent initially
          transitionBuilder: (context, animation, secondaryAnimation, child) {
            // Determine barrier color based on isPersistent flag
@@ -276,34 +330,46 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
              children: [
                // Barrier
                if (!isPersistent)
-                 GestureDetector(
-                   // Explicit for clarity/defensiveness: Container(color: ...) already
-                   // builds a ColoredBox, whose render object (_RenderColoredBox) is
-                   // unconditionally HitTestBehavior.opaque regardless of alpha — so this
-                   // barrier already blocks hits to whatever sits behind it in the Stack,
-                   // with or without this line. Kept explicit so the GestureDetector's own
-                   // hit-testing contract does not silently depend on an implementation
-                   // detail of its child. This also means the barrier absorbs MORE taps
-                   // than before, not fewer — which is exactly why the guard below is not
-                   // optional once this line is present: a barrier that reliably catches
-                   // every tap needs to reliably refuse to act on ones it should not.
-                   behavior: HitTestBehavior.opaque,
-                   onTap: () {
-                     // transitionBuilder (this whole Stack) renders for the ENTIRE
-                     // transition, including the exit/dismiss animation — the barrier
-                     // stays mounted and hit-testable while the sheet slides out. A
-                     // second fast tap during that window would otherwise call pop()
-                     // on a route that is already popping, which — under go_router —
-                     // throws 'currentConfiguration.isNotEmpty' trying to remove the
-                     // last page off the stack, or re-enters the Navigator mid-pop
-                     // ('!_debugLocked'). LayrzModalRoute.popIfCurrent is the shared
-                     // guard against exactly that -- see its own doc comment.
-                     LayrzModalRoute.popIfCurrent(context);
-                   },
-                   child: Container(
-                     color: barrierColor,
+                 if (canDismiss)
+                   GestureDetector(
+                     // Explicit for clarity/defensiveness: Container(color: ...) already
+                     // builds a ColoredBox, whose render object (_RenderColoredBox) is
+                     // unconditionally HitTestBehavior.opaque regardless of alpha — so this
+                     // barrier already blocks hits to whatever sits behind it in the Stack,
+                     // with or without this line. Kept explicit so the GestureDetector's own
+                     // hit-testing contract does not silently depend on an implementation
+                     // detail of its child. This also means the barrier absorbs MORE taps
+                     // than before, not fewer — which is exactly why the guard below is not
+                     // optional once this line is present: a barrier that reliably catches
+                     // every tap needs to reliably refuse to act on ones it should not.
+                     behavior: HitTestBehavior.opaque,
+                     onTap: () {
+                       // transitionBuilder (this whole Stack) renders for the ENTIRE
+                       // transition, including the exit/dismiss animation — the barrier
+                       // stays mounted and hit-testable while the sheet slides out. A
+                       // second fast tap during that window would otherwise call pop()
+                       // on a route that is already popping, which — under go_router —
+                       // throws 'currentConfiguration.isNotEmpty' trying to remove the
+                       // last page off the stack, or re-enters the Navigator mid-pop
+                       // ('!_debugLocked'). LayrzModalRoute.popIfCurrent is the shared
+                       // guard against exactly that -- see its own doc comment.
+                       LayrzModalRoute.popIfCurrent(context);
+                     },
+                     child: Container(
+                       color: barrierColor,
+                     ),
+                   )
+                 else
+                   // Non-dismissible barrier, mirroring LayrzDialog's own: still painted
+                   // (the page behind must read as non-interactive) but does not itself
+                   // handle taps, so a stray click needs no guard at all -- matching
+                   // RawDialogRoute's own barrierDismissible: false semantics, which this
+                   // widget already composed into above (barrierDismissible: !isPersistent
+                   // && canDismiss); this IgnorePointer just keeps this hand-rolled
+                   // GestureDetector's behaviour consistent with that.
+                   IgnorePointer(
+                     child: Container(color: barrierColor),
                    ),
-                 ),
                // Sheet
                Padding(
                  padding: EdgeInsets.only(bottom: viewInsets.bottom),
@@ -383,13 +449,20 @@ class _KeyboardVisibility extends InheritedWidget {
 /// The actual content widget displayed inside the bottom sheet route.
 ///
 /// Manages the draggable scrollable sheet, drag handle visibility,
-/// PopScope for back button handling, and focus management.
+/// a [PopScope] gating the system/Android back gesture on [canDismiss], and
+/// focus management.
 class _BottomSheetContent<T> extends StatefulWidget {
   /// The builder function that constructs the sheet's content.
   final WidgetBuilder builder;
 
   /// Whether the sheet is persistent (no barrier, page interactive) or modal.
   final bool isPersistent;
+
+  /// Whether the sheet can be dismissed by any route other than an explicit caller
+  /// action -- gates Escape, drag-dismiss, and the system/Android back gesture here.
+  /// See [LayrzBottomSheet.show]'s `canDismiss` doc for the full contract; this is the
+  /// same resolved value the enclosing [_BottomSheetRoute] also used for the barrier.
+  final bool canDismiss;
 
   /// Semantic label for screen readers (caller-supplied, optional).
   final String? semanticLabel;
@@ -417,6 +490,7 @@ class _BottomSheetContent<T> extends StatefulWidget {
   const _BottomSheetContent({
     required this.builder,
     required this.isPersistent,
+    required this.canDismiss,
     required this.semanticLabel,
     required this.snapSizes,
     required this.initialSize,
@@ -558,14 +632,22 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     final focusChild = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
-        // Dismiss on Escape (modal mode only). Guarded the same way as the
-        // barrier's onTap (see the comment there) for consistency across every
+        // Dismiss on Escape (modal, dismissible mode only). Guarded the same way as
+        // the barrier's onTap (see the comment there) for consistency across every
         // pop site in this file — a fast repeated Escape was not reproducible as
         // an actual double-pop in testing (the second key event is not even
         // delivered to this handler once the first pop is in flight, unlike the
         // barrier tap, which is a spatial hit-test unaffected by focus state),
         // but the guard costs nothing and removes the asymmetry.
+        //
+        // widget.canDismiss gates this the same way it gates the barrier and the
+        // PopScope below (see widget.canDismiss's own doc). When it is false, this
+        // returns `ignored` unconditionally so Escape keeps propagating exactly as
+        // if this sheet were not listening at all -- mirroring LayrzDialog's own
+        // Escape handler (dialog.dart) so the same "handled only when it acts"
+        // contract holds for every modal surface, not just the dialog.
         if (!widget.isPersistent &&
+            widget.canDismiss &&
             event.logicalKey == LogicalKeyboardKey.escape &&
             (ModalRoute.of(context)?.isCurrent ?? false)) {
           LayrzModalRoute.popIfCurrent(context);
@@ -649,6 +731,12 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                         // asked only to disable EXPANSION; nothing about
                         // taking away dismissal while typing.
                         dismissOnly: keyboardVisible,
+                        // See LayrzBottomSheet.show's canDismiss doc: a
+                        // non-dismissible sheet must not be swipeable away
+                        // either, in either dismissOnly or ordinary mode --
+                        // the handle keeps rendering and keeps resizing, only
+                        // the drag-past-the-end dismissal is disabled.
+                        canDismiss: widget.canDismiss,
                       ),
                     // Content
                     Expanded(
@@ -680,6 +768,25 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
       ),
     );
 
+    // System/Android back gesture. canPop mirrors every other dismissal route on
+    // widget.canDismiss: `true` lets the framework pop normally (identical to there
+    // being no PopScope at all), `false` intercepts the pop attempt and does nothing
+    // -- no partial dismissal, no popped route, no swallowed gesture reaching past
+    // this sheet to an ancestor, since a non-poppable PopScope simply reports the
+    // back attempt as handled and stops there. Gated on widget.canDismiss alone,
+    // NOT composed with widget.isPersistent -- a persistent, non-dismissible sheet
+    // still has no barrier to tap (see _BottomSheetRoute's Stack), but the back
+    // gesture is a keyboard/system-level route action independent of the barrier,
+    // so it is blocked exactly the same as it would be for a modal sheet. This
+    // mirrors LayrzDialog's own PopScope (dialog.dart) -- see its doc for why
+    // onPopInvokedWithResult is intentionally a no-op: a blocked back gesture here
+    // has no secondary action to perform, so the sheet simply stays open, exactly
+    // as a blocked barrier tap, Escape press, or drag-dismiss already leaves it.
+    final popScoped = PopScope(
+      canPop: widget.canDismiss,
+      child: focusChild,
+    );
+
     // For modal sheets with a semantic label, wrap with Semantics to expose route semantics.
     // scopesRoute: announces to screen readers that this subtree is a route/modal context
     // namesRoute: uses the label to name that route for screen readers
@@ -694,10 +801,10 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
         namesRoute: true,
         explicitChildNodes: true,
         enabled: true,
-        child: focusChild,
+        child: popScoped,
       );
     }
 
-    return focusChild;
+    return popScoped;
   }
 }

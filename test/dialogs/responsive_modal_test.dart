@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -380,6 +381,112 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DragHandle), findsNothing);
+    });
+  });
+
+  group('LayrzResponsiveModal.show forwards canDismiss to the sheet branch too', () {
+    // Regression coverage for the gap this component shipped with: canDismiss used to
+    // reach LayrzDialog.show only -- LayrzBottomSheet.show had no equivalent parameter,
+    // so a caller's canDismiss: false silently did nothing on a narrow viewport. Both
+    // branches now read the same forwarded value; see responsive_modal.dart's own
+    // canDismiss doc for the null-mapping rationale (LayrzBottomSheet.show's parameter
+    // is non-nullable, defaulting to true).
+    guardedTestWidgets('canDismiss: false blocks the sheet branch\'s barrier tap', (tester) async {
+      setViewportWidth(tester, 500);
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzResponsiveModal.show<void>(
+                context,
+                canDismiss: false,
+                builder: (context) => const Text('Modal content'),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget, reason: 'must resolve to the sheet branch');
+      expect(find.text('Modal content'), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Modal content'),
+        findsOneWidget,
+        reason: 'canDismiss: false must reach the sheet branch, not just the dialog branch',
+      );
+    });
+
+    guardedTestWidgets('canDismiss: false blocks the sheet branch\'s system back gesture', (tester) async {
+      setViewportWidth(tester, 500);
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzResponsiveModal.show<void>(
+                context,
+                canDismiss: false,
+                builder: (context) => const Text('Modal content'),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+
+      final handled = await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modal content'), findsOneWidget);
+      expect(handled, isTrue, reason: 'the blocked back gesture must still be intercepted, not fall through');
+    });
+
+    guardedTestWidgets('an unset canDismiss keeps the sheet branch freely dismissible (default preserved)', (
+      tester,
+    ) async {
+      setViewportWidth(tester, 500);
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzResponsiveModal.show<void>(
+                context,
+                builder: (context) => const Text('Modal content'),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Modal content'),
+        findsNothing,
+        reason: 'omitting canDismiss must preserve the sheet\'s original freely-dismissible default',
+      );
     });
   });
 }

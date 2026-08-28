@@ -46,6 +46,21 @@ class DragHandle extends StatefulWidget {
   /// gesture, not from the sheet's current fractional size.
   final bool dismissOnly;
 
+  /// Whether a drag past the dismiss threshold (in either [dismissOnly] mode or the
+  /// ordinary past-[lowSnapSize] mode) is actually allowed to pop the sheet.
+  ///
+  /// Defaults to `true`, preserving this widget's original behaviour exactly. When
+  /// `false` -- mirroring [LayrzBottomSheet.show]'s `canDismiss: false` -- a drag that
+  /// would otherwise dismiss instead snaps back to the nearest [snapSizes] entry (or,
+  /// in [dismissOnly] mode, simply leaves the sheet where it already was, since that
+  /// mode never resizes the sheet in the first place). This exists so a sheet the
+  /// caller marked non-dismissible cannot be trivially escaped by a downward swipe --
+  /// the drag-handle equivalent of [LayrzDialog.show]'s `canDismiss` also gating its
+  /// close ("X") icon. The handle itself keeps rendering and keeps resizing the sheet
+  /// across [snapSizes]/its min/max bounds either way -- only the drag-past-the-end
+  /// dismissal is disabled, not the handle's whole purpose.
+  final bool canDismiss;
+
   /// Creates a drag handle.
   const DragHandle({
     super.key,
@@ -54,6 +69,7 @@ class DragHandle extends StatefulWidget {
     this.snapSizes = const [],
     this.lowSnapSize = 0.0,
     this.dismissOnly = false,
+    this.canDismiss = true,
   });
 
   @override
@@ -138,10 +154,14 @@ class _DragHandleState extends State<DragHandle> {
   /// least [_dismissOnlyThreshold] pixels; otherwise leaves the sheet exactly
   /// where it is -- there is no snap-back animation to play, since the
   /// sheet's own size was never touched by this gesture in the first place.
+  ///
+  /// When [widget.canDismiss] is `false`, a drag past the threshold is a no-op --
+  /// there is nothing to snap back to (this mode never resized the sheet), so the
+  /// sheet simply stays exactly where it was, same as a below-threshold drag.
   void _onDismissOnlyDragEnd(BuildContext context) {
     final distance = _dismissDragDistance;
     _dismissDragDistance = 0.0;
-    if (distance < _dismissOnlyThreshold) {
+    if (distance < _dismissOnlyThreshold || !widget.canDismiss) {
       return;
     }
     // Guarded the same way as every other pop site in this file -- see
@@ -155,6 +175,13 @@ class _DragHandleState extends State<DragHandle> {
   /// sheet's own [DraggableScrollableSheet.snap], which this handle drives manually
   /// so it matches what dragging the content already does.
   ///
+  /// When [widget.canDismiss] is `false`, dragging past [widget.lowSnapSize] snaps
+  /// back to the nearest entry in [widget.snapSizes] instead of dismissing -- the
+  /// same fallthrough the ordinary snap-to-nearest logic below already provides,
+  /// just reached without ever popping first. This is the drag-handle half of
+  /// [LayrzBottomSheet.show]'s `canDismiss: false` contract: a non-dismissible sheet
+  /// cannot be swiped away either.
+  ///
   /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
   void _onDragEnd(BuildContext context, DraggableScrollableController sheetController) {
     if (!sheetController.isAttached) {
@@ -162,7 +189,7 @@ class _DragHandleState extends State<DragHandle> {
     }
 
     final currentSize = sheetController.size;
-    if (currentSize < widget.lowSnapSize) {
+    if (widget.canDismiss && currentSize < widget.lowSnapSize) {
       // Guarded the same way as the barrier's onTap and the Escape handler, for
       // consistency across every pop site in this file. In practice a second
       // drag-to-dismiss during the exit animation was not reproducible as a
