@@ -3322,6 +3322,30 @@ This row's spec raised a critical question: does the widget render only the step
 - `LayrzStepperController` required for navigation
 - Responsive header collapse below `md`
 
+### 2026-08-27 update — two clauses superseded, the rest stands unamended
+
+**Superseded, exactly these two, from the Scope trims list above:**
+- ~~Horizontal only~~
+- ~~Below `md` breakpoint, header collapses to *"Step X of Y"* instead of scrolling~~
+
+Everything else in this decision is **unamended**: full-flow ownership (header + body + actions), `LayrzStep` as a data class, the controller requirement, the `upcoming / active / completed / error` state trim, and — critically — the accessibility clause above (*"Completed steps carry `MdiIcons.check`, errors carry `MdiIcons.alertCircle`. State is never colour-only."*), which now also governs the new caller-supplied `LayrzStep.icon`: the state glyph always beats a caller icon on `completed`/`error`. Adding an identity icon does not repeal an accessibility constraint this decision already settled.
+
+**Why the collapse-to-summary clause did not survive.** This decision's own headline is that the stepper "owns the whole flow — header, current step body, and back/next actions." Below the `md` breakpoint, the shipped compact header was a single line of text, `"Step X of Y"`, and nothing else — it satisfied the *indicator* half of that job and abandoned the *body* half entirely. So D57's own flow-ownership decision was unimplementable on every compact viewport, not just under-served there. Treating compact as a *degraded* mode was the framing error, not an acceptable trade-off.
+
+**What shipped instead**: not a full mode and a degraded mode, but two equally-complete layouts for the same two jobs — show position, host content — chosen by viewport orientation rather than by feature reduction:
+- **Wide** (`lib/src/steppers/src/stepper_wide.dart`) — a full-width row of equal-width flex cells, one per step. Each cell stacks a fixed-height indicator band over a label band; the indicator band's height cannot be affected by the label band's content, which is the structural fix for the alignment bug that motivated the redesign (a two-line label could previously shift its own indicator out of line with its neighbours, because indicator and label shared one centre-aligned `Column`).
+- **Compact** (`lib/src/steppers/src/stepper_compact.dart`) — a vertical accordion: one step's body is open at a time, driven by `currentIndex` (not independent per-row state — exactly one step is ever open, and it is always the active one), with a persistent localized "Step X of Y" counter above the stack so the common "how much is left" question stays a one-glance answer rather than requiring a scan of every row. `AnimatedSize` (`tokens.motion.dTransition` + `tokens.motion.easing`, `alignment: Alignment.topCenter`) animates the expand/collapse — the first use of `AnimatedSize` anywhere in this library, and now the house pattern for expand/collapse; it was chosen over `AnimatedCrossFade`, which would have laid out both the collapsed and expanded branches to compute a shared max size.
+
+**Labels do not get a recovery affordance.** Wide-layout labels are capped at `maxLines: 2` with `TextOverflow.ellipsis` and no tooltip, no long-press, and no other way to recover a truncated label. This is a deliberate ruling, not an oversight: a truncated label stays truncated.
+
+**No maximum step count — a deliberate ownership boundary, not an oversight.** Neither layout enforces, asserts, or documents a ceiling on `steps.length`; the wide layout squeezes its equal-width cells arbitrarily narrow rather than scrolling, switching layouts, or rejecting the input. A threshold around 5–6 steps, above which even a wide viewport would fall back to the vertical layout, was **proposed and declined**. The library renders what it is given; legibility at extreme step counts is the caller's problem to manage (e.g. by not putting 20 steps in one flow). Recorded here so this does not get re-litigated as a bug report.
+
+**The two layout widgets are deliberately not exported, while the indicator they both use is.** `lib/src/steppers/steppers.dart` exports `LayrzStep`, `LayrzStepIndicator`, `LayrzStepper`, `LayrzStepperController`, and `LayrzStepperState` — it does **not** export `LayrzStepperWideHeader` or `LayrzStepperCompactLayout`. This is the maintainer's explicit choice, not an accidental omission: keeping the two layouts private preserves the freedom to change either one's internal structure — how the indicator band is sized, how the accordion animates, how connectors are drawn — without that being a breaking API change. The trade-off is real and accepted: a consumer who wants only the wide header (say, a read-only progress indicator with no body or navigation) cannot compose it directly and must use the full `LayrzStepper`. `LayrzStepIndicator` is exported on its own because it has independent value as a single-step glyph outside a full stepper flow; that asymmetry — one piece of the redesign public, the two layouts that consume it private — is easy to mistake for an oversight from the code alone, which is why it is recorded here rather than left to a comment in `steppers.dart`.
+
+**Error steps are tappable — three stale doc comments are now honoured, not merely corrected.** `LayrzStepperState.error`'s own contract says an error step "can be jumped to for correction," and that promise already existed in three doc comments before this redesign. The shipped code before this change locked error steps out of both layouts regardless, so the promise was never kept. Both layouts now treat `completed`, `active`, and `error` identically for tappability; only `upcoming` stays locked. The one code-visible consequence: an error row in the compact layout now carries `expanded: false` when it is not the open step (a real, closed, re-openable row), rather than `expanded: null` (which is reserved for a step that can never be expanded at all).
+
+**`stepper.dart` at 222 lines (45 doc, 26 blank, 151 code), down from 484 — the target was met in substance, not narrowly missed.** The `<200`-line figure discussed during planning was a proxy for one question: did the two-layout split actually leave this file, rather than growing it further? It did — `_buildStepCircle`, `_buildStepCircles`, and `_getConnectorColor`, the old circle/connector/layout helpers, all grep to zero occurrences in the file today. The remaining 222 lines are the justified floor: 45 lines of mandatory rule-#1 argument documentation, the controller lifecycle (attach/detach, dispose ownership, the swap guard), and one `build()` with no further extraction candidates. One genuine duplication was caught and removed during a second pass: `_handleStepTap` had recomputed `isCompleted || isActive` as a second copy of the tappability rule that both layouts already enforce structurally in their own `onTap: isTappable ? ... : null` wiring (`stepper_wide.dart:206`, `stepper_compact.dart:192`). A second copy of that rule risked silently diverging from the layouts' own, so `_handleStepTap` was reduced to a one-line delegation to the controller instead. Going lower than 222 would mean cutting mandatory argument documentation, which is not an acceptable trade against the line-count target.
+
 ---
 
 ## D58: Responsive Option Grids Use `LayrzCol` Integer Spans
@@ -4413,4 +4437,32 @@ advance, for every future picker as a category.
 - **D52**: The decision this entry amends.
 - **D69**: `LayrzResponsiveModal`'s own decide-once/viewport-width rules, built on the same
   `isCompact` boundary D52 established.
+
+---
+
+## D71: `LayrzAnchoredPanel.controller` Swap Guard Stays Debug-Only — "Throw in Release" Tried and Reverted
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Component Design / Reliability
+
+### Context
+
+DESIGN-146 flagged that `LayrzAnchoredPanel.controller`'s no-swap contract is enforced only by a debug-only `assert` in `didUpdateWidget` — stripped in release builds, so a release-mode controller swap is silently ignored rather than rejected, even though the doc comment promised an assertion failure. The row asked for a decision among three options: (1) support the swap properly, (2) throw in release too, or (3) keep it debug-only and document the release behaviour honestly.
+
+### Decision
+
+**Option 3 shipped: the guard stays a debug-only `assert`, and the doc comment now states plainly that a release-mode swap is silently ignored.** This reverses an in-flight implementation of option 2.
+
+### Why option 2 was tried and rejected
+
+Option 2 — throwing a `StateError` from `didUpdateWidget` when the controller is swapped — was implemented first, on the reasoning that a debug-only contract on a widely-composed primitive is a weak guarantee. It was measured, not merely reviewed, and the measurement is why it was reverted: **throwing from `didUpdateWidget` mid-rebuild, through `LayrzAnchoredPanel`'s real tree (`RawMenuAnchor` / `InheritedNotifierElement` / `Focus` layers), corrupts the framework's own `_InactiveElements` bookkeeping.** An `InheritedElement.debugDeactivated` assertion fired at teardown, and every later `didUpdateWidget` in the same element tree became unreliable — 7 unrelated tests failed until the throwing test itself was removed.
+
+Blast radius was independently re-checked before reverting: every consumer that reaches `LayrzAnchoredPanel.controller` — `duration_input.dart`, `combobox_input.dart`, `search_input.dart`, `select_input.dart` — receives the controller from the panel's own `builder` callback, and **no caller in the library passes a controller at all.** The throw therefore added a genuine release crash path to a parameter nothing in the codebase exercises, in exchange for corrupting element-tree bookkeeping for the one hypothetical caller who would trigger it. That trade is worse than the debug-only status quo it was meant to improve on.
+
+### Consequences
+
+- `LayrzAnchoredPanel.controller`'s doc comment now states outright that a release-mode swap is silently ignored, rather than implying the debug-only assert is the whole story.
+- `LayrzStepper.controller` carries the identical debug-only-`assert` pattern for its own no-swap contract (`stepper.dart`'s `didUpdateWidget`). That is **consistent with this decision**, not a second instance of the same defect — do not "fix" it to throw without re-confirming the `_InactiveElements` hazard no longer reproduces.
+- **Do not re-attempt option 2** without first reproducing that the corruption hazard is gone under the then-current Flutter SDK. This decision exists specifically so that the next reader does not rediscover "throw instead of assert" as an obvious-looking improvement and reintroduce a regression that was already measured and reverted once.
 

@@ -37,7 +37,7 @@ Nine input component suites have zero semantics assertions despite ~70 tests. Th
 - DESIGN-119: `avatar_a11y_test.dart` (0 / 9 assertions)
 - DESIGN-120: `alert_a11y_test.dart` (0 / 8 assertions)
 - DESIGN-121: `bottom_sheet_a11y_test.dart` (0 / 5 assertions)
-- DESIGN-122: `stepper_a11y_test.dart` (1 / 11 assertions)
+- DESIGN-122: `stepper_a11y_test.dart` (1 / 11 assertions) — superseded by the 2026-08-27 stepper redesign, which rewrote the test suite against the new wide/compact layouts and their new semantics surface (expand/collapse, lock affordance) as part of that unit rather than as a separate follow-up
 - DESIGN-123: `anchored_panel_a11y_test.dart` (0 / 4 assertions)
 
 These are non-blocking for M3 release but represent outstanding accessibility debt that must be addressed before the next milestone.
@@ -207,24 +207,32 @@ Grid layout uses real `LayrzRow` + `LayrzCol`, cascading fallback (unset breakpo
 
 ---
 
-### 8. LayrzStepper (DESIGN-87)
+### 8. LayrzStepper (DESIGN-87, redesigned 2026-08-27)
 
 **Status**: Merged · Review required
 
 **What it does**:
-- Horizontal stepper that owns the whole flow: header, current step body, back/next actions (decision D57)
-- `LayrzStep` is a simple data class carrying `label`, `body` (Widget), and `state` (enum)
+- Owns the whole flow: header, current step body, back/next actions (decision D57)
+- `LayrzStep` is a data class carrying `labelText`, `body` (Widget), an optional `state` override, and an optional identity `icon`
 - `LayrzStepperController` for programmatic navigation (e.g., advance only after async save)
-- Responsive header: below md breakpoint, collapses to *"Step X of Y"* summary instead of scrolling
-- Step states: `upcoming / active / completed / error` (trimmed per D27/D28)
+- Step states: `upcoming / active / completed / error` (trimmed per D27/D28); `completed`, `active`, and `error` steps are all tappable, only `upcoming` is locked
+- **Redesigned to run full page width, per two dedicated layouts instead of one branching widget:**
+  - **Wide** (`stepper_wide.dart`) — full-width row of equal-width flex cells, each stacking a fixed-height indicator+connector band over a label band, so a two-line label cannot shift its own indicator out of alignment with the others (the bug that motivated the redesign)
+  - **Compact** (`stepper_compact.dart`) — vertical accordion, exactly one step's body open at a time driven by `currentIndex`, plus a persistent "Step X of Y" counter above the stack; `AnimatedSize` drives the expand/collapse, the library's first use of that widget
+- `bool? isCompact` override on `LayrzStepper` forces either layout regardless of viewport, for testing and for callers that need to override the viewport-based default
+- `stepper.dart` itself is now a 222-line coordinator (down from 484) that owns the controller lifecycle and delegates all layout painting to the two layout files and to `LayrzStepIndicator`
 
 **Accessibility (WCAG 1.4.1)**:
-- Completed steps carry `MdiIcons.check`, error steps carry `MdiIcons.alertCircle` — state is never colour-only
-- Semantics labels include position and state (*"Step 2 of 3, Shipping, completed"*)
-- Connector line and numbered circles are excluded from semantics as decorative
+- Completed steps carry `MdiIcons.check`, error steps carry `MdiIcons.alertCircle` — state is never colour-only; this override beats any caller-supplied `LayrzStep.icon`
+- Semantics labels include position and state (*"Step 2 of 3, Shipping, completed"*), built from `LayrzUiL10nSteppersMixin.steppersStepCounterLabel` / `steppersStateLabel` so both layouts announce identically
+- An `upcoming` (locked) step now carries a non-colour lock glyph (`MdiIcons.lockOutline`) in both layouts, closing a pre-existing gap where a locked step was distinguished by colour and a thin border alone
+- Connector lines and numbered circles are excluded from semantics as decorative
+- `ExcludeFocus` keeps a collapsed compact-layout step's body out of the tab order — a new precedent in this library for hiding collapsed content from keyboard navigation
 - Button labels resolve from `LayrzUiL10nSteppersMixin`
 
-**Architecture**: Full stepper (not header-only) was deliberate despite being heavier. The accepted cost is that navigation-button layout is baked in, so escape hatches can be added later if consumers need custom actions.
+**Architecture**: Full stepper (not header-only) was deliberate despite being heavier. The accepted cost is that navigation-button layout is baked in, so escape hatches can be added later if consumers need custom actions. See decision D57's 2026-08-27 update for the full reasoning behind the redesign, including why "collapse to a summary string" was not a viable reading of D57's own flow-ownership decision, the declined step-count ceiling, and why the two layout widgets stay unexported while `LayrzStepIndicator` is exported.
+
+**Wiki**: documented for the first time at `wiki/Widgets/LayrzStepper.md`, registered in `wiki/Widgets/_Sidebar.md` under Inputs — there was no page for this widget before this redesign.
 
 ---
 
