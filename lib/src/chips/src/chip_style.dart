@@ -18,7 +18,7 @@ enum LayrzChipStyle {
 
   /// Whether this style renders a visible border.
   ///
-  /// Only [outlined] has a border; [filled] and [filledTonal] do not.
+  /// Only [outlined] has a border; [filled] does not.
   bool get hasBorder => switch (this) {
     outlined => true,
     _ => false,

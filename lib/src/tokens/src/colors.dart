@@ -70,7 +70,7 @@ class LayrzColorTokens {
   /// Semi-transparent color used for modal scrims and overlays.
   final Color overlay;
 
-  /// Alpha value applied to tonal/filledTonal fills to create visual distinction.
+  /// Alpha value applied to tonal fills to create visual distinction.
   final double tonalOpacity;
 
   /// Creates a new [LayrzColorTokens].

@@ -104,8 +104,6 @@ class LayrzButtonStyleSpec {
   ///   - `text` / `fab`: transparent → tonal → tonal (stronger)
   ///   - `outlined` / `outlinedFab`: transparent + border → tonal + border → solid + border
   ///   - `outlinedTonal` / `outlinedTonalFab`: tonal + border → stronger tonal + border → solid + border
-  ///   - `filledTonal` / `filledTonalFab`: tonal → stronger tonal → solid
-  ///   - `filled` / `filledFab`: solid → solid (color shift) → solid (stronger shift)
   ///   - `elevated` / `elevatedFab`: solid + shadow → solid + bigger shadow → solid (no shadow)
   ///
   /// - **Border invariant**: Outlined pairs keep `borderColor` **identical** across all states

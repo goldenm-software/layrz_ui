@@ -67,7 +67,7 @@ class LayrzChipStyleSpec {
 
   /// Resolves a [LayrzChipStyleSpec] from a style, accent color, and tokens.
   ///
-  /// [style] determines which visual treatment to apply (filled, outlined, filledTonal).
+  /// [style] determines which visual treatment to apply ([LayrzChipStyle.filled] or [LayrzChipStyle.outlined]).
   /// [accent] is the primary color for the chip (semantic color or custom).
   /// [tokens] provides design values like surface colors, borders, and opacity rules.
   static LayrzChipStyleSpec resolve({

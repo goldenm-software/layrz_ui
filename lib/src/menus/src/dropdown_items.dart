@@ -86,7 +86,8 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
   /// When null, the band keeps the neutral [LayrzColorTokens.sf3] fill, so
   /// menus written before this parameter existed are unchanged. When set, the band
   /// is filled with this colour at [LayrzColorTokens.tonalOpacity], flattened over
-  /// the panel surface — the same treatment as [LayrzChipStyle.filledTonal].
+  /// the panel surface — the same tonal-over-surface treatment used elsewhere
+  /// in the design system (see [LayrzColorTokens.tonalOpacity]).
   final Color? color;
 
   /// Creates a new [LayrzDropdownLabel].

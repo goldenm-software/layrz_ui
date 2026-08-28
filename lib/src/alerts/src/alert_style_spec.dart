@@ -104,7 +104,8 @@ class LayrzAlertStyleSpec {
 
   /// Resolves a [LayrzAlertStyleSpec] from a style, accent color, tokens, and interaction state.
   ///
-  /// [style] determines which visual treatment to apply (e.g., layrz, filledTonal, filled).
+  /// [style] determines which visual treatment to apply ([LayrzAlertStyle.layrz] or
+  /// [LayrzAlertStyle.filledIcon]).
   /// [accent] is the primary color for the alert (semantic color or custom).
   /// [tokens] provides design values like surface colors, borders, and opacity rules.
   /// [isInteractive] indicates whether the alert has an [onTap] callback. When true,

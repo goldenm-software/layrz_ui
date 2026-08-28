@@ -103,7 +103,7 @@ class LayrzTokenizer {
   /// Contextual color used for neutral status and informational elements.
   Color get contextual => tokens.colors.contextual;
 
-  /// Alpha value applied to tonal/filledTonal fills.
+  /// Alpha value applied to tonal fills.
   double get tonalOpacity => tokens.colors.tonalOpacity;
 
   // ===== FLAT SHORTCUTS FOR SPACING TOKENS =====
