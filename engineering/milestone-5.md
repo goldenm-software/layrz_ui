@@ -18,14 +18,15 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 | 5 | LayrzSnackbar and LayrzSnackbarMessenger (transient feedback) | Todo |
 | 6 | Dialogs on RawDialogRoute (general, alert, confirmation) | Todo |
 | 7 | LayrzAboutDialog | Todo |
-| 8 | Page transitions (PageRouteBuilder.transitionsBuilder + FadeTransition, ScaleTransition) | Todo |
+| 8 | DESIGN-81: Page transitions (`LayrzPageTransitions`: fade, slide, scale, rotation, none — shared builders for both `PageRouteBuilder.transitionsBuilder` and go_router's `CustomTransitionPage.transitionsBuilder`) | Merged · Review required |
 | 9 | LayrzNotificationItem (notification display in nav footer) | Todo |
+| 10 | DESIGN-95: LayrzRefreshIndicator (loading affordance for a refresh lifecycle; programmatic `LayrzRefreshController.refresh()` is the primary API, drag-to-refresh is an optional touch-only affordance) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M5 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Items 1-3 were delivered ahead of formal M5 planning; they are marked Done and documented in detail in the wiki.
 
 ## Definition of Done
 
-- All 9 items below complete
+- All 10 items below complete
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass on all M5 tests
 - Coverage floor (90%) not breached
@@ -169,18 +170,28 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 
 ---
 
-### 8. Page Transitions (PageRouteBuilder + FadeTransition, ScaleTransition)
+### 8. DESIGN-81: Page Transitions (`LayrzPageTransitions`)
+
+**Status**: Merged · Review required
 
 **What it does**:
-- Material-free page transitions using `PageRouteBuilder.transitionsBuilder` with FadeTransition and ScaleTransition from `widgets.dart`
-- Support for multiple transition styles (fade, slide, scale, none)
-- Configurable duration and curve
+- Material-free page transitions built on `FadeTransition`, `SlideTransition`, `ScaleTransition`,
+  and `RotationTransition` from `widgets.dart`
+- Ships the full union of named transitions: `fade` (default), `slide`, `scale`, `rotation`, `none`
+  — corrected from this row's original parenthetical, which only described fade+scale; the shipped
+  surface is all five
+- `LayrzTransitionBuilder` is a plain typedef matching both `PageRouteBuilder.transitionsBuilder`
+  and go_router's `CustomTransitionPage.transitionsBuilder` structurally, so the same builder
+  function serves both call sites with zero adapter code and no `go_router` dependency added to the
+  package
+- `LayrzPageTransitions.durationOf(context)` resolves the matching duration token
+  (`tokens.motion.dPageTransition`, 250ms) for the route's own `transitionDuration` parameter
+- Every builder delegates to `none` when `MediaQuery.disableAnimationsOf` reports reduced motion
 
-**Acceptance Criteria**:
-- Implement transition factory functions (e.g., `fadeTransition()`, `scaleTransition()`)
-- Test transition duration and curve application
-- Verify Material-free construction (no PageTransitionsBuilder import)
-- Wiki page documents available transitions and customization
+**Default**: `fade` — ratified by Kenny (`.claude/pipeline/RULINGS.md`), overriding the
+implementation plan's `none` recommendation.
+
+**API contract**: See [wiki LayrzPageTransition page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzPageTransition).
 
 ---
 
@@ -196,6 +207,31 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 - Support badge count, custom icons, and visibility toggles
 - Test dropdown panel open/close
 - Wiki page documents badge styling and dropdown content
+
+---
+
+### 10. DESIGN-95: LayrzRefreshIndicator (Refresh Loading Affordance)
+
+**Status**: Merged · Review required
+
+**What it does**:
+- Reports a refresh lifecycle (`idle → armed → refreshing → settling → idle`) above a scrollable
+  region via `LayrzRefreshController` (state machine) and `LayrzRefreshVisual` (the painted ring)
+- **The programmatic `LayrzRefreshController.refresh()` call is the primary, always-available
+  API** — not a test hook layered under a gesture. The optional `LayrzRefreshGestureDetector`
+  (touch-only, wired by default via `enableDragGesture: true`) is a second entry point into the
+  exact same controller call, for drag-to-refresh on touch devices
+- No custom `ScrollPhysics`/`ScrollBehavior` installed — the drag gesture reads
+  `OverscrollNotification`s via a local `NotificationListener`
+
+**Naming**: Kenny ruled to **keep `LayrzRefreshIndicator`** (`.claude/pipeline/RULINGS.md`),
+overriding the plan's `LayrzRefreshView` recommendation, which had been proposed on the premise
+that the gesture-first framing this reframe demoted was still primary.
+
+**Non-goals (v1)**: no resistance/overscroll physics curve (linear drag-to-progress mapping only);
+no platform branching on `LayrzPlatform`; no sliver support.
+
+**API contract**: See [wiki LayrzRefreshIndicator page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzRefreshIndicator).
 
 ---
 
