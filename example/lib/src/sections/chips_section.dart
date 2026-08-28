@@ -105,11 +105,6 @@ class _ChipsStylesShowcase extends StatelessWidget {
               style: LayrzChipStyle.outlined,
               type: LayrzChipType.success,
             ),
-            const LayrzChip(
-              labelText: 'Filled Tonal',
-              style: LayrzChipStyle.filledTonal,
-              type: LayrzChipType.warning,
-            ),
           ],
         ),
       ],

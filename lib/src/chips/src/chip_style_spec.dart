@@ -75,7 +75,6 @@ class LayrzChipStyleSpec {
     required Color accent,
     required LayrzTokens tokens,
   }) {
-    final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
     final contrast = accent.contrastColor;
 
     switch (style) {
@@ -92,14 +91,6 @@ class LayrzChipStyleSpec {
           backgroundColor: const Color(0x00000000),
           borderColor: accent,
           borderWidth: tokens.border.stroke1,
-          contentColor: accent,
-        );
-
-      case LayrzChipStyle.filledTonal:
-        return LayrzChipStyleSpec(
-          backgroundColor: tonal,
-          borderColor: const Color(0x00000000),
-          borderWidth: 0,
           contentColor: accent,
         );
     }

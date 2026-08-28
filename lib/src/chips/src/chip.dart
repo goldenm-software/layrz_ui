@@ -54,7 +54,7 @@ class LayrzChip extends StatefulWidget {
     required this.labelText,
     this.leadingIcon,
     this.onDelete,
-    this.style = LayrzChipStyle.filledTonal,
+    this.style = LayrzChipStyle.filled,
     this.type = LayrzChipType.custom,
     this.color,
   }) : assert(
