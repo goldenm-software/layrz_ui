@@ -1,5 +1,6 @@
 export 'src/alerts/alerts.dart';
 export 'src/app/app.dart';
+export 'src/badges/badges.dart';
 export 'src/buttons/buttons.dart';
 export 'src/cards/cards.dart';
 export 'src/chips/chips.dart';
