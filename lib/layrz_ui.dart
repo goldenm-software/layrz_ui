@@ -28,3 +28,4 @@ export 'src/theme/theme.dart';
 export 'src/tokenizer/tokenizer.dart';
 export 'src/tokens/tokens.dart';
 export 'src/tooltips/tooltips.dart';
+export 'src/trees/trees.dart';
