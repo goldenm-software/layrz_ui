@@ -12,6 +12,7 @@ void main() {
       expect(tokens.dTransition, equals(const Duration(milliseconds: 200)));
       expect(tokens.dPageTransition, equals(kPageTransitionDuration));
       expect(tokens.dDialog, equals(const Duration(milliseconds: 300)));
+      expect(tokens.dIndeterminate, equals(kIndeterminateDuration));
     });
 
     test('dHover equals kHoverDuration constant', () {
@@ -24,6 +25,12 @@ void main() {
       const tokens = LayrzMotionTokens();
       expect(tokens.dPageTransition, equals(kPageTransitionDuration));
       expect(tokens.dPageTransition, equals(const Duration(milliseconds: 250)));
+    });
+
+    test('dIndeterminate equals kIndeterminateDuration constant', () {
+      const tokens = LayrzMotionTokens();
+      expect(tokens.dIndeterminate, equals(kIndeterminateDuration));
+      expect(tokens.dIndeterminate, equals(const Duration(milliseconds: 1500)));
     });
 
     test('default easing is easeInOut', () {
@@ -105,6 +112,7 @@ void main() {
       expect(tokens.dTransition.inMilliseconds, greaterThan(0));
       expect(tokens.dPageTransition.inMilliseconds, greaterThan(0));
       expect(tokens.dDialog.inMilliseconds, greaterThan(0));
+      expect(tokens.dIndeterminate.inMilliseconds, greaterThan(0));
     });
 
     test('dPress is faster than dTransition', () {
@@ -113,6 +121,25 @@ void main() {
         tokens.dPress.inMilliseconds,
         lessThan(tokens.dTransition.inMilliseconds),
       );
+    });
+
+    test('dIndeterminate is slower than dDialog', () {
+      const tokens = LayrzMotionTokens();
+      expect(
+        tokens.dIndeterminate.inMilliseconds,
+        greaterThan(tokens.dDialog.inMilliseconds),
+      );
+    });
+
+    test('copyWith replaces dIndeterminate independently', () {
+      const original = LayrzMotionTokens();
+      final modified = original.copyWith(
+        dIndeterminate: const Duration(milliseconds: 1200),
+      );
+
+      expect(modified.dIndeterminate, equals(const Duration(milliseconds: 1200)));
+      expect(modified.dDialog, equals(original.dDialog));
+      expect(original.dIndeterminate, equals(const Duration(milliseconds: 1500))); // original unchanged
     });
   });
 }

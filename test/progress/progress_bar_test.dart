@@ -278,7 +278,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      for (final type in LayrzProgressBarType.values) {
+      for (final type in LayrzProgressType.values) {
         await pumpThemed(tester, LayrzProgressBar(value: 0.5, type: type));
         expect(find.byType(LayrzProgressBar), findsOneWidget);
       }
@@ -292,7 +292,7 @@ void main() {
       const customColor = Color(0xFF00FF00);
       await pumpThemed(
         tester,
-        const LayrzProgressBar(value: 0.5, type: LayrzProgressBarType.custom, color: customColor),
+        const LayrzProgressBar(value: 0.5, type: LayrzProgressType.custom, color: customColor),
       );
 
       final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
@@ -307,7 +307,7 @@ void main() {
       final theme = LayrzThemeData.light();
       await pumpThemed(
         tester,
-        const LayrzProgressBar(value: 0.5, type: LayrzProgressBarType.custom),
+        const LayrzProgressBar(value: 0.5, type: LayrzProgressType.custom),
         theme: theme,
       );
 
@@ -326,6 +326,43 @@ void main() {
       expect(sizedBoxes.any((box) => box.height == 20.0), isTrue);
     });
 
+    testWidgets('defaults height to kLayrzProgressBarHeight when not overridden', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(value: 0.3));
+
+      final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
+      expect(sizedBoxes.any((box) => box.height == kLayrzProgressBarHeight), isTrue);
+    });
+
+    testWidgets('indeterminate sweep controller uses tokens.motion.dIndeterminate, not dDialog', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(tester, const LayrzProgressBar(), theme: theme);
+
+      double sweepPositionOf(WidgetTester t) =>
+          (t.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter).sweepPosition;
+
+      expect(sweepPositionOf(tester), 0.0);
+
+      // A full dDialog interval (300ms, the old — too fast — duration) must
+      // NOT complete a full repeat cycle now that dIndeterminate (1500ms) is
+      // in effect: regression guard for the "too fast" defect.
+      await tester.pump(theme.tokens.motion.dDialog);
+      expect(sweepPositionOf(tester), isNot(0.0));
+      expect(sweepPositionOf(tester), lessThan(1.0));
+
+      // Advancing the remainder of dIndeterminate completes exactly one
+      // repeat cycle, landing back at the animation's start value.
+      await tester.pump(theme.tokens.motion.dIndeterminate - theme.tokens.motion.dDialog);
+      expect(sweepPositionOf(tester), 0.0);
+    });
+
     testWidgets('applies an explicit borderRadius override', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
@@ -337,7 +374,7 @@ void main() {
       expect(painter.borderRadius, 2.0);
     });
 
-    testWidgets('defaults borderRadius to the pill token when not overridden', (tester) async {
+    testWidgets('defaults borderRadius to the rounded-box token when not overridden', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -346,7 +383,7 @@ void main() {
       await pumpThemed(tester, const LayrzProgressBar(value: 0.3), theme: theme);
 
       final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
-      expect(painter.borderRadius, theme.tokens.radius.full);
+      expect(painter.borderRadius, theme.tokens.radius.r1);
     });
 
     test('asserts value is within [0.0, 1.0]', () {
@@ -358,31 +395,292 @@ void main() {
     });
   });
 
-  group('LayrzProgressBarType', () {
+  group('LayrzProgressBar circular mode', () {
+    testWidgets('renders determinate circular without an animation controller ticking', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(value: 0.5, format: LayrzProgressFormat.circular));
+
+      expect(find.byType(LayrzProgressBar), findsOneWidget);
+      final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
+      expect(painter.shape, LayrzProgressFormat.circular);
+      expect(painter.determinateValue, 0.5);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('renders indeterminate circular and rotates over time', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(format: LayrzProgressFormat.circular));
+
+      expect(find.byType(LayrzProgressBar), findsOneWidget);
+      expect(find.byType(AnimatedBuilder), findsOneWidget);
+
+      // Pump forward without pumpAndSettle, which would hang on a repeating
+      // animation, and confirm the widget survives across frames.
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(LayrzProgressBar), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(LayrzProgressBar), findsOneWidget);
+    });
+
+    testWidgets('null value means indeterminate in circular mode too, not zero', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(format: LayrzProgressFormat.circular));
+
+      final handle = tester.ensureSemantics();
+      try {
+        final semantics = tester.getSemantics(find.byType(LayrzProgressBar));
+        expect(semantics.value, isEmpty);
+        expect(semantics.label, 'Loading');
+      } finally {
+        handle.dispose();
+      }
+
+      // Stop the repeating ticker before the test ends.
+      await tester.pump(const Duration(milliseconds: 10));
+    });
+
+    testWidgets('zero value is determinate-at-zero in circular mode, not indeterminate', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(value: 0.0, format: LayrzProgressFormat.circular));
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      final handle = tester.ensureSemantics();
+      try {
+        final semantics = tester.getSemantics(find.byType(LayrzProgressBar));
+        expect(semantics.value, '0%');
+        expect(semantics.label, 'Progress');
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('defaults to kLayrzProgressCircularSize and kLayrzProgressCircularStrokeWidth', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(value: 0.3, format: LayrzProgressFormat.circular));
+
+      final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
+      expect(
+        sizedBoxes.any(
+          (box) => box.height == kLayrzProgressCircularSize && box.width == kLayrzProgressCircularSize,
+        ),
+        isTrue,
+      );
+
+      final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
+      expect(painter.strokeWidth, kLayrzProgressCircularStrokeWidth);
+    });
+
+    testWidgets('applies a custom size and strokeWidth override', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const LayrzProgressBar(value: 0.3, format: LayrzProgressFormat.circular, size: 80.0, strokeWidth: 8.0),
+      );
+
+      final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
+      expect(sizedBoxes.any((box) => box.height == 80.0 && box.width == 80.0), isTrue);
+
+      final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
+      expect(painter.strokeWidth, 8.0);
+    });
+
+    testWidgets('height and borderRadius are ignored in circular mode', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const LayrzProgressBar(
+          value: 0.3,
+          format: LayrzProgressFormat.circular,
+          height: 999.0,
+          borderRadius: 999.0,
+        ),
+      );
+
+      final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
+      expect(sizedBoxes.any((box) => box.height == 999.0), isFalse);
+      expect(
+        sizedBoxes.any(
+          (box) => box.height == kLayrzProgressCircularSize && box.width == kLayrzProgressCircularSize,
+        ),
+        isTrue,
+      );
+    });
+
+    testWidgets('respects MediaQuery.disableAnimationsOf in circular mode', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Localizations(
+            locale: const Locale('en'),
+            delegates: const [
+              DefaultWidgetsLocalizations.delegate,
+              LayrzUiL10nDelegate(),
+            ],
+            child: LayrzTheme(
+              data: LayrzThemeData.light(),
+              child: const Center(child: LayrzProgressBar(format: LayrzProgressFormat.circular)),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      expect(find.byType(LayrzProgressBar), findsOneWidget);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('stops the circular ticker when reduce-motion turns on at runtime', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      bool disableAnimations = false;
+      late StateSetter setter;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setter = setState;
+            return MediaQuery(
+              data: MediaQueryData(disableAnimations: disableAnimations),
+              child: Localizations(
+                locale: const Locale('en'),
+                delegates: const [
+                  DefaultWidgetsLocalizations.delegate,
+                  LayrzUiL10nDelegate(),
+                ],
+                child: LayrzTheme(
+                  data: LayrzThemeData.light(),
+                  child: const Center(child: LayrzProgressBar(format: LayrzProgressFormat.circular)),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsOneWidget);
+
+      setter(() => disableAnimations = true);
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('resumes the circular ticker when reduce-motion turns off at runtime', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      bool disableAnimations = true;
+      late StateSetter setter;
+
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            setter = setState;
+            return MediaQuery(
+              data: MediaQueryData(disableAnimations: disableAnimations),
+              child: Localizations(
+                locale: const Locale('en'),
+                delegates: const [
+                  DefaultWidgetsLocalizations.delegate,
+                  LayrzUiL10nDelegate(),
+                ],
+                child: LayrzTheme(
+                  data: LayrzThemeData.light(),
+                  child: const Center(child: LayrzProgressBar(format: LayrzProgressFormat.circular)),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsNothing);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+
+      setter(() => disableAnimations = false);
+      await tester.pump();
+
+      expect(find.byType(AnimatedBuilder), findsOneWidget);
+
+      // Stop the repeating ticker before the test ends.
+      await tester.pump(const Duration(milliseconds: 10));
+    });
+
+    testWidgets('resolves each semantic type in circular mode too', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      for (final progressType in LayrzProgressType.values) {
+        await pumpThemed(
+          tester,
+          LayrzProgressBar(value: 0.5, format: LayrzProgressFormat.circular, type: progressType),
+        );
+        expect(find.byType(LayrzProgressBar), findsOneWidget);
+      }
+    });
+  });
+
+  group('LayrzProgressType', () {
     final tokens = LayrzTokens.light();
 
     test('info resolves to the info swatch shade500', () {
-      expect(LayrzProgressBarType.info.colorToken(tokens), tokens.colors.info.shade500);
+      expect(LayrzProgressType.info.colorToken(tokens), tokens.colors.info.shade500);
     });
 
     test('success resolves to the success swatch shade500', () {
-      expect(LayrzProgressBarType.success.colorToken(tokens), tokens.colors.success.shade500);
+      expect(LayrzProgressType.success.colorToken(tokens), tokens.colors.success.shade500);
     });
 
     test('warning resolves to the warning swatch shade500', () {
-      expect(LayrzProgressBarType.warning.colorToken(tokens), tokens.colors.warning.shade500);
+      expect(LayrzProgressType.warning.colorToken(tokens), tokens.colors.warning.shade500);
     });
 
     test('danger resolves to the danger swatch shade500', () {
-      expect(LayrzProgressBarType.danger.colorToken(tokens), tokens.colors.danger.shade500);
+      expect(LayrzProgressType.danger.colorToken(tokens), tokens.colors.danger.shade500);
     });
 
     test('context resolves to the contextual swatch shade500', () {
-      expect(LayrzProgressBarType.context.colorToken(tokens), tokens.colors.contextual.shade500);
+      expect(LayrzProgressType.context.colorToken(tokens), tokens.colors.contextual.shade500);
     });
 
     test('custom resolves to null, deferring to an explicit color', () {
-      expect(LayrzProgressBarType.custom.colorToken(tokens), isNull);
+      expect(LayrzProgressType.custom.colorToken(tokens), isNull);
     });
   });
 
@@ -390,7 +688,7 @@ void main() {
     final tokens = LayrzTokens.light();
 
     test('resolve uses the track surface color and the semantic accent for non-custom types', () {
-      final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressBarType.success, color: null, tokens: tokens);
+      final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressType.success, color: null, tokens: tokens);
 
       expect(spec.trackColor, tokens.colors.sf3);
       expect(spec.indicatorColor, tokens.colors.success.shade500);
@@ -399,7 +697,7 @@ void main() {
     test('resolve honours an explicit color when type is custom', () {
       const customColor = Color(0xFF123456);
       final spec = LayrzProgressStyleSpec.resolve(
-        type: LayrzProgressBarType.custom,
+        type: LayrzProgressType.custom,
         color: customColor,
         tokens: tokens,
       );
@@ -408,7 +706,7 @@ void main() {
     });
 
     test('resolve falls back to primary when type is custom and color is null', () {
-      final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressBarType.custom, color: null, tokens: tokens);
+      final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressType.custom, color: null, tokens: tokens);
 
       expect(spec.indicatorColor, tokens.colors.primary.shade500);
     });

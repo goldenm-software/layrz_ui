@@ -6,6 +6,7 @@ export 'src/colors.dart';
 export 'src/durations.dart';
 export 'src/layout.dart';
 export 'src/menu.dart';
+export 'src/progress.dart';
 export 'src/scaffold.dart';
 export 'src/scrollbar.dart';
 export 'src/tooltip.dart';

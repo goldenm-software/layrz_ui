@@ -10,6 +10,8 @@ import '../common/showroom_section.dart';
 /// - Indeterminate mode (a permanent loading sweep)
 /// - All six semantic types (info, success, warning, danger, context, custom)
 /// - A custom height and border radius override
+/// - Circular mode: determinate and indeterminate rings, a couple of
+///   semantic colors, and a size/thickness override
 class ProgressSection extends StatefulWidget {
   /// Creates a new [ProgressSection].
   const ProgressSection({super.key});
@@ -40,6 +42,11 @@ class _ProgressSectionState extends State<ProgressSection> {
           _IndeterminateShowcase(tokens: tokens),
           _TypesShowcase(tokens: tokens),
           const _CustomizationShowcase(),
+          _CircularShowcase(
+            tokens: tokens,
+            value: _demoValue,
+            onValueChanged: (value) => setState(() => _demoValue = value),
+          ),
         ],
       ),
     );
@@ -124,12 +131,12 @@ class _TypesShowcase extends StatelessWidget {
         Column(
           spacing: tokens.spacing.sp2,
           children: [
-            for (final type in LayrzProgressBarType.values)
+            for (final progressType in LayrzProgressType.values)
               LayrzProgressBar(
                 value: 0.6,
-                type: type,
-                color: type == LayrzProgressBarType.custom ? tokens.colors.primary.shade700 : null,
-                semanticLabel: type.name,
+                type: progressType,
+                color: progressType == LayrzProgressType.custom ? tokens.colors.primary.shade700 : null,
+                semanticLabel: progressType.name,
               ),
           ],
         ),
@@ -153,10 +160,118 @@ class _CustomizationShowcase extends StatelessWidget {
         Text('Custom Height & Border Radius', style: tokens.typography.title),
         LayrzProgressBar(
           value: 0.5,
-          height: 16.0,
+          height: 20.0,
           borderRadius: tokens.radius.r1,
-          type: LayrzProgressBarType.success,
+          type: LayrzProgressType.success,
           semanticLabel: 'Custom style demo',
+        ),
+      ],
+    );
+  }
+}
+
+/// Showcase of circular mode: determinate and indeterminate rings, a couple
+/// of semantic colors, and a size/thickness override.
+class _CircularShowcase extends StatelessWidget {
+  /// Design tokens used to style the showcase's own text.
+  final LayrzTokens tokens;
+
+  /// The current demo progress value, in `[0.0, 1.0]`, shared with the linear
+  /// determinate showcase above.
+  final double value;
+
+  /// Invoked with a new demo progress value when a step button is tapped.
+  final ValueChanged<double> onValueChanged;
+
+  /// Creates a new [_CircularShowcase].
+  const _CircularShowcase({
+    required this.tokens,
+    required this.value,
+    required this.onValueChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp2,
+      children: [
+        Text('Circular Mode', style: tokens.typography.title),
+        Row(
+          spacing: tokens.spacing.sp4,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              spacing: tokens.spacing.sp2,
+              children: [
+                LayrzProgressBar(
+                  value: value,
+                  format: LayrzProgressFormat.circular,
+                  semanticLabel: 'Demo circular progress',
+                ),
+                Text('Determinate', style: tokens.typography.label),
+              ],
+            ),
+            Column(
+              spacing: tokens.spacing.sp2,
+              children: [
+                const LayrzProgressBar(format: LayrzProgressFormat.circular),
+                Text('Indeterminate', style: tokens.typography.label),
+              ],
+            ),
+            Column(
+              spacing: tokens.spacing.sp2,
+              children: [
+                LayrzProgressBar(
+                  value: 0.7,
+                  format: LayrzProgressFormat.circular,
+                  type: LayrzProgressType.success,
+                  semanticLabel: 'Success circular progress',
+                ),
+                Text('Success', style: tokens.typography.label),
+              ],
+            ),
+            Column(
+              spacing: tokens.spacing.sp2,
+              children: [
+                LayrzProgressBar(
+                  value: 0.4,
+                  format: LayrzProgressFormat.circular,
+                  type: LayrzProgressType.danger,
+                  semanticLabel: 'Danger circular progress',
+                ),
+                Text('Danger', style: tokens.typography.label),
+              ],
+            ),
+            Column(
+              spacing: tokens.spacing.sp2,
+              children: [
+                LayrzProgressBar(
+                  value: 0.6,
+                  format: LayrzProgressFormat.circular,
+                  size: 90.0,
+                  strokeWidth: 10.0,
+                  type: LayrzProgressType.custom,
+                  color: tokens.colors.primary.shade700,
+                  semanticLabel: 'Custom size circular progress',
+                ),
+                Text('Size 90 / stroke 10', style: tokens.typography.label),
+              ],
+            ),
+          ],
+        ),
+        Row(
+          spacing: tokens.spacing.sp2,
+          children: [
+            LayrzButton(
+              labelText: '-10%',
+              onTap: () => onValueChanged((value - 0.1).clamp(0.0, 1.0)),
+            ),
+            LayrzButton(
+              labelText: '+10%',
+              onTap: () => onValueChanged((value + 0.1).clamp(0.0, 1.0)),
+            ),
+          ],
         ),
       ],
     );

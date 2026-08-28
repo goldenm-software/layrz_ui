@@ -35,6 +35,18 @@ class LayrzMotionTokens {
   /// Defaults to 300 milliseconds, giving dialogs a more prominent entrance.
   final Duration dDialog;
 
+  /// Duration for a single indeterminate sweep cycle in looping progress
+  /// indicators (e.g. `LayrzProgressBar`'s indeterminate mode).
+  ///
+  /// Must equal [kIndeterminateDuration] (1500 milliseconds) to maintain
+  /// consistency with the existing indeterminate duration constant, and to
+  /// match `LayrzButtonIndicator`'s hardcoded indeterminate cycle so the two
+  /// loading affordances in the design system read at the same speed. This is
+  /// deliberately slower than [dDialog]: a repeating sweep at dialog speed
+  /// (300ms) completes over three cycles per second, which reads as frantic
+  /// rather than as a calm, ongoing operation.
+  final Duration dIndeterminate;
+
   /// Standard easing curve for most animations.
   ///
   /// Defaults to [Curves.easeInOut], which is the most common easing curve
@@ -60,6 +72,7 @@ class LayrzMotionTokens {
     this.dTransition = const Duration(milliseconds: 200),
     this.dPageTransition = kPageTransitionDuration,
     this.dDialog = const Duration(milliseconds: 300),
+    this.dIndeterminate = kIndeterminateDuration,
     this.easing = Curves.easeInOut,
     this.easingEnter = Curves.easeOut,
     this.easingExit = Curves.easeIn,
@@ -72,6 +85,7 @@ class LayrzMotionTokens {
     Duration? dTransition,
     Duration? dPageTransition,
     Duration? dDialog,
+    Duration? dIndeterminate,
     Curve? easing,
     Curve? easingEnter,
     Curve? easingExit,
@@ -82,6 +96,7 @@ class LayrzMotionTokens {
       dTransition: dTransition ?? this.dTransition,
       dPageTransition: dPageTransition ?? this.dPageTransition,
       dDialog: dDialog ?? this.dDialog,
+      dIndeterminate: dIndeterminate ?? this.dIndeterminate,
       easing: easing ?? this.easing,
       easingEnter: easingEnter ?? this.easingEnter,
       easingExit: easingExit ?? this.easingExit,
@@ -98,6 +113,7 @@ class LayrzMotionTokens {
           dTransition == other.dTransition &&
           dPageTransition == other.dPageTransition &&
           dDialog == other.dDialog &&
+          dIndeterminate == other.dIndeterminate &&
           easing == other.easing &&
           easingEnter == other.easingEnter &&
           easingExit == other.easingExit;
@@ -109,6 +125,7 @@ class LayrzMotionTokens {
     dTransition,
     dPageTransition,
     dDialog,
+    dIndeterminate,
     easing,
     easingEnter,
     easingExit,
