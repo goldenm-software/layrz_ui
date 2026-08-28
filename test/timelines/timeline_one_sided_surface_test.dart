@@ -102,6 +102,55 @@ void main() {
       );
     });
 
+    guardedTestWidgets('the spine is continuous: connectors meet the adjacent marker with no gap', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Entries with real card content (label + description + timestamp) so
+      // this reproduces the row heights the showroom screenshot showed --
+      // a `labelText`-only entry collapses the row so tightly that the
+      // inter-row gap this test guards against would not show up.
+      const entries = [
+        LayrzTimelineEntry(labelText: 'Order placed', descriptionText: 'Placed by customer', timestampText: 'Jan 1'),
+        LayrzTimelineEntry(labelText: 'Payment failed', descriptionText: 'Card declined', timestampText: 'Jan 2'),
+        LayrzTimelineEntry(labelText: 'Shipped', descriptionText: 'Left warehouse', timestampText: 'Jan 3'),
+      ];
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 600,
+          child: LayrzTimelineOneSidedSurface(entries: entries, cardBuilder: buildCard),
+        ),
+      );
+
+      final markers = find.byType(LayrzTimelineMarker);
+      final connectors = find.descendant(
+        of: find.byType(LayrzTimelineConnector),
+        matching: find.byType(Container),
+      );
+
+      final markerRects = [for (var i = 0; i < 3; i++) tester.getRect(markers.at(i))];
+      final connectorRects = [for (var i = 0; i < 4; i++) tester.getRect(connectors.at(i))];
+
+      // Connector 0 is below marker 0, connector 1 is above marker 1: between
+      // them lies the former inter-row gap. The spine is continuous only if
+      // connector 0's bottom edge reaches all the way to connector 1's top
+      // edge -- i.e. no unpainted band separates the two halves of the
+      // segment joining marker 0 to marker 1. Before the fix, connector 0
+      // stopped well short of marker 1 (a bare `Padding` gap in between).
+      expect(connectorRects[0].bottom, equals(connectorRects[1].top));
+      expect(connectorRects[2].bottom, equals(connectorRects[3].top));
+
+      // Each connector segment must also directly abut the marker it is
+      // adjacent to, with no gap on that side either.
+      expect(connectorRects[0].top, equals(markerRects[0].bottom));
+      expect(connectorRects[1].bottom, equals(markerRects[1].top));
+      expect(connectorRects[2].top, equals(markerRects[1].bottom));
+      expect(connectorRects[3].bottom, equals(markerRects[2].top));
+    });
+
     guardedTestWidgets('renders a plain dot marker (no Icon) for an entry with no icon', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;

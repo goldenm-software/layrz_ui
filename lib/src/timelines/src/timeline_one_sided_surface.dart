@@ -95,30 +95,41 @@ class _OneSidedRow extends StatelessWidget {
     final tokens = context.tokens;
     final spec = LayrzTimelineStyleSpec.resolve(accentColor: entry.accentColor, tokens: tokens);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : gap),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: kLayrzTimelineMarkerSize,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
-                  ),
-                  LayrzTimelineMarker(spec: spec, icon: entry.icon),
-                  Expanded(
-                    child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
-                  ),
-                ],
-              ),
+    // The inter-row gap is applied to the CARD only, not to the row as a
+    // whole. `IntrinsicHeight` then sizes the row to the card's height
+    // (which now includes the gap), and `CrossAxisAlignment.stretch` makes
+    // the marker column — and therefore its `Expanded` connectors — stretch
+    // to match. That is what makes the spine continuous: the bottom
+    // connector's `Expanded` now extends through the space that used to be
+    // a bare `Padding` with no connector painted in it at all. See
+    // `LayrzTimelineConnector`'s continuity regression test for the gap this
+    // fixes.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: kLayrzTimelineMarkerSize,
+            child: Column(
+              children: [
+                Expanded(
+                  child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+                ),
+                LayrzTimelineMarker(spec: spec, icon: entry.icon),
+                Expanded(
+                  child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+                ),
+              ],
             ),
-            SizedBox(width: tokens.spacing.sp3),
-            Expanded(child: cardBuilder(context, entry, spec)),
-          ],
-        ),
+          ),
+          SizedBox(width: tokens.spacing.sp3),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : gap),
+              child: cardBuilder(context, entry, spec),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -113,33 +113,46 @@ class _TwoSidedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final spec = LayrzTimelineStyleSpec.resolve(accentColor: entry.accentColor, tokens: tokens);
-    final card = cardBuilder(context, entry, spec);
     final isStart = side == LayrzTimelineSide.start;
 
+    // The inter-row gap is applied to the CARD only (via `_gapped`), not to
+    // the row as a whole, the same fix as `LayrzTimelineOneSidedSurface`.
+    // `IntrinsicHeight` sizes the row to the occupied side's card height
+    // (which now includes the gap), and `CrossAxisAlignment.stretch` makes
+    // the marker column's `Expanded` connectors stretch to match, so the
+    // spine no longer has a bare, unpainted gap between rows.
+    final card = _gapped(cardBuilder(context, entry, spec));
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: isStart ? card : const SizedBox.shrink()),
+          SizedBox(width: tokens.spacing.sp3),
+          Column(
+            children: [
+              Expanded(
+                child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+              ),
+              LayrzTimelineMarker(spec: spec, icon: entry.icon),
+              Expanded(
+                child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+              ),
+            ],
+          ),
+          SizedBox(width: tokens.spacing.sp3),
+          Expanded(child: isStart ? const SizedBox.shrink() : card),
+        ],
+      ),
+    );
+  }
+
+  /// Wraps [child] with the bottom inter-row gap, unless this is the last
+  /// row (which has no following row to separate itself from).
+  Widget _gapped(Widget child) {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : gap),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: isStart ? card : const SizedBox.shrink()),
-            SizedBox(width: tokens.spacing.sp3),
-            Column(
-              children: [
-                Expanded(
-                  child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
-                ),
-                LayrzTimelineMarker(spec: spec, icon: entry.icon),
-                Expanded(
-                  child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
-                ),
-              ],
-            ),
-            SizedBox(width: tokens.spacing.sp3),
-            Expanded(child: isStart ? const SizedBox.shrink() : card),
-          ],
-        ),
-      ),
+      child: child,
     );
   }
 }

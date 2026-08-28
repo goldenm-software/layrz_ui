@@ -115,14 +115,31 @@ class LayrzBadgeVisual extends StatelessWidget {
       content = Icon(icon, size: diameter * 0.7, color: spec.contentColor);
     }
 
+    // No `alignment:` here deliberately: `Container.build` only inserts an
+    // inner `Align` when `alignment` is non-null — and per `Container`'s own
+    // documented layout rules, that `Align` expands to fill the parent
+    // whenever the incoming constraints are bounded (even if loose), rather
+    // than shrink-wrapping to `constraints` + `child`. That is exactly what
+    // happened when this badge was overlaid by `LayrzBadge`:
+    // `Positioned.fill` -> `Align` -> `FractionalTranslation` still hands this
+    // widget bounded constraints (loosened to the size of whatever it
+    // decorates), so an `alignment`-bearing `Container` ballooned out to match
+    // the decorated child's own box instead of staying pinned to `diameter`.
+    // Without `alignment`, the composed tree is just
+    // `ConstrainedBox(diameter) -> DecoratedBox -> Padding -> content`, which
+    // sizes to `content`'s own size (clamped up to `diameter`) regardless of
+    // how loose or tight the ambient constraints are — content is already
+    // visually centered by the symmetric padding, so no inner `Align`/`Center`
+    // is needed to reproduce the old centering.
     return Container(
       constraints: BoxConstraints(minWidth: diameter, minHeight: diameter),
-      padding: isDot ? EdgeInsets.zero : EdgeInsets.symmetric(horizontal: tokens.spacing.sp1 * 0.6),
+      padding: isDot
+          ? EdgeInsets.zero
+          : EdgeInsets.symmetric(horizontal: tokens.spacing.sp1 * 0.6, vertical: tokens.spacing.sp1 / 2),
       decoration: BoxDecoration(
         color: spec.backgroundColor,
         borderRadius: BorderRadius.circular(tokens.radius.full),
       ),
-      alignment: Alignment.center,
       child: content,
     );
   }

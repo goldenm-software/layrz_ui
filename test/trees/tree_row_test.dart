@@ -328,6 +328,117 @@ void main() {
       }
     });
 
+    guardedTestWidgets('an unselected, inactive row paints the idle surface -- never a black background', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: false,
+          isPartiallySelected: false,
+          totalDepth: 0,
+          child: const Text('Alpha'),
+        ),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration.color, tokens.colors.sf1);
+      expect(decoration.color, isNot(const Color(0xFF000000)));
+    });
+
+    guardedTestWidgets(
+      'a selected row paints no background fill -- selection is marked by the checkbox alone '
+      '(maintainer review, DESIGN-93: a full-row fill was judged redundant with the checkbox)',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: true,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            onSelect: () {},
+            child: const Text('Alpha'),
+          ),
+        );
+
+        final tokens = LayrzThemeData.light().tokens;
+        // With onSelect provided, the checkbox affordance paints a second,
+        // unrelated DecoratedBox -- so a plain find.byType(DecoratedBox) is
+        // ambiguous here. The row's own DecoratedBox is the outermost one in
+        // its subtree (it wraps the checkbox, not the reverse), so it is the
+        // first match in the descendant search's tree order.
+        final decoratedBox = tester.widget<DecoratedBox>(
+          find.descendant(of: find.byType(LayrzTreeRow<String>), matching: find.byType(DecoratedBox)).first,
+        );
+        final decoration = decoratedBox.decoration as BoxDecoration;
+
+        expect(decoration.color, tokens.colors.sf1);
+
+        // Text stays legible against the plain idle surface.
+        final defaultTextStyle = tester.widget<DefaultTextStyle>(
+          find.descendant(of: find.byType(LayrzTreeRow<String>), matching: find.byType(DefaultTextStyle)).first,
+        );
+        expect(defaultTextStyle.style.color, tokens.colors.fg1);
+      },
+    );
+
+    guardedTestWidgets('selected AND active together: outline marks focus, checkbox marks selection, no fill', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: true,
+          isPartiallySelected: false,
+          totalDepth: 0,
+          isActive: true,
+          onSelect: () {},
+          child: const Text('Alpha'),
+        ),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      // See the previous test for why this can't be a plain
+      // find.byType(DecoratedBox): the checkbox affordance paints its own.
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find.descendant(of: find.byType(LayrzTreeRow<String>), matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = decoratedBox.decoration as BoxDecoration;
+
+      expect(decoration.color, tokens.colors.sf1);
+      expect((decoration.border as Border).top.color, tokens.colors.primary.shade500);
+
+      // The checkbox itself is the visual marker of selection: filled with
+      // the primary colour and painting the check glyph.
+      expect(find.byIcon(MdiIcons.check), findsOneWidget);
+    });
+
     guardedTestWidgets(
       'the active outline is the only geometry-neutral difference -- row size is identical either way',
       (tester) async {

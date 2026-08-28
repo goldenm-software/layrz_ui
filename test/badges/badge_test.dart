@@ -55,6 +55,43 @@ void main() {
       expect(badgedSize, equals(bareSize));
     });
 
+    guardedTestWidgets('the overlaid badge visual is not inflated to the size of a larger child', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Regression test for the "badges are too big" defect: `Positioned.fill`
+      // -> `Align` -> `FractionalTranslation` still hands `LayrzBadgeVisual`
+      // bounded (loosened-to-the-child) constraints, and a `Container` with
+      // its own `alignment:` set expands to fill bounded constraints instead
+      // of shrink-wrapping (see `LayrzBadgeVisual.build`'s doc comment). The
+      // overlay visual's rendered size must match a same-content bare
+      // `LayrzBadgeVisual` regardless of how large the decorated child is.
+      const bareKey = Key('bare-visual');
+
+      await pumpThemed(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzBadgeVisual(count: 3, key: bareKey),
+            LayrzBadge(
+              label: 'Notifications',
+              count: 3,
+              child: const SizedBox(width: 64, height: 64),
+            ),
+          ],
+        ),
+      );
+
+      final bareSize = tester.getSize(find.byKey(bareKey));
+      final overlaySize = tester.getSize(
+        find.descendant(of: find.byType(LayrzBadge), matching: find.byType(LayrzBadgeVisual)),
+      );
+
+      expect(overlaySize, equals(bareSize));
+    });
+
     guardedTestWidgets('renders a bare presence dot when count and icon are both null', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
