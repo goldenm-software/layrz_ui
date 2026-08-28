@@ -236,4 +236,58 @@ void main() {
       expect(find.byType(ColoredBox), findsOneWidget);
     });
   });
+
+  group('LayrzPageTransitions.durationOf', () {
+    testWidgets('resolves the ambient theme\'s page-transition duration token', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final themeData = LayrzThemeData.light();
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(
+        LayrzPageTransitions.durationOf(capturedContext),
+        themeData.tokens.motion.dPageTransition,
+      );
+    });
+
+    testWidgets('tracks a customized motion token rather than a hardcoded value', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final customTokens = LayrzThemeData.light().tokens.copyWith(
+        motion: const LayrzMotionTokens(dPageTransition: Duration(milliseconds: 400)),
+      );
+      final themeData = LayrzThemeData.light().copyWith(tokens: customTokens);
+      late BuildContext capturedContext;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              capturedContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(LayrzPageTransitions.durationOf(capturedContext), const Duration(milliseconds: 400));
+    });
+  });
 }

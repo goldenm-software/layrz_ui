@@ -113,6 +113,7 @@ class _TransitionsSectionState extends State<TransitionsSection> {
                 pageBuilder: (context, animation, secondaryAnimation) =>
                     _DemoPage(pageNumber: _pageCounter, transitionType: _selectedType),
                 transitionsBuilder: builder,
+                transitionDuration: LayrzPageTransitions.durationOf(context),
               ),
             );
           },

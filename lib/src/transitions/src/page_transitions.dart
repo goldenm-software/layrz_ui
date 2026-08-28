@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'transition_builder.dart';
 import 'transition_type.dart';
@@ -21,6 +23,7 @@ import 'transition_type.dart';
 ///   PageRouteBuilder(
 ///     pageBuilder: (context, animation, secondaryAnimation) => const DetailPage(),
 ///     transitionsBuilder: LayrzPageTransitions.slide,
+///     transitionDuration: LayrzPageTransitions.durationOf(context),
 ///   ),
 /// );
 /// ```
@@ -34,6 +37,7 @@ import 'transition_type.dart';
 ///     key: state.pageKey,
 ///     child: const DetailPage(),
 ///     transitionsBuilder: LayrzPageTransitions.scale,
+///     transitionDuration: LayrzPageTransitions.durationOf(context),
 ///   ),
 /// );
 /// ```
@@ -183,6 +187,23 @@ abstract final class LayrzPageTransitions {
   ) {
     return child;
   }
+
+  /// The design system's page-transition duration, resolved from [context].
+  ///
+  /// A [LayrzTransitionBuilder] cannot set its own route duration — that is
+  /// `PageRouteBuilder.transitionDuration` (or, on go_router, the sibling
+  /// `CustomTransitionPage.transitionDuration`), a parameter of the route
+  /// itself rather than of the function that builds the transition widget.
+  /// This accessor gives callers a handle on the matching duration token so
+  /// the route they construct actually runs at the design system's page
+  /// transition speed instead of the SDK's default, rather than silently
+  /// drifting from the curves the builders above already use.
+  ///
+  /// Reads [LayrzTokens.motion]'s `dPageTransition` field via [context],
+  /// which is defined to equal [kPageTransitionDuration] (250 milliseconds).
+  /// [context] is used only to resolve the ambient [LayrzThemeData]; it is
+  /// not otherwise read.
+  static Duration durationOf(BuildContext context) => context.tokens.motion.dPageTransition;
 
   /// Resolves the [LayrzTransitionBuilder] that corresponds to [type].
   ///
