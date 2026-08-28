@@ -37,7 +37,7 @@ Nine input component suites have zero semantics assertions despite ~70 tests. Th
 - DESIGN-119: `avatar_a11y_test.dart` (0 / 9 assertions)
 - DESIGN-120: `alert_a11y_test.dart` (0 / 8 assertions)
 - DESIGN-121: `bottom_sheet_a11y_test.dart` (0 / 5 assertions)
-- DESIGN-122: `stepper_a11y_test.dart` (1 / 11 assertions) — superseded by the 2026-08-27 stepper redesign, which rewrote the test suite against the new wide/compact layouts and their new semantics surface (expand/collapse, lock affordance) as part of that unit rather than as a separate follow-up
+- DESIGN-122: `stepper_a11y_test.dart` (was 1 / 11 assertions) — superseded by the 2026-08-27 stepper redesign, which rewrote the test suite (now 12 `testWidgets`, including new coverage of a compact error-step row that had no prior test at all) against the new wide/compact layouts and their new semantics surface (expand/collapse, lock affordance) as part of that unit rather than as a separate follow-up
 - DESIGN-123: `anchored_panel_a11y_test.dart` (0 / 4 assertions)
 
 These are non-blocking for M3 release but represent outstanding accessibility debt that must be addressed before the next milestone.
@@ -233,6 +233,12 @@ Grid layout uses real `LayrzRow` + `LayrzCol`, cascading fallback (unset breakpo
 **Architecture**: Full stepper (not header-only) was deliberate despite being heavier. The accepted cost is that navigation-button layout is baked in, so escape hatches can be added later if consumers need custom actions. See decision D57's 2026-08-27 update for the full reasoning behind the redesign, including why "collapse to a summary string" was not a viable reading of D57's own flow-ownership decision, the declined step-count ceiling, and why the two layout widgets stay unexported while `LayrzStepIndicator` is exported.
 
 **Wiki**: documented for the first time at `wiki/Widgets/LayrzStepper.md`, registered in `wiki/Widgets/_Sidebar.md` under Inputs — there was no page for this widget before this redesign.
+
+**2026-08-27 batch note**: this redesign shipped alongside a batch of four other rows, closed as follows —
+- **DESIGN-87** (this redesign) and **DESIGN-122** (the a11y test rewrite) — closed, covered above.
+- **DESIGN-161** (`LayrzComboBoxInput`'s mobile sheet had no search field or accessible name) and **DESIGN-162** (`LayrzTappable.onTap` fired twice on a double-tap) — both closed; see `CHANGELOG.md`'s Unreleased section for what shipped.
+- **DESIGN-146** (`LayrzAnchoredPanel.controller`'s no-swap contract is debug-only) — closed as a **reversal**: option 2 (throw in release) was implemented, measured to corrupt the framework's `_InactiveElements` bookkeeping, and reverted to option 3 (debug-only assert, honestly documented). See decision D71.
+- **DESIGN-153** (`LayrzEditableField`'s null→caller-supplied `focusNode` swap) was investigated as part of this batch and **closed as NOT-A-BUG, not fixed**. The skipped test's premise was a harness artefact — its `pumpThemed`-based swap trigger never fires `didUpdateWidget` at all — not a defect in the widget. Under a valid harness, all three swap directions (null→external, external→null, external→different-external) pass unmodified. No code changed as a result; this row does not appear in `CHANGELOG.md`.
 
 ---
 
