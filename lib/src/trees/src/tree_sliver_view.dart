@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'tree_controller.dart';
@@ -22,6 +23,19 @@ import 'tree_selection.dart';
 ///
 /// [LayrzTreeView] (the box form) wraps this widget in its own
 /// `CustomScrollView`; the tree is implemented once, here.
+///
+/// **Keyboard navigation** moves [LayrzTreeController.activeId] across the
+/// tree's currently-*visible* rows only — a collapsed subtree's descendants
+/// are not navigable, matching what a sighted user can actually see:
+/// * ArrowDown / ArrowUp move the active row to the next/previous visible row.
+/// * ArrowRight expands the active row if collapsed, or descends into its
+///   first child if already expanded (a no-op on a leaf).
+/// * ArrowLeft collapses the active row if expanded, or ascends to its
+///   parent if already collapsed (or a leaf).
+/// Moving the active row is deliberately **not** the same as selecting it —
+/// arrow keys never call into [LayrzTreeSelectionController]. See
+/// `tree_style_spec.dart`'s `isActive` parameter for how the active row is
+/// rendered.
 class LayrzSliverTreeView<T> extends StatefulWidget {
   /// Creates a [LayrzSliverTreeView].
   const LayrzSliverTreeView({
@@ -77,6 +91,14 @@ class LayrzSliverTreeView<T> extends StatefulWidget {
 
 class _LayrzSliverTreeViewState<T> extends State<LayrzSliverTreeView<T>> {
   final TreeSliverController _sdkController = TreeSliverController();
+
+  /// Owns keyboard focus for arrow-key navigation across the tree's rows.
+  ///
+  /// A single node for the whole tree, rather than one per row: the active
+  /// row is tracked as data ([_activeId]), not as which widget currently
+  /// holds Flutter's focus, so rows can come and go (expand/collapse changes
+  /// which are mounted) without focus needing to migrate between widgets.
+  final FocusNode _focusNode = FocusNode(debugLabel: 'LayrzSliverTreeView');
 
   LayrzTreeController? _internalController;
   LayrzTreeController get _effectiveController => widget.controller ?? _internalController!;
@@ -140,6 +162,7 @@ class _LayrzSliverTreeViewState<T> extends State<LayrzSliverTreeView<T>> {
     if (widget.selectionController == null) {
       _internalSelectionController?.dispose();
     }
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -167,9 +190,129 @@ class _LayrzSliverTreeViewState<T> extends State<LayrzSliverTreeView<T>> {
         expandAll: _sdkController.expandAll,
         collapseAll: _sdkController.collapseAll,
         getActiveId: () => _activeId,
-        setActive: (id) => setState(() => _activeId = id),
+        setActive: _setActive,
       ),
     );
+  }
+
+  /// Sets [_activeId] to [id] and rebuilds so the newly-active row's visual
+  /// (see `tree_style_spec.dart`'s `isActive`) actually updates. Used both by
+  /// the public [LayrzTreeController.setActive] and by this widget's own
+  /// arrow-key handling, so the two are indistinguishable to callers of the
+  /// controller.
+  void _setActive(Object id) => setState(() => _activeId = id);
+
+  /// Flattens [_tree] into the rows currently visible to the user — a node
+  /// appears here only if every one of its ancestors is expanded, matching
+  /// exactly what a sighted user can see (and, therefore, what arrow-key
+  /// navigation is allowed to move across). A collapsed subtree's children
+  /// are omitted entirely rather than merely skipped, so ArrowDown/ArrowUp
+  /// can never land the active row somewhere invisible.
+  List<TreeSliverNode<LayrzTreeNode<T>>> _visibleRows() {
+    final visible = <TreeSliverNode<LayrzTreeNode<T>>>[];
+    void walk(List<TreeSliverNode<LayrzTreeNode<T>>> nodes) {
+      for (final node in nodes) {
+        visible.add(node);
+        if (node.isExpanded && node.children.isNotEmpty) {
+          walk(node.children);
+        }
+      }
+    }
+
+    walk(_tree);
+    return visible;
+  }
+
+  /// Handles arrow-key navigation. See the class doc comment on
+  /// [LayrzSliverTreeView] for the exact key-to-behaviour mapping.
+  ///
+  /// Returns [KeyEventResult.handled] for every arrow key this widget
+  /// recognizes -- even ones that end up a no-op (e.g. ArrowRight on an
+  /// already-expanded leaf) -- so the event does not keep bubbling into an
+  /// ancestor's own shortcut handling. Any other key is ignored.
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return KeyEventResult.ignored;
+
+    final key = event.logicalKey;
+    final isArrowKey =
+        key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowLeft;
+    if (!isArrowKey) return KeyEventResult.ignored;
+
+    final visible = _visibleRows();
+    if (visible.isEmpty) return KeyEventResult.handled;
+
+    final currentIndex = _activeId == null ? -1 : visible.indexWhere((n) => n.content.id == _activeId);
+
+    if (key == LogicalKeyboardKey.arrowDown) {
+      final nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1).clamp(0, visible.length - 1);
+      _setActive(visible[nextIndex].content.id);
+    } else if (key == LogicalKeyboardKey.arrowUp) {
+      final prevIndex = currentIndex < 0 ? 0 : (currentIndex - 1).clamp(0, visible.length - 1);
+      _setActive(visible[prevIndex].content.id);
+    } else if (key == LogicalKeyboardKey.arrowRight) {
+      _handleArrowRight(currentIndex < 0 ? visible.first : visible[currentIndex]);
+    } else if (key == LogicalKeyboardKey.arrowLeft) {
+      _handleArrowLeft(currentIndex < 0 ? visible.first : visible[currentIndex]);
+    }
+
+    return KeyEventResult.handled;
+  }
+
+  /// ArrowRight: expands the active row if it is collapsed and has children;
+  /// if it is already expanded, descends into its first child instead. A
+  /// no-op on a leaf that is not expandable.
+  void _handleArrowRight(TreeSliverNode<LayrzTreeNode<T>> active) {
+    if (active.children.isEmpty) {
+      _setActive(active.content.id);
+      return;
+    }
+
+    if (!active.isExpanded) {
+      _sdkController.expandNode(active);
+      _setActive(active.content.id);
+    } else {
+      _setActive(active.children.first.content.id);
+    }
+  }
+
+  /// ArrowLeft: collapses the active row if it is currently expanded; if it
+  /// is already collapsed (or is a leaf), ascends to its parent instead. A
+  /// no-op when a leaf root has no parent to ascend to.
+  void _handleArrowLeft(TreeSliverNode<LayrzTreeNode<T>> active) {
+    if (active.children.isNotEmpty && active.isExpanded) {
+      _sdkController.collapseNode(active);
+      _setActive(active.content.id);
+      return;
+    }
+
+    final parent = _findParent(active.content.id, _tree, null);
+    if (parent != null) {
+      _setActive(parent.content.id);
+    } else {
+      _setActive(active.content.id);
+    }
+  }
+
+  /// Finds the parent of the node identified by [id] within [nodes], or
+  /// `null` if [id] is a root (or is not found at all). [ancestor] is the
+  /// direct parent of every node in [nodes], carried down from the caller's
+  /// own recursion level so a match at any depth can report it directly.
+  TreeSliverNode<LayrzTreeNode<T>>? _findParent(
+    Object id,
+    List<TreeSliverNode<LayrzTreeNode<T>>> nodes,
+    TreeSliverNode<LayrzTreeNode<T>>? ancestor,
+  ) {
+    for (final node in nodes) {
+      if (node.content.id == id) return ancestor;
+      if (node.children.isNotEmpty) {
+        final found = _findParent(id, node.children, node);
+        if (found != null) return found;
+      }
+    }
+    return null;
   }
 
   List<TreeSliverNode<LayrzTreeNode<T>>> _buildSdkTree(List<LayrzTreeNode<T>> nodes) {
@@ -213,53 +356,65 @@ class _LayrzSliverTreeViewState<T> extends State<LayrzSliverTreeView<T>> {
     final totalDepth = _maxDepth(widget.nodes);
     final selection = _effectiveSelectionController;
 
-    return TreeSliver<LayrzTreeNode<T>>(
-      tree: _tree,
-      controller: _sdkController,
-      treeNodeBuilder: (context, node, animationStyle) {
-        // The SDK's TreeSliverNodeBuilder typedef is fixed to
-        // TreeSliverNode<Object?> regardless of this widget's own type
-        // parameter, since treeNodeBuilder must have a stable, non-generic
-        // signature. TreeSliver<T> always calls back with the same
-        // TreeSliverNode<T> instances it was built from (see
-        // _TreeSliverState.build in sliver_tree.dart), so this cast is safe.
-        final sdkNode = node as TreeSliverNode<LayrzTreeNode<T>>;
-        final layrzNode = sdkNode.content;
-        final depth = sdkNode.depth ?? 0;
-        final isLeaf = layrzNode.children.isEmpty;
-        final isSelected = selection?.isSelected(layrzNode.id) ?? false;
-        final isPartiallySelected = selection?.isPartiallySelected(layrzNode.id) ?? false;
+    return Focus(
+      focusNode: _focusNode,
+      onKeyEvent: _handleKeyEvent,
+      // TreeSliver is a sliver -- Semantics is a SingleChildRenderObjectWidget
+      // producing a RenderBox, which a Viewport rejects as a sliver child.
+      // includeSemantics: false keeps Focus a pure InheritedWidget wrapper
+      // here; each row already carries its own Semantics via LayrzTreeRow, so
+      // nothing is lost by skipping Focus's own semantics node.
+      includeSemantics: false,
+      child: TreeSliver<LayrzTreeNode<T>>(
+        tree: _tree,
+        controller: _sdkController,
+        treeNodeBuilder: (context, node, animationStyle) {
+          // The SDK's TreeSliverNodeBuilder typedef is fixed to
+          // TreeSliverNode<Object?> regardless of this widget's own type
+          // parameter, since treeNodeBuilder must have a stable, non-generic
+          // signature. TreeSliver<T> always calls back with the same
+          // TreeSliverNode<T> instances it was built from (see
+          // _TreeSliverState.build in sliver_tree.dart), so this cast is safe.
+          final sdkNode = node as TreeSliverNode<LayrzTreeNode<T>>;
+          final layrzNode = sdkNode.content;
+          final depth = sdkNode.depth ?? 0;
+          final isLeaf = layrzNode.children.isEmpty;
+          final isSelected = selection?.isSelected(layrzNode.id) ?? false;
+          final isPartiallySelected = selection?.isPartiallySelected(layrzNode.id) ?? false;
+          final isActive = _activeId != null && layrzNode.id == _activeId;
 
-        void onToggle() => _sdkController.toggleNode(sdkNode);
-        void onSelect() => selection?.toggle(layrzNode.id);
+          void onToggle() => _sdkController.toggleNode(sdkNode);
+          void onSelect() => selection?.toggle(layrzNode.id);
 
-        final content = widget.nodeBuilder != null
-            ? widget.nodeBuilder!(
-                context,
-                layrzNode,
-                depth,
-                sdkNode.isExpanded,
-                isLeaf,
-                isSelected,
-                isPartiallySelected,
-                isLeaf ? null : onToggle,
-                widget.selectable ? onSelect : null,
-              )
-            : Text(layrzNode.content.toString());
+          final content = widget.nodeBuilder != null
+              ? widget.nodeBuilder!(
+                  context,
+                  layrzNode,
+                  depth,
+                  sdkNode.isExpanded,
+                  isLeaf,
+                  isSelected,
+                  isPartiallySelected,
+                  isLeaf ? null : onToggle,
+                  widget.selectable ? onSelect : null,
+                )
+              : Text(layrzNode.content.toString());
 
-        return LayrzTreeRow<T>(
-          node: layrzNode,
-          depth: depth,
-          isExpanded: sdkNode.isExpanded,
-          isLeaf: isLeaf,
-          isSelected: isSelected,
-          isPartiallySelected: isPartiallySelected,
-          totalDepth: totalDepth,
-          onToggle: isLeaf ? null : onToggle,
-          onSelect: widget.selectable ? onSelect : null,
-          child: content,
-        );
-      },
+          return LayrzTreeRow<T>(
+            node: layrzNode,
+            depth: depth,
+            isExpanded: sdkNode.isExpanded,
+            isLeaf: isLeaf,
+            isSelected: isSelected,
+            isPartiallySelected: isPartiallySelected,
+            totalDepth: totalDepth,
+            isActive: isActive,
+            onToggle: isLeaf ? null : onToggle,
+            onSelect: widget.selectable ? onSelect : null,
+            child: content,
+          );
+        },
+      ),
     );
   }
 }

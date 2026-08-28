@@ -35,6 +35,7 @@ class LayrzTreeRow<T> extends StatefulWidget {
     required this.child,
     this.onToggle,
     this.onSelect,
+    this.isActive = false,
     super.key,
   });
 
@@ -74,6 +75,14 @@ class LayrzTreeRow<T> extends StatefulWidget {
   /// selection semantics.
   final VoidCallback? onSelect;
 
+  /// Whether this row is currently the keyboard-navigation active row (see
+  /// [LayrzTreeController.activeId]).
+  ///
+  /// Rendered as a constant-width outline whose colour changes with this
+  /// flag, per D15 — never as a change to the row's size or padding.
+  /// Defaults to `false`.
+  final bool isActive;
+
   @override
   State<LayrzTreeRow<T>> createState() => _LayrzTreeRowState<T>();
 }
@@ -89,6 +98,7 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
       isHovered: _isHovered,
       isSelected: widget.isSelected,
       isPartiallySelected: widget.isPartiallySelected,
+      isActive: widget.isActive,
     );
 
     final label = 'Level ${widget.depth + 1} of ${widget.totalDepth + 1}';
@@ -101,12 +111,21 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
       hint: semanticsHint,
       selected: widget.onSelect != null ? widget.isSelected : null,
       expanded: widget.isLeaf ? null : widget.isExpanded,
+      // Passing `false` here (rather than `null`) would still set the
+      // isFocusable flag -- Semantics.focused implicitly sets focusable
+      // whenever it is non-null, per SemanticsProperties.focused's own doc
+      // comment. A row not currently active must carry no focus concept at
+      // all, matching how `selected`/`expanded` are only set when meaningful.
+      focused: widget.isActive ? true : null,
       onTap: widget.onToggle,
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: DecoratedBox(
-          decoration: BoxDecoration(color: style.backgroundColor),
+          decoration: BoxDecoration(
+            color: style.backgroundColor,
+            border: Border.all(color: style.activeBorderColor, width: tokens.border.stroke1),
+          ),
           child: Padding(
             padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp1, horizontal: tokens.spacing.sp2),
             child: Row(

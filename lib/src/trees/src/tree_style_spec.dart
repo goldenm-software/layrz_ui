@@ -20,19 +20,25 @@ class LayrzTreeRowStyleSpec {
     required this.checkboxBorderColor,
     required this.checkboxFillColor,
     required this.checkboxGlyphColor,
+    required this.activeBorderColor,
   });
 
   /// Resolves a [LayrzTreeRowStyleSpec] from [tokens] and the row's current
   /// interaction/selection state.
   ///
   /// Per decision D15, only colour (never geometry) varies across
-  /// hover/selected/disabled states — this factory is the single place that
-  /// rule is applied for tree rows.
+  /// hover/selected/active/disabled states — this factory is the single place
+  /// that rule is applied for tree rows. [isActive] marks the row currently
+  /// focused by keyboard navigation (see [LayrzTreeController.activeId]); it
+  /// is rendered as a border colour change only ([activeBorderColor]), never
+  /// as a background swap, so it composes cleanly with [isSelected] /
+  /// [isPartiallySelected] instead of fighting them for the same visual slot.
   factory LayrzTreeRowStyleSpec.resolve(
     LayrzTokens tokens, {
     required bool isHovered,
     required bool isSelected,
     required bool isPartiallySelected,
+    bool isActive = false,
   }) {
     final Color backgroundColor;
     if (isSelected || isPartiallySelected) {
@@ -51,6 +57,7 @@ class LayrzTreeRowStyleSpec {
       checkboxBorderColor: isSelected || isPartiallySelected ? tokens.colors.primary.shade500 : tokens.colors.fg3,
       checkboxFillColor: tokens.colors.primary.shade500,
       checkboxGlyphColor: tokens.colors.sf1,
+      activeBorderColor: isActive ? tokens.colors.primary.shade500 : const Color(0x00000000),
     );
   }
 
@@ -75,4 +82,12 @@ class LayrzTreeRowStyleSpec {
 
   /// The colour of the checkmark/dash glyph drawn inside a filled checkbox.
   final Color checkboxGlyphColor;
+
+  /// The colour of the row's outline when it is the keyboard-active row.
+  ///
+  /// Fully transparent when the row is not active. The outline is always
+  /// painted at a constant width (see [LayrzTreeRow]) and only its colour
+  /// changes, per D15 — this keeps the row's geometry identical whether or
+  /// not it is active, avoiding reflow when keyboard focus moves.
+  final Color activeBorderColor;
 }

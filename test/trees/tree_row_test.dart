@@ -249,5 +249,128 @@ void main() {
       expect(find.byIcon(MdiIcons.minus), findsOneWidget);
       expect(find.byIcon(MdiIcons.check), findsNothing);
     });
+
+    guardedTestWidgets('isActive: false paints a fully transparent outline and carries no focus semantics', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: false,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            child: const Text('Alpha'),
+          ),
+        );
+
+        final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+        final decoration = decoratedBox.decoration as BoxDecoration;
+        expect((decoration.border as Border).top.color.a, 0);
+
+        // isFocused/isFocusable both default to false in matchesSemantics: an
+        // inactive row must carry no focus concept at all -- not merely "not
+        // focused" -- exactly mirroring the isSelected/isFocusable trap this
+        // same pattern already avoids for selection (Semantics.focused: false
+        // would still set isFocusable, which is why the row passes `null`
+        // instead when inactive).
+        expect(tester.getSemantics(find.byType(LayrzTreeRow<String>)), matchesSemantics());
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('isActive: true paints a visible outline and announces focused semantics', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: false,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            isActive: true,
+            child: const Text('Alpha'),
+          ),
+        );
+
+        final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+        final decoration = decoratedBox.decoration as BoxDecoration;
+        // The active border must actually be visible (non-zero alpha) -- this
+        // is what would fail if the active-row treatment were ever removed
+        // and isActive silently stopped changing anything.
+        expect(decoration.border, isNotNull);
+        expect((decoration.border as Border).top.color.a, greaterThan(0));
+
+        expect(
+          tester.getSemantics(find.byType(LayrzTreeRow<String>)),
+          matchesSemantics(isFocused: true, isFocusable: true),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets(
+      'the active outline is the only geometry-neutral difference -- row size is identical either way',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: false,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            child: const Text('Alpha'),
+          ),
+        );
+        final inactiveSize = tester.getSize(find.byType(LayrzTreeRow<String>));
+
+        await pumpThemed(
+          tester,
+          LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: false,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            isActive: true,
+            child: const Text('Alpha'),
+          ),
+        );
+        final activeSize = tester.getSize(find.byType(LayrzTreeRow<String>));
+
+        // Per D15: the active-row outline changes colour only. If it grew
+        // the row (e.g. via border width instead of colour), this equality
+        // would fail.
+        expect(activeSize, inactiveSize);
+      },
+    );
   });
 }
