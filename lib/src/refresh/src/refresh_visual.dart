@@ -99,6 +99,14 @@ class _LayrzRefreshVisualState extends State<LayrzRefreshVisual> with SingleTick
     _syncSpinning();
 
     return Semantics(
+      // `container: true` gives this widget its own semantics boundary node
+      // regardless of what else shares the page. [LayrzRefreshIndicator] can
+      // float a second [LayrzRefreshVisual] for its fallback button
+      // alongside this one (see refresh_indicator.dart); without a boundary
+      // here, both would merge their `liveRegion`/`label` into whatever
+      // ancestor node happens to be nearest, and the combined result is not
+      // guaranteed to preserve either one's label or live-region flag.
+      container: true,
       liveRegion: isSpinning,
       label: isSpinning ? 'Refreshing' : null,
       child: SizedBox(

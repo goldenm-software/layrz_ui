@@ -4,7 +4,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/refresh/src/refresh_controller.dart';
 import 'package:layrz_ui/src/refresh/src/refresh_indicator.dart';
-import 'package:layrz_ui/src/refresh/src/refresh_visual.dart';
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
@@ -17,7 +16,7 @@ Widget _listView() {
 
 void main() {
   group('LayrzRefreshIndicator Accessibility', () {
-    guardedTestWidgets('idle indicator exposes no live region to assistive technology', (tester) async {
+    guardedTestWidgets('idle indicator exposes nothing to assistive technology', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -33,8 +32,11 @@ void main() {
           ),
         );
 
-        final semanticsNode = tester.getSemantics(find.byType(LayrzRefreshVisual));
-        expect(semanticsNode, matchesSemantics(isLiveRegion: false));
+        // The floating pull indicator is genuinely absent from the tree at
+        // rest (zero drag progress, no refresh in flight) -- not merely
+        // present-but-silent. See refresh_indicator.dart's `_onControllerChanged`
+        // for why the widget itself, not just its opacity, is gated this way.
+        expect(find.byKey(const ValueKey('layrz-refresh-pull-visual')), findsNothing);
       } finally {
         handle.dispose();
       }
@@ -70,7 +72,14 @@ void main() {
           unawaited(controller.refresh(() => completer.future));
           await tester.pump();
 
-          final semanticsNode = tester.getSemantics(find.byType(LayrzRefreshVisual));
+          // `enableDragGesture: false` still leaves the automatic fallback
+          // button visible (no mouse has been observed connected in this
+          // test), which paints a second `LayrzRefreshVisual` for its own
+          // loading state -- disambiguate by key to target the pull
+          // indicator's visual specifically.
+          final semanticsNode = tester.getSemantics(
+            find.byKey(const ValueKey('layrz-refresh-pull-visual')),
+          );
           expect(
             semanticsNode,
             matchesSemantics(isLiveRegion: true, label: 'Refreshing'),
@@ -109,7 +118,7 @@ void main() {
       }
     });
 
-    guardedTestWidgets('a settled refresh leaves no live region behind', (tester) async {
+    guardedTestWidgets('a settled refresh leaves nothing behind in the tree', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -136,8 +145,12 @@ void main() {
         unawaited(controller.refresh(() async {}));
         await tester.pumpAndSettle();
 
-        final semanticsNode = tester.getSemantics(find.byType(LayrzRefreshVisual));
-        expect(semanticsNode, matchesSemantics(isLiveRegion: false));
+        // Once settling completes and the controller reports `idle` again,
+        // the pull indicator must be gone from the tree entirely -- this is
+        // the same collapse-to-nothing contract the abandoned/reversed-pull
+        // regression tests in refresh_indicator_test.dart cover for the drag
+        // path, verified here for the programmatic-refresh path instead.
+        expect(find.byKey(const ValueKey('layrz-refresh-pull-visual')), findsNothing);
       } finally {
         handle.dispose();
       }
