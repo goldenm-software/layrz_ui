@@ -311,6 +311,161 @@ void main() {
 
       expect(resolvedBehavior, same(customBehavior));
     });
+
+    group('pageTransitionType', () {
+      testWidgets('defaults to fade and installs a FadeTransition on pushed routes', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            initialRoute: '/',
+            routes: {
+              '/': (context) => Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed('/second'),
+                  child: const Text('first'),
+                ),
+              ),
+              '/second': (context) => const Text('second'),
+            },
+          ),
+        );
+
+        await tester.tap(find.text('first'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(FadeTransition), findsWidgets);
+      });
+
+      testWidgets('a caller-supplied type overrides the default', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            initialRoute: '/',
+            pageTransitionType: LayrzTransitionType.none,
+            routes: {
+              '/': (context) => Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed('/second'),
+                  child: const Text('first'),
+                ),
+              ),
+              '/second': (context) => const Text('second'),
+            },
+          ),
+        );
+
+        await tester.tap(find.text('first'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(FadeTransition), findsNothing);
+        expect(find.byType(ScaleTransition), findsNothing);
+      });
+
+      testWidgets('respects reduced motion even with the default fade type', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: LayrzApp(
+              title: 'Test App',
+              initialRoute: '/',
+              routes: {
+                '/': (context) => Builder(
+                  builder: (context) => GestureDetector(
+                    onTap: () => Navigator.of(context).pushNamed('/second'),
+                    child: const Text('first'),
+                  ),
+                ),
+                '/second': (context) => const Text('second'),
+              },
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('first'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.byType(FadeTransition), findsNothing);
+        expect(find.text('second'), findsOneWidget);
+      });
+
+      testWidgets('pageTransitionTypeOf reads the ambient value from an imperative LayrzApp', (
+        tester,
+      ) async {
+        late LayrzTransitionType resolved;
+
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            pageTransitionType: LayrzTransitionType.slide,
+            home: Builder(
+              builder: (context) {
+                resolved = LayrzApp.pageTransitionTypeOf(context);
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+
+        expect(resolved, LayrzTransitionType.slide);
+      });
+
+      testWidgets('pageTransitionTypeOf reads the ambient value from a router-based LayrzApp', (
+        tester,
+      ) async {
+        late LayrzTransitionType resolved;
+
+        final routerConfig = RouterConfig<Object>(
+          routeInformationProvider: _SimpleRouteInformationProvider(),
+          routeInformationParser: SimpleRouteInformationParser(),
+          routerDelegate: SimpleRouterDelegate(
+            builder: (context) {
+              resolved = LayrzApp.pageTransitionTypeOf(context);
+              return const Placeholder();
+            },
+          ),
+        );
+
+        await tester.pumpWidget(
+          LayrzApp.router(
+            title: 'Router Test',
+            pageTransitionType: LayrzTransitionType.scale,
+            routerConfig: routerConfig,
+          ),
+        );
+
+        expect(resolved, LayrzTransitionType.scale);
+      });
+
+      testWidgets('pageTransitionTypeOf defaults to fade with no LayrzApp ancestor', (tester) async {
+        late LayrzTransitionType resolved;
+
+        await tester.pumpWidget(
+          Builder(
+            builder: (context) {
+              resolved = LayrzApp.pageTransitionTypeOf(context);
+              return const SizedBox.shrink();
+            },
+          ),
+        );
+
+        expect(resolved, LayrzTransitionType.fade);
+      });
+    });
   });
 }
 

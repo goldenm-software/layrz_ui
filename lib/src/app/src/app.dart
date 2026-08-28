@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
+import 'package:layrz_ui/src/transitions/transitions.dart';
 
 /// Root application widget for layrz_ui.
 ///
@@ -142,6 +143,35 @@ class LayrzApp extends StatefulWidget {
   /// The identifier for state restoration.
   final String? restorationScopeId;
 
+  // ── Page transitions ────────────────────────────────────────────────
+
+  /// The design system's default page-transition animation.
+  ///
+  /// Defaults to [LayrzTransitionType.fade]. On the imperative-routing
+  /// constructor ([LayrzApp.new]), this value has a real, direct effect: it
+  /// is resolved via [LayrzPageTransitions.resolve] and installed as the
+  /// `transitionsBuilder` (with [LayrzPageTransitions.durationOf] as the
+  /// matching `transitionDuration`) on every [PageRouteBuilder] this widget
+  /// constructs for [home], [routes], and [onGenerateRoute].
+  ///
+  /// On the declarative-routing constructor ([LayrzApp.router]), `layrz_ui`
+  /// has no dependency on `go_router` (or any other router package) and
+  /// therefore cannot reach into a caller-supplied [RouterConfig] to install
+  /// a transition on routes it did not build — there is no seam to intercept.
+  /// This value is still propagated as ambient app state, reachable via
+  /// [LayrzApp.pageTransitionTypeOf], so a router-based caller can read the
+  /// design system's default and apply it explicitly to their own route
+  /// builders (for example, go_router's `CustomTransitionPage.transitionsBuilder:
+  /// LayrzPageTransitions.resolve(LayrzApp.pageTransitionTypeOf(context))`).
+  /// It is not applied automatically for router-based apps.
+  ///
+  /// Every builder [LayrzPageTransitions.resolve] can return already checks
+  /// [MediaQuery.disableAnimationsOf] and falls back to
+  /// [LayrzPageTransitions.none] when the platform requests reduced motion,
+  /// so this default respects that preference wherever it is actually
+  /// applied.
+  final LayrzTransitionType pageTransitionType;
+
   /// Imperative-routing constructor.
   const LayrzApp({
     super.key,
@@ -168,6 +198,7 @@ class LayrzApp extends StatefulWidget {
     this.shortcuts,
     this.actions,
     this.restorationScopeId,
+    this.pageTransitionType = LayrzTransitionType.fade,
   }) : routerConfig = null,
        routerDelegate = null,
        routeInformationParser = null,
@@ -199,6 +230,7 @@ class LayrzApp extends StatefulWidget {
     this.shortcuts,
     this.actions,
     this.restorationScopeId,
+    this.pageTransitionType = LayrzTransitionType.fade,
   }) : home = null,
        routes = null,
        onGenerateRoute = null,
@@ -206,8 +238,41 @@ class LayrzApp extends StatefulWidget {
        navigatorObservers = const [],
        initialRoute = null;
 
+  /// Returns the nearest ancestor [LayrzApp]'s [pageTransitionType].
+  ///
+  /// [context] is the [BuildContext] to search upward from. Intended for
+  /// router-based callers (see [pageTransitionType]'s doc comment) who build
+  /// their own route pages and want to apply the design system's default
+  /// transition rather than hardcoding [LayrzTransitionType.fade] themselves.
+  ///
+  /// Returns [LayrzTransitionType.fade] — the same default [pageTransitionType]
+  /// itself falls back to — if no [LayrzApp] ancestor is found, so this is
+  /// safe to call even outside a [LayrzApp] subtree.
+  static LayrzTransitionType pageTransitionTypeOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<_LayrzAppScope>();
+    return scope?.pageTransitionType ?? LayrzTransitionType.fade;
+  }
+
   @override
   State<LayrzApp> createState() => _LayrzAppState();
+}
+
+/// [InheritedWidget] that propagates [LayrzApp.pageTransitionType] down the
+/// widget tree, so [LayrzApp.pageTransitionTypeOf] can read it from any
+/// descendant context — including inside a router-based caller's own route
+/// builders, which sit below this scope.
+class _LayrzAppScope extends InheritedWidget {
+  /// The [LayrzApp.pageTransitionType] value being propagated.
+  final LayrzTransitionType pageTransitionType;
+
+  /// Creates a [_LayrzAppScope].
+  ///
+  /// [pageTransitionType] is the value to propagate. [child] is the widget
+  /// subtree that can read it via [LayrzApp.pageTransitionTypeOf].
+  const _LayrzAppScope({required this.pageTransitionType, required super.child});
+
+  @override
+  bool updateShouldNotify(_LayrzAppScope oldWidget) => pageTransitionType != oldWidget.pageTransitionType;
 }
 
 /// Combines caller-supplied localizations delegates with the default [LayrzUiL10nDelegate].
@@ -265,9 +330,12 @@ class _LayrzAppState extends State<LayrzApp> {
     // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
     final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
 
-    return ScrollConfiguration(
-      behavior: scrollBehavior,
-      child: innerChild,
+    return _LayrzAppScope(
+      pageTransitionType: widget.pageTransitionType,
+      child: ScrollConfiguration(
+        behavior: scrollBehavior,
+        child: innerChild,
+      ),
     );
   }
 
@@ -331,6 +399,8 @@ class _LayrzAppState extends State<LayrzApp> {
         return PageRouteBuilder<T>(
           settings: settings,
           pageBuilder: (ctx, animation, secondaryAnimation) => builder(ctx),
+          transitionsBuilder: LayrzPageTransitions.resolve(widget.pageTransitionType),
+          transitionDuration: themeData.tokens.motion.dPageTransition,
         );
       },
       builder: (ctx, child) => _wrapWithTheme(context: ctx, themeData: themeData, child: child),
