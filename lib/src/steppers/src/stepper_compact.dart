@@ -98,6 +98,10 @@ class LayrzStepperCompactLayout extends StatelessWidget {
           ),
           child: Semantics(
             label: l10n.steppersStepCounterLabel(currentIndex + 1, stepCount),
+            // The wrapper's label above is built from the exact same call as
+            // the descendant `Text` below, so without this flag the merged
+            // announcement would repeat the counter text twice.
+            excludeSemantics: true,
             child: Text(
               l10n.steppersStepCounterLabel(currentIndex + 1, stepCount),
               style: tokens.typography.label,
@@ -166,7 +170,13 @@ class _CompactStepRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final l10n = context.l10n;
-    final isTappable = state == LayrzStepperState.completed || state == LayrzStepperState.active;
+    // Completed, active, and error steps are all tappable — completed to
+    // jump back for review, active because it is already open, and error so
+    // the step that failed can be jumped to for correction, per
+    // LayrzStepperState.error's own contract. Only upcoming steps stay
+    // locked.
+    final isTappable =
+        state == LayrzStepperState.completed || state == LayrzStepperState.active || state == LayrzStepperState.error;
     final isUpcoming = state == LayrzStepperState.upcoming;
 
     // steppersStateLabel already includes "locked" for the upcoming case, so
@@ -193,8 +203,16 @@ class _CompactStepRow extends StatelessWidget {
     );
 
     return Semantics(
+      button: isTappable,
       label: '$positionLabel, ${step.labelText}. $stateLabel.',
       enabled: isTappable,
+      // The real GestureDetector lives inside `_CompactStepHeader`, wrapped in
+      // `ExcludeSemantics` so it does not contribute a second, competing node
+      // (see the comment on that `ExcludeSemantics` below). Excluding it also
+      // strips its tap action from the tree entirely, so the action is
+      // re-declared explicitly here — on the one node a screen reader actually
+      // sees — gated to tappable rows exactly like `enabled` and `button`.
+      onTap: isTappable ? () => onTap(index) : null,
       // `expanded` is deliberately null (not false) for a locked row.
       // SemanticsProperties.expanded means "this subtree represents
       // something that CAN be expanded/collapsed" when non-null; a locked

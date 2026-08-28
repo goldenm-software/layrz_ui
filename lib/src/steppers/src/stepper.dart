@@ -192,24 +192,25 @@ class _LayrzStepperState extends State<LayrzStepper> {
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp2),
           child: Row(
             children: [
+              // No wrapping Semantics(label:) here: LayrzButton already emits
+              // its own complete Semantics(button: true, label: labelText,
+              // enabled: ..., excludeSemantics: true) internally (see
+              // button.dart), so an outer wrapper carrying the same label
+              // would only merge into a duplicated announcement — e.g.
+              // "Back\nBack" — without adding anything the button doesn't
+              // already declare.
               Expanded(
-                child: Semantics(
-                  label: backLabel,
-                  child: LayrzButton(
-                    labelText: backLabel,
-                    onTap: canGoBack ? _handlePrevious : null,
-                    type: LayrzButtonType.info,
-                  ),
+                child: LayrzButton(
+                  labelText: backLabel,
+                  onTap: canGoBack ? _handlePrevious : null,
+                  type: LayrzButtonType.info,
                 ),
               ),
               SizedBox(width: tokens.spacing.sp3),
               Expanded(
-                child: Semantics(
-                  label: nextLabel,
-                  child: LayrzButton(
-                    labelText: nextLabel,
-                    onTap: canGoNext ? _handleNext : null,
-                  ),
+                child: LayrzButton(
+                  labelText: nextLabel,
+                  onTap: canGoNext ? _handleNext : null,
                 ),
               ),
             ],

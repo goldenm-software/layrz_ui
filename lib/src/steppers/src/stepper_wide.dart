@@ -96,12 +96,17 @@ class LayrzStepperWideHeader extends StatelessWidget {
 
   /// Whether the step at [index] currently accepts taps.
   ///
-  /// Mirrors the stepper-wide contract: only completed and active steps are
-  /// tappable, so a caller can jump back to review or forward to the step
-  /// already in progress, but never ahead into a locked step.
+  /// Mirrors the stepper-wide contract: completed, active, and error steps
+  /// are all tappable — completed to jump back for review, active because it
+  /// is already open, and error so the step that failed can be jumped to for
+  /// correction, per [LayrzStepperState.error]'s own contract. Only
+  /// [LayrzStepperState.upcoming] steps stay locked; a caller can never jump
+  /// ahead into a step it has not reached yet.
   bool _isTappable(int index) {
     final state = _stateOf(index);
-    return state == LayrzStepperState.completed || state == LayrzStepperState.active;
+    return state == LayrzStepperState.completed ||
+        state == LayrzStepperState.active ||
+        state == LayrzStepperState.error;
   }
 
   @override
@@ -200,8 +205,16 @@ class _StepCell extends StatelessWidget {
     final cursor = isTappable ? SystemMouseCursors.click : MouseCursor.defer;
 
     return Semantics(
+      button: isTappable,
       label: '$positionLabel, ${step.labelText}. $stateLabel.',
       enabled: isTappable,
+      onTap: isTappable ? onTap : null,
+      // The wrapper's label above already includes the step's own label text
+      // (`step.labelText`), so the descendant `Text` below must not
+      // contribute a second, competing semantics node — excluding it is what
+      // keeps the announcement to one occurrence of the label instead of two,
+      // and stops a locked row's index number from leaking into the merge.
+      excludeSemantics: true,
       child: GestureDetector(
         onTap: isTappable ? onTap : null,
         child: MouseRegion(
