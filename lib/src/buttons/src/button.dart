@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/positioning/positioning.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
@@ -79,6 +80,14 @@ class LayrzButton extends StatefulWidget {
   /// For non-Fab buttons, this field alone determines whether a tooltip is shown.
   final String? hintText;
 
+  /// The preferred side on which the button's tooltip renders, relative to the button.
+  ///
+  /// Defaults to [LayrzPreferredSide.bottom], matching [LayrzTooltip]'s own default,
+  /// so existing callers see no change in behaviour. Pass [LayrzPreferredSide.top]
+  /// (or `left`/`right`) when the button sits directly above content that a
+  /// bottom-anchored tooltip would otherwise obscure.
+  final LayrzPreferredSide tooltipPosition;
+
   /// Creates a new [LayrzButton] with the given properties.
   ///
   /// The button accent color is determined by [type]:
@@ -91,6 +100,9 @@ class LayrzButton extends StatefulWidget {
   /// Tooltip behavior is determined by [style] and [hintText]:
   /// - **Fab buttons** always show a tooltip (labelText, or labelText + hintText if hint is provided)
   /// - **Non-Fab buttons** show a tooltip only when [hintText] is non-null
+  ///
+  /// [tooltipPosition] controls which side of the button that tooltip renders on,
+  /// defaulting to [LayrzPreferredSide.bottom].
   ///
   /// Button sizing is fixed and not caller-configurable: height, width, icon size,
   /// and spacing all use design system constants. Buttons can be constrained by their
@@ -109,6 +121,7 @@ class LayrzButton extends StatefulWidget {
     this.color,
     this.style = LayrzButtonStyle.elevated,
     this.hintText,
+    this.tooltipPosition = LayrzPreferredSide.bottom,
   }) : assert(
          type == LayrzButtonType.custom || color == null,
          'color is only applied when type is LayrzButtonType.custom.',
@@ -130,6 +143,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.save({
     required String labelText,
     required VoidCallback onTap,
@@ -138,6 +154,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -155,6 +172,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.success,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -174,6 +192,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.cancel({
     required String labelText,
     required VoidCallback onTap,
@@ -182,6 +203,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -199,6 +221,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.danger,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -218,6 +241,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.info({
     required String labelText,
     required VoidCallback onTap,
@@ -226,6 +252,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -243,6 +270,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.info,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -262,6 +290,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.show({
     required String labelText,
     required VoidCallback onTap,
@@ -270,6 +301,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -287,6 +319,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.info,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -306,6 +339,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.edit({
     required String labelText,
     required VoidCallback onTap,
@@ -314,6 +350,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -331,6 +368,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.warning,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -350,6 +388,9 @@ class LayrzButton extends StatefulWidget {
   /// The [hintText] parameter is optional and applies only to Fab buttons, where it
   /// is displayed alongside the labelText in the tooltip. For non-Fab buttons, the
   /// label is already visible, so hintText is not shown unless explicitly provided.
+  ///
+  /// The [tooltipPosition] parameter controls which side of the button the tooltip
+  /// renders on, defaulting to [LayrzPreferredSide.bottom].
   factory LayrzButton.delete({
     required String labelText,
     required VoidCallback onTap,
@@ -358,6 +399,7 @@ class LayrzButton extends StatefulWidget {
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
+    LayrzPreferredSide tooltipPosition = LayrzPreferredSide.bottom,
     Key? key,
   }) {
     assert(
@@ -375,6 +417,7 @@ class LayrzButton extends StatefulWidget {
       type: LayrzButtonType.danger,
       style: isFab ? style.asFab : style,
       hintText: hintText,
+      tooltipPosition: tooltipPosition,
     );
   }
 
@@ -682,6 +725,7 @@ class _LayrzButtonState extends State<LayrzButton> with TickerProviderStateMixin
     final wrappedContent = _shouldShowTooltip()
         ? LayrzTooltip(
             contentText: tooltipMessage,
+            position: widget.tooltipPosition,
             child: buttonContent,
           )
         : buttonContent;

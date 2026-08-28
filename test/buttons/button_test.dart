@@ -605,6 +605,63 @@ void main() {
         // Tooltip should contain only the hint, not the label
         expect(find.text('Button Hint'), findsWidgets);
       });
+
+      testWidgets('tooltipPosition defaults to bottom, placing the tooltip below the anchor', (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Fab Label',
+            style: LayrzButtonStyle.outlinedTonalFab,
+            onTap: () {},
+          ),
+        );
+
+        await tester.longPress(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final buttonRect = tester.getRect(find.byType(LayrzButton));
+        final tooltipRect = tester.getRect(find.text('Fab Label').last);
+
+        expect(
+          tooltipRect.top,
+          greaterThanOrEqualTo(buttonRect.bottom),
+          reason:
+              'With no tooltipPosition passed, the tooltip must default to LayrzPreferredSide.bottom '
+              'so every existing caller sees no change in behaviour.',
+        );
+      });
+
+      testWidgets('tooltipPosition: top places the tooltip above the anchor', (tester) async {
+        tester.view.physicalSize = const Size(800, 600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButton(
+            labelText: 'Fab Label',
+            style: LayrzButtonStyle.outlinedTonalFab,
+            onTap: () {},
+            tooltipPosition: LayrzPreferredSide.top,
+          ),
+        );
+
+        await tester.longPress(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+
+        final buttonRect = tester.getRect(find.byType(LayrzButton));
+        final tooltipRect = tester.getRect(find.text('Fab Label').last);
+
+        expect(
+          tooltipRect.bottom,
+          lessThanOrEqualTo(buttonRect.top),
+          reason: 'tooltipPosition: LayrzPreferredSide.top must render the tooltip above the anchor.',
+        );
+      });
     });
 
     group('Hover and press states', () {
