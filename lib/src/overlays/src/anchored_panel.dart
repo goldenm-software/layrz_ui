@@ -118,8 +118,26 @@ class LayrzAnchoredPanel extends StatefulWidget {
   /// external control. When non-null, callers can open or close the panel by
   /// calling [controller.open()] and [controller.close()].
   ///
-  /// **Important:** The controller instance must never be swapped via [didUpdateWidget].
-  /// An assertion will fail if a different controller instance is passed on a rebuild.
+  /// **Important:** Swapping the controller instance via `didUpdateWidget` is
+  /// unsupported. In debug builds, passing a different non-null controller on a
+  /// rebuild is caught by an `assert`. In **release** builds the assert compiles
+  /// out, so the swap is **silently ignored** -- the originally supplied
+  /// controller stays in effect, not the new one. A caller that needs a
+  /// different controller must construct a new [LayrzAnchoredPanel] instead of
+  /// swapping this parameter on an existing one.
+  ///
+  /// This is intentionally not enforced with a `throw` in release. It was tried
+  /// (DESIGN-146) and reverted: a [StateError] thrown from `didUpdateWidget`
+  /// mid-rebuild, through this widget's real tree (`RawMenuAnchor` /
+  /// `InheritedNotifierElement` / `Focus` layers), leaves the framework's own
+  /// `_InactiveElements` bookkeeping inconsistent -- an
+  /// `InheritedElement.debugDeactivated` assertion fires at teardown, and every
+  /// later `didUpdateWidget` in the same element tree becomes unreliable. A
+  /// release consumer would trade a silent no-op for a corrupted element tree
+  /// and a confusing downstream failure, in a build where assertions are
+  /// stripped and there is no way to catch the mistake beforehand. The no-op is
+  /// the lesser failure mode, so the guard stays assert-only. Do not "fix" this
+  /// back to a throw without re-confirming that hazard no longer reproduces.
   final MenuController? controller;
 
   /// Called when the panel is opened.
@@ -255,14 +273,16 @@ class _LayrzAnchoredPanelState extends State<LayrzAnchoredPanel> with SingleTick
   void didUpdateWidget(LayrzAnchoredPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Verify that the controller is never swapped
-    if (widget.controller != null && _lastSuppliedController != widget.controller) {
-      assert(
-        false,
-        'MenuController instances must never be swapped. '
-        'Create a new LayrzAnchoredPanel instead of changing the controller.',
-      );
-    }
+    // Debug-only guard for the controller immutability contract -- see the
+    // [controller] doc comment for why this is an `assert` and not a `throw`.
+    // Stripped in release, so a release-mode swap falls through to the line
+    // below unnoticed and the originally supplied controller stays in effect.
+    assert(
+      widget.controller == null || _lastSuppliedController == widget.controller,
+      'LayrzAnchoredPanel.controller must never be swapped for a different '
+      'non-null MenuController instance via didUpdateWidget. Construct a new '
+      'LayrzAnchoredPanel instead of changing the controller on an existing one.',
+    );
     _lastSuppliedController = widget.controller;
 
     // Update animation timing if tokens change

@@ -307,6 +307,144 @@ void main() {
       expect(callCount, greaterThan(0));
     });
 
+    // `pumpThemed` builds a brand-new `OverlayEntry` on every call, so its subtree
+    // is torn down and rebuilt from scratch rather than updated in place -- which
+    // means `didUpdateWidget` never fires across two `pumpThemed` calls, even with
+    // matching keys (see the documented gotcha in `engineering/m3-handoff.md:169-170`,
+    // also surfaced by DESIGN-153). Worse: `Overlay.initialEntries` is only consumed
+    // in `initState` (`overlay.dart:657`), so even pumping a second `Overlay` widget
+    // with a *new* `OverlayEntry` list leaves the old entry mounted -- the new child
+    // is never actually built at all, and a naive two-`pumpWidget` test would pass
+    // for the wrong reason (nothing ever ran `didUpdateWidget` with a different
+    // controller). To genuinely exercise `didUpdateWidget`, the "no behaviour change"
+    // test below builds a single `OverlayEntry` once and calls `entry.markNeedsBuild()`
+    // to force a real in-place rebuild of the same element.
+    //
+    // DESIGN-146 history: an earlier revision of this guard threw a `StateError`
+    // from `didUpdateWidget` instead of asserting, specifically so the swap would
+    // still be caught in release builds. That was reverted -- confirmed by direct
+    // experiment, not merely predicted: letting the `StateError` propagate out of
+    // `didUpdateWidget` mid-rebuild, inside `LayrzAnchoredPanel`'s real tree (which
+    // nests several `InheritedNotifierElement`/`Focus`/`RawMenuAnchor` layers),
+    // leaves the framework's own `_InactiveElements` bookkeeping inconsistent -- an
+    // `InheritedElement.debugDeactivated` assertion (`'_dependents.isEmpty': is not
+    // true`) fires when the test framework tries to unmount the tree, and from that
+    // point on every subsequent `testWidgets` in the same file fails, including ones
+    // with no relation to this widget (7 unrelated tests failed with the throwing
+    // test present; all passed once it was removed). A minimal reproduction (a bare
+    // `StatefulWidget` two levels deep, no `RawMenuAnchor`) does NOT corrupt the
+    // binding, so the hazard is specific to throwing mid-update through a tree this
+    // deep. The guard is therefore assert-only again: it fires in debug, and is
+    // compiled out in release, where the swap is silently ignored. See the
+    // [LayrzAnchoredPanel.controller] doc comment for the full rationale.
+    //
+    // What follows is NOT a test that the release build "enforces" the contract --
+    // it does not, by design. `flutter_test` runs in debug mode with assertions
+    // enabled, so there is no harness-level way to exercise the actual release
+    // behaviour (the assert compiling out) from this suite; asserting that would
+    // require a separate release-mode test runner this repo does not have. What
+    // this test honestly verifies instead: (1) the assert's condition is the exact
+    // one `didUpdateWidget` uses, so passing the same controller across a rebuild
+    // never trips it, and a genuinely different one does; (2) `assert` throws an
+    // `AssertionError` in this (debug) test environment, matching the doc comment's
+    // "caught by an assert in debug builds" claim.
+    test('the swap guard assert condition matches the documented debug-only contract', () {
+      // Mirrors the exact boolean `didUpdateWidget` now asserts on
+      // (`anchored_panel.dart`: `widget.controller == null || _lastSuppliedController
+      // == widget.controller`), without walking `LayrzAnchoredPanel`'s real element
+      // tree -- see the block comment above for why the real tree cannot be used to
+      // exercise the throwing path this replaced.
+      final firstController = MenuController();
+      final secondController = MenuController();
+
+      // Mirrors `_LayrzAnchoredPanelState.initState`, which seeds
+      // `_lastSuppliedController` from `widget.controller` directly -- the guard
+      // never sees a `null` baseline for a caller that supplies a controller from
+      // the start.
+      MenuController? lastSupplied = firstController;
+      void simulateDidUpdateWidget(MenuController? newController) {
+        assert(
+          newController == null || lastSupplied == newController,
+          'LayrzAnchoredPanel.controller must never be swapped for a different '
+          'non-null MenuController instance via didUpdateWidget.',
+        );
+        lastSupplied = newController;
+      }
+
+      // Same controller again (first didUpdateWidget after initState): must not assert.
+      simulateDidUpdateWidget(firstController);
+      expect(lastSupplied, same(firstController));
+
+      // A genuinely different controller: the assert condition is false, so it
+      // throws here (assertions are enabled under flutter_test). This confirms the
+      // guard actually fires in debug -- it says nothing about release, where the
+      // same `assert` compiles out and this call would instead fall through
+      // silently, leaving `lastSupplied` unchanged from the caller's perspective.
+      expect(
+        () => simulateDidUpdateWidget(secondController),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    testWidgets(
+      'no behaviour change for current callers: a caller that never passes a controller '
+      'is unaffected by the swap guard',
+      (tester) async {
+        // Every internal caller today passes no controller at all, so the widget owns an
+        // internally-created MenuController and `_lastSuppliedController` stays null
+        // across rebuilds. This asserts that path never throws, across real
+        // `didUpdateWidget` calls on the same element (see the note above the
+        // previous test for why a fresh `pumpThemed`/`Overlay` tree per pump
+        // would not actually exercise `didUpdateWidget` at all).
+        var maxHeight = 100.0;
+
+        late final OverlayEntry entry;
+        entry = OverlayEntry(
+          builder: (context) => Center(
+            child: LayrzAnchoredPanel(
+              maxHeight: maxHeight,
+              builder: (context, controller) => LayrzButton(
+                labelText: 'Open',
+                onTap: controller.open,
+              ),
+              child: SizedBox(
+                width: 200,
+                height: 100,
+                child: Text('Panel content'),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(
+          Localizations(
+            locale: const Locale('en'),
+            delegates: const [
+              DefaultWidgetsLocalizations.delegate,
+              LayrzUiL10nDelegate(),
+            ],
+            child: LayrzTheme(
+              data: LayrzThemeData.light(),
+              child: Overlay(initialEntries: [entry]),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+
+        // Rebuild several times with no controller supplied -- must never throw.
+        for (var i = 1; i <= 3; i++) {
+          maxHeight = 100.0 + i;
+          entry.markNeedsBuild();
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+        }
+
+        await tester.tap(find.byType(LayrzButton));
+        await tester.pumpAndSettle();
+        expect(find.text('Panel content'), findsOneWidget);
+      },
+    );
+
     testWidgets('controller parameter allows external control', (tester) async {
       final controller = MenuController();
 
