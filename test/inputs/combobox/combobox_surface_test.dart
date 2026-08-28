@@ -1,10 +1,38 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 
 import '../../helpers/pump_themed.dart';
 import '../../helpers/pump_themed_app.dart';
+
+/// Collects every semantics label under [tester]'s current tree.
+///
+/// Used instead of `find.bySemanticsLabel` for the DESIGN-161 acceptance
+/// signal: that matcher also matches literal text on renderable widgets (a
+/// plain `Text` widget carries an implicit semantics label equal to its own
+/// string), which has already produced a false green in this repo -- a widget
+/// with visible text but no actual `Semantics` naming it would still satisfy
+/// `find.bySemanticsLabel`. Dumping the tree and inspecting the labels
+/// directly cannot be fooled by that.
+List<String> dumpSemanticsLabels(WidgetTester tester) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final labels = <String>[];
+  void walk(SemanticsNode node) {
+    final label = node.getSemanticsData().label;
+    if (label.isNotEmpty) labels.add(label);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return labels;
+}
 
 void main() {
   group('LayrzComboBoxPanelContent', () {
@@ -294,6 +322,187 @@ void main() {
 
       expect(find.byType(BottomSheetContent), findsNothing);
       expect(result, 'Second');
+    });
+
+    // DESIGN-161: before this unit, `BottomSheetContent` rendered nothing but
+    // a bare `GestureDetector + Text` list -- no search field, no `Semantics`,
+    // no heading, no label of any kind (`options` and `emptyText` were its
+    // only two parameters). Witnessed failing against that code: reverting
+    // this file's `BottomSheetContent` to the pre-fix version and re-running
+    // this group threw `find.byType(EditableText)` -> "found 0 widgets" on
+    // every test below and a hard `NoSuchMethodError` on
+    // `BottomSheetContent(labelText: ...)` (the parameter did not exist yet).
+
+    testWidgets('renders a search field above the option list', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo', 'Charlie'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      expect(find.byType(EditableText), findsOneWidget);
+    });
+
+    testWidgets('typing in the search field filters the option list live', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Apple', 'Apricot', 'Banana'],
+          emptyText: 'No matches',
+        ),
+      );
+
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Apricot'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+
+      await tester.enterText(find.byType(EditableText), 'Ap');
+      await tester.pump();
+
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Apricot'), findsOneWidget);
+      expect(find.text('Banana'), findsNothing);
+    });
+
+    testWidgets('filtering down to no matches shows the empty text', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Apple', 'Banana'],
+          emptyText: 'No matches',
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'zzz');
+      await tester.pump();
+
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Banana'), findsNothing);
+      expect(find.text('No matches'), findsOneWidget);
+    });
+
+    testWidgets('clearing the search field via its suffix restores the full list', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Apple', 'Banana'],
+          emptyText: 'No matches',
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'App');
+      await tester.pump();
+      expect(find.text('Banana'), findsNothing);
+
+      // Located by icon, not `find.bySemanticsLabel` -- that matcher also
+      // matches literal text on renderable widgets and has already produced a
+      // false green in this repo; an `Icon` lookup carries no such risk.
+      final clearIcon = find.byWidgetPredicate((widget) => widget is Icon && widget.icon == MdiIcons.close);
+      expect(clearIcon, findsOneWidget);
+      await tester.tap(clearIcon);
+      await tester.pump();
+
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+    });
+
+    testWidgets('tapping a filtered option still pops the enclosing sheet with that value', (tester) async {
+      String? result;
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) {
+            return GestureDetector(
+              onTap: () async {
+                result = await LayrzBottomSheet.show<String?>(
+                  context,
+                  builder: (context) => const BottomSheetContent(
+                    options: ['Apple', 'Apricot', 'Banana'],
+                    emptyText: 'Nothing here',
+                  ),
+                  scrollable: false,
+                );
+              },
+              child: const Text('open sheet'),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('open sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText), 'Ap');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Apricot'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheetContent), findsNothing);
+      expect(result, 'Apricot');
+    });
+
+    testWidgets(
+      'the semantics tree carries a name identifying what is being picked, distinct from the search field',
+      (tester) async {
+        // Asserted by dumping the tree (see dumpSemanticsLabels's own doc
+        // comment for why `find.bySemanticsLabel` is not used here): before
+        // DESIGN-161, this dump was empty of both strings below -- the sheet's
+        // entire subtree had nothing nameable in it at all.
+        final handle = tester.ensureSemantics();
+
+        await pumpThemed(
+          tester,
+          const BottomSheetContent(
+            options: ['Alpha', 'Bravo'],
+            emptyText: 'Nothing here',
+            labelText: 'Item picker',
+          ),
+        );
+
+        final l10n = LayrzUiL10n.of(tester.element(find.byType(BottomSheetContent)));
+        final labels = dumpSemanticsLabels(tester);
+
+        expect(labels, contains('Item picker'));
+        expect(
+          labels.any((label) => label.contains(l10n.inputsSearchFieldLabel)),
+          isTrue,
+          reason: 'the search field must carry its own accessible name somewhere in the tree',
+        );
+        expect(
+          'Item picker',
+          isNot(l10n.inputsSearchFieldLabel),
+          reason: 'the sheet heading and the search field must carry distinct names',
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets('with no labelText, the sheet has no heading but the search field is still named', (tester) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      final l10n = LayrzUiL10n.of(tester.element(find.byType(BottomSheetContent)));
+      final labels = dumpSemanticsLabels(tester);
+
+      expect(
+        labels.any((label) => label.contains(l10n.inputsSearchFieldLabel)),
+        isTrue,
+        reason: 'the search field must carry its own accessible name somewhere in the tree',
+      );
+
+      handle.dispose();
     });
   });
 }

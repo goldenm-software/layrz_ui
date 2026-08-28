@@ -35,6 +35,20 @@ void main() {
     });
 
     testWidgets('calls onChanged when value changes', (tester) async {
+      // Explicit desktop size (DESIGN-161): this test's own gesture --
+      // tapping the chrome and expecting `find.byType(EditableText)` to
+      // resolve to a single field -- only holds on the desktop branch, where
+      // the field's own EditableText is the sole one in the tree. Left
+      // unset, this ran at flutter_test's 800x600 default, which
+      // `context.isCompact` (< 960px) reads as compact -- opening the mobile
+      // bottom sheet instead, which (since DESIGN-161 gave it its own search
+      // field) now has an EditableText of its own too, so `enterText` found
+      // two and threw "Too many elements" rather than testing what this test
+      // names.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final options = ['Option 1', 'Option 2'];
       String? lastValue;
 
@@ -154,6 +168,15 @@ void main() {
     });
 
     testWidgets('allows free-form entry when allowFreeForm is true', (tester) async {
+      // Explicit desktop size (DESIGN-161) -- see the identical note on
+      // 'calls onChanged when value changes' above: left unset, this test's
+      // `find.byType(EditableText)` silently ran the compact bottom-sheet
+      // branch, which now has a second EditableText of its own (the sheet's
+      // own search field), and `enterText` threw "Too many elements".
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final options = ['Option 1', 'Option 2'];
       String? lastSubmitted;
 
@@ -244,6 +267,12 @@ void main() {
     });
 
     testWidgets('filters options when text is typed', (tester) async {
+      // Explicit desktop size (DESIGN-161) -- see the identical note on
+      // 'calls onChanged when value changes' above.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final options = ['Apple', 'Apricot', 'Banana'];
 
       String? lastValue;

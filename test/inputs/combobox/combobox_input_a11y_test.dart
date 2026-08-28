@@ -3,9 +3,33 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
+
+/// Collects every semantics label under [tester]'s current tree.
+///
+/// Mirrors `combobox_surface_test.dart`'s own `dumpSemanticsLabels` -- used
+/// here, rather than `find.bySemanticsLabel`, for the same DESIGN-161 reason:
+/// that matcher also matches literal text on renderable widgets, and has
+/// already produced a false green in this repo.
+List<String> dumpSemanticsLabels(WidgetTester tester) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final labels = <String>[];
+  void walk(SemanticsNode node) {
+    final label = node.getSemanticsData().label;
+    if (label.isNotEmpty) labels.add(label);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return labels;
+}
 
 /// Counts semantics nodes whose label contains [needle].
 int countSemanticsWithLabel(WidgetTester tester, String needle) {
@@ -322,5 +346,55 @@ void main() {
 
       expect(find.byType(LayrzInputChrome), findsOneWidget);
     });
+
+    testWidgets(
+      'DESIGN-161: the mobile bottom sheet carries a name identifying what is being picked',
+      (tester) async {
+        // Witnessed failing before the fix: on the pre-fix `BottomSheetContent`
+        // (no `Semantics`, no heading, no label parameter, no search field at
+        // all), `dumpSemanticsLabels` while the sheet was open returned every
+        // ancestor label EXCLUDING 'Choose an option' and its search field's
+        // label -- both live behind the modal barrier on the closed field, or
+        // did not exist. Asserted by dumping the tree, not
+        // `find.bySemanticsLabel` (see `dumpSemanticsLabels`'s own doc
+        // comment): a bare `Text` widget's implicit label would have made that
+        // matcher a false green.
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final handle = tester.ensureSemantics();
+        final options = ['Option 1', 'Option 2'];
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose an option',
+            options: options,
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheetContent), findsOneWidget);
+
+        final l10n = LayrzUiL10n.of(tester.element(find.byType(BottomSheetContent)));
+        final labels = dumpSemanticsLabels(tester);
+
+        expect(
+          labels,
+          contains('Choose an option'),
+          reason: "the sheet's subtree must carry the picker's own name while open",
+        );
+        expect(
+          labels.any((label) => label.contains(l10n.inputsSearchFieldLabel)),
+          isTrue,
+          reason: 'the sheet must also carry a distinct name for its own search field',
+        );
+
+        handle.dispose();
+      },
+    );
   });
 }
