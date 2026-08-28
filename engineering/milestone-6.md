@@ -19,11 +19,11 @@ Made below).
 
 | # | Item | Status |
 |---|---|---|
-| 1 | DESIGN-64: LayrzCalendar (month view, event display, disabled dates) | Merged · Review required |
+| 1 | DESIGN-64: LayrzCalendar (month/week/day views, event display, disabled dates) | Merged · Review required |
 | 2 | DESIGN-88: LayrzProgressBar (determinate + indeterminate linear indicator) | Merged · Review required |
 | 3 | DESIGN-89: LayrzTimeline (one-sided / two-sided dated event spine) | Merged · Review required |
-| 4 | DESIGN-90: LayrzTreeView / LayrzSliverTreeView (expand/collapse, dual selection modes, keyboard nav) | Merged · Review required |
-| 5 | DESIGN-93: LayrzBadge / LayrzBadgeVisual (notification indicator, 99+ overflow) | Merged · Review required |
+| 4 | DESIGN-93: LayrzTreeView / LayrzSliverTreeView (expand/collapse, dual selection modes, keyboard nav) | Merged · Review required |
+| 5 | DESIGN-90: LayrzBadge / LayrzBadgeVisual (notification indicator, 99+ overflow) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M6 work items, kept in step with the code in
 the same commit. All five rows are implemented, tested, and merged to `development`; none has yet
@@ -56,22 +56,39 @@ five rows above but were Notion-filed against M5, not M6; this milestone does no
 **Status**: Merged · Review required
 
 **What it does**:
-- Calendar surface with month navigation, event display (single- and multi-day), and disabled-date
-  support
+- Calendar surface with month, week, and day navigation, event display (single- and multi-day), and
+  disabled-date support — **all three `LayrzCalendarMode` values render and are reachable** from the
+  header's view-mode switcher, a second pass over the month-only surface this milestone originally
+  shipped
 - `LayrzCalendarController` mirrors `LayrzStepperController`'s ownership contract: caller-supplied
   controllers are caller-disposed, internal ones are calendar-disposed, and the instance must never
-  be swapped mid-lifecycle
-- Header renders previous/next/today navigation plus a view-mode switcher (month/week/day)
+  be swapped mid-lifecycle; it also gained `nextWeek`/`previousWeek`/`nextDay`/`previousDay` for the
+  two new surfaces, stepped via calendar-field arithmetic (never `Duration`) to stay DST-safe
+- Header renders previous/next/today navigation plus a view-mode switcher (month/week/day); the
+  previous/next buttons' label and dispatched callback are now mode-aware rather than always
+  stepping by month
+- Month view gained a configurable `firstDayOfWeek` (**default changed to `DateTime.sunday`, a
+  breaking change** from the previous hardcoded Monday-first grid), a tappable day-of-month number
+  (`dayNumberOpensDayView`) and a tappable ISO 8601 week-number gutter (`showWeekNumbers`), both
+  navigating to day/week view respectively
+- Multi-day events render as one continuous bar per week row (month view) or per visible range
+  (week/day view's all-day band), with lane assignment stable across the whole month rather than
+  re-derived per row
+- The month grid's per-cell event cap is now derived from measured cell height rather than a fixed
+  constant (`kLayrzCalendarMaxVisibleEvents` removed); overflow is a tappable "+N" chip
+- Week and day views render a fixed 24-row hour axis, with overlapping timed events split evenly
+  into columns and a demoted fill for covered events
+- Month names and AM/PM markers are now localizable via a new `LayrzUiL10nMonthsMixin` namespace,
+  and a `LayrzTimeFormat` enum (`amPm`/`h24`, default `h24`) selects the week/day surfaces' clock
+  convention
 
 **Constraints**:
-- **Month view only, this pass.** `week` and `day` throw `UnimplementedError`; the switcher renders
-  all three buttons but disables the unimplemented two so the chrome's shape does not change once a
-  later pass implements them
-- **Display-only, no selection.** No `onDaySelected`, no return value — tapping a day does nothing
-- **No year view** despite year-related l10n strings existing in the namespace already
-- **Month names are hardcoded English** — no month-name l10n mixin exists yet, unlike weekday
-  labels which already resolve through `LayrzUiL10n`
-- Disabled-date styling and "no events that day" are distinct render paths that never share a
+- **Display-only, no selection.** No `onDaySelected`, no return value — tapping a day cell's
+  background or an event chip does nothing. The day number, "+N" chip, and week-number gutter are
+  the exceptions, and all three only navigate the calendar's own internal view state
+- **No year view** despite `engineering/decisions.md`'s D11 naming one of four original scope
+  candidates — this milestone ships three of the four
+- Disabled-date styling and "no events that day" remain distinct render paths that never share a
   branch
 
 **API contract**: See [wiki LayrzCalendar page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzCalendar).
@@ -123,7 +140,7 @@ five rows above but were Notion-filed against M5, not M6; this milestone does no
 
 ---
 
-### 4. LayrzTreeView / LayrzSliverTreeView (DESIGN-90)
+### 4. LayrzTreeView / LayrzSliverTreeView (DESIGN-93)
 
 **Status**: Merged · Review required
 
@@ -151,7 +168,7 @@ five rows above but were Notion-filed against M5, not M6; this milestone does no
 
 ---
 
-### 5. LayrzBadge / LayrzBadgeVisual (DESIGN-93)
+### 5. LayrzBadge / LayrzBadgeVisual (DESIGN-90)
 
 **Status**: Merged · Review required
 
