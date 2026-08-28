@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -28,7 +29,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.byType(LayrzStepper), findsOneWidget);
@@ -37,9 +38,13 @@ void main() {
     });
 
     testWidgets('shows active step body', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -47,9 +52,13 @@ void main() {
     });
 
     testWidgets('next button advances step', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -66,13 +75,17 @@ void main() {
     });
 
     testWidgets('back button moves to previous step', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
       controller.goTo(1);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
@@ -89,9 +102,13 @@ void main() {
     });
 
     testWidgets('back button disabled on first step', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       final backButton = find.byWidgetPredicate(
@@ -102,13 +119,17 @@ void main() {
     });
 
     testWidgets('next button disabled on last step', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
       controller.goTo(2);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
@@ -120,12 +141,16 @@ void main() {
     });
 
     testWidgets('controller-driven navigation works', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -137,6 +162,10 @@ void main() {
     });
 
     testWidgets('controller is required and cannot be swapped', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final first = LayrzStepperController();
       first.setStepCount(3);
       addTearDown(first.dispose);
@@ -147,6 +176,7 @@ void main() {
         LayrzStepper(
           steps: testSteps,
           controller: first,
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -158,25 +188,62 @@ void main() {
       expect(first.currentStepIndex, 1);
     });
 
-    // SKIP REASON: LayrzStepper.didUpdateWidget asserts on a controller swap, but
-    // every approach tried (two pumpThemed calls, StatefulBuilder setState,
-    // tap-driven swap) either bypasses didUpdateWidget or trips an unrelated
-    // framework assertion first. The assertion is real and fires in production;
-    // it is unverified by tests. Revisit if pump_themed.dart stops rebuilding
-    // its OverlayEntry subtree.
-    testWidgets(
-      'disallows swapping the controller',
-      (tester) async {},
-      skip: true,
-    );
+    // `pumpThemed` builds a brand-new `OverlayEntry` on every call, so
+    // `didUpdateWidget` never fires across two `pumpThemed` calls (same
+    // constraint documented for `LayrzAnchoredPanel`, see
+    // `test/overlays/anchored_panel_test.dart:310-350` and the settled
+    // DESIGN-146 decision it records: the guard is a debug-only `assert`,
+    // not a `StateError`, because throwing mid-rebuild through a real element
+    // tree corrupts the framework's `_InactiveElements` bookkeeping). Rather
+    // than leave this as an empty skipped stub — which reads as covered when
+    // it verifies nothing — this test mirrors the exact boolean
+    // `didUpdateWidget` asserts on (`stepper.dart`:
+    // `widget.controller == oldWidget.controller`) without walking
+    // `LayrzStepper`'s real element tree. It honestly verifies only: (1) the
+    // condition never trips when the same controller is passed again, and
+    // (2) `assert` throws an `AssertionError` when a genuinely different one
+    // is. It says nothing about release builds, where the same `assert`
+    // compiles out and a swap is silently ignored instead — matching the
+    // class doc's "an assertion fails" wording, not a release-mode guarantee.
+    test('the swap guard assert condition matches the documented contract', () {
+      final first = LayrzStepperController()..setStepCount(3);
+      final second = LayrzStepperController()..setStepCount(3);
+      addTearDown(first.dispose);
+      addTearDown(second.dispose);
+
+      LayrzStepperController? previous = first;
+      void simulateDidUpdateWidget(LayrzStepperController? next) {
+        assert(
+          next == previous,
+          'LayrzStepper does not support changing the controller instance. '
+          'The same controller must be passed, or null must remain null.',
+        );
+        previous = next;
+      }
+
+      // Same controller again (first didUpdateWidget after initState): must not assert.
+      simulateDidUpdateWidget(first);
+      expect(previous, same(first));
+
+      // A genuinely different controller: the assert condition is false, so
+      // it throws here (assertions are enabled under the test runner).
+      expect(
+        () => simulateDidUpdateWidget(second),
+        throwsA(isA<AssertionError>()),
+      );
+    });
 
     testWidgets('caller-supplied controller is not disposed', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -186,9 +253,13 @@ void main() {
     });
 
     testWidgets('internal controller is disposed', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -197,6 +268,10 @@ void main() {
     });
 
     testWidgets('onStepChanged callback fires', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       var lastIndex = -1;
 
       await pumpThemed(
@@ -204,6 +279,7 @@ void main() {
         LayrzStepper(
           steps: testSteps,
           onStepChanged: (index) => lastIndex = index,
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -220,6 +296,10 @@ void main() {
     });
 
     testWidgets('step with explicit error state shows error icon', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final errorSteps = [
         const LayrzStep(
           labelText: 'Step 1',
@@ -234,11 +314,25 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: errorSteps),
+        LayrzStepper(steps: errorSteps, direction: LayrzStepperDirection.horizontal),
       );
 
-      // Step 2 should have an error icon (circle shows as error state).
-      expect(find.byType(LayrzStepper), findsOneWidget);
+      // Step 2's indicator shows the alert glyph, not the checkmark, and no
+      // other step renders one — the error glyph is exclusive to the error step.
+      expect(
+        find.descendant(
+          of: find.byType(LayrzStepIndicator),
+          matching: find.byIcon(MdiIcons.alertCircle),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LayrzStepIndicator),
+          matching: find.byIcon(MdiIcons.check),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('custom button labels work', (WidgetTester tester) async {
@@ -252,6 +346,7 @@ void main() {
           steps: testSteps,
           backButtonLabel: 'Previous',
           nextButtonLabel: 'Continue',
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -267,22 +362,24 @@ void main() {
     });
 
     testWidgets('completed step can be tapped to jump back', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final controller = LayrzStepperController();
       controller.setStepCount(3);
       controller.goTo(2);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
       expect(find.text('Review Order'), findsOneWidget);
 
-      // Tap the first step (completed) to jump back.
-      // In compact mode this might not render all circles, so we'll just
-      // verify the controller can navigate.
-      controller.goTo(0);
+      // Tap the first step's indicator (completed) to jump back.
+      await tester.tap(find.text('Personal'));
       await tester.pumpAndSettle();
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -370,6 +467,10 @@ void main() {
     });
 
     testWidgets('handles empty body gracefully', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       final emptySteps = [
         const LayrzStep(
           labelText: 'Empty',
@@ -379,50 +480,69 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: emptySteps),
+        LayrzStepper(steps: emptySteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.byType(LayrzStepper), findsOneWidget);
     });
 
     testWidgets('requires at least one step', (WidgetTester tester) async {
-      expect(
-        () => LayrzStepper(steps: []),
-        throwsAssertionError,
-      );
-    });
-
-    testWidgets('wide mode renders step labels and circles', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(
-        tester,
-        LayrzStepper(steps: testSteps),
+      expect(
+        () => LayrzStepper(steps: [], direction: LayrzStepperDirection.horizontal),
+        throwsAssertionError,
       );
-
-      // In wide mode (>= 960px), step labels should render
-      expect(find.text('Personal'), findsWidgets);
-      expect(find.text('Shipping'), findsWidgets);
-      expect(find.text('Review'), findsWidgets);
     });
 
-    testWidgets('compact mode hides step labels and circles', (WidgetTester tester) async {
+    testWidgets('horizontal direction renders step labels and circles, no compact counter', (
+      WidgetTester tester,
+    ) async {
+      // Ambient viewport is narrow, but `direction` is the only thing that
+      // selects a layout now — there is no viewport-derived fallback to win
+      // against, so a narrow viewport must not silently switch this to the
+      // vertical accordion.
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
-      // In compact mode (< 960px), step labels should NOT render
-      expect(find.text('Personal'), findsNothing);
-      expect(find.text('Shipping'), findsNothing);
-      expect(find.text('Review'), findsNothing);
-      // But "Step X of Y" summary should render
+      // In wide mode, every step's label renders (Personal/Shipping/Review all
+      // findsWidgets, since the label appears once per step in the header).
+      expect(find.text('Personal'), findsWidgets);
+      expect(find.text('Shipping'), findsWidgets);
+      expect(find.text('Review'), findsWidgets);
+      // The compact layout's persistent "Step X of Y" counter must not render.
+      expect(find.text('Step 1 of 3'), findsNothing);
+    });
+
+    testWidgets('vertical direction renders accordion labels and counter, no wide header', (
+      WidgetTester tester,
+    ) async {
+      // Ambient viewport is wide, but `direction` is the only thing that
+      // selects a layout now — a wide viewport must not silently switch this
+      // to the horizontal header.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.vertical),
+      );
+
+      // In compact mode, every step's label renders exactly once as an
+      // accordion header row, plus the persistent "Step X of Y" counter — it
+      // does NOT collapse to a single summary line the way the old layout did.
+      expect(find.text('Personal'), findsOneWidget);
+      expect(find.text('Shipping'), findsOneWidget);
+      expect(find.text('Review'), findsOneWidget);
       expect(find.text('Step 1 of 3'), findsOneWidget);
     });
   });

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -136,6 +137,128 @@ void main() {
 
       test('isMobile and isDesktop cannot both be true', () {
         expect(LayrzPlatform.isMobile && LayrzPlatform.isDesktop, isFalse);
+      });
+    });
+
+    group('isTouchOS (DESIGN-147)', () {
+      // These tests exercise debugDefaultTargetPlatformOverride directly, so
+      // each one resets it in a try/finally rather than relying solely on
+      // addTearDown -- an assertion failure partway through the body must
+      // never leak the override into a later test.
+
+      test('is true for android', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          expect(LayrzPlatform.isTouchOS, isTrue);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is true for iOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        try {
+          expect(LayrzPlatform.isTouchOS, isTrue);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is false for macOS', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        try {
+          expect(LayrzPlatform.isTouchOS, isFalse);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is false for windows', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+        try {
+          expect(LayrzPlatform.isTouchOS, isFalse);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is false for linux', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+        try {
+          expect(LayrzPlatform.isTouchOS, isFalse);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('is false for fuchsia', () {
+        debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;
+        try {
+          expect(LayrzPlatform.isTouchOS, isFalse);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      test('covers all six TargetPlatform values exhaustively', () {
+        final expected = <TargetPlatform, bool>{
+          TargetPlatform.android: true,
+          TargetPlatform.iOS: true,
+          TargetPlatform.macOS: false,
+          TargetPlatform.windows: false,
+          TargetPlatform.linux: false,
+          TargetPlatform.fuchsia: false,
+        };
+
+        for (final entry in expected.entries) {
+          debugDefaultTargetPlatformOverride = entry.key;
+          try {
+            expect(
+              LayrzPlatform.isTouchOS,
+              equals(entry.value),
+              reason: 'isTouchOS for ${entry.key} should be ${entry.value}',
+            );
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        }
+      });
+
+      test('reads defaultTargetPlatform directly, tracking it exactly regardless of kIsWeb', () {
+        // isTouchOS must never short-circuit the way LayrzPlatform.current does
+        // (kIsWeb first, discarding the OS). Proof here does not require
+        // flipping kIsWeb itself (not overridable in a unit test): instead,
+        // this asserts isTouchOS agrees with defaultTargetPlatform alone, for
+        // every value, under the current (non-web) kIsWeb -- exactly the
+        // contract the getter's own doc comment states, and the same contract
+        // that fails for LayrzPlatform.isMobile on an actual web build.
+        for (final platform in TargetPlatform.values) {
+          debugDefaultTargetPlatformOverride = platform;
+          try {
+            final expectedTouch = platform == TargetPlatform.android || platform == TargetPlatform.iOS;
+            expect(LayrzPlatform.isTouchOS, equals(expectedTouch));
+            expect(defaultTargetPlatform, equals(platform));
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        }
+      });
+
+      test('differs from isMobile only in how each is documented to behave on web', () {
+        // On native (this test environment), isMobile and isTouchOS must agree
+        // exactly for every TargetPlatform -- they diverge only on web, where
+        // isMobile routes through LayrzPlatform.current (kIsWeb-gated) and
+        // isTouchOS does not. This test pins the native-agreement half of that
+        // contract; the web-divergence half is what DESIGN-147 exists to fix
+        // and cannot be exercised without an actual web target.
+        for (final platform in TargetPlatform.values) {
+          debugDefaultTargetPlatformOverride = platform;
+          try {
+            expect(LayrzPlatform.isTouchOS, equals(LayrzPlatform.isMobile));
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        }
       });
     });
   });

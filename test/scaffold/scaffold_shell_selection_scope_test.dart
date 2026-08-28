@@ -41,9 +41,9 @@ void main() {
     /// drawer are structurally different subtrees, not a single stable
     /// structure with reparented children) instead of being disposed and
     /// recreated -- which would otherwise tear down LayrzScaffoldShell's own
-    /// State (and its _itemsChangeNotifier) while a useRootNavigator: true
-    /// sheet, now on a different lifecycle, is still open and listening to
-    /// it. Confirmed by removing this key during investigation: doing so
+    /// State (and its _itemsChangeNotifier) while a sheet -- always pushed on
+    /// the root navigator -- is now on a different lifecycle, still open and
+    /// listening to it. Confirmed by removing this key during investigation: doing so
     /// reproduces "A ValueNotifier<int> was used after being disposed" on
     /// the band-transition test below -- a test-harness fidelity gap, not a
     /// defect in the fix, but real enough to be worth recording here.
@@ -353,7 +353,7 @@ void main() {
 
         // Ground truth for "did the narrow sheet's own route pop": the root
         // Navigator must go from 2 routes (the nested-shell page + the
-        // useRootNavigator:true sheet) to 1. Checking for the text's absence
+        // sheet, which always pushes on the root navigator) to 1. Checking for the text's absence
         // is NOT valid here -- the wide layout's own side-by-side DetailPane
         // legitimately renders the SAME text once resized (per this class's
         // own doc: "A resize from narrow to wide pops the sheet but

@@ -3,6 +3,7 @@ import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/menus/menus.dart';
+import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -182,6 +183,28 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     return '${parts[0][0]}${parts[parts.length - 1][0]}'.toUpperCase();
   }
 
+  /// The [TextSelectionControls] used by this layout's [SelectableRegion]s.
+  ///
+  /// DESIGN-147: touch selection handles and the selection action menu are
+  /// Android/iOS only, on web or native (per [LayrzPlatform.isTouchOS]).
+  /// Unlike [LayrzEditableField], [SelectableRegion.selectionControls] is a
+  /// required, non-nullable parameter, so the null-both-parameters mechanism
+  /// used by the text inputs does not apply here.
+  ///
+  /// [emptyTextSelectionControls] is used as the "off" value instead: it does
+  /// not mix in `TextSelectionHandleControls`, so [SelectableRegion] takes the
+  /// `is! TextSelectionHandleControls` branch internally and shows its toolbar
+  /// via the deprecated `buildToolbar()` path rather than force-unwrapping
+  /// [_buildContextMenu] -- which would otherwise null-check-crash on
+  /// right-click, since [_buildContextMenu] is still passed unconditionally
+  /// below. [EmptyTextSelectionControls.buildToolbar] and `buildHandle` both
+  /// return `SizedBox.shrink()`, so no handles and no visible toolbar are
+  /// ever painted; the returned [OverlayEntry] carries zero-size content.
+  /// Both branches are stable, package-level singleton instances, so no
+  /// gate-driven identity change disposes anything mid-display.
+  TextSelectionControls get _selectionControls =>
+      LayrzPlatform.isTouchOS ? LayrzTextSelectionControls.instance : emptyTextSelectionControls;
+
   /// Builds the context menu for text selection, displaying a Copy-only toolbar.
   ///
   /// This builder is passed to [SelectableRegion] to render a toolbar when the user
@@ -193,6 +216,11 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   /// keeping the read-only page-wide selection focused on copying selected text.
   /// The copy action invokes the selection state's clipboard copy handler, which
   /// handles clipboard transfer via the platform channels.
+  ///
+  /// On non-touch platforms this builder is never actually invoked -- see
+  /// [_selectionControls] -- but it must remain unconditionally wired so that
+  /// [SelectableRegion] never receives it with a shape [_buildContextMenu]'s
+  /// signature does not expect.
   Widget _buildContextMenu(
     BuildContext context,
     SelectableRegionState state,
@@ -247,7 +275,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: LayrzTextSelectionControls.instance,
+            selectionControls: _selectionControls,
             contextMenuBuilder: _buildContextMenu,
             child: widget.body,
           )
@@ -321,7 +349,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     final bodyWidget = widget.selectableContent
         ? SelectableRegion(
             focusNode: _selectableFocusNode,
-            selectionControls: LayrzTextSelectionControls.instance,
+            selectionControls: _selectionControls,
             contextMenuBuilder: _buildContextMenu,
             child: widget.body,
           )

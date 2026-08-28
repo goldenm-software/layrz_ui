@@ -6,6 +6,7 @@ import 'input_demo.dart';
 import 'demos/text_input_demo.dart';
 import 'demos/textarea_input_demo.dart';
 import 'demos/number_input_demo.dart';
+import 'demos/slider_demo.dart';
 import 'demos/checkbox_input_demo.dart';
 import 'demos/switch_input_demo.dart';
 import 'demos/radio_input_demo.dart';
@@ -13,7 +14,6 @@ import 'demos/search_input_demo.dart';
 import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
 import 'demos/duration_input_demo.dart';
-import 'demos/stepper_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
 ///
@@ -56,6 +56,13 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Numeric',
       details: NumberInputDemo(),
       icon: MdiIcons.numeric,
+    ),
+    InputDemo(
+      id: 'slider',
+      name: 'Slider',
+      category: 'Numeric',
+      details: SliderDemo(),
+      icon: MdiIcons.tuneVariant,
     ),
 
     // Boolean category
@@ -112,15 +119,6 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Search',
       details: SearchInputDemo(),
       icon: MdiIcons.magnify,
-    ),
-
-    // Flow category
-    InputDemo(
-      id: 'stepper',
-      name: 'Stepper',
-      category: 'Flow',
-      details: StepperDemo(),
-      icon: MdiIcons.formatListNumberedRtl,
     ),
   ];
 

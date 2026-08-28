@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
@@ -31,6 +33,15 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 ///
 /// **Hit area:** The entire [borderRadius] region is tappable via [HitTestBehavior.opaque],
 /// so even transparent areas of the painted surface respond to taps.
+///
+/// **Double-tap:** [onTap] fires at most once per [kDoubleTapTimeout] window, so a
+/// double-tap invokes it exactly once rather than once per physical tap. There is no
+/// public `onDoubleTap` -- see the implementation note on the cooldown timer for why.
+/// A side effect of this: double-tap-to-select on text inside an active [LayrzTappable]
+/// (via an ancestor [SelectableRegion]) is not restored by this fix -- the
+/// [GestureDetector]'s tap recognizer still wins the gesture arena over
+/// [SelectableRegion]'s own recognizer regardless of what the callback does afterward,
+/// so that limitation is unchanged from before this fix (measured).
 ///
 /// **Interaction states per decision D15:** Only colour, opacity, and cursor change
 /// across states; geometry (size, padding, margin, border width) remains constant.
@@ -132,6 +143,25 @@ class _LayrzTappableState extends State<LayrzTappable> {
   /// Whether the pointer is currently down within the widget (pressed state).
   bool _isPressed = false;
 
+  /// Non-null while a just-fired [LayrzTappable.onTap] is still inside its
+  /// double-tap cooldown window; a second [_handleTap] call while this is
+  /// active is swallowed rather than re-invoking [LayrzTappable.onTap].
+  ///
+  /// This is a [Timer], not a `DateTime.now()` timestamp comparison: a
+  /// [GestureDetector] with only `onTap` wired (no `onDoubleTap`) resolves
+  /// each tap of a double-tap independently and fires `onTap` once per tap
+  /// (measured: 2 calls for 2 taps). Adding a real `onDoubleTap` recognizer to
+  /// the arena does make a double-tap collapse to a single `onTap`-shaped
+  /// outcome, but it does so by *not* calling `onTap` at all on a double-tap
+  /// (measured: 0 `onTap` calls, 1 `onDoubleTap` call) and it makes every
+  /// single tap in the entire design system wait out the full recognizer
+  /// resolution window before firing (measured: exactly `kDoubleTapTimeout`,
+  /// 300ms, versus ~0ms today) -- both wrong for this fix. A post-resolution
+  /// cooldown on the callback itself keeps single-tap latency at ~0ms (the
+  /// [GestureDetector] arena and its timing are untouched) while still
+  /// collapsing a double-tap to exactly one [LayrzTappable.onTap] call.
+  Timer? _doubleTapCooldown;
+
   /// Resolves the current surface color based on state.
   Color _resolveColor(LayrzTokens tokens) {
     // Disabled state has its own visual treatment.
@@ -194,7 +224,25 @@ class _LayrzTappableState extends State<LayrzTappable> {
     });
   }
 
+  /// Invokes [LayrzTappable.onTap] at most once per [kDoubleTapTimeout] window.
+  ///
+  /// Without this, a double-tap fires the underlying [GestureDetector]'s
+  /// `onTap` twice -- once per physical tap, since nothing puts a
+  /// [DoubleTapGestureRecognizer] in the gesture arena to make the two taps
+  /// resolve as one gesture. See [_doubleTapCooldown] for why this is a
+  /// [Timer]-based cooldown rather than an `onDoubleTap` recognizer.
+  void _handleTap() {
+    if (_doubleTapCooldown != null) return;
+    widget.onTap?.call();
+    _doubleTapCooldown = Timer(kDoubleTapTimeout, () => _doubleTapCooldown = null);
+  }
+
   @override
+  void dispose() {
+    _doubleTapCooldown?.cancel();
+    super.dispose();
+  }
+
   @override
   void didUpdateWidget(covariant LayrzTappable oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -238,7 +286,7 @@ class _LayrzTappableState extends State<LayrzTappable> {
         onPointerUp: _onPointerUp,
         onPointerCancel: _onPointerUp,
         child: GestureDetector(
-          onTap: widget.onTap,
+          onTap: widget.onTap == null ? null : _handleTap,
           onLongPress: widget.onLongPress,
           onSecondaryTap: widget.onSecondaryTap,
           behavior: HitTestBehavior.opaque,

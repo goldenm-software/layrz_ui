@@ -141,25 +141,65 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('accepts useRootNavigator parameter', (WidgetTester tester) async {
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) => GestureDetector(
-            onTap: () {
-              LayrzBottomSheet.show<String>(
-                context,
-                useRootNavigator: false,
-                builder: (context) => const SizedBox(height: 200),
-              );
-            },
-            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+    // useRootNavigator was removed as a public parameter -- LayrzBottomSheet.show
+    // now ALWAYS pushes on the root navigator, unconditionally. This replaces the
+    // old parameterized test (which only proved a sheet could open, regardless of
+    // which navigator received it) with one that distinguishes the two navigators
+    // via separate NavigatorObservers, so a regression back to "push on the
+    // nearest navigator" would show up as a push recorded on the nested observer
+    // instead of the root one.
+    testWidgets('always pushes on the root navigator, even from a nested Navigator context', (
+      WidgetTester tester,
+    ) async {
+      final rootPushedRoutes = <Route<dynamic>>[];
+      final nestedPushedRoutes = <Route<dynamic>>[];
+
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          navigatorObservers: [_RecordingNavigatorObserver(rootPushedRoutes)],
+          home: Navigator(
+            observers: [_RecordingNavigatorObserver(nestedPushedRoutes)],
+            onGenerateRoute: (settings) => PageRouteBuilder<void>(
+              settings: settings,
+              pageBuilder: (context, animation, secondaryAnimation) => Center(
+                child: Builder(
+                  builder: (innerContext) => GestureDetector(
+                    onTap: () {
+                      LayrzBottomSheet.show<String>(
+                        innerContext,
+                        builder: (context) => const SizedBox(height: 200, child: Text('body')),
+                      );
+                    },
+                    child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       );
+      await tester.pump();
 
       await tester.tap(find.text('Tap'));
       await tester.pumpAndSettle();
+
+      expect(find.text('body'), findsOneWidget);
+      expect(
+        rootPushedRoutes,
+        isNotEmpty,
+        reason: 'the sheet route must be pushed on the root navigator',
+      );
+      expect(
+        nestedPushedRoutes,
+        hasLength(1),
+        reason:
+            'the nested navigator must observe exactly ONE didPush: its own initial page '
+            'route, produced by onGenerateRoute when the Navigator is first built. The sheet '
+            'route must not add a second push here -- a regression to "push on the nearest '
+            'navigator" would show up as this growing to 2.',
+      );
     });
 
     testWidgets('uses default snapSizes [0.5, 0.95]', (WidgetTester tester) async {
@@ -647,4 +687,20 @@ void main() {
       skip: !canCaptureImage,
     );
   });
+}
+
+/// A [NavigatorObserver] that records every route pushed on the navigator it
+/// is attached to, so a test can assert which of two (root vs. nested)
+/// navigators actually received a given push.
+class _RecordingNavigatorObserver extends NavigatorObserver {
+  /// Creates a recording observer that appends every pushed route to [pushed].
+  _RecordingNavigatorObserver(this.pushed);
+
+  /// The list every observed `didPush` route is appended to, in push order.
+  final List<Route<dynamic>> pushed;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushed.add(route);
+  }
 }

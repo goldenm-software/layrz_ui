@@ -3322,6 +3322,48 @@ This row's spec raised a critical question: does the widget render only the step
 - `LayrzStepperController` required for navigation
 - Responsive header collapse below `md`
 
+### 2026-08-27 update — two clauses superseded, the rest stands unamended
+
+**Superseded, exactly these two, from the Scope trims list above:**
+- ~~Horizontal only~~
+- ~~Below `md` breakpoint, header collapses to *"Step X of Y"* instead of scrolling~~
+
+Everything else in this decision is **unamended**: full-flow ownership (header + body + actions), `LayrzStep` as a data class, the controller requirement, the `upcoming / active / completed / error` state trim, and — critically — the accessibility clause above (*"Completed steps carry `MdiIcons.check`, errors carry `MdiIcons.alertCircle`. State is never colour-only."*), which now also governs the new caller-supplied `LayrzStep.icon`: the state glyph always beats a caller icon on `completed`/`error`. Adding an identity icon does not repeal an accessibility constraint this decision already settled.
+
+**Why the collapse-to-summary clause did not survive.** This decision's own headline is that the stepper "owns the whole flow — header, current step body, and back/next actions." Below the `md` breakpoint, the shipped compact header was a single line of text, `"Step X of Y"`, and nothing else — it satisfied the *indicator* half of that job and abandoned the *body* half entirely. So D57's own flow-ownership decision was unimplementable on every compact viewport, not just under-served there. Treating compact as a *degraded* mode was the framing error, not an acceptable trade-off.
+
+**What shipped instead**: not a full mode and a degraded mode, but two equally-complete layouts for the same two jobs — show position, host content — chosen by viewport orientation rather than by feature reduction:
+- **Wide** (`lib/src/steppers/src/stepper_wide.dart`) — a full-width row of equal-width flex cells, one per step. Each cell stacks a fixed-height indicator band over a label band; the indicator band's height cannot be affected by the label band's content, which is the structural fix for the alignment bug that motivated the redesign (a two-line label could previously shift its own indicator out of line with its neighbours, because indicator and label shared one centre-aligned `Column`).
+- **Compact** (`lib/src/steppers/src/stepper_compact.dart`) — a vertical accordion: one step's body is open at a time, driven by `currentIndex` (not independent per-row state — exactly one step is ever open, and it is always the active one), with a persistent localized "Step X of Y" counter above the stack so the common "how much is left" question stays a one-glance answer rather than requiring a scan of every row. `AnimatedSize` (`tokens.motion.dTransition` + `tokens.motion.easing`, `alignment: Alignment.topCenter`) animates the expand/collapse — the first use of `AnimatedSize` anywhere in this library, and now the house pattern for expand/collapse; it was chosen over `AnimatedCrossFade`, which would have laid out both the collapsed and expanded branches to compute a shared max size.
+
+**Labels do not get a recovery affordance.** Wide-layout labels are capped at `maxLines: 2` with `TextOverflow.ellipsis` and no tooltip, no long-press, and no other way to recover a truncated label. This is a deliberate ruling, not an oversight: a truncated label stays truncated.
+
+**No maximum step count — a deliberate ownership boundary, not an oversight.** Neither layout enforces, asserts, or documents a ceiling on `steps.length`; the wide layout squeezes its equal-width cells arbitrarily narrow rather than scrolling, switching layouts, or rejecting the input. A threshold around 5–6 steps, above which even a wide viewport would fall back to the vertical layout, was **proposed and declined**. The library renders what it is given; legibility at extreme step counts is the caller's problem to manage (e.g. by not putting 20 steps in one flow). Recorded here so this does not get re-litigated as a bug report.
+
+**The two layout widgets are deliberately not exported, while the indicator they both use is.** `lib/src/steppers/steppers.dart` exports `LayrzStep`, `LayrzStepIndicator`, `LayrzStepper`, `LayrzStepperController`, and `LayrzStepperState` — it does **not** export `LayrzStepperWideHeader` or `LayrzStepperCompactLayout`. This is the maintainer's explicit choice, not an accidental omission: keeping the two layouts private preserves the freedom to change either one's internal structure — how the indicator band is sized, how the accordion animates, how connectors are drawn — without that being a breaking API change. The trade-off is real and accepted: a consumer who wants only the wide header (say, a read-only progress indicator with no body or navigation) cannot compose it directly and must use the full `LayrzStepper`. `LayrzStepIndicator` is exported on its own because it has independent value as a single-step glyph outside a full stepper flow; that asymmetry — one piece of the redesign public, the two layouts that consume it private — is easy to mistake for an oversight from the code alone, which is why it is recorded here rather than left to a comment in `steppers.dart`.
+
+**Error steps are tappable — three stale doc comments are now honoured, not merely corrected.** `LayrzStepperState.error`'s own contract says an error step "can be jumped to for correction," and that promise already existed in three doc comments before this redesign. The shipped code before this change locked error steps out of both layouts regardless, so the promise was never kept. Both layouts now treat `completed`, `active`, and `error` identically for tappability; only `upcoming` stays locked. The one code-visible consequence: an error row in the compact layout now carries `expanded: false` when it is not the open step (a real, closed, re-openable row), rather than `expanded: null` (which is reserved for a step that can never be expanded at all).
+
+**`stepper.dart` at 222 lines (45 doc, 26 blank, 151 code), down from 484 — the target was met in substance, not narrowly missed.** The `<200`-line figure discussed during planning was a proxy for one question: did the two-layout split actually leave this file, rather than growing it further? It did — `_buildStepCircle`, `_buildStepCircles`, and `_getConnectorColor`, the old circle/connector/layout helpers, all grep to zero occurrences in the file today. The remaining 222 lines are the justified floor: 45 lines of mandatory rule-#1 argument documentation, the controller lifecycle (attach/detach, dispose ownership, the swap guard), and one `build()` with no further extraction candidates. One genuine duplication was caught and removed during a second pass: `_handleStepTap` had recomputed `isCompleted || isActive` as a second copy of the tappability rule that both layouts already enforce structurally in their own `onTap: isTappable ? ... : null` wiring (`stepper_wide.dart:206`, `stepper_compact.dart:192`). A second copy of that rule risked silently diverging from the layouts' own, so `_handleStepTap` was reduced to a one-line delegation to the controller instead. Going lower than 222 would mean cutting mandatory argument documentation, which is not an acceptable trade against the line-count target.
+
+### 2026-08-27 addendum — the viewport-derived `isCompact` override is replaced by a required `direction` parameter
+
+This update's own text above shipped `LayrzStepper` with a `bool? isCompact` override: `null` derived the layout from `context.isCompact`, `true`/`false` forced a branch. That inference is now removed entirely, superseding this update's own description of it. **This section is the current word on layout selection; the `isCompact` text above is history, not the shipped API.**
+
+**Why it did not survive contact with the showroom.** The showroom's own demo page for this component — built to exercise exactly the wide/compact split this update describes — labelled one tab "wide," forced nothing about the viewport, and on a narrow window silently rendered the compact accordion inside a box sized and laid out for the wide header. The result overflowed. The caller (the showroom page) believed it had chosen a layout by building a tab called "wide"; the component overrode that belief based on a viewport width the caller had not consulted. An implicit width-derived layout switch inside a component whose caller believes it already chose a layout is a trap, and the showroom catching it on the very demo page written to showcase the feature is exactly the kind of signal this decision log exists to record rather than special-case away.
+
+**The fix removes the inference rather than patching around it.** `LayrzStepper` now takes a required `direction: LayrzStepperDirection` (`horizontal` | `vertical`, `lib/src/steppers/src/stepper_direction.dart`) and reads `context.isCompact` nowhere in its own build method. There is no default: a caller omitting `direction` gets a compile error. That is the honest outcome — a caller relying on the old derivation was relying on behaviour that no longer exists, and silently choosing `horizontal` or `vertical` on their behalf could as easily be wrong as right, particularly on a phone. A caller that wants the previous width-derived behaviour reproduces it explicitly at the call site:
+
+```dart
+direction: context.isCompact
+    ? LayrzStepperDirection.vertical
+    : LayrzStepperDirection.horizontal,
+```
+
+**What is not touched by this addendum.** `LayrzStepperWideHeader` and `LayrzStepperCompactLayout` are unchanged and still unexported — this is a change to how `LayrzStepper` selects between them, not to either layout's own rendering. The hover/tab-order reasoning in `stepper_compact.dart` (a narrow desktop window means a mouse-and-keyboard user needs hover states and correct tab order) is unamended and, if anything, more load-bearing now than before: a caller can select `LayrzStepperDirection.vertical` on a wide desktop window too, so that reasoning no longer depends on the window being narrow at all. Only the framing that `context.isCompact` is the thing selecting the layout is what this addendum corrects.
+
+**Not breaking for any released consumer.** `isCompact` was introduced in this same Unreleased changelog batch and never shipped to pub.dev — there is no published caller for this to break.
+
 ---
 
 ## D58: Responsive Option Grids Use `LayrzCol` Integer Spans
@@ -4065,4 +4107,380 @@ value in hand rather than retrofitted around a binary flag.
 
 Also revisit if a consuming app reports needing an arbitrary (non-density) padding override on
 any of the 10 widgets in this decision — see the capability-loss note above.
+
+---
+
+## D67: The DESIGN-147 Selection-Tool Gate — Platform-Only, With Recorded Reservations
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Design / Selection Framework
+
+### Context
+
+`LayrzTextSelectionControls`, the drag handles, the magnifier, and the selection action menu
+shipped under DESIGN-74 with a stated but only half-implemented intent: DESIGN-74's own
+acceptance criteria already said *"Magnifier appears on long-press drag on touch platforms
+only"* and *"Touch drag handles adjust the selection on Android and iOS"*. Only the magnifier
+half was ever gated (`selection_magnifier.dart:176`, `if (!LayrzPlatform.isMobile)`); the handles
+and the selection action menu rendered unconditionally on every platform, including native
+desktop and desktop web.
+
+DESIGN-147 was opened to close that gap. Its Notion page body, written 2026-08-24/25, proposed a
+two-level predicate — desktop OS first, then `MediaQuery.sizeOf(context).shortestSide < 960` for
+the rest, so a large touch tablet would still count as touch. That proposal was superseded before
+implementation by a team vote.
+
+### The Vote, Verbatim
+
+Posted 2026-08-26 by the maintainer, after voting among five team members:
+
+> After voting (Voters: [5 users]), the decision is to preserve the magnifier, drops and anything
+> related to text selection tools only on android and iOS, via web or native
+
+Two things about this wording matter for the implementation:
+
+- **The predicate is platform-only. There is no size term.** The vote does not mention a
+  breakpoint, a `shortestSide` threshold, or tablets at all — it supersedes the page body's
+  two-level predicate outright, not just its threshold value.
+- **"Via web or native"** means the gate is on the underlying OS, not on `kIsWeb`. Android and iOS
+  keep every selection affordance whether running natively or inside a mobile browser; every other
+  platform — Windows, Linux, macOS, and **desktop web** — loses all three: the magnifier, the drag
+  handles ("drops"), and the selection action menu ("anything related to text selection tools").
+
+### Decision
+
+**The gate is `LayrzPlatform.isTouchOS`, a new getter that reads `defaultTargetPlatform` directly
+and does not route through `LayrzPlatform.current`:**
+
+```dart
+static bool get isTouchOS =>
+    defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS;
+```
+
+`LayrzPlatform.current` short-circuits on `kIsWeb` before `defaultTargetPlatform` is ever
+consulted, discarding the real OS — which is exactly why the existing `isMobile` getter
+(`isAndroid || isIOS` under `current`) cannot express "via web or native" and fails the vote on
+mobile web. `isTouchOS` bypasses that short-circuit deliberately. `isMobile` keeps its existing
+meaning and its five existing call sites are untouched; the two getters differ only on web, and
+both now carry doc comments saying so.
+
+This is a confirmation, not a new policy: DESIGN-147 completes the intent DESIGN-74 already
+specified and only half-built. Both rows close together as a result — DESIGN-147 is DESIGN-74's
+last remaining piece.
+
+`LayrzPlatform.isTouchOS` was added — rather than reading `defaultTargetPlatform` directly at each
+of the four gate sites — because it also fixes a bug already present in the shipped magnifier gate
+at the same time: `!LayrzPlatform.isMobile` strips the magnifier from mobile web today, which the
+vote requires to keep. Replacing it with `!LayrzPlatform.isTouchOS` fixes that latent bug at its
+source, in the same edit, rather than leaving a second, subtly different predicate next to a newly
+correct one.
+
+### Rationale — The Reservations, Recorded As A Required Deliverable
+
+The vote is deliberate and is not being relitigated here. But it has a real usability cost on one
+platform, and the team's own reasoning for recording it was explicit: **a future "why doesn't
+right-click work?" triage must find a documented answer here, not a mystery.**
+
+**The cost.** On native desktop and desktop web, this gate removes the selection handles, the
+magnifier, and the selection action menu together. The selection action menu is, in practice, this
+package's replacement for right-click copy/paste on native desktop — removing it plausibly leaves
+**keyboard shortcuts (Ctrl+C / Cmd+C, etc.) as the only remaining route** to copy or paste
+selected text on a mouse-driven desktop app built on layrz_ui. The person who pays this cost is not
+the team making the decision — it is **the end user of a downstream application**, who never chose
+this trade-off and has no UI affordance from which to discover that Ctrl+C still works. Unlike
+touch platforms, which lose nothing (Android/iOS keep everything), a native desktop mouse user is
+left with strictly less than before, and no in-UI hint pointing at the keyboard alternative.
+
+**The milder option that was knowingly set aside.** A less disruptive gate exists: suppress only
+the *automatic* selection toolbar/action menu, while leaving right-click free to open whatever
+native desktop apps conventionally offer at that gesture. That option was considered and explicitly
+not chosen — the vote's wording ("anything related to text selection tools") covers the action menu
+along with the handles and magnifier, not a partial suppression of just the automatic popup.
+Recording this here so the narrower option is not later mistaken for something nobody thought of.
+
+**The touchscreen-laptop / 2-in-1 gap.** A touchscreen Windows laptop or a 2-in-1 device reports
+`TargetPlatform.windows` under `defaultTargetPlatform` regardless of how it is actually being
+used. Under this platform-only predicate, such a device **loses the touch-shaped selection
+affordances** (handles, magnifier, action menu) **and has no mouse to fall back on** for
+right-click — a finger-driven device with neither its touch UI nor a viable substitute. This is
+the sharpest edge of choosing a platform predicate with no size or input-method term, and it is
+recorded here rather than discovered later via a support ticket from exactly this device class.
+
+### Consequences
+
+- `selection_magnifier.dart:176` changes from `if (!LayrzPlatform.isMobile)` to
+  `if (!LayrzPlatform.isTouchOS)` — a bug fix (restores mobile web), not a copy.
+- Four gate sites move together, not just the two the original Notion page described: the five
+  inputs behind `editable_field.dart`, `LayrzLayout`'s expanded and drawer `SelectableRegion`
+  constructions, and `DetailPane`'s own `SelectableRegion` (added in 0.0.14, after the Notion page
+  was written — its absence from the page is a staleness gap, not a scope decision).
+- The "off" state is `selectionControls: null` together with `contextMenuBuilder: null`, not
+  `emptyTextSelectionControls` — the latter does not mix in `TextSelectionHandleControls`, so per
+  **D50**'s Trap 3 it yields a toolbar that renders and is visibly blank, rather than no toolbar at
+  all. See D50 for the full trap analysis.
+- Revisiting this predicate to soften the desktop cost (e.g. adopting the milder toolbar-only
+  suppression, or adding a size term back) is a separate, future row — not a reopening of this
+  vote.
+
+### Related Decisions
+
+- **D50**: Material-free text selection traps — Trap 2 (stable instance identity for
+  `selectionControls`/`magnifierConfiguration`) and Trap 3 (`emptyTextSelectionControls` blank
+  toolbar) both bind this gate's implementation directly.
+- **D15**: Not directly applicable, but the same "state changes affordance, not geometry"
+  discipline informs why the gate touches visibility, not size, of the handles.
+
+### Review Trigger
+
+Revisit if Flutter's selection API changes `TextSelectionControls`/`SelectableRegion` in a future
+SDK version — `isTouchOS`'s correctness depends on `defaultTargetPlatform` continuing to report the
+real OS underneath `kIsWeb`, which is the exact behaviour `LayrzPlatform.current` does not have.
+
+---
+
+## D68: Shared Modal Route Base — `LayrzModalRoute` Extracted From The Sheet
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Architecture / Component Design
+
+### Context
+
+`LayrzBottomSheet` (shipped 0.0.14) already builds on `RawDialogRoute<T>`
+(`_BottomSheetRoute<T> extends RawDialogRoute<T>`, `bottom_sheet.dart:188`) and, in that one file,
+solves twelve concerns common to any modal surface: the barrier, reduce-motion handling, the
+barrier-dismissible wiring, Escape-to-dismiss, focus-in, route semantics, and a keyboard-inset
+workaround built around `ModalRoute`'s page-caching behaviour. Chief among them is a four-site
+`ModalRoute.isCurrent` guard before every `Navigator.pop()` call (barrier tap, Escape, and two
+drag-dismiss sites) — the fix for a release-only data-loss bug shipped in 0.0.14: a fast double tap
+on the barrier could pop the route underneath the sheet as well as the sheet itself, silently
+dismissing the caller's own page with no error in a release build.
+
+`LayrzDialog` (DESIGN-96) needed the same barrier, the same reduce-motion handling, and — most
+importantly — the same double-pop guard. Two paths existed: duplicate this machinery into the
+dialog's own route subclass, or extract it once and have both surfaces depend on the extraction.
+
+### Decision
+
+**Extract `LayrzModalRoute<T> extends RawDialogRoute<T>` into `lib/src/sheets/src/modal_route.dart`,
+carrying the guard and the other genuinely shared concerns as instance methods and static helpers.
+`LayrzBottomSheet`'s route becomes `_BottomSheetRoute<T> extends LayrzModalRoute<T>`, and
+`LayrzDialog`'s route becomes `_DialogRoute<T> extends LayrzModalRoute<T>`.** The guard itself is
+exposed as a single static helper, `LayrzModalRoute.popIfCurrent(BuildContext)`, so every dismiss
+site on every subclass calls the same implementation rather than re-typing the `isCurrent` check.
+
+**This unit changed no public API and no behaviour of the shipped sheet.**
+`LayrzBottomSheet.show<T>()`'s signature, defaults, and semantics are unchanged; the extraction
+moved code between files and into a shared superclass, nothing else. Sheet-specific concerns —
+snap sizes, the drag handle, `DraggableScrollableSheet` — stay in `bottom_sheet.dart`, because they
+are meaningless for a dialog.
+
+### Rationale
+
+**The guard must exist in exactly one place, reachable as a static from any subclass, for the
+guarantee to actually hold.** Duplicating the four-site guard into the dialog's own route class was
+rejected because it recreates the exact condition that let the original bug ship once already: a
+correctness-critical check, hand-typed at every dismiss site, with no structural guarantee that a
+future modal surface (a third family member, or a future edit to either existing one) repeats it
+correctly. Extracting it means every subclass gets the guard **by construction** — a future modal
+surface that extends `LayrzModalRoute` cannot forget it, because there is nothing to forget; it
+calls the one existing helper.
+
+**This was accepted as present risk to protect future correctness.** `LayrzBottomSheet` was
+shipped, working, and tested code; this extraction touched it to serve a component (`LayrzDialog`)
+that did not exist yet. That is a real trade-off, worth stating plainly rather than treating as
+free: a reviewer could reasonably ask why a working component was modified at all. The honest
+answer is that duplicating the guard, or converging the two "later" once both existed
+independently, both leave a window where the guard exists in two places and can drift or be
+forgotten in the copy — and "converge later" is a step that, empirically, tends not to happen once
+each surface already works on its own.
+
+**The mitigation was that all eight existing `test/sheets/` files pass completely unmodified.**
+That was the acceptance bar set for this extraction specifically because it is the only way to
+demonstrate the refactor changed no behaviour: if any existing sheet test had needed editing to
+keep passing, that would have been the signal the extraction altered behaviour rather than merely
+relocating it. `bottom_sheet_double_pop_test.dart` is the specific canary for the guard itself.
+
+**Splitting `bottom_sheet.dart` was a secondary, independent benefit.** The file was 888 lines
+against this repo's ~400-line splitting guidance before the extraction; moving the shared base out
+is the natural, no-extra-cost moment to bring it back down, rather than a separate future refactor.
+
+### Consequences
+
+- `lib/src/sheets/sheets.dart` now also exports `LayrzModalRoute`, so `lib/src/dialogs/` can import
+  it via the absolute `package:layrz_ui/src/sheets/sheets.dart` form.
+- The shared base lives in `sheets/`, not `dialogs/`, specifically so `sheets/` does not depend on
+  `dialogs/` for its own foundation — the sheet is the base's first consumer and existed first.
+- Any future modal-surface component (a persistent side panel, for instance) extends
+  `LayrzModalRoute` and inherits the guard, reduce-motion handling, and keyboard-inset workaround
+  without re-deriving any of them.
+
+### Related Decisions
+
+- **D65**: `LayrzLayout` resizes its body for the keyboard — the same inset-handling problem
+  family `LayrzModalRoute.keyboardViewInsetsOf` addresses for modal surfaces specifically.
+
+---
+
+## D69: `LayrzResponsiveModal` — Viewport Width, Decided Once, Never Re-Evaluated
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: API Design / Interaction Design
+
+### Context
+
+DESIGN-99 asked for a component that presents its content as `LayrzDialog` on wide viewports and
+`LayrzBottomSheet` on narrow ones, so that consumers stop duplicating that breakpoint branch
+themselves. Two design questions had to be settled before implementation: what width source drives
+the choice, and whether the choice, once made, can change while the modal is open.
+
+### Decision
+
+**Width source: viewport width via `context.isCompact`, not container width via `LayoutBuilder`
+constraint width.** `LayrzLayout`'s own `resolveLayrzLayoutPresentation` deliberately reads
+`LayoutBuilder` constraint width, because `LayrzLayout` can be embedded inside a constrained
+container and its presentation should respond to the space it is actually given there. A modal is
+a different case: it is presented over the whole screen regardless of where `show()` was called
+from, so the viewport itself — not an accident of where the calling widget sits in the tree — is
+the honest input. This also matches **D52**, which already uses the same `isCompact` (< 960px)
+boundary for the identical dialog-vs-sheet choice in the M3 picker family.
+
+**Presentation is resolved exactly once, at `show()` call time, and is never re-evaluated for the
+life of the route.** There is no `LayoutBuilder`, no `MediaQuery` listener, and nothing installed
+in the widget tree that could rebuild across the breakpoint. A modal opened on a wide viewport and
+then resized narrow stays on the surface it opened with for the entire life of that route.
+
+**The component is named `LayrzResponsiveModal`, not `LayrzAdaptiveModal`.** Flutter reserves
+"adaptive" for platform-switching (`Switch.adaptive`); this component switches on breakpoint, which
+is what "responsive" means in this codebase's existing vocabulary (`LayrzBreakpoint`, `LayrzRow`).
+The rename was taken now, before publication, because renaming a published 0.x API is a breaking
+change and this was the last free moment to make it.
+
+### Rationale
+
+**Re-evaluating across a resize is itself behaviour, and this component's premise is that it adds
+none.** Its entire job is to pick a presentation once and forward to the chosen surface; anything
+that cannot be expressed as "forward to one branch or the other" — including "swap the branch
+mid-route" — does not belong on it. Tearing down one route and pushing the other mid-flight also
+risks the same class of transition-state bug the sheet's own `_KeyboardVisibility` workaround exists
+to avoid, since `ModalRoute` caches its page widget rather than rebuilding it on every inset or
+layout change.
+
+**There is shipped precedent for the exact failure this rule avoids.** Version 0.0.14 fixed
+`LayrzScaffoldShell` throwing `setState() or markNeedsBuild() called during build` when the
+viewport crossed the compact breakpoint while its detail sheet was open — a bug produced by
+exactly the "re-evaluate presentation across a live breakpoint crossing" design this decision
+rules out from the start.
+
+**The name makes the non-goal more important to state, not less.** "Responsive" invites the
+live-resize assumption harder than "adaptive" did, precisely because "responsive" is the word this
+codebase already uses for `LayrzRow`'s live-reflowing grid behaviour. The decide-once rule is
+therefore documented as an explicit, prominent non-goal on the component itself — in the class doc
+comment and as the lead section of its wiki page — rather than left to be inferred, and it is
+enforced by tests confirming the presentation does not change when the viewport crosses the
+breakpoint in either direction while the route is open.
+
+### Consequences
+
+- `LayrzResponsiveModal.show<T>()` reads `context.isCompact` (or the `isCompact` override, if
+  supplied) exactly once, before pushing to either `LayrzDialog.show` or `LayrzBottomSheet.show`.
+- `LayrzModalPresentation` (`dialog` / `sheet`) is its own enum, deliberately not a reuse of
+  `LayrzLayoutPresentation` (`expanded` / `drawer`), which means navigation chrome and has no
+  member that could stand for a modal surface without redefining the enum.
+- The Notion row DESIGN-99 remains titled `LayrzAdaptiveModal`; the rename is not being pushed back
+  into Notion as part of this work — that is a separate housekeeping follow-up.
+
+### Related Decisions
+
+- **D52**: Establishes the `isCompact` (< 960px) boundary this component reuses, and is the
+  decision this component's own amendment note (below) attaches to.
+- **D68**: The shared `LayrzModalRoute` base both of this component's branches ultimately build on.
+
+---
+
+## D70: Amendment to D52 — `LayrzDialog`/`LayrzResponsiveModal` Built; Shipped M3 Pickers Not Migrated
+
+**Date**: 2026-08-27
+**Status**: Decided (amends D52)
+**Category**: API Design / Interaction Design
+
+### Context
+
+**D52** (2026-08-21) deferred `LayrzDialog` (DESIGN-96) and `LayrzResponsiveModal`
+(then `LayrzAdaptiveModal`, DESIGN-99) to "M4 or later", and prescribed the anchored overlay
+(`LayrzAnchoredPanel`) as the desktop surface for M3's picker-style inputs
+(`LayrzComboBoxInput`, `LayrzSelectInput`, `LayrzDurationInput`). Both components have now been
+built, in this run, ahead of that original M4+ timeline. This entry records what that does — and
+explicitly does not do — to D52's standing decision.
+
+### Decision
+
+**D52 stands. Building `LayrzDialog` and `LayrzResponsiveModal` did not migrate any shipped M3
+picker off its anchored-overlay desktop surface.** The three M3 pickers named in D52 keep
+`LayrzAnchoredPanel` on desktop and `LayrzBottomSheet` below `isCompact`, exactly as D52
+prescribes, with no `position`/`surface` parameter added to any of them. Only D52's "deferred to
+M4 or later" line is superseded by this run's delivery — its prescription for the M3 pickers
+themselves is unchanged and remains binding.
+
+### Rationale
+
+**A dialog and an anchored overlay are different product surfaces, not two competing idioms for
+the same job.** An anchored overlay is field-relative disclosure: it is tethered to the field that
+opened it, flips up or down based on available space, and matches that field's width — appropriate
+for inline form picking, where the user's attention stays anchored to the field they were already
+interacting with. A dialog is a page-relative interruption: centered, barriered, and deliberately
+disconnected from any one field's position. D52's own rationale — *"the anchored overlay is
+lighter-weight and appropriate for inline form picking"* — was a statement about why pickers get a
+lighter surface, not a placeholder standing in for "the dialog didn't exist yet." Now that the
+dialog exists, the reason for the anchored overlay has not gone away.
+
+**A future M4 picker may still choose a dialog on its own merits — that is a per-component
+decision, not a blanket migration.** A picker whose content is genuinely a small multi-field form
+with its own validation may reasonably prefer a dialog's page-relative interruption over an
+anchored overlay's field-relative disclosure. That choice belongs to whichever future row plans
+that specific component, made against that component's actual content — not decided here, in
+advance, for every future picker as a category.
+
+### Consequences
+
+- No M3 picker's public API changed as a result of `LayrzDialog`/`LayrzResponsiveModal` landing.
+- This entry must not be read as "pickers may never use a dialog" — it records that none were
+  migrated *in this run*, and leaves the door open, narrowly, for a future row to choose
+  differently on its own merits.
+
+### Related Decisions
+
+- **D52**: The decision this entry amends.
+- **D69**: `LayrzResponsiveModal`'s own decide-once/viewport-width rules, built on the same
+  `isCompact` boundary D52 established.
+
+---
+
+## D71: `LayrzAnchoredPanel.controller` Swap Guard Stays Debug-Only — "Throw in Release" Tried and Reverted
+
+**Date**: 2026-08-27
+**Status**: Decided
+**Category**: Component Design / Reliability
+
+### Context
+
+DESIGN-146 flagged that `LayrzAnchoredPanel.controller`'s no-swap contract is enforced only by a debug-only `assert` in `didUpdateWidget` — stripped in release builds, so a release-mode controller swap is silently ignored rather than rejected, even though the doc comment promised an assertion failure. The row asked for a decision among three options: (1) support the swap properly, (2) throw in release too, or (3) keep it debug-only and document the release behaviour honestly.
+
+### Decision
+
+**Option 3 shipped: the guard stays a debug-only `assert`, and the doc comment now states plainly that a release-mode swap is silently ignored.** This reverses an in-flight implementation of option 2.
+
+### Why option 2 was tried and rejected
+
+Option 2 — throwing a `StateError` from `didUpdateWidget` when the controller is swapped — was implemented first, on the reasoning that a debug-only contract on a widely-composed primitive is a weak guarantee. It was measured, not merely reviewed, and the measurement is why it was reverted: **throwing from `didUpdateWidget` mid-rebuild, through `LayrzAnchoredPanel`'s real tree (`RawMenuAnchor` / `InheritedNotifierElement` / `Focus` layers), corrupts the framework's own `_InactiveElements` bookkeeping.** An `InheritedElement.debugDeactivated` assertion fired at teardown, and every later `didUpdateWidget` in the same element tree became unreliable — 7 unrelated tests failed until the throwing test itself was removed.
+
+Blast radius was independently re-checked before reverting: every consumer that reaches `LayrzAnchoredPanel.controller` — `duration_input.dart`, `combobox_input.dart`, `search_input.dart`, `select_input.dart` — receives the controller from the panel's own `builder` callback, and **no caller in the library passes a controller at all.** The throw therefore added a genuine release crash path to a parameter nothing in the codebase exercises, in exchange for corrupting element-tree bookkeeping for the one hypothetical caller who would trigger it. That trade is worse than the debug-only status quo it was meant to improve on.
+
+### Consequences
+
+- `LayrzAnchoredPanel.controller`'s doc comment now states outright that a release-mode swap is silently ignored, rather than implying the debug-only assert is the whole story.
+- `LayrzStepper.controller` carries the identical debug-only-`assert` pattern for its own no-swap contract (`stepper.dart`'s `didUpdateWidget`). That is **consistent with this decision**, not a second instance of the same defect — do not "fix" it to throw without re-confirming the `_InactiveElements` hazard no longer reproduces.
+- **Do not re-attempt option 2** without first reproducing that the corruption hazard is gone under the then-current Flutter SDK. This decision exists specifically so that the next reader does not rediscover "throw instead of assert" as an obvious-looking improvement and reintroduce a regression that was already measured and reverted once.
 

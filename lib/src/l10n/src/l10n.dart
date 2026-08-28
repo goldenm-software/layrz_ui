@@ -5,6 +5,7 @@ import 'namespaces/about.dart';
 import 'namespaces/calendar.dart';
 import 'namespaces/combobox.dart';
 import 'namespaces/date_time_pickers.dart';
+import 'namespaces/dialogs.dart';
 import 'namespaces/dual_list.dart';
 import 'namespaces/dynamic_avatar.dart';
 import 'namespaces/editor.dart';
@@ -26,7 +27,7 @@ import 'namespaces/weekdays.dart';
 
 /// Abstract contract for all localized strings used throughout layrz_ui.
 ///
-/// All 133 localization keys are declared as getters across 17 namespace mixins,
+/// All 134 localization keys are declared as getters across 18 namespace mixins,
 /// each providing an English default value. Components read localization via
 /// [LayrzUiL10n.of] or the convenience extension [BuildContext.l10n]. When the
 /// user changes locale, Flutter's `Localizations` system automatically rebuilds
@@ -98,6 +99,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nCalendarMixin,
         LayrzUiL10nComboboxMixin,
         LayrzUiL10nDateTimePickersMixin,
+        LayrzUiL10nDialogsMixin,
         LayrzUiL10nDualListMixin,
         LayrzUiL10nDynamicAvatarMixin,
         LayrzUiL10nEditorMixin,

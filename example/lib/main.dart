@@ -13,6 +13,7 @@ import 'src/sections/button_group_section.dart';
 import 'src/sections/buttons_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
+import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
 import 'src/sections/grid_section.dart';
 import 'src/sections/images_section.dart';
@@ -20,7 +21,9 @@ import 'src/sections/inputs_section.dart';
 import 'src/sections/menus_section.dart';
 import 'src/sections/motion_section.dart';
 import 'src/sections/radius_section.dart';
+import 'src/sections/sheets_section.dart';
 import 'src/sections/spacing_section.dart';
+import 'src/sections/steppers_section.dart';
 import 'src/sections/text_section.dart';
 import 'src/sections/tooltips_section.dart';
 import 'src/sections/typography_section.dart';
@@ -99,6 +102,18 @@ final _router = GoRouter(
         GoRoute(
           path: '/grid',
           pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
+        ),
+        GoRoute(
+          path: '/dialogs',
+          pageBuilder: (context, state) => NoTransitionPage(child: DialogsSection()),
+        ),
+        GoRoute(
+          path: '/sheets',
+          pageBuilder: (context, state) => NoTransitionPage(child: SheetsSection()),
+        ),
+        GoRoute(
+          path: '/steppers',
+          pageBuilder: (context, state) => NoTransitionPage(child: StepperSection()),
         ),
         GoRoute(
           path: '/typography',

@@ -170,6 +170,27 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/menus'),
       ),
       LayrzNavigatorPage(
+        id: '/dialogs',
+        labelText: 'Dialogs',
+        icon: MdiIcons.windowMaximize,
+        isSelected: currentRoute == '/dialogs',
+        onTap: () => _navigateTo(context, '/dialogs'),
+      ),
+      LayrzNavigatorPage(
+        id: '/sheets',
+        labelText: 'Sheets',
+        icon: MdiIcons.trayArrowUp,
+        isSelected: currentRoute == '/sheets',
+        onTap: () => _navigateTo(context, '/sheets'),
+      ),
+      LayrzNavigatorPage(
+        id: '/steppers',
+        labelText: 'Steppers',
+        icon: MdiIcons.formatListNumberedRtl,
+        isSelected: currentRoute == '/steppers',
+        onTap: () => _navigateTo(context, '/steppers'),
+      ),
+      LayrzNavigatorPage(
         id: '/chips',
         labelText: 'Chips',
         icon: MdiIcons.tagOutline,

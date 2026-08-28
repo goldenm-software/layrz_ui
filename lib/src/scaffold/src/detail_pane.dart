@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -54,17 +55,37 @@ class DetailPane<T> extends StatelessWidget {
       return const SizedBox.shrink();
     }
     return SelectableRegion(
-      selectionControls: LayrzTextSelectionControls.instance,
+      selectionControls: _selectionControls,
       contextMenuBuilder: _buildContextMenu,
       child: content,
     );
   }
 
+  /// The [TextSelectionControls] used by this pane's [SelectableRegion].
+  ///
+  /// DESIGN-147: touch selection handles and the selection action menu are
+  /// Android/iOS only, on web or native (per [LayrzPlatform.isTouchOS]).
+  /// [SelectableRegion.selectionControls] is required and non-nullable, so
+  /// (unlike `LayrzEditableField`) the null-both-parameters mechanism does
+  /// not apply here. [emptyTextSelectionControls] is used as the "off" value
+  /// instead: it does not mix in `TextSelectionHandleControls`, so
+  /// [SelectableRegion] takes its `is! TextSelectionHandleControls` branch
+  /// internally and shows a toolbar via the deprecated `buildToolbar()` path
+  /// rather than force-unwrapping [_buildContextMenu] -- which is still
+  /// passed unconditionally below and would otherwise null-check-crash on
+  /// right-click. [EmptyTextSelectionControls.buildToolbar] and `buildHandle`
+  /// both return `SizedBox.shrink()`, so nothing is ever visibly painted.
+  /// Both branches are stable, package-level singleton instances.
+  TextSelectionControls get _selectionControls =>
+      LayrzPlatform.isTouchOS ? LayrzTextSelectionControls.instance : emptyTextSelectionControls;
+
   /// Builds the copy toolbar for this pane's own [SelectableRegion].
   ///
   /// Mirrors `LayrzLayout`'s own `_buildContextMenu` -- a bare [SelectableRegion]
   /// with no `contextMenuBuilder` null-crashes on long-press in this repo, since
-  /// there is no Material default to fall back on.
+  /// there is no Material default to fall back on. On non-touch platforms this
+  /// builder is never actually invoked -- see [_selectionControls] -- but it
+  /// must remain unconditionally wired for the same reason.
   Widget _buildContextMenu(BuildContext context, SelectableRegionState state) {
     final tokens = context.tokens;
     final anchors = state.contextMenuAnchors;

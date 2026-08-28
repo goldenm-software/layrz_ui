@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -316,6 +317,105 @@ void main() {
       // Act & Assert
       // The widget should be present.
       expect(find.text('Custom Pressed'), findsOneWidget);
+    });
+
+    group('double-tap', () {
+      // `SelectableRegion` (exercised in the text-selection test below) branches
+      // on `debugDefaultTargetPlatformOverride`, taking a desktop-only path on a
+      // Linux test host that Android never takes. Pin the platform for every test
+      // in this group so all of them exercise the same (Android) branch the
+      // Notion row measured against. Following the house pattern (see
+      // `test/selection/selection_gate_test.dart`), each test resets the override
+      // via try/finally rather than `setUp`/`tearDown`, so a failing assertion
+      // still restores it and it cannot leak into other test files.
+
+      testWidgets('fires onTap exactly once for a single tap', (WidgetTester tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange
+          int tapCount = 0;
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () => tapCount++,
+              child: const Text('Tap Me'),
+            ),
+          );
+
+          // Act
+          await tester.tap(find.text('Tap Me'));
+          await tester.pumpAndSettle();
+
+          // Assert
+          expect(tapCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('fires onTap exactly once for a double-tap, not twice', (WidgetTester tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange
+          int tapCount = 0;
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () => tapCount++,
+              child: const Text('Tap Me'),
+            ),
+          );
+          final finder = find.text('Tap Me');
+
+          // Act — two taps within the double-tap window, as a real double-tap
+          // gesture would be interpreted by the platform.
+          await tester.tap(finder);
+          await tester.pump(kDoubleTapMinTime);
+          await tester.tap(finder);
+          await tester.pumpAndSettle();
+
+          // Assert — a double-tap on an active LayrzTappable must resolve as a
+          // single logical activation, not fire the callback once per physical tap.
+          expect(tapCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('the cooldown is per-instance: tapping two different LayrzTappables in quick succession '
+          'fires both', (WidgetTester tester) async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange — a fast scroller or a mis-tap correction taps two distinct
+          // rows within the double-tap window. Widget A's cooldown must not
+          // suppress widget B: the cooldown lives on each LayrzTappable's own
+          // State, not in any shared/static state.
+          int aCount = 0;
+          int bCount = 0;
+          await pumpThemed(
+            tester,
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzTappable(onTap: () => aCount++, child: const Text('Row A')),
+                LayrzTappable(onTap: () => bCount++, child: const Text('Row B')),
+              ],
+            ),
+          );
+
+          // Act
+          await tester.tap(find.text('Row A'));
+          await tester.pump(const Duration(milliseconds: 100));
+          await tester.tap(find.text('Row B'));
+          await tester.pumpAndSettle();
+
+          // Assert
+          expect(aCount, 1);
+          expect(bCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
     });
   });
 }

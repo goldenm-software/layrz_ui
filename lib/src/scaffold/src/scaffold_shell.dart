@@ -256,8 +256,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     // Mark the sheet as open before checking anything else
     _sheetOpen = true;
 
-    // Guard: check if the ROOT Navigator is reachable -- the sheet below is
-    // pushed there (useRootNavigator: true), so this must validate the same
+    // Guard: check if the ROOT Navigator is reachable -- LayrzBottomSheet.show
+    // always pushes there intrinsically, so this must validate the same
     // Navigator it pushes to. Checking the nearest one instead would pass
     // here and still throw at the push if only a nested Navigator exists
     // with no root above it (impossible under LayrzApp in practice, but the
@@ -285,29 +285,28 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
     // Show the sheet
     //
-    // useRootNavigator: true is required, not optional. This shell is meant
-    // to be composed under an app shell that owns its own nested Navigator
-    // (e.g. go_router's ShellRoute -- "All ShellRoutes build a Navigator by
-    // default. Child GoRoutes are placed onto this Navigator instead of the
-    // root Navigator.") sitting inside a LayrzLayout ancestor. Without this
-    // flag, LayrzBottomSheet.show's default (nearest Navigator) resolves to
-    // that nested one, whose Overlay is a descendant of LayrzLayout's own
-    // SelectableRegion -- so the sheet's content is a genuine widget-tree
-    // descendant of the page's selection scope, and a double-tap physically
-    // on the sheet's own text can resolve against a page-body row behind it
-    // instead. The nested Overlay is also bounded by LayrzLayout's body, not
-    // the full physical screen, so the sheet's own barrier cannot cover
-    // LayrzLayout's own chrome (e.g. the narrow-mode top bar) either -- a tap
-    // on that chrome while the sheet is open reaches the chrome's own
-    // controls instead of being blocked by the modal scrim. Pushing to the
-    // root Navigator escapes both: the sheet's Overlay entry then sits above
-    // LayrzLayout entirely, genuinely outside its SelectableRegion and
-    // genuinely covering the full screen. A modal sheet belongs above the
-    // app's chrome, not nested inside the page's own subtree, independent of
-    // either symptom.
+    // LayrzBottomSheet.show always pushes on the root Navigator intrinsically,
+    // which is exactly what this shell needs: it is meant to be composed under
+    // an app shell that owns its own nested Navigator (e.g. go_router's
+    // ShellRoute -- "All ShellRoutes build a Navigator by default. Child
+    // GoRoutes are placed onto this Navigator instead of the root Navigator.")
+    // sitting inside a LayrzLayout ancestor. Pushing to the nearest Navigator
+    // would resolve to that nested one, whose Overlay is a descendant of
+    // LayrzLayout's own SelectableRegion -- so the sheet's content would be a
+    // genuine widget-tree descendant of the page's selection scope, and a
+    // double-tap physically on the sheet's own text could resolve against a
+    // page-body row behind it instead. That nested Overlay would also be
+    // bounded by LayrzLayout's body, not the full physical screen, so the
+    // sheet's own barrier could not cover LayrzLayout's own chrome (e.g. the
+    // narrow-mode top bar) either -- a tap on that chrome while the sheet is
+    // open would reach the chrome's own controls instead of being blocked by
+    // the modal scrim. Pushing to the root Navigator escapes both: the sheet's
+    // Overlay entry sits above LayrzLayout entirely, genuinely outside its
+    // SelectableRegion and genuinely covering the full screen. A modal sheet
+    // belongs above the app's chrome, not nested inside the page's own
+    // subtree, independent of either symptom.
     await LayrzBottomSheet.show<void>(
       context,
-      useRootNavigator: true,
       builder: (sheetContext) {
         _narrowSheetContext = sheetContext;
         return ListenableBuilder(

@@ -477,8 +477,8 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       builder: (context) => BottomSheetContent(
         options: filtered,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
+        labelText: widget.labelText,
       ),
-      useRootNavigator: true,
       // BottomSheetContent renders a plain Column, never a same-axis ListView, so
       // it needs no lazy-loading scrollable of its own — but it still needs a
       // *bounded* incoming height to scroll within. scrollable: false hands it the

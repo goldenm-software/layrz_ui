@@ -2,6 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/drag_handle.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 /// A modal or persistent bottom sheet component for presenting content above the page.
 ///
@@ -25,6 +27,14 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 /// - The drag must never be the only route to content; the initial size shows the primary
 ///   content, and content scrolls independently of the drag
 ///
+/// **Navigator**: [show] always pushes on the root navigator ([Navigator.of] with
+/// `rootNavigator: true`). This is intrinsic, not caller-configurable — a sheet shown
+/// from a context whose nearest navigator is nested inside the page body (e.g. a
+/// `go_router` `ShellRoute`) would otherwise land inside that page's own layout
+/// instead of covering the whole screen, with a barrier that does not cover chrome
+/// (such as a top bar) living outside the nested navigator. Every real call site
+/// needs the root navigator, so there is no configuration to get wrong.
+///
 /// **Example usage** (a simple picker):
 /// ```dart
 /// final selected = await LayrzBottomSheet.show<String>(
@@ -46,8 +56,69 @@ class LayrzBottomSheet {
   /// - [context]: the build context from which to show the sheet. Must contain a Navigator.
   /// - [builder]: a builder function that constructs the sheet's content. The builder
   ///   receives the sheet context as an argument.
+  /// - [actions]: optional list of widgets (typically `LayrzButton`s), rendered in a row
+  ///   at the bottom of the sheet, right-aligned with spacing between them -- matching
+  ///   [LayrzDialog.show]'s own `actions` slot's spacing, alignment, and position so the
+  ///   two components' action rows read as siblings rather than cousins. `null` (the
+  ///   default) renders nothing and changes no layout: the sheet's `Column` simply has no
+  ///   third child, identical to every existing caller today.
+  ///
+  ///   **Pinned below the scrollable content, never inside it.** [actions] is a sibling of
+  ///   the `Expanded` content area in the sheet's own `Column`, not nested inside whatever
+  ///   scroll view wraps [builder] (see [scrollable]) -- so a tall [builder] scrolls
+  ///   independently while [actions] stays fixed at the bottom, exactly like [title] and
+  ///   [actions] stay pinned outside [LayrzDialog.show]'s own content scroll view. This
+  ///   also means [actions] is never pushed behind the on-screen keyboard: the keyboard
+  ///   avoidance that shrinks/pins the whole sheet above the keyboard (see
+  ///   [_BottomSheetRoute]'s `transitionBuilder`) applies to the entire `Column`, this row
+  ///   included, not only to the `Expanded` content.
+  ///
+  ///   **Does not change [canDismiss]'s default.** Unlike [LayrzDialog.show], which infers
+  ///   its own dismissibility from whether `actions` is null, a sheet with [actions] present
+  ///   is still freely dismissible unless the caller also passes `canDismiss: false`. This
+  ///   is deliberate, not an oversight: [builder] can already contain its own buttons with
+  ///   or without this parameter, so the mere presence of [actions] is a weaker signal here
+  ///   than it is for a dialog whose *only* way to offer a decision is this slot.
   /// - [isPersistent]: whether the sheet is persistent (no barrier, page stays interactive)
   ///   or modal (barrier present, page not interactive). Defaults to `false` (modal).
+  /// - [canDismiss]: whether the sheet can be dismissed by any route other than an explicit
+  ///   caller action (e.g. a tap on one of [actions], or a button inside [builder] that pops
+  ///   the sheet itself). Governs three routes, together:
+  ///     1. tapping the barrier outside the sheet (meaningless when [isPersistent] is
+  ///        `true`, since a persistent sheet paints no barrier at all — see below),
+  ///     2. the Escape key, and
+  ///     3. the system/Android back gesture.
+  ///   Defaults to `true`, preserving this method's original behaviour exactly — every
+  ///   existing caller keeps a freely-dismissible sheet with no change. Pass `false` for a
+  ///   sheet that must be answered through its own content (typically one of [actions] or a
+  ///   button inside [builder]) rather than escaped, mirroring [LayrzDialog.show]'s
+  ///   `canDismiss` contract as closely as this component's shape allows. This stays an
+  ///   explicit, caller-set flag rather than being inferred from [actions] -- see [actions]'s
+  ///   own doc for why the two are independent here, unlike on the dialog.
+  ///
+  ///   **Composes with [isPersistent] on a separate axis, not collapsed into it.**
+  ///   [isPersistent] decides whether a barrier exists at all; [canDismiss] decides whether
+  ///   the routes that remain (Escape, the system back gesture, and the barrier tap when one
+  ///   exists) are allowed to act. A persistent, non-dismissible sheet
+  ///   (`isPersistent: true, canDismiss: false`) has no barrier to gate in the first place,
+  ///   but still blocks Escape and the back gesture -- it behaves like a fixed panel that
+  ///   only its own content can close. A modal, non-dismissible sheet
+  ///   (`isPersistent: false, canDismiss: false`) additionally paints a barrier that
+  ///   visually blocks the page behind it but does not itself handle taps (mirroring
+  ///   [LayrzDialog.show]'s own non-dismissible barrier).
+  ///
+  ///   **Drag-to-dismiss is gated by this flag too.** A sheet the caller marked
+  ///   non-dismissible would otherwise be trivially escaped by a downward swipe -- the same
+  ///   problem [LayrzDialog.show]'s `canDismiss` solved for its close ("X") icon. When
+  ///   `false`, dragging past the lowest snap point (or, with the keyboard open, past the
+  ///   dismiss-only threshold) snaps the sheet back instead of dismissing it. **The drag
+  ///   handle still renders** when [showDragHandle] is `true` -- unlike the dialog's X icon,
+  ///   which is suppressed entirely when non-dismissible, the handle's primary job is
+  ///   resizing across [snapSizes]/[minSize]/[maxSize], which stays fully available; only the
+  ///   dismiss-by-dragging-past-the-end behaviour is disabled. Hiding a handle that still
+  ///   resizes correctly would remove a working affordance to avoid a secondary one, and
+  ///   the visible-but-inert failure mode the dialog's X was avoiding does not apply here --
+  ///   the handle-as-a-resize-control is not being aimed at anything it silently declines.
   /// - [semanticLabel]: optional semantic label for screen readers announcing the sheet.
   ///   For modal sheets, this should describe the purpose and exit mechanism
   ///   (e.g., "Choose an option. Press Escape to close."). This label is required
@@ -61,7 +132,14 @@ class LayrzBottomSheet {
   ///   - All values must be between [minSize] and [maxSize] inclusive
   ///   - Values must be in ascending order
   ///   - An assertion fires at the call site if constraints are violated
-  ///   If null, defaults to `[0.5, 0.95]` (half-height and near-full-height snap points, respecting the 0.95 maxSize default).
+  ///   These same bounds/ascending-order constraints are also enforced on the *derived*
+  ///   default described below when [snapSizes] is left null -- see [_defaultSnapSizes] --
+  ///   so a narrowed [minSize]/[maxSize] can never produce an out-of-range default.
+  ///   If null, defaults to `[0.5, 0.95]` for this method's own [minSize]/[maxSize]
+  ///   defaults (`0.25`/`0.95`) -- half-height and near-full-height snap points. For any
+  ///   other [minSize]/[maxSize] pair, the default is instead derived from that actual
+  ///   range (see [_defaultSnapSizes]), so it always lies within `minSize..maxSize` even
+  ///   when a caller narrows [maxSize] below `0.95` without also supplying [snapSizes].
   /// - [initialSize]: the fraction of the screen height the sheet initially occupies.
   ///   Defaults to 0.5 (half the screen). Must be between [minSize] and [maxSize].
   /// - [minSize]: the minimum fraction of screen height the sheet can be dragged down to.
@@ -74,9 +152,6 @@ class LayrzBottomSheet {
   ///   pill) is draggable, and dragging it resizes the sheet the same way dragging the
   ///   content does — more forgiving than a handle-only hit target, which is easy to
   ///   miss on touch.
-  /// - [useRootNavigator]: whether to use the root navigator instead of the nearest one.
-  ///   Defaults to `false`. Set to `true` when showing from a context that does not have
-  ///   its own navigator (e.g. a nested route on desktop).
   /// - [scrollable]: whether the sheet wraps [builder]'s content in its own
   ///   [SingleChildScrollView]. Defaults to `true`, which preserves this method's original
   ///   behaviour exactly: the content is wrapped and the sheet's drag/scroll-handoff
@@ -105,14 +180,15 @@ class LayrzBottomSheet {
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
+    List<Widget>? actions,
     bool isPersistent = false,
+    bool canDismiss = true,
     String? semanticLabel,
     List<double>? snapSizes,
     double initialSize = 0.5,
     double minSize = 0.25,
     double maxSize = 0.95,
     bool showDragHandle = true,
-    bool useRootNavigator = false,
     bool scrollable = true,
   }) {
     // Validate sizing constraints
@@ -127,43 +203,61 @@ class LayrzBottomSheet {
       'Got $initialSize.',
     );
 
-    // Validate snapSizes constraints
+    // Validate a caller-supplied snapSizes shape before it is used as-is below.
+    // This is deliberately narrower than the bounds/ascending checks that now run
+    // on effectiveSnapSizes regardless of origin (see below) -- emptiness is only
+    // possible for a caller-supplied list (the derived default is never empty), so
+    // it is checked here, against the caller's own value, rather than folded into
+    // the shared check.
     if (snapSizes != null) {
       assert(
         snapSizes.isNotEmpty,
         'snapSizes must not be empty when supplied.',
       );
-
-      // Check all values are within bounds
-      for (final size in snapSizes) {
-        assert(
-          size >= minSize && size <= maxSize,
-          'Every entry in snapSizes must lie within minSize ($minSize)..maxSize ($maxSize). '
-          'Got $size.',
-        );
-      }
-
-      // Check ascending order
-      for (int i = 1; i < snapSizes.length; i++) {
-        assert(
-          snapSizes[i] > snapSizes[i - 1],
-          'snapSizes must be in ascending order. Got $snapSizes.',
-        );
-      }
     }
 
-    // Use default snap sizes if not provided
-    final effectiveSnapSizes = snapSizes ?? [0.5, 0.95];
+    // The historical hardcoded default, [0.5, 0.95], is only in-bounds against the
+    // *default* maxSize of 0.95 -- a caller who narrows maxSize (e.g. maxSize: 0.5)
+    // and leaves snapSizes unset previously got a default snap point above their own
+    // ceiling, which DraggableScrollableSheet asserts on. _defaultSnapSizes derives
+    // the fallback from the actual minSize/maxSize instead, so it is in-bounds by
+    // construction for any valid minSize <= maxSize pair, while still returning
+    // exactly [0.5, 0.95] for the untouched defaults (0.25, 0.95) -- see its own doc.
+    final effectiveSnapSizes = snapSizes ?? _defaultSnapSizes(minSize, maxSize);
+
+    // Bounds and ascending-order checks run on effectiveSnapSizes -- the value
+    // DraggableScrollableSheet actually receives -- rather than only on a
+    // caller-supplied list, so a bad derived default can never reach the SDK
+    // unchecked the way the old hardcoded fallback did. When snapSizes is null,
+    // every entry here came from _defaultSnapSizes, which is constructed to always
+    // satisfy both properties -- so these asserts are a safety net for that
+    // function, not expected to ever fire for the derived path in practice.
+    for (final size in effectiveSnapSizes) {
+      assert(
+        size >= minSize && size <= maxSize,
+        'Every entry in snapSizes must lie within minSize ($minSize)..maxSize ($maxSize). '
+        'Got $size.',
+      );
+    }
+
+    for (int i = 1; i < effectiveSnapSizes.length; i++) {
+      assert(
+        effectiveSnapSizes[i] > effectiveSnapSizes[i - 1],
+        'snapSizes must be in ascending order. Got $effectiveSnapSizes.',
+      );
+    }
 
     final navigator = Navigator.of(
       context,
-      rootNavigator: useRootNavigator,
+      rootNavigator: true,
     );
 
     return navigator.push<T>(
       _BottomSheetRoute<T>(
         builder: builder,
+        actions: actions,
         isPersistent: isPersistent,
+        canDismiss: canDismiss,
         semanticLabel: semanticLabel,
         snapSizes: effectiveSnapSizes,
         initialSize: initialSize,
@@ -176,18 +270,63 @@ class LayrzBottomSheet {
   }
 }
 
+/// Derives the default snap sizes used by [LayrzBottomSheet.show] when its
+/// caller passes no [snapSizes] of its own, from the actual [minSize]/[maxSize]
+/// in effect -- rather than the historical hardcoded `[0.5, 0.95]`, which was
+/// only ever in-bounds against the *default* `maxSize` of `0.95` and asserted
+/// inside [DraggableScrollableSheet] for any caller that narrowed `maxSize`
+/// below `0.95` without also supplying `snapSizes`.
+///
+/// **Preserves the untouched-defaults case exactly.** For `minSize: 0.25`,
+/// `maxSize: 0.95` (this method's own defaults), this returns `[0.5, 0.95]` --
+/// bit-for-bit the historical literal -- so no existing caller's behaviour
+/// shifts. That happens because `0.5` already lies strictly between `0.25` and
+/// `0.95`, which is exactly the condition the first branch below checks for.
+///
+/// **General case.** `0.5` is kept as the lower snap point whenever it lies
+/// strictly inside `(minSize, maxSize)` -- i.e. whenever the historical value
+/// would actually have been valid on its own terms. When it does not (`0.5` at
+/// or below `minSize`, or at or above `maxSize`), the lower point is instead the
+/// midpoint of the `minSize`..`maxSize` range, which is always strictly inside
+/// that range whenever the range itself is non-degenerate.
+///
+/// **Degenerate range** (`minSize == maxSize`, e.g. both `0.5`): there is no
+/// room for two ascending points, so this returns the single-element
+/// `[maxSize]`. [maxSize] is preferred over [minSize] here only because they
+/// are equal in this branch -- either would do.
+List<double> _defaultSnapSizes(double minSize, double maxSize) {
+  if (minSize == maxSize) {
+    return [maxSize];
+  }
+
+  const historicalLowSnap = 0.5;
+  final lowSnap = (historicalLowSnap > minSize && historicalLowSnap < maxSize)
+      ? historicalLowSnap
+      : minSize + (maxSize - minSize) / 2;
+
+  return [lowSnap, maxSize];
+}
+
 /// Internal route class for managing the bottom sheet presentation.
 ///
-/// Extends [RawDialogRoute] to leverage the barrier painting, focus management,
-/// and transition infrastructure already built into the SDK's dialog system.
-/// [RawDialogRoute] provides:
-/// - Barrier painting and dismissal on tap
-/// - Automatic focus trap and restoration
-/// - Transition builders and page builders
-/// - Semantic semantics for accessibility
-class _BottomSheetRoute<T> extends RawDialogRoute<T> {
+/// Extends [LayrzModalRoute] to share the barrier, reduce-motion, and
+/// double-pop-guard machinery common to every modal surface in the design
+/// system. Sheet-specific behaviour — snap sizes, the drag handle, the
+/// slide-from-bottom transition, and the keyboard-inset workaround's own
+/// widget wiring — stays here rather than in the shared base, because it is
+/// meaningless for a non-sheet modal surface such as a dialog.
+class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
   /// Whether the sheet is persistent (no barrier) or modal.
   final bool isPersistent;
+
+  /// Whether the sheet can be dismissed by any route other than an explicit caller
+  /// action -- the barrier (when one exists), Escape, drag-dismiss, and the
+  /// system/Android back gesture all read this single value. See [LayrzBottomSheet.show]'s
+  /// `canDismiss` doc for the full contract; this is that same resolved value, forwarded
+  /// verbatim to [RawDialogRoute]'s own `barrierDismissible` (composed with [isPersistent]
+  /// below, since a persistent sheet has no barrier to gate regardless of this flag) and
+  /// re-read by name here for every other route this class or [_BottomSheetContent] gates.
+  final bool canDismiss;
 
   /// Semantic label for screen readers (caller-supplied, optional).
   final String? semanticLabel;
@@ -195,7 +334,9 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
   /// Creates a new bottom sheet route.
   _BottomSheetRoute({
     required WidgetBuilder builder,
+    required List<Widget>? actions,
     required this.isPersistent,
+    required this.canDismiss,
     required this.semanticLabel,
     required List<double> snapSizes,
     required double initialSize,
@@ -207,7 +348,9 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
          pageBuilder: (context, animation, secondaryAnimation) {
            return _BottomSheetContent(
              builder: builder,
+             actions: actions,
              isPersistent: isPersistent,
+             canDismiss: canDismiss,
              semanticLabel: semanticLabel,
              snapSizes: snapSizes,
              initialSize: initialSize,
@@ -217,7 +360,10 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
              scrollable: scrollable,
            );
          },
-         barrierDismissible: !isPersistent,
+         // A persistent sheet paints no barrier at all (see the Stack below), so
+         // barrierDismissible is moot for it regardless of canDismiss -- only a modal
+         // sheet's barrier tap is actually gated by canDismiss here.
+         barrierDismissible: !isPersistent && canDismiss,
          barrierColor: const Color(0x00000000), // Transparent initially
          transitionBuilder: (context, animation, secondaryAnimation, child) {
            // Determine barrier color based on isPersistent flag
@@ -226,8 +372,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
                : const Color(0x00000000);
 
            // Respect reduce-motion by shortening or skipping the transition
-           final disableAnimations = MediaQuery.of(context).disableAnimations;
-           final effectiveAnimation = disableAnimations ? AlwaysStoppedAnimation(1.0) : animation;
+           final effectiveAnimation = LayrzModalRoute.resolveAnimation(context, animation);
 
            // D65's SHRINK pattern (layout.dart/drawer_scaffold.dart), applied
            // here directly rather than the offset/push-up approach an earlier
@@ -266,44 +411,52 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
            // Padding/removeViewInsets above already rely on and is confirmed
            // to update correctly.
            final viewInsets = MediaQuery.viewInsetsOf(context);
-           final keyboardVisible = viewInsets.bottom > 0;
+           final keyboardVisible = LayrzModalRoute.keyboardViewInsetsOf(context) > 0;
 
            return Stack(
              children: [
                // Barrier
                if (!isPersistent)
-                 GestureDetector(
-                   // Explicit for clarity/defensiveness: Container(color: ...) already
-                   // builds a ColoredBox, whose render object (_RenderColoredBox) is
-                   // unconditionally HitTestBehavior.opaque regardless of alpha — so this
-                   // barrier already blocks hits to whatever sits behind it in the Stack,
-                   // with or without this line. Kept explicit so the GestureDetector's own
-                   // hit-testing contract does not silently depend on an implementation
-                   // detail of its child. This also means the barrier absorbs MORE taps
-                   // than before, not fewer — which is exactly why the guard below is not
-                   // optional once this line is present: a barrier that reliably catches
-                   // every tap needs to reliably refuse to act on ones it should not.
-                   behavior: HitTestBehavior.opaque,
-                   onTap: () {
-                     // transitionBuilder (this whole Stack) renders for the ENTIRE
-                     // transition, including the exit/dismiss animation — the barrier
-                     // stays mounted and hit-testable while the sheet slides out. A
-                     // second fast tap during that window would otherwise call pop()
-                     // on a route that is already popping, which — under go_router —
-                     // throws 'currentConfiguration.isNotEmpty' trying to remove the
-                     // last page off the stack, or re-enters the Navigator mid-pop
-                     // ('!_debugLocked'). ModalRoute.of(context)?.isCurrent is the
-                     // SDK's own purpose-built answer to "is this route still the one
-                     // to pop" — it is what the barrier's onTap should have always been
-                     // conditioned on, independent of the opaque fix above.
-                     if (ModalRoute.of(context)?.isCurrent ?? false) {
-                       Navigator.of(context).pop();
-                     }
-                   },
-                   child: Container(
-                     color: barrierColor,
+                 if (canDismiss)
+                   GestureDetector(
+                     // Explicit for clarity/defensiveness: Container(color: ...) already
+                     // builds a ColoredBox, whose render object (_RenderColoredBox) is
+                     // unconditionally HitTestBehavior.opaque regardless of alpha — so this
+                     // barrier already blocks hits to whatever sits behind it in the Stack,
+                     // with or without this line. Kept explicit so the GestureDetector's own
+                     // hit-testing contract does not silently depend on an implementation
+                     // detail of its child. This also means the barrier absorbs MORE taps
+                     // than before, not fewer — which is exactly why the guard below is not
+                     // optional once this line is present: a barrier that reliably catches
+                     // every tap needs to reliably refuse to act on ones it should not.
+                     behavior: HitTestBehavior.opaque,
+                     onTap: () {
+                       // transitionBuilder (this whole Stack) renders for the ENTIRE
+                       // transition, including the exit/dismiss animation — the barrier
+                       // stays mounted and hit-testable while the sheet slides out. A
+                       // second fast tap during that window would otherwise call pop()
+                       // on a route that is already popping, which — under go_router —
+                       // throws 'currentConfiguration.isNotEmpty' trying to remove the
+                       // last page off the stack, or re-enters the Navigator mid-pop
+                       // ('!_debugLocked'). LayrzModalRoute.popIfCurrent is the shared
+                       // guard against exactly that -- see its own doc comment.
+                       LayrzModalRoute.popIfCurrent(context);
+                     },
+                     child: Container(
+                       color: barrierColor,
+                     ),
+                   )
+                 else
+                   // Non-dismissible barrier, mirroring LayrzDialog's own: still painted
+                   // (the page behind must read as non-interactive) but does not itself
+                   // handle taps, so a stray click needs no guard at all -- matching
+                   // RawDialogRoute's own barrierDismissible: false semantics, which this
+                   // widget already composed into above (barrierDismissible: !isPersistent
+                   // && canDismiss); this IgnorePointer just keeps this hand-rolled
+                   // GestureDetector's behaviour consistent with that.
+                   IgnorePointer(
+                     child: Container(color: barrierColor),
                    ),
-                 ),
                // Sheet
                Padding(
                  padding: EdgeInsets.only(bottom: viewInsets.bottom),
@@ -340,7 +493,7 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
 
 /// Carries whether the on-screen keyboard is currently covering part of the
 /// screen down to [_BottomSheetContentState], from [_BottomSheetRoute]'s
-/// [_BottomSheetRoute.transitionBuilder].
+/// `transitionBuilder`.
 ///
 /// This exists because [_BottomSheetContent] cannot read
 /// `MediaQuery.viewInsetsOf(context)` directly and see it update: it is built
@@ -354,6 +507,9 @@ class _BottomSheetRoute<T> extends RawDialogRoute<T> {
 /// that is exactly what the existing keyboard-avoidance `Padding` already
 /// relies on), sidesteps that entirely: the dependency genuinely lives inside
 /// the subtree that rebuilds when `viewInsets` changes.
+///
+/// See [LayrzModalRoute.keyboardViewInsetsOf] for the shared read this value
+/// is derived from.
 class _KeyboardVisibility extends InheritedWidget {
   /// Whether the keyboard is currently open (`viewInsets.bottom > 0`) as of
   /// the most recent [_BottomSheetRoute.transitionBuilder] rebuild.
@@ -380,13 +536,24 @@ class _KeyboardVisibility extends InheritedWidget {
 /// The actual content widget displayed inside the bottom sheet route.
 ///
 /// Manages the draggable scrollable sheet, drag handle visibility,
-/// PopScope for back button handling, and focus management.
+/// a [PopScope] gating the system/Android back gesture on [canDismiss], and
+/// focus management.
 class _BottomSheetContent<T> extends StatefulWidget {
   /// The builder function that constructs the sheet's content.
   final WidgetBuilder builder;
 
+  /// Optional action row content, pinned below [builder]'s content. See
+  /// [LayrzBottomSheet.show]'s `actions` doc for the full contract.
+  final List<Widget>? actions;
+
   /// Whether the sheet is persistent (no barrier, page interactive) or modal.
   final bool isPersistent;
+
+  /// Whether the sheet can be dismissed by any route other than an explicit caller
+  /// action -- gates Escape, drag-dismiss, and the system/Android back gesture here.
+  /// See [LayrzBottomSheet.show]'s `canDismiss` doc for the full contract; this is the
+  /// same resolved value the enclosing [_BottomSheetRoute] also used for the barrier.
+  final bool canDismiss;
 
   /// Semantic label for screen readers (caller-supplied, optional).
   final String? semanticLabel;
@@ -413,7 +580,9 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
     required this.builder,
+    required this.actions,
     required this.isPersistent,
+    required this.canDismiss,
     required this.semanticLabel,
     required this.snapSizes,
     required this.initialSize,
@@ -491,7 +660,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     // handling a structural no-op for resizing (there is no range left to
     // drag within), which is a stronger and simpler guarantee than trying to
     // intercept the gesture. Drag-to-DISMISS is deliberately preserved
-    // through a *different* path -- see _DragHandle's dismissOnly mode below
+    // through a *different* path -- see DragHandle's dismissOnly mode below
     // -- since disabling expansion has nothing to do with taking away the
     // user's ability to swipe the sheet away while typing.
     //
@@ -555,17 +724,25 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     final focusChild = Focus(
       focusNode: _focusNode,
       onKeyEvent: (node, event) {
-        // Dismiss on Escape (modal mode only). Guarded the same way as the
-        // barrier's onTap (see the comment there) for consistency across every
+        // Dismiss on Escape (modal, dismissible mode only). Guarded the same way as
+        // the barrier's onTap (see the comment there) for consistency across every
         // pop site in this file — a fast repeated Escape was not reproducible as
         // an actual double-pop in testing (the second key event is not even
         // delivered to this handler once the first pop is in flight, unlike the
         // barrier tap, which is a spatial hit-test unaffected by focus state),
         // but the guard costs nothing and removes the asymmetry.
+        //
+        // widget.canDismiss gates this the same way it gates the barrier and the
+        // PopScope below (see widget.canDismiss's own doc). When it is false, this
+        // returns `ignored` unconditionally so Escape keeps propagating exactly as
+        // if this sheet were not listening at all -- mirroring LayrzDialog's own
+        // Escape handler (dialog.dart) so the same "handled only when it acts"
+        // contract holds for every modal surface, not just the dialog.
         if (!widget.isPersistent &&
+            widget.canDismiss &&
             event.logicalKey == LogicalKeyboardKey.escape &&
             (ModalRoute.of(context)?.isCurrent ?? false)) {
-          Navigator.of(context).pop();
+          LayrzModalRoute.popIfCurrent(context);
           return KeyEventResult.handled;
         }
         return KeyEventResult.ignored;
@@ -630,7 +807,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                   children: [
                     // Drag handle
                     if (widget.showDragHandle)
-                      _DragHandle(
+                      DragHandle(
                         draggable: true,
                         controller: _sheetController,
                         snapSizes: widget.snapSizes,
@@ -640,12 +817,18 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                         // dismissOnly switches the handle to a SEPARATE
                         // dismiss-by-drag path that does not go through
                         // sheetController.jumpTo/the min/max-locked size at
-                        // all (see _DragHandle._onDragUpdate), so a deliberate
+                        // all (see DragHandle's _onDragUpdate), so a deliberate
                         // downward swipe still closes the sheet even though
                         // "expand/resize" is inert. The maintainer's brief
                         // asked only to disable EXPANSION; nothing about
                         // taking away dismissal while typing.
                         dismissOnly: keyboardVisible,
+                        // See LayrzBottomSheet.show's canDismiss doc: a
+                        // non-dismissible sheet must not be swipeable away
+                        // either, in either dismissOnly or ordinary mode --
+                        // the handle keeps rendering and keeps resizing, only
+                        // the drag-past-the-end dismissal is disabled.
+                        canDismiss: widget.canDismiss,
                       ),
                     // Content
                     Expanded(
@@ -668,6 +851,35 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                               child: widget.builder(context),
                             ),
                     ),
+                    // Actions -- deliberately a THIRD, non-expanded Column child, sibling to
+                    // the Expanded content above rather than nested inside it. This pins the
+                    // row outside whatever scroll view widget.scrollable wraps the content in
+                    // (or outside the caller's own scrollable, when widget.scrollable is
+                    // false) -- mirroring LayrzDialog's title/actions staying outside its own
+                    // content scroll view (dialog.dart's _buildSlots). A caller with actions
+                    // taller than the sheet's content wants them to stay reachable, not scroll
+                    // away with a long builder; matching the dialog's own choice here, per the
+                    // maintainer's explicit preference, keeps the two components' actions rows
+                    // behaving identically regardless of which surface a LayrzResponsiveModal
+                    // resolves to. This placement also means actions sit ABOVE the keyboard
+                    // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance Padding
+                    // and this State's own effectiveMinSize/maxSize/1.0 pinning above: both
+                    // apply to the WHOLE sheet (including this Column), not just the
+                    // Expanded/scrollable content, so the actions row is never pushed behind
+                    // the keyboard by this sheet's own layout.
+                    if (widget.actions != null && widget.actions!.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.all(tokens.spacing.sp3),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            for (int i = 0; i < widget.actions!.length; i++) ...[
+                              if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                              widget.actions![i],
+                            ],
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -675,6 +887,25 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
           );
         },
       ),
+    );
+
+    // System/Android back gesture. canPop mirrors every other dismissal route on
+    // widget.canDismiss: `true` lets the framework pop normally (identical to there
+    // being no PopScope at all), `false` intercepts the pop attempt and does nothing
+    // -- no partial dismissal, no popped route, no swallowed gesture reaching past
+    // this sheet to an ancestor, since a non-poppable PopScope simply reports the
+    // back attempt as handled and stops there. Gated on widget.canDismiss alone,
+    // NOT composed with widget.isPersistent -- a persistent, non-dismissible sheet
+    // still has no barrier to tap (see _BottomSheetRoute's Stack), but the back
+    // gesture is a keyboard/system-level route action independent of the barrier,
+    // so it is blocked exactly the same as it would be for a modal sheet. This
+    // mirrors LayrzDialog's own PopScope (dialog.dart) -- see its doc for why
+    // onPopInvokedWithResult is intentionally a no-op: a blocked back gesture here
+    // has no secondary action to perform, so the sheet simply stays open, exactly
+    // as a blocked barrier tap, Escape press, or drag-dismiss already leaves it.
+    final popScoped = PopScope(
+      canPop: widget.canDismiss,
+      child: focusChild,
     );
 
     // For modal sheets with a semantic label, wrap with Semantics to expose route semantics.
@@ -691,198 +922,10 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
         namesRoute: true,
         explicitChildNodes: true,
         enabled: true,
-        child: focusChild,
+        child: popScoped,
       );
     }
 
-    return focusChild;
-  }
-}
-
-/// Visual drag handle widget.
-///
-/// Renders a centered pill-shaped indicator that signals the sheet is draggable.
-/// When [draggable] is true, the entire header region — not just the visible
-/// 40x4 pill — is the drag target: dragging it resizes the attached sheet across
-/// [snapSizes], the same way dragging the sheet's own content does, and dragging
-/// past [lowSnapSize] on release dismisses the sheet. The hit region is a fixed
-/// size regardless of hover/press state (per D15, interaction states never change
-/// geometry); only the pill's colour may vary with theme.
-class _DragHandle extends StatefulWidget {
-  /// Whether this handle responds to vertical drag gestures. When false (or when
-  /// [controller] is null), the handle is purely visual.
-  final bool draggable;
-
-  /// Controls the sheet this handle drags. Required for [draggable] to have effect.
-  final DraggableScrollableController? controller;
-
-  /// The sheet's snap point fractions, in ascending order. On drag release, the
-  /// sheet animates to whichever of these is nearest its current size. Ignored
-  /// when [draggable] is false or [dismissOnly] is true.
-  final List<double> snapSizes;
-
-  /// The lowest existing snap point fraction. Releasing the drag with the sheet's
-  /// current size below this dismisses the sheet instead of snapping back to it —
-  /// this is how dismissal "falls out of" dragging past the low end, rather than
-  /// being a separate dismiss-only gesture. Ignored when [draggable] is false or
-  /// [dismissOnly] is true.
-  final double lowSnapSize;
-
-  /// When true, the handle no longer resizes the sheet at all (expansion is
-  /// suppressed -- there is nothing to resize INTO with the keyboard up,
-  /// per the maintainer's decision), but a downward drag past a fixed pixel
-  /// threshold still dismisses the sheet. This is a genuinely separate drag
-  /// path from the ordinary resize-then-check-lowSnapSize one: with the
-  /// keyboard open, [DraggableScrollableSheet]'s own min/max are pinned to
-  /// `1.0` (see `_BottomSheetContentState.build`), so driving this through
-  /// [DraggableScrollableController.jumpTo] the normal way would either be a
-  /// no-op (nowhere to move the size to) or, worse, briefly violate the
-  /// pinned bounds mid-drag. Tracking raw drag distance instead sidesteps the
-  /// sheet's own size entirely -- dismissal here is a decision made from the
-  /// gesture, not from the sheet's current fractional size.
-  final bool dismissOnly;
-
-  /// Creates a drag handle.
-  const _DragHandle({
-    required this.draggable,
-    this.controller,
-    this.snapSizes = const [],
-    this.lowSnapSize = 0.0,
-    this.dismissOnly = false,
-  });
-
-  @override
-  State<_DragHandle> createState() => _DragHandleState();
-}
-
-class _DragHandleState extends State<_DragHandle> {
-  /// Accumulated downward drag distance in the current gesture, used only by
-  /// [widget.dismissOnly] mode. Reset on every drag start/end.
-  double _dismissDragDistance = 0.0;
-
-  /// The pixel distance a downward drag must cover, in [widget.dismissOnly]
-  /// mode, before releasing dismisses the sheet. Chosen to require a
-  /// deliberate swipe (roughly a third of the drag handle's own visual travel
-  /// on a typical phone), not an incidental jitter while trying to type.
-  static const double _dismissOnlyThreshold = 80.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    final header = Container(
-      padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp3),
-      alignment: Alignment.center,
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: tokens.colors.fg3,
-          borderRadius: tokens.radius.br5,
-        ),
-      ),
-    );
-
-    final sheetController = widget.controller;
-    if (!widget.draggable || sheetController == null) {
-      return header;
-    }
-
-    if (widget.dismissOnly) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: (_) => _dismissDragDistance = 0.0,
-        onVerticalDragUpdate: (details) => _dismissDragDistance += details.delta.dy,
-        onVerticalDragEnd: (_) => _onDismissOnlyDragEnd(context),
-        child: header,
-      );
-    }
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onVerticalDragUpdate: (details) => _onDragUpdate(sheetController, details),
-      onVerticalDragEnd: (details) => _onDragEnd(context, sheetController),
-      child: header,
-    );
-  }
-
-  /// Resizes the sheet by the drag delta. Dragging up (negative `dy`) grows the
-  /// sheet; dragging down shrinks it. [DraggableScrollableController.jumpTo] clamps
-  /// the result to the sheet's own `minSize`/`maxSize` internally (inside
-  /// `updateSize`), but only AFTER its own `assert(size >= 0 && size <= 1)` — that
-  /// assert fires on the raw, unclamped value, so a `newSize` outside `[0, 1]`
-  /// crashes before the minSize/maxSize clamping this comment used to (wrongly)
-  /// credit with covering this. `pixelsToSize` converts by dividing by the sheet's
-  /// parent height; with the keyboard open, the bottom-sheet keyboard-avoidance
-  /// Padding (see `_BottomSheetRoute`) reduces that parent height, so the same
-  /// drag delta in pixels now converts to a larger fraction than it did against
-  /// the full screen — a single fast drag can land `newSize` past 1.0 (or below
-  /// 0.0) well before the finger physically leaves the sheet. Clamp here so this
-  /// holds for any large-enough delta, keyboard-driven or not.
-  ///
-  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
-  void _onDragUpdate(DraggableScrollableController sheetController, DragUpdateDetails details) {
-    if (!sheetController.isAttached) {
-      return;
-    }
-    final newSize = sheetController.size - sheetController.pixelsToSize(details.delta.dy);
-    sheetController.jumpTo(newSize.clamp(0.0, 1.0));
-  }
-
-  /// Dismisses the sheet if the just-completed drag moved downward by at
-  /// least [_dismissOnlyThreshold] pixels; otherwise leaves the sheet exactly
-  /// where it is -- there is no snap-back animation to play, since the
-  /// sheet's own size was never touched by this gesture in the first place.
-  void _onDismissOnlyDragEnd(BuildContext context) {
-    final distance = _dismissDragDistance;
-    _dismissDragDistance = 0.0;
-    if (distance < _dismissOnlyThreshold) {
-      return;
-    }
-    // Guarded the same way as every other pop site in this file -- see the
-    // barrier's onTap for the full rationale.
-    if (ModalRoute.of(context)?.isCurrent ?? false) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  /// On release, either dismisses the sheet (current size below [widget.lowSnapSize])
-  /// or animates it to the nearest snap point. [DraggableScrollableController.jumpTo]
-  /// does not snap on its own — snapping only happens after a drag through the
-  /// sheet's own [DraggableScrollableSheet.snap], which this handle drives manually
-  /// so it matches what dragging the content already does.
-  ///
-  /// Not reached in [widget.dismissOnly] mode -- see [_onDismissOnlyDragEnd].
-  void _onDragEnd(BuildContext context, DraggableScrollableController sheetController) {
-    if (!sheetController.isAttached) {
-      return;
-    }
-
-    final currentSize = sheetController.size;
-    if (currentSize < widget.lowSnapSize) {
-      // Guarded the same way as the barrier's onTap and the Escape handler, for
-      // consistency across every pop site in this file. In practice a second
-      // drag-to-dismiss during the exit animation was not reproducible as a
-      // double-pop in testing: `sheetController.isAttached` (checked above)
-      // already returns early once the sheet detaches, before this line is
-      // ever reached — but the guard costs nothing and removes the asymmetry.
-      if (ModalRoute.of(context)?.isCurrent ?? false) {
-        Navigator.of(context).pop();
-      }
-      return;
-    }
-
-    var nearestSnapSize = widget.snapSizes.isNotEmpty ? widget.snapSizes.first : currentSize;
-    var smallestDiff = (currentSize - nearestSnapSize).abs();
-    for (final snapSize in widget.snapSizes) {
-      final diff = (currentSize - snapSize).abs();
-      if (diff < smallestDiff) {
-        smallestDiff = diff;
-        nearestSnapSize = snapSize;
-      }
-    }
-
-    final motion = context.tokens.motion;
-    sheetController.animateTo(nearestSnapSize, duration: motion.dTransition, curve: motion.easing);
+    return popScoped;
   }
 }

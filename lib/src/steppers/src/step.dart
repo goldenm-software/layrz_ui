@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'step_indicator.dart';
 import 'stepper_state.dart';
 
 /// An immutable data class representing a single step in a [LayrzStepper].
@@ -21,6 +22,7 @@ class LayrzStep {
     required this.labelText,
     required this.body,
     this.state,
+    this.icon,
   });
 
   /// The step's display label.
@@ -44,6 +46,22 @@ class LayrzStep {
   /// overriding this field if set.
   final LayrzStepperState? state;
 
+  /// An optional icon identifying this step, e.g. a credit-card glyph for a
+  /// billing step.
+  ///
+  /// This is the step's *identity* icon, rendered inside its [LayrzStepIndicator]
+  /// circle only while the step is [LayrzStepperState.upcoming] or
+  /// [LayrzStepperState.active]. When null, the 1-based step number is shown
+  /// instead.
+  ///
+  /// **This icon is always overridden by the state glyph** once the step becomes
+  /// [LayrzStepperState.completed] (`MdiIcons.check`) or [LayrzStepperState.error]
+  /// (`MdiIcons.alertCircle`). That override is fixed and cannot be disabled by
+  /// the caller: WCAG 1.4.1 requires a step's status to be legible without colour,
+  /// so the status glyph must always win over the identity icon. See
+  /// `engineering/decisions.md` D57 and [LayrzStepIndicator] for the full rule.
+  final IconData? icon;
+
   /// Creates a copy of this step with the given fields replaced.
   ///
   /// All parameters are optional; omitted fields retain their original values.
@@ -51,11 +69,13 @@ class LayrzStep {
     String? labelText,
     Widget? body,
     LayrzStepperState? state,
+    IconData? icon,
   }) {
     return LayrzStep(
       labelText: labelText ?? this.labelText,
       body: body ?? this.body,
       state: state ?? this.state,
+      icon: icon ?? this.icon,
     );
   }
 
@@ -66,8 +86,9 @@ class LayrzStep {
           runtimeType == other.runtimeType &&
           labelText == other.labelText &&
           body == other.body &&
-          state == other.state;
+          state == other.state &&
+          icon == other.icon;
 
   @override
-  int get hashCode => Object.hash(labelText, body, state);
+  int get hashCode => Object.hash(labelText, body, state, icon);
 }

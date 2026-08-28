@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/steppers/src/step.dart';
 import 'package:layrz_ui/src/steppers/src/stepper_state.dart';
@@ -10,10 +11,12 @@ void main() {
         labelText: 'Personal Info',
         body: Text('content'),
         state: LayrzStepperState.completed,
+        icon: MdiIcons.creditCard,
       );
 
       expect(step.labelText, 'Personal Info');
       expect(step.state, LayrzStepperState.completed);
+      expect(step.icon, MdiIcons.creditCard);
     });
 
     test('creates with null state', () {
@@ -26,21 +29,33 @@ void main() {
       expect(step.state, isNull);
     });
 
+    test('creates with null icon by default', () {
+      const step = LayrzStep(
+        labelText: 'Shipping',
+        body: Text('content'),
+      );
+
+      expect(step.icon, isNull);
+    });
+
     test('copyWith replaces all fields', () {
       const original = LayrzStep(
         labelText: 'Step 1',
         body: Text('original'),
         state: LayrzStepperState.upcoming,
+        icon: MdiIcons.truck,
       );
 
       final updated = original.copyWith(
         labelText: 'Step 1 Modified',
         body: const Text('modified'),
         state: LayrzStepperState.completed,
+        icon: MdiIcons.creditCard,
       );
 
       expect(updated.labelText, 'Step 1 Modified');
       expect(updated.state, LayrzStepperState.completed);
+      expect(updated.icon, MdiIcons.creditCard);
       expect(original.labelText, 'Step 1');
     });
 
@@ -49,12 +64,14 @@ void main() {
         labelText: 'Step 1',
         body: Text('content'),
         state: LayrzStepperState.active,
+        icon: MdiIcons.truck,
       );
 
       final updated = original.copyWith(labelText: 'Modified');
 
       expect(updated.labelText, 'Modified');
       expect(updated.state, LayrzStepperState.active);
+      expect(updated.icon, MdiIcons.truck);
     });
 
     test('== operator works correctly', () {
@@ -80,6 +97,37 @@ void main() {
 
       expect(step1, step2);
       expect(step1, isNot(step3));
+    });
+
+    test('== operator distinguishes by icon', () {
+      final widget1 = const Text('address');
+
+      final step1 = LayrzStep(
+        labelText: 'Billing',
+        body: widget1,
+        icon: MdiIcons.creditCard,
+      );
+
+      final step2 = LayrzStep(
+        labelText: 'Billing',
+        body: widget1,
+        icon: MdiIcons.creditCard,
+      );
+
+      final step3 = LayrzStep(
+        labelText: 'Billing',
+        body: widget1,
+        icon: MdiIcons.truck,
+      );
+
+      final step4 = LayrzStep(
+        labelText: 'Billing',
+        body: widget1,
+      );
+
+      expect(step1, step2);
+      expect(step1, isNot(step3));
+      expect(step1, isNot(step4));
     });
 
     test('hashCode is consistent', () {
@@ -109,6 +157,22 @@ void main() {
       const step2 = LayrzStep(
         labelText: 'Billing',
         body: Text('address'),
+      );
+
+      expect(step1.hashCode, isNot(step2.hashCode));
+    });
+
+    test('hashCode differs when only icon differs', () {
+      const step1 = LayrzStep(
+        labelText: 'Shipping',
+        body: Text('address'),
+        icon: MdiIcons.truck,
+      );
+
+      const step2 = LayrzStep(
+        labelText: 'Shipping',
+        body: Text('address'),
+        icon: MdiIcons.creditCard,
       );
 
       expect(step1.hashCode, isNot(step2.hashCode));
