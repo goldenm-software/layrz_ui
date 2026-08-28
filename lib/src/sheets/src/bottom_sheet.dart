@@ -132,7 +132,14 @@ class LayrzBottomSheet {
   ///   - All values must be between [minSize] and [maxSize] inclusive
   ///   - Values must be in ascending order
   ///   - An assertion fires at the call site if constraints are violated
-  ///   If null, defaults to `[0.5, 0.95]` (half-height and near-full-height snap points, respecting the 0.95 maxSize default).
+  ///   These same bounds/ascending-order constraints are also enforced on the *derived*
+  ///   default described below when [snapSizes] is left null -- see [_defaultSnapSizes] --
+  ///   so a narrowed [minSize]/[maxSize] can never produce an out-of-range default.
+  ///   If null, defaults to `[0.5, 0.95]` for this method's own [minSize]/[maxSize]
+  ///   defaults (`0.25`/`0.95`) -- half-height and near-full-height snap points. For any
+  ///   other [minSize]/[maxSize] pair, the default is instead derived from that actual
+  ///   range (see [_defaultSnapSizes]), so it always lies within `minSize..maxSize` even
+  ///   when a caller narrows [maxSize] below `0.95` without also supplying [snapSizes].
   /// - [initialSize]: the fraction of the screen height the sheet initially occupies.
   ///   Defaults to 0.5 (half the screen). Must be between [minSize] and [maxSize].
   /// - [minSize]: the minimum fraction of screen height the sheet can be dragged down to.
@@ -196,33 +203,49 @@ class LayrzBottomSheet {
       'Got $initialSize.',
     );
 
-    // Validate snapSizes constraints
+    // Validate a caller-supplied snapSizes shape before it is used as-is below.
+    // This is deliberately narrower than the bounds/ascending checks that now run
+    // on effectiveSnapSizes regardless of origin (see below) -- emptiness is only
+    // possible for a caller-supplied list (the derived default is never empty), so
+    // it is checked here, against the caller's own value, rather than folded into
+    // the shared check.
     if (snapSizes != null) {
       assert(
         snapSizes.isNotEmpty,
         'snapSizes must not be empty when supplied.',
       );
-
-      // Check all values are within bounds
-      for (final size in snapSizes) {
-        assert(
-          size >= minSize && size <= maxSize,
-          'Every entry in snapSizes must lie within minSize ($minSize)..maxSize ($maxSize). '
-          'Got $size.',
-        );
-      }
-
-      // Check ascending order
-      for (int i = 1; i < snapSizes.length; i++) {
-        assert(
-          snapSizes[i] > snapSizes[i - 1],
-          'snapSizes must be in ascending order. Got $snapSizes.',
-        );
-      }
     }
 
-    // Use default snap sizes if not provided
-    final effectiveSnapSizes = snapSizes ?? [0.5, 0.95];
+    // The historical hardcoded default, [0.5, 0.95], is only in-bounds against the
+    // *default* maxSize of 0.95 -- a caller who narrows maxSize (e.g. maxSize: 0.5)
+    // and leaves snapSizes unset previously got a default snap point above their own
+    // ceiling, which DraggableScrollableSheet asserts on. _defaultSnapSizes derives
+    // the fallback from the actual minSize/maxSize instead, so it is in-bounds by
+    // construction for any valid minSize <= maxSize pair, while still returning
+    // exactly [0.5, 0.95] for the untouched defaults (0.25, 0.95) -- see its own doc.
+    final effectiveSnapSizes = snapSizes ?? _defaultSnapSizes(minSize, maxSize);
+
+    // Bounds and ascending-order checks run on effectiveSnapSizes -- the value
+    // DraggableScrollableSheet actually receives -- rather than only on a
+    // caller-supplied list, so a bad derived default can never reach the SDK
+    // unchecked the way the old hardcoded fallback did. When snapSizes is null,
+    // every entry here came from _defaultSnapSizes, which is constructed to always
+    // satisfy both properties -- so these asserts are a safety net for that
+    // function, not expected to ever fire for the derived path in practice.
+    for (final size in effectiveSnapSizes) {
+      assert(
+        size >= minSize && size <= maxSize,
+        'Every entry in snapSizes must lie within minSize ($minSize)..maxSize ($maxSize). '
+        'Got $size.',
+      );
+    }
+
+    for (int i = 1; i < effectiveSnapSizes.length; i++) {
+      assert(
+        effectiveSnapSizes[i] > effectiveSnapSizes[i - 1],
+        'snapSizes must be in ascending order. Got $effectiveSnapSizes.',
+      );
+    }
 
     final navigator = Navigator.of(
       context,
@@ -245,6 +268,43 @@ class LayrzBottomSheet {
       ),
     );
   }
+}
+
+/// Derives the default snap sizes used by [LayrzBottomSheet.show] when its
+/// caller passes no [snapSizes] of its own, from the actual [minSize]/[maxSize]
+/// in effect -- rather than the historical hardcoded `[0.5, 0.95]`, which was
+/// only ever in-bounds against the *default* `maxSize` of `0.95` and asserted
+/// inside [DraggableScrollableSheet] for any caller that narrowed `maxSize`
+/// below `0.95` without also supplying `snapSizes`.
+///
+/// **Preserves the untouched-defaults case exactly.** For `minSize: 0.25`,
+/// `maxSize: 0.95` (this method's own defaults), this returns `[0.5, 0.95]` --
+/// bit-for-bit the historical literal -- so no existing caller's behaviour
+/// shifts. That happens because `0.5` already lies strictly between `0.25` and
+/// `0.95`, which is exactly the condition the first branch below checks for.
+///
+/// **General case.** `0.5` is kept as the lower snap point whenever it lies
+/// strictly inside `(minSize, maxSize)` -- i.e. whenever the historical value
+/// would actually have been valid on its own terms. When it does not (`0.5` at
+/// or below `minSize`, or at or above `maxSize`), the lower point is instead the
+/// midpoint of the `minSize`..`maxSize` range, which is always strictly inside
+/// that range whenever the range itself is non-degenerate.
+///
+/// **Degenerate range** (`minSize == maxSize`, e.g. both `0.5`): there is no
+/// room for two ascending points, so this returns the single-element
+/// `[maxSize]`. [maxSize] is preferred over [minSize] here only because they
+/// are equal in this branch -- either would do.
+List<double> _defaultSnapSizes(double minSize, double maxSize) {
+  if (minSize == maxSize) {
+    return [maxSize];
+  }
+
+  const historicalLowSnap = 0.5;
+  final lowSnap = (historicalLowSnap > minSize && historicalLowSnap < maxSize)
+      ? historicalLowSnap
+      : minSize + (maxSize - minSize) / 2;
+
+  return [lowSnap, maxSize];
 }
 
 /// Internal route class for managing the bottom sheet presentation.
