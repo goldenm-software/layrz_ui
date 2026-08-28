@@ -148,5 +148,83 @@ void main() {
       // July has 31 days; the last few (27-31) fill the leading grid cells.
       expect(find.text('31'), findsWidgets);
     });
+
+    guardedTestWidgets('does not duplicate or shift a day across a DST transition', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Regression for a bug where the grid stepped cells via
+      // `gridStart.add(Duration(days: n))`. Duration arithmetic is absolute
+      // elapsed time, not calendar-day stepping: crossing a local DST
+      // transition lands a 24h step on 23:00 of the *previous* local day,
+      // duplicating that day's number and shifting every subsequent cell
+      // onto the wrong weekday column. The fix steps via the `DateTime`
+      // constructor (`DateTime(y, m, d + n)`), which normalizes by calendar
+      // date and is immune to the local UTC-offset change.
+      //
+      // Whether this test's host machine actually has a DST transition
+      // depends on its configured timezone, so this scans a window of
+      // months for one instead of hardcoding a single month/year -- making
+      // the test meaningful on any host with at least one DST-observing
+      // month in the scanned range, while still failing loudly (not
+      // silently passing) if none is found.
+      DateTime? transitionMonth;
+      for (var year = 2015; year <= 2030 && transitionMonth == null; year++) {
+        for (var month = 1; month <= 12; month++) {
+          final monthStart = DateTime(year, month, 1);
+          final monthEnd = DateTime(year, month + 1, 1).subtract(const Duration(microseconds: 1));
+          if (monthStart.timeZoneOffset != monthEnd.timeZoneOffset) {
+            transitionMonth = DateTime(year, month, 1);
+          }
+        }
+      }
+
+      expect(
+        transitionMonth,
+        isNotNull,
+        reason:
+            'No DST-transitioning month found in 2015-2030 for this host\'s local timezone -- '
+            'this test cannot exercise the regression it guards. Run it on a host whose '
+            'timezone observes DST (e.g. TZ=America/Mexico_City, which observed DST through 2022).',
+      );
+
+      // Reference sequence: the correct, DST-immune calendar-date stepping
+      // this fix uses. Computed independently of production code so the
+      // test does not just re-assert whatever the surface currently does.
+      final firstOfMonth = DateTime(transitionMonth!.year, transitionMonth.month);
+      final offset = firstOfMonth.weekday - DateTime.monday;
+      final gridStart = DateTime(transitionMonth.year, transitionMonth.month, 1 - offset);
+      final expectedCounts = <int, int>{};
+      for (var i = 0; i < 42; i++) {
+        final date = DateTime(gridStart.year, gridStart.month, gridStart.day + i);
+        expectedCounts[date.day] = (expectedCounts[date.day] ?? 0) + 1;
+      }
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 1000,
+          height: 800,
+          child: LayrzCalendarMonthSurface(
+            focusedDate: transitionMonth,
+            entries: const [],
+          ),
+        ),
+      );
+
+      // Assert every day number renders exactly as many times as the
+      // reference grid predicts -- catches both an outright duplicate (a
+      // count too high) and a whole-grid shift (a different set of numbers,
+      // or wrong counts throughout) in one comparison, without hardcoding
+      // day numbers that only hold in one timezone.
+      for (final entry in expectedCounts.entries) {
+        expect(
+          find.text('${entry.key}'),
+          findsNWidgets(entry.value),
+          reason: 'day-of-month ${entry.key} should render exactly ${entry.value} time(s) in this grid',
+        );
+      }
+    });
   });
 }

@@ -91,7 +91,11 @@ class LayrzCalendarMonthSurface extends StatelessWidget {
                         Expanded(
                           child: _buildCell(
                             context,
-                            date: gridStart.add(Duration(days: week * _kColumns + day)),
+                            date: DateTime(
+                              gridStart.year,
+                              gridStart.month,
+                              gridStart.day + week * _kColumns + day,
+                            ),
                             today: today,
                           ),
                         ),
@@ -127,6 +131,11 @@ class LayrzCalendarMonthSurface extends StatelessWidget {
     // DateTime.weekday is 1 (Monday) through 7 (Sunday); back up to the
     // Monday on or before the 1st.
     final offset = firstOfMonth.weekday - DateTime.monday;
-    return firstOfMonth.subtract(Duration(days: offset));
+    // Step by calendar date (DateTime constructor field overflow), not by
+    // Duration -- Duration arithmetic is absolute elapsed time and silently
+    // lands on the wrong local day across a DST transition. See
+    // LayrzCalendarMonthSurface.build for the same pattern and why it
+    // matters.
+    return DateTime(focusedDate.year, focusedDate.month, 1 - offset);
   }
 }

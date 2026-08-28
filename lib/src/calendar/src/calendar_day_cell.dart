@@ -27,9 +27,11 @@ const int kLayrzCalendarMaxVisibleEvents = 3;
 /// [isDisabled] alone controls the disabled visual treatment (dimmed date
 /// number, muted background) via [LayrzCalendarDayCellStyleSpec]; whether
 /// [entries] is empty never influences that treatment. A disabled day with
-/// events still renders those events (dimmed to match), and a day with no
-/// events that is not disabled renders as a perfectly ordinary empty cell —
-/// there is no shared "nothing to show" branch between the two states.
+/// events still renders those events at their ordinary event colors — this
+/// pass does not dim event chips to match the disabled date number — and a
+/// day with no events that is not disabled renders as a perfectly ordinary
+/// empty cell; there is no shared "nothing to show" branch between the two
+/// states.
 class LayrzCalendarDayCell extends StatelessWidget {
   /// Creates a [LayrzCalendarDayCell].
   const LayrzCalendarDayCell({

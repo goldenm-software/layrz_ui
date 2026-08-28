@@ -23,12 +23,13 @@ class LayrzCalendarDayCellStyleSpec {
 
   /// Resolves the style for a single day cell from [tokens] and its state.
   ///
-  /// [isDisabled] and [hasNoEvents] are deliberately independent inputs —
-  /// per the plan's criterion, "a day with no events and a day that is
-  /// disabled must not share a render branch" — so [isDisabled] alone
-  /// determines [dateColor]/[backgroundColor] here; the day-cell surface is
-  /// responsible for keeping the "no events" branch visually and
-  /// structurally distinct rather than folding it into this spec.
+  /// [isDisabled] alone determines [dateColor]/[backgroundColor] here —
+  /// whether a day has events is deliberately **not** an input to this spec
+  /// at all. Per the plan's criterion, "a day with no events and a day that
+  /// is disabled must not share a render branch"; keeping "has events" out
+  /// of this factory's parameter list entirely is what enforces that
+  /// separation. The day-cell surface is responsible for keeping the "no
+  /// events" branch visually and structurally distinct on its own.
   factory LayrzCalendarDayCellStyleSpec.resolve({
     required LayrzTokens tokens,
     required bool isToday,
