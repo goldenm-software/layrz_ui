@@ -7,6 +7,7 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'step.dart';
 import 'stepper_compact.dart';
 import 'stepper_controller.dart';
+import 'stepper_direction.dart';
 import 'stepper_state.dart';
 import 'stepper_wide.dart';
 
@@ -14,15 +15,16 @@ import 'stepper_wide.dart';
 /// delegates all layout painting to a wide or compact surface.
 ///
 /// [LayrzStepper] is a thin coordinator: it owns the [LayrzStepperController]
-/// lifecycle, resolves the active step's state on tap, and picks a layout —
-/// [LayrzStepperWideHeader] on wide viewports or [LayrzStepperCompactLayout]
-/// (a vertical accordion with an inline active body and a persistent counter)
-/// on compact ones ([isCompact], `< 960px` by default). It owns no
-/// circle/connector/label rendering itself; see those two layouts and
-/// [LayrzStepIndicator] for that. On the wide layout, the active step's body
-/// renders below the header; the compact layout renders it inline as part of
-/// its own accordion row instead. A single Back/Next row, driven by
-/// [LayrzStepperController.canAdvance], sits below either layout.
+/// lifecycle, resolves the active step's state on tap, and renders the layout
+/// the caller chose via the required [direction] — [LayrzStepperWideHeader]
+/// for [LayrzStepperDirection.horizontal] or [LayrzStepperCompactLayout] (a
+/// vertical accordion with an inline active body and a persistent counter)
+/// for [LayrzStepperDirection.vertical]. It owns no circle/connector/label
+/// rendering itself; see those two layouts and [LayrzStepIndicator] for that.
+/// On the wide layout, the active step's body renders below the header; the
+/// compact layout renders it inline as part of its own accordion row instead.
+/// A single Back/Next row, driven by [LayrzStepperController.canAdvance],
+/// sits below either layout.
 ///
 /// **Lifecycle:** if [controller] is null, the stepper creates and disposes
 /// its own; if non-null, the caller owns disposal and the instance must never
@@ -36,11 +38,11 @@ class LayrzStepper extends StatefulWidget {
   /// Creates a [LayrzStepper].
   const LayrzStepper({
     required this.steps,
+    required this.direction,
     this.controller,
     this.onStepChanged,
     this.backButtonLabel,
     this.nextButtonLabel,
-    this.isCompact,
     super.key,
   }) : assert(steps.length > 0, 'At least one step is required');
 
@@ -69,14 +71,20 @@ class LayrzStepper extends StatefulWidget {
   /// Defaults to [LayrzUiL10n.steppersNextButtonLabel] when null.
   final String? nextButtonLabel;
 
-  /// Overrides which layout is chosen, regardless of viewport width.
+  /// Which of the two layouts this stepper renders.
   ///
-  /// Defaults to `null`, which derives the layout from `context.isCompact`
-  /// (`true` below the 960 logical-pixel `sm`/`md` breakpoint). Pass `true`
-  /// to force [LayrzStepperCompactLayout] or `false` to force
-  /// [LayrzStepperWideHeader] regardless of the actual viewport — useful for
-  /// testing both branches without resizing the test surface.
-  final bool? isCompact;
+  /// Required — there is no default and no viewport-derived inference.
+  /// [LayrzStepperDirection.horizontal] renders [LayrzStepperWideHeader];
+  /// [LayrzStepperDirection.vertical] renders [LayrzStepperCompactLayout]. A
+  /// caller that wants the previous width-derived behaviour reproduces it
+  /// explicitly:
+  ///
+  /// ```dart
+  /// direction: context.isCompact
+  ///     ? LayrzStepperDirection.vertical
+  ///     : LayrzStepperDirection.horizontal,
+  /// ```
+  final LayrzStepperDirection direction;
 
   @override
   State<LayrzStepper> createState() => _LayrzStepperState();
@@ -154,7 +162,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final isCompact = widget.isCompact ?? context.isCompact;
+    final isVertical = widget.direction == LayrzStepperDirection.vertical;
     final currentIndex = _effectiveController.currentStepIndex;
     final canGoBack = currentIndex > 0;
     final canGoNext = currentIndex < widget.steps.length - 1;
@@ -165,7 +173,7 @@ class _LayrzStepperState extends State<LayrzStepper> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (isCompact)
+        if (isVertical)
           LayrzStepperCompactLayout(
             steps: widget.steps,
             currentIndex: currentIndex,

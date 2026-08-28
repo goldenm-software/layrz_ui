@@ -79,7 +79,7 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzStepper(steps: testSteps, isCompact: false),
+          LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
         );
 
         // Wide header cells build their semantics label as
@@ -136,7 +136,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzStepper(steps: completedSteps, controller: controller, isCompact: true),
+          LayrzStepper(steps: completedSteps, controller: controller, direction: LayrzStepperDirection.vertical),
         );
 
         await tester.pumpAndSettle();
@@ -190,7 +190,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzStepper(steps: errorSteps, isCompact: false),
+          LayrzStepper(steps: errorSteps, direction: LayrzStepperDirection.horizontal),
         );
 
         // The error step renders MdiIcons.alertCircle inside its LayrzStepIndicator —
@@ -245,7 +245,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzStepper(steps: errorSteps, controller: controller, isCompact: true),
+          LayrzStepper(steps: errorSteps, controller: controller, direction: LayrzStepperDirection.vertical),
         );
 
         await tester.pumpAndSettle();
@@ -295,6 +295,7 @@ void main() {
             steps: testSteps,
             controller: controller,
             backButtonLabel: 'Previous',
+            direction: LayrzStepperDirection.horizontal,
           ),
         );
 
@@ -333,6 +334,7 @@ void main() {
           LayrzStepper(
             steps: testSteps,
             nextButtonLabel: 'Continue',
+            direction: LayrzStepperDirection.horizontal,
           ),
         );
 
@@ -383,7 +385,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzStepper(steps: completedSteps, controller: controller, isCompact: true),
+          LayrzStepper(steps: completedSteps, controller: controller, direction: LayrzStepperDirection.vertical),
         );
 
         await tester.pumpAndSettle();
@@ -425,7 +427,7 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzStepper(steps: testSteps, controller: controller),
+          LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
         );
 
         await tester.pumpAndSettle();
@@ -458,7 +460,7 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzStepper(steps: testSteps, controller: controller, isCompact: true),
+          LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.vertical),
         );
 
         await tester.pumpAndSettle();
@@ -556,7 +558,7 @@ void main() {
 
         await pumpThemed(
           tester,
-          LayrzStepper(steps: errorSteps, controller: controller, isCompact: false),
+          LayrzStepper(steps: errorSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
         );
 
         await tester.pumpAndSettle();
@@ -595,7 +597,7 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzStepper(steps: testSteps),
+          LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
         );
 
         final backButton = find.byWidgetPredicate(
@@ -629,7 +631,7 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzStepper(steps: testSteps, controller: controller),
+          LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
         );
 
         await tester.pumpAndSettle();

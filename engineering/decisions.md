@@ -3346,6 +3346,24 @@ Everything else in this decision is **unamended**: full-flow ownership (header +
 
 **`stepper.dart` at 222 lines (45 doc, 26 blank, 151 code), down from 484 — the target was met in substance, not narrowly missed.** The `<200`-line figure discussed during planning was a proxy for one question: did the two-layout split actually leave this file, rather than growing it further? It did — `_buildStepCircle`, `_buildStepCircles`, and `_getConnectorColor`, the old circle/connector/layout helpers, all grep to zero occurrences in the file today. The remaining 222 lines are the justified floor: 45 lines of mandatory rule-#1 argument documentation, the controller lifecycle (attach/detach, dispose ownership, the swap guard), and one `build()` with no further extraction candidates. One genuine duplication was caught and removed during a second pass: `_handleStepTap` had recomputed `isCompleted || isActive` as a second copy of the tappability rule that both layouts already enforce structurally in their own `onTap: isTappable ? ... : null` wiring (`stepper_wide.dart:206`, `stepper_compact.dart:192`). A second copy of that rule risked silently diverging from the layouts' own, so `_handleStepTap` was reduced to a one-line delegation to the controller instead. Going lower than 222 would mean cutting mandatory argument documentation, which is not an acceptable trade against the line-count target.
 
+### 2026-08-27 addendum — the viewport-derived `isCompact` override is replaced by a required `direction` parameter
+
+This update's own text above shipped `LayrzStepper` with a `bool? isCompact` override: `null` derived the layout from `context.isCompact`, `true`/`false` forced a branch. That inference is now removed entirely, superseding this update's own description of it. **This section is the current word on layout selection; the `isCompact` text above is history, not the shipped API.**
+
+**Why it did not survive contact with the showroom.** The showroom's own demo page for this component — built to exercise exactly the wide/compact split this update describes — labelled one tab "wide," forced nothing about the viewport, and on a narrow window silently rendered the compact accordion inside a box sized and laid out for the wide header. The result overflowed. The caller (the showroom page) believed it had chosen a layout by building a tab called "wide"; the component overrode that belief based on a viewport width the caller had not consulted. An implicit width-derived layout switch inside a component whose caller believes it already chose a layout is a trap, and the showroom catching it on the very demo page written to showcase the feature is exactly the kind of signal this decision log exists to record rather than special-case away.
+
+**The fix removes the inference rather than patching around it.** `LayrzStepper` now takes a required `direction: LayrzStepperDirection` (`horizontal` | `vertical`, `lib/src/steppers/src/stepper_direction.dart`) and reads `context.isCompact` nowhere in its own build method. There is no default: a caller omitting `direction` gets a compile error. That is the honest outcome — a caller relying on the old derivation was relying on behaviour that no longer exists, and silently choosing `horizontal` or `vertical` on their behalf could as easily be wrong as right, particularly on a phone. A caller that wants the previous width-derived behaviour reproduces it explicitly at the call site:
+
+```dart
+direction: context.isCompact
+    ? LayrzStepperDirection.vertical
+    : LayrzStepperDirection.horizontal,
+```
+
+**What is not touched by this addendum.** `LayrzStepperWideHeader` and `LayrzStepperCompactLayout` are unchanged and still unexported — this is a change to how `LayrzStepper` selects between them, not to either layout's own rendering. The hover/tab-order reasoning in `stepper_compact.dart` (a narrow desktop window means a mouse-and-keyboard user needs hover states and correct tab order) is unamended and, if anything, more load-bearing now than before: a caller can select `LayrzStepperDirection.vertical` on a wide desktop window too, so that reasoning no longer depends on the window being narrow at all. Only the framing that `context.isCompact` is the thing selecting the layout is what this addendum corrects.
+
+**Not breaking for any released consumer.** `isCompact` was introduced in this same Unreleased changelog batch and never shipped to pub.dev — there is no published caller for this to break.
+
 ---
 
 ## D58: Responsive Option Grids Use `LayrzCol` Integer Spans

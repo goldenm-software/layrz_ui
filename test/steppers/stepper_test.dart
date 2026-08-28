@@ -29,7 +29,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.byType(LayrzStepper), findsOneWidget);
@@ -44,7 +44,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -58,7 +58,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -85,7 +85,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
@@ -108,7 +108,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       final backButton = find.byWidgetPredicate(
@@ -129,7 +129,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
@@ -150,7 +150,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.text('Personal Info'), findsOneWidget);
@@ -176,6 +176,7 @@ void main() {
         LayrzStepper(
           steps: testSteps,
           controller: first,
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -242,7 +243,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -258,7 +259,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -278,6 +279,7 @@ void main() {
         LayrzStepper(
           steps: testSteps,
           onStepChanged: (index) => lastIndex = index,
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -312,7 +314,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: errorSteps),
+        LayrzStepper(steps: errorSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       // Step 2's indicator shows the alert glyph, not the checkmark, and no
@@ -344,6 +346,7 @@ void main() {
           steps: testSteps,
           backButtonLabel: 'Previous',
           nextButtonLabel: 'Continue',
+          direction: LayrzStepperDirection.horizontal,
         ),
       );
 
@@ -369,7 +372,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, controller: controller),
+        LayrzStepper(steps: testSteps, controller: controller, direction: LayrzStepperDirection.horizontal),
       );
 
       await tester.pumpAndSettle();
@@ -477,7 +480,7 @@ void main() {
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: emptySteps),
+        LayrzStepper(steps: emptySteps, direction: LayrzStepperDirection.horizontal),
       );
 
       expect(find.byType(LayrzStepper), findsOneWidget);
@@ -489,22 +492,25 @@ void main() {
       addTearDown(tester.view.reset);
 
       expect(
-        () => LayrzStepper(steps: []),
+        () => LayrzStepper(steps: [], direction: LayrzStepperDirection.horizontal),
         throwsAssertionError,
       );
     });
 
-    testWidgets('wide mode renders step labels and circles, no compact counter', (WidgetTester tester) async {
-      // Ambient viewport is narrow, but isCompact: false forces the wide
-      // branch — this proves the override wins over the derived value, which
-      // a matching viewport+override pair would not.
+    testWidgets('horizontal direction renders step labels and circles, no compact counter', (
+      WidgetTester tester,
+    ) async {
+      // Ambient viewport is narrow, but `direction` is the only thing that
+      // selects a layout now — there is no viewport-derived fallback to win
+      // against, so a narrow viewport must not silently switch this to the
+      // vertical accordion.
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, isCompact: false),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.horizontal),
       );
 
       // In wide mode, every step's label renders (Personal/Shipping/Review all
@@ -516,17 +522,19 @@ void main() {
       expect(find.text('Step 1 of 3'), findsNothing);
     });
 
-    testWidgets('compact mode renders accordion labels and counter, no wide header', (WidgetTester tester) async {
-      // Ambient viewport is wide, but isCompact: true forces the compact
-      // branch — this proves the override wins over the derived value, which
-      // a matching viewport+override pair would not.
+    testWidgets('vertical direction renders accordion labels and counter, no wide header', (
+      WidgetTester tester,
+    ) async {
+      // Ambient viewport is wide, but `direction` is the only thing that
+      // selects a layout now — a wide viewport must not silently switch this
+      // to the horizontal header.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemed(
         tester,
-        LayrzStepper(steps: testSteps, isCompact: true),
+        LayrzStepper(steps: testSteps, direction: LayrzStepperDirection.vertical),
       );
 
       // In compact mode, every step's label renders exactly once as an

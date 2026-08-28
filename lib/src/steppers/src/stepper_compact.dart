@@ -5,10 +5,11 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'step.dart';
 import 'step_indicator.dart';
+import 'stepper_direction.dart';
 import 'stepper_state.dart';
 
-/// The vertical, "acts like an accordion" layout rendered by [LayrzStepper] on
-/// compact viewports (`context.isCompact`, i.e. narrower than 960px).
+/// The vertical, "acts like an accordion" layout rendered by [LayrzStepper]
+/// when its caller passes `direction: LayrzStepperDirection.vertical`.
 ///
 /// [LayrzStepperCompactLayout] flips the stepper's axis from left-to-right to
 /// top-to-bottom. Every step renders as a header row; the **active** step's
@@ -230,10 +231,11 @@ class _CompactStepRow extends StatelessWidget {
             curve: tokens.motion.easing,
             alignment: Alignment.topCenter,
             // ExcludeFocus keeps a collapsed step's content out of the tab
-            // order — required for narrow desktop windows, where isCompact is
-            // width-based and a mouse-and-keyboard user can otherwise still
-            // tab into a body that is visually hidden. ExcludeSemantics keeps
-            // it out of the screen-reader tree for the same reason.
+            // order — required because a caller can pick this vertical
+            // direction on a wide desktop window too, where a
+            // mouse-and-keyboard user can otherwise still tab into a body
+            // that is visually hidden. ExcludeSemantics keeps it out of the
+            // screen-reader tree for the same reason.
             child: ExcludeFocus(
               excluding: !isOpen,
               child: ExcludeSemantics(
@@ -264,9 +266,9 @@ class _CompactStepRow extends StatelessWidget {
 /// dedicated [StatefulWidget] is used (rather than the stateless
 /// [LayrzTappable]) so the header can vary its background colour on hover
 /// without owning press/animation state it does not need — see
-/// [_CompactStepHeaderState] for the hover handling required for narrow
-/// desktop windows, where `context.isCompact` is width-based and a
-/// mouse-and-keyboard user needs a visible cue that the row is clickable.
+/// [_CompactStepHeaderState] for the hover handling required because a
+/// caller can pick this vertical direction on any desktop window width, and
+/// a mouse-and-keyboard user needs a visible cue that the row is clickable.
 class _CompactStepHeader extends StatefulWidget {
   /// Creates a [_CompactStepHeader].
   const _CompactStepHeader({
@@ -310,10 +312,11 @@ class _CompactStepHeader extends StatefulWidget {
 class _CompactStepHeaderState extends State<_CompactStepHeader> {
   /// Whether the pointer currently hovers this header.
   ///
-  /// Desktop-only signal: a narrow resized desktop window is still
-  /// [BuildContext.isCompact] (width-based), so a mouse user needs this
-  /// explicit hover cue since [MouseCursor.defer] alone is not visible enough
-  /// and does not exist on touch at all.
+  /// Desktop-only signal: the caller can select
+  /// [LayrzStepperDirection.vertical] on a wide desktop window as freely as
+  /// on a narrow one, so a mouse user needs this explicit hover cue since
+  /// [MouseCursor.defer] alone is not visible enough and does not exist on
+  /// touch at all.
   bool _isHovered = false;
 
   void _setHovered(bool value) {
