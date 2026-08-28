@@ -20,6 +20,7 @@ export 'src/overlays/overlays.dart';
 export 'src/platform/platform.dart';
 export 'src/positioning/positioning.dart';
 export 'src/progress/progress.dart';
+export 'src/refresh/refresh.dart';
 export 'src/scaffold/scaffold.dart';
 export 'src/scrollbar/scrollbar.dart';
 export 'src/selection/selection.dart';
