@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'calendar_day_surface.dart' show kLayrzCalendarHourAxisWidth;
 import 'calendar_entry.dart';
 import 'calendar_event_lane.dart';
+import 'calendar_zone.dart';
 
 /// The shared all-day/multi-day band rendered across the top of
 /// [LayrzCalendarWeekSurface] (spanning all seven columns) and
@@ -155,10 +156,10 @@ class _AllDayBarState extends State<_AllDayBar> {
 
     final visibleStart = entry.start.isBefore(rangeStart)
         ? rangeStart
-        : DateTime(entry.start.year, entry.start.month, entry.start.day);
+        : sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
     final visibleEnd = entry.end.isAfter(rangeEnd)
         ? rangeEnd
-        : DateTime(entry.end.year, entry.end.month, entry.end.day);
+        : sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
     final startColumn = visibleStart.difference(rangeStart).inDays;
     final endColumn = visibleEnd.difference(rangeStart).inDays;
 
@@ -260,15 +261,15 @@ LayrzCalendarLaneAssignments assignBandLanes({
   required DateTime rangeStart,
   required DateTime rangeEnd,
 }) {
-  final start = DateTime(rangeStart.year, rangeStart.month, rangeStart.day);
-  final end = DateTime(rangeEnd.year, rangeEnd.month, rangeEnd.day);
+  final start = sameZoneDate(rangeStart, rangeStart.year, rangeStart.month, rangeStart.day);
+  final end = sameZoneDate(rangeEnd, rangeEnd.year, rangeEnd.month, rangeEnd.day);
 
   final candidates =
       entries
           .where((entry) {
             if (!entry.isMultiDay) return false;
-            final entryStart = DateTime(entry.start.year, entry.start.month, entry.start.day);
-            final entryEnd = DateTime(entry.end.year, entry.end.month, entry.end.day);
+            final entryStart = sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
+            final entryEnd = sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
             return !entryEnd.isBefore(start) && !entryStart.isAfter(end);
           })
           .toList(growable: false)
@@ -285,8 +286,8 @@ LayrzCalendarLaneAssignments assignBandLanes({
   final laneRanges = <int, List<(DateTime start, DateTime end)>>{};
 
   for (final entry in candidates) {
-    final entryStart = DateTime(entry.start.year, entry.start.month, entry.start.day);
-    final entryEnd = DateTime(entry.end.year, entry.end.month, entry.end.day);
+    final entryStart = sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
+    final entryEnd = sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
 
     var lane = 0;
     while (true) {

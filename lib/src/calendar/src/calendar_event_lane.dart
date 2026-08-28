@@ -28,6 +28,7 @@ library;
 import 'package:flutter/foundation.dart' show immutable;
 
 import 'calendar_entry.dart';
+import 'calendar_zone.dart';
 
 /// The lane assignment produced for one multi-day [LayrzCalendarEntry] by
 /// [assignLanes].
@@ -107,7 +108,7 @@ class LayrzCalendarLaneAssignments {
   /// indices when it needs to leave the right gaps, not assume the occupied
   /// lanes are always `0..count-1`.
   Set<int> occupiedLanesOn(DateTime date) {
-    final day = DateTime(date.year, date.month, date.day);
+    final day = sameZoneDate(date, date.year, date.month, date.day);
     return {
       for (final assignment in assignments)
         if (assignment.entry.occupies(day)) assignment.lane,
@@ -121,7 +122,7 @@ class LayrzCalendarLaneAssignments {
   /// that already knows which lane it is painting and wants the entry for
   /// it, e.g. to look up its color and title.
   LayrzCalendarEntry? entryAt({required DateTime date, required int lane}) {
-    final day = DateTime(date.year, date.month, date.day);
+    final day = sameZoneDate(date, date.year, date.month, date.day);
     for (final assignment in assignments) {
       if (assignment.lane == lane && assignment.entry.occupies(day)) {
         return assignment.entry;
@@ -162,15 +163,15 @@ LayrzCalendarLaneAssignments assignLanes({
   required List<LayrzCalendarEntry> entries,
   required DateTime monthAnchor,
 }) {
-  final monthStart = DateTime(monthAnchor.year, monthAnchor.month);
-  final monthEnd = DateTime(monthAnchor.year, monthAnchor.month + 1, 0);
+  final monthStart = sameZoneDate(monthAnchor, monthAnchor.year, monthAnchor.month);
+  final monthEnd = sameZoneDate(monthAnchor, monthAnchor.year, monthAnchor.month + 1, 0);
 
   final candidates =
       entries
           .where((entry) {
             if (!entry.isMultiDay) return false;
-            final start = DateTime(entry.start.year, entry.start.month, entry.start.day);
-            final end = DateTime(entry.end.year, entry.end.month, entry.end.day);
+            final start = sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
+            final end = sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
             return !end.isBefore(monthStart) && !start.isAfter(monthEnd);
           })
           .toList(growable: false)
@@ -186,8 +187,8 @@ LayrzCalendarLaneAssignments assignLanes({
   final laneRanges = <int, List<(DateTime start, DateTime end)>>{};
 
   for (final entry in candidates) {
-    final start = DateTime(entry.start.year, entry.start.month, entry.start.day);
-    final end = DateTime(entry.end.year, entry.end.month, entry.end.day);
+    final start = sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
+    final end = sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
 
     var lane = 0;
     while (true) {

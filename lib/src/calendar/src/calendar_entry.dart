@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'calendar_zone.dart';
+
 /// An immutable data class representing a single event rendered on a
 /// [LayrzCalendar].
 ///
@@ -56,6 +58,9 @@ import 'package:flutter/widgets.dart';
 /// **Equality and hashing caveat**: like [LayrzStep], equality depends on
 /// [color], a [Color], which is compared by value, and is otherwise a plain
 /// value comparison of every field except [onTap].
+///
+/// **All dates passed to one calendar — [start], [end], and the calendar's
+/// own `focusedDate` — are expected to share a single timezone.**
 @immutable
 class LayrzCalendarEntry {
   /// Creates a [LayrzCalendarEntry].
@@ -136,10 +141,11 @@ class LayrzCalendarEntry {
   /// Compares only the year/month/day components of [start] and [end] — an
   /// entry from 23:00 to 01:00 the next calendar day is multi-day even though
   /// it lasts two hours, while an entry from 00:00 to 23:59 the same day is
-  /// not, even though it spans nearly 24 hours.
+  /// not, even though it spans nearly 24 hours. Each is read via
+  /// [sameZoneDate] in its own zone, preserving a `TZDateTime`'s `Location`.
   bool get isMultiDay {
-    final startDate = DateTime(start.year, start.month, start.day);
-    final endDate = DateTime(end.year, end.month, end.day);
+    final startDate = sameZoneDate(start, start.year, start.month, start.day);
+    final endDate = sameZoneDate(end, end.year, end.month, end.day);
     return endDate.isAfter(startDate);
   }
 
@@ -149,9 +155,9 @@ class LayrzCalendarEntry {
   /// range `[start, end]`, so a multi-day entry correctly occupies every date
   /// it spans, not just [start]'s date.
   bool occupies(DateTime date) {
-    final day = DateTime(date.year, date.month, date.day);
-    final startDate = DateTime(start.year, start.month, start.day);
-    final endDate = DateTime(end.year, end.month, end.day);
+    final day = sameZoneDate(date, date.year, date.month, date.day);
+    final startDate = sameZoneDate(start, start.year, start.month, start.day);
+    final endDate = sameZoneDate(end, end.year, end.month, end.day);
     return !day.isBefore(startDate) && !day.isAfter(endDate);
   }
 

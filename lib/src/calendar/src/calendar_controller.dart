@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'calendar_mode.dart';
+import 'calendar_zone.dart';
 
 /// A controller that drives the focused date and view mode of a
 /// [LayrzCalendar].
@@ -59,48 +60,49 @@ class LayrzCalendarController extends ChangeNotifier {
   /// Moves [focusedDate] to the first day of the next month and notifies
   /// listeners.
   void nextMonth() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month + 1);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month + 1);
     notifyListeners();
   }
 
   /// Moves [focusedDate] to the first day of the previous month and
   /// notifies listeners.
   void previousMonth() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month - 1);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month - 1);
     notifyListeners();
   }
 
   /// Moves [focusedDate] forward by exactly 7 calendar days and notifies
   /// listeners.
   ///
-  /// Steps via the [DateTime] constructor's field-overflow normalization
-  /// (`DateTime(y, m, day + 7)`), never `Duration(days: 7)` — `Duration`
-  /// arithmetic is absolute elapsed time and silently lands on the wrong
-  /// local day across a DST transition. See `LayrzCalendarMonthSurface` for
-  /// the same rule applied to grid-start math.
+  /// Steps via [sameZoneDate]'s field-overflow normalization
+  /// (`day + 7`), never `Duration(days: 7)` — `Duration` arithmetic is
+  /// absolute elapsed time and silently lands on the wrong local day across
+  /// a DST transition, in [_focusedDate]'s own zone just as much as the
+  /// host's. See `LayrzCalendarMonthSurface` for the same rule applied to
+  /// grid-start math.
   void nextWeek() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day + 7);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month, _focusedDate.day + 7);
     notifyListeners();
   }
 
   /// Moves [focusedDate] back by exactly 7 calendar days and notifies
   /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
   void previousWeek() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day - 7);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month, _focusedDate.day - 7);
     notifyListeners();
   }
 
   /// Moves [focusedDate] forward by exactly one calendar day and notifies
   /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
   void nextDay() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day + 1);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month, _focusedDate.day + 1);
     notifyListeners();
   }
 
   /// Moves [focusedDate] back by exactly one calendar day and notifies
   /// listeners. See [nextWeek] for the DST-safe stepping rule this mirrors.
   void previousDay() {
-    _focusedDate = DateTime(_focusedDate.year, _focusedDate.month, _focusedDate.day - 1);
+    _focusedDate = sameZoneDate(_focusedDate, _focusedDate.year, _focusedDate.month, _focusedDate.day - 1);
     notifyListeners();
   }
 
@@ -128,7 +130,7 @@ class LayrzCalendarController extends ChangeNotifier {
     notifyListeners();
   }
 
-  static DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+  static DateTime _dateOnly(DateTime date) => sameZoneDate(date, date.year, date.month, date.day);
 
   /// Disposes the controller and releases resources.
   ///

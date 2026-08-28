@@ -11,6 +11,7 @@ import 'calendar_mode.dart';
 import 'calendar_month_surface.dart';
 import 'calendar_time_format.dart';
 import 'calendar_week_surface.dart';
+import 'calendar_zone.dart';
 
 /// A calendar surface with support for disabled dates, single- and
 /// multi-day events, and switching between month, week and day views.
@@ -284,7 +285,7 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
   /// [date] to midnight — hour, minute, second and millisecond all zero —
   /// per [LayrzCalendar.onTap]'s doc.
   void _handleMonthTap(DateTime date) {
-    widget.onTap?.call(DateTime(date.year, date.month, date.day));
+    widget.onTap?.call(sameZoneDate(date, date.year, date.month, date.day));
   }
 
   /// Returns the "previous period" callback for the currently active mode.

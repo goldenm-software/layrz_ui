@@ -8,6 +8,7 @@ import 'calendar_day_surface.dart';
 import 'calendar_entry.dart';
 import 'calendar_time_format.dart';
 import 'calendar_weekdays.dart';
+import 'calendar_zone.dart';
 
 /// The layout surface for [LayrzCalendarMode.week]: seven day columns sharing
 /// **one** left-edge hour axis and **one** all-day/multi-day band spanning
@@ -178,12 +179,15 @@ class LayrzCalendarWeekSurface extends StatelessWidget {
   /// Returns the seven dates of the week containing [anchor], starting from
   /// [firstDayOfWeek].
   ///
-  /// Steps by the [DateTime] constructor's field-overflow normalization, not
+  /// Steps by [sameZoneDate]'s field-overflow normalization, not
   /// `Duration` — see `LayrzCalendarController.nextWeek` for the same rule.
+  /// Every returned date is constructed in [anchor]'s own zone via
+  /// [sameZoneDate], so a `TZDateTime` [anchor] produces a week of
+  /// `TZDateTime`s in that same `Location` rather than the host's zone.
   static List<DateTime> _weekDates(DateTime anchor, int firstDayOfWeek) {
     final offset = (anchor.weekday - firstDayOfWeek + 7) % 7;
-    final weekStart = DateTime(anchor.year, anchor.month, anchor.day - offset);
-    return [for (var i = 0; i < 7; i++) DateTime(weekStart.year, weekStart.month, weekStart.day + i)];
+    final weekStart = sameZoneDate(anchor, anchor.year, anchor.month, anchor.day - offset);
+    return [for (var i = 0; i < 7; i++) sameZoneDate(weekStart, weekStart.year, weekStart.month, weekStart.day + i)];
   }
 }
 

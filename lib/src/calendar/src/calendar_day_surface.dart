@@ -8,6 +8,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 import 'calendar_all_day_band.dart';
 import 'calendar_entry.dart';
 import 'calendar_time_format.dart';
+import 'calendar_zone.dart';
 
 /// The minimum rendered height of a timed event block, in logical pixels.
 ///
@@ -369,11 +370,15 @@ class _HourGridColumnState extends State<HourGridColumn> {
   /// Returns [date] at [hour], with minutes snapped to the nearest
   /// 15-minute boundary at or before [localDy] within the row — see
   /// [LayrzCalendar.onTap]'s doc for the snapping rule.
+  ///
+  /// Constructed via [sameZoneDateTime] in [date]'s own zone, so a
+  /// `TZDateTime` [date] produces a tap result in that same zone rather than
+  /// the host's.
   static DateTime _snappedTimeForOffset({required DateTime date, required int hour, required double localDy}) {
     final clampedDy = localDy.clamp(0.0, kLayrzCalendarHourRowHeight);
     final minuteWithinHour = (clampedDy / kLayrzCalendarHourRowHeight) * 60;
     final snappedMinute = (minuteWithinHour ~/ 15) * 15;
-    return DateTime(date.year, date.month, date.day, hour, snappedMinute.clamp(0, 45));
+    return sameZoneDateTime(date, date.year, date.month, date.day, hour, snappedMinute.clamp(0, 45));
   }
 }
 

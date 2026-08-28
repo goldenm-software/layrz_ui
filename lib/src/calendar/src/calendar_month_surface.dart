@@ -10,6 +10,7 @@ import 'calendar_event_lane.dart';
 import 'calendar_style_spec.dart';
 import 'calendar_weekdays.dart';
 import 'calendar_week_gutter.dart';
+import 'calendar_zone.dart';
 
 /// The number of weekday columns a month grid always renders.
 const int _kColumns = 7;
@@ -305,7 +306,7 @@ class LayrzCalendarMonthSurface extends StatelessWidget {
           child: LayrzCalendarWeekGutter(
             weekStarts: [
               for (var week = 0; week < 6; week++)
-                DateTime(gridStart.year, gridStart.month, gridStart.day + week * _kColumns),
+                sameZoneDate(gridStart, gridStart.year, gridStart.month, gridStart.day + week * _kColumns),
             ],
             onWeekTap: onWeekNumberTap,
           ),
@@ -344,7 +345,7 @@ class LayrzCalendarMonthSurface extends StatelessWidget {
   }) {
     final weekDates = [
       for (var day = 0; day < _kColumns; day++)
-        DateTime(weekStart.year, weekStart.month, weekStart.day + week * _kColumns + day),
+        sameZoneDate(weekStart, weekStart.year, weekStart.month, weekStart.day + week * _kColumns + day),
     ];
     final weekFirst = weekDates.first;
     final weekLast = weekDates.last;
@@ -494,15 +495,19 @@ class LayrzCalendarMonthSurface extends StatelessWidget {
   /// to the original at `firstDayOfWeek == DateTime.monday` and correct for
   /// all seven values — the fixed 6-row grid (42 cells) still suffices for
   /// every month under every first-day choice.
+  ///
+  /// Constructed via [sameZoneDate] in [focusedDate]'s own zone, so a
+  /// `TZDateTime` [focusedDate] produces a grid start whose day-of-week
+  /// normalization follows that zone's own calendar, not the host's.
   static DateTime _gridStart(DateTime focusedDate, int firstDayOfWeek) {
-    final firstOfMonth = DateTime(focusedDate.year, focusedDate.month);
+    final firstOfMonth = sameZoneDate(focusedDate, focusedDate.year, focusedDate.month);
     final offset = (firstOfMonth.weekday - firstDayOfWeek + 7) % 7;
-    // Step by calendar date (DateTime constructor field overflow), not by
+    // Step by calendar date (sameZoneDate's field overflow), not by
     // Duration -- Duration arithmetic is absolute elapsed time and silently
     // lands on the wrong local day across a DST transition. See
     // LayrzCalendarMonthSurface.build for the same pattern and why it
     // matters.
-    return DateTime(focusedDate.year, focusedDate.month, 1 - offset);
+    return sameZoneDate(focusedDate, focusedDate.year, focusedDate.month, 1 - offset);
   }
 }
 
@@ -599,10 +604,10 @@ class _MultiDayBarState extends State<_MultiDayBar> {
     // independently-clamped bar in the adjacent week row(s).
     final visibleStart = entry.start.isBefore(weekFirst)
         ? weekFirst
-        : DateTime(entry.start.year, entry.start.month, entry.start.day);
+        : sameZoneDate(entry.start, entry.start.year, entry.start.month, entry.start.day);
     final visibleEnd = entry.end.isAfter(weekLast)
         ? weekLast
-        : DateTime(entry.end.year, entry.end.month, entry.end.day);
+        : sameZoneDate(entry.end, entry.end.year, entry.end.month, entry.end.day);
     final startColumn = visibleStart.difference(weekFirst).inDays;
     final endColumn = visibleEnd.difference(weekFirst).inDays;
 
