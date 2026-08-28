@@ -57,12 +57,10 @@ enum LayrzTreeSelectionMode {
 class LayrzTreeSelectionController<T> extends ChangeNotifier {
   /// Creates a [LayrzTreeSelectionController].
   LayrzTreeSelectionController({
-    required List<LayrzTreeNode<T>> roots,
-    LayrzTreeSelectionMode mode = LayrzTreeSelectionMode.independent,
+    required this._roots,
+    this._mode = LayrzTreeSelectionMode.independent,
     Set<Object>? initialSelectedIds,
-  }) : _mode = mode,
-       _roots = roots,
-       _selectedIds = {...?initialSelectedIds};
+  }) : _selectedIds = {...?initialSelectedIds};
 
   LayrzTreeSelectionMode _mode;
 
