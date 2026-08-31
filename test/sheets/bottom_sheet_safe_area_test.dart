@@ -126,13 +126,13 @@ void main() {
       expect(surfaceRect.top, closeTo(0.0, 0.5));
 
       // The drag handle now sits flush with the surface's own top edge (see
-      // `bottom_sheet_flush_handle_test.dart`) and is itself taller than the
-      // 40px status bar, so it alone already clears the notch -- the content
-      // SafeArea below it deliberately does NOT add a second top inset on top
-      // of that (see the long comment in bottom_sheet.dart). So content here
-      // sits at roughly the handle's own header height, not header + 40px.
-      // This still proves the surface/content distinction the test group is
-      // named for: the surface reaches y=0 while the content does not.
+      // `bottom_sheet_flush_handle_test.dart`); the content below it is
+      // additionally inset by the REMAINDER of the top padding not already
+      // covered by the handle's own footprint (see the long comment in
+      // bottom_sheet.dart) -- at this 40px inset, smaller than the handle's
+      // ~32px footprint, that remainder is a few px, not zero. This still
+      // proves the surface/content distinction the test group is named for:
+      // the surface reaches y=0 while the content does not.
       expect(contentTopRect.top, greaterThan(surfaceRect.top));
     });
 

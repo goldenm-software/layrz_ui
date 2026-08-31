@@ -585,10 +585,14 @@ void main() {
       // The ClipRRect's direct child is the sheet's outer Column, whose FIRST
       // child is the drag handle (flush with the sheet's true top edge, not
       // pushed down by a top inset -- see bottom_sheet_flush_handle_test.dart)
-      // and whose remaining space is an Expanded SafeArea wrapping the actual
+      // and whose remaining space is an Expanded child wrapping the actual
       // content Column (inset clear of system bars while the surface --
       // decorated and clipped above -- stays edge-to-edge; see
-      // bottom_sheet_safe_area_test.dart).
+      // bottom_sheet_safe_area_test.dart). The Expanded child is a Padding
+      // (carrying the top inset actually cleared, computed net of however much
+      // the drag handle above it already covers) wrapping a SafeArea (bottom/
+      // left/right only -- top handled by the Padding, see the long comment in
+      // bottom_sheet.dart) wrapping the content Column.
       expect(
         clipRRect.child,
         isA<Column>(),
@@ -596,14 +600,21 @@ void main() {
       );
 
       final outerColumn = clipRRect.child! as Column;
-      final expandedSafeArea = outerColumn.children.whereType<Expanded>().single;
+      final expandedContent = outerColumn.children.whereType<Expanded>().single;
       expect(
-        expandedSafeArea.child,
-        isA<SafeArea>(),
-        reason: 'the outer Column\'s Expanded child must wrap a content SafeArea',
+        expandedContent.child,
+        isA<Padding>(),
+        reason: 'the outer Column\'s Expanded child must wrap a top-inset Padding',
       );
 
-      final safeArea = expandedSafeArea.child as SafeArea;
+      final topPadding = expandedContent.child as Padding;
+      expect(
+        topPadding.child,
+        isA<SafeArea>(),
+        reason: 'the top-inset Padding must wrap a content SafeArea',
+      );
+
+      final safeArea = topPadding.child as SafeArea;
       expect(
         safeArea.child,
         isA<Column>(),

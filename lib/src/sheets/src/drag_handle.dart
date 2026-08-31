@@ -13,6 +13,15 @@ import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 /// size regardless of hover/press state (per D15, interaction states never change
 /// geometry); only the pill's colour may vary with theme.
 class DragHandle extends StatefulWidget {
+  /// The fixed height, in logical pixels, of the visible pill indicator itself —
+  /// excluding the vertical padding around it, which scales with the active
+  /// theme's [LayrzSpacingTokens.sp3] and so cannot be a compile-time constant.
+  /// Exposed so callers that need the handle's total footprint (e.g. to work out
+  /// how much of the top safe-area inset the handle already covers) can compute
+  /// it as `pillHeight + 2 * tokens.spacing.sp3` without duplicating the `4.0`
+  /// magic number that [build] below also uses.
+  static const double pillHeight = 4.0;
+
   /// Whether this handle responds to vertical drag gestures. When false (or when
   /// [controller] is null), the handle is purely visual.
   final bool draggable;
@@ -96,7 +105,7 @@ class _DragHandleState extends State<DragHandle> {
       alignment: Alignment.center,
       child: Container(
         width: 40,
-        height: 4,
+        height: DragHandle.pillHeight,
         decoration: BoxDecoration(
           color: tokens.colors.fg3,
           borderRadius: tokens.radius.br5,

@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/sheets/src/drag_handle.dart';
 import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// A modal or persistent bottom sheet component for presenting content above the page.
 ///
@@ -797,20 +800,35 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
               // The maintainer's report was explicit: the handle "must go on
               // full top".
               //
-              // Only the SafeArea below (top: true) insets the CONTENT clear of
-              // the status bar / notch -- it does NOT also need to account for
-              // the handle, because the handle already occupies that top strip
-              // and pushes the SafeArea (and everything inside it) below itself
-              // as an ordinary Column sibling. Giving the SafeArea a top inset
-              // as well, on top of the handle's own height, would double-inset
-              // and add a second, needless gap below the handle. That means the
-              // top inset is effectively "spent" by the handle when it is
-              // shown -- which is correct, since the handle's few logical
-              // pixels of tap/drag surface already clear the notch on any
-              // device this matters on. When there is no handle
-              // (showDragHandle: false), nothing else occupies that top strip,
-              // so the content still needs its own top inset -- see the
-              // SafeArea's `top: !widget.showDragHandle` below.
+              // A previous version of this comment claimed the handle's own
+              // height already cleared the notch, so the content below it
+              // needed no top inset at all when the handle was shown. That was
+              // measured and wrong: the handle sits OUTSIDE the SafeArea
+              // starting at y=0, so it occupies the UNSAFE region rather than
+              // clearing it, and its footprint (DragHandle.pillHeight plus
+              // `2 * tokens.spacing.sp3` of padding -- 4 + 2*14 = ~32dp at the
+              // default tokens) is smaller than a real notch/Dynamic-Island
+              // inset (~59dp measured on an iPhone 17 Pro Max). Content placed
+              // immediately after the handle with no inset of its own still
+              // rendered ~27dp inside the unsafe area -- confirmed on-device as
+              // a search field jammed against the Dynamic Island.
+              //
+              // The fix insets the content by the REMAINDER: whatever the top
+              // padding is, minus however much of it the handle already
+              // covers (zero, when there is no handle). `_topContentInset`
+              // below computes this once and feeds it to SafeArea.minimum, so
+              // on a device with no notch (top padding 0) this is also 0 and
+              // costs nothing. This does couple the two widgets' geometry --
+              // if DragHandle's own layout changes, this constant needs
+              // updating too -- but the alternative (always giving content the
+              // FULL top inset unconditionally, ignoring what the handle
+              // already covers) reintroduces a visible double gap: handle,
+              // then a ~59dp inset on top of the ~32dp the handle already
+              // occupies, then content, needlessly pushing content ~91dp down
+              // on devices where ~59dp alone would clear the notch. The
+              // remainder calculation is more coupled but visibly tighter, and
+              // "tighter, coupled, and correct" beats "loose, decoupled, and
+              // wrong" given that wrong is exactly how this shipped last time.
               //
               // This uses SafeArea rather than a bespoke Padding so it composes
               // with the keyboard for free: SafeArea's default `bottom: true`
@@ -856,69 +874,78 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                       canDismiss: widget.canDismiss,
                     ),
                   Expanded(
-                    child: SafeArea(
-                      // Only inset the top when there is no drag handle to
-                      // already occupy that strip -- see the long comment
-                      // above this Column for why the handle's presence makes
-                      // an additional top inset here redundant (and would
-                      // double the visible gap below the handle).
-                      top: !widget.showDragHandle,
-                      left: false,
-                      right: false,
-                      child: Column(
-                        children: [
-                          // Content
-                          Expanded(
-                            child: widget.scrollable
-                                ? SingleChildScrollView(
-                                    controller: scrollController,
-                                    child: widget.builder(context),
-                                  )
-                                // scrollable: false hands the caller the scrollController via
-                                // PrimaryScrollController instead of wrapping the content: a
-                                // vertical ListView/GridView that sets no controller of its own
-                                // binds to it automatically, giving it the sheet's drag/scroll
-                                // handoff without being nested inside another same-axis scrollable.
-                                // automaticallyInheritForPlatforms covers every platform, not just
-                                // mobile (PrimaryScrollController's own default) — the sheet already
-                                // knows which ScrollController it wants used, on every platform.
-                                : PrimaryScrollController(
-                                    controller: scrollController,
-                                    automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                                    child: widget.builder(context),
-                                  ),
-                          ),
-                          // Actions -- deliberately a SECOND, non-expanded Column child, sibling
-                          // to the Expanded content above rather than nested inside it. This pins
-                          // the row outside whatever scroll view widget.scrollable wraps the
-                          // content in (or outside the caller's own scrollable, when
-                          // widget.scrollable is false) -- mirroring LayrzDialog's title/actions
-                          // staying outside its own content scroll view (dialog.dart's
-                          // _buildSlots). A caller with actions taller than the sheet's content
-                          // wants them to stay reachable, not scroll away with a long builder;
-                          // matching the dialog's own choice here, per the maintainer's explicit
-                          // preference, keeps the two components' actions rows behaving
-                          // identically regardless of which surface a LayrzResponsiveModal
-                          // resolves to. This placement also means actions sit ABOVE the keyboard
-                          // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance
-                          // Padding and this State's own effectiveMinSize/maxSize/1.0 pinning
-                          // above: both apply to the WHOLE sheet (including this Column), not
-                          // just the Expanded/scrollable content, so the actions row is never
-                          // pushed behind the keyboard by this sheet's own layout.
-                          if (widget.actions != null && widget.actions!.isNotEmpty)
-                            Padding(
-                              padding: EdgeInsets.all(tokens.spacing.sp3),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  for (int i = 0; i < widget.actions!.length; i++) ...[
-                                    if (i > 0) SizedBox(width: tokens.spacing.sp2),
-                                    widget.actions![i],
-                                  ],
-                                ],
-                              ),
+                    // The top inset is applied here, OUTSIDE the SafeArea below,
+                    // as a manually-computed Padding -- not via SafeArea's own
+                    // `top`. SafeArea can only clear the FULL top padding or
+                    // none of it; there is no "clear the padding minus however
+                    // much the handle already covers" mode, and that remainder
+                    // is exactly what correctness requires here (see the long
+                    // comment above this Column). `_topContentInset` computes
+                    // it: MediaQuery's top padding, minus the handle's total
+                    // footprint when the handle is shown, floored at zero so a
+                    // device with a small/no inset (or an over-generous handle
+                    // measurement) never produces a negative padding.
+                    child: Padding(
+                      padding: EdgeInsets.only(top: _topContentInset(context, tokens)),
+                      child: SafeArea(
+                        top: false,
+                        left: false,
+                        right: false,
+                        child: Column(
+                          children: [
+                            // Content
+                            Expanded(
+                              child: widget.scrollable
+                                  ? SingleChildScrollView(
+                                      controller: scrollController,
+                                      child: widget.builder(context),
+                                    )
+                                  // scrollable: false hands the caller the scrollController via
+                                  // PrimaryScrollController instead of wrapping the content: a
+                                  // vertical ListView/GridView that sets no controller of its own
+                                  // binds to it automatically, giving it the sheet's drag/scroll
+                                  // handoff without being nested inside another same-axis scrollable.
+                                  // automaticallyInheritForPlatforms covers every platform, not just
+                                  // mobile (PrimaryScrollController's own default) — the sheet already
+                                  // knows which ScrollController it wants used, on every platform.
+                                  : PrimaryScrollController(
+                                      controller: scrollController,
+                                      automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                                      child: widget.builder(context),
+                                    ),
                             ),
-                        ],
+                            // Actions -- deliberately a SECOND, non-expanded Column child, sibling
+                            // to the Expanded content above rather than nested inside it. This pins
+                            // the row outside whatever scroll view widget.scrollable wraps the
+                            // content in (or outside the caller's own scrollable, when
+                            // widget.scrollable is false) -- mirroring LayrzDialog's title/actions
+                            // staying outside its own content scroll view (dialog.dart's
+                            // _buildSlots). A caller with actions taller than the sheet's content
+                            // wants them to stay reachable, not scroll away with a long builder;
+                            // matching the dialog's own choice here, per the maintainer's explicit
+                            // preference, keeps the two components' actions rows behaving
+                            // identically regardless of which surface a LayrzResponsiveModal
+                            // resolves to. This placement also means actions sit ABOVE the keyboard
+                            // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance
+                            // Padding and this State's own effectiveMinSize/maxSize/1.0 pinning
+                            // above: both apply to the WHOLE sheet (including this Column), not
+                            // just the Expanded/scrollable content, so the actions row is never
+                            // pushed behind the keyboard by this sheet's own layout.
+                            if (widget.actions != null && widget.actions!.isNotEmpty)
+                              Padding(
+                                padding: EdgeInsets.all(tokens.spacing.sp3),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    for (int i = 0; i < widget.actions!.length; i++) ...[
+                                      if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                                      widget.actions![i],
+                                    ],
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -968,5 +995,25 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
     }
 
     return popScoped;
+  }
+
+  /// The top padding to apply to the sheet's content, clear of whatever strip
+  /// the drag handle (when shown) already occupies.
+  ///
+  /// The handle sits OUTSIDE the content's SafeArea, flush with the sheet's
+  /// true top edge (see the long comment in [build] above), so it physically
+  /// covers the top of the unsafe region rather than clearing it. Its total
+  /// footprint is [DragHandle.pillHeight] plus the vertical padding around it
+  /// ([LayrzSpacingTokens.sp3] on both sides) -- this must track
+  /// [DragHandle.build] exactly, or the two drift apart silently.
+  ///
+  /// The result is [MediaQuery.paddingOf]'s top inset minus that footprint
+  /// (zero, when there is no handle), floored at zero via [math.max] so a
+  /// device with little or no top inset -- or a handle taller than the
+  /// inset -- never produces a negative padding.
+  double _topContentInset(BuildContext context, LayrzTokens tokens) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final handleFootprint = widget.showDragHandle ? DragHandle.pillHeight + 2 * tokens.spacing.sp3 : 0.0;
+    return math.max(0.0, topPadding - handleFootprint);
   }
 }
