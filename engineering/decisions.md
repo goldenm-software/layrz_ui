@@ -4519,3 +4519,225 @@ The maintainer's reasoning was never that `LayrzCalendar` is incapable of the in
 - Month-grid arithmetic may still be duplicated between the two rather than shared through an extracted primitive; this decision forecloses that extraction too — see the pass-2 plan's explicit non-goal, "no shared picker primitive extraction."
 - Any future M4 planning should treat this as settled rather than reopening it: the question was asked and answered here so it does not need rediscovering when the pickers actually start.
 
+---
+
+## D73: Foldable-Hinge-Aware `LayrzScaffoldShell` — Vertical-Only Split, Gated on Shell Height, Not Modal Under D69
+
+**Date**: 2026-08-31  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Foldable phones report their physical seam to Flutter as a `DisplayFeature`, and `LayrzScaffoldShell`
+had no concept of it. Two concrete defects follow from that gap. First, a Z Fold's unfolded inner
+screen measures **~904dp wide in portrait** — below the 960dp `sm`→`md` threshold `LayrzBreakpointTokens`
+draws between narrow and wide — so the most capable foldable screen on the market gets the narrow
+list-plus-sheet presentation when it has ample width for a genuine two-pane split. Second, a Z Flip's
+vertical crease (reached by rotating the device to landscape) is felt and seen by the user but never
+consulted: the detail always arrives as a modal sheet at an arbitrary fraction of the screen, ignoring
+the seam entirely.
+
+Wiring a fix surfaces a real tension between two standing decisions:
+
+- **D37** rules `LayrzScaffoldShell` **container-driven**: its band is resolved from `LayoutBuilder`
+  constraints via `bandAt`, not from the viewport.
+- **D69** — decided later than D37, and naming `LayrzScaffoldShell` as its own cautionary precedent —
+  rules that a presentation is resolved **once**, at open time, and never re-evaluated across a live
+  breakpoint crossing. It cites the 0.0.14 `setState() or markNeedsBuild() called during build` crash,
+  produced by exactly the "re-evaluate presentation across a live breakpoint crossing" design D69
+  rules out.
+
+A fold split is inherently **live** in a way neither decision was written against: unfolding,
+rotating, and the keyboard opening or closing all change the seam's position and relevance mid-session,
+without the app ever navigating anywhere. The shell cannot honor D69's "decide once" literally and
+also honor a hinge that moves under it.
+
+### Options Considered
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Extend D69's decide-once rule to the fold split (resolve the split once, e.g. at first build, never re-evaluate) | One rule, no new carve-out to document; mechanically simplest | Wrong on its face: unfolding a Fold mid-session, rotating a Flip, or the keyboard opening would freeze the shell on a stale split, reintroducing the exact "screen doesn't match the content" defect this feature exists to fix. D69's rule was written for a widget that owns a `ModalRoute`; the inline shell owns none |
+| Read D69 as blocking any re-evaluation anywhere in `LayrzScaffoldShell`, and decline the live fold feature entirely | Zero risk of resurrecting the 0.0.14 crash class | Leaves both measured defects unfixed for no reason connected to what D69 actually protects against; treats a decision about modal-route caching as though it were a decision about `LayoutBuilder` itself, which D37 already established as this shell's live, reactive input |
+| **(Chosen) Scope D69's rule to modal routes; keep the inline split reactive, governed by the existing post-frame discipline** | Fixes both measured defects; does not weaken the guarantee D69 actually protects (no modal route in this library re-evaluates its surface after opening); reuses discipline already proven safe in this exact file | Requires this entry to state precisely why the inline case is different, so a future reader does not mistake this for a quiet reversal of D69 |
+
+### Decision
+
+**D69's once-only rule governs modal routes — dialogs and sheets that cache their page widget as
+`ModalRoute._page` and cannot safely re-resolve it. It does not govern an inline two-pane shell that
+pushes no route in its split band.** `LayrzScaffoldShell`'s fold-aware layout stays fully reactive:
+`resolveFoldSplit` re-resolves on every rebuild the same way `bandAt` already does, and responds live
+to a fold appearing or disappearing, a posture change, a rotation, or the keyboard opening or closing.
+
+The 0.0.14 crash class — `setState`/`markNeedsBuild` during build — remains guarded exactly as it is
+today: every transition that needs to mutate widget state as a result of a layout change (popping the
+narrow sheet on a band crossing, popping it again on a fold appearing) is deferred to a post-frame
+callback, per the existing discipline at `scaffold_shell.dart:150-161`. Every new fold transition
+follows that same discipline, and the existing regression test
+`test/scaffold/scaffold_shell_breakpoint_transition_test.dart` keeps covering the crash class this
+rule guards against; the new fold-specific transitions get their own coverage in
+`test/scaffold/scaffold_shell_fold_test.dart` rather than replacing it.
+
+**`resolveFoldSplit` (`lib/src/scaffold/src/fold_split.dart`) resolves a split through exactly three
+gates**, all of which must pass before the shell touches its layout at all:
+
+1. **Axis.** A seam's own shape decides its `LayrzFoldAxis` — taller than wide is `vertical`, wider
+   than tall is `horizontal` — but **only a vertical seam ever produces a split**. A horizontal seam
+   is still classified, purely for documentary value, and then unconditionally rejected:
+   `resolveFoldSplit` returns `null` for it, exactly as if no `DisplayFeature` had been reported at
+   all, and the shell falls through to its existing `bandAt(constraints.maxWidth)` behavior (wide
+   side-by-side or narrow list+sheet). Reachable as: Z Fold portrait / Z Flip landscape → vertical
+   (splits); Z Flip portrait / Z Fold landscape → horizontal (no split). The seam's axis follows
+   device rotation, which is never locked by this feature.
+2. **Minimum shell height.** `kLayrzFoldMinSplitHeight = 480.0`. A vertical seam only splits when the
+   shell's own height (`shellRect.height`, not either pane's width) clears this threshold. This guards
+   the shell's **main axis**, a wholly distinct concern from `minPaneExtent`'s **cross-axis**
+   (pane-width) guard — conflating those two axes was the flaw in the design this entry replaces. A
+   deliberate, valuable side effect: the keyboard opening shrinks the shell's own height, so **the
+   split disappears on its own** the moment the shell drops below 480dp, with no keyboard-aware code
+   anywhere in the fold path and no presentation switch to drive.
+3. **Seam selection.** When more than one vertical seam qualifies at once — the Galaxy Z TriFold
+   (shipped hardware) reports two, splitting its inner display into three panels — the seam whose
+   `leadingExtent` lands nearest `kLayrzFoldPreferredListFraction = 1/3` of the shell's width wins; the
+   remaining seam(s) are absorbed into the detail pane, and only that one seam's divider is ever drawn.
+   This is a selection over every independently-qualifying candidate, not a first-match: a tie is
+   broken toward the leading-most (smallest `leadingExtent`) candidate, deterministically, so the
+   result is order-independent by construction rather than dependent on the order `features` happens
+   to list them in.
+
+Additional rulings folded into this same decision, settled together because they came from the same
+piece of work:
+
+- **Hinge bounds are mapped into the shell's own local box via `RenderBox`, never assumed to already
+  be shell-local.** `DisplayFeature.bounds` is reported in the coordinate space of the whole Flutter
+  view, already in **logical pixels** — it must never be divided by device pixel ratio. Measured on a
+  Galaxy Z Flip 3 (SM-F711B) under the primary composition (`LayrzLayout`'s 178px rail plus its top
+  bar): treating view-space bounds as shell-local misplaces the divider by **49.9dp in portrait** and
+  **110.0dp in landscape**, where the rail's 220dp inset compounds the error. The correct landscape
+  split is genuinely asymmetric — **282.9dp / 502.9dp**, measured, not 50/50 — because the rail has
+  already consumed part of the physical leading pane before the shell ever sees its own constraints.
+  The implementation must not equalize the panes to make the numbers look tidier; the asymmetry is
+  correct.
+- **`DisplayFeatureType.cutout` is excluded from consideration, unconditionally.** A real Z Flip 3
+  reports a camera cutout as its own feature, measured at `Rect.fromLTRB(192, 0, 219, 36)`. Splitting
+  the shell's content at a cutout would be a serious bug, not a fold-aware layout, so only `fold` and
+  `hinge` feature types are ever considered.
+- **`DisplayFeatureState.postureHalfOpened` is fully supported, not excluded.** It is treated exactly
+  like `postureFlat` — `resolveFoldSplit` does not filter on posture at all. Verified on a Pixel 10 Pro
+  Fold emulator, which **boots in `postureHalfOpened`** with a viewport (851.7 x 882.9 logical pixels
+  at DPR 2.4375) identical to `postureFlat` in every measured respect but the enum value itself; that
+  viewport is itself below the 960dp `md` threshold even at full width, so excluding this posture would
+  have silently sent exactly the device this feature exists for back to the narrow list+sheet layout.
+
+### Rationale
+
+**D69's protection is about a specific failure mode — a `ModalRoute` re-resolving the surface it was
+pushed with — not about liveness in general.** `LayrzResponsiveModal` picks `LayrzDialog` or
+`LayrzBottomSheet` once and pushes a route that then owns its own cached page widget for the life of
+that route; re-evaluating the choice after push means either mutating a route's cached page (unsafe)
+or tearing it down and pushing a different one mid-flight (the transition-state risk D69's rationale
+explicitly names). Neither hazard applies to `LayrzScaffoldShell`'s split band: `LayoutBuilder` and
+`MediaQuery.displayFeaturesOf` are read on every build the same way `bandAt(constraints.maxWidth)`
+already is, and the arrangement of already-mounted, already-alive `ListPanel`/`DetailPane` widgets
+changes — no route is pushed, cached, or torn down to do it. D37 already established that this shell
+is a `LayoutBuilder`-driven, reactive widget; the fold split is one more reactive input into a widget
+that was never "decide once" to begin with, for the plain reason that D69 postdates D37 and was never
+written to reach backward and re-govern it.
+
+**The distinction is drawn at the level D69 itself argues from, not asserted by fiat.** D69's own
+rationale is explicit that its rule exists because "`ModalRoute` caches its page widget rather than
+rebuilding it on every inset or layout change" — a statement about a specific Flutter mechanism, not
+a general prohibition on any widget re-reading `MediaQuery` or `LayoutBuilder` after its first frame.
+Reading D69 as reaching into every widget in the scaffold module, including the inline band the shell
+already re-resolves live per D37, would make D69 quietly overrule D37 by implication — which D69 never
+states and does not intend, since it names `LayrzScaffoldShell` only as the source of the 0.0.14 crash
+class, not as an example of a widget that must stop re-resolving its layout.
+
+**The horizontal-seam-produces-a-stacked-split design was built, tested on real hardware, and
+deleted — the axis gate exists because of two distinct, device-confirmed failures, not as a
+precaution.** The original design stacked the panes top/bottom on a horizontal seam and promoted the
+detail into a `LayrzBottomSheet` whenever the keyboard opened. On the horizontal case (Z Flip
+portrait), the promotion destroyed the very focus that had opened the keyboard, as a direct
+consequence of that widget gaining focus during the promotion — which closed the keyboard, which
+reverted the promotion, which restored focus, which reopened the keyboard, forever. In the
+maintainer's own words: *"it's impossible to get the keyboard fully opened, because the code detects
+the keyboard opening, and switches to the bottom sheet, and well, lost focus so keyboard closed."* On
+the vertical case (Z Fold portrait) the keyboard rule never even fired — there was no presentation
+switch tied to a vertical seam to begin with — so the shell simply collapsed to a measured 435dp with
+both panes crushed to an unusable height, unguarded by anything. **The height gate this entry adopts
+subsumes the need for any keyboard rule at all**: a Z Fold in portrait measures 731.9dp with the
+keyboard down and 435.0dp with it up, straddling the 480dp threshold in exactly the direction needed,
+so the split retracts on its own the moment the keyboard opens — the same outcome the deleted
+promotion rule was chasing, produced as a side effect of a guard that has nothing to do with the
+keyboard specifically. That the correct fix turned out to be a plain height comparison, not a
+keyboard-aware presentation switch, is itself the evidence that the keyboard-promotion mechanism was
+the wrong tool for the problem.
+
+**The 49.9dp/110.0dp coordinate errors are measured, not theorized, and settle why the `RenderBox`
+mapping step is required rather than a nice-to-have.** A naive implementation that assumed the shell's
+box began at the view's origin would have shipped a divider visibly detached from the physical crease
+on the exact hardware this feature targets. The landscape case additionally proves the panes must be
+allowed to come out asymmetric: forcing a 50/50 split at the mapped seam position would still be
+wrong, because the rail has already consumed part of one pane before the shell's own `LayoutBuilder`
+constraints are handed down.
+
+**The multi-seam rule exists because shipped hardware, not a hypothetical, reports more than one
+qualifying seam at once.** The Galaxy Z TriFold splits its inner display with two creases; picking the
+first-encountered seam would make the result depend on the order `MediaQuery.displayFeaturesOf`
+happens to report them in, which is not a contract this function should lean on. Choosing the seam
+nearest the `1/3` list-pane proportion keeps the shell's two-pane list/detail model intact on a
+three-panel device rather than growing a third pane, and the deterministic tiebreak keeps the choice
+reproducible rather than becoming an intermittent layout bug on the rare device where two candidates
+land equidistant from the target.
+
+### Consequences
+
+- `LayrzScaffoldShell`'s split-band layout re-resolves `resolveFoldSplit` on every build, exactly as
+  it already re-resolves `bandAt` — this is a continuation of D37's container-driven design, not a new
+  liveness rule requiring its own decision if D37 did not already require one.
+- D69 is **not** amended, superseded, or narrowed by this entry for the case it actually governs.
+  `LayrzResponsiveModal`, `LayrzDialog`, and `LayrzBottomSheet` keep resolving their surface exactly
+  once at open time; nothing about this decision changes that. This entry only states, for the first
+  time explicitly, that D69's rule was always scoped to modal routes and was never meant to reach an
+  inline, route-free layout branch — the scope was implicit in D69's own rationale and is now written
+  down because the fold work is the first case that needed the boundary made explicit.
+- Every new fold-driven transition (sheet popped on a fold appearing, on a posture change, on a
+  rotation) must go through a post-frame callback, matching `scaffold_shell.dart:150-161`. A
+  synchronous `setState`/`markNeedsBuild` introduced in any of these paths reintroduces the exact
+  0.0.14 crash class this decision explicitly keeps guarded.
+- `LayrzBreakpointTokens` is unchanged: no new `LayrzBreakpoint` band is added, and the 600/960/1264/1904px
+  thresholds keep governing every one of their 19 existing consumers exactly as before. The fold
+  override sits above `bandAt`'s outcome, not inside it.
+- `ListPanel`'s fixed 300px width becomes overridable (an optional `width`, defaulting to the current
+  300px) so the vertical-seam split can size the leading pane to the mapped seam position instead of
+  the panel's usual fixed width — additive, no existing caller is affected.
+- There is deliberately no keyboard-aware term anywhere in `resolveFoldSplit` or its callers; the
+  minimum-height gate is the sole mechanism that makes the split retract when the keyboard opens.
+  Re-adding a keyboard-specific check would be redundant with this guard, not a complement to it, and
+  risks reintroducing the exact oscillation the deleted design suffered from.
+- Tri-fold behavior (the multi-seam selection rule) is verified by unit test against synthetic
+  multi-feature input, not against real or emulated tri-fold hardware. Emulating a tri-fold AVD to get
+  device-level coverage was attempted and **does not work**: Android's foldable emulator support gates
+  hinge behavior on the device *profile*, not on the number of hinges declared, and a single hinge
+  fails identically on a custom profile that isn't one of the emulator's built-in foldable profiles —
+  so the gap is not specific to three hinges and there is currently no available emulator path to close
+  it. This is a known coverage limitation, not an oversight.
+
+### Review Trigger
+
+If `postureHalfOpened` handling is later found to need different treatment from `postureFlat` on some
+device this decision was not tested against, that is a new row, not a reopening of this one — this
+decision explicitly treats them identically based on the Pixel 10 Pro Fold evidence above. If a
+tri-fold-capable AVD profile becomes available, add the resulting device-level coverage to
+`test/scaffold/scaffold_shell_fold_test.dart` rather than reopening this entry.
+
+### Related Decisions
+
+- **D37**: Establishes `LayrzScaffoldShell` as container-driven via `LayoutBuilder`/`bandAt`, which
+  this decision's fold override sits on top of without modifying, and whose own DESIGN-140 amendment
+  (mobile bottom-sheet presentation) is the origin of the narrow-band sheet whose dismissal discipline
+  the new fold transitions reuse.
+- **D69**: The decide-once rule this decision scopes to modal routes. `LayrzScaffoldShell`'s inline
+  split is the case this entry draws the boundary against, using D69's own cited precedent (the 0.0.14
+  crash) as the shared reference point for what both decisions are actually protecting.
+
