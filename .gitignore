@@ -45,3 +45,6 @@ CLAUDE.local.md
 com.layrz.ui.apk
 
 MSG.md
+
+# FVM Version Cache
+.fvm/
