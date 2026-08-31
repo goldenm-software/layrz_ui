@@ -582,18 +582,28 @@ void main() {
         reason: 'the ClipRRect radii must match the decoration\'s radii exactly',
       );
 
-      // The ClipRRect's direct child is now a SafeArea (inset the sheet's
-      // CONTENT clear of system bars while the surface -- decorated and
-      // clipped above -- stays edge-to-edge; see bottom_sheet_safe_area_test.dart),
-      // wrapping the same content Column this test originally asserted
-      // directly beneath the ClipRRect.
+      // The ClipRRect's direct child is the sheet's outer Column, whose FIRST
+      // child is the drag handle (flush with the sheet's true top edge, not
+      // pushed down by a top inset -- see bottom_sheet_flush_handle_test.dart)
+      // and whose remaining space is an Expanded SafeArea wrapping the actual
+      // content Column (inset clear of system bars while the surface --
+      // decorated and clipped above -- stays edge-to-edge; see
+      // bottom_sheet_safe_area_test.dart).
       expect(
         clipRRect.child,
-        isA<SafeArea>(),
-        reason: 'the ClipRRect must sit directly above the content SafeArea',
+        isA<Column>(),
+        reason: 'the ClipRRect must sit directly above the sheet\'s outer Column',
       );
 
-      final safeArea = clipRRect.child! as SafeArea;
+      final outerColumn = clipRRect.child! as Column;
+      final expandedSafeArea = outerColumn.children.whereType<Expanded>().single;
+      expect(
+        expandedSafeArea.child,
+        isA<SafeArea>(),
+        reason: 'the outer Column\'s Expanded child must wrap a content SafeArea',
+      );
+
+      final safeArea = expandedSafeArea.child as SafeArea;
       expect(
         safeArea.child,
         isA<Column>(),

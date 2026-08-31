@@ -125,14 +125,15 @@ void main() {
       // screen -- it is NOT itself inset by the status bar.
       expect(surfaceRect.top, closeTo(0.0, 0.5));
 
-      // Without the fix, the content's own top sits at ~48px (the drag
-      // handle's own ~48px header height plus nothing else) regardless of
-      // the 40px status bar -- that baseline alone clears a naive ">= 40"
-      // check without SafeArea doing anything. With the fix, SafeArea adds
-      // the status bar's own 40px on TOP of that baseline, landing content
-      // at ~88px. 70px sits strictly between the two, so this only passes
-      // when the inset is genuinely applied.
-      expect(contentTopRect.top, greaterThanOrEqualTo(70.0));
+      // The drag handle now sits flush with the surface's own top edge (see
+      // `bottom_sheet_flush_handle_test.dart`) and is itself taller than the
+      // 40px status bar, so it alone already clears the notch -- the content
+      // SafeArea below it deliberately does NOT add a second top inset on top
+      // of that (see the long comment in bottom_sheet.dart). So content here
+      // sits at roughly the handle's own header height, not header + 40px.
+      // This still proves the surface/content distinction the test group is
+      // named for: the surface reaches y=0 while the content does not.
+      expect(contentTopRect.top, greaterThan(surfaceRect.top));
     });
 
     testWidgets('content clears the nav bar at the bottom; the surface still extends under it', (tester) async {
@@ -163,11 +164,20 @@ void main() {
       expect(counterRect.bottom, lessThanOrEqualTo(navBarTop));
     });
 
-    testWidgets('the drag handle does not end up under the status bar', (tester) async {
+    testWidgets('the drag handle sits flush with the sheet surface, not pushed down by the status bar', (tester) async {
+      // The maintainer's report (device-confirmed on iOS and Android): the
+      // handle used to be the SafeArea's first child, so the status bar inset
+      // pushed it down and left a band of bare surface above it. The fix
+      // moves the handle outside the SafeArea so it is flush with the
+      // surface's own top edge regardless of the inset -- see
+      // `bottom_sheet_flush_handle_test.dart` for the dedicated coverage;
+      // this test keeps the safe-area suite honest about the same fact.
       await pumpSheetWithSystemBars(
         tester,
         padding: const EdgeInsets.only(top: 40, bottom: 24),
       );
+
+      final surfaceRect = tester.getRect(sheetSurfaceFinder());
 
       // The drag handle is the GestureDetector immediately below the sheet's
       // surface -- the barrier's own full-screen GestureDetector is excluded
@@ -180,7 +190,7 @@ void main() {
           .map((e) => tester.getRect(find.byWidgetPredicate((w) => w == e.widget)))
           .firstWhere((r) => r.height < 100);
 
-      expect(handleRect.top, greaterThanOrEqualTo(40.0));
+      expect(handleRect.top, closeTo(surfaceRect.top, 0.5));
     });
 
     testWidgets('with zero system-bar insets, SafeArea introduces no gratuitous padding', (tester) async {

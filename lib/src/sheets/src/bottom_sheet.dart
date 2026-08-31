@@ -782,10 +782,36 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
             child: ClipRRect(
               borderRadius: topRadius,
               // The surface (the DecoratedBox above) deliberately stays OUTSIDE
-              // this SafeArea and keeps extending edge-to-edge under the status
-              // bar and the Android navigation bar -- that full-bleed background
-              // is the point, matching the modern Android look the maintainer
-              // asked for. Only the CONTENT is inset clear of those system bars.
+              // this whole subtree and keeps extending edge-to-edge under the
+              // status bar and the Android navigation bar -- that full-bleed
+              // background is the point, matching the modern Android look the
+              // maintainer asked for.
+              //
+              // The drag handle sits OUTSIDE the SafeArea below, as the first
+              // child of this Column, so it is flush with the sheet's true top
+              // edge -- not pushed down by the top inset. It used to be the
+              // SafeArea's first child instead, which left a band of bare
+              // surface above it exactly as tall as the top inset (visible
+              // whenever the expanded sheet's top edge reaches into the status
+              // bar / notch area, e.g. ~59dp under an iPhone Dynamic Island).
+              // The maintainer's report was explicit: the handle "must go on
+              // full top".
+              //
+              // Only the SafeArea below (top: true) insets the CONTENT clear of
+              // the status bar / notch -- it does NOT also need to account for
+              // the handle, because the handle already occupies that top strip
+              // and pushes the SafeArea (and everything inside it) below itself
+              // as an ordinary Column sibling. Giving the SafeArea a top inset
+              // as well, on top of the handle's own height, would double-inset
+              // and add a second, needless gap below the handle. That means the
+              // top inset is effectively "spent" by the handle when it is
+              // shown -- which is correct, since the handle's few logical
+              // pixels of tap/drag surface already clear the notch on any
+              // device this matters on. When there is no handle
+              // (showDragHandle: false), nothing else occupies that top strip,
+              // so the content still needs its own top inset -- see the
+              // SafeArea's `top: !widget.showDragHandle` below.
+              //
               // This uses SafeArea rather than a bespoke Padding so it composes
               // with the keyboard for free: SafeArea's default `bottom: true`
               // reads MediaQuery.paddingOf, which the engine already reports as
@@ -800,88 +826,103 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
               // side notches to avoid, matching the selective-edge precedent in
               // top_bar.dart (SafeArea(bottom: false)) and navigator_panel.dart
               // (SafeArea(right: false)).
-              child: SafeArea(
-                left: false,
-                right: false,
-                child: Column(
-                  children: [
-                    // Drag handle
-                    if (widget.showDragHandle)
-                      DragHandle(
-                        draggable: true,
-                        controller: _sheetController,
-                        snapSizes: widget.snapSizes,
-                        lowSnapSize: lowSnapSize,
-                        // With the keyboard up, effectiveMinSize/maxSize above
-                        // already make ordinary resizing a structural no-op --
-                        // dismissOnly switches the handle to a SEPARATE
-                        // dismiss-by-drag path that does not go through
-                        // sheetController.jumpTo/the min/max-locked size at
-                        // all (see DragHandle's _onDragUpdate), so a deliberate
-                        // downward swipe still closes the sheet even though
-                        // "expand/resize" is inert. The maintainer's brief
-                        // asked only to disable EXPANSION; nothing about
-                        // taking away dismissal while typing.
-                        dismissOnly: keyboardVisible,
-                        // See LayrzBottomSheet.show's canDismiss doc: a
-                        // non-dismissible sheet must not be swipeable away
-                        // either, in either dismissOnly or ordinary mode --
-                        // the handle keeps rendering and keeps resizing, only
-                        // the drag-past-the-end dismissal is disabled.
-                        canDismiss: widget.canDismiss,
-                      ),
-                    // Content
-                    Expanded(
-                      child: widget.scrollable
-                          ? SingleChildScrollView(
-                              controller: scrollController,
-                              child: widget.builder(context),
-                            )
-                          // scrollable: false hands the caller the scrollController via
-                          // PrimaryScrollController instead of wrapping the content: a
-                          // vertical ListView/GridView that sets no controller of its own
-                          // binds to it automatically, giving it the sheet's drag/scroll
-                          // handoff without being nested inside another same-axis scrollable.
-                          // automaticallyInheritForPlatforms covers every platform, not just
-                          // mobile (PrimaryScrollController's own default) — the sheet already
-                          // knows which ScrollController it wants used, on every platform.
-                          : PrimaryScrollController(
-                              controller: scrollController,
-                              automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                              child: widget.builder(context),
-                            ),
+              child: Column(
+                children: [
+                  // Drag handle -- deliberately OUTSIDE the SafeArea below (see
+                  // the long comment above) so it sits flush with the sheet's
+                  // true top edge, with no inset band of bare surface above it.
+                  if (widget.showDragHandle)
+                    DragHandle(
+                      draggable: true,
+                      controller: _sheetController,
+                      snapSizes: widget.snapSizes,
+                      lowSnapSize: lowSnapSize,
+                      // With the keyboard up, effectiveMinSize/maxSize above
+                      // already make ordinary resizing a structural no-op --
+                      // dismissOnly switches the handle to a SEPARATE
+                      // dismiss-by-drag path that does not go through
+                      // sheetController.jumpTo/the min/max-locked size at
+                      // all (see DragHandle's _onDragUpdate), so a deliberate
+                      // downward swipe still closes the sheet even though
+                      // "expand/resize" is inert. The maintainer's brief
+                      // asked only to disable EXPANSION; nothing about
+                      // taking away dismissal while typing.
+                      dismissOnly: keyboardVisible,
+                      // See LayrzBottomSheet.show's canDismiss doc: a
+                      // non-dismissible sheet must not be swipeable away
+                      // either, in either dismissOnly or ordinary mode --
+                      // the handle keeps rendering and keeps resizing, only
+                      // the drag-past-the-end dismissal is disabled.
+                      canDismiss: widget.canDismiss,
                     ),
-                    // Actions -- deliberately a THIRD, non-expanded Column child, sibling to
-                    // the Expanded content above rather than nested inside it. This pins the
-                    // row outside whatever scroll view widget.scrollable wraps the content in
-                    // (or outside the caller's own scrollable, when widget.scrollable is
-                    // false) -- mirroring LayrzDialog's title/actions staying outside its own
-                    // content scroll view (dialog.dart's _buildSlots). A caller with actions
-                    // taller than the sheet's content wants them to stay reachable, not scroll
-                    // away with a long builder; matching the dialog's own choice here, per the
-                    // maintainer's explicit preference, keeps the two components' actions rows
-                    // behaving identically regardless of which surface a LayrzResponsiveModal
-                    // resolves to. This placement also means actions sit ABOVE the keyboard
-                    // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance Padding
-                    // and this State's own effectiveMinSize/maxSize/1.0 pinning above: both
-                    // apply to the WHOLE sheet (including this Column), not just the
-                    // Expanded/scrollable content, so the actions row is never pushed behind
-                    // the keyboard by this sheet's own layout.
-                    if (widget.actions != null && widget.actions!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.all(tokens.spacing.sp3),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            for (int i = 0; i < widget.actions!.length; i++) ...[
-                              if (i > 0) SizedBox(width: tokens.spacing.sp2),
-                              widget.actions![i],
-                            ],
-                          ],
-                        ),
+                  Expanded(
+                    child: SafeArea(
+                      // Only inset the top when there is no drag handle to
+                      // already occupy that strip -- see the long comment
+                      // above this Column for why the handle's presence makes
+                      // an additional top inset here redundant (and would
+                      // double the visible gap below the handle).
+                      top: !widget.showDragHandle,
+                      left: false,
+                      right: false,
+                      child: Column(
+                        children: [
+                          // Content
+                          Expanded(
+                            child: widget.scrollable
+                                ? SingleChildScrollView(
+                                    controller: scrollController,
+                                    child: widget.builder(context),
+                                  )
+                                // scrollable: false hands the caller the scrollController via
+                                // PrimaryScrollController instead of wrapping the content: a
+                                // vertical ListView/GridView that sets no controller of its own
+                                // binds to it automatically, giving it the sheet's drag/scroll
+                                // handoff without being nested inside another same-axis scrollable.
+                                // automaticallyInheritForPlatforms covers every platform, not just
+                                // mobile (PrimaryScrollController's own default) — the sheet already
+                                // knows which ScrollController it wants used, on every platform.
+                                : PrimaryScrollController(
+                                    controller: scrollController,
+                                    automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                                    child: widget.builder(context),
+                                  ),
+                          ),
+                          // Actions -- deliberately a SECOND, non-expanded Column child, sibling
+                          // to the Expanded content above rather than nested inside it. This pins
+                          // the row outside whatever scroll view widget.scrollable wraps the
+                          // content in (or outside the caller's own scrollable, when
+                          // widget.scrollable is false) -- mirroring LayrzDialog's title/actions
+                          // staying outside its own content scroll view (dialog.dart's
+                          // _buildSlots). A caller with actions taller than the sheet's content
+                          // wants them to stay reachable, not scroll away with a long builder;
+                          // matching the dialog's own choice here, per the maintainer's explicit
+                          // preference, keeps the two components' actions rows behaving
+                          // identically regardless of which surface a LayrzResponsiveModal
+                          // resolves to. This placement also means actions sit ABOVE the keyboard
+                          // whenever it is open -- see _BottomSheetRoute's keyboard-avoidance
+                          // Padding and this State's own effectiveMinSize/maxSize/1.0 pinning
+                          // above: both apply to the WHOLE sheet (including this Column), not
+                          // just the Expanded/scrollable content, so the actions row is never
+                          // pushed behind the keyboard by this sheet's own layout.
+                          if (widget.actions != null && widget.actions!.isNotEmpty)
+                            Padding(
+                              padding: EdgeInsets.all(tokens.spacing.sp3),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  for (int i = 0; i < widget.actions!.length; i++) ...[
+                                    if (i > 0) SizedBox(width: tokens.spacing.sp2),
+                                    widget.actions![i],
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
