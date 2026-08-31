@@ -51,7 +51,7 @@ class LayrzTimelineStyleSpec {
     required Color? accentColor,
     required LayrzTokens tokens,
   }) {
-    final marker = accentColor ?? tokens.colors.fg3;
+    final marker = accentColor ?? tokens.colors.sf4;
     return LayrzTimelineStyleSpec(
       markerColor: marker,
       markerContentColor: marker.contrastColor,

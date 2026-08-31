@@ -251,30 +251,27 @@ class _ResponsiveModalShowcase extends StatelessWidget {
       semanticLabel: 'Responsive modal',
       builder: (sheetContext) {
         final tokens = sheetContext.tokens;
-        return Padding(
-          padding: EdgeInsets.all(tokens.spacing.sp3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            spacing: tokens.spacing.sp2,
-            children: [
-              Text('Presented as: $presentationLabel', style: tokens.typography.title),
-              Text(
-                'This surface was chosen once, when show() was called, from the viewport '
-                'width at that moment. Resizing the window while this is open will not '
-                'swap it to the other surface -- that is a deliberate non-goal, not a bug. '
-                'Close this and resize before opening again to see a different choice.',
-                style: tokens.typography.body,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          spacing: tokens.spacing.sp2,
+          children: [
+            Text('Presented as: $presentationLabel', style: tokens.typography.title),
+            Text(
+              'This surface was chosen once, when show() was called, from the viewport '
+              'width at that moment. Resizing the window while this is open will not '
+              'swap it to the other surface -- that is a deliberate non-goal, not a bug. '
+              'Close this and resize before opening again to see a different choice.',
+              style: tokens.typography.body,
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: LayrzButton.save(
+                labelText: 'Close',
+                onTap: () => Navigator.of(sheetContext, rootNavigator: true).pop(),
               ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: LayrzButton.save(
-                  labelText: 'Close',
-                  onTap: () => Navigator.of(sheetContext, rootNavigator: true).pop(),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

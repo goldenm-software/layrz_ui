@@ -165,7 +165,11 @@ class _LayrzChipState extends State<LayrzChip> {
             label: widget.labelText,
             child: Text(
               widget.labelText,
-              style: tokens.typography.label.copyWith(color: spec.contentColor),
+              style: tokens.typography.label.copyWith(
+                color: spec.contentColor,
+                fontWeight: tokens.typography.title.fontWeight,
+                fontVariations: tokens.typography.title.fontVariations,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -200,7 +204,7 @@ class _LayrzChipState extends State<LayrzChip> {
                           isPressed: isPressed,
                         );
                         return Icon(
-                          MdiIcons.closeCircle,
+                          MdiIcons.close,
                           color: iconColor,
                           size: kLayrzChipIconSize,
                         );
