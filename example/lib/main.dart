@@ -240,10 +240,10 @@ class ShowroomApp extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle.dark.copyWith(
-        statusBarBrightness: .dark,
-        statusBarIconBrightness: .dark,
+        statusBarBrightness: LayrzPlatform.isIOS ? .light : .dark,
+        statusBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
         systemStatusBarContrastEnforced: true,
-        systemNavigationBarIconBrightness: .dark,
+        systemNavigationBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
         systemNavigationBarContrastEnforced: true,
       ),
     );
