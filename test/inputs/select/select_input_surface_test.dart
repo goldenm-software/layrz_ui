@@ -500,6 +500,82 @@ void main() {
       });
     });
 
+    testWidgets(
+      'the internal ListView has no phantom leading gap from the ambient top inset '
+      '(device-confirmed on an iPhone 17 Pro Max: ~59px gap with the keyboard open)',
+      (tester) async {
+        // A bare `ListView.builder` with no explicit `padding:` falls back to deriving
+        // its scroll-axis padding from the ambient `MediaQuery.maybeOf(context).padding`
+        // (SDK's `ScrollView.buildSlivers`, scroll_view.dart, around lines 900-916 on the
+        // pinned 3.47 SDK) -- unconditionally, whenever an ancestor `MediaQuery` reports a
+        // nonzero `padding.top`. This surface's `ListView` is never the outermost
+        // scrollable in either of its real hosts (the bottom sheet or the anchored
+        // panel), both of which already own and account for the device's top inset in
+        // their own chrome -- so this inner `ListView` re-applying the same inset a
+        // SECOND time, entirely inside its own viewport, is the phantom gap.
+        //
+        // `tester.view.padding` defaults to ZERO, which is the "no notch" condition
+        // where this bug cannot occur -- an explicit `FakeViewPadding` is required to
+        // reproduce it at all.
+        const topInset = 59.0;
+
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.view.resetViewPadding);
+
+        // devicePixelRatio pinned BEFORE physicalSize, per this repo's established
+        // convention (see layout_list_padding_test.dart) -- otherwise the ambient test
+        // devicePixelRatio skews the physical->logical mapping.
+        tester.view.devicePixelRatio = 1.0;
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.padding = const FakeViewPadding(top: topInset);
+        tester.view.viewPadding = const FakeViewPadding(top: topInset);
+
+        await pumpThemed(
+          tester,
+          LayrzSelectInputSurface<String>(
+            itemExtent: 40,
+            items: items,
+            enableSearch: true,
+            canUnselect: false,
+            onItemSelected: (_) {},
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final listRect = tester.getRect(find.byType(ListView));
+        // `find.text('Apple')` rather than `find.byKey(ValueKey('apple'))`: the key
+        // lives on `_SelectItemRow` (a `StatelessWidget`, so its `Element` never
+        // carries an independent `RenderObject` of its own to hit-test/measure),
+        // which `getRect` cannot resolve directly. The item row also wraps its text
+        // in `tokens.spacing.sp1` of vertical padding, so this measures a few logical
+        // pixels short of the row's own top edge -- immaterial next to the ~59px
+        // phantom gap under test; `closeTo`'s tolerance below is widened accordingly.
+        final firstRowRect = tester.getRect(find.text('Apple'));
+
+        // CRITICAL ASSERTION: the first row must start flush with the ListView's own
+        // viewport top -- no phantom leading inset from the ambient top padding being
+        // auto-applied a second time. A non-zero gap here means `topInset` leaked into
+        // this `ListView`'s own SliverPadding on top of whatever the surface's real
+        // hosts already consumed for it.
+        expect(
+          firstRowRect.top,
+          // Tolerance covers the row's own internal vertical padding/centering
+          // (measured ~13px between the ListView's viewport top and the rendered
+          // text's own top edge with the fix applied) -- far below the ~59px
+          // phantom gap this test guards against, so a regression still fails
+          // clearly.
+          closeTo(listRect.top, 20.0),
+          reason:
+              'CRITICAL: the first item row must start at the top of the ListView\'s own '
+              'viewport, with no phantom leading gap. A gap here means the ambient '
+              'MediaQuery.padding.top ($topInset px) is leaking into this internal '
+              'ListView and being auto-applied as scroll-axis padding.',
+        );
+      },
+    );
+
     testWidgets('disposes internal controllers and focus nodes without throwing', (tester) async {
       await pumpThemed(
         tester,

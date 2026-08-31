@@ -358,6 +358,30 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
       listOrEmptyState = SizedBox(
         height: _filteredItems.length * widget.itemExtent,
         child: ListView.builder(
+          // Explicit zero padding, not the ListView/ScrollView default (`padding: null`):
+          // with no padding given, `ScrollView.buildSlivers` (scroll_view.dart, around
+          // lines 900-916 on the pinned 3.47 SDK) falls back to deriving the vertical
+          // scroll-axis padding from the ambient `MediaQuery.maybeOf(context).padding`
+          // (top + bottom) whenever `scrollDirection` is vertical -- which it is here by
+          // default. Both hosts of this surface already own and fully account for the
+          // device's top inset in their own chrome before this list ever mounts: the
+          // bottom sheet's `_BottomSheetContentState._topContentInset` computes an
+          // explicit `Padding` for exactly that inset (clear of the drag handle's own
+          // footprint) and wraps it in `SafeArea(top: false, ...)` -- which leaves
+          // `MediaQuery.paddingOf` unstripped for descendants, so this `ListView` would
+          // silently re-apply that same top inset a second time, entirely inside its own
+          // viewport, between the top of the list and its first row. The desktop anchored
+          // panel has no top-inset chrome to double-count against, but the same
+          // ambient-padding fallback would still apply there on any host with a nonzero
+          // `MediaQuery.padding.top` -- there is no case where this `ListView` deriving
+          // its own padding from the device inset is correct, since it is never the
+          // outermost scrollable in either presentation (see the class-level height
+          // comment above: both hosts already wrap this in their own outer
+          // `SingleChildScrollView`/sheet chrome). Confirmed on-device (iPhone 17 Pro Max,
+          // ~59px top inset with the keyboard open): a 97px total gap between the search
+          // field and the first row, 59px of which was inside this `ListView` itself,
+          // between its viewport top and the first `KeyedSubtree`.
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           itemExtent: widget.itemExtent,
           itemCount: _filteredItems.length,
