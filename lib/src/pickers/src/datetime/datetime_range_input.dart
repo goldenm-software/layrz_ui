@@ -18,6 +18,17 @@ import 'datetime_range_surface.dart';
 /// in the dossier: `simoncito` argued this widget's own complexity favored
 /// a dialog; the ruling kept every range widget on the same anchored-panel
 /// container). **No dialog variant.**
+///
+/// **No midnight default.** Each endpoint's time part seeds from
+/// [startValue]/[endValue]'s own time when that value is non-null; when it
+/// is `null` the corresponding time part starts genuinely unset, never
+/// defaulted to midnight — see [LayrzDateTimeRangeSurface]'s class doc for
+/// why a silent default would be exactly the problem the Save boundary
+/// exists to remove.
+///
+/// **Preserves `TZDateTime` zones**: the committed endpoints are built via
+/// `sameZoneDateTime`, so a caller passing `TZDateTime` values gets
+/// `TZDateTime` values back in the same zone.
 class LayrzDateTimeRangeInput extends StatefulWidget {
   /// The currently committed start datetime.
   final DateTime? startValue;
@@ -26,6 +37,7 @@ class LayrzDateTimeRangeInput extends StatefulWidget {
   final DateTime? endValue;
 
   /// Called with the new (start, end) datetimes when the user presses Save.
+  /// Never called with a value whose time half the user never touched.
   final void Function(DateTime start, DateTime end)? onChanged;
 
   /// The label text displayed above the input field.
@@ -54,6 +66,16 @@ class LayrzDateTimeRangeInput extends StatefulWidget {
 
   /// Individually disabled dates.
   final Set<DateTime> disabledDays;
+
+  /// Which [DateTime] weekday constant starts each week in the day grid.
+  /// Defaults to [DateTime.monday] — deliberately differing from
+  /// `LayrzCalendar`'s `DateTime.sunday` default; asserted to be within
+  /// `DateTime.monday..DateTime.sunday`.
+  final int firstDayOfWeek;
+
+  /// Whether the day grid's ISO week-number gutter renders. Defaults to
+  /// `true`.
+  final bool showWeekNumbers;
 
   /// Whether the seconds fields are shown.
   final bool showSeconds;
@@ -98,6 +120,8 @@ class LayrzDateTimeRangeInput extends StatefulWidget {
     this.firstDay,
     this.lastDay,
     this.disabledDays = const {},
+    this.firstDayOfWeek = DateTime.monday,
+    this.showWeekNumbers = true,
     this.showSeconds = false,
     this.use24HourFormat = true,
     this.pattern = '%Y-%m-%d %H:%M',
@@ -107,7 +131,11 @@ class LayrzDateTimeRangeInput extends StatefulWidget {
     this.dense = false,
     this.helpTitleText,
     this.helpContentText,
-  }) : assert(labelText != null || hintText != null, 'At least one of labelText or hintText must be non-null.');
+  }) : assert(labelText != null || hintText != null, 'At least one of labelText or hintText must be non-null.'),
+       assert(
+         firstDayOfWeek >= DateTime.monday && firstDayOfWeek <= DateTime.sunday,
+         'firstDayOfWeek must be between DateTime.monday (1) and DateTime.sunday (7), got $firstDayOfWeek.',
+       );
 
   @override
   State<LayrzDateTimeRangeInput> createState() => _LayrzDateTimeRangeInputState();
@@ -118,12 +146,27 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The (start, end) pair the summary text was last computed for.
+  ///
+  /// Mirrors `LayrzDateTimeInput`'s identical cache: computing the summary
+  /// reads `context.l10n`, which cannot be established from `initState`
+  /// (Flutter throws "dependOnInheritedWidgetOfExactType() ... called before
+  /// initState() completed"), so the summary is instead computed reactively
+  /// from `build` whenever `widget.startValue`/`widget.endValue` have changed
+  /// since the last computation. A plain equality check can't distinguish
+  /// "never computed" from "computed for null", so [_summaryPrimed] covers
+  /// the first build explicitly.
+  bool _summaryPrimed = false;
+  DateTime? _lastStartValue;
+  DateTime? _lastEndValue;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling the summary computation here -- see
+    // `_summaryPrimed`'s own doc above.
   }
 
   @override
@@ -137,7 +180,6 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.startValue != oldWidget.startValue || widget.endValue != oldWidget.endValue) _updateSummary();
   }
 
   @override
@@ -166,8 +208,11 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
 
   void _handleSave(DateTime start, DateTime end) {
     widget.onChanged?.call(start, end);
-    _updateSummary();
-    setState(() {});
+    setState(() {
+      _lastStartValue = start;
+      _lastEndValue = end;
+      _updateSummary();
+    });
   }
 
   LayrzDateRange? get _rangeValue => (widget.startValue == null || widget.endValue == null)
@@ -178,6 +223,10 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
     if (widget.disabled) return;
     await LayrzBottomSheet.show<void>(
       context,
+      // Names the sheet's route for screen readers with this field's own
+      // label, mirroring `LayrzDateTimeInput`'s identical fallback -- without
+      // it the sheet carries no name for what is being picked.
+      semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzDateTimeRangeSurface(
         value: _rangeValue,
         startTime: widget.startValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.startValue!),
@@ -185,6 +234,8 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
         onSave: (start, end) {
@@ -250,6 +301,13 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_summaryPrimed || widget.startValue != _lastStartValue || widget.endValue != _lastEndValue) {
+      _summaryPrimed = true;
+      _lastStartValue = widget.startValue;
+      _lastEndValue = widget.endValue;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
@@ -270,6 +328,12 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
         width: tokens.border.base,
       ),
+      // `LayrzAnchoredPanel` reconstructs this `child`'s `State` fresh on
+      // every open (verified: `child` is consumed only inside the overlay
+      // builder, torn down and rebuilt on close/reopen -- see
+      // `LayrzDateTimeInput`'s identical citation), so no generation-counter
+      // key is needed here; `LayrzDateTimeRangeSurface.initState` alone
+      // re-seeds the draft on every open.
       child: LayrzDateTimeRangeSurface(
         value: _rangeValue,
         startTime: widget.startValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.startValue!),
@@ -277,6 +341,8 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
         onSave: (start, end) {
