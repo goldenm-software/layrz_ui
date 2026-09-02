@@ -7,7 +7,7 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/date_range.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/picker_drawer.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'date_range_surface.dart';
 
 /// A Material-free date-range input field.
@@ -18,12 +18,18 @@ import 'date_range_surface.dart';
 /// **Involuntary close discards the draft** — reopening always starts clean
 /// from [value].
 ///
-/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
 /// below `isCompact`.** This widget previously opened [LayrzDateRangeSurface]
-/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
-/// panel too cramped for every Save-carrying picker widget (see
-/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
-/// a fixed-width drawer instead. The mobile branch is unchanged.
+/// in the picker-private `LayrzPickerDrawer`, composing its Cancel/Clear/Save
+/// footer inline as a trailing child of the scrolling body — which is exactly
+/// why the maintainer's screenshot showed the footer stranded under short
+/// content instead of pinned to the drawer's bottom edge. [_openDesktopDrawer]
+/// now builds those actions via [LayrzPickerDrawerFooter.build] and passes
+/// them to [LayrzEndDrawer.show]'s `actions` parameter, reading the surface's
+/// live draft state through [_surfaceKey] (a [GlobalKey], the same tool
+/// [LayrzDateRangeSurfaceState]'s own class doc explains). The mobile branch
+/// is unchanged: [LayrzDateRangeSurface] still renders its own footer inline
+/// there via [LayrzDateRangeSurface.showInlineFooter]'s default.
 class LayrzDateRangeInput extends StatefulWidget {
   /// The currently committed range.
   final LayrzDateRange? value;
@@ -223,30 +229,74 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
     );
   }
 
-  /// Opens [LayrzDateRangeSurface] in [LayrzPickerDrawer] on desktop —
-  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
-  /// See [LayrzPickerDrawer]'s class doc for why a fresh
-  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
-  /// already reconstructs [LayrzDateRangeSurface]'s `State` from scratch.
+  /// Opens [LayrzDateRangeSurface] in [LayrzEndDrawer] on desktop — DESIGN-98's
+  /// replacement for the previous picker-private `LayrzPickerDrawer`, now
+  /// with Cancel/Clear/Save pinned via [LayrzEndDrawer.show]'s `actions`
+  /// parameter instead of composed inline. See [LayrzEndDrawer]'s class doc
+  /// for why a fresh [LayrzEndDrawer.show] call needs no generation-key
+  /// trick: every open already reconstructs [LayrzDateRangeSurface]'s `State`
+  /// from scratch.
+  ///
+  /// **Why a [ValueNotifier], not a single top-level `setState`.**
+  /// [LayrzEndDrawer.show]'s `builder` and `actions` are two separate
+  /// parameters, each captured once when `show` is called — there is no
+  /// single ancestor `StatefulBuilder` that could rebuild both together short
+  /// of restructuring the drawer itself. A [ValueNotifier] holding the
+  /// surface's live `(canSave, hasSelection)` sidesteps that: the surface
+  /// writes to it on every draft mutation, and each of the three actions
+  /// wraps itself in a [ValueListenableBuilder] listening to it, so Clear's
+  /// visibility and Save's enabled state update independently of one another
+  /// and of the body, with no shared rebuild boundary required.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    await LayrzPickerDrawer.show<void>(
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzDateRangeSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: state.hasSelection);
+    }
+
+    await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
       builder: (context) => LayrzDateRangeSurface(
+        key: surfaceKey,
         value: widget.value,
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
         firstDayOfWeek: widget.firstDayOfWeek,
         showWeekNumbers: widget.showWeekNumbers,
+        showInlineFooter: false,
+        onDraftChanged: syncDraftState,
         onSave: (range) {
           _handleSave(range);
           Navigator.pop(context);
         },
         onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () => surfaceKey.currentState?.clear(),
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
     );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {

@@ -2,20 +2,21 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import '../models/time_of_day.dart';
+import '../shared/picker_inline_footer.dart';
 import '../shared/time_fields_panel.dart';
-import '../shared/picker_drawer_footer.dart';
 
 /// The surface content for [LayrzTimeRangeInput]: two
-/// [LayrzPickersTimeFieldsPanel] clusters (Start / End) plus a Cancel/Save
-/// footer — **`LayrzTimeRangeInput` counts as a range and gets Save**, per
-/// the implementation plan's explicit ruling.
+/// [LayrzPickersTimeFieldsPanel] clusters (Start / End) plus, on the mobile
+/// bottom-sheet path, a Cancel/Save footer — **`LayrzTimeRangeInput` counts
+/// as a range and gets Save**, per the implementation plan's explicit ruling.
 ///
-/// **Hosted in [LayrzPickerDrawer] on desktop as of DESIGN-49** (previously
-/// [LayrzAnchoredPanel]); this widget's own content is unaffected by the
-/// container change beyond the shared [LayrzPickerDrawerFooter] button order
-/// (DESIGN-46: Cancel, then Save — no Clear affordance existed here before
-/// or after, this cluster pair has nothing to reset to an empty state the
-/// way a range grid does).
+/// **Hosted in [LayrzEndDrawer] on desktop as of DESIGN-98** (previously the
+/// picker-private `LayrzPickerDrawer`, and before that [LayrzAnchoredPanel]).
+/// On desktop, Cancel/Save are built by [LayrzTimeRangeInput] and passed to
+/// [LayrzEndDrawer.show]'s `actions` parameter instead of composed inline —
+/// see [LayrzTimeRangeSurfaceState]'s class doc. No Clear affordance existed
+/// here before or after (DESIGN-46): this cluster pair has nothing to reset
+/// to an empty state the way a range grid does.
 ///
 /// Auto-swaps if the end draft precedes the start draft at Save time, rather
 /// than rejecting — consistent with the contiguous range state machine's
@@ -47,6 +48,22 @@ class LayrzTimeRangeSurface extends StatefulWidget {
   /// Called when the user presses Cancel.
   final VoidCallback onCancel;
 
+  /// Called on every draft mutation (a start/end field edit), so
+  /// [LayrzTimeRangeInput] can refresh the `actions` it builds outside this
+  /// surface — see [LayrzTimeRangeSurfaceState]'s own doc for why the actions
+  /// live outside rather than being composed into this widget's own build.
+  /// Ignored when [showInlineFooter] is `true`.
+  final VoidCallback? onDraftChanged;
+
+  /// Whether this surface renders its own Cancel/Save footer inline, as the
+  /// last child of its scrolling body.
+  ///
+  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
+  /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
+  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
+  /// identical doc for the full rationale.
+  final bool showInlineFooter;
+
   /// Creates a new [LayrzTimeRangeSurface].
   const LayrzTimeRangeSurface({
     super.key,
@@ -56,13 +73,20 @@ class LayrzTimeRangeSurface extends StatefulWidget {
     this.use24HourFormat = true,
     required this.onSave,
     required this.onCancel,
+    this.onDraftChanged,
+    this.showInlineFooter = true,
   });
 
   @override
-  State<LayrzTimeRangeSurface> createState() => _LayrzTimeRangeSurfaceState();
+  State<LayrzTimeRangeSurface> createState() => LayrzTimeRangeSurfaceState();
 }
 
-class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
+/// State for [LayrzTimeRangeSurface].
+///
+/// **Public, not library-private, so [LayrzTimeRangeInput] can reach it
+/// through a [GlobalKey]** (DESIGN-98) — see [LayrzDateRangeSurfaceState]'s
+/// identical class doc for the full rationale, which applies here unchanged.
+class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   /// The start cluster's draft. `null` until the user actually edits the
   /// start fields — see the class doc's "No 9:00–17:00 default" note.
   LayrzTimeOfDay? _start;
@@ -75,6 +99,9 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   void initState() {
     super.initState();
     _seed();
+    // Syncs the caller's external draft-state mirror immediately -- see
+    // LayrzDateRangeSurfaceState's identical initState comment for why.
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
   @override
@@ -90,10 +117,14 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
 
   /// Whether Save is reachable: both clusters must have been genuinely
   /// chosen. Never `true` from a silently-substituted default — see the
-  /// class doc's "No 9:00–17:00 default" note.
-  bool get _canSave => _start != null && _end != null;
+  /// class doc's "No 9:00–17:00 default" note. Read by [LayrzTimeRangeInput]
+  /// through a [GlobalKey] (see [LayrzTimeRangeSurfaceState]'s class doc).
+  bool get canSave => _start != null && _end != null;
 
-  void _handleSave() {
+  /// Commits the draft via [LayrzTimeRangeSurface.onSave]. Invoked by
+  /// [LayrzTimeRangeInput] through a [GlobalKey] when the Save action it
+  /// builds is pressed.
+  void save() {
     final start = _start;
     final end = _end;
     if (start == null || end == null) return;
@@ -125,7 +156,10 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
             value: _start ?? const LayrzTimeOfDay(hour: 0, minute: 0),
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
-            onChanged: (time) => setState(() => _start = time),
+            onChanged: (time) {
+              setState(() => _start = time);
+              widget.onDraftChanged?.call();
+            },
           ),
           SizedBox(height: tokens.spacing.sp3),
           Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
@@ -135,13 +169,18 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
             value: _end ?? const LayrzTimeOfDay(hour: 0, minute: 0),
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
-            onChanged: (time) => setState(() => _end = time),
+            onChanged: (time) {
+              setState(() => _end = time);
+              widget.onDraftChanged?.call();
+            },
           ),
-          SizedBox(height: tokens.spacing.sp3),
-          LayrzPickerDrawerFooter(
-            onCancel: widget.onCancel,
-            onSave: _canSave ? _handleSave : null,
-          ),
+          if (widget.showInlineFooter) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzPickerInlineFooter(
+              onCancel: widget.onCancel,
+              onSave: canSave ? save : null,
+            ),
+          ],
         ],
       ),
     );

@@ -8,7 +8,7 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 import '../models/date_range.dart';
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/picker_drawer.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'datetime_range_surface.dart';
 
 /// A Material-free start/end datetime-range input field.
@@ -19,13 +19,12 @@ import 'datetime_range_surface.dart';
 /// a dialog; the ruling kept every range widget on the same container).
 /// **No dialog variant.**
 ///
-/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
 /// below `isCompact`.** This widget previously opened
-/// [LayrzDateTimeRangeSurface] through [LayrzAnchoredPanel] on desktop; the
-/// maintainer ruled the anchored panel too cramped for every Save-carrying
-/// picker widget (see [LayrzPickerDrawer]'s own class doc for the ruling
-/// verbatim) and asked for a fixed-width drawer instead. The mobile branch is
-/// unchanged.
+/// [LayrzDateTimeRangeSurface] in the picker-private `LayrzPickerDrawer`,
+/// composing Cancel/Clear/Save inline — see [LayrzDateRangeInput]'s
+/// identical doc for the full rationale, which applies here unchanged. The
+/// mobile branch is unchanged.
 ///
 /// **No midnight default.** Each endpoint's time part seeds from
 /// [startValue]/[endValue]'s own time when that value is non-null; when it
@@ -257,17 +256,34 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
     );
   }
 
-  /// Opens [LayrzDateTimeRangeSurface] in [LayrzPickerDrawer] on desktop —
-  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
-  /// See [LayrzPickerDrawer]'s class doc for why a fresh
-  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
-  /// already reconstructs [LayrzDateTimeRangeSurface]'s `State` from scratch.
+  /// Opens [LayrzDateTimeRangeSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98).
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    await LayrzPickerDrawer.show<void>(
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzDateTimeRangeSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: state.hasSelection);
+    }
+
+    await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
       builder: (context) => LayrzDateTimeRangeSurface(
+        key: surfaceKey,
         value: _rangeValue,
         startTime: widget.startValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.startValue!),
         endTime: widget.endValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.endValue!),
@@ -278,13 +294,25 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        showInlineFooter: false,
+        onDraftChanged: syncDraftState,
         onSave: (start, end) {
           _handleSave(start, end);
           Navigator.pop(context);
         },
         onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () => surfaceKey.currentState?.clear(),
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
     );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {

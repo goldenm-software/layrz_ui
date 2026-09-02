@@ -8,7 +8,7 @@ import '../models/date_range.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
-import '../shared/picker_drawer_footer.dart';
+import '../shared/picker_inline_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
 
@@ -20,22 +20,24 @@ import '../shared/range_policy.dart';
 /// fixed -> interior tap visibly rejected -> outside tap extends the nearer
 /// endpoint. **The interior-lock model is retired and is not implemented.**
 ///
-/// **Cancel/Clear/Save live inside this surface, visible from the first
-/// frame** — `liliana`'s hard requirement that a range surface never leave
-/// the user guessing whether a tap already counted. Clear is visible as soon
-/// as a range exists. Order and styling follow [LayrzPickerDrawerFooter]'s
-/// own doc (DESIGN-46).
+/// **Cancel/Clear/Save live in the hosting surface's `actions` slot, visible
+/// from the first frame** — `liliana`'s hard requirement that a range
+/// surface never leave the user guessing whether a tap already counted.
+/// Clear is visible as soon as a range exists. Order and styling follow
+/// `LayrzPickerDrawerFooter.build`'s own doc (DESIGN-46). **DESIGN-98**:
+/// those actions are built by [LayrzDateRangeInput] and passed to
+/// [LayrzEndDrawer.show]'s `actions` parameter — this widget itself renders
+/// only the calendar, no footer.
 ///
-/// **Container**: as of DESIGN-49, [LayrzDateRangeInput] hosts this surface
-/// in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet] below `isCompact` —
-/// see [LayrzPickerDrawer]'s own class doc for the maintainer's ruling.
-/// That container wiring lives in `date_range_input.dart`, not this file.
+/// **Container**: as of DESIGN-98, [LayrzDateRangeInput] hosts this surface
+/// in [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below `isCompact`. That
+/// container wiring lives in `date_range_input.dart`, not this file.
 ///
 /// **Involuntary close discards the draft**: [initState] and
 /// [didUpdateWidget] both re-seed [_draft] from [widget.value], so a
 /// dismissed surface never leaves stale in-progress state for the next open
 /// — see the implementation plan's "Involuntary close" section. Both
-/// [LayrzPickerDrawer] and [LayrzAnchoredPanel] reconstruct this widget's
+/// [LayrzEndDrawer] and [LayrzAnchoredPanel] reconstruct this widget's
 /// `State` fresh on every open, so no generation-counter key is needed for
 /// either container.
 ///
@@ -71,6 +73,26 @@ class LayrzDateRangeSurface extends StatefulWidget {
   /// hosting surface; this widget only reports the intent.
   final VoidCallback onCancel;
 
+  /// Called on every draft mutation (a day tap or Clear), so
+  /// [LayrzDateRangeInput] can rebuild the `actions` row it builds outside
+  /// this surface — see [LayrzDateRangeSurfaceState]'s own doc for why the
+  /// actions live outside rather than being composed into this widget's own
+  /// build. Ignored when [showInlineFooter] is `true`.
+  final VoidCallback? onDraftChanged;
+
+  /// Whether this surface renders its own Cancel/Clear/Save footer inline, as
+  /// the last child of its scrolling body.
+  ///
+  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
+  /// exactly as it behaved before DESIGN-98 — that container is out of scope
+  /// for this change (the maintainer's report and fix are desktop-only), so
+  /// this surface still renders its own footer when hosted there. Pass
+  /// `false` when hosting this surface in [LayrzEndDrawer], whose `actions`
+  /// slot pins Cancel/Clear/Save to the drawer's own bottom edge instead —
+  /// [LayrzDateRangeInput] reads this surface's state through a [GlobalKey]
+  /// in that case (see [LayrzDateRangeSurfaceState]'s class doc).
+  final bool showInlineFooter;
+
   /// Creates a new [LayrzDateRangeSurface].
   const LayrzDateRangeSurface({
     super.key,
@@ -82,13 +104,27 @@ class LayrzDateRangeSurface extends StatefulWidget {
     this.showWeekNumbers = true,
     required this.onSave,
     required this.onCancel,
+    this.onDraftChanged,
+    this.showInlineFooter = true,
   });
 
   @override
-  State<LayrzDateRangeSurface> createState() => _LayrzDateRangeSurfaceState();
+  State<LayrzDateRangeSurface> createState() => LayrzDateRangeSurfaceState();
 }
 
-class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
+/// State for [LayrzDateRangeSurface].
+///
+/// **Public, not library-private, so [LayrzDateRangeInput] can reach it
+/// through a [GlobalKey]** (DESIGN-98). The drawer's `actions` row must be
+/// built as a sibling of this surface, not nested inside it (that nesting is
+/// exactly the bug the maintainer reported — see [LayrzEndDrawer]'s own
+/// doc), so [LayrzDateRangeInput] builds the Cancel/Clear/Save actions itself
+/// and needs a way to read this surface's live draft state ([canSave],
+/// [hasSelection]) and invoke its mutations ([save], [clear]) from outside.
+/// A [GlobalKey] is the same tool [LayrzEditableFieldState] and
+/// `_sharedFieldKey` already use elsewhere in this package for an identical
+/// "an ancestor widget needs to drive a descendant's imperative state" need.
+class LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
   late LayrzRangeDraft<DateTime> _draft;
   late DateTime _displayedMonth;
   final _policy = LayrzContiguousRangePolicy<DateTime>(compare: (a, b) => _dayOnly(a).compareTo(_dayOnly(b)));
@@ -108,6 +144,13 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
   void initState() {
     super.initState();
     _seed();
+    // Syncs the caller's external draft-state mirror (see
+    // LayrzDateRangeSurface.onDraftChanged's own doc) to this surface's
+    // as-seeded state immediately -- without this, opening the drawer on an
+    // already-complete `value` would show Save as disabled until the first
+    // tap, since the caller's ValueNotifier otherwise starts from a
+    // hardcoded `(false, false)`.
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
   @override
@@ -137,6 +180,7 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
 
   void _handleTap(DateTime tapped) {
     setState(() => _draft = _policy.onTap(_draft, _dayOnly(tapped)));
+    widget.onDraftChanged?.call();
   }
 
   Set<DateTime> _rejectedDates(List<DateTime> visibleDates) => {
@@ -159,9 +203,28 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
     return _policy.isRejected(_draft, _dayOnly(date));
   }
 
-  void _handleReset() => setState(() => _draft = const LayrzRangeDraft<DateTime>.empty());
+  /// Whether the draft is complete and Save is reachable. Read by
+  /// [LayrzDateRangeInput] through a [GlobalKey] to decide whether the Save
+  /// action it builds is enabled — see [LayrzDateRangeSurfaceState]'s class
+  /// doc.
+  bool get canSave => _draft.isComplete;
 
-  void _handleSave() {
+  /// Whether a selection exists to clear. Read by [LayrzDateRangeInput]
+  /// through a [GlobalKey] to decide whether to include a Clear action.
+  bool get hasSelection => _draft.anchor != null;
+
+  /// Clears the in-progress draft back to empty. Invoked by
+  /// [LayrzDateRangeInput] through a [GlobalKey] when the Clear action it
+  /// builds is pressed.
+  void clear() {
+    setState(() => _draft = const LayrzRangeDraft<DateTime>.empty());
+    widget.onDraftChanged?.call();
+  }
+
+  /// Commits the draft range via [LayrzDateRangeSurface.onSave]. Invoked by
+  /// [LayrzDateRangeInput] through a [GlobalKey] when the Save action it
+  /// builds is pressed.
+  void save() {
     if (!_draft.isComplete) return;
     widget.onSave(LayrzDateRange(start: _draft.anchor as DateTime, end: _draft.end as DateTime));
   }
@@ -237,12 +300,14 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
             ),
             onDisplayedMonthChanged: _stepMonth,
           ),
-          SizedBox(height: tokens.spacing.sp3),
-          LayrzPickerDrawerFooter(
-            onCancel: widget.onCancel,
-            onClear: _draft.anchor != null ? _handleReset : null,
-            onSave: _draft.isComplete ? _handleSave : null,
-          ),
+          if (widget.showInlineFooter) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzPickerInlineFooter(
+              onCancel: widget.onCancel,
+              onClear: _draft.anchor != null ? clear : null,
+              onSave: _draft.isComplete ? save : null,
+            ),
+          ],
         ],
       ),
     );

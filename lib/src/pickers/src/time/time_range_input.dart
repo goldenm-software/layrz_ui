@@ -7,7 +7,7 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/picker_drawer.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'time_range_surface.dart';
 
 /// A Material-free start/end time-range input field.
@@ -17,12 +17,11 @@ import 'time_range_surface.dart';
 /// the range rule despite being built from two single-time clusters rather
 /// than a grid.
 ///
-/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
 /// below `isCompact`.** This widget previously opened [LayrzTimeRangeSurface]
-/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
-/// panel too cramped for every Save-carrying picker widget (see
-/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
-/// a fixed-width drawer instead. The mobile branch is unchanged.
+/// in the picker-private `LayrzPickerDrawer`, composing Cancel/Save inline —
+/// see [LayrzDateRangeInput]'s identical doc for the full rationale, which
+/// applies here unchanged. The mobile branch is unchanged.
 class LayrzTimeRangeInput extends StatefulWidget {
   /// The currently committed start time.
   final LayrzTimeOfDay? startValue;
@@ -208,28 +207,60 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     );
   }
 
-  /// Opens [LayrzTimeRangeSurface] in [LayrzPickerDrawer] on desktop —
-  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
-  /// See [LayrzPickerDrawer]'s class doc for why a fresh
-  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
-  /// already reconstructs [LayrzTimeRangeSurface]'s `State` from scratch.
+  /// Opens [LayrzTimeRangeSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98). This surface has no Clear affordance (see
+  /// [LayrzTimeRangeSurface]'s class doc), so `hasSelection` in the shared
+  /// draft-state record is always `false` and [LayrzPickerDrawerActions]
+  /// never renders a Clear button for it.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    await LayrzPickerDrawer.show<void>(
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzTimeRangeSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: false);
+    }
+
+    await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
       builder: (context) => LayrzTimeRangeSurface(
+        key: surfaceKey,
         startValue: widget.startValue,
         endValue: widget.endValue,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        showInlineFooter: false,
+        onDraftChanged: syncDraftState,
         onSave: (start, end) {
           _handleSave(start, end);
           Navigator.pop(context);
         },
         onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
     );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {

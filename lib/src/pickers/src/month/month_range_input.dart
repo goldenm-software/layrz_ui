@@ -8,7 +8,7 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 import '../models/month.dart';
 import '../models/month_range.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/picker_drawer.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'month_range_surface.dart';
 
 /// A Material-free month-range input field.
@@ -36,13 +36,12 @@ import 'month_range_surface.dart';
 /// [disabledMonths] is documented as **ignored in consecutive mode**,
 /// matching old layrz_theme behaviour.
 ///
-/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
 /// below `isCompact`.** This widget previously opened
-/// [LayrzMonthRangeSurface] through [LayrzAnchoredPanel] on desktop; the
-/// maintainer ruled the anchored panel too cramped for every Save-carrying
-/// picker widget (see [LayrzPickerDrawer]'s own class doc for the ruling
-/// verbatim) and asked for a fixed-width drawer instead. The mobile branch
-/// is unchanged.
+/// [LayrzMonthRangeSurface] in the picker-private `LayrzPickerDrawer`,
+/// composing Cancel/Clear/Save inline — see [LayrzDateRangeInput]'s
+/// identical doc for the full rationale, which applies here unchanged. The
+/// mobile branch is unchanged.
 class LayrzMonthRangeInput extends StatefulWidget {
   /// Whether this widget operates in consecutive (contiguous) mode rather
   /// than the default arbitrary (non-contiguous) multi-select mode.
@@ -324,23 +323,42 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     );
   }
 
-  /// Opens [LayrzMonthRangeSurface] in [LayrzPickerDrawer] on desktop —
-  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
-  /// See [LayrzPickerDrawer]'s class doc for why a fresh
-  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
-  /// already reconstructs [LayrzMonthRangeSurface]'s `State` from scratch.
+  /// Opens [LayrzMonthRangeSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98).
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    await LayrzPickerDrawer.show<void>(
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzMonthRangeSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: state.hasSelection);
+    }
+
+    await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
       builder: (context) => LayrzMonthRangeSurface(
+        key: surfaceKey,
         consecutive: widget.consecutive,
         arbitraryValue: widget.arbitraryValue,
         rangeValue: widget.rangeValue,
         minimum: widget.minimum,
         maximum: widget.maximum,
         disabledMonths: widget.disabledMonths,
+        showInlineFooter: false,
+        onDraftChanged: syncDraftState,
         onArbitrarySave: (months) {
           _handleArbitrarySave(months);
           Navigator.pop(context);
@@ -351,7 +369,17 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
         },
         onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () => surfaceKey.currentState?.clear(),
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
     );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {

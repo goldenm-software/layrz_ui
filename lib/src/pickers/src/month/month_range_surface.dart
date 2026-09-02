@@ -5,19 +5,20 @@ import '../models/month.dart';
 import '../models/month_range.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/month_grid.dart';
-import '../shared/picker_drawer_footer.dart';
+import '../shared/picker_inline_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
 
 /// The surface content for [LayrzMonthRangeInput]: a [LayrzPickersMonthGrid]
-/// plus a Cancel/Clear/Save footer.
+/// plus, on the mobile bottom-sheet path, a Cancel/Clear/Save footer.
 ///
-/// **Container**: as of DESIGN-49, [LayrzMonthRangeInput] hosts this surface
-/// in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet] below `isCompact` —
-/// see [LayrzPickerDrawer]'s own class doc for the maintainer's ruling. That
-/// container wiring lives in `month_range_input.dart`, not this file. Order
-/// and styling of the footer follow [LayrzPickerDrawerFooter]'s own doc
-/// (DESIGN-46).
+/// **Container**: as of DESIGN-98, [LayrzMonthRangeInput] hosts this surface
+/// in [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below `isCompact`. That
+/// container wiring lives in `month_range_input.dart`, not this file. On
+/// desktop, Cancel/Clear/Save are built by [LayrzMonthRangeInput] and passed
+/// to [LayrzEndDrawer.show]'s `actions` parameter — see
+/// [LayrzMonthRangeSurfaceState]'s class doc. Order and styling of the
+/// footer follow `LayrzPickerDrawerFooter.build`'s own doc (DESIGN-46).
 ///
 /// **Switches its selection policy by [consecutive]** — [LayrzArbitraryRangePolicy]
 /// (default, set-membership, no adjacency concept) or
@@ -86,6 +87,20 @@ class LayrzMonthRangeSurface extends StatefulWidget {
   /// hosting surface; this widget only reports the intent.
   final VoidCallback onCancel;
 
+  /// Called on every draft mutation (a month tap or Clear), so
+  /// [LayrzMonthRangeInput] can refresh the `actions` it builds outside this
+  /// surface. Ignored when [showInlineFooter] is `true`.
+  final VoidCallback? onDraftChanged;
+
+  /// Whether this surface renders its own Cancel/Clear/Save footer inline,
+  /// as the last child of its scrolling body.
+  ///
+  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
+  /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
+  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
+  /// identical doc for the full rationale.
+  final bool showInlineFooter;
+
   /// Creates a new [LayrzMonthRangeSurface].
   const LayrzMonthRangeSurface({
     super.key,
@@ -98,13 +113,20 @@ class LayrzMonthRangeSurface extends StatefulWidget {
     required this.onArbitrarySave,
     required this.onRangeSave,
     required this.onCancel,
+    this.onDraftChanged,
+    this.showInlineFooter = true,
   });
 
   @override
-  State<LayrzMonthRangeSurface> createState() => _LayrzMonthRangeSurfaceState();
+  State<LayrzMonthRangeSurface> createState() => LayrzMonthRangeSurfaceState();
 }
 
-class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
+/// State for [LayrzMonthRangeSurface].
+///
+/// **Public, not library-private, so [LayrzMonthRangeInput] can reach it
+/// through a [GlobalKey]** (DESIGN-98) — see [LayrzDateRangeSurfaceState]'s
+/// identical class doc for the full rationale.
+class LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
   late LayrzRangeDraft<LayrzMonth> _draft;
   late int _displayedYear;
 
@@ -121,6 +143,9 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
   void initState() {
     super.initState();
     _seed();
+    // Syncs the caller's external draft-state mirror immediately -- see
+    // LayrzDateRangeSurfaceState's identical initState comment for why.
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
   @override
@@ -154,9 +179,16 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
   void _handleTap(DateTime monthDate) {
     final month = LayrzMonth.fromDateTime(monthDate);
     setState(() => _draft = _policy.onTap(_draft, month));
+    widget.onDraftChanged?.call();
   }
 
-  void _handleReset() => setState(() => _draft = const LayrzRangeDraft<LayrzMonth>.empty());
+  /// Clears the in-progress draft back to empty. Invoked by
+  /// [LayrzMonthRangeInput] through a [GlobalKey] when the Clear action it
+  /// builds is pressed.
+  void clear() {
+    setState(() => _draft = const LayrzRangeDraft<LayrzMonth>.empty());
+    widget.onDraftChanged?.call();
+  }
 
   void _handleYearChanged(int year) => setState(() => _displayedYear = year);
 
@@ -180,12 +212,20 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
     return _policy.isRejected(_draft, LayrzMonth.fromDateTime(monthDate));
   }
 
-  bool get _hasSelection => widget.consecutive ? _draft.anchor != null : _draft.arbitrarySelection.isNotEmpty;
+  /// Whether a selection exists to clear. Read by [LayrzMonthRangeInput]
+  /// through a [GlobalKey].
+  bool get hasSelection => widget.consecutive ? _draft.anchor != null : _draft.arbitrarySelection.isNotEmpty;
 
-  bool get _canSave => widget.consecutive ? _draft.isComplete : _draft.arbitrarySelection.isNotEmpty;
+  /// Whether Save is reachable. Read by [LayrzMonthRangeInput] through a
+  /// [GlobalKey].
+  bool get canSave => widget.consecutive ? _draft.isComplete : _draft.arbitrarySelection.isNotEmpty;
 
-  void _handleSave() {
-    if (!_canSave) return;
+  /// Commits the draft via [LayrzMonthRangeSurface.onRangeSave]/
+  /// [LayrzMonthRangeSurface.onArbitrarySave]. Invoked by
+  /// [LayrzMonthRangeInput] through a [GlobalKey] when the Save action it
+  /// builds is pressed.
+  void save() {
+    if (!canSave) return;
     if (widget.consecutive) {
       widget.onRangeSave(LayrzMonthRange(start: _draft.anchor as LayrzMonth, end: _draft.end as LayrzMonth));
     } else {
@@ -233,12 +273,14 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
               onYearChanged: _handleYearChanged,
             ),
           ),
-          SizedBox(height: tokens.spacing.sp3),
-          LayrzPickerDrawerFooter(
-            onCancel: widget.onCancel,
-            onClear: _hasSelection ? _handleReset : null,
-            onSave: _canSave ? _handleSave : null,
-          ),
+          if (widget.showInlineFooter) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzPickerInlineFooter(
+              onCancel: widget.onCancel,
+              onClear: hasSelection ? clear : null,
+              onSave: canSave ? save : null,
+            ),
+          ],
         ],
       ),
     );

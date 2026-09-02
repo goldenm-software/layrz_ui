@@ -1,11 +1,12 @@
 /// How [LayrzDateTimeInput] arranges its date and time parts.
 ///
 /// **Deprecated and ignored as of DESIGN-49.** [LayrzDateTimeInput] moved
-/// from [LayrzAnchoredPanel] to [LayrzPickerDrawer] on desktop; the drawer's
-/// extra vertical room is enough to show the calendar and the time fields
-/// together in one scroll, which is what [LayrzDateTimeSurface] now always
-/// does. Both values of this enum reduce to the same layout — there is no
-/// remaining tab strip or step sequence to select between.
+/// from [LayrzAnchoredPanel] to a picker-private drawer (since promoted to
+/// [LayrzEndDrawer] under DESIGN-98) on desktop; the drawer's extra vertical
+/// room is enough to show the calendar and the time fields together in one
+/// scroll, which is what [LayrzDateTimeSurface] now always does. Both values
+/// of this enum reduce to the same layout — there is no remaining tab strip
+/// or step sequence to select between.
 ///
 /// **Kept, not removed, as a no-op.** DESIGN-51 was formally recorded as
 /// *covered by* DESIGN-49 through this enum (`engineering/milestone-4.md`,

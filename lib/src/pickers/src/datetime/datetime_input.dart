@@ -8,7 +8,7 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/picker_drawer.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'datetime_presentation.dart';
 import 'datetime_surface.dart';
 
@@ -20,12 +20,11 @@ import 'datetime_surface.dart';
 /// update). Composes [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel]
 /// stacked in **one** scrollable surface via [LayrzDateTimeSurface].
 ///
-/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
 /// below `isCompact`.** This widget previously opened [LayrzDateTimeSurface]
-/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
-/// panel too cramped for every Save-carrying picker widget (see
-/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
-/// a fixed-width drawer instead. The mobile branch is unchanged.
+/// in the picker-private `LayrzPickerDrawer`, composing Cancel/Save inline —
+/// see [LayrzDateRangeInput]'s identical doc for the full rationale, which
+/// applies here unchanged. The mobile branch is unchanged.
 ///
 /// **Commit model — Cancel/Save inside the surface, not commit-on-tap.** This
 /// widget is single-valued by *type* (one [DateTime]) but collects **two
@@ -59,7 +58,7 @@ class LayrzDateTimeInput extends StatefulWidget {
   /// moment — see [LayrzDateTimeInputPresentation]'s own doc for what
   /// genuinely differs between them.
   @Deprecated(
-    'Ignored as of DESIGN-49: LayrzPickerDrawer always shows the calendar and '
+    'Ignored as of DESIGN-49: LayrzEndDrawer always shows the calendar and '
     'time fields together, so there is no longer a tab strip or step sequence '
     'to select between. Safe to drop from call sites.',
   )
@@ -145,7 +144,7 @@ class LayrzDateTimeInput extends StatefulWidget {
     // parameter) and is what makes `deprecated_member_use` fire on
     // `LayrzDateTimeInput(presentation: ...)` itself.
     @Deprecated(
-      'Ignored as of DESIGN-49: LayrzPickerDrawer always shows the calendar and '
+      'Ignored as of DESIGN-49: LayrzEndDrawer always shows the calendar and '
       'time fields together, so there is no longer a tab strip or step sequence '
       'to select between. Safe to drop from call sites.',
     )
@@ -294,17 +293,35 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
     );
   }
 
-  /// Opens [LayrzDateTimeSurface] in [LayrzPickerDrawer] on desktop —
-  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
-  /// See [LayrzPickerDrawer]'s class doc for why a fresh
-  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
-  /// already reconstructs [LayrzDateTimeSurface]'s `State` from scratch.
+  /// Opens [LayrzDateTimeSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98). This surface has no Clear affordance, so
+  /// `hasSelection` is always `false`.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    await LayrzPickerDrawer.show<void>(
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzDateTimeSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: false);
+    }
+
+    await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
       builder: (context) => LayrzDateTimeSurface(
+        key: surfaceKey,
         presentation: widget.presentation,
         initialDate: widget.value,
         initialTime: widget.value == null ? null : LayrzTimeOfDay.fromDateTime(widget.value!),
@@ -315,13 +332,25 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        showInlineFooter: false,
+        onDraftChanged: syncDraftState,
         onSave: (date, time) {
           _handleSave(date, time);
           Navigator.pop(context);
         },
         onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
     );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {

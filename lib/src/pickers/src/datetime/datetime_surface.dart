@@ -8,14 +8,14 @@ import '../models/time_of_day.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
-import '../shared/picker_drawer_footer.dart';
+import '../shared/picker_inline_footer.dart';
 import '../shared/time_fields_panel.dart';
 import 'datetime_presentation.dart';
 
 /// The surface content for [LayrzDateTimeInput]: composes [LayrzPickersDayGrid]
 /// and [LayrzPickersTimeFieldsPanel] stacked in **one** scrollable container
-/// (its host is [LayrzPickerDrawer] on desktop, [LayrzBottomSheet] below
-/// `isCompact`), with a Cancel/Save footer.
+/// (its host is [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below
+/// `isCompact`), with a Cancel/Save footer on the mobile path.
 ///
 /// **DESIGN-49 retired the tab/step presentation.** [LayrzDateTimeInput]
 /// previously arranged its date and time parts per [presentation]
@@ -26,6 +26,10 @@ import 'datetime_presentation.dart';
 /// surface always renders both parts stacked, in that fixed order, and
 /// [presentation] is accepted but ignored (see that enum's own doc for why
 /// it is deprecated rather than removed).
+///
+/// **DESIGN-98: Cancel/Save move to [LayrzEndDrawer.show]'s `actions` slot on
+/// desktop.** See [LayrzDateTimeSurfaceState]'s class doc for why this
+/// surface's `State` is now public.
 ///
 /// **Commit model — Cancel/Save, not commit-on-tap.** [LayrzDateTimeInput] is
 /// single-valued by *type* (one [DateTime]) but collects two coordinated
@@ -41,15 +45,12 @@ import 'datetime_presentation.dart';
 /// is disabled while either part is unset, so there is no way to commit a
 /// time the user never chose; see [_canSave].
 ///
-/// **Involuntary close.** Both [LayrzPickerDrawer.show] and
-/// [LayrzAnchoredPanel] (still used by the three commit-on-tap widgets, not
-/// this one) reconstruct this widget's `State` fresh on every open — a
-/// [Navigator.push] always builds a fresh subtree, exactly like
-/// [LayrzAnchoredPanel]'s overlay builder does (see [LayrzPickerDrawer]'s own
-/// class doc for the verified citation) — so seeding in [initState] alone is
-/// sufficient; [didUpdateWidget] additionally re-seeds for the rare case a
-/// caller changes [initialDate]/[initialTime] while the surface is already
-/// open (the mobile bottom-sheet path, or a caller rebuilding this widget in
+/// **Involuntary close.** [LayrzEndDrawer.show] reconstructs this widget's
+/// `State` fresh on every open — a [Navigator.push] always builds a fresh
+/// subtree — so seeding in [initState] alone is sufficient;
+/// [didUpdateWidget] additionally re-seeds for the rare case a caller
+/// changes [initialDate]/[initialTime] while the surface is already open
+/// (the mobile bottom-sheet path, or a caller rebuilding this widget in
 /// place).
 class LayrzDateTimeSurface extends StatefulWidget {
   /// Deprecated and ignored as of DESIGN-49 — see
@@ -96,6 +97,20 @@ class LayrzDateTimeSurface extends StatefulWidget {
   /// reporting anything; no partial commit is ever made.
   final VoidCallback onCancel;
 
+  /// Called on every draft mutation (a date tap or time field edit), so
+  /// [LayrzDateTimeInput] can refresh the `actions` it builds outside this
+  /// surface. Ignored when [showInlineFooter] is `true`.
+  final VoidCallback? onDraftChanged;
+
+  /// Whether this surface renders its own Cancel/Save footer inline, as the
+  /// last child of its scrolling body.
+  ///
+  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
+  /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
+  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
+  /// identical doc for the full rationale.
+  final bool showInlineFooter;
+
   /// Creates a new [LayrzDateTimeSurface].
   const LayrzDateTimeSurface({
     super.key,
@@ -111,13 +126,20 @@ class LayrzDateTimeSurface extends StatefulWidget {
     this.use24HourFormat = true,
     required this.onSave,
     required this.onCancel,
+    this.onDraftChanged,
+    this.showInlineFooter = true,
   });
 
   @override
-  State<LayrzDateTimeSurface> createState() => _LayrzDateTimeSurfaceState();
+  State<LayrzDateTimeSurface> createState() => LayrzDateTimeSurfaceState();
 }
 
-class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
+/// State for [LayrzDateTimeSurface].
+///
+/// **Public, not library-private, so [LayrzDateTimeInput] can reach it
+/// through a [GlobalKey]** (DESIGN-98) — see
+/// [LayrzDateRangeSurfaceState]'s identical class doc for the full rationale.
+class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
   DateTime? _date;
   LayrzTimeOfDay? _time;
   late DateTime _displayedMonth;
@@ -126,6 +148,9 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
   void initState() {
     super.initState();
     _seed();
+    // Syncs the caller's external draft-state mirror immediately -- see
+    // LayrzDateRangeSurfaceState's identical initState comment for why.
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
   @override
@@ -144,10 +169,13 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
 
   /// Whether both parts are set, so Save is enabled. Never `true` from a
   /// silently-substituted default — see the class doc's "No midnight
-  /// default" note.
-  bool get _canSave => _date != null && _time != null;
+  /// default" note. Read by [LayrzDateTimeInput] through a [GlobalKey].
+  bool get canSave => _date != null && _time != null;
 
-  void _handleSave() {
+  /// Commits the draft via [LayrzDateTimeSurface.onSave]. Invoked by
+  /// [LayrzDateTimeInput] through a [GlobalKey] when the Save action it
+  /// builds is pressed.
+  void save() {
     final date = _date;
     final time = _time;
     if (date == null || time == null) return;
@@ -156,10 +184,12 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
 
   void _handleDateTap(DateTime date) {
     setState(() => _date = date);
+    widget.onDraftChanged?.call();
   }
 
   void _handleTimeChanged(LayrzTimeOfDay time) {
     setState(() => _time = time);
+    widget.onDraftChanged?.call();
   }
 
   void _stepMonth(int months) {
@@ -268,11 +298,13 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
           _buildDatePart(context),
           SizedBox(height: tokens.spacing.sp3),
           _buildTimePart(context),
-          SizedBox(height: tokens.spacing.sp3),
-          LayrzPickerDrawerFooter(
-            onCancel: widget.onCancel,
-            onSave: _canSave ? _handleSave : null,
-          ),
+          if (widget.showInlineFooter) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzPickerInlineFooter(
+              onCancel: widget.onCancel,
+              onSave: canSave ? save : null,
+            ),
+          ],
         ],
       ),
     );

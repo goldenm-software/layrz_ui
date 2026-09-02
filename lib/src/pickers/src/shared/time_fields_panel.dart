@@ -85,9 +85,8 @@ import 'time_field.dart';
 /// [ConstrainedBox]-capped copy of [availableWidth] and derives every
 /// field-width computation below from that capped value, not the raw
 /// [LayoutBuilder] constraint, so a field reads as one coherent, tightly
-/// packed control regardless of how wide its host (an [LayrzPickerDrawer], a
-/// [LayrzBottomSheet], or the narrower legacy anchored panel still used by
-/// [LayrzTimeInput]) happens to be. **This does not touch the existing
+/// packed control regardless of how wide its host (an [LayrzEndDrawer] or a
+/// [LayrzBottomSheet]) happens to be. **This does not touch the existing
 /// 280px/140px thresholds** ([LayrzPickersTimeField.kNarrowWidth],
 /// [_kFieldFloorWidth]): those are evaluated against the same capped width a
 /// narrow host already provides unchanged (a host narrower than
@@ -186,8 +185,8 @@ class LayrzPickersTimeFieldsPanel extends StatelessWidget {
         builder: (context, constraints) {
           // The row's own measured width, not the viewport (MediaQuery) --
           // this panel is always hosted inside a bounded-width ancestor
-          // (LayrzPickerDrawer, LayrzAnchoredPanel, or LayrzBottomSheet's
-          // Padding, see the class doc's _bounded reasoning), so its own
+          // (LayrzEndDrawer or LayrzBottomSheet's Padding, see the class
+          // doc's _bounded reasoning), so its own
           // constraints -- not the device's viewport size -- are what
           // determine whether a field's label fits. Mirrors
           // LayrzDurationPickerPanel's identical LayoutBuilder-over-MediaQuery
@@ -347,9 +346,9 @@ class LayrzPickersTimeFieldsPanel extends StatelessWidget {
 /// silently re-trigger that same narrow-width label switch this file's own
 /// suite already guards against — 900.0 is the smallest cap that cannot
 /// regress it, not a number chosen for its own sake. Still comfortably below
-/// what a wide desktop input field's anchored-panel width (this panel's other
-/// host, alongside [LayrzPickerDrawer.width] at 420.0, already narrower than
-/// this cap and therefore unaffected by it) can otherwise stretch to.
+/// what a wide desktop input field's drawer width (this panel's other host,
+/// alongside [LayrzEndDrawer.width] at 420.0, already narrower than this cap
+/// and therefore unaffected by it) can otherwise stretch to.
 const double _kMaxRowWidth = 900.0;
 
 /// A conservative estimate of [_MeridiemControl]'s own rendered width, used
