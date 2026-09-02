@@ -27,14 +27,14 @@ class LayrzProgressLabelPainter extends CustomPainter {
   /// is overridden per copy, per side of the fill boundary.
   final TextStyle style;
 
-  /// The determinate fill fraction, in `[0.0, 1.0]`, marking where the
-  /// indicator fill ends and the track begins. The x-offset in logical
-  /// pixels is derived from this fraction and the painter's actual resolved
-  /// [Size] at paint time, rather than being precomputed by the caller —
-  /// the enclosing bar's width is frequently unresolved
-  /// (`double.infinity`, an unconstrained-width hint) until layout, so only
-  /// the [paint] callback's `size` argument is ever a real, finite width.
-  final double fillFraction;
+  /// The x-offset, in logical pixels, marking where the indicator fill ends
+  /// and the track begins. Precomputed by the caller from the determinate
+  /// fill fraction and the bar's resolved width — the enclosing bar's width
+  /// is frequently unresolved (`double.infinity`, an unconstrained-width
+  /// hint) until layout, so the caller only has a real, finite width once
+  /// it has measured its own [Size], which it then multiplies by the fill
+  /// fraction to produce this boundary.
+  final double fillBoundary;
 
   /// The text color used for the portion of the label that overlaps the
   /// filled (indicator) region.
@@ -82,7 +82,10 @@ class LayrzProgressLabelPainter extends CustomPainter {
     if (clip.width <= 0 || clip.height <= 0) return;
 
     final painter = TextPainter(
-      text: TextSpan(text: text, style: style.copyWith(color: color)),
+      text: TextSpan(
+        text: text,
+        style: style.copyWith(color: color),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
 

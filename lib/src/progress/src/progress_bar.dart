@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'progress_format.dart';
 import 'progress_label_painter.dart';
