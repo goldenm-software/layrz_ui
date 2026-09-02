@@ -101,14 +101,13 @@ class LayrzButtonStyleSpec {
   ///   4. Disabled (non-interactive: disabled, loading, or in cooldown)
   ///
   /// - **Fill ladder** (style-dependent):
-  ///   - `text` / `fab`: transparent → tonal → tonal (stronger)
+  ///   - `text` / `textFab`: transparent → tonal → tonal (stronger)
   ///   - `outlined` / `outlinedFab`: transparent + border → tonal + border → solid + border
-  ///   - `outlinedTonal` / `outlinedTonalFab`: tonal + border → stronger tonal + border → solid + border
-  ///   - `elevated` / `elevatedFab`: solid + shadow → solid + bigger shadow → solid (no shadow)
+  ///   - `filled` / `filledFab`: solid + shadow → solid + bigger shadow → solid (no shadow)
   ///
   /// - **Border invariant**: Outlined pairs keep `borderColor` **identical** across all states
-  /// - **Shadow invariant**: Only `elevated` changes shadows (grows on hover, disappears on press);
-  ///   `filled` never gains shadows; all others have fixed shadows
+  /// - **Shadow invariant**: Only `filled` changes shadows (grows on hover, disappears on press);
+  ///   `text` never gains shadows; all others have fixed shadows
   ///
   /// [accent] is the primary color for the button variant (brand color or semantic).
   /// Geometry (height, width, padding, borderWidth) is byte-identical across states
@@ -167,7 +166,7 @@ class LayrzButtonStyleSpec {
     final contrastColor = accent.contrastColor;
 
     switch (style) {
-      case LayrzButtonStyle.elevated || LayrzButtonStyle.elevatedFab:
+      case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
         return LayrzButtonStyleSpec(
           backgroundColor: accent,
           borderColor: const Color(0x00000000),
@@ -189,10 +188,10 @@ class LayrzButtonStyleSpec {
           shadows: const [],
         );
 
-      case LayrzButtonStyle.outlinedTonal || LayrzButtonStyle.outlinedTonalFab:
+      case LayrzButtonStyle.text || LayrzButtonStyle.textFab:
         return LayrzButtonStyleSpec(
-          backgroundColor: accent.withOpacityValue(kLayrzButtonOutlinedTonalOpacity),
-          borderColor: accent,
+          backgroundColor: const Color(0x00000000),
+          borderColor: const Color(0x00000000),
           borderWidth: tokens.border.base,
           contentColor: accent,
           shadows: const [],
@@ -202,8 +201,7 @@ class LayrzButtonStyleSpec {
 
   /// Computes background color for disabled state.
   ///
-  /// Solid backgrounds (filled, elevated) fade to [fg3] with reduced opacity.
-  /// Tonal backgrounds retain the tonal opacity structure but use [fg3].
+  /// Solid backgrounds ([LayrzButtonStyle.filled]) fade to [fg3] with reduced opacity.
   static Color _disabledBackground(
     LayrzButtonStyleSpec baseSpec,
     LayrzTokens tokens,
@@ -253,8 +251,8 @@ class LayrzButtonStyleSpec {
     final contrastColor = accent.contrastColor;
 
     switch (style) {
-      // elevated / elevatedFab: solid + shadow → solid + bigger shadow → solid (no shadow)
-      case LayrzButtonStyle.elevated || LayrzButtonStyle.elevatedFab:
+      // filled / filledFab: solid + shadow → solid + bigger shadow → solid (no shadow)
+      case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
         final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
         final backgroundColor = Color.lerp(baseSpec.backgroundColor, contentColor, lerpFactor)!;
         final List<BoxShadow> shadows = rung == _ButtonLadderRung.pressed
@@ -280,20 +278,14 @@ class LayrzButtonStyleSpec {
           contentColor: actualContentColor,
         );
 
-      // outlinedTonal / outlinedTonalFab: tonal + border → tonal (stronger) + border → solid + border
-      case LayrzButtonStyle.outlinedTonal || LayrzButtonStyle.outlinedTonalFab:
+      // text / textFab: transparent → tonal → tonal (stronger)
+      case LayrzButtonStyle.text || LayrzButtonStyle.textFab:
         final opacity = rung == _ButtonLadderRung.hovered
-            ? kLayrzButtonOutlinedTonalOpacity + kLayrzButtonOutlinedTonalHoveredDelta
-            : kLayrzButtonOutlinedTonalOpacity + kLayrzButtonOutlinedTonalPressedDelta;
-        final cappedOpacity = opacity.clamp(0.0, 1.0);
-        final backgroundColor = accent.withOpacityValue(cappedOpacity);
-        // At pressed rung, content color becomes contrast (avoid accent-on-accent).
-        final actualContentColor = rung == _ButtonLadderRung.pressed && cappedOpacity >= 1.0
-            ? contrastColor
-            : contentColor;
+            ? kLayrzButtonTextHoveredOpacity
+            : kLayrzButtonTextPressedOpacity;
+        final backgroundColor = accent.withOpacityValue(opacity);
         return baseSpec.copyWith(
           backgroundColor: backgroundColor,
-          contentColor: actualContentColor,
         );
     }
   }

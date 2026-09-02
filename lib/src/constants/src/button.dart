@@ -45,22 +45,16 @@ const double kLayrzButtonFontSize = 14.0;
 /// to improve readability and maintain visual hierarchy as the button height grows to 50.
 const double kLayrzButtonCompactFontSize = 16.0;
 
-/// Opacity applied to outlined tonal button backgrounds.
+/// Hovered rung opacity for [LayrzButtonStyle.text] styles on the fill ladder.
 ///
-/// Used to create a subtle fill effect for [LayrzButtonStyle.outlinedTonal]
-/// variants without full solid colors.
-const double kLayrzButtonOutlinedTonalOpacity = 0.15;
-
-/// Unused legacy opacity from a `text` button style that was removed from
-/// the design system. [LayrzButtonStyle] has no style that reads this
-/// constant; it is retained only for API stability until a deliberate
-/// removal pass.
+/// Text buttons climb from transparent → tonal → tonal (stronger).
+/// This is the tonal opacity applied on hover.
 const double kLayrzButtonTextHoveredOpacity = 0.20;
 
-/// Unused legacy opacity from a `text` button style that was removed from
-/// the design system. [LayrzButtonStyle] has no style that reads this
-/// constant; it is retained only for API stability until a deliberate
-/// removal pass.
+/// Pressed rung opacity for [LayrzButtonStyle.text] styles on the fill ladder.
+///
+/// Text buttons climb from transparent → tonal → tonal (stronger).
+/// This is the stronger tonal opacity applied on press.
 const double kLayrzButtonTextPressedOpacity = 0.35;
 
 /// Hovered rung opacity for outlined styles on the fill ladder.
@@ -68,30 +62,6 @@ const double kLayrzButtonTextPressedOpacity = 0.35;
 /// Outlined buttons climb from transparent → tonal → solid.
 /// This is the tonal opacity applied on hover.
 const double kLayrzButtonOutlinedHoveredOpacity = 0.20;
-
-/// Unused legacy delta from a `filledTonal` button style that was removed
-/// from the design system. [LayrzButtonStyle] has no style that reads this
-/// constant; it is retained only for API stability until a deliberate
-/// removal pass.
-const double kLayrzButtonFilledTonalHoveredDelta = 0.18;
-
-/// Unused legacy delta from a `filledTonal` button style that was removed
-/// from the design system. [LayrzButtonStyle] has no style that reads this
-/// constant; it is retained only for API stability until a deliberate
-/// removal pass.
-const double kLayrzButtonFilledTonalPressedDelta = 0.80;
-
-/// Hovered rung opacity for outlinedTonal styles on the fill ladder.
-///
-/// OutlinedTonal buttons climb from tonal → stronger → solid.
-/// This is the stronger tonal opacity applied on hover (base + delta).
-const double kLayrzButtonOutlinedTonalHoveredDelta = 0.17;
-
-/// Pressed rung opacity for outlinedTonal styles on the fill ladder.
-///
-/// OutlinedTonal buttons reach solid (1.0) when pressed.
-/// This is the delta added to base opacity to compute the pressed opacity.
-const double kLayrzButtonOutlinedTonalPressedDelta = 0.85;
 
 /// Minimum duration a busy state (loading or cooldown) remains visible on [LayrzButton].
 ///

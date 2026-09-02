@@ -353,7 +353,7 @@ class _LayrzRefreshIndicatorState extends State<LayrzRefreshIndicator> with Sing
 /// not the elevation ramp -- this is a small floating affordance sized to
 /// [size], the same category the [LayrzShadowTokens] doc comment names
 /// ("buttons, chips, menu items, badges"), not a card or sheet. `compact1` is
-/// also the exact resting shadow [LayrzButtonStyle.elevatedFab] resolves to,
+/// also the exact resting shadow [LayrzButtonStyle.filledFab] resolves to,
 /// which is what the sibling [_FallbackRefreshButton] already renders in this
 /// same overlay slot -- matching it here is what makes the two read as
 /// consistent siblings instead of two different elevation languages floating
@@ -493,7 +493,7 @@ class _FallbackRefreshButton extends StatelessWidget {
                   child: LayrzButton(
                     labelText: 'Refresh',
                     icon: MdiIcons.refresh,
-                    style: LayrzButtonStyle.elevatedFab,
+                    style: LayrzButtonStyle.filledFab,
                     onTap: _handleTap,
                   ),
                 ),
