@@ -273,6 +273,127 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       expect(decoration.color, expected);
     });
+
+    // Finding 2c regression: a consecutive month range's endpoint/interior
+    // months previously rendered a bordered card/pill of their own (visible
+    // in the maintainer's screenshot), on top of the continuous bar. This
+    // asserts neither role paints a fill/border of its own any longer.
+    guardedTestWidgets('a consecutive range endpoint/interior month paints no card of its own (Finding 2c)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          rangeStart: DateTime(2026, 2),
+          rangeEnd: DateTime(2026, 5),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final rangeCells = tester.widgetList<LayrzPickersMonthGridCell>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersMonthGridCell &&
+              (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
+        ),
+      );
+      // Feb (start), Mar/Apr (interior), May (end) -- four cells total.
+      expect(rangeCells.length, 4);
+
+      for (final label in ['February', 'March', 'April', 'May']) {
+        final cellFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersMonthGridCell &&
+              widget.label == label &&
+              (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
+        );
+        expect(cellFinder, findsOneWidget, reason: '$label cell not found');
+
+        // The cell's own rounded-rectangle Container is the innermost one
+        // (padded vertically, no fixed size) -- LayrzTappable's own idle
+        // surface Container (matching its `tokens.radius.br2` chrome) sits
+        // ahead of it in descendant order for a selectable (non-rejected)
+        // cell, same trap as the day grid's endpoint test.
+        final containers = tester.widgetList<Container>(
+          find.descendant(of: cellFinder, matching: find.byType(Container)),
+        );
+        final innerContainer = containers.last;
+        final decoration = innerContainer.decoration as BoxDecoration;
+        expect(decoration.color, isNull, reason: '$label must not paint its own card fill');
+        expect(decoration.border, isNull, reason: '$label must not paint its own card border');
+      }
+    });
+
+    // Finding 2b regression, mirrored for the month grid: the bar previously
+    // used a tonal tint; the maintainer's ruling is flat primary, "without
+    // transparency or filledTonal effect".
+    guardedTestWidgets('the month range bar paints flat primary, not a tonal tint (Finding 2b)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          rangeStart: DateTime(2026, 2),
+          rangeEnd: DateTime(2026, 5),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final coloredBoxes = tester.widgetList<ColoredBox>(find.byType(ColoredBox));
+      expect(coloredBoxes.any((box) => box.color == tokens.colors.primary), isTrue);
+      expect(
+        coloredBoxes.any((box) => box.color == tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity)),
+        isFalse,
+        reason: 'no bar segment may fall back to the retired tonal tint',
+      );
+    });
+
+    // Numeral-legibility half of Finding 2b: the month name printed on a
+    // flat-primary bar must resolve to a contrasting foreground.
+    guardedTestWidgets('range endpoint/interior month labels resolve to a legible foreground on the bar', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          rangeStart: DateTime(2026, 2),
+          rangeEnd: DateTime(2026, 5),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      for (final label in ['February', 'March', 'May']) {
+        final cellFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersMonthGridCell &&
+              widget.label == label &&
+              (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
+        );
+        final text = tester.widget<Text>(find.descendant(of: cellFinder, matching: find.byType(Text)).first);
+        expect(text.style?.color, tokens.colors.sf1, reason: '$label must use the contrasting foreground');
+      }
+    });
   });
 
   group('LayrzPickersMonthGrid — continuous range bar (Finding 2)', () {

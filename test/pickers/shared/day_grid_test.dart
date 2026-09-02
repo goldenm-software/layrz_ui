@@ -281,6 +281,137 @@ void main() {
       // in the "continuous range bar" group below) supplies the tint.
       expect(decoration.color, isNull);
     });
+
+    // Finding 2a regression: a completed range's endpoints previously
+    // painted their own full-strength filled circle on top of the bar --
+    // "instead of adding the circles, just let's do the row, the circle
+    // looks weird" (the maintainer's words). This asserts an endpoint cell
+    // paints no shape of its own at all, exactly like an interior cell.
+    guardedTestWidgets('a range endpoint cell paints no fill/shape of its own -- no circle on the bar', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersDayGrid(
+          displayedMonth: DateTime(2026, 9),
+          rangeStart: DateTime(2026, 9, 5),
+          rangeEnd: DateTime(2026, 9, 20),
+          onDayTap: (_) {},
+        ),
+      );
+
+      final endpointCells = tester.widgetList<LayrzPickersDayGridCell>(
+        find.byWidgetPredicate(
+          (widget) => widget is LayrzPickersDayGridCell && widget.role == LayrzPickerCellRole.rangeEndpoint,
+        ),
+      );
+      // Exactly the two endpoints -- Sept 5 and Sept 20 -- render this role.
+      expect(endpointCells.length, 2);
+
+      for (final label in ['5', '20']) {
+        final cellFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersDayGridCell &&
+              widget.label == label &&
+              widget.role == LayrzPickerCellRole.rangeEndpoint,
+        );
+        expect(cellFinder, findsOneWidget, reason: 'endpoint cell "$label" not found');
+
+        // A selectable (non-rejected) cell's LayrzTappable also renders its
+        // own idle-state Container (sf1 fill) ahead of the cell's actual
+        // 32x32 box in descendant order -- see LayrzPickersDayGridCell's own
+        // `LayrzTappable` composition doc. Match on the fixed 32x32
+        // constraint the cell's own Container is built with, rather than
+        // assuming descendant order.
+        final container = tester
+            .widgetList<Container>(find.descendant(of: cellFinder, matching: find.byType(Container)))
+            .firstWhere(
+              (c) => c.constraints == const BoxConstraints.tightFor(width: 32.0, height: 32.0),
+            );
+        final decoration = container.decoration as BoxDecoration;
+        expect(decoration.color, isNull, reason: 'endpoint "$label" must not paint its own circle fill');
+      }
+    });
+
+    // Finding 2b regression: the bar previously used
+    // `primary.withValues(alpha: tonalOpacity)` as a workaround for
+    // `LayrzColorSwatch.fromColor`'s shade50 inversion. The maintainer's
+    // ruling reverses that: "the color is primary, just primary, without
+    // transparency or filledTonal effect."
+    guardedTestWidgets('the range bar paints flat primary, not a tonal tint (Finding 2b)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersDayGrid(
+          displayedMonth: DateTime(2026, 9),
+          rangeStart: DateTime(2026, 9, 5),
+          rangeEnd: DateTime(2026, 9, 20),
+          onDayTap: (_) {},
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final coloredBoxes = tester.widgetList<ColoredBox>(find.byType(ColoredBox));
+      final interiorBoxes = coloredBoxes.where((box) => box.color == tokens.colors.primary);
+      expect(interiorBoxes, isNotEmpty, reason: 'at least one interior bar segment must paint flat primary');
+
+      final tonalBoxes = coloredBoxes.where(
+        (box) => box.color == tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity),
+      );
+      expect(tonalBoxes, isEmpty, reason: 'no bar segment may fall back to the retired tonal tint');
+    });
+
+    // Finding 2b's numeral-legibility half: a flat primary bar behind a dark
+    // day numeral is unreadable (the maintainer's screenshots show white
+    // text on the selected navy cells), so range members must resolve to a
+    // contrasting foreground, exactly like `selected`/`today` roles already
+    // do against a solid primary fill.
+    guardedTestWidgets('range endpoint and interior day numerals resolve to a legible foreground on the bar', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersDayGrid(
+          displayedMonth: DateTime(2026, 9),
+          rangeStart: DateTime(2026, 9, 5),
+          rangeEnd: DateTime(2026, 9, 20),
+          onDayTap: (_) {},
+        ),
+      );
+
+      final tokens = LayrzTokens.light();
+      final rangeCells = tester.widgetList<LayrzPickersDayGridCell>(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersDayGridCell &&
+              (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
+        ),
+      );
+      // Sept 5, 6-19 (interior), and 20 -- 16 cells total carry a range role.
+      expect(rangeCells.length, 16);
+
+      for (final label in ['5', '10', '20']) {
+        final cellFinder = find.byWidgetPredicate(
+          (widget) =>
+              widget is LayrzPickersDayGridCell &&
+              widget.label == label &&
+              (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
+        );
+        final text = tester.widget<Text>(find.descendant(of: cellFinder, matching: find.byType(Text)).first);
+        expect(text.style?.color, tokens.colors.sf1, reason: 'day "$label" must use the contrasting foreground');
+      }
+    });
   });
 
   group('LayrzPickersDayGrid — continuous range bar (Finding 2)', () {
@@ -362,10 +493,13 @@ void main() {
         return radius != null && radius != BorderRadius.zero;
       });
       // Exactly two capped segments in the bar itself: rangeStart and
-      // rangeEnd. (Selected/today rings and cell circles also use
-      // DecoratedBox-adjacent shapes, but those are Container/BoxShape
-      // .circle, not DecoratedBox with a BorderRadius, so they do not
-      // pollute this count.)
+      // rangeEnd. (A `today` ring also uses a Container-level Border, and a
+      // selected/endpoint cell paints via BoxShape.circle, not
+      // DecoratedBox with a BorderRadius -- neither pollutes this count.
+      // Endpoints paint no shape of their own at all as of Finding 2a --
+      // see `LayrzPickersDayGridCell`'s own doc -- so the only
+      // BorderRadius-bearing DecoratedBoxes left are the bar's own capped
+      // segments.)
       expect(rounded.length, greaterThanOrEqualTo(2));
     });
 

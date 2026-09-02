@@ -39,12 +39,27 @@ enum LayrzRangeBarColumn {
 /// range reads as one unbroken line rather than a string of separate
 /// tinted circles/pills.
 ///
-/// **Finding 2's ruling, implemented literally**: a light primary bar
+/// **Finding 2's ruling, implemented literally**: a flat `primary` bar
 /// connects the range edge-to-edge across [columns], with **no gap**
 /// between adjacent in-range columns. The bar is **square** where the
 /// range continues past this row's own leading/trailing edge (i.e. the
 /// range carries on into the previous/next grid row) and **rounded** only
 /// at the range's true start/end column — see [LayrzRangeBarColumn].
+///
+/// **Flat `primary`, no tonal tint (Finding 2b).** A prior revision used
+/// `primary.withValues(alpha: tokens.colors.tonalOpacity)` here to work
+/// around [LayrzColorSwatch.fromColor] inverting its shade ramp (`shade50`
+/// subtracts lightness rather than adding it, so it clamps to black for a
+/// dark seed like the default `kPrimaryColor` — see that class's own doc).
+/// The maintainer's explicit ruling reverses that workaround: *"the color
+/// is primary, just primary, without transparency or filledTonal
+/// effect."* [LayrzColorSwatch.fromColor]'s inversion is real and still
+/// unfixed, but this file no longer routes around it — the bar paints
+/// [LayrzColorTokens.primary] at full opacity. This also means the day
+/// numerals painted on top of the bar can no longer assume a light tint
+/// behind them: see [LayrzPickersDayGridCell]'s own doc for how its
+/// `rangeInterior`/`rangeEndpoint` roles pick a legible foreground against
+/// this now-solid fill.
 ///
 /// **Never changes cell geometry (D15).** This widget paints a background
 /// **behind** the row of cells it is composed with — see
@@ -78,7 +93,9 @@ class LayrzPickersRangeBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final fillColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
+    // Flat primary, no tonal opacity -- see this class's own "Flat primary,
+    // no tonal tint" doc for the maintainer's ruling this implements.
+    final fillColor = tokens.colors.primary;
     // Matches the day cell's own 32.0-diameter circle -- see
     // `LayrzPickersDayGridCell`'s `LayrzTappable.borderRadius` doc comment
     // for why this is a literal geometric derivation (half the cell's own

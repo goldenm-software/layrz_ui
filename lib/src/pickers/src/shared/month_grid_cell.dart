@@ -14,6 +14,17 @@ import 'day_grid_cell.dart' show LayrzPickerCellRole;
 /// ("September") would look absurdly oversized for "May". **No
 /// abbreviation**: an unrecognizable three-letter form is worse than a
 /// cramped-but-readable full word, per the implementation plan.
+///
+/// **No per-cell card for a consecutive range's members (Finding 2c).**
+/// [LayrzPickerCellRole.rangeEndpoint]/`.rangeInterior` paint no
+/// fill/border of their own here, mirroring [LayrzPickersDayGridCell]'s
+/// identical "no per-cell shape" ruling — see that class's own doc for the
+/// maintainer's exact words. The continuous [LayrzPickersRangeBar] behind
+/// the row is the only thing marking range membership in consecutive mode.
+/// Arbitrary (non-consecutive) mode is unaffected: its months read
+/// [LayrzPickerCellRole.selected] instead (see
+/// `LayrzPickersMonthGrid._roleFor`), which keeps its individual filled
+/// pill exactly as before — Finding 2 is a range-mode ruling only.
 class LayrzPickersMonthGridCell extends StatelessWidget {
   /// The full, localized month name rendered as this cell's label.
   final String label;
@@ -65,24 +76,28 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
       case LayrzPickerCellRole.none:
         break;
       case LayrzPickerCellRole.selected:
-      case LayrzPickerCellRole.rangeEndpoint:
+        // Arbitrary (non-consecutive) mode's individual filled pill --
+        // unaffected by Finding 2, which is a range-mode ruling only. See
+        // this class's own doc.
         fillColor = tokens.colors.primary;
         textColor = tokens.colors.sf1;
       case LayrzPickerCellRole.today:
         border = Border.all(color: tokens.colors.primary, width: tokens.border.base);
+      case LayrzPickerCellRole.rangeEndpoint:
       case LayrzPickerCellRole.rangeInterior:
-        // No pill fill here in consecutive-range mode -- the continuous
-        // range bar ([LayrzPickersMonthGrid]'s own per-row background,
-        // painted behind this cell) already provides the interior's light
-        // primary tint edge-to-edge across the row. Painting a second,
-        // separately-shaped fill on top of it would double the tint and
-        // reintroduce the "separate pills" look Finding 2 replaces. Text
-        // stays at its ordinary (non-selected) color, set above. Arbitrary
-        // (non-consecutive) mode never assigns this role -- see
+        // No pill fill for either role in consecutive-range mode -- the
+        // continuous range bar ([LayrzPickersMonthGrid]'s own per-row
+        // background, painted behind this cell) already carries the whole
+        // selection, endpoints included, per Finding 2c (see this class's
+        // own doc). The bar paints flat `primary` (no tonal tint -- see
+        // `LayrzPickersRangeBar`'s own doc), so the numeral needs the same
+        // contrasting foreground `selected` uses against a solid primary
+        // fill, or it is unreadable against it. Arbitrary (non-consecutive)
+        // mode never assigns either of these roles -- see
         // `LayrzPickersMonthGrid._roleFor`'s `arbitrarySelection` branch,
         // which reads `selected` instead -- so arbitrary-mode months keep
         // their individual filled pills exactly as before.
-        break;
+        textColor = tokens.colors.sf1;
     }
 
     // A rejected cell that is not itself a range-interior cell (defensive,

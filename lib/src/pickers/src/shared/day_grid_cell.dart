@@ -19,7 +19,10 @@ enum LayrzPickerCellRole {
   /// endpoint" (see [isRangeEndpoint]).
   today,
 
-  /// A completed range's start or end endpoint, rendered at full strength.
+  /// A completed range's start or end endpoint. **Renders no shape of its
+  /// own** — see [LayrzPickersDayGridCell]'s own doc for Finding 2's "no
+  /// circles" ruling; the continuous range bar behind the row already
+  /// carries the whole selection, endpoints included.
   rangeEndpoint,
 
   /// A completed range's interior cell — tinted, persistently
@@ -33,6 +36,19 @@ enum LayrzPickerCellRole {
 /// **Feedback is colour/opacity only (D15)** — disabled, rejected, hovered,
 /// and pressed states never change this cell's size, padding, or border
 /// width, so a state change never reflows the grid around it.
+///
+/// **No per-cell shape for range members (Finding 2a).** The maintainer's
+/// words, on the earlier "endpoints as filled circles on top of the bar"
+/// treatment: *"instead of adding the circles, just let's do the row, the
+/// circle looks weird."* Both [LayrzPickerCellRole.rangeEndpoint] and
+/// [LayrzPickerCellRole.rangeInterior] paint no fill/ring/shape of their
+/// own — the continuous [LayrzPickersRangeBar] behind the row (painted by
+/// [LayrzPickersDayGrid]'s own `build`) is the only thing that visually
+/// marks range membership, endpoints included. This means the two
+/// endpoints are not visually distinguished from an interior day once the
+/// range is complete — flagged as a usability concern, but this is what
+/// was explicitly asked for, so it is implemented as asked rather than
+/// substituted with the reviewer's own judgment.
 class LayrzPickersDayGridCell extends StatelessWidget {
   /// The label rendered inside the cell, e.g. `"14"` for a day or
   /// `"September"` for a month.
@@ -117,17 +133,16 @@ class LayrzPickersDayGridCell extends StatelessWidget {
       case LayrzPickerCellRole.today:
         ring = Border.all(color: tokens.colors.primary, width: tokens.border.base);
       case LayrzPickerCellRole.rangeEndpoint:
-        fillColor = tokens.colors.primary;
-        textColor = tokens.colors.sf1;
       case LayrzPickerCellRole.rangeInterior:
-        // No circle fill here -- the continuous range bar
+        // No circle fill for either role -- the continuous range bar
         // ([LayrzPickersDayGrid]'s own per-row background, painted behind
-        // this cell) already provides the interior's light primary tint
-        // edge-to-edge across the row. Painting a second, separately-shaped
-        // fill on top of it would double the tint and reintroduce the
-        // "separate circles" look Finding 2 replaces. Text stays at its
-        // ordinary (non-selected) color, set above.
-        break;
+        // this cell) already carries the whole selection, endpoints
+        // included, per Finding 2a (see this class's own doc). The bar now
+        // paints flat `primary` (Finding 2b, no tonal tint -- see
+        // `LayrzPickersRangeBar`'s own doc), so the numeral needs the same
+        // contrasting foreground the `selected`/`today` roles would use
+        // against a solid primary fill, or it is unreadable against it.
+        textColor = tokens.colors.sf1;
     }
 
     // A rejected cell that is not itself a range-interior cell (defensive:
