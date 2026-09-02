@@ -11,13 +11,8 @@ import '../../helpers/pump_themed_app.dart';
 /// real caller in this suite anchors it inside a bounded-width ancestor so
 /// [LayrzPickersTimeFieldsPanel]'s `Row`-of-`Expanded` layout has room to
 /// resolve -- mirrors `time_fields_panel_test.dart`'s own `_bounded` helper.
-/// 700px is chosen deliberately: below roughly 660px the shared panel's
-/// fields (full-length unit labels via `LayrzNumberInput.suffixText`, no
-/// narrow-width abbreviation) overflow horizontally -- a defect in the
-/// shared `time_fields_panel.dart` reported to the orchestrator rather than
-/// patched here (out of this unit's file set). 700px stays comfortably clear
-/// of that boundary so these tests exercise this widget's own behaviour
-/// without tripping the shared panel's unrelated overflow.
+/// 700px keeps every 2-slot (no seconds) configuration in this file clear of
+/// [LayrzPickersTimeField.kNarrowWidth]'s per-field narrow threshold.
 const double _kSafeAnchorWidth = 700.0;
 
 Widget _bounded(Widget child) => SizedBox(width: _kSafeAnchorWidth, child: child);
@@ -599,15 +594,6 @@ void main() {
       expect(find.byType(LayrzTimeSurface), findsOneWidget);
     });
 
-    // NOTE: these two tests pump at a real 400px phone width, which trips
-    // the shared `LayrzPickersTimeFieldsPanel`'s unrelated narrow-width
-    // overflow (see this file's top-of-file doc comment and
-    // `time_input_a11y_test.dart`'s identical note) -- a confirmed
-    // shared-file defect reported to the orchestrator, not fixed here. Using
-    // plain `testWidgets` (not `guardedTestWidgets`) and draining the
-    // exception keeps these tests asserting their own actual concern (which
-    // surface opens; that typing does not dismiss it) without failing on
-    // that unrelated, already-reported overflow.
     testWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -632,7 +618,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LayrzTimeSurface), findsOneWidget);
-      tester.takeException();
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('narrow viewport: typing in the bottom sheet does not dismiss it either', (tester) async {
@@ -661,7 +647,7 @@ void main() {
 
       expect(reported, isNotEmpty);
       expect(find.byType(LayrzTimeSurface), findsOneWidget, reason: 'the sheet must remain open after the edit');
-      tester.takeException();
+      expect(tester.takeException(), isNull);
     });
   });
 

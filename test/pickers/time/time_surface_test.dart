@@ -6,12 +6,9 @@ import 'package:layrz_ui/src/pickers/src/time/time_surface.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
-/// See `time_input_test.dart`'s own `_kSafeAnchorWidth` doc for why this
-/// width is used: the shared `LayrzPickersTimeFieldsPanel` overflows below
-/// roughly 660px of available width because its unit-label suffixes have no
-/// narrow-width abbreviation (unlike `LayrzDurationPickerPanel`'s measured
-/// `_kNarrowFieldWidth` split) -- a shared-file defect reported, not fixed
-/// here (`shared/time_fields_panel.dart` is outside this unit's file set).
+/// See `time_input_test.dart`'s own `_kSafeAnchorWidth` doc: 700px keeps
+/// every 2-slot (no seconds) configuration in this file clear of
+/// `LayrzPickersTimeField.kNarrowWidth`'s per-field narrow threshold.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 
 /// A minimal stateful host that owns [value] and can be driven via

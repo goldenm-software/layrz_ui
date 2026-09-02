@@ -18,6 +18,55 @@ mixin LayrzUiL10nDateTimePickersMixin {
   /// is genuinely new rather than a rename of an existing one.
   String get timePickerSeconds => 'Seconds';
 
+  /// Singular short-form abbreviation of "hour" (1 hour), for
+  /// [LayrzPickersTimeFieldsPanel]'s narrow-width field label.
+  ///
+  /// Mirrors `LayrzUiL10nInputsMixin.durationUnitHourShortSingular`'s
+  /// singular/plural split -- see that key's doc comment for why a short
+  /// form is needed at all: real translations of the unabridged
+  /// `timePickerHours`/`timePickerMinutes`/`timePickerSeconds` labels (e.g.
+  /// Spanish "Segundos", 8 characters) overflow `LayrzNumberInput`'s chrome
+  /// below a measured width threshold.
+  ///
+  /// English default: "h"
+  String get timePickerHourShortSingular => 'h';
+
+  /// Plural short-form abbreviation of "hour" (2+ hours, or the field's
+  /// count-agnostic display when the panel does not track singular/plural).
+  ///
+  /// See [timePickerHourShortSingular] for why this key exists.
+  ///
+  /// English default: "h"
+  String get timePickerHourShortPlural => 'h';
+
+  /// Singular short-form abbreviation of "minute" (1 minute).
+  ///
+  /// See [timePickerHourShortSingular] for why this key exists.
+  ///
+  /// English default: "m"
+  String get timePickerMinuteShortSingular => 'm';
+
+  /// Plural short-form abbreviation of "minute" (2+ minutes).
+  ///
+  /// See [timePickerHourShortSingular] for why this key exists.
+  ///
+  /// English default: "m"
+  String get timePickerMinuteShortPlural => 'm';
+
+  /// Singular short-form abbreviation of "second" (1 second).
+  ///
+  /// See [timePickerHourShortSingular] for why this key exists.
+  ///
+  /// English default: "s"
+  String get timePickerSecondShortSingular => 's';
+
+  /// Plural short-form abbreviation of "second" (2+ seconds).
+  ///
+  /// See [timePickerHourShortSingular] for why this key exists.
+  ///
+  /// English default: "s"
+  String get timePickerSecondShortPlural => 's';
+
   /// Localized label for start time in time range picker.
   String get timePickerStart => 'Start time';
 
