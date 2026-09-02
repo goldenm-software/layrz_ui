@@ -1,18 +1,34 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/formatting/formatting.dart';
 
 import '../shared/day_grid.dart';
 
-/// The desktop/mobile-shared surface content for [LayrzDateInput]: a single
-/// [LayrzPickersDayGrid] page. Composed by [LayrzDateInput] inside either
-/// [LayrzAnchoredPanel] (desktop) or [LayrzBottomSheet] (compact) — see that
-/// widget's own doc for the surface-selection rule (D52/D70).
+/// The desktop/mobile-shared surface content for [LayrzDateInput]: a month
+/// navigation header above a single [LayrzPickersDayGrid] page. Composed by
+/// [LayrzDateInput] inside either [LayrzAnchoredPanel] (desktop) or
+/// [LayrzBottomSheet] (compact) — see that widget's own doc for the
+/// surface-selection rule (D52/D70).
 ///
 /// **Commit on tap.** [onDateSelected] fires once, with the tapped date, and
 /// [LayrzDateInput] is responsible for closing whichever surface hosts this
 /// widget immediately afterward — this widget itself has no notion of
 /// "close". There is no Cancel/Save footer: single-valued widgets in this
 /// batch commit on the one atomic tap.
+///
+/// **Owns its own month-navigation header.** Unlike
+/// [LayrzPickersMonthGrid] — which renders its year-navigation chrome
+/// inline because year-stepping is the whole of its own selection state —
+/// [LayrzPickersDayGrid] renders only a single page and exposes no
+/// navigation of its own; a caller supplies whichever month it wants
+/// rendered. This widget is that caller: it owns [_displayedMonth] and
+/// steps it with a `‹ "Month YYYY" › ` header built the same way
+/// [LayrzPickersMonthGrid]'s year header is, reusing the existing
+/// `calendarMonthBack`/`calendarMonthNext` l10n keys (already public,
+/// already generic "previous/next month" navigation labels — reusing them
+/// here needs no new l10n surface).
 class LayrzDateSurface extends StatefulWidget {
   /// The currently selected date, or `null`.
   final DateTime? value;
@@ -66,7 +82,10 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
     // Involuntary-close discipline: re-seed from `widget.value` on every
     // incoming update, not only in `initState` -- see the implementation
     // plan's "Involuntary close" section for why this is load-bearing
-    // (`LayrzAnchoredPanel` does not recreate this State per open).
+    // (`LayrzAnchoredPanel` does not recreate this State per open). This is
+    // now belt-and-suspenders alongside `LayrzDateInput`'s own
+    // `_surfaceGeneration` key, which forces a fresh `State` (and so a
+    // fresh `initState`) on every desktop open regardless.
     if (oldWidget.value != widget.value) {
       _seed();
     }
@@ -76,20 +95,72 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
     _displayedMonth = widget.value ?? DateTime.now();
   }
 
+  /// Steps [_displayedMonth] by [months], through [sameZoneDate] rather
+  /// than [Duration] arithmetic so a `TZDateTime` value steps according to
+  /// its own zone's calendar-field rules rather than absolute elapsed time
+  /// — see `sameZoneDate`'s own doc for why `Duration` is unsafe here.
+  void _stepMonth(int months) {
+    setState(() {
+      _displayedMonth = sameZoneDate(_displayedMonth, _displayedMonth.year, _displayedMonth.month + months);
+    });
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final tokens = context.tokens;
+    final l10n = context.l10n;
+    final label = formatStrftime(_displayedMonth, '%B %Y', l10n);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Semantics(
+          button: true,
+          label: l10n.calendarMonthBack,
+          onTap: () => _stepMonth(-1),
+          child: ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () => _stepMonth(-1),
+              child: Icon(MdiIcons.chevronLeft, color: tokens.colors.fg2),
+            ),
+          ),
+        ),
+        Text(label, style: tokens.typography.title),
+        Semantics(
+          button: true,
+          label: l10n.calendarMonthNext,
+          onTap: () => _stepMonth(1),
+          child: ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () => _stepMonth(1),
+              child: Icon(MdiIcons.chevronRight, color: tokens.colors.fg2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: LayrzPickersDayGrid(
-        displayedMonth: _displayedMonth,
-        selectedDate: widget.value,
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        onDayTap: widget.onDateSelected,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(context),
+          SizedBox(height: tokens.spacing.sp2),
+          LayrzPickersDayGrid(
+            displayedMonth: _displayedMonth,
+            selectedDate: widget.value,
+            firstDay: widget.firstDay,
+            lastDay: widget.lastDay,
+            disabledDays: widget.disabledDays,
+            firstDayOfWeek: widget.firstDayOfWeek,
+            showWeekNumbers: widget.showWeekNumbers,
+            onDayTap: widget.onDateSelected,
+          ),
+        ],
       ),
     );
   }

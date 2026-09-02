@@ -136,12 +136,46 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The [widget.value] the summary text was last computed for.
+  ///
+  /// [_updateSummary] reads `context.l10n`, which depends on the
+  /// [Localizations] inherited widget — that dependency cannot be
+  /// established from `initState` (Flutter throws
+  /// "dependOnInheritedWidgetOfExactType() ... called before initState()
+  /// completed"). Mirroring `LayrzDurationInput`'s own `_lastValue` cache,
+  /// [build] compares [widget.value] against this field and only calls
+  /// [_updateSummary] when it actually changed, which is always safe
+  /// because [build] runs with a fully established inherited-widget
+  /// dependency.
+  DateTime? _lastValue;
+
+  /// Bumped immediately before the desktop panel is opened, and used as
+  /// [LayrzDateSurface]'s [Key].
+  ///
+  /// **Involuntary-close fix.** `LayrzAnchoredPanel` takes its `child`
+  /// eagerly (`anchored_panel.dart:72`) and never recreates it per open, so
+  /// [LayrzDateSurface]'s `State` — specifically its `_displayedMonth`,
+  /// which only re-seeds in `didUpdateWidget` when `widget.value` itself
+  /// changes — would otherwise survive a tap-outside/Escape close unchanged.
+  /// A user who browses to a different month without selecting, then closes
+  /// involuntarily, would reopen the panel on that stale browsed-to month
+  /// instead of back on the committed [LayrzDateInput.value]. Changing this
+  /// key on every open forces Flutter to discard and reconstruct
+  /// [LayrzDateSurface]'s `State`, which re-seeds `_displayedMonth` from
+  /// [LayrzDateInput.value] in `initState` unconditionally. The mobile
+  /// bottom-sheet branch needs no equivalent: [LayrzBottomSheet.show] pushes
+  /// a fresh route (and so a fresh `builder` widget) on every call.
+  int _surfaceGeneration = 0;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling `_updateSummary()` here -- see `_lastValue`'s
+    // own doc for why: it reads `context.l10n`, which cannot be established
+    // from `initState`. `build` performs the initial (and every
+    // subsequent) summary computation via the `_lastValue` comparison.
   }
 
   @override
@@ -154,9 +188,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
     if (widget.focusNode != oldWidget.focusNode) {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
-    }
-    if (widget.value != oldWidget.value) {
-      _updateSummary();
     }
   }
 
@@ -181,6 +212,14 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
     widget.onChanged?.call(date);
     _updateSummary();
     setState(() {});
+  }
+
+  /// Opens the desktop anchored panel, bumping [_surfaceGeneration] first so
+  /// [LayrzDateSurface] is reconstructed fresh on every open — see
+  /// [_surfaceGeneration]'s own doc for why this is required.
+  void _openDesktopPanel() {
+    setState(() => _surfaceGeneration++);
+    _panelController.open();
   }
 
   Future<void> _openMobileSurface() async {
@@ -256,6 +295,11 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.value != _lastValue) {
+      _lastValue = widget.value;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
@@ -270,13 +314,17 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
       childFocusNode: _focusNode,
       builder: (context, controller) {
         _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
+        return _buildInteractiveField(
+          context: context,
+          onTap: widget.disabled ? null : _openDesktopPanel,
+        );
       },
       border: LayrzAnchoredPanelBorder(
         color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
         width: tokens.border.base,
       ),
       child: LayrzDateSurface(
+        key: ValueKey(_surfaceGeneration),
         value: widget.value,
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
