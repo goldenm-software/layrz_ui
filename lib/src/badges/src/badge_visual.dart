@@ -13,6 +13,19 @@ import 'badge_type.dart';
 /// icon without distorting it.
 const int kLayrzBadgeMaxCount = 99;
 
+/// Font size used for the badge's numeric content ("count" / `99+` form).
+///
+/// DESIGN-167: the design system's `label` typography token defaults to 12px,
+/// which is itself the modest bump this change asked for over the previous
+/// hardcoded 11px. This constant exists only as a documented fallback for the
+/// rare case a caller supplies a [LayrzTextTheme] whose `label` carries no
+/// explicit [TextStyle.fontSize] (fontSize is nullable on [TextStyle]) — the
+/// badge's numeral must never end up unsized. In the normal path the badge
+/// uses `tokens.typography.label`'s own resolved size unmodified, so a theme
+/// that intentionally sets a different label size is honored instead of
+/// being silently overridden here.
+const double kLayrzBadgeCountFontSize = 12;
+
 /// The bare, positioned visual for a notification badge.
 ///
 /// This is a small rounded-square (in practice, pill-shaped for numbers and
@@ -96,7 +109,12 @@ class LayrzBadgeVisual extends StatelessWidget {
     final spec = LayrzBadgeStyleSpec.resolve(type: type, color: color, tokens: tokens);
 
     final isDot = count == null && icon == null;
-    final diameter = tokens.spacing.sp3;
+    // DESIGN-167: bumped from `sp3` (14) to `sp4` (20) -- the next step up on
+    // the spacing scale (`lib/src/tokens/src/spacing.dart`). The maintainer's
+    // note was explicit that the icon and count sizes are coupled through
+    // this single knob, so both grow together from this one change rather
+    // than being tuned independently.
+    final diameter = tokens.spacing.sp4;
 
     Widget? content;
     if (count != null) {
@@ -104,7 +122,7 @@ class LayrzBadgeVisual extends StatelessWidget {
         formatCount(count!),
         style: tokens.typography.label.copyWith(
           color: spec.contentColor,
-          fontSize: 11,
+          fontSize: tokens.typography.label.fontSize ?? kLayrzBadgeCountFontSize,
           height: 1.0,
           fontWeight: FontWeight.w600,
         ),
