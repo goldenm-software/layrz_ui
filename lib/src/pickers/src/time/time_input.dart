@@ -114,12 +114,24 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
 
   static const _midnight = LayrzTimeOfDay(hour: 0, minute: 0);
 
+  // `build()` re-runs `_updateSummary()` only once per distinct
+  // `widget.value`, mirroring `LayrzDurationInput`'s `_lastValue`
+  // dirty-check -- but that alone can't tell "never computed" apart from
+  // "computed for a `null` value", so `_summaryPrimed` covers the first
+  // build explicitly. This exists for a correctness reason, not merely to
+  // save work: `_updateSummary()` reads `context.l10n`, an inherited-widget
+  // lookup that is illegal from `initState()` -- calling it there throws
+  // "dependOnInheritedWidgetOfExactType... called before initState()
+  // completed." So the summary is never primed in `initState`; the first
+  // `build()` call always computes it instead, once the tree is attached.
+  bool _summaryPrimed = false;
+  LayrzTimeOfDay? _lastValue;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
   }
 
   @override
@@ -133,7 +145,10 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.value != oldWidget.value) _updateSummary();
+    if (widget.value != oldWidget.value) {
+      _lastValue = widget.value;
+      _updateSummary();
+    }
   }
 
   @override
@@ -157,13 +172,27 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
 
   void _handleTimeChanged(LayrzTimeOfDay time) {
     widget.onChanged?.call(time);
-    setState(_updateSummary);
+    // Trap 4 discipline: this callback only reports the edit and refreshes
+    // the anchor's own summary text -- it never closes the surface (no
+    // `Navigator.pop`, no `controller.close()`), regardless of whether the
+    // caller's `onChanged` updates `widget.value` synchronously.
+    setState(() {
+      _lastValue = time;
+      _updateSummary();
+    });
   }
 
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
     await LayrzBottomSheet.show<void>(
       context,
+      // Names the sheet's route for screen readers with this field's own
+      // label -- without it LayrzBottomSheet.show adds no route semantics at
+      // all (see its own doc comment), so a screen-reader user opening the
+      // sheet would hear no name for what they are picking. Falls back to
+      // hintText when labelText is null, matching this widget's own
+      // labelText-or-hintText constructor assertion.
+      semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzTimeSurface(
         value: widget.value ?? _midnight,
         showSeconds: widget.showSeconds,
@@ -227,6 +256,12 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_summaryPrimed || widget.value != _lastValue) {
+      _summaryPrimed = true;
+      _lastValue = widget.value;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
