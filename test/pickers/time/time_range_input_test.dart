@@ -881,6 +881,49 @@ void main() {
       );
       expect(saveButton.isDisabled, isFalse, reason: 'a populated field must not regress to disabled');
     });
+
+    // DESIGN-98 regression (see LayrzDateTimeInput's identical test for the
+    // maintainer's report this guards against). The test immediately above
+    // only checks `isDisabled` on the button's own widget -- it never
+    // actually presses Save. This closes that gap: reopen on an
+    // already-complete (startValue, endValue) pair and tap Save with zero
+    // interaction, asserting onChanged actually fires with the seeded
+    // values.
+    guardedTestWidgets('Save is already enabled on open when value is already complete, with zero interaction', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final reported = <(LayrzTimeOfDay, LayrzTimeOfDay)>[];
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onChanged: (start, end) => reported.add((start, end)),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel(const LayrzUiL10nDefault().actionSave);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no edit has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(reported, [(const LayrzTimeOfDay(hour: 9, minute: 0), const LayrzTimeOfDay(hour: 17, minute: 0))]);
+    });
   });
 
   group('LayrzTimeRangeInput — start/end groups are distinguishable', () {

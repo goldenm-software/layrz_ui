@@ -444,6 +444,55 @@ void main() {
         );
       });
 
+      // DESIGN-98 regression (see LayrzDateTimeInput's identical test for
+      // the maintainer's report this guards against). Save must already be
+      // enabled the moment the drawer opens on a pre-existing complete
+      // range, with zero interaction.
+      guardedTestWidgets('Save is already enabled on open when the range is already complete, with zero interaction', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        LayrzMonthRange? saved;
+        var callCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzMonthRangeInput(
+            labelText: 'Months',
+            consecutive: true,
+            rangeValue: const LayrzMonthRange(
+              start: LayrzMonth(year: 2026, month: 2),
+              end: LayrzMonth(year: 2026, month: 6),
+            ),
+            onRangeChanged: (r) {
+              callCount++;
+              saved = r;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        final saveButton = findButtonLabel(const LayrzUiL10nDefault().actionSave);
+        final saveWidget = tester.widget<LayrzButton>(
+          find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+        );
+        expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+        await tester.tap(saveButton);
+        await tester.pumpAndSettle();
+
+        expect(callCount, 1);
+        expect(
+          saved,
+          const LayrzMonthRange(start: LayrzMonth(year: 2026, month: 2), end: LayrzMonth(year: 2026, month: 6)),
+        );
+      });
+
       guardedTestWidgets('re-tapping an endpoint picks it up and makes it movable', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;

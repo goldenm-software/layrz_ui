@@ -176,6 +176,46 @@ void main() {
       expect(reported.single.hour, 10);
       expect(reported.single.minute, 15);
     });
+
+    // DESIGN-98 regression (see LayrzDateTimeInput's identical test for the
+    // maintainer's report this guards against): Save must already be
+    // enabled and functional the moment the drawer opens on a pre-existing
+    // value, with zero interaction -- not just after a field edit.
+    guardedTestWidgets('Save is already enabled on open when value is already set, with zero interaction', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final reported = <LayrzTimeOfDay>[];
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 9, minute: 30),
+            onChanged: reported.add,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no edit has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(reported, [const LayrzTimeOfDay(hour: 9, minute: 30)]);
+    });
   });
 
   group('LayrzTimeInput — involuntary close discards uncommitted draft state', () {

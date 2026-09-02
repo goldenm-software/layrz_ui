@@ -195,6 +195,49 @@ void main() {
         expect(find.text('October'), findsNothing);
       });
 
+      // DESIGN-98 regression (see LayrzDateTimeInput's identical test for
+      // the maintainer's report this guards against). Save must already be
+      // enabled the moment the drawer opens on a pre-existing value, with
+      // zero interaction -- not just after a fresh in-drawer tap.
+      guardedTestWidgets('Save is already enabled on open when value is already set, with zero interaction', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        LayrzMonth? committed;
+        var callCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzMonthInput(
+            labelText: 'Month',
+            value: const LayrzMonth(year: 2026, month: 1),
+            onChanged: (m) {
+              callCount++;
+              committed = m;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        final saveButton = findButtonLabel('Save');
+        expect(saveButton, findsOneWidget);
+        final saveWidget = tester.widget<LayrzButton>(
+          find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+        );
+        expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+        await tester.tap(saveButton);
+        await tester.pumpAndSettle();
+
+        expect(callCount, 1);
+        expect(committed, const LayrzMonth(year: 2026, month: 1));
+      });
+
       guardedTestWidgets('year chevrons change the displayed year without committing or closing', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;

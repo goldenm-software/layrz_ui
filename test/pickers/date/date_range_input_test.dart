@@ -415,6 +415,88 @@ void main() {
 
       expect(find.text('2026-09-05 – 2026-09-10'), findsOneWidget);
     });
+
+    // DESIGN-98 regression: the maintainer reported Save rendering disabled
+    // on reopen even though a range was already committed, forcing a
+    // re-selection to "unstick" it. Every existing Save-commits test above
+    // builds its selection fresh via taps; none reopens on an
+    // already-complete `value` and presses Save with zero interaction. This
+    // is that missing case.
+    guardedTestWidgets('Save is already enabled on open when value is already complete, with zero interaction', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      LayrzDateRange? changed;
+      var changeCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateRangeInput(
+          labelText: 'Range',
+          value: LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)),
+          onChanged: (r) {
+            changed = r;
+            changeCount++;
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(changeCount, 1);
+      expect(changed, LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)));
+      expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
+    });
+
+    // Finding 4: "the reset button should be placed with the actions...
+    // applies to all fields with the endDrawer" (the maintainer's words,
+    // reported against LayrzDurationInput but ruled to apply here too).
+    // Asserts Clear is genuinely OUTSIDE the drawer's scrolling body -- not
+    // merely that it renders somewhere, which a floating-in-body footer
+    // would also satisfy.
+    guardedTestWidgets('Clear renders outside the scrolling body, in the pinned actions row (Finding 4)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateRangeInput(
+          labelText: 'Range',
+          value: LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final clearButton = findButtonLabel(const LayrzUiL10nDefault().pickerRangeReset);
+      expect(clearButton, findsOneWidget);
+
+      final scrollFinder = find.byType(SingleChildScrollView);
+      expect(scrollFinder, findsOneWidget);
+      expect(
+        find.descendant(of: scrollFinder, matching: clearButton),
+        findsNothing,
+        reason: 'Clear must be pinned to the drawer actions row, not composed into the scrolling body',
+      );
+    });
   });
 
   group('LayrzDateRangeInput — Save commits, Cancel reverts, both close (mobile, compact viewport)', () {

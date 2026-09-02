@@ -159,6 +159,34 @@ void main() {
       expect(findButtonLabel('Save'), findsOneWidget);
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
+
+    // DESIGN-98 Finding 5: "title should be the labelText of the input" --
+    // before this, labelText only ever reached the drawer as `semanticLabel`
+    // (screen-reader only, no visible rendering). This asserts the drawer
+    // genuinely paints a visible title now, not merely that some text
+    // matching the label happens to exist somewhere on screen.
+    guardedTestWidgets('the drawer shows labelText as a visible title (Finding 5)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(tester, LayrzDateInput(labelText: 'Preferred date'));
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      // The closed anchor's own label renders as a RichText (button-style
+      // chrome, matched by findButtonLabel), while the drawer's title is a
+      // plain Text -- find.text matches only the latter, so a single hit
+      // here confirms the title itself paints "Preferred date", not just
+      // that the string appears somewhere via the anchor.
+      expect(find.text('Preferred date'), findsOneWidget);
+      // The drawer content (day grid) has no cell or heading spelling out
+      // the full label, so the only source of a *second* match for the bare
+      // "Preferred date" string is the anchor's own RichText -- confirming
+      // the title is additional, not a relocation.
+      expect(findButtonLabel('Preferred date'), findsWidgets);
+    });
   });
 
   group('LayrzDateInput — errors', () {
@@ -389,6 +417,49 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('2026-09-20'), findsOneWidget);
+    });
+
+    // DESIGN-98 regression (see LayrzDateTimeInput's identical test for the
+    // maintainer's report this guards against): Save must already be
+    // enabled the moment the drawer opens on a pre-existing value, with zero
+    // interaction -- not just after a fresh in-drawer selection.
+    guardedTestWidgets('Save is already enabled on open when value is already set, with zero interaction', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      DateTime? changed;
+      var changeCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(
+          labelText: 'Date',
+          value: DateTime(2026, 9, 1),
+          onChanged: (d) {
+            changed = d;
+            changeCount++;
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(changeCount, 1);
+      expect(changed, DateTime(2026, 9, 1));
     });
   });
 

@@ -118,7 +118,12 @@ void main() {
       // "Time" tab to select.
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
       expect(find.byType(EditableText), findsWidgets);
-      expect(findButtonLabel('When'), findsOneWidget);
+      // Finding 5: the drawer now also renders `labelText` as its visible
+      // title (see LayrzDateTimeInput._openDesktopDrawer), so "When" appears
+      // twice while the drawer is open -- once on the anchor field behind
+      // it, once as the drawer's own title. `findsWidgets` (not
+      // `findsOneWidget`) reflects that intentionally.
+      expect(findButtonLabel('When'), findsWidgets);
     });
   });
 
@@ -200,6 +205,46 @@ void main() {
 
       expect(changed, DateTime(2026, 9, 15, 8, 0));
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
+    });
+
+    // DESIGN-98 regression: the maintainer reported Save rendering DISABLED
+    // on reopen even though a datetime was already visibly selected --
+    // "pressing save didn't update anything, I was forced to re-open to
+    // set." Every Save-commits test above builds date+time fresh via taps;
+    // none reopens on an already-complete `value` and presses Save with zero
+    // interaction. This is that missing case.
+    guardedTestWidgets('Save is already enabled on open when value is already complete, with zero interaction', (
+      tester,
+    ) async {
+      setWide(tester);
+      DateTime? changed;
+      var changeCount = 0;
+      await pumpThemedApp(
+        tester,
+        LayrzDateTimeInput(
+          labelText: 'When',
+          value: DateTime(2026, 9, 1, 8, 0),
+          onChanged: (v) {
+            changed = v;
+            changeCount++;
+          },
+        ),
+      );
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(changeCount, 1);
+      expect(changed, DateTime(2026, 9, 1, 8, 0));
     });
 
     guardedTestWidgets('Cancel reverts and closes without reporting anything', (tester) async {

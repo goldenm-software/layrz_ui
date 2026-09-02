@@ -737,6 +737,54 @@ void main() {
       expect(callCount, 0);
       expect(find.byType(LayrzDateTimeRangeSurface), findsNothing);
     });
+
+    // DESIGN-98 regression: the maintainer reported the same "update value"
+    // issue on this widget as on LayrzDateTimeInput -- Save not committing,
+    // forcing a re-open. Every Save-commits test above builds the range and
+    // both time clusters fresh via taps; none reopens on an
+    // already-complete (startValue, endValue) pair and presses Save with
+    // zero interaction. This is that missing case.
+    guardedTestWidgets('Save is already enabled on open when value is already complete, with zero interaction', (
+      tester,
+    ) async {
+      setWide(tester);
+      var callCount = 0;
+      DateTime? savedStart;
+      DateTime? savedEnd;
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzDateTimeRangeInput(
+            labelText: 'Trip',
+            startValue: DateTime(2026, 9, 5, 9, 0),
+            endValue: DateTime(2026, 9, 10, 17, 0),
+            onChanged: (s, e) {
+              callCount++;
+              savedStart = s;
+              savedEnd = e;
+            },
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must already be enabled -- no tap has happened yet.');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(callCount, 1);
+      expect(savedStart, DateTime(2026, 9, 5, 9, 0));
+      expect(savedEnd, DateTime(2026, 9, 10, 17, 0));
+      expect(find.byType(LayrzDateTimeRangeSurface), findsNothing);
+    });
   });
 
   group('LayrzDateTimeRangeInput — Save commits, Cancel reverts, both close (mobile, compact viewport)', () {
