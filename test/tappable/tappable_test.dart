@@ -353,10 +353,15 @@ void main() {
         }
       });
 
-      testWidgets('fires onTap exactly once for a double-tap, not twice', (WidgetTester tester) async {
+      testWidgets('collapseDoubleTap defaults to true: a rapid double-tap still fires onTap once', (
+        WidgetTester tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
         try {
-          // Arrange
+          // Arrange — no collapseDoubleTap argument passed, exercising the default.
           int tapCount = 0;
           await pumpThemed(
             tester,
@@ -374,9 +379,162 @@ void main() {
           await tester.tap(finder);
           await tester.pumpAndSettle();
 
-          // Assert — a double-tap on an active LayrzTappable must resolve as a
-          // single logical activation, not fire the callback once per physical tap.
+          // Assert — this is the behaviour all 11 existing consumers rely on
+          // and must keep seeing: a double-tap on an active LayrzTappable
+          // resolves as a single logical activation.
           expect(tapCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('collapseDoubleTap: false delivers one onTap call per physical tap, not swallowed', (
+        WidgetTester tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange
+          int tapCount = 0;
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () => tapCount++,
+              collapseDoubleTap: false,
+              child: const Text('Tap Me'),
+            ),
+          );
+          final finder = find.text('Tap Me');
+
+          // Act — two taps within the double-tap window, as a real double-tap
+          // gesture would be interpreted by the platform.
+          await tester.tap(finder);
+          await tester.pump(kDoubleTapMinTime);
+          await tester.tap(finder);
+          await tester.pumpAndSettle();
+
+          // Assert — with the cooldown opted out of, both physical taps
+          // deliver their own onTap call. This is the fix for the defect
+          // where a second tap on the same instance within the cooldown
+          // window was dropped -- e.g. a date-range picker cell tapped twice
+          // in quick succession to first complete a range then re-pick up
+          // that same endpoint.
+          expect(tapCount, 2);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets('collapseDoubleTap: false still fires exactly once for a single, non-repeated tap', (
+        WidgetTester tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange
+          int tapCount = 0;
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () => tapCount++,
+              collapseDoubleTap: false,
+              child: const Text('Tap Me'),
+            ),
+          );
+
+          // Act
+          await tester.tap(find.text('Tap Me'));
+          await tester.pumpAndSettle();
+
+          // Assert
+          expect(tapCount, 1);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+
+      testWidgets(
+        'three taps on one instance with only tester.pump() between them: '
+        'true collapses to one call, false delivers three',
+        (WidgetTester tester) async {
+          tester.view.physicalSize = const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+          debugDefaultTargetPlatformOverride = TargetPlatform.android;
+          try {
+            // Arrange — the minimal acceptance case surfaced against the picker
+            // day-grid cells: repeated taps on one instance separated only by a
+            // bare tester.pump() (no explicit inter-tap delay), which is the
+            // exact pattern the reviewer-scenario picker test uses. Asserting
+            // both directions proves the flag is actually read, rather than
+            // the widget always taking one branch regardless of its value.
+            int collapsedCount = 0;
+            int uncollapsedCount = 0;
+            await pumpThemed(
+              tester,
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayrzTappable(onTap: () => collapsedCount++, child: const Text('Collapsed')),
+                  LayrzTappable(
+                    onTap: () => uncollapsedCount++,
+                    collapseDoubleTap: false,
+                    child: const Text('Uncollapsed'),
+                  ),
+                ],
+              ),
+            );
+
+            // Act
+            for (var i = 0; i < 3; i++) {
+              await tester.tap(find.text('Collapsed'));
+              await tester.pump();
+            }
+            for (var i = 0; i < 3; i++) {
+              await tester.tap(find.text('Uncollapsed'));
+              await tester.pump();
+            }
+
+            // Assert
+            expect(collapsedCount, 1, reason: 'collapseDoubleTap: true (default) must swallow the repeats');
+            expect(uncollapsedCount, 3, reason: 'collapseDoubleTap: false must deliver every discrete tap');
+          } finally {
+            debugDefaultTargetPlatformOverride = null;
+          }
+        },
+      );
+
+      testWidgets('collapseDoubleTap: false leaves no pending Timer behind', (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange — regression guard for the timer-leak failure mode found
+          // while evaluating a gesture-recognizer-based alternative to this
+          // flag: with collapseDoubleTap false, _handleTap never starts the
+          // cooldown Timer at all, so a bare tester.pump() (not
+          // pumpAndSettle) after the tap must not trip Flutter's
+          // end-of-test "a Timer is still pending" invariant.
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () {},
+              collapseDoubleTap: false,
+              child: const Text('Tap Me'),
+            ),
+          );
+
+          // Act
+          await tester.tap(find.text('Tap Me'));
+          await tester.pump();
+
+          // Assert — reaching here without the test framework's pending-timer
+          // assertion firing at teardown is the assertion.
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
@@ -415,6 +573,76 @@ void main() {
         } finally {
           debugDefaultTargetPlatformOverride = null;
         }
+      });
+
+      testWidgets('a secondary-button tap fires onSecondaryTap only, never onTap', (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+        debugDefaultTargetPlatformOverride = TargetPlatform.android;
+        try {
+          // Arrange — onTap and onSecondaryTap are mutually exclusive per tap:
+          // a secondary-button (right) click must resolve as onSecondaryTap
+          // alone, never onTap as well.
+          int tapCount = 0;
+          int secondaryTapCount = 0;
+          await pumpThemed(
+            tester,
+            LayrzTappable(
+              onTap: () => tapCount++,
+              onSecondaryTap: () => secondaryTapCount++,
+              child: const Text('Tap Me'),
+            ),
+          );
+
+          // Act
+          await tester.tap(find.text('Tap Me'), buttons: kSecondaryButton);
+          await tester.pumpAndSettle();
+
+          // Assert
+          expect(secondaryTapCount, 1);
+          expect(tapCount, 0);
+        } finally {
+          debugDefaultTargetPlatformOverride = null;
+        }
+      });
+    });
+
+    group('geometry stability across states (D15)', () {
+      testWidgets('hover and press states do not change the widget size', (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        // Arrange
+        await pumpThemed(
+          tester,
+          LayrzTappable(
+            onTap: () {},
+            child: Container(width: 100, height: 40, color: const Color(0xFF00FF00)),
+          ),
+        );
+        final finder = find.byType(LayrzTappable);
+        final idleSize = tester.getSize(finder);
+
+        // Act — hover.
+        final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await gesture.addPointer(location: tester.getCenter(finder));
+        addTearDown(gesture.removePointer);
+        await tester.pump();
+        final hoveredSize = tester.getSize(finder);
+
+        // Act — press.
+        await gesture.down(tester.getCenter(finder));
+        await tester.pump();
+        final pressedSize = tester.getSize(finder);
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // Assert — per decision D15, only colour/border/shadow/opacity/cursor
+        // vary across interaction states; geometry never does.
+        expect(hoveredSize, idleSize);
+        expect(pressedSize, idleSize);
       });
     });
   });

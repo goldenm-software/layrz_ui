@@ -67,6 +67,11 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// - [pressedColor]: the surface color when pressed. Defaults to null, which uses
 ///   [LayrzTokens.colors.sf3] (the third surface level). When non-null, overrides
 ///   the token-based pressed color.
+/// - [collapseDoubleTap]: whether a double-tap is collapsed into a single [onTap]
+///   call via the cooldown described above. Defaults to true. Set to false when
+///   re-tapping the *same* target in quick succession is itself a legitimate,
+///   distinct gesture that must not be swallowed -- see [collapseDoubleTap] for
+///   the concrete case this exists for.
 class LayrzTappable extends StatefulWidget {
   /// The widget to be wrapped with the tapable treatment.
   final Widget child;
@@ -116,6 +121,25 @@ class LayrzTappable extends StatefulWidget {
   /// When non-null, overrides the token-based pressed color.
   final Color? pressedColor;
 
+  /// Whether a double-tap is collapsed into a single [onTap] call.
+  ///
+  /// Defaults to true, matching the double-tap cooldown documented on the class:
+  /// without it, a double-tap fires the underlying [GestureDetector]'s `onTap`
+  /// twice -- once per physical tap, since nothing puts a [DoubleTapGestureRecognizer]
+  /// in the gesture arena to make the two taps resolve as one gesture. That
+  /// collapsing is correct for the overwhelming majority of tappable surfaces
+  /// (buttons, rows, list items), where a double-tap should read as a single
+  /// activation, not two.
+  ///
+  /// Set to false when re-tapping the *same* target in quick succession is itself
+  /// a legitimate, distinct gesture rather than an accidental double-tap -- for
+  /// example, a date-range picker calendar cell: a user first taps a cell to
+  /// complete a range, then taps that same cell again, in quick succession, to
+  /// pick it back up as the movable endpoint. With the default cooldown, that
+  /// second tap is silently swallowed and the pick-up never happens. With this
+  /// set to false, every discrete tap delivers its own [onTap] call.
+  final bool collapseDoubleTap;
+
   /// Creates a new [LayrzTappable].
   ///
   /// All parameters except [child] are optional.
@@ -130,6 +154,7 @@ class LayrzTappable extends StatefulWidget {
     this.color,
     this.hoverColor,
     this.pressedColor,
+    this.collapseDoubleTap = true,
   });
 
   @override
@@ -224,14 +249,21 @@ class _LayrzTappableState extends State<LayrzTappable> {
     });
   }
 
-  /// Invokes [LayrzTappable.onTap] at most once per [kDoubleTapTimeout] window.
+  /// Invokes [LayrzTappable.onTap], applying the double-tap cooldown only when
+  /// [LayrzTappable.collapseDoubleTap] is true.
   ///
-  /// Without this, a double-tap fires the underlying [GestureDetector]'s
+  /// Without the cooldown, a double-tap fires the underlying [GestureDetector]'s
   /// `onTap` twice -- once per physical tap, since nothing puts a
   /// [DoubleTapGestureRecognizer] in the gesture arena to make the two taps
   /// resolve as one gesture. See [_doubleTapCooldown] for why this is a
-  /// [Timer]-based cooldown rather than an `onDoubleTap` recognizer.
+  /// [Timer]-based cooldown rather than an `onDoubleTap` recognizer. When
+  /// [LayrzTappable.collapseDoubleTap] is false, that swallowing is skipped
+  /// entirely and every physical tap delivers its own [LayrzTappable.onTap] call.
   void _handleTap() {
+    if (!widget.collapseDoubleTap) {
+      widget.onTap?.call();
+      return;
+    }
     if (_doubleTapCooldown != null) return;
     widget.onTap?.call();
     _doubleTapCooldown = Timer(kDoubleTapTimeout, () => _doubleTapCooldown = null);

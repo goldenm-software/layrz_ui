@@ -131,6 +131,11 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
             // [Container]'s margin/size never changes.
             child: LayrzTappable(
               onTap: isInert ? null : onTap,
+              // Same reasoning as LayrzPickersDayGridCell: a completed
+              // range's endpoint month is re-tapped in quick succession to
+              // pick it back up as the movable endpoint, which the default
+              // double-tap cooldown would otherwise swallow on this cell.
+              collapseDoubleTap: false,
               borderRadius: tokens.radius.br2,
               child: Container(
                 alignment: Alignment.center,

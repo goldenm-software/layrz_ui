@@ -180,6 +180,12 @@ class LayrzPickersDayGridCell extends StatelessWidget {
             // state; this cell's 32x32 box never changes size.
             child: LayrzTappable(
               onTap: isInert ? null : onTap,
+              // A completed range's endpoint is re-tapped in quick succession
+              // to pick it back up as the movable endpoint (see the reviewer
+              // scenario in date_range_surface_test.dart) -- the default
+              // double-tap cooldown would swallow that second tap on the
+              // same cell, so it is opted out of here.
+              collapseDoubleTap: false,
               borderRadius: BorderRadius.circular(16.0),
               child: Container(
                 width: 32.0,
