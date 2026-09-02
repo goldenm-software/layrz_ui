@@ -2,8 +2,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/pickers/src/shared/focus_ring.dart';
 import 'package:layrz_ui/src/pickers/src/shared/grid_keyboard_handler.dart';
 import 'package:layrz_ui/src/pickers/src/shared/month_grid.dart';
+import 'package:layrz_ui/src/pickers/src/shared/month_grid_cell.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
@@ -462,6 +464,111 @@ void main() {
       await tester.pump();
 
       expect(selectCount, 0);
+    });
+  });
+
+  group('LayrzPickersMonthGrid — focus ring (D15 geometry compliance)', () {
+    guardedTestWidgets('a focused month cell has an identical size to when unfocused', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final cellFinder = find.ancestor(
+        of: find.text('March'),
+        matching: find.byType(LayrzPickersMonthGridCell),
+      );
+      final unfocusedSize = tester.getSize(cellFinder);
+
+      _focusMonth(tester, 'March');
+      await tester.pump();
+      expect(WidgetsBinding.instance.focusManager.primaryFocus?.hasFocus, isTrue);
+
+      final focusedSize = tester.getSize(cellFinder);
+
+      expect(
+        focusedSize,
+        unfocusedSize,
+        reason: 'D15: LayrzFocusRing must never change the wrapped month cell\'s own size.',
+      );
+    });
+
+    guardedTestWidgets("the focus ring's overlay box matches the focused cell's box exactly", (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      _focusMonth(tester, 'March');
+      await tester.pump();
+      expect(WidgetsBinding.instance.focusManager.primaryFocus?.hasFocus, isTrue);
+
+      final ringFinder = find.ancestor(
+        of: find.text('March'),
+        matching: find.byType(LayrzFocusRing),
+      );
+      final cellFinder = find.ancestor(
+        of: find.text('March'),
+        matching: find.byType(LayrzPickersMonthGridCell),
+      );
+
+      expect(tester.getRect(ringFinder), tester.getRect(cellFinder));
+    });
+
+    guardedTestWidgets('a visible border paints only on the focused cell, not on its neighbours', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+
+      // A displayedYear far from the real current year, so no cell renders
+      // the separate "today" ring (LayrzPickersMonthGridCell's own
+      // Border.all for LayrzPickerCellRole.today) -- this test isolates
+      // LayrzFocusRing's border specifically, not the cell's independent
+      // today-marker border.
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2099,
+          onYearChanged: (_) {},
+          reference: DateTime(2099),
+          onMonthTap: (_) {},
+        ),
+        theme: theme,
+      );
+
+      _focusMonth(tester, 'March');
+      await tester.pump();
+      await tester.pump();
+      expect(WidgetsBinding.instance.focusManager.primaryFocus?.hasFocus, isTrue);
+
+      final decoratedBoxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
+      final borderedBoxes = decoratedBoxes.where((box) => (box.decoration as BoxDecoration).border != null).toList();
+
+      // Exactly one ring paints a border -- the focused cell's own, not any
+      // of the other eleven months'.
+      expect(borderedBoxes, hasLength(1));
+      final decoration = borderedBoxes.single.decoration as BoxDecoration;
+      expect(decoration.border!.top.color, theme.tokens.colors.primary.shade500);
     });
   });
 }

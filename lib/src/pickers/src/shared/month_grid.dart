@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 
 import 'day_grid.dart' show LayrzGridKeyboardHandler, kDayGridMaxWidth;
 import 'day_grid_cell.dart' show LayrzPickerCellRole;
+import 'focus_ring.dart';
 import 'grid_math.dart';
 import 'month_grid_cell.dart';
 
@@ -18,6 +19,11 @@ import 'month_grid_cell.dart';
 /// Shares [LayrzPickersDayGridCell]'s selected/today/range/disabled
 /// vocabulary via [LayrzPickersMonthGridCell] and the same
 /// [LayrzGridKeyboardHandler] injectable keyboard seam as the day grid.
+///
+/// **Visible keyboard focus**, same as [LayrzPickersDayGrid]: each cell is
+/// wrapped in a [LayrzFocusRing] listening to that cell's own [FocusNode],
+/// so arrow-key navigation is visible (WCAG 2.4.7) and not merely
+/// functional — see [LayrzFocusRing]'s own D15 compliance doc.
 class LayrzPickersMonthGrid extends StatefulWidget {
   /// The year currently displayed.
   final int displayedYear;
@@ -218,14 +224,17 @@ class _LayrzPickersMonthGridState extends State<LayrzPickersMonthGrid> {
                                           month,
                                           (key) => _focusNodeFor(key).requestFocus(),
                                         ),
-                                  child: LayrzPickersMonthGridCell(
-                                    label: _monthLabel(month.month, l10n),
-                                    semanticLabel: '${_monthLabel(month.month, l10n)} ${month.year}',
-                                    role: _roleFor(month, today),
-                                    isDisabled: isDisabled,
-                                    isRejected: isRejected,
-                                    onTap: (isDisabled || isRejected) ? null : () => widget.onMonthTap(month),
+                                  child: LayrzFocusRing(
                                     focusNode: _focusNodeFor(month),
+                                    child: LayrzPickersMonthGridCell(
+                                      label: _monthLabel(month.month, l10n),
+                                      semanticLabel: '${_monthLabel(month.month, l10n)} ${month.year}',
+                                      role: _roleFor(month, today),
+                                      isDisabled: isDisabled,
+                                      isRejected: isRejected,
+                                      onTap: (isDisabled || isRejected) ? null : () => widget.onMonthTap(month),
+                                      focusNode: _focusNodeFor(month),
+                                    ),
                                   ),
                                 );
                               },
