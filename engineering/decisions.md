@@ -4741,3 +4741,229 @@ tri-fold-capable AVD profile becomes available, add the resulting device-level c
   split is the case this entry draws the boundary against, using D69's own cited precedent (the 0.0.14
   crash) as the shared reference point for what both decisions are actually protecting.
 
+---
+
+## D74: Amendment to D72 — `sameZoneDate`/`sameZoneDateTime` Exported for Picker Use (S5)
+
+**Date**: 2026-09-02
+**Status**: Decided (amends D72)
+**Category**: Component Scope / API Design
+
+### Context
+
+**D72** declined to make `LayrzCalendar` the shared base for the M4 date pickers, and along with that
+declined the calendar module's month-grid arithmetic as a shared extraction — pickers were to duplicate
+it rather than depend on `LayrzCalendar`'s internals.
+
+Building the M4 date/time/month pickers surfaced a defect that predates this batch:
+`lib/src/calendar/src/calendar_zone.dart` documents that every internal date computation in the
+calendar module used to read `.year`/`.month`/`.day` off a caller-supplied `DateTime` and feed those
+fields straight into the plain `DateTime(year, month, day)` constructor. That constructor **always**
+returns a value in the *host's local zone*, silently discarding whatever zone the original value
+carried — so a caller passing a `package:timezone` `TZDateTime` (which `extends DateTime` and is
+therefore accepted anywhere a `DateTime` parameter is declared) got silently re-anchored to the host's
+zone on every truncation. `sameZoneDate`/`sameZoneDateTime` were written to fix this: they preserve the
+subtype and `location` of whatever `DateTime` was passed in, and were **library-private** to the
+calendar module.
+
+The M4 pickers truncate dates to calendar-day granularity constantly — every day/month-grid cell,
+every "step displayed month by n" call, every range endpoint. Building this batch's day-grid and
+month-grid surfaces against the plain `DateTime` constructor would have reintroduced the exact same
+zone-dropping defect one level up, in new code. The defect was in fact caught and fixed during this
+batch in `lib/src/pickers/src/date/date_range_surface.dart` and
+`lib/src/pickers/src/datetime/datetime_range_surface.dart`, both of which now truncate and step through
+`sameZoneDate` instead of the plain constructor.
+
+The maintainer granted a narrow export of these two functions for picker use rather than have every
+picker surface re-implement the same subtype-preserving truncation logic independently.
+
+### Decision
+
+**`sameZoneDate` and `sameZoneDateTime` are exported from `lib/src/calendar/calendar.dart`** (the
+calendar module's public barrel) so picker code under `lib/src/pickers/` can consume them.
+
+**This exception is narrow and covers only these two utilities.** It does **not** reopen D72 for
+anything else: the month-grid arithmetic, day-of-week/week-number computation, range-selection state
+machine, and every other piece of calendar-adjacent logic remain independently implemented in
+`lib/src/pickers/`, exactly as D72 required. `LayrzCalendar` itself gains no new picker-facing surface
+from this — its own internals still call these functions the same way they always did; only the export
+boundary moved.
+
+### Rationale
+
+D72's reasoning was scope discipline against `LayrzCalendar` absorbing picker-only concerns (a
+selection model, picker-specific chrome) that would grow the display surface for a use case it does not
+itself need. `sameZoneDate`/`sameZoneDateTime` are not picker-only concerns growing onto the calendar —
+they are a correctness fix for date-truncation arithmetic that both the calendar and the pickers need
+identically, already written, already tested against the calendar's own consumers, and with a **known,
+demonstrated defect** on the other side of not sharing it (the two range-surface bugs this batch fixed).
+Duplicating month-grid *arithmetic* is cheap, per D72's own rationale; duplicating a *zone-preservation
+bugfix* is not cheap — it is re-introducing a bug that was already found and fixed once.
+
+### Consequences
+
+- `lib/src/calendar/calendar.dart` exports `src/calendar_zone.dart`. This is the only surface-level
+  change D72 did not already anticipate.
+- Every picker call site that truncates or steps a `DateTime` to day/month granularity from a caller
+  value must go through `sameZoneDate`/`sameZoneDateTime`, never the plain `DateTime(...)` constructor
+  directly — see `date_range_surface.dart:90-97` and `datetime_range_surface.dart:128-135` for the
+  pattern, and their doc comments for the specific bug each fixes.
+- **A future reader must not treat this export as reopening D72's boundary in general.** No further
+  calendar-module internals (grid arithmetic, selection state, chrome) are shared with pickers as a
+  result of this entry. If a future change wants to share something else across the boundary, that is a
+  new decision, argued on its own merits — this entry does not set that precedent.
+
+### Related Decisions
+
+- **D72**: The decision this entry amends. D72's core ruling (no shared base, no shared chrome, no
+  selection-model extraction) is otherwise untouched.
+
+---
+
+## D75: M4 DateTime Pickers Batch — Container, Commit Boundary, No `intl`, Typed Ranges, Contiguity
+Policy, Endpoint-Adjust Selection
+
+**Date**: 2026-09-02
+**Status**: Decided
+**Category**: Component Scope / API Design / Interaction Design
+
+### Context
+
+This entry records the settled calls made by the maintainer across the M4 date/time/month picker
+batch — eight public widget classes covering nine Notion rows (DESIGN-45, 46, 47, 48/new,
+49 with 51 collapsed in, 50, 52, 53; DESIGN-41 `LayrzMultiSelectInput` excluded, its own batch) —
+so the reasoning behind this batch's shape is recorded once rather than reconstructed from the
+diff by a future reader.
+
+### Decisions
+
+**One container for the whole family.** Every picker surfaces through the same adaptive container:
+anchored panel (`LayrzAnchoredPanel`) at ≥960px, `LayrzBottomSheet` below 960px, per D52/D70. **No
+dialog variant for any picker**, despite the old layrz_theme month picker (`ThemedMonthRangePicker`)
+having been a dialog — the old dialog chrome (rounded panel, header, Cancel/Save footer) is read as
+"the 4×3 month grid and its footer actions," not as "must be a dialog route."
+
+**The commit boundary is "one atomic value vs. multiple coordinated parts" — not single-valued vs.
+range.** Three widgets commit on tap, no Save step at all: `LayrzDateInput`, `LayrzTimeInput`,
+`LayrzMonthInput`. Five widgets carry in-panel Cancel/Save: `LayrzDateRangeInput`,
+`LayrzTimeRangeInput`, `LayrzDateTimeInput`, `LayrzDateTimeRangeInput`, `LayrzMonthRangeInput`.
+Notably, **`LayrzDateTimeInput` is single-valued *by type* (`DateTime?`) and still carries Save** —
+its value is one `DateTime`, but committing it requires the date part and the time part to both be
+genuinely set, which is a multi-part commit exactly like a range's two endpoints. A widget's value
+type is what misleads a reader into guessing its commit model; the number of coordinated parts a
+single Save/tap must reconcile is the actual rule. Each picker must be **visually self-consistent
+about its commit model from the first frame** — a user must never have to guess whether a tap already
+committed a value.
+
+**No silent defaults.** A time part the user never touched is never committed on the caller's behalf;
+Save stays **disabled** until every part the widget needs is genuinely set by the user. Concretely:
+midnight (`00:00`) defaults were removed from both `LayrzDateTimeInput` and
+`LayrzDateTimeRangeInput`'s time parts, and the old `9:00`–`17:00` default was removed from
+`LayrzTimeRangeInput`. All three removals follow the same reasoning: defaulting a value the user never
+chose is exactly the silent-value problem the Save boundary exists to prevent, so a default that
+bypasses it defeats the boundary's own purpose.
+
+**No `intl`.** All date/time formatting goes through a house `strftime`-style formatter
+(`lib/src/formatting/`, public API), taking Python `strftime` directives — `%Y %y %m %d %H %I %M %S
+%B %b %A %a %p %j %%` — because that is the formatting convention already standard across the team's
+stack, not because of any technical limitation in `intl`. Malformed or unsupported directives **pass
+through literally and never throw** — a deliberate compatibility commitment, since the formatter is
+public API and a throwing formatter would be a breaking hazard for every caller-supplied pattern
+string. **`strptime`-style parsing is deliberately not provided**: every picker in this batch has a
+read-only text anchor and commits only from a tap or a Save action, so there is no free-text input to
+parse back into a `DateTime` — providing a parser would be unused surface area. **Migration
+continuity**: `strftime` directives are what the old layrz_theme pickers already used, so consumers
+porting from `ThemedDatePicker`/`ThemedDateRangePicker`/etc. keep their existing `'%Y-%m-%d'`-style
+format strings working unchanged — the one place in this batch where the old API is preserved rather
+than broken.
+
+**Typed range classes, not a runtime-asserted list.** `LayrzDateRange` and `LayrzMonthRange` are
+immutable classes with **non-nullable** `start`/`end` fields, replacing the old layrz_theme shape of a
+`List<DateTime>` runtime-asserted to have exactly two elements. Explicit non-goal: **no library-wide
+generic range type** (e.g. `LayrzRange<T>`). Each range type is scoped to this batch and shaped for its
+own domain.
+
+**Contiguity is a policy object, with two concrete classes behind one interface — not one generic
+class.** `LayrzContiguousRangePolicy` and `LayrzArbitraryRangePolicy` implement a shared policy
+interface. These are not the same policy parameterized differently: contiguous-date selection needs
+calendar-day adjacency (stepping across leap years and month-length boundaries) that arbitrary-month
+selection has no equivalent for at all — arbitrary selection needs only set membership, no adjacency
+concept whatsoever. The domains differ in kind, not merely in the type parameter, which is why this is
+two classes rather than one generic one.
+
+**Range selection uses the endpoint-adjust model. The old "interior locked, only endpoints
+deselectable" model, as documented in the old layrz_theme month-range picker's own docs, is
+RETIRED.** Verified against the old pickers before retiring it: that "interior locked" language
+appears twice in the old month-range picker's documentation and **not at all** in the old date-range
+picker's documentation — so it was a month-specific behavior in the old family, never a date-range
+behavior, and this batch does not need to preserve it as a cross-widget contract. The retained model,
+applied uniformly across every range widget in this batch:
+
+- Empty → tap sets the anchor (first endpoint).
+- Anchor → a second tap completes the range, auto-swapping start/end if the second tap lands before
+  the anchor (so the user never has to tap in chronological order).
+- Complete → **re-tapping either endpoint adjusts that edge**, the other edge stays fixed — this
+  replaces the old "endpoints only, interior locked" rule with "either single endpoint is directly
+  redraggable via re-tap."
+- Complete → a tap on an **interior cell is visibly rejected**. Locked interior cells are styled
+  persistently non-interactive **from the moment a range exists** (not only after a rejected tap), so
+  a user reads them as locked before ever tapping one — silent rejection (no visible reaction to the
+  tap) reads as a broken app and is not acceptable.
+- Complete → a tap **outside** the current range extends the nearer endpoint toward the tapped cell.
+
+Per D15, all of this feedback — the locked-interior styling and the rejection reaction — is
+**colour/opacity/cursor only, never a geometry change**.
+
+**Only month range allows non-consecutive (arbitrary) selection.** Every other range widget in this
+library (date, time, datetime) is contiguous-only. This was an explicit, direct requirement from the
+maintainer, not inferred from the old widgets' behavior.
+
+**The validation-vs-selection-surface general rule.** Anything shaped like "is this value or range
+*valid*" — range-length limits, restricted/blacked-out time windows, disabled weekdays, and any future
+ask in the same shape — is a **validation and `errors` concern, owned by the caller via the existing
+`errors` parameter, not a selection-surface concern** the picker widget itself should encode. This
+batch's range-length-limit and restricted-time-window asks were both ruled out of scope on this
+basis. Recorded here once so a future "can the picker disable X" question is answered by this rule
+rather than re-litigated per widget.
+
+**`firstDayOfWeek` defaults to Monday**, a deliberate difference from `LayrzCalendar`'s Sunday
+default — the two components are allowed to diverge on this because they serve different reference
+material (the M4 picker screenshot reference is Monday-first) and D72 already established they share
+no base to keep consistent.
+
+**Keyboard: WCAG 2.1.1 Level A is required, not optional**, matching the library's existing
+accessibility bar rather than being treated as picker-specific scope. In the day/month grids: arrow
+keys move focus, Enter/Space selects the focused cell, Page Up/Down changes the displayed
+month/period. In the time text fields: **Up/Down arrows step the field's value; Left/Right keep
+normal text-caret movement** — `LayrzNumberInput` already owns all text-field key handling for these
+fields, and only the vertical arrows are overridden for the step behavior, so horizontal caret
+movement and text selection inside the field are unaffected.
+
+**24-hour format by default; 12-hour format supported** as an explicit opt-in, not the default.
+
+**Time entry is text fields only — no clock face, dial, or spinner affordance of any kind.** The
+maintainer was emphatic on this point in the original request ("I just want fields, not a clock,
+fields please"). `showSeconds` toggles the seconds field's visibility **without any layout reflow**
+of the surrounding fields, per D15.
+
+**`LayrzInputChrome` remained frozen throughout this batch.** No parameter was added to it and no
+change was made to its layout, despite eight new input widgets being built against it concurrently.
+Recorded here as evidence that the frozen-chrome constraint (see `CLAUDE.md`'s rule on
+`LayrzInputChrome`) held under real, sustained pressure from a large batch, not only in theory.
+
+### Related Decisions
+
+- **D52 / D70**: Establish the anchored-panel/bottom-sheet adaptive container this batch's single
+  container decision reuses without modification.
+- **D34**: Caller-owned `errors`, which the validation-vs-selection-surface rule in this entry is a
+  direct application of.
+- **D53**: `LayrzSelectItem<T>` — not reused by this batch's grids directly, but the same
+  minimal-shared-type philosophy this entry's range-class non-goal follows.
+- **D63**: No input wraps another input; every field composes `LayrzInputChrome` directly — the
+  standing rule this batch's Notion `Primitive` field corrections (see the accompanying milestone-4
+  tracking) bring the record back into alignment with.
+- **D72 / D74**: `LayrzCalendar` remains independent of the picker family; D74 is the narrow,
+  explicitly bounded exception to that boundary this batch needed.
+- **D15**: Interaction-state feedback (locked-interior styling, rejected-tap reaction, `showSeconds`
+  toggle) stays colour/opacity/cursor only — applied throughout this entry.
+
