@@ -1,12 +1,9 @@
-import 'dart:ui' show Tristate;
-
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 
-import '../../helpers/find_button_label.dart';
 import '../../helpers/pump_themed_app.dart';
 
 /// Collects every semantics label under [tester]'s current tree.
@@ -30,25 +27,6 @@ List<String> dumpSemanticsLabels(WidgetTester tester) {
 
   walk(root);
   return labels;
-}
-
-/// Locates the [SemanticsNode] carrying [label] with `selected` reported,
-/// used to check which of the two tab headers is currently selected without
-/// relying on `find.bySemanticsLabel` (see this file's own doc above).
-SemanticsNode? findSemanticsNodeWithLabel(WidgetTester tester, String label) {
-  // ignore: deprecated_member_use
-  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
-  SemanticsNode? found;
-  void walk(SemanticsNode node) {
-    if (node.getSemanticsData().label == label) found = node;
-    node.visitChildren((child) {
-      walk(child);
-      return true;
-    });
-  }
-
-  walk(root);
-  return found;
 }
 
 Widget _bounded(Widget child) => SizedBox(width: 900, child: child);
@@ -174,7 +152,14 @@ void main() {
       }
     });
 
-    testWidgets('the tab strip reports which tab is selected via real semantics properties', (tester) async {
+    // DESIGN-49 removed the tab strip entirely -- the calendar and time
+    // fields are always both visible together in the drawer, so there is no
+    // longer a "Date"/"Time" tab pair whose selection semantics could be
+    // tested. See `datetime_presentation_test.dart` and
+    // `datetime_input_test.dart`'s "presentation is deprecated and ignored"
+    // group for the coverage that replaces these two removed tests.
+
+    testWidgets('the drawer route announces its own semantic label', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         tester.view.physicalSize = const Size(1600, 1200);
@@ -189,48 +174,20 @@ void main() {
         await tester.tap(find.byType(LayrzDateTimeInput));
         await tester.pumpAndSettle();
 
-        final dateNode = findSemanticsNodeWithLabel(tester, 'Date');
-        final timeNode = findSemanticsNodeWithLabel(tester, 'Time');
-        expect(dateNode, isNotNull);
-        expect(timeNode, isNotNull);
-        expect(dateNode!.getSemanticsData().flagsCollection.isSelected, Tristate.isTrue);
-        expect(timeNode!.getSemanticsData().flagsCollection.isSelected, Tristate.isFalse);
-
-        await tester.tap(findButtonLabel('Time'));
-        await tester.pumpAndSettle();
-
-        final dateNodeAfter = findSemanticsNodeWithLabel(tester, 'Date');
-        final timeNodeAfter = findSemanticsNodeWithLabel(tester, 'Time');
-        expect(dateNodeAfter!.getSemanticsData().flagsCollection.isSelected, Tristate.isFalse);
-        expect(timeNodeAfter!.getSemanticsData().flagsCollection.isSelected, Tristate.isTrue);
-      } finally {
-        handle.dispose();
-      }
-    });
-
-    testWidgets('the tab strip headers report as buttons', (tester) async {
-      final handle = tester.ensureSemantics();
-      try {
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
-
-        await pumpThemedApp(
-          tester,
-          _bounded(LayrzDateTimeInput(labelText: 'Meeting start')),
+        final labels = dumpSemanticsLabels(tester);
+        expect(
+          labels,
+          contains('Meeting start'),
+          reason:
+              'LayrzPickerDrawer.show is called with semanticLabel: '
+              'labelText, naming the route for screen readers',
         );
-
-        await tester.tap(find.byType(LayrzDateTimeInput));
-        await tester.pumpAndSettle();
-
-        final dateNode = findSemanticsNodeWithLabel(tester, 'Date');
-        expect(dateNode!.getSemanticsData().flagsCollection.isButton, isTrue);
       } finally {
         handle.dispose();
       }
     });
 
-    testWidgets('Save and Cancel are announced as buttons once the panel is open', (tester) async {
+    testWidgets('Save and Cancel are announced as buttons once the drawer is open', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         tester.view.physicalSize = const Size(1600, 1200);

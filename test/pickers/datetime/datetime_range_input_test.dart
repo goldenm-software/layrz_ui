@@ -1145,18 +1145,26 @@ void main() {
   });
 
   group('LayrzDateTimeRangeInput — viewport branch selection', () {
-    guardedTestWidgets('opens the anchored panel (not a bottom sheet route) at a wide viewport', (tester) async {
+    // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
+    // viewport -- desktop opens LayrzPickerDrawer, compact opens
+    // LayrzBottomSheet. Both container types push a route rather than
+    // mounting inline, so neither is present in the tree before the tap.
+    guardedTestWidgets('opens the drawer (fixed-width, not a bottom sheet) at a wide viewport', (tester) async {
       setWide(tester);
       await pumpThemedApp(tester, _bounded(LayrzDateTimeRangeInput(labelText: 'Trip')));
 
-      expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
+      expect(find.byType(LayrzAnchoredPanel), findsNothing);
+      expect(find.byType(LayrzDateTimeRangeSurface), findsNothing);
 
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
+
       expect(find.byType(LayrzDateTimeRangeSurface), findsOneWidget);
+      final surfaceWidth = tester.getSize(find.byType(LayrzDateTimeRangeSurface)).width;
+      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: 'the drawer is fixed-width, not the anchor\'s width');
     });
 
-    guardedTestWidgets('opens a bottom sheet route (not an anchored panel) below isCompact', (tester) async {
+    guardedTestWidgets('opens a bottom sheet route (not the drawer) below isCompact', (tester) async {
       setCompact(tester);
       await pumpThemedApp(tester, LayrzDateTimeRangeInput(labelText: 'Trip'));
 

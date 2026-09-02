@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -37,6 +38,9 @@ void main() {
 
     guardedTestWidgets('defaults presentation to tabbed and firstDayOfWeek to DateTime.monday', (tester) async {
       const widget = LayrzDateTimeInput(labelText: 'When');
+      // presentation is deprecated and ignored as of DESIGN-49 (see
+      // LayrzDateTimeInputPresentation's own doc) -- this only pins the
+      // default value has not silently changed, not that it does anything.
       expect(widget.presentation, LayrzDateTimeInputPresentation.tabbed);
       expect(widget.firstDayOfWeek, DateTime.monday);
     });
@@ -102,33 +106,26 @@ void main() {
       expect(find.text('custom-2026'), findsOneWidget);
     });
 
-    guardedTestWidgets('opens as an anchored panel at wide viewport, bottom sheet at compact', (tester) async {
+    guardedTestWidgets('opens in the drawer at wide viewport, showing the calendar and time fields together', (
+      tester,
+    ) async {
       setWide(tester);
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
+      // The calendar's month header and the time fields are both visible at
+      // once -- DESIGN-49 removed the tab strip, so there is no separate
+      // "Time" tab to select.
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      // No LayrzBottomSheet route should have been pushed.
+      expect(find.byType(EditableText), findsWidgets);
       expect(findButtonLabel('When'), findsOneWidget);
     });
   });
 
   group('LayrzDateTimeInput — save/cancel footer', () {
-    guardedTestWidgets('shows Cancel/Save from the first frame the panel opens (tabbed)', (tester) async {
+    guardedTestWidgets('shows Cancel/Save from the first frame the drawer opens', (tester) async {
       setWide(tester);
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-      expect(findButtonLabel('Save'), findsOneWidget);
-      expect(findButtonLabel('Cancel'), findsOneWidget);
-    });
-
-    guardedTestWidgets('shows Cancel/Save from the first frame the panel opens (stepped)', (tester) async {
-      setWide(tester);
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(labelText: 'When', presentation: LayrzDateTimeInputPresentation.stepped),
-      );
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
       expect(findButtonLabel('Save'), findsOneWidget);
@@ -146,11 +143,11 @@ void main() {
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
       expect(changed, isNull);
-      // Panel should still be open (Save was a no-op).
+      // The drawer should still be open (Save was a no-op).
       expect(findButtonLabel('Save'), findsOneWidget);
     });
 
-    guardedTestWidgets('picking a date alone does not commit or close (tabbed)', (tester) async {
+    guardedTestWidgets('picking a date alone does not commit or close', (tester) async {
       setWide(tester);
       DateTime? changed;
       await pumpThemedApp(
@@ -185,7 +182,7 @@ void main() {
       expect(changed, isNull);
     });
 
-    guardedTestWidgets('Save commits the combined datetime and closes the panel', (tester) async {
+    guardedTestWidgets('Save commits the combined datetime and closes the drawer', (tester) async {
       setWide(tester);
       DateTime? changed;
       await pumpThemedApp(
@@ -225,16 +222,12 @@ void main() {
       expect(find.text('2026-09-01 08:00'), findsOneWidget);
     });
 
-    guardedTestWidgets('typing in a time field never closes the surface (trap 4)', (tester) async {
+    guardedTestWidgets('typing in a time field never closes the drawer (trap 4)', (tester) async {
       setWide(tester);
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(labelText: 'When', presentation: LayrzDateTimeInputPresentation.stepped),
-      );
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // Advance to the time step.
       await tester.tap(find.text('10').first);
       await tester.pumpAndSettle();
       expect(find.byType(EditableText), findsWidgets);
@@ -247,112 +240,33 @@ void main() {
     });
   });
 
-  group('LayrzDateTimeInput — tabbed vs stepped are provably different', () {
-    guardedTestWidgets('tabbed shows only the date half until the time tab is selected', (tester) async {
+  group('LayrzDateTimeInput — presentation is deprecated and ignored (DESIGN-49)', () {
+    guardedTestWidgets('tabbed and stepped render an identical calendar+time-fields surface', (tester) async {
       setWide(tester);
-      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
 
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsNothing);
+      Future<void> exerciseAndAssertNoTabStrip({required LayrzDateTimeInputPresentation presentation}) async {
+        await pumpThemedApp(
+          tester,
+          LayrzDateTimeInput(labelText: 'When', presentation: presentation),
+        );
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
 
-      await tester.tap(findButtonLabel('Time'));
-      await tester.pumpAndSettle();
+        // No tab strip and no step-back affordance exist any longer -- both
+        // parts are always visible together.
+        expect(findButtonLabel('Time'), findsNothing);
+        expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+        expect(find.byType(EditableText), findsWidgets);
 
-      expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
-      expect(find.byType(EditableText), findsWidgets);
+        await tester.tap(findButtonLabel('Cancel'));
+        await tester.pumpAndSettle();
+      }
+
+      await exerciseAndAssertNoTabStrip(presentation: LayrzDateTimeInputPresentation.tabbed);
+      await exerciseAndAssertNoTabStrip(presentation: LayrzDateTimeInputPresentation.stepped);
     });
 
-    guardedTestWidgets('tabbed: switching tabs does not commit or close', (tester) async {
-      setWide(tester);
-      DateTime? changed;
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(labelText: 'When', value: DateTime(2026, 9, 1, 8, 0), onChanged: (v) => changed = v),
-      );
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      await tester.tap(findButtonLabel('Time'));
-      await tester.pumpAndSettle();
-      await tester.tap(findButtonLabel('Date'));
-      await tester.pumpAndSettle();
-
-      expect(changed, isNull);
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(findButtonLabel('Save'), findsOneWidget);
-    });
-
-    guardedTestWidgets('stepped: time step is unreachable before a date is chosen', (tester) async {
-      setWide(tester);
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(labelText: 'When', presentation: LayrzDateTimeInputPresentation.stepped),
-      );
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsNothing);
-      // No tab strip exists in stepped mode.
-      expect(findButtonLabel('Time'), findsNothing);
-    });
-
-    guardedTestWidgets('stepped: selecting a date advances to the time step, with a back affordance', (
-      tester,
-    ) async {
-      setWide(tester);
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(labelText: 'When', presentation: LayrzDateTimeInputPresentation.stepped),
-      );
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('12').first);
-      await tester.pumpAndSettle();
-
-      // The day grid's own month-navigation chevrons are gone; the only
-      // chevron left is the back affordance's own icon.
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byIcon(MdiIcons.chevronRight), findsNothing);
-      expect(find.byType(EditableText), findsWidgets);
-      expect(findButtonLabel('Date'), findsOneWidget);
-
-      // Back affordance returns to the date step without discarding the date.
-      await tester.tap(findButtonLabel('Date'));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsNothing);
-    });
-
-    guardedTestWidgets('stepped: cancelling at the time step abandons the whole selection', (tester) async {
-      setWide(tester);
-      DateTime? changed;
-      await pumpThemedApp(
-        tester,
-        LayrzDateTimeInput(
-          labelText: 'When',
-          presentation: LayrzDateTimeInputPresentation.stepped,
-          onChanged: (v) => changed = v,
-        ),
-      );
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('12').first);
-      await tester.pumpAndSettle();
-
-      await tester.tap(findButtonLabel('Cancel'));
-      await tester.pumpAndSettle();
-
-      expect(changed, isNull);
-      expect(find.text(''), findsWidgets);
-    });
-
-    guardedTestWidgets('both presentations fire onChanged at the identical commit moment (on Save)', (
+    guardedTestWidgets('onChanged fires at the identical commit moment (on Save) for both presentations', (
       tester,
     ) async {
       setWide(tester);
@@ -374,13 +288,7 @@ void main() {
         await tester.tap(find.text('10').first);
         await tester.pumpAndSettle();
 
-        // Not yet committed after picking the date alone, in either mode.
-        expect(changed, isNull);
-
-        if (presentation == LayrzDateTimeInputPresentation.tabbed) {
-          await tester.tap(findButtonLabel('Time'));
-          await tester.pumpAndSettle();
-        }
+        // Not yet committed after picking the date alone.
         expect(changed, isNull);
 
         await tester.tap(findButtonLabel('Save'));
@@ -394,7 +302,7 @@ void main() {
   });
 
   group('LayrzDateTimeInput — involuntary close discards draft state', () {
-    guardedTestWidgets('tap-outside closes the panel without reporting or retaining the draft', (tester) async {
+    guardedTestWidgets('barrier tap closes the drawer without reporting or retaining the draft', (tester) async {
       setWide(tester);
       DateTime? changed;
       await pumpThemedApp(
@@ -411,39 +319,40 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // Pick a different date and switch to the time tab, but never Save.
+      // Pick a different date and edit a time field, but never Save.
       await tester.tap(find.text('20').first);
       await tester.pumpAndSettle();
-      await tester.tap(findButtonLabel('Time'));
+      await tester.enterText(find.byType(EditableText).first, '5');
       await tester.pumpAndSettle();
 
+      // Tap the barrier, well outside the drawer's own fixed width.
       await tester.tapAt(const Offset(10, 10));
       await tester.pumpAndSettle();
 
       expect(changed, isNull);
       expect(find.text('2026-09-01 08:00'), findsOneWidget);
 
-      // Reopen: the draft must be gone and the presentation reset to the
-      // date tab, not stuck on the browsed-to time tab.
+      // Reopen: the draft must be gone -- the hour field must read back the
+      // originally-seeded value (8), not the abandoned edit (5).
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsNothing);
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
+        '8',
+      );
     });
 
-    guardedTestWidgets('stepped: involuntary close resets to the date step, not the browsed-to time step', (
-      tester,
-    ) async {
+    guardedTestWidgets('Escape closes the drawer and reverts a pending Save', (tester) async {
       setWide(tester);
+      DateTime? changed;
       await pumpThemedApp(
         tester,
-        Center(
-          child: LayrzDateTimeInput(
-            labelText: 'When',
-            presentation: LayrzDateTimeInputPresentation.stepped,
-            value: DateTime(2026, 9, 1, 8, 0),
-          ),
+        LayrzDateTimeInput(
+          labelText: 'When',
+          value: DateTime(2026, 9, 1, 8, 0),
+          onChanged: (v) => changed = v,
         ),
       );
 
@@ -452,16 +361,12 @@ void main() {
 
       await tester.tap(find.text('20').first);
       await tester.pumpAndSettle();
-      expect(find.byType(EditableText), findsWidgets);
 
-      await tester.tapAt(const Offset(10, 10));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsNothing);
+      expect(changed, isNull);
+      expect(findButtonLabel('Save'), findsNothing);
     });
   });
 
@@ -486,7 +391,7 @@ void main() {
   });
 
   group('LayrzDateTimeInput — disabled / readOnly', () {
-    guardedTestWidgets('disabled field does not open the panel', (tester) async {
+    guardedTestWidgets('disabled field does not open the drawer', (tester) async {
       setWide(tester);
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', disabled: true));
       await tester.tap(find.byType(LayrzInputChrome).first);
@@ -567,7 +472,7 @@ void main() {
   });
 
   group('LayrzDateTimeInput — compact viewport', () {
-    guardedTestWidgets('opens as a bottom sheet below isCompact, not an anchored panel', (tester) async {
+    guardedTestWidgets('opens as a bottom sheet below isCompact, not the drawer', (tester) async {
       setCompact(tester);
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
 
@@ -579,7 +484,9 @@ void main() {
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    guardedTestWidgets('no layout overflow at a narrow width with the tab strip and time fields', (tester) async {
+    guardedTestWidgets('no layout overflow at a narrow width with the calendar and time fields both visible', (
+      tester,
+    ) async {
       setCompact(tester);
       await pumpThemedApp(
         tester,
@@ -587,8 +494,6 @@ void main() {
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-      await tester.tap(findButtonLabel('Time'));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

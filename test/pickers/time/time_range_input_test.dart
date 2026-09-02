@@ -369,7 +369,13 @@ void main() {
   });
 
   group('LayrzTimeRangeInput — error styling (trap 1: readOnly must never be hardcoded on the anchor)', () {
-    guardedTestWidgets('errors present paints a danger border on the anchored panel', (tester) async {
+    // DESIGN-49: this widget no longer opens LayrzAnchoredPanel on desktop
+    // (it opens LayrzPickerDrawer, which paints no anchor-adjacent border at
+    // all -- see LayrzPickerDrawer's own class doc), so the danger/primary
+    // border assertion these two tests exercised no longer applies. The
+    // trap-1 regression guard itself (chrome.readOnly stays false with
+    // errors present) is preserved below.
+    guardedTestWidgets('errors present does not hardcode readOnly on the anchor chrome', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -387,42 +393,9 @@ void main() {
         ),
       );
 
-      final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
-      final theme = LayrzTheme.of(tester.element(find.byType(LayrzTimeRangeInput)));
-
-      expect(
-        panel.border?.color,
-        theme.tokens.colors.danger,
-        reason:
-            'errors must paint the danger border; if the anchor hardcoded readOnly:true on the chrome this would '
-            'silently fail because LayrzInputStyleSpec.resolve ranks readOnly above error',
-      );
-
       final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome).first);
       expect(chrome.readOnly, isFalse, reason: 'trap 1 regression guard: the anchor must never hardcode readOnly');
-    });
-
-    guardedTestWidgets('no errors paints the primary border on the anchored panel', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        _bounded(
-          LayrzTimeRangeInput(
-            labelText: 'Business hours',
-            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
-            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
-            onChanged: (_, _) {},
-          ),
-        ),
-      );
-
-      final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
-      final theme = LayrzTheme.of(tester.element(find.byType(LayrzTimeRangeInput)));
-
-      expect(panel.border?.color, theme.tokens.colors.primary);
+      expect(chrome.errors, contains('Range spans a break'));
     });
   });
 
@@ -643,7 +616,14 @@ void main() {
   });
 
   group('LayrzTimeRangeInput — responsive surface (isCompact boundary)', () {
-    guardedTestWidgets('wide viewport (>=960px) opens an anchored panel, never a bottom sheet', (tester) async {
+    // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
+    // viewport -- desktop opens LayrzPickerDrawer, compact opens
+    // LayrzBottomSheet. Both push a route rather than mounting inline, so
+    // neither the drawer's surface nor the anchored panel is present before
+    // the tap.
+    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width drawer, never an anchored panel', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -660,13 +640,15 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
+      expect(find.byType(LayrzAnchoredPanel), findsNothing);
 
       await tester.tap(find.byType(LayrzTimeRangeInput));
       await tester.pumpAndSettle();
 
       expect(find.byType(EditableText), findsWidgets);
       expect(find.byType(LayrzTimeRangeSurface), findsOneWidget);
+      final surfaceWidth = tester.getSize(find.byType(LayrzTimeRangeSurface)).width;
+      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: 'the drawer is fixed-width, not the anchor\'s width');
     });
 
     testWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel', (tester) async {

@@ -37,15 +37,17 @@ List<String> dumpSemanticsLabels(WidgetTester tester) {
 /// form -- see [_wideThreeSlot] for the width that renders full words.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 
-/// A wide-enough anchor that every one of a cluster's 3 slots
-/// (hour/minute/second) individually clears
-/// `LayrzPickersTimeField.kNarrowWidth` (280px), so
-/// `LayrzPickersTimeFieldsPanel` renders the full-word label form rather
-/// than the short `h`/`m`/`s` abbreviation -- mirrors
-/// `time_input_a11y_test.dart`'s own `_wideThreeSlot`. 3 slots need at least
-/// 3*280 + 2*6 = 852px; 1200px keeps clear margin above that even though
-/// this widget stacks two clusters (each cluster individually measures the
-/// full row width, not a shared/split width).
+/// A wide anchor field -- kept for historical width parity with
+/// `time_input_a11y_test.dart`'s own `_wideThreeSlot`, but no longer
+/// controls the field-label form for THIS widget. DESIGN-49 moved
+/// `LayrzTimeRangeInput`'s desktop surface into [LayrzPickerDrawer], whose
+/// width is fixed at [LayrzPickerDrawer.width] (420px) regardless of how
+/// wide the anchor field itself is -- so the panel always renders the SHORT
+/// `h`/`m`/`s` label form now, not the full-word form this anchor width used
+/// to produce when the surface was `LayrzAnchoredPanel` (which matched the
+/// anchor's own width). `LayrzTimeInput`'s single-cluster surface still uses
+/// the anchored panel and keeps the full-word behavior this width name
+/// describes -- see that widget's own `time_input_a11y_test.dart`.
 Widget _wideThreeSlot(Widget child) => SizedBox(width: 1200, child: child);
 
 void main() {
@@ -231,9 +233,12 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        // Wide enough (see _wideThreeSlot) that all 3 slots in each cluster
-        // clear LayrzPickersTimeField.kNarrowWidth, so the panel renders the
-        // full-word label form this assertion checks for.
+        // The anchor field's own width no longer matters here (see
+        // _wideThreeSlot's updated doc): LayrzPickerDrawer is fixed at
+        // LayrzPickerDrawer.width (420px), which is below
+        // LayrzPickersTimeField.kNarrowWidth for a 2-slot cluster, so the
+        // panel renders the SHORT h/m label form regardless of _bounded vs
+        // _wideThreeSlot.
         await pumpThemedApp(
           tester,
           _wideThreeSlot(
@@ -252,8 +257,14 @@ void main() {
         final l10n = LayrzUiL10n.of(tester.element(find.byType(LayrzTimeRangeInput)));
         final labels = dumpSemanticsLabels(tester);
 
-        expect(labels.where((l) => l.contains(l10n.timePickerHours)).length, greaterThanOrEqualTo(2));
-        expect(labels.where((l) => l.contains(l10n.timePickerMinutes)).length, greaterThanOrEqualTo(2));
+        final hourShortLabels = labels.where(
+          (l) => l == l10n.timePickerHourShortSingular || l == l10n.timePickerHourShortPlural,
+        );
+        final minuteShortLabels = labels.where(
+          (l) => l == l10n.timePickerMinuteShortSingular || l == l10n.timePickerMinuteShortPlural,
+        );
+        expect(hourShortLabels.length, greaterThanOrEqualTo(2));
+        expect(minuteShortLabels.length, greaterThanOrEqualTo(2));
       } finally {
         handle.dispose();
       }
