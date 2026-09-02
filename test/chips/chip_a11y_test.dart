@@ -56,21 +56,6 @@ void main() {
       expect(deleted, isTrue);
     });
 
-    testWidgets('chip with leading icon is accessible', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzChip(
-          labelText: 'With Icon',
-          leadingIcon: MdiIcons.checkCircleOutline,
-        ),
-      );
-
-      // Verify the chip, label text, and icon are rendered
-      expect(find.byType(LayrzChip), findsOneWidget);
-      expect(find.text('With Icon'), findsOneWidget);
-      expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
-    });
-
     testWidgets('chip group items are all accessible', (tester) async {
       await pumpThemed(
         tester,

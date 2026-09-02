@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../common/showroom_section.dart';
@@ -145,7 +144,7 @@ class _ChipsTypesShowcase extends StatelessWidget {
   }
 }
 
-/// Showcase of leading icon and delete affordance.
+/// Showcase of the delete affordance.
 class _ChipsFeatureShowcase extends StatelessWidget {
   final LayrzTokens tokens;
 
@@ -158,7 +157,7 @@ class _ChipsFeatureShowcase extends StatelessWidget {
       spacing: tokens.spacing.sp2,
       children: [
         Text(
-          'Features: Leading Icon & Delete',
+          'Features: Delete',
           style: tokens.typography.title,
         ),
         Wrap(
@@ -166,18 +165,12 @@ class _ChipsFeatureShowcase extends StatelessWidget {
           runSpacing: tokens.spacing.sp2,
           children: [
             LayrzChip(
-              labelText: 'With Icon',
-              leadingIcon: MdiIcons.checkCircleOutline,
-              type: LayrzChipType.success,
-            ),
-            LayrzChip(
               labelText: 'Deletable',
               onDelete: () {},
               type: LayrzChipType.warning,
             ),
             LayrzChip(
-              labelText: 'Both',
-              leadingIcon: MdiIcons.checkCircleOutline,
+              labelText: 'Also deletable',
               onDelete: () {},
               type: LayrzChipType.info,
             ),

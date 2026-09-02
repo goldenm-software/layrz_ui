@@ -10,7 +10,7 @@ import 'chip_type.dart';
 /// A Material-free chip widget in the layrz_ui design system.
 ///
 /// [LayrzChip] is a static, non-interactive visual representation of a compact label.
-/// It supports optional leading icon and delete affordance. The chip itself has no tap,
+/// It supports an optional delete affordance. The chip itself has no tap,
 /// hover, focus, or selection state — only the optional delete icon is interactive.
 ///
 /// Chips are rendered at a fixed height with a rounded-box border radius
@@ -20,9 +20,6 @@ import 'chip_type.dart';
 class LayrzChip extends StatefulWidget {
   /// The text label displayed in the chip.
   final String labelText;
-
-  /// Optional icon displayed before the label.
-  final IconData? leadingIcon;
 
   /// Called when the delete affordance is tapped. When null, no delete icon is rendered.
   final VoidCallback? onDelete;
@@ -54,7 +51,6 @@ class LayrzChip extends StatefulWidget {
   const LayrzChip({
     super.key,
     required this.labelText,
-    this.leadingIcon,
     this.onDelete,
     this.style = LayrzChipStyle.filled,
     this.type = LayrzChipType.custom,
@@ -67,7 +63,7 @@ class LayrzChip extends StatefulWidget {
   /// Measures the intrinsic width this chip will occupy, in logical pixels.
   ///
   /// This method computes the width by measuring the label text at the current
-  /// theme's label typography, then adding space for optional leading and delete icons.
+  /// theme's label typography, then adding space for the optional delete icon.
   /// The result includes the horizontal padding and all inter-element spacing.
   ///
   /// Used by [LayrzChipGroup] in compact mode to determine when to show the `+N` indicator.
@@ -85,11 +81,6 @@ class LayrzChip extends StatefulWidget {
     )..layout();
 
     double width = painter.width;
-
-    // Add space for leading icon
-    if (leadingIcon != null) {
-      width += kLayrzChipIconSize + tokens.spacing.sp1; // icon + gap
-    }
 
     // Add space for delete icon
     if (onDelete != null) {
@@ -150,16 +141,6 @@ class _LayrzChipState extends State<LayrzChip> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Leading icon
-          if (widget.leadingIcon != null) ...[
-            Icon(
-              widget.leadingIcon,
-              color: spec.contentColor,
-              size: kLayrzChipIconSize,
-            ),
-            SizedBox(width: tokens.spacing.sp1),
-          ],
-
           // Label text
           Semantics(
             label: widget.labelText,
