@@ -35,6 +35,24 @@ const double _kComboBoxOverlayMaxHeight = 300.0;
 /// - **Mobile (< 960px)**: Opens a bottom sheet instead, allowing touch-friendly interaction
 ///   with better use of screen space.
 ///
+/// **DESIGN-98: deliberately still [LayrzAnchoredPanel], not [LayrzEndDrawer].**
+/// Every other DESIGN-98 input (the eight date/time pickers, [LayrzDurationInput],
+/// [LayrzSelectInput]) moved its desktop overlay onto [LayrzEndDrawer]. This one did
+/// not, and that is a decision, not an oversight: [LayrzEndDrawer] is
+/// [Navigator.push]ed as a separate route, which has no single build pass spanning
+/// both the closed field and the opened overlay for [_sharedFieldKey]'s `GlobalKey`
+/// to reparent a single [Element] across (see that field's own doc comment for the
+/// mechanism this depends on). Losing that shared-build-pass guarantee reopens the
+/// exact failure [_sharedFieldKey] exists to prevent -- a genuine unmount fires a
+/// focus-loss notification before the replacement instance can request focus, which
+/// [_handleBlur] reads as "the user left the field" and closes the overlay on it,
+/// mid-gesture, before the user ever sees it open. A prototype conversion was built
+/// and verified this reproduces; see the reverted commit for the analysis. The
+/// maintainer's call, informed by that verification: accept two overlay containers
+/// in the input family rather than change a shipped, daily-use widget's focus
+/// behavior. Revisit only if [LayrzEndDrawer] itself grows a same-build-pass
+/// presentation mode.
+///
 /// **The panel's first row IS the live input (Q3).** Unlike [LayrzSelectInput] --
 /// whose field is always read-only, so its opened surface owns a second,
 /// independent search field -- this field *is* the input, so typing must keep
