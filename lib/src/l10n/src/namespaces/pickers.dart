@@ -29,4 +29,16 @@ mixin LayrzUiL10nPickersMixin {
   /// (outside `firstDay`/`lastDay` bounds or in `disabledDays`/
   /// `disabledMonths`).
   String get pickerDisabledLabel => 'Unavailable';
+
+  /// Localized overflow summary for `LayrzMonthRangeInput`'s arbitrary
+  /// (non-contiguous) mode, shown in the anchor field once the selection
+  /// exceeds the widget's comma-joined-list threshold and collapses to a
+  /// count instead.
+  ///
+  /// [count] is the number of selected months; the returned phrase is
+  /// singular/plural-aware (`"1 month selected"` vs. `"5 months selected"`),
+  /// following the count-aware method pattern established by
+  /// `LayrzUiL10nHelpersMixin.helperDurationDays` — pluralization is resolved
+  /// here rather than by the caller appending an `s`.
+  String pickerMonthRangeCount(int count) => count == 1 ? '$count month selected' : '$count months selected';
 }

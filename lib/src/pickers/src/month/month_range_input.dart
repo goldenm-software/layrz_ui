@@ -250,16 +250,8 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     }
     // Comma-joined list, falling back to a count on overflow -- see
     // `_overflowThreshold`'s doc for the threshold and its rationale.
-    //
-    // No `LayrzUiL10n` key exists for this count phrasing (`pickers.dart`
-    // only defines `pickerRangeReset`/`pickerTodayLabel`/`pickerSelectedLabel`/
-    // `pickerRangeInteriorLabel`/`pickerDisabledLabel`, none of which fit),
-    // and `lib/src/l10n/` is outside this unit's declared file set -- adding
-    // a key there is U1's call, not this unit's. Left as a plain literal
-    // pending that addition; flagged in this unit's report for the
-    // maintainer.
     if (months.length > _overflowThreshold) {
-      _controller.text = '${months.length} months selected';
+      _controller.text = l10n.pickerMonthRangeCount(months.length);
       return;
     }
     final sorted = months.toList()..sort();

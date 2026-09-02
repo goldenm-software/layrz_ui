@@ -371,6 +371,7 @@ void main() {
           ),
         );
 
+        expect(find.text(const LayrzUiL10nDefault().pickerMonthRangeCount(5)), findsOneWidget);
         expect(find.text('5 months selected'), findsOneWidget);
         expect(find.textContaining('Jan 2026'), findsNothing);
       });

@@ -61,6 +61,16 @@ void main() {
       expect(l10n.pickerRangeInteriorLabel, isNotEmpty);
       expect(l10n.pickerDisabledLabel, isNotEmpty);
     });
+
+    test('pickerMonthRangeCount uses the singular phrasing for exactly one month', () {
+      expect(l10n.pickerMonthRangeCount(1), '1 month selected');
+    });
+
+    test('pickerMonthRangeCount uses the plural phrasing for zero or multiple months', () {
+      expect(l10n.pickerMonthRangeCount(0), '0 months selected');
+      expect(l10n.pickerMonthRangeCount(5), '5 months selected');
+      expect(l10n.pickerMonthRangeCount(12), '12 months selected');
+    });
   });
 
   group('LayrzUiL10n subclass overrides — adapters can override without breaking', () {
