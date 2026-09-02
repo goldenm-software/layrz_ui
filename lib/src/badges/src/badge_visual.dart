@@ -114,7 +114,18 @@ class LayrzBadgeVisual extends StatelessWidget {
     // note was explicit that the icon and count sizes are coupled through
     // this single knob, so both grow together from this one change rather
     // than being tuned independently.
-    final diameter = tokens.spacing.sp4;
+    final contentDiameter = tokens.spacing.sp4;
+    // DESIGN-172: the maintainer rejected the bare presence dot sharing
+    // `contentDiameter` -- a dot carries no glyph to keep legible, so it reads
+    // as a bloated blob rather than a presence indicator at the same size as
+    // a two-digit count badge. `tokens.spacing.sp2` (10lp) is used instead of
+    // a magic number: it is exactly half of `sp4` (20lp), landing in the
+    // conventional ~8-10lp-against-a-40lp-avatar range for a presence dot
+    // while staying proportional to the count/icon diameter as the spacing
+    // scale is retuned, rather than drifting independently of it. Only the
+    // contentless form uses this smaller size -- count and icon content keep
+    // the full `sp4` diameter approved separately in DESIGN-167.
+    final diameter = isDot ? tokens.spacing.sp2 : contentDiameter;
 
     Widget? content;
     if (count != null) {
@@ -131,7 +142,12 @@ class LayrzBadgeVisual extends StatelessWidget {
         textAlign: TextAlign.center,
       );
     } else if (icon != null) {
-      content = Icon(icon, size: diameter * 0.7, color: spec.contentColor);
+      // Always `contentDiameter`, never the (possibly smaller) dot `diameter`
+      // above: this branch is only reached when `icon` is non-null, which
+      // means `isDot` is false and `diameter == contentDiameter` already --
+      // spelled out explicitly so this line stays correct even if `isDot`'s
+      // definition ever changes.
+      content = Icon(icon, size: contentDiameter * 0.7, color: spec.contentColor);
     }
 
     // DESIGN-167: `content` is wrapped in a shrink-wrapped `Center` (below)
@@ -157,20 +173,42 @@ class LayrzBadgeVisual extends StatelessWidget {
     // reproduces the exact same ballooning as `Container.alignment` did,
     // which is why the factors are mandatory, not stylistic.
     //
-    // The centering bug this fixes (DESIGN-167 follow-up): symmetric padding
-    // alone only centers content when the padded content is exactly
-    // `diameter` wide/tall. Whenever `ConstrainedBox`'s `minWidth`/`minHeight`
-    // forces the box larger than `padding + content` (true for every count
-    // form at this diameter, and doubly true for single digits, which also
-    // fall short horizontally), `RenderPadding.performLayout` still offsets
-    // its child by exactly `(padding.left, padding.top)` and dumps *all* of
-    // the extra slack on the right/bottom (see
-    // `flutter/rendering/shifted_box.dart`'s `RenderPadding.performLayout`).
-    // That is a fixed top/left bias, not a centering effect -- measured at
-    // this diameter/padding it was +2.0lp low vertically for every form, plus
-    // +0.8lp right-biased horizontally for single-digit counts only. The
-    // `Center` re-centers within whatever box `ConstrainedBox` ultimately
-    // produces, so the bias cancels regardless of how much slack there is.
+    // The centering bug this fixes (DESIGN-167 follow-up) had TWO independent
+    // causes, not one -- both had to be fixed for the visible ink to land on
+    // center, and a test that checks only the first is not sufficient:
+    //
+    // 1. `RenderPadding.performLayout` always offsets its child by exactly
+    //    `(padding.left, padding.top)` (see
+    //    `flutter/rendering/shifted_box.dart`), dumping all slack from a
+    //    `ConstrainedBox` minWidth/minHeight larger than `padding + content`
+    //    onto the right/bottom. The `Center` here re-centers within whatever
+    //    box `ConstrainedBox` ultimately produces, cancelling that bias.
+    //
+    // 2. Independently of (1): whenever the count's own `RenderParagraph` box
+    //    is *itself* widened past its ink (this happens whenever
+    //    `ConstrainedBox`'s minWidth exceeds the padded intrinsic width --
+    //    true for every single/double-digit count at this diameter, since
+    //    `RenderParagraph.performLayout` does `size =
+    //    constraints.constrain(textSize)`, obeying the same minWidth floor),
+    //    the *widened paragraph box* is what gets centered by (1) and by
+    //    `Center` -- not the ink inside it. Without `textAlign:
+    //    TextAlign.center` on the `Text` above, the default `TextAlign.start`
+    //    then paints the glyphs flush-left within that widened, correctly-
+    //    centered box, so the box's center coincides with the badge while the
+    //    visible ink sits measurably left of it. Measured directly against
+    //    real Roboto glyph ink bounds (not the paragraph's layout box) for a
+    //    single digit at this diameter/padding: -3.0lp, i.e. the ink's own
+    //    center was 3lp left of the badge's true center -- large enough to
+    //    read as visibly off-center, and NOT the same (smaller, box-only)
+    //    number an earlier pass measured, because that measurement used the
+    //    paragraph's box rather than the ink. `textAlign: TextAlign.center`
+    //    on the `Text` above is what actually fixes this half of the bug;
+    //    without it, the `Center`/minWidth math in (1) alone is not enough,
+    //    because RenderParagraph's own box absorbs the same minWidth-driven
+    //    slack as everything else in this chain and needs its OWN internal
+    //    alignment corrected too. See
+    //    `test/badges/badge_visual_centering_test.dart` for the ink-bounds
+    //    regression test this discrepancy required.
     return Container(
       constraints: BoxConstraints(minWidth: diameter, minHeight: diameter),
       padding: isDot
