@@ -302,7 +302,7 @@ void main() {
   });
 
   group('LayrzDateTimeInput — involuntary close discards draft state', () {
-    guardedTestWidgets('barrier tap closes the drawer without reporting or retaining the draft', (tester) async {
+    guardedTestWidgets('Cancel closes the drawer without reporting or retaining the draft', (tester) async {
       setWide(tester);
       DateTime? changed;
       await pumpThemedApp(
@@ -325,8 +325,10 @@ void main() {
       await tester.enterText(find.byType(EditableText).first, '5');
       await tester.pumpAndSettle();
 
-      // Tap the barrier, well outside the drawer's own fixed width.
-      await tester.tapAt(const Offset(10, 10));
+      // DESIGN-98: LayrzEndDrawer's canDismiss infers false while actions is
+      // present, so a barrier tap no longer closes it -- Cancel is now the
+      // involuntary-close route this test exercises.
+      await tester.tap(findButtonLabel('Cancel'));
       await tester.pumpAndSettle();
 
       expect(changed, isNull);

@@ -202,7 +202,9 @@ void main() {
       },
     );
 
-    guardedTestWidgets('this widget carries no semantics node with "Save" or "Cancel" as its label', (tester) async {
+    guardedTestWidgets('DESIGN-98: this widget exposes Save and Cancel semantics once the drawer is open', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -215,8 +217,12 @@ void main() {
         await tester.pumpAndSettle();
 
         final labels = dumpSemanticsLabels(tester);
-        expect(labels.any((l) => l == 'Save'), isFalse);
-        expect(labels.any((l) => l == 'Cancel'), isFalse);
+        expect(
+          labels.any((l) => l.contains('Save')),
+          isTrue,
+          reason: 'the drawer now carries a Save action (DESIGN-98) -- a tap alone no longer commits',
+        );
+        expect(labels.any((l) => l.contains('Cancel')), isTrue);
       } finally {
         handle.dispose();
       }

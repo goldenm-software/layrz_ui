@@ -184,7 +184,7 @@ void main() {
     });
 
     testWidgets(
-      'hour, minute and (when shown) second fields expose distinct full-word semantic labels at a wide anchor',
+      'hour, minute and (when shown) second fields expose distinct short-form semantic labels regardless of anchor width (DESIGN-98)',
       (tester) async {
         final handle = tester.ensureSemantics();
         try {
@@ -192,10 +192,16 @@ void main() {
           tester.view.devicePixelRatio = 1.0;
           addTearDown(tester.view.reset);
 
-          // Wide enough (see _wideThreeSlot) that all 3 slots clear
-          // LayrzPickersTimeField.kNarrowWidth, so the panel renders the
-          // full-word label form -- the real labels for this branch, and the
-          // stronger distinctness check (three words vs three single letters).
+          // DESIGN-98: this widget now opens LayrzEndDrawer on desktop, a
+          // fixed 420px width (LayrzEndDrawer.width) regardless of the
+          // anchor's own width -- previously LayrzAnchoredPanel matched the
+          // anchor's width via widthPolicy: matchAnchor, so a wide anchor
+          // (see the old _wideThreeSlot helper) could clear
+          // LayrzPickersTimeField.kNarrowWidth (280px) for all 3 slots and
+          // reach the full-word label form. The drawer's own padded width
+          // (~392px) can never clear 3*280px=840px, so the full-word form is
+          // no longer reachable from this widget at all -- _wideThreeSlot's
+          // width is asserted here to be irrelevant, not merely unused.
           await pumpThemedApp(
             tester,
             _wideThreeSlot(
@@ -214,9 +220,14 @@ void main() {
           final l10n = LayrzUiL10n.of(tester.element(find.byType(LayrzTimeInput)));
           final labels = dumpSemanticsLabels(tester);
 
-          expect(labels.any((l) => l.contains(l10n.timePickerHours)), isTrue);
-          expect(labels.any((l) => l.contains(l10n.timePickerMinutes)), isTrue);
-          expect(labels.any((l) => l.contains(l10n.timePickerSeconds)), isTrue);
+          expect(labels.any((l) => l.contains(l10n.timePickerHourShortSingular)), isTrue);
+          expect(labels.any((l) => l.contains(l10n.timePickerMinuteShortSingular)), isTrue);
+          expect(labels.any((l) => l.contains(l10n.timePickerSecondShortSingular)), isTrue);
+          expect(
+            labels.any((l) => l.contains(l10n.timePickerHours)),
+            isFalse,
+            reason: 'the drawer\'s fixed width forces the short form even with a wide anchor',
+          );
         } finally {
           handle.dispose();
         }

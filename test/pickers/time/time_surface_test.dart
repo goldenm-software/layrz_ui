@@ -61,8 +61,8 @@ void main() {
     });
   });
 
-  group('LayrzTimeSurface — trap 4: field edits report via onTimeChanged and never close anything', () {
-    guardedTestWidgets('typing in the hour field calls onTimeChanged and the widget stays mounted', (
+  group('LayrzTimeSurface — DESIGN-98: field edits only draft, save() commits via onTimeChanged', () {
+    guardedTestWidgets('typing in the hour field updates the draft but does not call onTimeChanged', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -70,20 +70,30 @@ void main() {
       addTearDown(tester.view.reset);
 
       final reported = <LayrzTimeOfDay>[];
+      final surfaceKey = GlobalKey<LayrzTimeSurfaceState>();
 
       await pumpThemed(
         tester,
         _bounded(
-          LayrzTimeSurface(value: const LayrzTimeOfDay(hour: 9, minute: 30), onTimeChanged: reported.add),
+          LayrzTimeSurface(
+            key: surfaceKey,
+            value: const LayrzTimeOfDay(hour: 9, minute: 30),
+            onTimeChanged: reported.add,
+          ),
         ),
       );
 
       await tester.enterText(find.byType(EditableText).first, '11');
       await tester.pumpAndSettle();
 
+      expect(reported, isEmpty, reason: 'DESIGN-98: a field edit alone must not commit -- it only drafts');
+      expect(find.byType(LayrzTimeSurface), findsOneWidget, reason: 'the surface itself must remain mounted');
+
+      surfaceKey.currentState!.save();
+      await tester.pumpAndSettle();
+
       expect(reported, isNotEmpty);
       expect(reported.last.hour, 11);
-      expect(find.byType(LayrzTimeSurface), findsOneWidget, reason: 'the surface itself must remain mounted');
     });
   });
 

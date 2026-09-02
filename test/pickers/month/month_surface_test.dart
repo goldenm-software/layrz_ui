@@ -37,22 +37,30 @@ void main() {
       expect(find.text('Year ${DateTime.now().year}'), findsOneWidget);
     });
 
-    guardedTestWidgets('tapping a month cell invokes onMonthSelected with the tapped month', (tester) async {
+    guardedTestWidgets('DESIGN-98: a tap only drafts -- save() commits the tapped month', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       LayrzMonth? selected;
+      final surfaceKey = GlobalKey<LayrzMonthSurfaceState>();
 
       await pumpThemed(
         tester,
         LayrzMonthSurface(
+          key: surfaceKey,
           value: const LayrzMonth(year: 2026, month: 1),
           onMonthSelected: (m) => selected = m,
         ),
       );
 
       await tester.tap(find.text('November'));
+      await tester.pumpAndSettle();
+
+      expect(selected, isNull, reason: 'a tap alone must not commit -- it only updates the draft');
+      expect(surfaceKey.currentState!.canSave, isTrue);
+
+      surfaceKey.currentState!.save();
       await tester.pumpAndSettle();
 
       expect(selected, const LayrzMonth(year: 2026, month: 11));
@@ -218,10 +226,12 @@ void main() {
       addTearDown(tester.view.reset);
 
       var callCount = 0;
+      final surfaceKey = GlobalKey<LayrzMonthSurfaceState>();
 
       await pumpThemed(
         tester,
         LayrzMonthSurface(
+          key: surfaceKey,
           value: const LayrzMonth(year: 2026, month: 6),
           minimum: const LayrzMonth(year: 2026, month: 3),
           maximum: const LayrzMonth(year: 2026, month: 9),
@@ -238,6 +248,11 @@ void main() {
       expect(callCount, 0);
 
       await tester.tap(find.text('June'));
+      await tester.pumpAndSettle();
+      expect(callCount, 0, reason: 'a tap alone must not commit -- it only drafts');
+      expect(surfaceKey.currentState!.canSave, isTrue);
+
+      surfaceKey.currentState!.save();
       await tester.pumpAndSettle();
       expect(callCount, 1);
     });

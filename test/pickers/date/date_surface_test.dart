@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/pickers/src/date/date_surface.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
@@ -56,18 +57,46 @@ void main() {
     });
   });
 
-  group('LayrzDateSurface — commit on tap', () {
-    guardedTestWidgets('tapping a day cell fires onDateSelected exactly once, with the tapped date', (tester) async {
+  group('LayrzDateSurface — DESIGN-98: tap only drafts, Save commits', () {
+    guardedTestWidgets('tapping a day cell only drafts it -- onDateSelected does not fire until Save', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var count = 0;
+      final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
+
+      await pumpThemed(
+        tester,
+        LayrzDateSurface(
+          key: surfaceKey,
+          value: DateTime(2026, 9, 1),
+          onDateSelected: (_) => count++,
+        ),
+      );
+
+      await tester.tap(find.text('15').first);
+      await tester.pump();
+
+      expect(count, 0, reason: 'a tap alone must not commit -- it only updates the draft');
+      expect(surfaceKey.currentState!.canSave, isTrue, reason: 'the draft must be reachable via canSave');
+    });
+
+    guardedTestWidgets('calling save() after a tap commits exactly once, with the tapped date', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       DateTime? selected;
       var count = 0;
+      final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
 
       await pumpThemed(
         tester,
         LayrzDateSurface(
+          key: surfaceKey,
           value: DateTime(2026, 9, 1),
           onDateSelected: (d) {
             selected = d;
@@ -78,6 +107,8 @@ void main() {
 
       await tester.tap(find.text('15').first);
       await tester.pump();
+      surfaceKey.currentState!.save();
+      await tester.pump();
 
       expect(count, 1);
       expect(selected!.day, 15);
@@ -85,7 +116,46 @@ void main() {
       expect(selected!.year, 2026);
     });
 
-    guardedTestWidgets('this widget never renders a Cancel/Save footer', (tester) async {
+    guardedTestWidgets('canSave is false before any tap, so save() is a no-op', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var count = 0;
+      final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
+
+      await pumpThemed(
+        tester,
+        LayrzDateSurface(value: null, onDateSelected: (_) => count++, key: surfaceKey),
+      );
+
+      expect(surfaceKey.currentState!.canSave, isFalse);
+      surfaceKey.currentState!.save();
+      await tester.pump();
+
+      expect(count, 0);
+    });
+
+    guardedTestWidgets('with showInlineFooter and onCancel, renders its own Cancel/Save footer', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzDateSurface(
+          value: DateTime(2026, 9, 1),
+          onDateSelected: (_) {},
+          onCancel: () {},
+          showInlineFooter: true,
+        ),
+      );
+
+      expect(findButtonLabel('Save'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
+    });
+
+    guardedTestWidgets('without showInlineFooter (the default), no Cancel/Save footer renders', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -95,8 +165,8 @@ void main() {
         LayrzDateSurface(value: DateTime(2026, 9, 1), onDateSelected: (_) {}),
       );
 
-      expect(find.text('Save'), findsNothing);
-      expect(find.text('Cancel'), findsNothing);
+      expect(findButtonLabel('Save'), findsNothing);
+      expect(findButtonLabel('Cancel'), findsNothing);
     });
   });
 
@@ -366,9 +436,10 @@ void main() {
       final value = tz.TZDateTime(location, 2026, 9, 1);
 
       DateTime? selected;
+      final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
       await pumpThemed(
         tester,
-        LayrzDateSurface(value: value, onDateSelected: (d) => selected = d),
+        LayrzDateSurface(key: surfaceKey, value: value, onDateSelected: (d) => selected = d),
       );
 
       await tester.tap(find.byIcon(MdiIcons.chevronRight));
@@ -376,6 +447,8 @@ void main() {
       expect(find.text('October 2026'), findsOneWidget);
 
       await tester.tap(find.text('15').first);
+      await tester.pump();
+      surfaceKey.currentState!.save();
       await tester.pump();
 
       expect(selected, isA<tz.TZDateTime>());

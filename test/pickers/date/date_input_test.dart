@@ -146,7 +146,7 @@ void main() {
       expect(find.byIcon(MdiIcons.calendarBlankOutline), findsOneWidget);
     });
 
-    guardedTestWidgets('never renders a Cancel/Save footer', (tester) async {
+    guardedTestWidgets('renders a Cancel/Save footer inside the drawer (DESIGN-98)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -156,8 +156,8 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      expect(findButtonLabel('Save'), findsNothing);
-      expect(findButtonLabel('Cancel'), findsNothing);
+      expect(findButtonLabel('Save'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
     });
   });
 
@@ -267,8 +267,34 @@ void main() {
     });
   });
 
-  group('LayrzDateInput — commit on tap (desktop, wide viewport)', () {
-    guardedTestWidgets('tapping a day fires onChanged exactly once with the tapped date and closes the panel', (
+  group('LayrzDateInput — Save commits, Cancel reverts, both close (desktop)', () {
+    guardedTestWidgets('a tap alone does not fire onChanged -- only Save does', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var changeCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(
+          labelText: 'Date',
+          value: DateTime(2026, 9, 1),
+          onChanged: (_) => changeCount++,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+
+      expect(changeCount, 0, reason: 'DESIGN-98: a tap alone must no longer commit');
+      // The drawer stays open -- the tap only drafted a value.
+      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+    });
+
+    guardedTestWidgets('selecting a day and pressing Save fires onChanged once and closes the drawer', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -295,6 +321,8 @@ void main() {
 
       await tester.tap(find.text('15').first);
       await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
 
       expect(changeCount, 1);
       expect(changed, isNotNull);
@@ -302,12 +330,38 @@ void main() {
       expect(changed!.month, 9);
       expect(changed!.year, 2026);
 
-      // Panel closed as part of the same gesture -- the month-nav header
-      // (only rendered while the surface is open) is gone.
+      // The drawer closed as part of the Save action.
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
     });
 
-    guardedTestWidgets('the closed field reflects the newly committed date', (tester) async {
+    guardedTestWidgets('pressing Cancel after a tap does not fire onChanged and closes the drawer', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var changeCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(
+          labelText: 'Date',
+          value: DateTime(2026, 9, 1),
+          onChanged: (_) => changeCount++,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(changeCount, 0);
+      expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
+    });
+
+    guardedTestWidgets('the closed field reflects the newly saved date', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -330,6 +384,8 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('20').first);
+      await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
       expect(find.text('2026-09-20'), findsOneWidget);
@@ -361,7 +417,7 @@ void main() {
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
     });
 
-    guardedTestWidgets('tapping a day in the bottom sheet fires onChanged once and dismisses the sheet', (
+    guardedTestWidgets('tapping a day in the bottom sheet only drafts it -- Save commits and dismisses the sheet', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(400, 800);
@@ -387,6 +443,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+      expect(changeCount, 0, reason: 'DESIGN-98: a tap alone must no longer commit, even on mobile');
+
+      await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
       expect(changeCount, 1);
@@ -431,9 +491,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
 
-      // Tap far outside the anchor/panel to trigger LayrzAnchoredPanel's
-      // tap-outside dismissal.
-      await tester.tapAt(const Offset(10, 10));
+      // DESIGN-98: LayrzEndDrawer's canDismiss infers false while actions is
+      // present, so a barrier tap no longer closes it (that inference is
+      // covered exhaustively by test/sheets/end_drawer_test.dart) -- Cancel
+      // is now the involuntary-close route this test exercises.
+      await tester.tap(findButtonLabel('Cancel'));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
@@ -471,8 +533,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('November 2026'), findsOneWidget);
 
-      // Close involuntarily.
-      await tester.tapAt(const Offset(10, 10));
+      // Close involuntarily via Cancel -- a barrier tap no longer dismisses
+      // once actions are present (DESIGN-98's canDismiss inference).
+      await tester.tap(findButtonLabel('Cancel'));
       await tester.pumpAndSettle();
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
 
@@ -604,6 +667,8 @@ void main() {
       // day 29 again (March only runs through day 10).
       await tester.tap(find.text('29').last);
       await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
 
       expect(changed!.year, 2024);
       expect(changed!.month, 2);
@@ -656,6 +721,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('15').first);
       await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
 
       expect(changed, isA<tz.TZDateTime>());
       expect((changed! as tz.TZDateTime).location, location);
@@ -704,7 +771,7 @@ void main() {
   });
 
   group('LayrzDateInput — viewport branch selection', () {
-    guardedTestWidgets('opens the anchored panel (not a bottom sheet route) at a wide viewport', (tester) async {
+    guardedTestWidgets('opens the drawer (fixed-width, not a bottom sheet) at a wide viewport', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -714,13 +781,10 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // The anchored panel keeps the original field visible behind it
-      // (no full route push), unlike the bottom sheet which pushes a new
-      // route. The field's own summary text is still present in the tree.
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
     });
 
-    guardedTestWidgets('opens a bottom sheet route (not an anchored panel) below isCompact', (tester) async {
+    guardedTestWidgets('opens a bottom sheet route (not the drawer) below isCompact', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -776,6 +840,8 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
       expect(changed, isNotNull);

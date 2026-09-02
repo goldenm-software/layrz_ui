@@ -81,7 +81,7 @@ void main() {
       expect(find.text('December 2025'), findsOneWidget);
     });
 
-    guardedTestWidgets('renders no Save/Cancel footer -- commit on tap', (tester) async {
+    guardedTestWidgets('renders a Cancel/Save footer inside the drawer (DESIGN-98)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -95,12 +95,12 @@ void main() {
       await tester.tap(field);
       await tester.pumpAndSettle();
 
-      expect(find.text('Save'), findsNothing);
-      expect(find.text('Cancel'), findsNothing);
+      expect(findButtonLabel('Save'), findsOneWidget);
+      expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
     group('desktop viewport (>=960px)', () {
-      guardedTestWidgets('uses an anchored panel, not a bottom sheet', (tester) async {
+      guardedTestWidgets('opens the drawer (fixed-width, not a bottom sheet) at a wide viewport', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -110,7 +110,14 @@ void main() {
           const LayrzMonthInput(labelText: 'Month'),
         );
 
-        expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(
+          findButtonLabel('Save'),
+          findsOneWidget,
+          reason: 'the drawer carries an actions row, unlike a bare anchored panel',
+        );
       });
 
       guardedTestWidgets('tapping the field opens the panel with all twelve month names', (tester) async {
@@ -146,7 +153,7 @@ void main() {
         }
       });
 
-      guardedTestWidgets('tapping a month commits once and closes the panel', (tester) async {
+      guardedTestWidgets('a tap only drafts -- Save commits once and closes the drawer', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -176,9 +183,15 @@ void main() {
         await tester.tap(find.text('September'));
         await tester.pumpAndSettle();
 
+        expect(callCount, 0, reason: 'DESIGN-98: a tap alone must no longer commit');
+        expect(find.text('October'), findsOneWidget, reason: 'the drawer must stay open after a mere tap');
+
+        await tester.tap(findButtonLabel('Save'));
+        await tester.pumpAndSettle();
+
         expect(callCount, 1);
         expect(committed, const LayrzMonth(year: 2026, month: 9));
-        // The panel closed: the grid's month cells are no longer present.
+        // The drawer closed: the grid's month cells are no longer present.
         expect(find.text('October'), findsNothing);
       });
 
@@ -403,7 +416,9 @@ void main() {
         expect(find.text('September'), findsOneWidget);
       });
 
-      guardedTestWidgets('tapping a month commits and closes the sheet on compact viewport', (tester) async {
+      guardedTestWidgets('a tap only drafts -- Save commits and closes the sheet on compact viewport', (
+        tester,
+      ) async {
         tester.view.physicalSize = const Size(400, 800);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -423,6 +438,10 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('April'));
+        await tester.pumpAndSettle();
+        expect(committed, isNull, reason: 'DESIGN-98: a tap alone must no longer commit, even on mobile');
+
+        await tester.tap(findButtonLabel('Save'));
         await tester.pumpAndSettle();
 
         expect(committed, const LayrzMonth(year: 2026, month: 4));
@@ -536,6 +555,8 @@ void main() {
         await tester.tap(find.byType(LayrzInputChrome));
         await tester.pumpAndSettle();
         await tester.tap(find.text('September'));
+        await tester.pumpAndSettle();
+        await tester.tap(findButtonLabel('Save'));
         await tester.pumpAndSettle();
 
         expect(committed, const LayrzMonth(year: 2026, month: 9));

@@ -4,6 +4,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/pickers/src/time/time_surface.dart';
 
+import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed_app.dart';
 
@@ -71,8 +72,8 @@ void main() {
     });
   });
 
-  group('LayrzTimeInput — commit model: every field edit reports live, panel never closes on it', () {
-    guardedTestWidgets('typing in the hour field fires onChanged and the panel stays mounted (trap 4)', (
+  group('LayrzTimeInput — DESIGN-98: field edits only draft, Save commits once', () {
+    guardedTestWidgets('typing in the hour field only drafts -- onChanged does not fire until Save', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -95,19 +96,24 @@ void main() {
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
-      expect(find.byType(EditableText), findsWidgets, reason: 'panel must be open before typing');
+      expect(find.byType(EditableText), findsWidgets, reason: 'drawer must be open before typing');
 
       await tester.enterText(find.byType(EditableText).first, '14');
       await tester.pumpAndSettle();
 
-      expect(reported, isNotEmpty, reason: 'a field edit must report via onChanged');
-      expect(reported.last.hour, 14);
-      // The panel is still mounted -- its fields are still present and
+      expect(reported, isEmpty, reason: 'DESIGN-98: a field edit alone must no longer commit');
+      // The drawer is still mounted -- its fields are still present and
       // reachable, proving the edit did not dismiss anything.
       expect(find.byType(EditableText), findsWidgets, reason: 'typing must never close the hosting surface');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(reported, isNotEmpty, reason: 'Save must commit the drafted edit');
+      expect(reported.last.hour, 14);
     });
 
-    guardedTestWidgets('typing in the minute field does not close the panel', (tester) async {
+    guardedTestWidgets('typing in the minute field does not close the drawer', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -132,7 +138,7 @@ void main() {
       expect(find.byType(EditableText), findsWidgets);
     });
 
-    guardedTestWidgets('multiple successive edits all report live without ever dismissing the panel', (
+    guardedTestWidgets('multiple successive edits stay drafted; Save reports only the final state once', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -160,8 +166,15 @@ void main() {
       await tester.enterText(find.byType(EditableText).at(1), '15');
       await tester.pumpAndSettle();
 
-      expect(reported.length, greaterThanOrEqualTo(2));
-      expect(find.byType(EditableText), findsWidgets, reason: 'panel survives every edit in the sequence');
+      expect(reported, isEmpty, reason: 'DESIGN-98: no edit in the sequence commits on its own');
+      expect(find.byType(EditableText), findsWidgets, reason: 'drawer survives every edit in the sequence');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(reported.length, 1);
+      expect(reported.single.hour, 10);
+      expect(reported.single.minute, 15);
     });
   });
 
@@ -239,7 +252,7 @@ void main() {
   });
 
   group('LayrzTimeInput — error styling (trap 1: readOnly must never be hardcoded on the anchor)', () {
-    guardedTestWidgets('errors present paints a danger border on the anchored panel', (tester) async {
+    guardedTestWidgets('errors present paints a danger border on the anchor chrome', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -256,19 +269,28 @@ void main() {
         ),
       );
 
-      final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
+      // DESIGN-98 dropped LayrzAnchoredPanel from this widget's desktop
+      // branch (LayrzEndDrawer replaces it, and the drawer itself carries no
+      // border) -- so the border assertion moves to the anchor's own
+      // LayrzInputChrome, which is what actually paints border colour by
+      // error state (see LayrzInputStyleSpec.resolve's readOnly > error
+      // precedence, the trap this test guards against).
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome).first);
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzTimeInput)));
 
+      expect(chrome.readOnly, isFalse);
       expect(
-        panel.border?.color,
-        theme.tokens.colors.danger,
+        chrome.errors,
+        isNotEmpty,
         reason:
-            'errors must paint the danger border; if the anchor hardcoded readOnly:true on the chrome this would '
-            'silently fail because LayrzInputStyleSpec.resolve ranks readOnly above error',
+            'errors must reach the chrome; if the anchor hardcoded readOnly:true this test would still pass '
+            'while the border silently stayed primary, because LayrzInputStyleSpec.resolve ranks readOnly above '
+            'error -- see the direct readOnly assertion above for that half of the guard',
       );
+      expect(theme.tokens.colors.danger, isNot(theme.tokens.colors.primary));
     });
 
-    guardedTestWidgets('no errors paints the primary border on the anchored panel', (tester) async {
+    guardedTestWidgets('no errors leaves the anchor chrome in its default (non-readOnly) state', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -284,10 +306,9 @@ void main() {
         ),
       );
 
-      final panel = tester.widget<LayrzAnchoredPanel>(find.byType(LayrzAnchoredPanel));
-      final theme = LayrzTheme.of(tester.element(find.byType(LayrzTimeInput)));
-
-      expect(panel.border?.color, theme.tokens.colors.primary);
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome).first);
+      expect(chrome.readOnly, isFalse);
+      expect(chrome.errors, isEmpty);
     });
   });
 
@@ -423,9 +444,14 @@ void main() {
       await tester.tap(find.text('PM'));
       await tester.pumpAndSettle();
 
+      expect(reported, isEmpty, reason: 'DESIGN-98: the meridiem toggle alone must not commit -- it only drafts');
+      expect(find.byType(EditableText), findsWidgets, reason: 'the meridiem toggle must not close the drawer either');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
       expect(reported, isNotEmpty);
       expect(reported.last.hour, 21);
-      expect(find.byType(EditableText), findsWidgets, reason: 'the meridiem toggle must not close the panel either');
     });
   });
 
@@ -474,6 +500,8 @@ void main() {
 
       await tester.enterText(find.byType(EditableText).first, '25');
       await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
 
       expect(reported, isNotEmpty, reason: 'out-of-range input must still report, clamped -- never dropped');
       expect(reported.last.hour, 23);
@@ -501,6 +529,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(EditableText).at(1), '99');
+      await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
       expect(reported, isNotEmpty);
@@ -569,7 +599,7 @@ void main() {
   });
 
   group('LayrzTimeInput — responsive surface (isCompact boundary)', () {
-    guardedTestWidgets('wide viewport (>=960px) opens an anchored panel, never a bottom sheet', (tester) async {
+    guardedTestWidgets('wide viewport (>=960px) opens the drawer, never a bottom sheet', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -585,16 +615,19 @@ void main() {
         ),
       );
 
-      expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
-
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
       expect(find.byType(EditableText), findsWidgets);
       expect(find.byType(LayrzTimeSurface), findsOneWidget);
+      expect(
+        findButtonLabel('Save'),
+        findsOneWidget,
+        reason: 'the drawer carries a Save action, unlike a bare anchored panel',
+      );
     });
 
-    testWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel', (tester) async {
+    testWidgets('narrow viewport (<960px) opens a bottom sheet, never the drawer', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -606,12 +639,6 @@ void main() {
           value: const LayrzTimeOfDay(hour: 9, minute: 5),
           onChanged: (_) {},
         ),
-      );
-
-      expect(
-        find.byType(LayrzAnchoredPanel),
-        findsNothing,
-        reason: 'the compact branch must not build an anchored panel at all',
       );
 
       await tester.tap(find.byType(LayrzTimeInput));
@@ -645,9 +672,14 @@ void main() {
       await tester.enterText(find.byType(EditableText).first, '11');
       await tester.pumpAndSettle();
 
-      expect(reported, isNotEmpty);
+      expect(reported, isEmpty, reason: 'DESIGN-98: a field edit alone must not commit, even on mobile');
       expect(find.byType(LayrzTimeSurface), findsOneWidget, reason: 'the sheet must remain open after the edit');
       expect(tester.takeException(), isNull);
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(reported, isNotEmpty);
     });
   });
 

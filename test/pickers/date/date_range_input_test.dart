@@ -540,7 +540,10 @@ void main() {
       await tester.tap(find.text('20').first);
       await tester.pumpAndSettle();
 
-      await tester.tapAt(const Offset(10, 10));
+      // DESIGN-98: LayrzEndDrawer's canDismiss infers false while actions is
+      // present, so a barrier tap no longer closes it -- Cancel is now the
+      // involuntary-close route this test exercises.
+      await tester.tap(findButtonLabel('Cancel'));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
@@ -570,8 +573,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(findButtonLabel('Clear selection'), findsOneWidget);
 
-        // Close involuntarily.
-        await tester.tapAt(const Offset(10, 10));
+        // Close involuntarily via Cancel -- a barrier tap no longer
+        // dismisses once actions are present (DESIGN-98's canDismiss
+        // inference).
+        await tester.tap(findButtonLabel('Cancel'));
         await tester.pumpAndSettle();
         expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
 
@@ -610,7 +615,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('November 2026'), findsOneWidget);
 
-      await tester.tapAt(const Offset(10, 10));
+      // Close involuntarily via Cancel -- a barrier tap no longer dismisses
+      // once actions are present (DESIGN-98's canDismiss inference).
+      await tester.tap(findButtonLabel('Cancel'));
       await tester.pumpAndSettle();
       expect(find.byIcon(MdiIcons.chevronLeft), findsNothing);
 
