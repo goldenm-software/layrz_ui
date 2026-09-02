@@ -2,13 +2,13 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'progress_format.dart';
-import 'progress_label_painter.dart';
+import 'progress_labeled_bar.dart';
 import 'progress_painter.dart';
 import 'progress_style_spec.dart';
 import 'progress_type.dart';
+import 'progress_value_format.dart';
 
 /// The fraction of the track width covered by the indeterminate sweep.
 ///
@@ -125,15 +125,31 @@ class LayrzProgressBar extends StatefulWidget {
   /// determinate mode, `'Loading'` for indeterminate mode). The percentage or
   /// busy state is always announced in addition to this label, never in place
   /// of it. Applies identically regardless of [format] (shape).
+  ///
+  /// The announced percentage is produced by [formatLayrzProgressValue] —
+  /// the same function that formats the visible [showLabel] text — so what
+  /// assistive technology hears always matches what a sighted user sees,
+  /// including the rounding rule that keeps a genuinely-started value from
+  /// announcing as `'0%'` and a genuinely-incomplete one from announcing as
+  /// `'100%'`. This holds even when [showLabel] is `false`: the announcement
+  /// does not depend on the visible label being painted.
   final String? semanticLabel;
 
-  /// Whether to paint the current value as a percentage label, centered
-  /// inside the bar. **Linear, determinate mode only** — ignored (no label
-  /// painted) when [format] is [LayrzProgressFormat.circular], or when this
-  /// bar is indeterminate (`value == null`), since a percentage is
-  /// meaningless while progress is unknown.
+  /// Whether to paint the current value as a percentage label. **Linear,
+  /// determinate mode only** — ignored (no label painted) when [format] is
+  /// [LayrzProgressFormat.circular], or when this bar is indeterminate
+  /// (`value == null`), since a percentage is meaningless while progress is
+  /// unknown.
   ///
-  /// Defaults to `false`. This widget shipped without an inside label, so
+  /// The label is right-aligned inside the filled (indicator) portion of
+  /// the bar by default, inset by a small padding from the fill boundary,
+  /// and colored with that fill color's contrast color. When the fill is too
+  /// narrow to hold the label, it flips to just outside the bar instead —
+  /// onto the track — colored with the *track* color's contrast color
+  /// instead, so it stays legible against whichever region it actually sits
+  /// on. See [LayrzProgressLabelPainter] for the exact placement rule.
+  ///
+  /// Defaults to `false`. This widget shipped without a visible label, so
   /// defaulting it on would silently change the appearance of every existing
   /// caller; making it opt-in preserves current behaviour for callers that
   /// do not ask for it. The value is always exposed to assistive technology
@@ -141,14 +157,21 @@ class LayrzProgressBar extends StatefulWidget {
   /// label off never removes the accessible announcement.
   final bool showLabel;
 
-  /// The number of decimal places shown in the value label, when [showLabel]
-  /// is true.
+  /// The number of decimal places shown in the value label, and in the
+  /// `Semantics.value` announcement — see [showLabel] and [semanticLabel].
   ///
   /// Defaults to `0` (e.g. `'42%'`). Formatting uses `num.toStringAsFixed`
   /// rather than `package:intl`'s `NumberFormat` — `intl` is not a dependency
   /// of this package, and adding one solely for this is a decision for the
   /// package maintainer, not something to introduce unilaterally here.
-  /// Ignored when [showLabel] is false.
+  ///
+  /// A value that would round to all-zero digits at this precision (e.g.
+  /// `0.001` at `decimals: 0`) is never actually shown as `'0%'` — nor does a
+  /// value just below `1.0` round up to `'100%'` — see
+  /// [formatLayrzProgressValue] for the exact rule; only the true zero and
+  /// true one still format as `'0%'`/`'100%'`. This governs both the visible
+  /// label (when [showLabel] is true) and the accessibility announcement
+  /// (regardless of [showLabel]) identically.
   final int decimals;
 
   /// Creates a new [LayrzProgressBar].
@@ -272,12 +295,21 @@ class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerPr
         size: boxSize,
       );
 
-      // The centered value label is a linear-only, determinate-only
-      // affordance: circular mode has no straight run of pixels to center
-      // text along, and an indeterminate bar has no percentage to show.
+      // The value label is a linear-only, determinate-only affordance:
+      // circular mode has no straight run of pixels to place text along
+      // relative to a fill boundary, and an indeterminate bar has no
+      // percentage to show.
       final showLabel = widget.showLabel && !isCircular;
       painted = _wrapCircular(
-        showLabel ? _buildLabeledBar(bar: bar, value: value, boxSize: boxSize, style: style, tokens: tokens) : bar,
+        showLabel
+            ? LayrzLabeledProgressBar(
+                bar: bar,
+                value: value,
+                decimals: widget.decimals,
+                style: style,
+                tokens: tokens,
+              )
+            : bar,
       );
     } else if (reduceMotion) {
       // Reduced motion: freeze the sweep at its start position rather than
@@ -330,56 +362,13 @@ class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerPr
 
     return Semantics(
       label: widget.semanticLabel ?? (value != null ? 'Progress' : 'Loading'),
-      value: value != null ? '${(value * 100).round()}%' : null,
+      value: value != null ? formatLayrzProgressValue(value, widget.decimals) : null,
       liveRegion: true,
       child: SizedBox(
         height: boxSize.height,
         width: boxSize.width,
         child: painted,
       ),
-    );
-  }
-
-  /// Composes [bar] with a centered value-percentage label painted on top,
-  /// via a [Stack] rather than folding text painting into
-  /// [LayrzProgressPainter] itself — that painter's concern is track/fill
-  /// geometry only, shared by both formats, and label painting is a
-  /// linear-only, opt-in concern layered above it.
-  ///
-  /// The label is painted by [LayrzProgressLabelPainter], split at the
-  /// fill/track boundary so it stays legible against both the filled
-  /// (indicator) and unfilled (track) portions of the bar — see that
-  /// painter's doc for why a single text color cannot serve both. Both
-  /// contrast colors are derived from `Color.contrastColor`
-  /// (`lib/src/extensions/src/color.dart`), the same primitive already used
-  /// by `LayrzChip`, `LayrzAlert`, and `LayrzButton` to pick legible text
-  /// against an arbitrary accent — not a one-off computation invented here.
-  Widget _buildLabeledBar({
-    required Widget bar,
-    required double value,
-    required Size boxSize,
-    required LayrzProgressStyleSpec style,
-    required LayrzTokens tokens,
-  }) {
-    final text = '${(value * 100).toStringAsFixed(widget.decimals)}%';
-    final labelStyle = tokens.typography.label.copyWith(fontWeight: FontWeight.w600);
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        bar,
-        Positioned.fill(
-          child: CustomPaint(
-            painter: LayrzProgressLabelPainter(
-              text: text,
-              style: labelStyle,
-              fillBoundary: boxSize.width.isFinite ? boxSize.width * value.clamp(0.0, 1.0) : 0.0,
-              indicatorContrastColor: style.indicatorColor.contrastColor,
-              trackContrastColor: style.trackColor.contrastColor,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
