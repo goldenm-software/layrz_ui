@@ -536,6 +536,56 @@ void main() {
       });
     });
 
+    group('showInlineFooter (DESIGN-98)', () {
+      // LayrzDurationInput's desktop LayrzEndDrawer hosting passes
+      // showInlineFooter: false and drives reset() externally via a
+      // GlobalKey instead -- see duration_input.dart's _openDesktopDrawer.
+      // The mobile LayrzBottomSheet path is untouched: it never passes this
+      // parameter, so it keeps the default (true) and its own inline button.
+      guardedTestWidgets('showInlineFooter: false omits the panel\'s own inline reset button', (tester) async {
+        tester.view.physicalSize = _wideViewport;
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzDurationPickerPanel(
+            initialValue: null,
+            visibleUnits: _allUnits,
+            onChanged: (_) {},
+            showInlineFooter: false,
+          ),
+        );
+
+        expect(find.byType(LayrzButton), findsNothing, reason: 'no inline button when showInlineFooter is false');
+      });
+
+      guardedTestWidgets('reset() (public, via GlobalKey) zeroes every field and reports the result', (tester) async {
+        tester.view.physicalSize = _wideViewport;
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        Duration? reported;
+        final panelKey = GlobalKey<LayrzDurationPickerPanelState>();
+
+        await pumpThemed(
+          tester,
+          LayrzDurationPickerPanel(
+            key: panelKey,
+            initialValue: const Duration(hours: 2, minutes: 30),
+            visibleUnits: _allUnits,
+            onChanged: (duration) => reported = duration,
+            showInlineFooter: false,
+          ),
+        );
+
+        panelKey.currentState!.reset();
+        await tester.pump();
+
+        expect(reported, const Duration(), reason: 'reset() must zero and report the duration externally');
+      });
+    });
+
     group('reset button semantic color', () {
       guardedTestWidgets('the reset button is type warning, not info', (tester) async {
         await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);

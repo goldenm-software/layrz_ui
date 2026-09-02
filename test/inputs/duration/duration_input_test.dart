@@ -1156,12 +1156,14 @@ void main() {
     });
 
     // DESIGN-98: `LayrzDurationInput` moved off `LayrzAnchoredPanel` onto
-    // `LayrzEndDrawer` with a Cancel/Save action row -- see the class doc on
-    // `_LayrzDurationInputState.build`. The old `matchAnchor`/`coverAnchor`
-    // rect-tracking, primary/danger `LayrzAnchoredPanelBorder`, and
-    // width-follows-the-field behavior these tests used to assert are gone:
-    // the drawer is a fixed-width (`LayrzEndDrawer.width`, 420px) right-edge
-    // panel independent of the anchor field's own rect or width.
+    // `LayrzEndDrawer` -- see the class doc on `_LayrzDurationInputState.build`.
+    // The old `matchAnchor`/`coverAnchor` rect-tracking, primary/danger
+    // `LayrzAnchoredPanelBorder`, and width-follows-the-field behavior these
+    // tests used to assert are gone: the drawer is a fixed-width
+    // (`LayrzEndDrawer.width`, 420px) right-edge panel independent of the
+    // anchor field's own rect or width. This is a container change only --
+    // the only functional move is Reset, relocated from the panel's own
+    // inline footer into the drawer's `actions` slot; no Cancel/Save added.
     guardedTestWidgets('the drawer opens with a fixed 420px width, independent of the anchor field\'s own width', (
       tester,
     ) async {
@@ -1186,7 +1188,9 @@ void main() {
       expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
     });
 
-    guardedTestWidgets('the drawer carries a Cancel and a Save action', (tester) async {
+    guardedTestWidgets('the drawer carries a single Reset action, relocated from the panel\'s own inline footer', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1199,11 +1203,20 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      expect(findButtonLabel('Cancel'), findsOneWidget);
-      expect(findButtonLabel('Save'), findsOneWidget);
+      expect(findButtonLabel('Reset'), findsOneWidget, reason: 'Reset now lives in the drawer actions slot');
+      expect(
+        findButtonLabel('Cancel'),
+        findsNothing,
+        reason: 'this widget never buffered a draft -- no Cancel is added',
+      );
+      expect(
+        findButtonLabel('Save'),
+        findsNothing,
+        reason: 'every field edit already reports live -- no Save is added',
+      );
     });
 
-    guardedTestWidgets('pressing Cancel reverts live field edits back to the value in effect when the drawer opened', (
+    guardedTestWidgets('field edits inside the drawer still report live, exactly as before DESIGN-98', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1236,60 +1249,14 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(changedValue, const Duration(hours: 1, days: 1), reason: 'the live edit must still report immediately');
-
-      await tester.tap(findButtonLabel('Cancel'));
-      await tester.pumpAndSettle();
-
-      expect(
-        changedValue,
-        const Duration(hours: 1),
-        reason: 'Cancel must revert the live edit back to the drawer\'s original opening value',
-      );
-      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Cancel closes the drawer');
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets, reason: 'a field edit must not close the drawer');
     });
 
-    guardedTestWidgets('pressing Save closes the drawer, keeping whatever the live edits already reported', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      Duration? changedValue;
-
-      await pumpThemedApp(
-        tester,
-        StatefulBuilder(
-          builder: (context, setState) {
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              value: changedValue ?? const Duration(hours: 1),
-              onChanged: (value) => setState(() => changedValue = value),
-            );
-          },
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome));
-      await tester.pumpAndSettle();
-
-      final dayIncrement = find.descendant(
-        of: find.byKey(const ValueKey('layrz_duration_field_day')),
-        matching: find.bySemanticsLabel('Increase value'),
-      );
-      await tester.tap(dayIncrement);
-      await tester.pumpAndSettle();
-
-      await tester.tap(findButtonLabel('Save'));
-      await tester.pumpAndSettle();
-
-      expect(
-        changedValue,
-        const Duration(hours: 1, days: 1),
-        reason: 'Save has nothing to commit -- the edit already reported live',
-      );
-      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Save closes the drawer');
-    });
+    // Note: Reset's full zero-and-close-and-report behavior is already
+    // covered above by "resetting the panel fires onChanged, updates the
+    // summary, and closes the panel" -- that test needed no change here,
+    // since `findButtonLabel('Reset')` finds the button in the drawer's
+    // `actions` slot exactly as it found it inline before DESIGN-98.
   });
 
   group('LayrzDurationInput controller/focusNode lifecycle updates', () {

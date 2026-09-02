@@ -109,6 +109,19 @@ class LayrzDurationPickerPanel extends StatefulWidget {
   /// behavior existing callers rely on.
   final ValueChanged<Duration?>? onReset;
 
+  /// Whether this panel renders its own Reset button inline, as the last
+  /// child of its fields column.
+  ///
+  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
+  /// exactly as it behaved before DESIGN-98 -- that container is out of scope
+  /// for this change, so this panel still renders its own Reset button when
+  /// hosted there. Pass `false` when hosting this panel in [LayrzEndDrawer],
+  /// whose `actions` slot pins Reset to the drawer's own bottom edge instead
+  /// -- [LayrzDurationInput] reads this panel's state through a [GlobalKey]
+  /// in that case (see [LayrzDurationPickerPanelState.reset]), mirroring
+  /// `LayrzDateRangeSurface.showInlineFooter`'s identical pattern.
+  final bool showInlineFooter;
+
   /// Creates a new [LayrzDurationPickerPanel].
   const LayrzDurationPickerPanel({
     super.key,
@@ -116,13 +129,19 @@ class LayrzDurationPickerPanel extends StatefulWidget {
     required this.visibleUnits,
     required this.onChanged,
     this.onReset,
+    this.showInlineFooter = true,
   });
 
   @override
-  State<LayrzDurationPickerPanel> createState() => _LayrzDurationPickerPanelState();
+  State<LayrzDurationPickerPanel> createState() => LayrzDurationPickerPanelState();
 }
 
-class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
+/// State for [LayrzDurationPickerPanel], exposed publicly so a caller hosting
+/// this panel with [LayrzDurationPickerPanel.showInlineFooter] `false` (i.e.
+/// in [LayrzEndDrawer]) can trigger [reset] externally via a [GlobalKey] --
+/// mirroring [LayrzDateRangeSurfaceState]'s identical pattern for the same
+/// reason.
+class LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
   late int _day;
   late int _hour;
   late int _minute;
@@ -158,7 +177,18 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
     );
   }
 
-  void _handleReset() {
+  /// Clears every field to zero and reports the result via
+  /// [LayrzDurationPickerPanel.onReset] (or [LayrzDurationPickerPanel.onChanged]
+  /// when [LayrzDurationPickerPanel.onReset] is not supplied).
+  ///
+  /// Public so a caller hosting this panel with
+  /// [LayrzDurationPickerPanel.showInlineFooter] `false` can trigger it
+  /// externally -- via a [GlobalKey] on this state -- from a Reset action
+  /// rendered outside this panel's own widget tree (e.g. [LayrzEndDrawer]'s
+  /// `actions` slot). The panel's own inline Reset button (rendered when
+  /// [LayrzDurationPickerPanel.showInlineFooter] is `true`) calls this same
+  /// method.
+  void reset() {
     setState(() {
       _day = 0;
       _hour = 0;
@@ -421,15 +451,21 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
                 fieldsPerRow: fieldsPerRow,
                 spacing: spacing,
               ),
-              SizedBox(height: tokens.spacing.sp4),
-              SizedBox(
-                width: double.infinity,
-                child: LayrzButton(
-                  labelText: l10n.durationReset,
-                  onTap: _handleReset,
-                  type: LayrzButtonType.warning,
+              // Omitted when `showInlineFooter` is false: the caller (desktop
+              // LayrzEndDrawer hosting) renders Reset in the drawer's own
+              // `actions` slot instead, driving this panel's `reset()`
+              // through a GlobalKey -- see the class doc on `showInlineFooter`.
+              if (widget.showInlineFooter) ...[
+                SizedBox(height: tokens.spacing.sp4),
+                SizedBox(
+                  width: double.infinity,
+                  child: LayrzButton(
+                    labelText: l10n.durationReset,
+                    onTap: reset,
+                    type: LayrzButtonType.warning,
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },

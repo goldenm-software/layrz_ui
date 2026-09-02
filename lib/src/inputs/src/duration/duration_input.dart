@@ -82,17 +82,18 @@ String _formatUnitPart(LayrzUiL10n l10n, LayrzDurationFormat format, LayrzDurati
 /// [LayrzDurationInput] captures a [Duration] value through a configurable picker
 /// showing day, hour, minute, and second fields. The picker adapts to screen size:
 /// - **Desktop/wide** (>= 960px, `!context.isCompact`): [LayrzEndDrawer] with a
-///   pinned Cancel/Save action row (DESIGN-98)
+///   pinned Reset action (DESIGN-98)
 /// - **Mobile/compact** (< 960px, `context.isCompact`): bottom sheet covering the lower screen
 ///
 /// **DESIGN-98: moved from the anchored panel to [LayrzEndDrawer].** The
 /// maintainer reported the anchored overlay "kinda weird" for this field after
-/// live usage. Unlike the other seven DESIGN-98 pickers, this one's fields
-/// already reported through [onChanged] on every edit with no draft state to
-/// buffer -- see [_LayrzDurationInputState._openDesktopDrawer]'s own doc for
-/// why that live contract is kept unchanged, with Save simply closing the
-/// drawer and Cancel reverting the live edits back to the value in effect when
-/// the drawer opened.
+/// live usage. This is a container change only, not a commit-model change --
+/// this widget's fields already reported through [onChanged] on every edit
+/// with no draft state to buffer, and that live contract is kept completely
+/// unchanged. See [_LayrzDurationInputState._openDesktopDrawer]'s own doc for
+/// why: the only thing that moves is the existing Reset button, from the
+/// panel's own inline footer into the drawer's `actions` slot. No Cancel or
+/// Save is added.
 ///
 /// **The fixed 420px drawer width ([LayrzEndDrawer.width]) is narrower than
 /// this panel used to render on a wide field, and now forces one field per
@@ -405,51 +406,37 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
   /// Opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] on desktop (DESIGN-98),
   /// replacing the previous [LayrzAnchoredPanel] hosting.
   ///
-  /// **Cancel/Save is additive here, not a live-to-draft rewrite.** Unlike the
-  /// other seven DESIGN-98 pickers, this panel's fields have always reported
-  /// through [LayrzDurationInput.onChanged] on every keystroke/+/- tap, with no
-  /// draft state of its own to commit later (see the class doc's "Unsupported
-  /// units" section neighbor, [LayrzDurationPickerPanel]'s own `onChanged` doc).
-  /// Changing that live-report contract to a buffered draft would be a real
-  /// breaking change for existing callers relying on "every edit reports
-  /// immediately" -- so [onChanged] below keeps firing live, completely
-  /// unchanged. **Save** therefore has nothing left to commit; it simply closes
-  /// the drawer. **Cancel** is the one action that does something the live
-  /// contract could not already do on its own: it restores [originalValue] (the
-  /// value in effect when the drawer opened) via [onChanged], discarding
-  /// whatever live edits happened since, then closes -- mirroring the
-  /// discard-the-draft contract every other DESIGN-98 picker's Cancel has, even
-  /// though this one is reverting already-reported live values rather than an
-  /// unreported draft.
-  ///
-  /// [originalValue] is captured once, by the caller, before the drawer opens
-  /// (see `build`) rather than re-read from `widget.value` inside this method:
-  /// `widget.value` may already have moved by the time Cancel is pressed, since
-  /// every live edit reports through `onChanged` and a controlled caller
-  /// typically feeds that straight back into `value`.
-  Future<void> _openDesktopDrawer({required Duration? originalValue}) async {
+  /// **Container change only -- not a commit-model change.** This panel's
+  /// fields have always reported through [LayrzDurationInput.onChanged] on
+  /// every keystroke/+/- tap, with no draft state of its own to buffer (see
+  /// [LayrzDurationPickerPanel]'s own `onChanged` doc). That live-report
+  /// contract is kept completely unchanged here -- [onChanged] below still
+  /// fires on every field edit, exactly as before DESIGN-98. The only thing
+  /// that moves is Reset: previously rendered inline as the panel's own
+  /// full-width button, it now renders as a single action in the drawer's
+  /// `actions` slot instead, driven through [_panelKey] (mirroring
+  /// [LayrzDateRangeSurfaceState]'s identical `GlobalKey` pattern) with
+  /// [LayrzDurationPickerPanel.showInlineFooter] `false` suppressing the
+  /// panel's own copy of it. No Cancel/Save: unlike the eight date/time
+  /// pickers, this widget never buffered a draft to discard, so there is
+  /// nothing for Cancel to revert and nothing left for Save to commit.
+  /// `actions: [reset]` alone still infers `canDismiss: true` from
+  /// [LayrzEndDrawer.show]'s own inference (a single reset action, not a
+  /// decision-bearing Save, leaves the drawer freely dismissable) -- no
+  /// override needed here, unlike the Cancel/Save pickers.
+  Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
 
-    void handleCancel() {
-      widget.onChanged?.call(originalValue);
-      if (mounted) {
-        _updateSummary();
-      }
-      Navigator.pop(context);
-    }
+    final panelKey = GlobalKey<LayrzDurationPickerPanelState>();
 
     await LayrzEndDrawer.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
-      // Escape and the barrier tap must still cancel a picker draft even with
-      // actions present -- mirrors every other DESIGN-98 picker's identical
-      // override of LayrzEndDrawer.show's actions-present-infers-false
-      // default. See `LayrzDateRangeInput._openDesktopDrawer`'s doc for the
-      // full rationale.
-      canDismiss: true,
       builder: (context) => LayrzDurationPickerPanel(
+        key: panelKey,
         initialValue: widget.value,
         visibleUnits: widget.visibleUnits,
+        showInlineFooter: false,
         // Field edits (typing, +/- taps) report the new value and update the
         // anchor's summary live -- unchanged from the pre-DESIGN-98 contract,
         // see this method's own doc comment for why that stays live rather
@@ -468,14 +455,14 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         },
       ),
       actions: [
-        LayrzButton.cancel(
-          labelText: context.l10n.actionCancel,
-          onTap: handleCancel,
+        // Matches the picker Clear button's own styling convention
+        // (LayrzPickerDrawerFooter: warning type, text style) -- Reset here
+        // plays the identical "destructive, not the primary action" role.
+        LayrzButton(
+          labelText: context.l10n.durationReset,
+          onTap: () => panelKey.currentState?.reset(),
+          type: LayrzButtonType.warning,
           style: LayrzButtonStyle.text,
-        ),
-        LayrzButton.save(
-          labelText: context.l10n.actionSave,
-          onTap: () => Navigator.pop(context),
         ),
       ],
     );
@@ -782,15 +769,14 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         onTap: widget.disabled ? null : _openMobileSurface,
       );
     } else {
-      // Desktop: opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] with a
-      // Cancel/Save action row (DESIGN-98) -- replacing the previous
-      // `LayrzAnchoredPanel` hosting. See [_openDesktopDrawer]'s own doc
-      // comment for why Save has nothing left to commit (the field already
-      // reports live) while Cancel still has real, distinct work to do
-      // (reverting those live reports back to the drawer's opening value).
+      // Desktop: opens [LayrzDurationPickerPanel] in [LayrzEndDrawer]
+      // (DESIGN-98) -- replacing the previous `LayrzAnchoredPanel` hosting.
+      // See [_openDesktopDrawer]'s own doc comment for why this is a
+      // container change only, with Reset moved into the drawer's `actions`
+      // slot and no Cancel/Save added.
       return _buildInteractiveField(
         context: context,
-        onTap: widget.disabled ? null : () => _openDesktopDrawer(originalValue: widget.value),
+        onTap: widget.disabled ? null : _openDesktopDrawer,
       );
     }
   }
