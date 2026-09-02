@@ -7,6 +7,8 @@ import 'package:layrz_ui/src/formatting/formatting.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/day_grid.dart';
+import '../shared/grid_keyboard_handler.dart';
+import '../shared/grid_math.dart';
 import '../shared/time_fields_panel.dart';
 import 'datetime_presentation.dart';
 
@@ -176,6 +178,22 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
     });
   }
 
+  /// Whether [date] is unselectable — mirrors [LayrzPickersDayGrid]'s own
+  /// internal `_isDisabled || isAdjacent` combination exactly, so
+  /// `buildDayGridKeyboardHandler`'s skip-disabled-cells and
+  /// Enter/Space-never-selects-a-disabled-cell behavior agrees with what
+  /// the grid itself would actually let a tap select. See
+  /// `LayrzDateSurface._isDisabled`'s identical doc for why this is
+  /// duplicated rather than read back from the grid.
+  bool _isDisabled(DateTime date) {
+    if (!isInGridMonth(date, year: _displayedMonth.year, month: _displayedMonth.month)) return true;
+    if (widget.firstDay != null && date.isBefore(_dayOnly(widget.firstDay!))) return true;
+    if (widget.lastDay != null && date.isAfter(_dayOnly(widget.lastDay!))) return true;
+    return widget.disabledDays.any((d) => isSameDay(d, date));
+  }
+
+  DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   Widget _buildMonthHeader(BuildContext context) {
     final tokens = context.tokens;
     final l10n = context.l10n;
@@ -225,6 +243,12 @@ class _LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
         firstDayOfWeek: widget.firstDayOfWeek,
         showWeekNumbers: widget.showWeekNumbers,
         onDayTap: _handleDateTap,
+        keyboardHandler: buildDayGridKeyboardHandler(
+          isDisabled: _isDisabled,
+          onSelect: _handleDateTap,
+          firstDayOfWeek: widget.firstDayOfWeek,
+        ),
+        onDisplayedMonthChanged: _stepMonth,
       ),
     ],
   );

@@ -4,6 +4,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import '../models/month.dart';
 import '../models/month_range.dart';
+import '../shared/grid_keyboard_handler.dart';
 import '../shared/month_grid.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
@@ -150,6 +151,28 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
 
   void _handleReset() => setState(() => _draft = const LayrzRangeDraft<LayrzMonth>.empty());
 
+  void _handleYearChanged(int year) => setState(() => _displayedYear = year);
+
+  /// Whether [monthDate] is unselectable — mirrors [LayrzPickersMonthGrid]'s
+  /// own internal [minimum]/[maximum] bounds plus this surface's own
+  /// per-mode rules ([disabledMonths] only in arbitrary mode, matching
+  /// [build]'s identical carve-out; [_policy.isRejected] for the
+  /// contiguous-mode interior lock), so `buildMonthGridKeyboardHandler`'s
+  /// skip-disabled-cells and Enter/Space-never-selects behavior agrees with
+  /// what the grid itself would actually let a tap select. See
+  /// `LayrzMonthSurface._isDisabled`'s identical doc for why this is
+  /// duplicated rather than read back from the grid.
+  bool _isDisabled(DateTime monthDate) {
+    final minimum = widget.minimum?.toDateTime();
+    final maximum = widget.maximum?.toDateTime();
+    if (minimum != null && monthDate.isBefore(DateTime(minimum.year, minimum.month))) return true;
+    if (maximum != null && monthDate.isAfter(DateTime(maximum.year, maximum.month))) return true;
+    if (!widget.consecutive) {
+      return widget.disabledMonths.any((m) => m.year == monthDate.year && m.month == monthDate.month);
+    }
+    return _policy.isRejected(_draft, LayrzMonth.fromDateTime(monthDate));
+  }
+
   bool get _hasSelection => widget.consecutive ? _draft.anchor != null : _draft.arbitrarySelection.isNotEmpty;
 
   bool get _canSave => widget.consecutive ? _draft.isComplete : _draft.arbitrarySelection.isNotEmpty;
@@ -186,7 +209,7 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
         children: [
           LayrzPickersMonthGrid(
             displayedYear: _displayedYear,
-            onYearChanged: (year) => setState(() => _displayedYear = year),
+            onYearChanged: _handleYearChanged,
             reference: DateTime.now(),
             rangeStart: widget.consecutive ? _draft.anchor?.toDateTime() : null,
             rangeEnd: widget.consecutive ? _draft.end?.toDateTime() : null,
@@ -198,6 +221,11 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
             maximum: widget.maximum?.toDateTime(),
             disabledMonths: widget.consecutive ? const {} : widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
             onMonthTap: _handleTap,
+            keyboardHandler: buildMonthGridKeyboardHandler(
+              isDisabled: _isDisabled,
+              onSelect: _handleTap,
+              onYearChanged: _handleYearChanged,
+            ),
           ),
           SizedBox(height: tokens.spacing.sp3),
           Row(

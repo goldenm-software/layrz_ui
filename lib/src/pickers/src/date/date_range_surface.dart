@@ -7,6 +7,7 @@ import 'package:layrz_ui/src/formatting/formatting.dart';
 
 import '../models/date_range.dart';
 import '../shared/day_grid.dart';
+import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
@@ -136,6 +137,21 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
       if (_policy.isRejected(_draft, _dayOnly(d))) d,
   };
 
+  /// Whether [date] is unselectable — mirrors [LayrzPickersDayGrid]'s own
+  /// internal `_isDisabled || isAdjacent` combination plus this surface's
+  /// own range-interior rejection, so `buildDayGridKeyboardHandler`'s
+  /// skip-disabled-cells and Enter/Space-never-selects behavior agrees with
+  /// what the grid itself would actually let a tap select. See
+  /// `LayrzDateSurface._isDisabled`'s identical doc for why this is
+  /// duplicated rather than read back from the grid.
+  bool _isDisabled(DateTime date) {
+    if (!isInGridMonth(date, year: _displayedMonth.year, month: _displayedMonth.month)) return true;
+    if (widget.firstDay != null && date.isBefore(_dayOnly(widget.firstDay!))) return true;
+    if (widget.lastDay != null && date.isAfter(_dayOnly(widget.lastDay!))) return true;
+    if (widget.disabledDays.any((d) => isSameDay(d, date))) return true;
+    return _policy.isRejected(_draft, _dayOnly(date));
+  }
+
   void _handleReset() => setState(() => _draft = const LayrzRangeDraft<DateTime>.empty());
 
   void _handleSave() {
@@ -208,6 +224,12 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
             firstDayOfWeek: widget.firstDayOfWeek,
             showWeekNumbers: widget.showWeekNumbers,
             onDayTap: _handleTap,
+            keyboardHandler: buildDayGridKeyboardHandler(
+              isDisabled: _isDisabled,
+              onSelect: _handleTap,
+              firstDayOfWeek: widget.firstDayOfWeek,
+            ),
+            onDisplayedMonthChanged: _stepMonth,
           ),
           SizedBox(height: tokens.spacing.sp3),
           Row(

@@ -5,6 +5,8 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 
 import '../shared/day_grid.dart';
+import '../shared/grid_keyboard_handler.dart';
+import '../shared/grid_math.dart';
 
 /// The desktop/mobile-shared surface content for [LayrzDateInput]: a month
 /// navigation header above a single [LayrzPickersDayGrid] page. Composed by
@@ -105,6 +107,24 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
     });
   }
 
+  /// Whether [date] is unselectable — mirrors [LayrzPickersDayGrid]'s own
+  /// internal `_isDisabled || isAdjacent` combination exactly (bounds,
+  /// [disabledDays], and outside-the-displayed-month), so
+  /// `buildDayGridKeyboardHandler`'s skip-disabled-cells and
+  /// Enter/Space-never-selects-a-disabled-cell behavior agrees with what
+  /// the grid itself would actually let a tap select. Duplicated rather
+  /// than read back from the grid because [LayrzPickersDayGrid] does not
+  /// expose its resolved disabled set — see `grid_keyboard_handler.dart`'s
+  /// `isDisabled` parameter doc.
+  bool _isDisabled(DateTime date) {
+    if (!isInGridMonth(date, year: _displayedMonth.year, month: _displayedMonth.month)) return true;
+    if (widget.firstDay != null && date.isBefore(_dayOnly(widget.firstDay!))) return true;
+    if (widget.lastDay != null && date.isAfter(_dayOnly(widget.lastDay!))) return true;
+    return widget.disabledDays.any((d) => isSameDay(d, date));
+  }
+
+  DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   Widget _buildHeader(BuildContext context) {
     final tokens = context.tokens;
     final l10n = context.l10n;
@@ -159,6 +179,12 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
             firstDayOfWeek: widget.firstDayOfWeek,
             showWeekNumbers: widget.showWeekNumbers,
             onDayTap: widget.onDateSelected,
+            keyboardHandler: buildDayGridKeyboardHandler(
+              isDisabled: _isDisabled,
+              onSelect: widget.onDateSelected,
+              firstDayOfWeek: widget.firstDayOfWeek,
+            ),
+            onDisplayedMonthChanged: _stepMonth,
           ),
         ],
       ),
