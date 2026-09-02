@@ -1,32 +1,37 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/month.dart';
 import '../models/month_range.dart';
-import '../shared/month_grid.dart';
 import '../shared/picker_anchor.dart';
-import '../shared/range_draft.dart';
-import '../shared/range_policy.dart';
+import 'month_range_surface.dart';
 
 /// A Material-free month-range input field.
 ///
 /// **The sole widget in this batch where a discontinuous selection is
 /// reachable.** [consecutive] defaults to `false` (arbitrary multi-select,
-/// via [LayrzArbitraryRangePolicy]) per the user's explicit carve-out; pass
-/// `true` for consecutive-months mode (via [LayrzContiguousRangePolicy]),
-/// which behaves like [LayrzDateRangeInput]'s endpoint-adjust state machine.
+/// via `LayrzArbitraryRangePolicy`) per the user's explicit carve-out; pass
+/// `true` for consecutive-months mode (via `LayrzContiguousRangePolicy`),
+/// which behaves like `LayrzDateRangeInput`'s endpoint-adjust state machine.
+/// See [LayrzMonthRangeSurface]'s class doc for the full selection contract
+/// of both modes.
 ///
 /// **Value shape depends on mode**: [onArbitraryChanged] fires a sorted
 /// `List<LayrzMonth>` in arbitrary mode; [onRangeChanged] fires a
 /// [LayrzMonthRange] in consecutive mode. Exactly one of [arbitraryValue]/
 /// [rangeValue] and one of [onArbitraryChanged]/[onRangeChanged] is
 /// meaningful at a time, selected by [consecutive].
+///
+/// **Cancel/Save live inside the anchored panel/bottom sheet, visible from
+/// the first frame** — this is one of the five widgets in the batch that
+/// coordinate multiple parts rather than committing on a single tap.
+/// **Involuntary close discards the draft** — reopening always starts clean
+/// from [arbitraryValue]/[rangeValue].
 ///
 /// [disabledMonths] is documented as **ignored in consecutive mode**,
 /// matching old layrz_theme behaviour.
@@ -79,12 +84,22 @@ class LayrzMonthRangeInput extends StatefulWidget {
   final Set<LayrzMonth> disabledMonths;
 
   /// A full-control override for formatting the arbitrary selection into
-  /// display text.
+  /// display text. Takes precedence over [arbitraryPattern] when supplied.
   final String Function(List<LayrzMonth>)? arbitraryFormatter;
 
   /// A full-control override for formatting the consecutive range into
-  /// display text.
+  /// display text. Takes precedence over [rangePattern] when supplied.
   final String Function(LayrzMonthRange)? rangeFormatter;
+
+  /// A strftime-style pattern used to format each month in the arbitrary
+  /// comma-joined summary (see [LayrzMonthRangeInput]'s class doc for the
+  /// overflow-to-count fallback). Defaults to `'%b %Y'` (abbreviated month
+  /// name), matching the field's need to fit several entries on one line.
+  final String arbitraryPattern;
+
+  /// A strftime-style pattern used to format each endpoint of the
+  /// consecutive-mode summary. Defaults to `'%B %Y'` (full month name).
+  final String rangePattern;
 
   /// The text editing controller for the anchor field.
   final TextEditingController? controller;
@@ -120,6 +135,8 @@ class LayrzMonthRangeInput extends StatefulWidget {
     this.disabledMonths = const {},
     this.arbitraryFormatter,
     this.rangeFormatter,
+    this.arbitraryPattern = '%b %Y',
+    this.rangePattern = '%B %Y',
     this.controller,
     this.focusNode,
     this.dense = false,
@@ -136,14 +153,41 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The maximum number of months rendered as a comma-joined list in
+  /// arbitrary mode before the summary collapses to a count instead.
+  ///
+  /// **Not a firm ruling** — the maintainer settled the *approach* (a
+  /// comma-joined list with an overflow fallback to a count), leaving the
+  /// exact threshold for review. `4` was chosen because four abbreviated
+  /// entries (`"Jan, Mar, Apr, Sep"`) is roughly the practical limit that
+  /// still fits the single-line anchor at typical field widths without
+  /// relying on horizontal scrolling or truncation; a fifth entry tips
+  /// most reasonably-sized fields into `TextOverflow.ellipsis` territory,
+  /// where a count reads better than a silently truncated list. Flagged for
+  /// maintainer review per the implementation plan.
   static const _overflowThreshold = 4;
+
+  /// The [widget.arbitraryValue]/[widget.rangeValue]/[widget.consecutive]
+  /// combination the summary text was last computed for.
+  ///
+  /// Mirrors `LayrzMonthInput`'s own `_lastValue` guard: [_updateSummary]
+  /// reads `context.l10n` (via [formatStrftime]), which asserts if called
+  /// before this widget's [BuildContext] has an established `Localizations`
+  /// dependency. **The scaffold called `_updateSummary()` directly from
+  /// `initState`, which crashes on construction** — this field and the
+  /// `build`-time check below are the fix: [build] recomputes the summary
+  /// only when the relevant value actually changed since the last build,
+  /// which also covers the very first build.
+  (bool, List<LayrzMonth>, LayrzMonthRange?)? _lastValue;
 
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling _updateSummary() here -- see _lastValue's
+    // doc. The first build() computes it instead, once context.l10n is safe
+    // to read.
   }
 
   @override
@@ -157,11 +201,9 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.arbitraryValue != oldWidget.arbitraryValue ||
-        widget.rangeValue != oldWidget.rangeValue ||
-        widget.consecutive != oldWidget.consecutive) {
-      _updateSummary();
-    }
+    // _updateSummary() is driven from build() via the _lastValue guard, not
+    // from here, so a controller swap above still gets the correct text
+    // without this method also needing to special-case it.
   }
 
   @override
@@ -171,25 +213,16 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     super.dispose();
   }
 
-  String _monthLabel(int month, LayrzUiL10n l10n) {
-    return switch (month) {
-      1 => l10n.monthJanuary,
-      2 => l10n.monthFebruary,
-      3 => l10n.monthMarch,
-      4 => l10n.monthApril,
-      5 => l10n.monthMay,
-      6 => l10n.monthJune,
-      7 => l10n.monthJuly,
-      8 => l10n.monthAugust,
-      9 => l10n.monthSeptember,
-      10 => l10n.monthOctober,
-      11 => l10n.monthNovember,
-      _ => l10n.monthDecember,
-    };
-  }
-
+  /// Formats the active mode's value into the anchor's summary text.
+  ///
+  /// **Never hand-rolls month names.** Both modes resolve month names
+  /// through [formatStrftime] (`%B`/`%b`, backed by [LayrzUiL10n]), never a
+  /// private switch statement — the scaffold this replaced did exactly that
+  /// and violated the no-`intl`-but-also-no-hardcoded-English rule the same
+  /// way `formatStrftime` exists to prevent.
   void _updateSummary() {
     final l10n = context.l10n;
+
     if (widget.consecutive) {
       final range = widget.rangeValue;
       if (widget.rangeFormatter != null && range != null) {
@@ -200,8 +233,8 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
         _controller.text = '';
         return;
       }
-      final start = '${_monthLabel(range.start.month, l10n)} ${range.start.year}';
-      final end = '${_monthLabel(range.end.month, l10n)} ${range.end.year}';
+      final start = formatStrftime(range.start.toDateTime(), widget.rangePattern, l10n);
+      final end = formatStrftime(range.end.toDateTime(), widget.rangePattern, l10n);
       _controller.text = '$start${l10n.dateTimePickerRangeSeparator}$end';
       return;
     }
@@ -215,16 +248,22 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
       _controller.text = '';
       return;
     }
-    // Comma-joined list, falling back to a count on overflow -- the one
-    // sub-question the plan left without a firm ruling (Q5b). Threshold
-    // documented here: beyond `_overflowThreshold` entries, a comma-joined
-    // list risks overflowing the anchor's single-line summary, so the
-    // display collapses to a count instead of truncating mid-list.
+    // Comma-joined list, falling back to a count on overflow -- see
+    // `_overflowThreshold`'s doc for the threshold and its rationale.
+    //
+    // No `LayrzUiL10n` key exists for this count phrasing (`pickers.dart`
+    // only defines `pickerRangeReset`/`pickerTodayLabel`/`pickerSelectedLabel`/
+    // `pickerRangeInteriorLabel`/`pickerDisabledLabel`, none of which fit),
+    // and `lib/src/l10n/` is outside this unit's declared file set -- adding
+    // a key there is U1's call, not this unit's. Left as a plain literal
+    // pending that addition; flagged in this unit's report for the
+    // maintainer.
     if (months.length > _overflowThreshold) {
       _controller.text = '${months.length} months selected';
       return;
     }
-    _controller.text = months.map((m) => '${_monthLabel(m.month, l10n)} ${m.year}').join(', ');
+    final sorted = months.toList()..sort();
+    _controller.text = sorted.map((m) => formatStrftime(m.toDateTime(), widget.arbitraryPattern, l10n)).join(', ');
   }
 
   void _handleArbitrarySave(List<LayrzMonth> months) {
@@ -243,7 +282,7 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     if (widget.disabled) return;
     await LayrzBottomSheet.show<void>(
       context,
-      builder: (context) => _LayrzMonthRangeSurface(
+      builder: (context) => LayrzMonthRangeSurface(
         consecutive: widget.consecutive,
         arbitraryValue: widget.arbitraryValue,
         rangeValue: widget.rangeValue,
@@ -260,6 +299,10 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
         },
         onCancel: () => Navigator.pop(context),
       ),
+      // Names the sheet for screen readers -- omitting this leaves it
+      // unannounced, a defect this batch's mobile branches shipped once
+      // already (see the implementation plan's known scaffold defects).
+      semanticLabel: widget.labelText ?? widget.hintText,
       initialSize: 0.8,
       maxSize: 0.95,
       snapSizes: const [0.8, 0.95],
@@ -317,6 +360,12 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
 
   @override
   Widget build(BuildContext context) {
+    final currentValue = (widget.consecutive, widget.arbitraryValue, widget.rangeValue);
+    if (_lastValue != currentValue) {
+      _lastValue = currentValue;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
@@ -337,7 +386,7 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
         color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
         width: tokens.border.base,
       ),
-      child: _LayrzMonthRangeSurface(
+      child: LayrzMonthRangeSurface(
         consecutive: widget.consecutive,
         arbitraryValue: widget.arbitraryValue,
         rangeValue: widget.rangeValue,
@@ -353,153 +402,6 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
           _panelController.close();
         },
         onCancel: () => _panelController.close(),
-      ),
-    );
-  }
-}
-
-/// Private surface backing [LayrzMonthRangeInput], switching policy by
-/// [consecutive] — [LayrzArbitraryRangePolicy] (default) or
-/// [LayrzContiguousRangePolicy].
-class _LayrzMonthRangeSurface extends StatefulWidget {
-  final bool consecutive;
-  final List<LayrzMonth> arbitraryValue;
-  final LayrzMonthRange? rangeValue;
-  final LayrzMonth? minimum;
-  final LayrzMonth? maximum;
-  final Set<LayrzMonth> disabledMonths;
-  final ValueChanged<List<LayrzMonth>> onArbitrarySave;
-  final ValueChanged<LayrzMonthRange> onRangeSave;
-  final VoidCallback onCancel;
-
-  const _LayrzMonthRangeSurface({
-    required this.consecutive,
-    required this.arbitraryValue,
-    required this.rangeValue,
-    required this.minimum,
-    required this.maximum,
-    required this.disabledMonths,
-    required this.onArbitrarySave,
-    required this.onRangeSave,
-    required this.onCancel,
-  });
-
-  @override
-  State<_LayrzMonthRangeSurface> createState() => _LayrzMonthRangeSurfaceState();
-}
-
-class _LayrzMonthRangeSurfaceState extends State<_LayrzMonthRangeSurface> {
-  late LayrzRangeDraft<LayrzMonth> _draft;
-  late int _displayedYear;
-  final _contiguousPolicy = LayrzContiguousRangePolicy<LayrzMonth>(compare: (a, b) => a.compareTo(b));
-  final _arbitraryPolicy = const LayrzArbitraryRangePolicy<LayrzMonth>();
-
-  LayrzRangePolicy<LayrzMonth> get _policy => widget.consecutive ? _contiguousPolicy : _arbitraryPolicy;
-
-  @override
-  void initState() {
-    super.initState();
-    _seed();
-  }
-
-  @override
-  void didUpdateWidget(_LayrzMonthRangeSurface oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.arbitraryValue != widget.arbitraryValue ||
-        oldWidget.rangeValue != widget.rangeValue ||
-        oldWidget.consecutive != widget.consecutive) {
-      _seed();
-    }
-  }
-
-  void _seed() {
-    if (widget.consecutive) {
-      final range = widget.rangeValue;
-      _draft = range == null
-          ? const LayrzRangeDraft<LayrzMonth>.empty()
-          : LayrzRangeDraft<LayrzMonth>.complete(anchor: range.start, end: range.end);
-      _displayedYear = range?.start.year ?? DateTime.now().year;
-    } else {
-      _draft = LayrzRangeDraft<LayrzMonth>.arbitrary(widget.arbitraryValue.toSet());
-      _displayedYear = widget.arbitraryValue.isEmpty ? DateTime.now().year : widget.arbitraryValue.first.year;
-    }
-  }
-
-  void _handleTap(DateTime monthDate) {
-    final month = LayrzMonth.fromDateTime(monthDate);
-    setState(() => _draft = _policy.onTap(_draft, month));
-  }
-
-  void _handleReset() => setState(() => _draft = const LayrzRangeDraft<LayrzMonth>.empty());
-
-  bool get _canSave => widget.consecutive ? _draft.isComplete : _draft.arbitrarySelection.isNotEmpty;
-
-  void _handleSave() {
-    if (!_canSave) return;
-    if (widget.consecutive) {
-      widget.onRangeSave(LayrzMonthRange(start: _draft.anchor as LayrzMonth, end: _draft.end as LayrzMonth));
-    } else {
-      final sorted = _draft.arbitrarySelection.toList()..sort();
-      widget.onArbitrarySave(sorted);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final l10n = context.l10n;
-
-    final visibleMonths = [for (var m = 1; m <= 12; m++) LayrzMonth(year: _displayedYear, month: m)];
-    final rejected = widget.consecutive
-        ? {
-            for (final m in visibleMonths)
-              if (_policy.isRejected(_draft, m)) m.toDateTime(),
-          }
-        : <DateTime>{};
-
-    return Padding(
-      padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickersMonthGrid(
-            displayedYear: _displayedYear,
-            onYearChanged: (year) => setState(() => _displayedYear = year),
-            reference: DateTime.now(),
-            selectedMonth: null,
-            rangeStart: widget.consecutive ? _draft.anchor?.toDateTime() : null,
-            rangeEnd: widget.consecutive ? _draft.end?.toDateTime() : null,
-            arbitrarySelection: widget.consecutive
-                ? const {}
-                : _draft.arbitrarySelection.map((m) => m.toDateTime()).toSet(),
-            rejectedMonths: rejected,
-            minimum: widget.minimum?.toDateTime(),
-            maximum: widget.consecutive ? widget.maximum?.toDateTime() : widget.maximum?.toDateTime(),
-            disabledMonths: widget.consecutive ? const {} : widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
-            onMonthTap: _handleTap,
-          ),
-          SizedBox(height: tokens.spacing.sp3),
-          Row(
-            children: [
-              if (_draft.anchor != null || _draft.arbitrarySelection.isNotEmpty)
-                Expanded(
-                  child: LayrzButton(
-                    labelText: l10n.pickerRangeReset,
-                    onTap: _handleReset,
-                    type: LayrzButtonType.warning,
-                  ),
-                ),
-              if (_draft.anchor != null || _draft.arbitrarySelection.isNotEmpty) SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.cancel(labelText: l10n.actionCancel, onTap: widget.onCancel),
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.save(labelText: l10n.actionSave, onTap: _handleSave, isDisabled: !_canSave),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
