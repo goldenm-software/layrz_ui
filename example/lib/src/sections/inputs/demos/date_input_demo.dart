@@ -4,7 +4,8 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// Showroom demo for [LayrzDateInput].
 ///
 /// Demonstrates:
-/// - **Commit-on-tap**: selecting a day commits immediately, with no Save button.
+/// - **Cancel/Save**: opens a [LayrzEndDrawer] (desktop) or [LayrzBottomSheet] (mobile) with
+///   Cancel and Save actions — tapping a day only drafts it; `onChanged` fires once, on Save.
 /// - **A live `strftime` pattern swap**, comparing `%Y-%m-%d` against `%B %d, %Y` on the same
 ///   value, so the formatter is visibly in effect rather than merely documented. No `intl`
 ///   dependency is available to this package.
@@ -35,12 +36,12 @@ class _DateInputDemoState extends State<DateInputDemo> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Commit on Tap', style: tokens.typography.title),
+            Text('Cancel / Save', style: tokens.typography.title),
             Text(
-              'Selecting a day commits immediately; there is no Save button. Toggle the pattern '
-              'below to see the strftime formatter change the display text for the same value. '
-              'firstDayOfWeek is set to DateTime.sunday here, differing from the widget\'s own '
-              'DateTime.monday default.',
+              'Tapping a day only drafts it -- the date commits when Save is pressed, and Cancel '
+              'discards the draft. Toggle the pattern below to see the strftime formatter change '
+              'the display text for the same value. firstDayOfWeek is set to DateTime.sunday '
+              'here, differing from the widget\'s own DateTime.monday default.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),

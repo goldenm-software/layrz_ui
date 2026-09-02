@@ -4,7 +4,8 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// Showroom demo for [LayrzTimeInput].
 ///
 /// Demonstrates:
-/// - **Commit-on-tap**: every field edit is itself a commit, with no separate save gesture.
+/// - **Cancel/Save**: opens a [LayrzEndDrawer] (desktop) or [LayrzBottomSheet] (mobile) with
+///   Cancel and Save actions — field edits only update the draft; `onChanged` fires once, on Save.
 /// - **A live `showSeconds` toggle on a single instance**, proving no layout reflow occurs when
 ///   the seconds field appears or disappears (D15) — two static instances would not demonstrate
 ///   this, since nothing would visibly change between them.
@@ -33,11 +34,11 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Commit on Tap', style: tokens.typography.title),
+            Text('Cancel / Save', style: tokens.typography.title),
             Text(
-              'Every field edit is itself a commit -- there is no separate save gesture. Toggle '
-              'showSeconds below; the panel/sheet does not reflow when the seconds field appears '
-              'or disappears.',
+              'Field edits only update the draft -- the time commits when Save is pressed, and '
+              'Cancel discards the draft. Toggle showSeconds below; the panel/sheet does not '
+              'reflow when the seconds field appears or disappears.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),

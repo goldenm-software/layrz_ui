@@ -4,8 +4,9 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// Showroom demo for [LayrzMonthInput].
 ///
 /// Demonstrates three instances side by side: a normal instance, an instance with a non-empty
-/// `errors` list (showing the danger border), and a `disabled` instance -- commit-on-tap, with
-/// no Save button.
+/// `errors` list (showing the danger border), and a `disabled` instance. Each opens a
+/// [LayrzEndDrawer] (desktop) or [LayrzBottomSheet] (mobile) with Cancel and Save actions --
+/// tapping a month only drafts it; `onChanged` fires once, on Save.
 class MonthInputDemo extends StatefulWidget {
   /// Creates a new [MonthInputDemo].
   const MonthInputDemo({super.key});
@@ -28,10 +29,11 @@ class _MonthInputDemoState extends State<MonthInputDemo> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Commit on Tap', style: tokens.typography.title),
+            Text('Cancel / Save', style: tokens.typography.title),
             Text(
               'Left: a normal instance. Middle: a non-empty errors list, showing the danger '
-              'border. Right: disabled.',
+              'border. Right: disabled. Tapping a month only drafts it -- Save commits, Cancel '
+              'discards.',
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),
