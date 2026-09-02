@@ -113,12 +113,30 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The [widget.value] the summary text was last computed for.
+  ///
+  /// [_updateSummary] reads `context.l10n`, which depends on the
+  /// [Localizations] inherited widget — that dependency cannot be
+  /// established from `initState` (Flutter throws
+  /// "dependOnInheritedWidgetOfExactType() ... called before initState()
+  /// completed"). Mirroring `LayrzDateInput`'s own `_lastValue` cache,
+  /// [build] compares [widget.value] against this field and only calls
+  /// [_updateSummary] when it actually changed, which is always safe
+  /// because [build] runs with a fully established inherited-widget
+  /// dependency. **The scaffold called `_updateSummary()` directly from
+  /// `initState`, which crashes on construction with any non-null [value]**
+  /// — this field and the `build`-time check below are the fix.
+  LayrzDateRange? _lastValue;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling `_updateSummary()` here -- see `_lastValue`'s
+    // own doc for why: it reads `context.l10n`, which cannot be established
+    // from `initState`. `build` performs the initial (and every subsequent)
+    // summary computation via the `_lastValue` comparison.
   }
 
   @override
@@ -132,7 +150,6 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.value != oldWidget.value) _updateSummary();
   }
 
   @override
@@ -181,6 +198,10 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
         },
         onCancel: () => Navigator.pop(context),
       ),
+      // Names the sheet for screen readers -- omitting this leaves it
+      // unannounced, a defect this batch's mobile branches shipped once
+      // already (see the implementation plan's known scaffold defects).
+      semanticLabel: widget.labelText ?? widget.hintText,
       initialSize: 0.8,
       maxSize: 0.95,
       snapSizes: const [0.8, 0.95],
@@ -238,6 +259,11 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.value != _lastValue) {
+      _lastValue = widget.value;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }

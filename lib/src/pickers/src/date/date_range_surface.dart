@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
+import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/formatting/formatting.dart';
 
 import '../models/date_range.dart';
 import '../shared/day_grid.dart';
@@ -27,6 +30,12 @@ import '../shared/range_policy.dart';
 /// see the implementation plan's "Involuntary close" section, which cites
 /// `LayrzAnchoredPanel`'s eager-child `State` reuse as the mechanism this
 /// guards against.
+///
+/// **Owns its own month-navigation header**, exactly like [LayrzDateSurface]
+/// — this widget renders only a single page and exposes no navigation of its
+/// own, so this surface steps [_displayedMonth] itself with a
+/// `‹ "Month YYYY" › ` header, reusing the existing `calendarMonthBack`/
+/// `calendarMonthNext` l10n keys.
 class LayrzDateRangeSurface extends StatefulWidget {
   /// The currently committed range, or `null`.
   final LayrzDateRange? value;
@@ -76,7 +85,16 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
   late DateTime _displayedMonth;
   final _policy = LayrzContiguousRangePolicy<DateTime>(compare: (a, b) => _dayOnly(a).compareTo(_dayOnly(b)));
 
-  static DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+  /// Truncates [d] to calendar-day granularity (year/month/day, time zeroed)
+  /// while preserving [d]'s own [DateTime] subtype and zone, via
+  /// [sameZoneDate] (the S5 exception to D72) rather than the plain
+  /// `DateTime(d.year, d.month, d.day)` constructor the scaffold used —
+  /// which always returns a **local** `DateTime` and silently drops a
+  /// `TZDateTime` argument's zone. `sameZoneDate(d, d.year, d.month, d.day)`
+  /// builds the truncated date through `d`'s own constructor instead, so a
+  /// `TZDateTime` endpoint stays a `TZDateTime` in the same [Location]
+  /// through every draft mutation and the final saved [LayrzDateRange].
+  static DateTime _dayOnly(DateTime d) => sameZoneDate(d, d.year, d.month, d.day);
 
   @override
   void initState() {
@@ -98,6 +116,17 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
     _displayedMonth = value?.start ?? DateTime.now();
   }
 
+  /// Steps [_displayedMonth] by [months], through [sameZoneDate] rather
+  /// than [Duration] arithmetic so a `TZDateTime` value steps according to
+  /// its own zone's calendar-field rules rather than absolute elapsed time
+  /// — mirrors [LayrzDateInput]'s surface exactly; see `sameZoneDate`'s own
+  /// doc for why [Duration] is unsafe here.
+  void _stepMonth(int months) {
+    setState(() {
+      _displayedMonth = sameZoneDate(_displayedMonth, _displayedMonth.year, _displayedMonth.month + months);
+    });
+  }
+
   void _handleTap(DateTime tapped) {
     setState(() => _draft = _policy.onTap(_draft, _dayOnly(tapped)));
   }
@@ -112,6 +141,41 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
   void _handleSave() {
     if (!_draft.isComplete) return;
     widget.onSave(LayrzDateRange(start: _draft.anchor as DateTime, end: _draft.end as DateTime));
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final tokens = context.tokens;
+    final l10n = context.l10n;
+    final label = formatStrftime(_displayedMonth, '%B %Y', l10n);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Semantics(
+          button: true,
+          label: l10n.calendarMonthBack,
+          onTap: () => _stepMonth(-1),
+          child: ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () => _stepMonth(-1),
+              child: Icon(MdiIcons.chevronLeft, color: tokens.colors.fg2),
+            ),
+          ),
+        ),
+        Text(label, style: tokens.typography.title),
+        Semantics(
+          button: true,
+          label: l10n.calendarMonthNext,
+          onTap: () => _stepMonth(1),
+          child: ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () => _stepMonth(1),
+              child: Icon(MdiIcons.chevronRight, color: tokens.colors.fg2),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -131,6 +195,8 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          _buildHeader(context),
+          SizedBox(height: tokens.spacing.sp2),
           LayrzPickersDayGrid(
             displayedMonth: _displayedMonth,
             rangeStart: _draft.anchor,
