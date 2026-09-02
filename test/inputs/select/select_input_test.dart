@@ -503,7 +503,7 @@ void main() {
       expect(find.text('Option A'), findsOneWidget);
     });
 
-    testWidgets('desktop viewport uses anchored panel', (tester) async {
+    testWidgets('desktop viewport opens the selection surface in LayrzEndDrawer (DESIGN-98)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -517,8 +517,14 @@ void main() {
         ),
       );
 
-      // Desktop should use LayrzAnchoredPanel
-      expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
+      expect(find.byType(LayrzSelectInputSurface<String>), findsNothing);
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      // Desktop opens the selection surface via LayrzEndDrawer (DESIGN-98),
+      // replacing the previous LayrzAnchoredPanel hosting.
+      expect(find.byType(LayrzSelectInputSurface<String>), findsOneWidget);
     });
 
     testWidgets('desktop viewport opens panel on tap', (tester) async {
@@ -1072,7 +1078,17 @@ void main() {
   // 300)`-capped list), which both pinned the panel to exactly 300px
   // regardless of content AND overflowed by the search field's height once
   // enough items were added. The rule is now: `height = min(content, 300)`,
-  // scroll past 300 -- enforced by `LayrzAnchoredPanel.maxHeight` alone.
+  // scroll past 300.
+  //
+  // DESIGN-98 moved the desktop cap's enforcement from `LayrzAnchoredPanel.maxHeight`
+  // to a `ConstrainedBox`+`SingleChildScrollView` pair `_openDesktopDrawer` wraps
+  // around `LayrzSelectInputSurface` (see that method's own doc comment) --
+  // `LayrzEndDrawer` offers no height-cap parameter of its own. That
+  // `SingleChildScrollView` now sits nested inside `LayrzEndDrawer`'s own
+  // outer one, so `find.byType(SingleChildScrollView)` below matches TWO
+  // widgets on desktop; [_panelScrollView] disambiguates to the inner one --
+  // the immediate ancestor of the surface -- which is the one this group's
+  // measurements are actually about.
   //
   // These assertions are measured geometry, not widget presence: presence
   // assertions are exactly what let the original overflow ship behind a
@@ -1101,7 +1117,7 @@ void main() {
       // Before the fix this measured Size(1580.0, 300.0) -- a fixed height
       // regardless of content. With 2 items the panel must shrink well
       // below the 300px cap.
-      final panelSize = tester.getSize(find.byType(SingleChildScrollView));
+      final panelSize = tester.getSize(_panelScrollView());
       expect(panelSize.height, lessThan(300.0));
     });
 
@@ -1120,7 +1136,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      final panelSize = tester.getSize(find.byType(SingleChildScrollView));
+      final panelSize = tester.getSize(_panelScrollView());
       expect(panelSize.height, equals(300.0));
 
       // The cap must be scrollable, not merely clipped: all 30 items are
@@ -1128,7 +1144,7 @@ void main() {
       // alone proves nothing -- assert that dragging actually moves content,
       // i.e. the viewport genuinely scrolls rather than being pinned.
       final topBefore = tester.getTopLeft(find.text('Option 29')).dy;
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
+      await tester.drag(_panelScrollView(), const Offset(0, -3000));
       await tester.pumpAndSettle();
       final topAfter = tester.getTopLeft(find.text('Option 29')).dy;
       expect(topAfter, lessThan(topBefore));
@@ -1199,11 +1215,11 @@ void main() {
       // The panel's own scroll viewport must be strictly shorter than the
       // full, uncapped content height (30 * 40 = 1200) -- proof the panel is
       // actually constraining the list, not merely failing to crash.
-      final desktopViewport = tester.getSize(find.byType(SingleChildScrollView));
+      final desktopViewport = tester.getSize(_panelScrollView());
       expect(desktopViewport.height, lessThan(1200.0));
 
       final desktopTopBefore = tester.getTopLeft(find.text('Option 0')).dy;
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
+      await tester.drag(_panelScrollView(), const Offset(0, -3000));
       await tester.pumpAndSettle();
       final desktopTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
       expect(desktopTopAfter, lessThan(desktopTopBefore));
@@ -1264,7 +1280,7 @@ void main() {
         await tester.tap(find.byType(LayrzInputChrome));
         await tester.pumpAndSettle();
 
-        final scrollViewFinder = find.byType(SingleChildScrollView);
+        final scrollViewFinder = _panelScrollView();
         final viewportHeight = tester.getSize(scrollViewFinder).height;
         final viewportElement = tester.element(scrollViewFinder);
 
@@ -1579,7 +1595,14 @@ void main() {
       const LayrzSelectItem(value: 'b', child: Text('Option B'), searchableStrings: {'Option B'}),
     ];
 
-    testWidgets("defect 1: the desktop overlay's rect overlaps the field's own rect, not sits below it", (
+    // DESIGN-98 retired the DESIGN-145 "elevated field" illusion this defect-1
+    // regression used to pin: the maintainer reported that overlay "kinda
+    // weird" after live usage, so the desktop selection surface no longer
+    // covers the field in place -- it opens in `LayrzEndDrawer`, a fixed-width
+    // right-edge drawer that does NOT overlap the field's own rect. This
+    // replaces the old overlap assertion with the new, intentionally
+    // non-overlapping one.
+    testWidgets("the desktop drawer's rect does not overlap the field's own rect (DESIGN-98 retires DESIGN-145)", (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -1598,30 +1621,11 @@ void main() {
 
       final surfaceRect = tester.getRect(find.byType(LayrzSelectInputSurface<String>));
 
-      // The old (pre-DESIGN-145) behavior placed the surface entirely BELOW the
-      // field, with a small gap -- their rects would never overlap at all. The
-      // new behavior starts the overlay at the field's own top-left corner, so
-      // it genuinely covers the field rather than merely sitting near it.
-      //
-      // Tolerance is exactly 0.0, not the 2.0 this assertion previously used.
-      // That 2.0 existed only because the "elevated field" border used to be
-      // drawn as a `ClipRRect`+`Container` INSIDE `LayrzAnchoredPanel.child`
-      // (see the border-scoping regression above), which inset the surface's
-      // own rect by the border's width -- a side effect of the border's wrong
-      // location, not a real design property. Now that the border is painted
-      // by `LayrzAnchoredPanel` around its own outer decoration, with
-      // `strokeAlign: BorderSide.strokeAlignOutside`, it no longer occupies any
-      // of the surface's layout box -- measured directly: `surfaceRect.left`
-      // and `surfaceRect.top` are bit-identical to `fieldRect`'s (0.0 diff on
-      // both axes at the showroom's own configuration). No width assertion
-      // here: the surface's own width is additionally narrowed by its vertical
-      // scrollbar reserving space on desktop, which is a scroll-affordance
-      // concern unrelated to what this test pins (position, not width policy --
-      // `LayrzAnchoredPanelWidthPolicy.matchAnchor` already has its own coverage
-      // in the overlays module).
-      expect(surfaceRect.overlaps(fieldRect), isTrue);
-      expect(surfaceRect.left, closeTo(fieldRect.left, 0.0));
-      expect(surfaceRect.top, closeTo(fieldRect.top, 0.0));
+      expect(
+        surfaceRect.overlaps(fieldRect),
+        isFalse,
+        reason: 'the drawer is a separate, fixed-width right-edge panel -- it must not cover the field in place',
+      );
     });
 
     testWidgets(
@@ -1694,6 +1698,20 @@ void main() {
       expect(find.text('Option A'), findsNothing);
     });
   });
+}
+
+/// Locates the `SingleChildScrollView` [_LayrzSelectInputState._openDesktopDrawer]
+/// wraps directly around [LayrzSelectInputSurface] -- the one carrying the
+/// DESIGN-40 300px cap -- disambiguated from [LayrzEndDrawer]'s own outer
+/// `SingleChildScrollView` (its `builder(context)` content, one level further
+/// out) by walking up from the surface itself and taking the closest match.
+Finder _panelScrollView() {
+  return find
+      .ancestor(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(SingleChildScrollView),
+      )
+      .first;
 }
 
 class _TestState {

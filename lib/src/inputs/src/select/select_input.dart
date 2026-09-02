@@ -6,7 +6,6 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -23,22 +22,22 @@ import 'select_input_surface.dart';
 /// dropdown chevron affordance rendered as an external sibling to the field (never inside
 /// a caller-suppliable slot). Tapping the field opens a selection surface that adapts to
 /// the viewport:
-/// - **Desktop / wide (≥ 960px)**: A floating card that covers the field itself -- same
-///   position, same size, with its own input-like border and shadow (DESIGN-145; see
-///   below).
+/// - **Desktop / wide (≥ 960px)**: [LayrzEndDrawer], a fixed-width right-edge
+///   drawer (DESIGN-98) -- see [_LayrzSelectInputState._openDesktopDrawer] for
+///   why it carries no `actions` row.
 /// - **Below `md` breakpoint (< 960px)**: A bottom sheet covering the lower portion of the screen
 ///
 /// This follows decision D52 (adaptive surface) and avoids depending on the dialog system
 /// (DESIGN-96/99), keeping the component self-contained and lightweight.
 ///
-/// **The "elevated field" illusion (DESIGN-145):** on desktop, the selection surface does
-/// not appear below the field -- it appears exactly on top of it, matching the field's own
-/// position and width, via [LayrzAnchoredPanel.coverAnchor]. A border colored [LayrzColorTokens.primary]
-/// (or [LayrzColorTokens.danger] when [errors] is non-empty) and the panel's own shadow
-/// sell the illusion that the field itself grew a dropdown in place, rather than a
-/// separate surface appearing beside it. Because the surface now visually covers the
-/// field, the field underneath never needs focus while the surface is open -- see the next
-/// point.
+/// **DESIGN-98 superseded the previous "elevated field" illusion (DESIGN-145).**
+/// The selection surface no longer covers the field in place via
+/// `LayrzAnchoredPanel.coverAnchor` -- the maintainer reported that overlay
+/// "kinda weird" after live usage, and this field now opens the same
+/// [LayrzEndDrawer] the eight date/time pickers use. The field itself is
+/// unaffected by this: it is still always read-only and never the searcher
+/// (see the next point), it simply no longer needs a focus node forwarded to
+/// an anchored-panel `childFocusNode` the way the illusion required.
 ///
 /// **Self-display (BREAKING, DESIGN-40/144):** The field renders from its own internal
 /// state, not directly from [value]. Picking an item updates the field's display
@@ -250,7 +249,6 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   late FocusNode _focusNode;
   late TextEditingController _controller;
   final Set<WidgetState> _states = {};
-  MenuController? _panelController;
 
   /// The value the field currently displays, independent of [LayrzSelectInput.value]
   /// once a pick has been made locally.
@@ -388,10 +386,11 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   /// already exposes `showBorder`/`borderRadius` for exactly this composition, so
   /// this needs no change to the chrome itself.
   ///
-  /// [onOpen] opens the selection surface -- [MenuController.open] on desktop,
+  /// [onOpen] opens the selection surface -- [_openDesktopDrawer] on desktop,
   /// [_openMobileSurface] on mobile. [isExpanded] reports whether the surface is
-  /// currently open, for the semantics `expanded` flag (always `false` on mobile,
-  /// which has no controller to query).
+  /// currently open; both hosts are routes rather than a queryable controller,
+  /// so this is always `false` -- see [_openDesktopDrawer]'s own doc for why
+  /// `LayrzEndDrawer` needs no controller the way `LayrzAnchoredPanel` did.
   Widget _buildField(
     BuildContext context, {
     required VoidCallback onOpen,
@@ -599,51 +598,62 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
         context.tokens,
       );
     } else {
-      // Desktop: return an anchored panel that covers the field itself (DESIGN-145 --
-      // see the class doc), rather than sitting below it.
-      //
-      // `maxHeight: 300` is the ONLY height cap for this surface (DESIGN-40):
-      // `LayrzAnchoredPanel` already clamps its content to this value and
-      // scrolls past it, while shrinking to content when the list is shorter
-      // than 300 -- so no fixed-height wrapper is needed here, and the
-      // surface itself must not impose a second, disagreeing cap.
-      //
-      // `minHeight` guarantees the card never looks collapsed when the internal
-      // search field (if any) has filtered the list down to nothing: one row's
-      // worth of room for the search field plus one row's worth for content,
-      // using `itemExtent` as the row-height proxy for both.
-      final tokens = context.tokens;
-      final hasErrors = widget.errors.isNotEmpty;
-      final minHeight = widget.itemExtent + (widget.enableSearch ? widget.itemExtent : 0.0);
-
+      // Desktop: opens the selection surface in a LayrzEndDrawer (DESIGN-98),
+      // replacing the previous `LayrzAnchoredPanel` "elevated field" hosting
+      // (DESIGN-145). See [_openDesktopDrawer]'s own doc for why this carries
+      // no `actions` row.
       return _appendExtras(
-        LayrzAnchoredPanel(
-          widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-          coverAnchor: true,
-          maxHeight: 300.0,
-          minHeight: minHeight,
-          childFocusNode: _focusNode,
-          builder: (context, controller) {
-            _panelController = controller;
-            return _buildField(
-              context,
-              onOpen: controller.open,
-              isExpanded: controller.isOpen,
-            );
-          },
-          // The border here -- painted by the panel around its own capped
-          // viewport, not by this widget around its content -- is what sells
-          // the "elevated field" illusion (DESIGN-145): the panel already
-          // paints its own background, shadow, and rounded corners at this same
-          // radius, so this just adds a border colored like a focused/errored input
-          // (primary, or danger when the field has errors) right at the panel's own
-          // outer edge, making the covered field look like it grew this card in
-          // place. Mirrors the same trick `LayrzSearchInput` uses for its own
-          // icon-mode panel.
-          border: LayrzAnchoredPanelBorder(
-            color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-            width: tokens.border.base,
-          ),
+        _buildField(
+          context,
+          onOpen: () => _openDesktopDrawer(context),
+          isExpanded: false,
+        ),
+        context.tokens,
+      );
+    }
+  }
+
+  /// Opens the selection surface in [LayrzEndDrawer] on desktop (DESIGN-98).
+  ///
+  /// **No `actions` row.** Unlike the eight date/time pickers, picking an item
+  /// here is the decision -- there is no separate value to compose across
+  /// multiple fields before committing, so a Save button below the list would
+  /// be pure friction: the user would tap an option, then have to find and tap
+  /// Save for a choice already made. `actions: null` also means
+  /// [LayrzEndDrawer.show]'s own `canDismiss` inference applies unchanged
+  /// (dismissable, since there is nothing pinned to lose) -- no override
+  /// needed, unlike every Cancel/Save-carrying picker.
+  ///
+  /// [LayrzSelectInputSurface] is passed no `panelController`: it has none to
+  /// give, since the drawer has no `MenuController` the way
+  /// `LayrzAnchoredPanel` did. The surface's own Escape/Enter/tap handlers
+  /// already fall back to a bare `Navigator.pop(context)` whenever
+  /// `panelController` is null -- the exact branch the mobile bottom sheet
+  /// path below already exercises -- so closing the drawer this way needed no
+  /// change to that widget.
+  ///
+  /// **The DESIGN-40 300px height cap is re-applied here, via [ConstrainedBox]
+  /// plus its own [SingleChildScrollView], because [LayrzEndDrawer] does not
+  /// offer either of its own for its `builder` content.** [LayrzAnchoredPanel]
+  /// used to be the single place both existed (`maxHeight` plus the scroll view
+  /// that let content past it keep scrolling -- see [LayrzSelectInputSurface]'s
+  /// own class doc, which is deliberately host-agnostic and uncapped).
+  /// [LayrzEndDrawer.show] wraps `builder(context)` in a bare
+  /// [SingleChildScrollView] with no height cap at all, so a [ConstrainedBox]
+  /// alone would clamp the available height but leave [LayrzSelectInputSurface]'s
+  /// own uncapped-height `Column` (search field plus its fixed-height item
+  /// list) with nowhere to put content past that cap -- it would overflow
+  /// rather than scroll, since the surface relies on its host to be the one
+  /// scrollable, not its own `Column`. The extra [SingleChildScrollView] here
+  /// is that scrollable, reproducing [LayrzAnchoredPanel]'s own
+  /// cap-then-scroll pairing exactly.
+  Future<void> _openDesktopDrawer(BuildContext context) async {
+    final result = await LayrzEndDrawer.show<LayrzSelectItem<T>?>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 300.0),
+        child: SingleChildScrollView(
           child: LayrzSelectInputSurface(
             items: widget.items,
             selectedItem: _findSelectedItem(),
@@ -651,13 +661,17 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
             canUnselect: widget.canUnselect,
             filter: widget.filter,
             emptyListText: widget.emptyListText,
-            panelController: _panelController,
-            onItemSelected: _commitSelection,
             itemExtent: widget.itemExtent,
+            onItemSelected: (item) {
+              Navigator.pop(context, item);
+            },
           ),
         ),
-        context.tokens,
-      );
+      ),
+    );
+
+    if (result != null || widget.canUnselect) {
+      _commitSelection(result);
     }
   }
 
