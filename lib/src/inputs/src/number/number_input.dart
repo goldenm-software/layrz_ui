@@ -771,6 +771,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
       hintText: widget.hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
+      errors: widget.errors,
       controller: _controller,
       focusNode: _focusNode,
       onChanged: _handleTextChanged,

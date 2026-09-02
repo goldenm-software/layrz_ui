@@ -177,6 +177,120 @@ void main() {
       expect(find.byType(LayrzNumberInput), findsWidgets);
     });
 
+    // Regression for DESIGN-170 (parent DESIGN-44): on a compact viewport, interacting
+    // with the picker inside the mobile bottom sheet dismissed the sheet instead of
+    // registering the edit. Root cause was `_openMobileSurface` wiring
+    // `LayrzDurationPickerPanel.onChanged` -- which fires on every field edit, not just a
+    // deliberate reset -- straight to `Navigator.pop(context, duration)`, so the very
+    // first +/- tap or keystroke inside the sheet popped it. This is the bottom-sheet
+    // counterpart of the bug `28c9680` already fixed for the desktop anchored panel (see
+    // the "tapping a field's increment control updates the value and keeps the panel
+    // open" test above and `duration_input.dart`'s `onChanged`/`onReset` split) -- that
+    // split was never carried over to the mobile branch, so the same failure mode
+    // regressed here. Asserts BOTH that the sheet is still present after the interaction
+    // AND that the value actually changed -- either alone would miss half of the bug: a
+    // sheet that silently ignored every tap (never popping, but never registering the
+    // edit either) would also leave the sheet present.
+    guardedTestWidgets(
+      'tapping a field\'s increment control inside the mobile bottom sheet updates the '
+      'value and keeps the sheet open',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        Duration? changedValue;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return LayrzDurationInput(
+                labelText: 'Duration',
+                value: changedValue,
+                onChanged: (value) => setState(() => changedValue = value),
+              );
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+        final dayIncrement = find.descendant(
+          of: find.byKey(const ValueKey('layrz_duration_field_day')),
+          matching: find.bySemanticsLabel('Increase value'),
+        );
+        expect(dayIncrement, findsOneWidget);
+
+        await tester.tap(dayIncrement);
+        await tester.pumpAndSettle();
+
+        expect(
+          changedValue,
+          const Duration(days: 1),
+          reason: 'the field edit must actually be registered, not silently swallowed',
+        );
+        expect(
+          find.byType(LayrzDurationPickerPanel),
+          findsWidgets,
+          reason: 'a field edit inside the mobile bottom sheet must not close it -- only Reset does',
+        );
+
+        // The sheet must still be interactive after the edit -- a second increment
+        // proves the sheet did not just fail to pop while silently losing focus/input.
+        await tester.tap(dayIncrement);
+        await tester.pumpAndSettle();
+
+        expect(changedValue, const Duration(days: 2));
+        expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+      },
+    );
+
+    // Companion to the increment-control regression above: Reset is the one action in
+    // the mobile picker meant to close the sheet (mirroring the desktop panel's
+    // `onReset` contract) -- this proves that contract still holds after the fix, i.e.
+    // the fix did not accidentally make the sheet un-closeable altogether.
+    guardedTestWidgets('pressing reset inside the mobile bottom sheet closes it and reports zero', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 5),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      await tester.tap(findButtonLabel('Reset'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, Duration.zero);
+      expect(
+        find.byType(LayrzDurationPickerPanel),
+        findsNothing,
+        reason: 'Reset is the one action meant to close the mobile sheet',
+      );
+    });
+
     guardedTestWidgets('applies disabled state correctly', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;

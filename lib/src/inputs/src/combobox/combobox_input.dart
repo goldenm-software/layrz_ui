@@ -597,6 +597,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       hintText: widget.hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
+      errors: widget.errors,
       controller: _controller,
       focusNode: _fieldFocusNode,
       // Deliberately null: `_handleTextChange` is already registered as a

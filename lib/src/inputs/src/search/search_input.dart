@@ -368,6 +368,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       hintText: hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
+      errors: widget.errors,
       controller: _controller,
       focusNode: _focusNode,
       onChanged: _handleSearchChanged,
@@ -520,7 +521,7 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
           icon: MdiIcons.magnify,
           onTap: widget.disabled ? null : controller.open,
           isDisabled: widget.disabled,
-          style: LayrzButtonStyle.elevatedFab,
+          style: LayrzButtonStyle.filledFab,
         );
       },
       // Painted by the panel around its own capped viewport instead of by this

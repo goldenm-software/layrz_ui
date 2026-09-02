@@ -106,6 +106,16 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
         ? null
         : (widget.isExpanded ? 'Double tap to collapse' : 'Double tap to expand');
 
+    // The row's single primary action, mirroring the design system's other
+    // value controls (checkbox/switch/radio -- see tree_row.dart's class doc
+    // comment): when selection is enabled, activating the row selects it,
+    // exactly like tapping a checkbox's label toggles the checkbox. Falling
+    // back to [onToggle] otherwise means a non-selectable tree's row still
+    // does the one thing it *can* do (expand/collapse) rather than going
+    // dead, and keeps this in sync with what the label itself is wired to
+    // below (see [_labelAction]).
+    final primaryAction = widget.onSelect ?? widget.onToggle;
+
     return Semantics(
       label: label,
       hint: semanticsHint,
@@ -117,7 +127,7 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
       // comment. A row not currently active must carry no focus concept at
       // all, matching how `selected`/`expanded` are only set when meaningful.
       focused: widget.isActive ? true : null,
-      onTap: widget.onToggle,
+      onTap: primaryAction,
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
@@ -133,14 +143,50 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
                 LayrzTreeIndentGuide(depth: widget.depth, color: style.indentGuideColor),
                 _buildChevron(tokens, style),
                 if (widget.onSelect != null) _buildCheckbox(tokens, style),
-                Expanded(
-                  child: DefaultTextStyle.merge(
-                    style: TextStyle(color: style.foregroundColor),
-                    child: widget.child,
-                  ),
-                ),
+                _buildLabel(tokens, style),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the row's label region -- [widget.child] wrapped so that tapping
+  /// it fires [_labelAction], matching how [LayrzCheckboxInput],
+  /// [LayrzSwitchInput] and [LayrzRadioOption] all make their own label text
+  /// tappable (DESIGN-166: "if we supported that behavior on switches,
+  /// checkboxes and radio buttons, why not on the treeview?").
+  ///
+  /// Those three sibling controls each have exactly one action, so their
+  /// whole row (control + label) shares one tap target. A tree row already
+  /// has two distinct, separately-rendered affordances -- the chevron
+  /// ([widget.onToggle]) and the checkbox ([widget.onSelect]) -- so the label
+  /// cannot simply join an existing single target. Instead it gets [onSelect]
+  /// when selection is enabled, matching the sibling controls' precedent that
+  /// the label triggers the value change, not the disclosure; the chevron
+  /// keeps sole ownership of expand/collapse either way. When selection is
+  /// disabled, the label falls back to [onToggle] so it still does the one
+  /// action a non-selectable, non-leaf row supports, rather than being dead
+  /// space next to a live chevron.
+  ///
+  /// Wrapped in its own [Semantics] with `excludeSemantics: true` beneath it
+  /// (via [ExcludeSemantics] on [widget.child]'s own text) -- the row-level
+  /// [Semantics] built in [build] already merges role, label, hint,
+  /// selected, and expanded state into one node with [onTap] wired to the
+  /// same action, so this inner tap target must not add a second, competing
+  /// announcement or the row would read twice to a screen reader.
+  Widget _buildLabel(LayrzTokens tokens, LayrzTreeRowStyleSpec style) {
+    final labelAction = widget.onSelect ?? (widget.isLeaf ? null : widget.onToggle);
+
+    return Expanded(
+      child: LayrzTappable(
+        onTap: labelAction,
+        borderRadius: BorderRadius.circular(tokens.radius.r1),
+        child: ExcludeSemantics(
+          child: DefaultTextStyle.merge(
+            style: TextStyle(color: style.foregroundColor),
+            child: widget.child,
           ),
         ),
       ),

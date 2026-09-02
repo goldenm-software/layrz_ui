@@ -311,15 +311,54 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     _controller.text = parts.join(separator);
   }
 
+  /// Opens the mobile bottom sheet surface hosting [LayrzDurationPickerPanel].
+  ///
+  /// **Regression fix (DESIGN-170):** [LayrzDurationPickerPanel.onChanged] fires on
+  /// *every* field edit -- each +/- tap or keystroke on day/hour/minute/second, not just
+  /// a deliberate reset (see that callback's own doc comment). An earlier version of this
+  /// method wired `onChanged` straight to `Navigator.pop(context, duration)`, so the very
+  /// first field edit inside the sheet popped it immediately -- the bottom sheet equivalent
+  /// of the bug `28c9680` (`fix(duration): stop field edits from closing the panel...`)
+  /// already fixed for the desktop anchored panel below, by splitting that panel's
+  /// `onChanged` (live updates, panel stays open) from its `onReset` (closes the panel).
+  /// That split was never carried over to this mobile branch, so the same failure mode
+  /// regressed here: on a compact viewport, interacting with any picker field dismissed
+  /// the sheet instead of registering the edit.
+  ///
+  /// This mirrors the desktop branch's contract exactly: [onChanged] below reports the
+  /// live value to the caller and refreshes the anchor's summary text on every field edit,
+  /// same as the desktop panel does, but never pops the sheet -- only [onReset] does that,
+  /// since Reset is the one action in the picker meant to close it (see the desktop
+  /// branch's own `onReset` doc for why). The sheet's return value is used only to detect
+  /// "was this dismissed via Reset" versus "was this dismissed some other way" (the
+  /// barrier, Escape, drag-to-dismiss, or the system back gesture) -- those other exits
+  /// intentionally keep whatever value the live [onChanged] calls already reported, exactly
+  /// like closing the desktop panel without pressing Reset keeps its last live value.
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
 
-    final result = await LayrzBottomSheet.show<Duration?>(
+    final resetValue = await LayrzBottomSheet.show<Duration?>(
       context,
       builder: (context) => LayrzDurationPickerPanel(
         initialValue: widget.value,
         visibleUnits: widget.visibleUnits,
+        // Field edits (typing, +/- taps) report the new value and refresh the anchor's
+        // summary, but deliberately do NOT close the sheet -- see this method's doc
+        // comment for why. Mirrors the desktop anchored panel's own `onChanged` below.
         onChanged: (duration) {
+          widget.onChanged?.call(duration);
+          if (mounted) {
+            _updateSummary();
+          }
+        },
+        // Reset is the one action meant to close the sheet -- a deliberate "clear and
+        // I'm done" gesture, unlike an in-progress field edit. `LayrzDurationPickerPanel`
+        // routes a reset through `onReset` INSTEAD OF `onChanged` (see its own
+        // `_handleReset`, which calls `(widget.onReset ?? widget.onChanged)(...)` exactly
+        // once), so supplying this callback means the reset value has NOT already been
+        // reported by the `onChanged` above -- popping with it here is what reports it,
+        // mirrored by the `widget.onChanged?.call(resetValue)` below once the sheet closes.
+        onReset: (duration) {
           Navigator.pop(context, duration);
         },
       ),
@@ -328,8 +367,8 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       snapSizes: const [0.5, 0.9],
     );
 
-    if (result != null && mounted) {
-      widget.onChanged?.call(result);
+    if (resetValue != null && mounted) {
+      widget.onChanged?.call(resetValue);
       _updateSummary();
     }
   }
