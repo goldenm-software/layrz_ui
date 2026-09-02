@@ -132,7 +132,7 @@ class _StepperSectionState extends State<StepperSection> {
   /// Builds the row of two [LayrzButton]s used to switch between the
   /// horizontal and vertical demo tabs.
   ///
-  /// The active tab is rendered [LayrzButtonStyle.elevated] (filled, matching
+  /// The active tab is rendered [LayrzButtonStyle.filled] (filled, matching
   /// the "selected" affordance used elsewhere in the design system) and the
   /// inactive tab [LayrzButtonStyle.outlined], so the current selection is
   /// legible at a glance without introducing a dedicated tab component.
@@ -153,12 +153,12 @@ class _StepperSectionState extends State<StepperSection> {
         children: [
           LayrzButton(
             labelText: 'Horizontal',
-            style: _activeTab == _StepperDemoTab.horizontal ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+            style: _activeTab == _StepperDemoTab.horizontal ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
             onTap: () => setState(() => _activeTab = _StepperDemoTab.horizontal),
           ),
           LayrzButton(
             labelText: 'Vertical',
-            style: _activeTab == _StepperDemoTab.vertical ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+            style: _activeTab == _StepperDemoTab.vertical ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
             onTap: () => setState(() => _activeTab = _StepperDemoTab.vertical),
           ),
         ],
