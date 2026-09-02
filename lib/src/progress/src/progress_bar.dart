@@ -4,6 +4,7 @@ import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'progress_format.dart';
+import 'progress_label_painter.dart';
 import 'progress_painter.dart';
 import 'progress_style_spec.dart';
 import 'progress_type.dart';
@@ -125,6 +126,30 @@ class LayrzProgressBar extends StatefulWidget {
   /// of it. Applies identically regardless of [format] (shape).
   final String? semanticLabel;
 
+  /// Whether to paint the current value as a percentage label, centered
+  /// inside the bar. **Linear, determinate mode only** — ignored (no label
+  /// painted) when [format] is [LayrzProgressFormat.circular], or when this
+  /// bar is indeterminate (`value == null`), since a percentage is
+  /// meaningless while progress is unknown.
+  ///
+  /// Defaults to `false`. This widget shipped without an inside label, so
+  /// defaulting it on would silently change the appearance of every existing
+  /// caller; making it opt-in preserves current behaviour for callers that
+  /// do not ask for it. The value is always exposed to assistive technology
+  /// via `Semantics.value` regardless of this flag — turning the visible
+  /// label off never removes the accessible announcement.
+  final bool showLabel;
+
+  /// The number of decimal places shown in the value label, when [showLabel]
+  /// is true.
+  ///
+  /// Defaults to `0` (e.g. `'42%'`). Formatting uses `num.toStringAsFixed`
+  /// rather than `package:intl`'s `NumberFormat` — `intl` is not a dependency
+  /// of this package, and adding one solely for this is a decision for the
+  /// package maintainer, not something to introduce unilaterally here.
+  /// Ignored when [showLabel] is false.
+  final int decimals;
+
   /// Creates a new [LayrzProgressBar].
   const LayrzProgressBar({
     super.key,
@@ -137,10 +162,13 @@ class LayrzProgressBar extends StatefulWidget {
     this.size = kLayrzProgressCircularSize,
     this.strokeWidth = kLayrzProgressCircularStrokeWidth,
     this.semanticLabel,
+    this.showLabel = false,
+    this.decimals = 0,
   }) : assert(
          value == null || (value >= 0.0 && value <= 1.0),
          'value must be null (indeterminate) or within [0.0, 1.0].',
-       );
+       ),
+       assert(decimals >= 0, 'decimals must be zero or a positive integer.');
 
   @override
   State<LayrzProgressBar> createState() => _LayrzProgressBarState();
@@ -229,20 +257,26 @@ class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerPr
     // never forces a sibling widget's layer to redraw either.
     final Widget painted;
     if (value != null) {
-      painted = _wrapCircular(
-        CustomPaint(
-          painter: LayrzProgressPainter(
-            shape: widget.format,
-            determinateValue: value,
-            sweepPosition: 0.0,
-            sweepWidthFraction: _kSweepWidthFraction,
-            trackColor: style.trackColor,
-            indicatorColor: style.indicatorColor,
-            borderRadius: radius,
-            strokeWidth: widget.strokeWidth,
-          ),
-          size: boxSize,
+      final bar = CustomPaint(
+        painter: LayrzProgressPainter(
+          shape: widget.format,
+          determinateValue: value,
+          sweepPosition: 0.0,
+          sweepWidthFraction: _kSweepWidthFraction,
+          trackColor: style.trackColor,
+          indicatorColor: style.indicatorColor,
+          borderRadius: radius,
+          strokeWidth: widget.strokeWidth,
         ),
+        size: boxSize,
+      );
+
+      // The centered value label is a linear-only, determinate-only
+      // affordance: circular mode has no straight run of pixels to center
+      // text along, and an indeterminate bar has no percentage to show.
+      final showLabel = widget.showLabel && !isCircular;
+      painted = _wrapCircular(
+        showLabel ? _buildLabeledBar(bar: bar, value: value, boxSize: boxSize, style: style, tokens: tokens) : bar,
       );
     } else if (reduceMotion) {
       // Reduced motion: freeze the sweep at its start position rather than
@@ -302,6 +336,49 @@ class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerPr
         width: boxSize.width,
         child: painted,
       ),
+    );
+  }
+
+  /// Composes [bar] with a centered value-percentage label painted on top,
+  /// via a [Stack] rather than folding text painting into
+  /// [LayrzProgressPainter] itself — that painter's concern is track/fill
+  /// geometry only, shared by both formats, and label painting is a
+  /// linear-only, opt-in concern layered above it.
+  ///
+  /// The label is painted by [LayrzProgressLabelPainter], split at the
+  /// fill/track boundary so it stays legible against both the filled
+  /// (indicator) and unfilled (track) portions of the bar — see that
+  /// painter's doc for why a single text color cannot serve both. Both
+  /// contrast colors are derived from `Color.contrastColor`
+  /// (`lib/src/extensions/src/color.dart`), the same primitive already used
+  /// by `LayrzChip`, `LayrzAlert`, and `LayrzButton` to pick legible text
+  /// against an arbitrary accent — not a one-off computation invented here.
+  Widget _buildLabeledBar({
+    required Widget bar,
+    required double value,
+    required Size boxSize,
+    required LayrzProgressStyleSpec style,
+    required LayrzTokens tokens,
+  }) {
+    final text = '${(value * 100).toStringAsFixed(widget.decimals)}%';
+    final labelStyle = tokens.typography.label.copyWith(fontWeight: FontWeight.w600);
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        bar,
+        Positioned.fill(
+          child: CustomPaint(
+            painter: LayrzProgressLabelPainter(
+              text: text,
+              style: labelStyle,
+              fillBoundary: boxSize.width.isFinite ? boxSize.width * value.clamp(0.0, 1.0) : 0.0,
+              indicatorContrastColor: style.indicatorColor.contrastColor,
+              trackContrastColor: style.trackColor.contrastColor,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
