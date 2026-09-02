@@ -1539,7 +1539,10 @@ void main() {
 
       final tokens = LayrzTokens.light();
       final icon = tester.widget<Icon>(find.byIcon(MdiIcons.clockOutline));
-      expect(icon.color, tokens.colors.fg1);
+      // DESIGN-106 follow-up: the icon derives its color from `spec.textColor`, which now
+      // resolves to `colors.danger` in the error state (previously left at plain fg1).
+      expect(icon.color, tokens.colors.danger);
+      expect(icon.color, isNot(tokens.colors.fg1));
       expect(icon.color, isNot(tokens.colors.fg4));
     });
 

@@ -122,7 +122,12 @@ void main() {
 
       expect(spec.backgroundColor, tokens.colors.danger.shade50);
       expect(spec.borderColor, tokens.colors.danger);
-      expect(spec.textColor, tokens.colors.fg1);
+      // Text color must match the border's danger color (DESIGN-106 follow-up):
+      // the error state previously left text at plain fg1, which read as a
+      // regular field with only a colored border/background, and, since the
+      // chrome derives affix icon color from the same textColor, also left
+      // the suffix icons uncolored in the reported screenshot.
+      expect(spec.textColor, tokens.colors.danger);
     });
 
     test('resolve: disabled state', () {
@@ -161,6 +166,19 @@ void main() {
       expect(spec.textColor, tokens.colors.fg4);
     });
 
+    test('resolve: precedence - disabled > error (disabled wins, stays fg4, not danger)', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {WidgetState.disabled},
+        tokens: tokens,
+        hasErrors: true,
+      );
+
+      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.borderColor, const Color(0x00000000));
+      expect(spec.textColor, tokens.colors.fg4);
+      expect(spec.textColor, isNot(tokens.colors.danger));
+    });
+
     test('resolve: precedence - readOnly > error', () {
       final spec = LayrzInputStyleSpec.resolve(
         states: {},
@@ -172,6 +190,20 @@ void main() {
       expect(spec.backgroundColor, tokens.colors.sf2);
     });
 
+    test('resolve: precedence - readOnly > error (readOnly wins, stays fg1, not danger)', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {},
+        tokens: tokens,
+        hasErrors: true,
+        readOnly: true,
+      );
+
+      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.borderColor, const Color(0x00000000));
+      expect(spec.textColor, tokens.colors.fg1);
+      expect(spec.textColor, isNot(tokens.colors.danger));
+    });
+
     test('resolve: precedence - error > pressed', () {
       final spec = LayrzInputStyleSpec.resolve(
         states: {WidgetState.pressed},
@@ -181,6 +213,52 @@ void main() {
 
       expect(spec.backgroundColor, tokens.colors.danger.shade50);
       expect(spec.borderColor, tokens.colors.danger);
+    });
+
+    test('resolve: precedence - error > pressed (text also follows danger, not fg1)', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {WidgetState.pressed},
+        tokens: tokens,
+        hasErrors: true,
+      );
+
+      expect(spec.textColor, tokens.colors.danger);
+    });
+
+    test('resolve: focused state - text and border both use primary', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {WidgetState.focused},
+        tokens: tokens,
+        hasErrors: false,
+      );
+
+      expect(spec.borderColor, tokens.colors.primary);
+      expect(spec.textColor, tokens.colors.primary);
+      expect(spec.textColor, spec.borderColor);
+    });
+
+    test('resolve: error state - text and border both use danger', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {},
+        tokens: tokens,
+        hasErrors: true,
+      );
+
+      expect(spec.borderColor, tokens.colors.danger);
+      expect(spec.textColor, tokens.colors.danger);
+      expect(spec.textColor, spec.borderColor);
+    });
+
+    test('resolve: default state - plain fg1, distinct from danger and primary', () {
+      final spec = LayrzInputStyleSpec.resolve(
+        states: {},
+        tokens: tokens,
+        hasErrors: false,
+      );
+
+      expect(spec.textColor, tokens.colors.fg1);
+      expect(spec.textColor, isNot(tokens.colors.danger));
+      expect(spec.textColor, isNot(tokens.colors.primary));
     });
 
     test('resolve: border width is always the same', () {

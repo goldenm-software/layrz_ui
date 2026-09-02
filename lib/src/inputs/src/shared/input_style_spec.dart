@@ -69,7 +69,7 @@ class LayrzInputStyleSpec {
   /// | rest | `surface2` | transparent | `fg1` |
   /// | hover | `surface3` | transparent | `fg1` |
   /// | focus | `surface2` | `colors.primary` | `fg1` |
-  /// | error | `colors.danger.shade50` | `colors.danger` | `fg1` |
+  /// | error | `colors.danger.shade50` | `colors.danger` | `colors.danger` |
   /// | disabled | `surface2` | transparent | `fg4` |
   /// | read-only | `surface2` | transparent | `fg1` |
   ///
@@ -107,7 +107,7 @@ class LayrzInputStyleSpec {
         backgroundColor: tokens.colors.danger.shade50,
         borderColor: tokens.colors.danger,
         borderWidth: tokens.border.base,
-        textColor: tokens.colors.fg1,
+        textColor: tokens.colors.danger,
       );
     }
 
