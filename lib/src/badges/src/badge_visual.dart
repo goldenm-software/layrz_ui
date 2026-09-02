@@ -128,27 +128,49 @@ class LayrzBadgeVisual extends StatelessWidget {
         ),
         maxLines: 1,
         overflow: TextOverflow.clip,
+        textAlign: TextAlign.center,
       );
     } else if (icon != null) {
       content = Icon(icon, size: diameter * 0.7, color: spec.contentColor);
     }
 
-    // No `alignment:` here deliberately: `Container.build` only inserts an
-    // inner `Align` when `alignment` is non-null — and per `Container`'s own
-    // documented layout rules, that `Align` expands to fill the parent
-    // whenever the incoming constraints are bounded (even if loose), rather
-    // than shrink-wrapping to `constraints` + `child`. That is exactly what
-    // happened when this badge was overlaid by `LayrzBadge`:
-    // `Positioned.fill` -> `Align` -> `FractionalTranslation` still hands this
-    // widget bounded constraints (loosened to the size of whatever it
-    // decorates), so an `alignment`-bearing `Container` ballooned out to match
-    // the decorated child's own box instead of staying pinned to `diameter`.
-    // Without `alignment`, the composed tree is just
-    // `ConstrainedBox(diameter) -> DecoratedBox -> Padding -> content`, which
-    // sizes to `content`'s own size (clamped up to `diameter`) regardless of
-    // how loose or tight the ambient constraints are — content is already
-    // visually centered by the symmetric padding, so no inner `Align`/`Center`
-    // is needed to reproduce the old centering.
+    // DESIGN-167: `content` is wrapped in a shrink-wrapped `Center` (below)
+    // rather than reaching for `Container.alignment`. This is NOT the same
+    // fix that was rejected before, and the distinction matters:
+    //
+    // `Container.build` inserts its `alignment`-driven `Align` as the
+    // OUTERMOST widget in the composed chain -- outside `ConstrainedBox`,
+    // `DecoratedBox` and `Padding` -- so that `Align` receives the *ambient*
+    // incoming constraints completely unfiltered by `diameter`. Under
+    // `LayrzBadge`'s overlay (`Positioned.fill` -> `Align` ->
+    // `FractionalTranslation`), those ambient constraints are loosened to the
+    // size of whatever this badge decorates, and a factor-less `Align` sizes
+    // itself to fill loose-but-bounded constraints -- which is exactly how
+    // the badge ballooned out to the decorated child's own box.
+    //
+    // The `Center` added below sits INSIDE that chain, as `Padding`'s child --
+    // it only ever sees constraints already lower-bounded by
+    // `ConstrainedBox(minWidth/minHeight: diameter)` and then deflated by
+    // `Padding`. Passing `widthFactor: 1.0, heightFactor: 1.0` makes it
+    // shrink-wrap to `content`'s own size instead of filling those
+    // (unbounded-above) constraints -- verified: a factor-less `Center` here
+    // reproduces the exact same ballooning as `Container.alignment` did,
+    // which is why the factors are mandatory, not stylistic.
+    //
+    // The centering bug this fixes (DESIGN-167 follow-up): symmetric padding
+    // alone only centers content when the padded content is exactly
+    // `diameter` wide/tall. Whenever `ConstrainedBox`'s `minWidth`/`minHeight`
+    // forces the box larger than `padding + content` (true for every count
+    // form at this diameter, and doubly true for single digits, which also
+    // fall short horizontally), `RenderPadding.performLayout` still offsets
+    // its child by exactly `(padding.left, padding.top)` and dumps *all* of
+    // the extra slack on the right/bottom (see
+    // `flutter/rendering/shifted_box.dart`'s `RenderPadding.performLayout`).
+    // That is a fixed top/left bias, not a centering effect -- measured at
+    // this diameter/padding it was +2.0lp low vertically for every form, plus
+    // +0.8lp right-biased horizontally for single-digit counts only. The
+    // `Center` re-centers within whatever box `ConstrainedBox` ultimately
+    // produces, so the bias cancels regardless of how much slack there is.
     return Container(
       constraints: BoxConstraints(minWidth: diameter, minHeight: diameter),
       padding: isDot
@@ -158,7 +180,21 @@ class LayrzBadgeVisual extends StatelessWidget {
         color: spec.backgroundColor,
         borderRadius: BorderRadius.circular(tokens.radius.full),
       ),
-      child: content,
+      // The dot form passes a zero-size `SizedBox.shrink()` rather than a
+      // literal `null` here. `Container.build` special-cases `child == null`
+      // together with non-tight constraints by substituting
+      // `LimitedBox(maxWidth: 0, maxHeight: 0) -> ConstrainedBox.expand()` --
+      // a widget that (by design, for *that* call site's own use case
+      // elsewhere in the framework) fills whatever bounded space it is
+      // handed. This badge's `constraints` are exactly non-tight
+      // (`minWidth`/`minHeight` only, `maxWidth`/`maxHeight` left at
+      // infinity), so a bare dot rendered with a literal `null` child
+      // ballooned to fill its ambient host -- the same class of "badge is
+      // too big" defect as the alignment/centering issue above, just
+      // triggered by the dot form specifically. A real (if empty) child
+      // widget keeps `Container` on its ordinary sizing path, so the dot
+      // clamps to `diameter` like every other content form.
+      child: content == null ? const SizedBox.shrink() : Center(widthFactor: 1.0, heightFactor: 1.0, child: content),
     );
   }
 }
