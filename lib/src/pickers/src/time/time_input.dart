@@ -1,0 +1,256 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/formatting/formatting.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
+import 'package:layrz_ui/src/overlays/overlays.dart';
+import 'package:layrz_ui/src/sheets/sheets.dart';
+
+import '../models/time_of_day.dart';
+import '../shared/picker_anchor.dart';
+import 'time_surface.dart';
+
+/// A Material-free single-time input field.
+///
+/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzTimeSurface]
+/// through [LayrzAnchoredPanel] on desktop or [LayrzBottomSheet] below
+/// `isCompact`, mirroring `LayrzDurationInput`'s structure.
+///
+/// **The time-fields surface has no discrete "tap to commit" gesture** — its
+/// fields report continuously via `onChanged` (trap 4 discipline: the
+/// hosting surface never closes on a field edit). So for this single-valued
+/// widget, every field edit **is** the commit: [onChanged] fires live as the
+/// user types or steps a field, and the surface stays open until the user
+/// dismisses it (tap-outside, Escape, or the mobile sheet's own dismissal) —
+/// there is no separate "commit gesture" distinct from editing, unlike
+/// [LayrzDateInput]'s single discrete day tap.
+///
+/// **Zero clock or dial affordance anywhere in the tree** — see
+/// [LayrzPickersTimeFieldsPanel]'s class doc, which this widget's surface
+/// composes unchanged.
+class LayrzTimeInput extends StatefulWidget {
+  /// The currently selected time.
+  final LayrzTimeOfDay? value;
+
+  /// Called with the new time on every field edit.
+  final ValueChanged<LayrzTimeOfDay>? onChanged;
+
+  /// The label text displayed above the input field.
+  final String? labelText;
+
+  /// Hint text displayed as placeholder when the field is empty.
+  final String? hintText;
+
+  /// Whether the field is marked as required.
+  final bool isRequired;
+
+  /// The list of error messages to display below the field.
+  final List<String> errors;
+
+  /// Whether to hide the error message block and other detail text.
+  final bool hideDetails;
+
+  /// Whether the field is disabled (not interactive).
+  final bool disabled;
+
+  /// Whether the seconds field is shown, without layout reflow when toggled.
+  final bool showSeconds;
+
+  /// Whether the hour field uses 24-hour form. Defaults to `true` —
+  /// reversing the old layrz_theme picker's 12h default.
+  final bool use24HourFormat;
+
+  /// A strftime-style pattern used to format [value] for display, when
+  /// [formatter] is not supplied. Defaults to `'%H:%M'`.
+  final String pattern;
+
+  /// A full-control override for formatting [value] into display text.
+  final String Function(LayrzTimeOfDay)? formatter;
+
+  /// The text editing controller for the anchor field.
+  final TextEditingController? controller;
+
+  /// The focus node for the anchor field.
+  final FocusNode? focusNode;
+
+  /// Whether the field uses the dense density variant.
+  final bool dense;
+
+  /// The title text for the help affordance tooltip.
+  final String? helpTitleText;
+
+  /// The content text for the help affordance tooltip.
+  final String? helpContentText;
+
+  /// Creates a new [LayrzTimeInput].
+  const LayrzTimeInput({
+    super.key,
+    this.value,
+    this.onChanged,
+    this.labelText,
+    this.hintText,
+    this.isRequired = false,
+    this.errors = const [],
+    this.hideDetails = false,
+    this.disabled = false,
+    this.showSeconds = false,
+    this.use24HourFormat = true,
+    this.pattern = '%H:%M',
+    this.formatter,
+    this.controller,
+    this.focusNode,
+    this.dense = false,
+    this.helpTitleText,
+    this.helpContentText,
+  }) : assert(labelText != null || hintText != null, 'At least one of labelText or hintText must be non-null.');
+
+  @override
+  State<LayrzTimeInput> createState() => _LayrzTimeInputState();
+}
+
+class _LayrzTimeInputState extends State<LayrzTimeInput> {
+  late TextEditingController _controller;
+  late FocusNode _focusNode;
+
+  static const _midnight = LayrzTimeOfDay(hour: 0, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = widget.controller ?? TextEditingController();
+    _focusNode = widget.focusNode ?? FocusNode();
+    _updateSummary();
+  }
+
+  @override
+  void didUpdateWidget(LayrzTimeInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      if (oldWidget.controller == null) _controller.dispose();
+      _controller = widget.controller ?? TextEditingController();
+    }
+    if (widget.focusNode != oldWidget.focusNode) {
+      if (oldWidget.focusNode == null) _focusNode.dispose();
+      _focusNode = widget.focusNode ?? FocusNode();
+    }
+    if (widget.value != oldWidget.value) _updateSummary();
+  }
+
+  @override
+  void dispose() {
+    if (widget.controller == null) _controller.dispose();
+    if (widget.focusNode == null) _focusNode.dispose();
+    super.dispose();
+  }
+
+  DateTime _asDateTime(LayrzTimeOfDay time) => DateTime(2000, 1, 1, time.hour, time.minute, time.second);
+
+  void _updateSummary() {
+    final value = widget.value;
+    if (value == null) {
+      _controller.text = '';
+      return;
+    }
+    final l10n = context.l10n;
+    _controller.text = widget.formatter?.call(value) ?? formatStrftime(_asDateTime(value), widget.pattern, l10n);
+  }
+
+  void _handleTimeChanged(LayrzTimeOfDay time) {
+    widget.onChanged?.call(time);
+    setState(_updateSummary);
+  }
+
+  Future<void> _openMobileSurface() async {
+    if (widget.disabled) return;
+    await LayrzBottomSheet.show<void>(
+      context,
+      builder: (context) => LayrzTimeSurface(
+        value: widget.value ?? _midnight,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onTimeChanged: _handleTimeChanged,
+      ),
+      initialSize: 0.4,
+      maxSize: 0.7,
+      snapSizes: const [0.4, 0.7],
+    );
+  }
+
+  Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
+    final tokens = context.tokens;
+    final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
+
+    final contentChild = SizedBox(
+      width: double.infinity,
+      child: Text(displayText, style: tokens.typography.body, maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
+
+    final states = <WidgetState>{if (widget.disabled) WidgetState.disabled};
+    final hasErrors = widget.errors.isNotEmpty;
+    final spec = LayrzInputStyleSpec.resolve(states: states, tokens: tokens, hasErrors: hasErrors);
+
+    final fieldRow = buildPickerFieldRow(
+      context: context,
+      tokens: tokens,
+      contentChild: contentChild,
+      states: states,
+      errors: widget.errors,
+      disabled: widget.disabled,
+      isRequired: widget.isRequired,
+      hintText: widget.hintText,
+      controller: _controller,
+      dense: widget.dense,
+      helpTitleText: widget.helpTitleText,
+      helpContentText: widget.helpContentText,
+      affordanceIcon: buildPickerAffordanceIcon(
+        tokens: tokens,
+        spec: spec,
+        hasErrors: hasErrors,
+        icon: MdiIcons.clockTimeFourOutline,
+      ),
+    );
+
+    return buildPickerAnchorColumn(
+      context: context,
+      tokens: tokens,
+      labelText: widget.labelText,
+      isRequired: widget.isRequired,
+      fieldRow: fieldRow,
+      errors: widget.errors,
+      hideDetails: widget.hideDetails,
+      controller: _controller,
+      focusNode: _focusNode,
+      onTap: onTap,
+      disabled: widget.disabled,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.isCompact) {
+      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
+    }
+
+    final tokens = context.tokens;
+    final hasErrors = widget.errors.isNotEmpty;
+
+    return LayrzAnchoredPanel(
+      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
+      maxHeight: 200.0,
+      coverAnchor: true,
+      childFocusNode: _focusNode,
+      builder: (context, controller) =>
+          _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open),
+      border: LayrzAnchoredPanelBorder(
+        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
+        width: tokens.border.base,
+      ),
+      child: LayrzTimeSurface(
+        value: widget.value ?? _midnight,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onTimeChanged: _handleTimeChanged,
+      ),
+    );
+  }
+}
