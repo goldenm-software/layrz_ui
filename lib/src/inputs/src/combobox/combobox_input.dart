@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -12,16 +11,6 @@ import '../shared/input_footer_slot.dart';
 import '../shared/input_slot.dart';
 import 'combobox_surface.dart';
 
-/// Maximum height, in logical pixels, of the desktop overlay's option list.
-///
-/// Fixed, not caller-configurable: the overlay renders [LayrzComboBoxPanelContent]
-/// up to this height and scrolls past it. This replaces the former
-/// `maxOptionsToDisplay` parameter, which let a caller size the panel by row
-/// count using a row-height constant (`48.0`) that did not match the actual
-/// rendered row height (~36px) -- the panel it produced was already wrong for
-/// any count other than the default.
-const double _kComboBoxOverlayMaxHeight = 300.0;
-
 /// A Material-free combobox input in the layrz_ui design system.
 ///
 /// [LayrzComboBoxInput] is an editable input field with a dropdown list of options.
@@ -29,40 +18,32 @@ const double _kComboBoxOverlayMaxHeight = 300.0;
 /// adding suggestion filtering and intelligent overlay positioning on top.
 ///
 /// **Desktop vs. Mobile behavior**:
-/// - **Desktop (>= 960px)**: Displays [LayrzAnchoredPanel], which covers the field
-///   itself (`coverAnchor: true`) -- the same "elevated field" illusion
-///   [LayrzSelectInput] uses (DESIGN-145) -- rather than sitting beside it.
-/// - **Mobile (< 960px)**: Opens a bottom sheet instead, allowing touch-friendly interaction
+/// - **Desktop (>= 960px)**: Opens [LayrzEndDrawer] (DESIGN-98), hosting the
+///   same [BottomSheetContent] surface the mobile band opens -- see
+///   [_LayrzComboBoxInputState._openDesktopDrawer] for why this replaced the
+///   previous `LayrzAnchoredPanel`, and why that also means the field no
+///   longer continues live into the opened surface (Q3 below no longer
+///   applies once this widget adopted [LayrzEndDrawer]; kept here as
+///   historical context for readers of the diff).
+/// - **Mobile (< 960px)**: Opens a bottom sheet, allowing touch-friendly interaction
 ///   with better use of screen space.
 ///
-/// **DESIGN-98: deliberately still [LayrzAnchoredPanel], not [LayrzEndDrawer].**
-/// Every other DESIGN-98 input (the eight date/time pickers, [LayrzDurationInput],
-/// [LayrzSelectInput]) moved its desktop overlay onto [LayrzEndDrawer]. This one did
-/// not, and that is a decision, not an oversight: [LayrzEndDrawer] is
-/// [Navigator.push]ed as a separate route, which has no single build pass spanning
-/// both the closed field and the opened overlay for [_sharedFieldKey]'s `GlobalKey`
-/// to reparent a single [Element] across (see that field's own doc comment for the
-/// mechanism this depends on). Losing that shared-build-pass guarantee reopens the
-/// exact failure [_sharedFieldKey] exists to prevent -- a genuine unmount fires a
-/// focus-loss notification before the replacement instance can request focus, which
-/// [_handleBlur] reads as "the user left the field" and closes the overlay on it,
-/// mid-gesture, before the user ever sees it open. A prototype conversion was built
-/// and verified this reproduces; see the reverted commit for the analysis. The
-/// maintainer's call, informed by that verification: accept two overlay containers
-/// in the input family rather than change a shipped, daily-use widget's focus
-/// behavior. Revisit only if [LayrzEndDrawer] itself grows a same-build-pass
-/// presentation mode.
-///
-/// **The panel's first row IS the live input (Q3).** Unlike [LayrzSelectInput] --
-/// whose field is always read-only, so its opened surface owns a second,
-/// independent search field -- this field *is* the input, so typing must keep
-/// working uninterrupted across the open transition. When the panel opens, the
-/// SAME `TextEditingController` and `FocusNode` instances that back the closed
-/// field are handed to the panel's first-row [LayrzEditableField] instead of
-/// the closed field's own -- there is only ever one live editable field, one
-/// controller, one focus node; only which host currently renders it changes.
-/// This is what makes text, caret, and focus continuity structural rather than
-/// copied: nothing needs to be seeded or resynced across the transition.
+/// **Q3, historical: the panel's first row WAS the live input, before
+/// DESIGN-98.** Unlike [LayrzSelectInput] -- whose field is always read-only,
+/// so its opened surface owns a second, independent search field -- this
+/// field *is* the input conceptually, so before DESIGN-98 the SAME
+/// `TextEditingController`/`FocusNode` instances backing the closed field were
+/// reparented into the open `LayrzAnchoredPanel`'s first row via a stable
+/// `GlobalKey`, letting text/caret/focus continue uninterrupted across the
+/// open transition. That trick depended on `RawMenuAnchor` building both the
+/// anchor and the overlay in one pass -- a route pushed via
+/// [Navigator.push] (what [LayrzEndDrawer] and [LayrzBottomSheet] both are)
+/// has no such shared pass to reparent across, so DESIGN-98 retires this
+/// entirely: both bands now open a wholly independent [BottomSheetContent]
+/// surface with its own search field, exactly like the mobile band already
+/// did. **This is a real, user-visible behavior change on desktop:** the
+/// drawer opens with an empty search field rather than continuing whatever
+/// the closed field's own text and caret position already were.
 ///
 /// **Free-form entry** (default): When [allowFreeForm] is true, any text the user types
 /// is a valid value -- reported via [onChanged] as the user types, with no separate
@@ -284,31 +265,7 @@ class LayrzComboBoxInput extends StatefulWidget {
 class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   late TextEditingController _controller;
   late FocusNode _fieldFocusNode;
-  MenuController? _panelController;
   String? _lastValidOption;
-
-  /// Identifies the single, shared [LayrzEditableField] across the open
-  /// transition (Q3).
-  ///
-  /// Without this, toggling which host renders the live field (the closed
-  /// anchor slot vs. the open panel's first row -- see [_buildFieldChrome]'s
-  /// `readOnlyPlaceholder`) would destroy and recreate the [EditableText]
-  /// each time: a genuine unmount fires a focus-loss notification on
-  /// [_fieldFocusNode] *before* the new instance can request focus, which
-  /// [_handleFocusChange] reads as "the user left the field" and reacts to by
-  /// closing the panel via [_handleBlur] -- observed directly: a manual open
-  /// probe showed the panel's options present for one frame and gone the
-  /// next, exactly the unmount/remount window. A stable [GlobalKey] on the
-  /// [LayrzEditableField] built in [_buildFieldChrome] instead makes this a
-  /// single [Element] reparented within the same frame (both the anchor's
-  /// `builder` and the panel's `overlayBuilder` are built inside one
-  /// `RawMenuAnchor.build()` pass), so [_fieldFocusNode] is never actually
-  /// detached -- no spurious blur, no self-inflicted close.
-  final GlobalKey<LayrzEditableFieldState> _sharedFieldKey = GlobalKey<LayrzEditableFieldState>();
-
-  /// Highlight index across the filtered options list. `-1` means no option
-  /// is highlighted. See [_navigableRowCount] and [_commitHighlighted].
-  int _highlightedIndex = -1;
 
   /// The text last reported to [LayrzComboBoxInput.onChanged].
   ///
@@ -412,10 +369,6 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   void _handleTextChange() {
-    setState(() {
-      _highlightedIndex = -1;
-    });
-
     final currentText = _controller.text;
     if (currentText == _lastNotifiedText) {
       // See [_lastNotifiedText]: this notification's text is identical to the one
@@ -426,34 +379,20 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     widget.onChanged?.call(currentText);
   }
 
-  /// Closes the panel and, if free-form entry is disallowed, reverts the
-  /// field's text — invoked on any loss of [_fieldFocusNode]'s focus.
+  /// If free-form entry is disallowed, reverts the field's text — invoked on
+  /// any loss of [_fieldFocusNode]'s focus.
+  ///
+  /// **No longer closes anything (post-DESIGN-98).** Before DESIGN-98, this
+  /// also closed the open `LayrzAnchoredPanel` on a genuine loss of focus,
+  /// deferred and re-checked across two post-frame callbacks to tolerate the
+  /// transient blur `RawMenuAnchor`'s own focus handoff caused. Now that the
+  /// closed field never keeps its focus node live inside an open overlay --
+  /// [LayrzEndDrawer] and [LayrzBottomSheet] both host a wholly independent
+  /// [BottomSheetContent] with its own focus node instead (see the class doc)
+  /// -- a blur here is never that transient handoff; it is simply the user
+  /// leaving the closed field, and there is no panel left to close in
+  /// response.
   void _handleBlur() {
-    // Deferred, and re-checked, rather than acted on synchronously: opening
-    // the desktop panel briefly unfocuses `_fieldFocusNode` mid-gesture --
-    // `EditableText`'s own tap handling loses focus for an instant before
-    // `LayrzEditableField`'s own gesture recognizer re-requests it, and the
-    // panel's own `onOpen` callback (see `build`) also explicitly moves
-    // focus onto the panel's own field row via a double post-frame callback,
-    // mirroring the exact race `LayrzSelectInputSurface` documents against
-    // `LayrzAnchoredPanel`'s internal focus steal. Closing synchronously on
-    // that transient blip would tear the panel down one frame after it
-    // opened, before the user ever saw it (observed directly: a manual open
-    // probe showed the panel's options present for one frame and gone the
-    // next). Posting this check to the frame after every focus-driven
-    // refocus has had a chance to run means a *genuine* loss of focus (tab
-    // away, a real outside click, the window itself losing focus) still
-    // closes the panel -- it is simply no longer treated as genuine before
-    // this frame's own focus traffic has settled.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        if (_fieldFocusNode.hasFocus) return;
-        _panelController?.close();
-      });
-    });
-
-    // If allowFreeForm is false, revert to last valid option
     if (!widget.allowFreeForm && _lastValidOption != null) {
       _controller.text = _lastValidOption!;
     }
@@ -473,18 +412,11 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     return widget.options.where((option) => option.toLowerCase().startsWith(text)).toList();
   }
 
-  /// The number of navigable rows in the currently open panel: the filtered
-  /// options. Used to keep [_highlightedIndex] within bounds across
-  /// arrow-key navigation.
-  int _navigableRowCount() {
-    return _getFilteredOptions().length;
-  }
-
   void _openOverlay() {
     if (context.isCompact) {
       _openBottomSheet();
     } else {
-      _panelController?.open();
+      _openDesktopDrawer();
     }
   }
 
@@ -515,15 +447,58 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     }
   }
 
+  /// Opens the option list in [LayrzEndDrawer] on desktop (DESIGN-98),
+  /// replacing the previous `LayrzAnchoredPanel` hosting.
+  ///
+  /// **The Q3 "same live field continues into the panel" trick does not carry
+  /// over, and this is a real behavior change from before DESIGN-98.** That
+  /// trick depended structurally on `RawMenuAnchor` building the closed
+  /// field's anchor and the open panel's overlay in one and the same build
+  /// pass, letting a stable `GlobalKey` reparent a single `Element` instead of
+  /// unmounting and remounting it (see the class doc's Q3 section).
+  /// [LayrzEndDrawer] is [Navigator.push]ed as a separate route -- there is no
+  /// shared build pass for a `GlobalKey` to reparent across, so the field the
+  /// user was typing into and the drawer's own content are unavoidably two
+  /// separate widget subtrees. Rather than fight that boundary (and risk
+  /// reintroducing the exact focus-loss-closes-the-panel race
+  /// [_handleBlur] was written against, this time across a route boundary
+  /// instead of a single frame), this reuses [BottomSheetContent] verbatim --
+  /// the same self-contained surface the mobile branch already uses, with its
+  /// own independent search field, filtering [_getFilteredOptions] pool taken
+  /// at open time, and commit-by-pop contract (see that class's own doc for
+  /// why it has no callback-based commit path). This makes desktop's drawer
+  /// behavior consistent with mobile's sheet instead of continuing to differ
+  /// from it, at the cost of the closed field's typed text and caret position
+  /// not continuing into the drawer -- the drawer opens with its own empty
+  /// search field instead of the closed field's current text.
+  Future<void> _openDesktopDrawer() async {
+    final filtered = _getFilteredOptions();
+    final selected = await LayrzEndDrawer.show<String?>(
+      context,
+      semanticLabel: widget.labelText,
+      builder: (context) => BottomSheetContent(
+        options: filtered,
+        emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
+        labelText: widget.labelText,
+      ),
+    );
+
+    if (selected != null) {
+      _commitValue(selected);
+    }
+  }
+
+  /// Commits [value] -- tapping an option or picking from the bottom sheet or
+  /// drawer, both of which report solely by popping with the selected value
+  /// (see [BottomSheetContent]'s own doc for why there is no second,
+  /// callback-based commit path).
   void _commitValue(String value) {
-    // A commit (tapping an option, pressing Enter on a highlighted row, or
-    // picking from the bottom sheet) always reports `onChanged`, exactly
-    // once — including when `value` already
-    // matches the field's current text (typing an option's full text and
-    // then tapping it, or re-selecting the option already shown). Writing
-    // `_lastNotifiedText` and calling `onChanged` *before* touching the
-    // controller is what makes that hold: the assignment below still routes
-    // through `_handleTextChange`, but by the time it fires,
+    // A commit always reports `onChanged`, exactly once — including when
+    // `value` already matches the field's current text (typing an option's
+    // full text and then tapping it, or re-selecting the option already
+    // shown). Writing `_lastNotifiedText` and calling `onChanged` *before*
+    // touching the controller is what makes that hold: the assignment below
+    // still routes through `_handleTextChange`, but by the time it fires,
     // `_lastNotifiedText` already equals `value`, so that notification — and
     // the second one from `EditableText`'s post-assignment selection resync
     // — are both deduped as echoes of the call just made here, rather than
@@ -534,61 +509,31 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     _controller.text = value;
     _lastValidOption = value;
     widget.onSubmit?.call(value);
-    _panelController?.close();
     _fieldFocusNode.unfocus();
   }
 
-  /// Commits the option [_highlightedIndex] currently points at, invoked on Enter.
-  void _commitHighlighted() {
-    if (_highlightedIndex < 0) return;
-
-    final filtered = _getFilteredOptions();
-    if (_highlightedIndex < filtered.length) {
-      _commitValue(filtered[_highlightedIndex]);
-    }
-  }
-
-  /// Builds the field row shared, by instance, between the closed field and
-  /// the open panel's first row (Q3). [readOnlyPlaceholder] renders a
-  /// non-editable visual stand-in instead of the real [LayrzEditableField] —
-  /// used for the closed-field slot while the panel is open, since
-  /// `coverAnchor: true` means the panel already renders the real, focused
-  /// field in exactly the same position; mounting a second [EditableText]
-  /// bound to the same [FocusNode] there would conflict with the panel's.
+  /// Builds the closed field's own bordered row.
   ///
-  /// [isPanelRow] distinguishes the panel's own first row from every other
-  /// caller of this function (the closed desktop field, and the compact/mobile
-  /// field, both of which render standalone and need their own border to read
-  /// as an input at all). The user's own framing: "the panel's input IS the
-  /// field's input, continuing" -- so when this row sits *inside*
-  /// `LayrzAnchoredPanel`'s already-bordered, already-rounded container, it
-  /// must not draw a second border and a second rounded rect of its own. Doing
-  /// so drew a bordered, rounded box nested inside the panel's own bordered,
-  /// rounded box -- a self-contained "field" floating in the dropdown, which
-  /// read as a search bar sitting above a results list (the user's own words:
-  /// "partially search, partially just a TextInput") rather than the closed
-  /// field's border simply continuing uninterrupted into the panel. Mirrors
-  /// how `LayrzSelectInputSurface._buildSearchField` suppresses its own border
-  /// for the identical reason (`showBorder: false`) -- see
-  /// `select_input_surface.dart:307`.
+  /// **Post-DESIGN-98: this is the field's only rendering, on both bands.**
+  /// Before DESIGN-98, this function also rendered the open desktop
+  /// `LayrzAnchoredPanel`'s first row -- a second, border/radius-suppressed
+  /// mode distinguished by a since-removed `isPanelRow` flag, load-bearing
+  /// because that panel covered the field in place (`coverAnchor: true`) and
+  /// needed the two rows to read as one continuous field rather than two
+  /// nested bordered boxes. Now that both bands open a wholly independent
+  /// [BottomSheetContent] surface instead (see the class doc's Q3 section),
+  /// there is only ever one row for this function to build, and it always
+  /// keeps its own border -- exactly like [LayrzSelectInput]'s and
+  /// [LayrzDurationInput]'s closed fields.
   ///
-  /// **`labelText`/`errors` are never passed to the inner [LayrzInputChrome]
-  /// here** (`labelText: null`, `hideDetails: true`) -- [build] renders both
-  /// outside this row instead, mirroring `LayrzSelectInput._appendExtras` and
-  /// `LayrzDurationInput._buildInteractiveField`. This is load-bearing, not
-  /// cosmetic: on desktop this chrome IS the anchor handed to
-  /// `LayrzAnchoredPanel.builder`, and with `coverAnchor: true` the opened
-  /// panel positions itself against that anchor's own rect. A label rendered
-  /// *inside* the chrome extends the anchor's rect upward by the label's own
-  /// height, so the panel would land on top of the label instead of the field
-  /// underneath it -- measured directly before this fix: the panel's top
-  /// landed exactly on the label's top, 24.0 logical pixels above the actual
-  /// bordered field box, at the showroom's own configuration.
+  /// **`labelText`/`errors` are still never passed to the inner
+  /// [LayrzInputChrome] here** (`labelText: null`, `hideDetails: true`) --
+  /// [build] renders both outside this row instead, mirroring
+  /// `LayrzSelectInput._appendExtras` and
+  /// `LayrzDurationInput._buildInteractiveField`.
   Widget _buildFieldChrome(
     BuildContext context, {
     required VoidCallback onOpen,
-    required bool readOnlyPlaceholder,
-    bool isPanelRow = false,
   }) {
     final prefixSlot = resolvePrefixSlot(
       prefixIcon: widget.prefixIcon,
@@ -622,7 +567,12 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       // listener on `_controller` and wiring `onChanged` too would fire the
       // callback twice.
       onChanged: null,
-      onSubmit: (_) => _commitHighlighted(),
+      // Enter on the closed field opens the overlay, mirroring arrow-down in
+      // `_handleKeyEvent` -- post-DESIGN-98 there is no in-place highlighted
+      // row on the closed field left to commit (see `_handleKeyEvent`'s own
+      // doc for why that navigation moved entirely into the opened
+      // BottomSheetContent surface).
+      onSubmit: (_) => _openOverlay(),
       onFocusChanged: (isFocused) {
         setState(() {
           if (isFocused) {
@@ -670,85 +620,27 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       helpContentText: widget.helpContentText,
       controller: _controller,
       dense: widget.dense,
-      // Only the panel's own row suppresses its border/radius (see the class
-      // doc on `isPanelRow`) -- the closed field (desktop or compact) always
-      // keeps both, since nothing else draws a border around it.
-      showBorder: !isPanelRow,
-      borderRadius: isPanelRow ? BorderRadius.zero : null,
-      child: readOnlyPlaceholder
-          ? ValueListenableBuilder<TextEditingValue>(
-              valueListenable: _controller,
-              builder: (context, value, _) => Text(
-                value.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            )
-          : LayrzEditableField(key: _sharedFieldKey, config: fieldConfig),
+      child: LayrzEditableField(config: fieldConfig),
     );
   }
 
-  /// Builds the panel's content: the live input row and the filtered option
-  /// list — see [LayrzComboBoxPanelContent].
-  Widget _buildPanelContent(BuildContext context) {
-    final filtered = _getFilteredOptions();
-    final emptyText = widget.emptyOptionsText ?? context.l10n.comboboxEmpty;
-
-    final fieldRow = _buildFieldChrome(
-      context,
-      onOpen: () {},
-      readOnlyPlaceholder: false,
-      isPanelRow: true,
-    );
-
-    return LayrzComboBoxPanelContent(
-      fieldRow: fieldRow,
-      options: filtered,
-      highlightedIndex: _highlightedIndex,
-      onSelected: _commitValue,
-      emptyText: emptyText,
-    );
-  }
-
+  /// Handles keyboard events on the closed field.
+  ///
+  /// **Reduced scope, post-DESIGN-98.** Before DESIGN-98, this also drove
+  /// arrow-key highlight navigation and Enter/Escape while the desktop
+  /// `LayrzAnchoredPanel` was open in place, since that panel's option rows
+  /// lived in the same subtree as this field. Now that opening the overlay
+  /// always pushes a separate [LayrzEndDrawer]/[LayrzBottomSheet] route
+  /// hosting its own independent [BottomSheetContent] -- with its own
+  /// [Focus]/key handling, mirroring [LayrzSelectInputSurface]'s identical
+  /// self-contained pattern -- there is no in-place option list left for this
+  /// handler to navigate. It keeps exactly the one job that still belongs to
+  /// the closed field: opening the overlay on arrow-down.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    final isCompact = context.isCompact;
-    final isOpen = _panelController?.isOpen ?? false;
-
-    if (!isOpen) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        if (!isCompact) {
-          _openOverlay();
-          return KeyEventResult.handled;
-        }
-      }
-      return KeyEventResult.ignored;
-    }
-
-    final rowCount = _navigableRowCount();
-    if (rowCount == 0) {
-      return KeyEventResult.ignored;
-    }
-
-    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      setState(() {
-        _highlightedIndex = (_highlightedIndex + 1) % rowCount;
-      });
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      setState(() {
-        _highlightedIndex = (_highlightedIndex - 1 + rowCount) % rowCount;
-      });
-      return KeyEventResult.handled;
-    } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-      if (_highlightedIndex >= 0 && _highlightedIndex < rowCount) {
-        _commitHighlighted();
-        return KeyEventResult.handled;
-      }
-      return KeyEventResult.ignored;
-    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      _panelController?.close();
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown && !context.isCompact) {
+      _openOverlay();
       return KeyEventResult.handled;
     }
 
@@ -757,62 +649,28 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = context.isCompact;
-
-    final Widget anchor = isCompact
-        ? _buildFieldChrome(context, onOpen: _openOverlay, readOnlyPlaceholder: false)
-        : LayrzAnchoredPanel(
-            widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-            coverAnchor: true,
-            maxHeight: _kComboBoxOverlayMaxHeight,
-            childFocusNode: _fieldFocusNode,
-            onOpen: () {
-              setState(() {
-                _highlightedIndex = -1;
-              });
-
-              // Focus must land on the panel's own input (Q3), not on
-              // `LayrzAnchoredPanel`'s internal `_panelFocusNode`. The
-              // panel requests focus on its own node via a post-frame
-              // callback in `_handlePanelOpenRequested`, registered
-              // *before* `widget.onOpen` (this callback) runs — so a
-              // single post-frame callback here would lose that race
-              // (fire first, get stolen from one tick later). Nesting a
-              // second callback inside the first pushes this request to
-              // the frame after that steal, mirroring the exact fix
-              // `LayrzSelectInputSurface` uses for the same race.
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  _fieldFocusNode.requestFocus();
-                });
-              });
-            },
-            onClose: () {
-              setState(() {
-                _highlightedIndex = -1;
-              });
-            },
-            builder: (context, controller) {
-              _panelController = controller;
-              return _buildFieldChrome(
-                context,
-                onOpen: controller.open,
-                readOnlyPlaceholder: controller.isOpen,
-              );
-            },
-            border: LayrzAnchoredPanelBorder(
-              color: widget.errors.isNotEmpty ? context.tokens.colors.danger : context.tokens.colors.primary,
-              width: context.tokens.border.base,
-            ),
-            child: Builder(builder: _buildPanelContent),
-          );
+    // Both bands render the same standalone field now (DESIGN-98): desktop no
+    // longer continues this same live field into an overlay that covers it
+    // (see [_openDesktopDrawer]'s own doc for why the Q3 shared-field trick
+    // does not survive a route boundary) -- it opens [LayrzEndDrawer] hosting
+    // an independent [BottomSheetContent], exactly like the compact band
+    // already opens [LayrzBottomSheet] hosting the same widget.
+    final anchor = _buildFieldChrome(context, onOpen: _openOverlay);
 
     return Semantics(
       label: widget.labelText,
       button: true,
       enabled: !widget.disabled && !widget.readOnly,
-      expanded: _panelController?.isOpen ?? false,
+      // Always false, post-DESIGN-98: there is no `MenuController` left to
+      // query for a live open/closed state (both the drawer and the bottom
+      // sheet are routes, not a queryable controller) -- mirrors
+      // `LayrzSelectInput`'s identical `isExpanded: false` on both of its own
+      // bands after its own DESIGN-98 conversion. Still explicitly `false`,
+      // not omitted: passing a literal bool (rather than leaving `expanded`
+      // null) is what keeps `hasExpandedState` true in the semantics tree,
+      // announcing this as an expandable control even though its live state
+      // is not tracked.
+      expanded: false,
       onTap: (widget.disabled || widget.readOnly) ? null : _openOverlay,
       child: Focus(
         onKeyEvent: _handleKeyEvent,
@@ -827,12 +685,13 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// entirely.
   ///
   /// Mirrors `LayrzSelectInput._appendExtras` and
-  /// `LayrzDurationInput._buildInteractiveField`'s identical composition, for
-  /// the identical reason (see the doc comment on [_buildFieldChrome]):
-  /// [child] is -- on desktop -- the exact anchor [LayrzAnchoredPanel] reads
-  /// to position the opened overlay via `coverAnchor: true`. A label or error
-  /// footer rendered inside that anchor would grow its rect and shift the
-  /// overlay off the field it is meant to cover.
+  /// `LayrzDurationInput._buildInteractiveField`'s identical composition.
+  /// Post-DESIGN-98 this is no longer load-bearing for anchor positioning the
+  /// way it was under `LayrzAnchoredPanel.coverAnchor` (see [_buildFieldChrome]'s
+  /// own doc) -- [LayrzEndDrawer] and [LayrzBottomSheet] both position
+  /// themselves independently of this field's rect -- but the composition is
+  /// kept identical to the other DESIGN-98 inputs regardless, for the same
+  /// label/footer placement every one of them uses.
   ///
   /// **The footer is never gated on the label.** An earlier version of this
   /// method (copied from `LayrzSelectInput`, which carries the identical bug)
