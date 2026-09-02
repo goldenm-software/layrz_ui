@@ -1,14 +1,19 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/month.dart';
 import '../shared/picker_anchor.dart';
 import 'month_surface.dart';
+
+/// Sentinel distinguishing "no summary computed yet" from a real `null`
+/// [LayrzMonth] value in [_LayrzMonthInputState._lastValue] — `widget.value`
+/// itself is nullable, so `null` cannot double as the "unset" marker.
+const Object _unset = Object();
 
 /// A Material-free month+year input field.
 ///
@@ -100,12 +105,40 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The [widget.value] the summary text was last computed for.
+  ///
+  /// Mirrors `LayrzDurationInput`'s own `_lastValue` guard
+  /// (`duration_input.dart`'s `build()`): [_updateSummary] reads
+  /// `context.l10n`, which asserts if called before this widget's
+  /// [BuildContext] has an established `Localizations` dependency. Calling
+  /// it eagerly from [initState] throws exactly that assertion, so instead
+  /// [build] recomputes the summary only when [widget.value] has actually
+  /// changed since the last build -- which also covers the very first build.
+  Object? _lastValue = _unset;
+
+  /// Bumped every time the desktop anchored panel opens, and used as
+  /// [LayrzMonthSurface]'s [Key].
+  ///
+  /// [LayrzAnchoredPanel] constructs [child] eagerly and does not recreate
+  /// its [State] on open/close (`anchored_panel.dart:72`), so without this,
+  /// [LayrzMonthSurface]'s `_displayedYear` would survive an involuntary
+  /// close: navigate to a different year, dismiss without tapping a month,
+  /// reopen — and the surface would still show the year last navigated to
+  /// instead of re-seeding from [LayrzMonthInput.value]. Changing this key
+  /// forces [LayrzMonthSurface] to be torn down and reconstructed fresh on
+  /// every open, which re-runs its `initState` seed unconditionally. The
+  /// mobile bottom-sheet branch does not need this: [LayrzBottomSheet.show]
+  /// already rebuilds [LayrzMonthSurface] from scratch on every call via its
+  /// own `builder`.
+  int _surfaceGeneration = 0;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling _updateSummary() here -- see _lastValue's doc.
+    // The first build() computes it instead, once context.l10n is safe to read.
   }
 
   @override
@@ -119,7 +152,9 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.value != oldWidget.value) _updateSummary();
+    // _updateSummary() is driven from build() via the _lastValue guard, not
+    // from here, so a controller swap above still gets the correct text
+    // without this method also needing to special-case it.
   }
 
   @override
@@ -129,31 +164,20 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
     super.dispose();
   }
 
-  String _monthName(int month, LayrzUiL10n l10n) {
-    return switch (month) {
-      1 => l10n.monthJanuary,
-      2 => l10n.monthFebruary,
-      3 => l10n.monthMarch,
-      4 => l10n.monthApril,
-      5 => l10n.monthMay,
-      6 => l10n.monthJune,
-      7 => l10n.monthJuly,
-      8 => l10n.monthAugust,
-      9 => l10n.monthSeptember,
-      10 => l10n.monthOctober,
-      11 => l10n.monthNovember,
-      _ => l10n.monthDecember,
-    };
-  }
-
+  /// Formats [value] into the anchor's summary text.
+  ///
+  /// [widget.formatter] takes precedence when supplied. Otherwise falls back
+  /// to `formatStrftime(value.toDateTime(), '%B %Y', context.l10n)` — the
+  /// house strftime-style formatter (Python `datetime` directives, not
+  /// `intl`/`DateFormat` patterns), so month names resolve through
+  /// [LayrzUiL10n] rather than a hardcoded English switch.
   void _updateSummary() {
     final value = widget.value;
     if (value == null) {
       _controller.text = '';
       return;
     }
-    final l10n = context.l10n;
-    _controller.text = widget.formatter?.call(value) ?? '${_monthName(value.month, l10n)} ${value.year}';
+    _controller.text = widget.formatter?.call(value) ?? formatStrftime(value.toDateTime(), '%B %Y', context.l10n);
   }
 
   void _handleSelected(LayrzMonth month) {
@@ -233,6 +257,11 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (!identical(_lastValue, widget.value) && _lastValue != widget.value) {
+      _lastValue = widget.value;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
@@ -245,6 +274,11 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
       maxHeight: 420.0,
       coverAnchor: true,
       childFocusNode: _focusNode,
+      // See `_surfaceGeneration`'s doc: bumping it here forces a fresh
+      // LayrzMonthSurface (and thus a fresh `_displayedYear` seed) on every
+      // open, since `LayrzAnchoredPanel` does not recreate `child`'s State
+      // on its own between an involuntary close and the next open.
+      onOpen: () => setState(() => _surfaceGeneration++),
       builder: (context, controller) {
         _panelController = controller;
         return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
@@ -254,6 +288,7 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
         width: tokens.border.base,
       ),
       child: LayrzMonthSurface(
+        key: ValueKey(_surfaceGeneration),
         value: widget.value,
         minimum: widget.minimum,
         maximum: widget.maximum,
