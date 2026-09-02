@@ -149,8 +149,8 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   /// dependency.
   DateTime? _lastValue;
 
-  /// Bumped immediately before the desktop panel is opened, and used as
-  /// [LayrzDateSurface]'s [Key].
+  /// Bumped by [LayrzAnchoredPanel.onOpen] on every desktop panel open, and
+  /// used as [LayrzDateSurface]'s [Key].
   ///
   /// **Involuntary-close fix.** `LayrzAnchoredPanel` takes its `child`
   /// eagerly (`anchored_panel.dart:72`) and never recreates it per open, so
@@ -162,7 +162,14 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   /// instead of back on the committed [LayrzDateInput.value]. Changing this
   /// key on every open forces Flutter to discard and reconstruct
   /// [LayrzDateSurface]'s `State`, which re-seeds `_displayedMonth` from
-  /// [LayrzDateInput.value] in `initState` unconditionally. The mobile
+  /// [LayrzDateInput.value] in `initState` unconditionally.
+  ///
+  /// Bumped from [LayrzAnchoredPanel.onOpen] rather than from this widget's
+  /// own `onTap` handler: `onOpen`'s doc guarantees it "fire[s] before the
+  /// overlay is shown" for every open regardless of how it was triggered
+  /// (tap, keyboard activation, or a future programmatic
+  /// `_panelController.open()` call), so it is a strictly more complete
+  /// hook than wrapping only the anchor's own tap handler. The mobile
   /// bottom-sheet branch needs no equivalent: [LayrzBottomSheet.show] pushes
   /// a fresh route (and so a fresh `builder` widget) on every call.
   int _surfaceGeneration = 0;
@@ -212,14 +219,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
     widget.onChanged?.call(date);
     _updateSummary();
     setState(() {});
-  }
-
-  /// Opens the desktop anchored panel, bumping [_surfaceGeneration] first so
-  /// [LayrzDateSurface] is reconstructed fresh on every open — see
-  /// [_surfaceGeneration]'s own doc for why this is required.
-  void _openDesktopPanel() {
-    setState(() => _surfaceGeneration++);
-    _panelController.open();
   }
 
   Future<void> _openMobileSurface() async {
@@ -312,11 +311,18 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
       maxHeight: 420.0,
       coverAnchor: true,
       childFocusNode: _focusNode,
+      // Bumps `_surfaceGeneration` on every open regardless of how it was
+      // triggered (tap, keyboard activation, or a future programmatic
+      // `_panelController.open()` call this widget doesn't itself make
+      // today) -- `onOpen` is "guaranteed to fire before the overlay is
+      // shown" (`anchored_panel.dart`'s own field doc), which is a strictly
+      // more complete hook than wrapping only this anchor's own `onTap`.
+      onOpen: () => setState(() => _surfaceGeneration++),
       builder: (context, controller) {
         _panelController = controller;
         return _buildInteractiveField(
           context: context,
-          onTap: widget.disabled ? null : _openDesktopPanel,
+          onTap: widget.disabled ? null : controller.open,
         );
       },
       border: LayrzAnchoredPanelBorder(
