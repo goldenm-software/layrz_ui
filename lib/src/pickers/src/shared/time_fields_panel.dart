@@ -70,6 +70,29 @@ import 'time_field.dart';
 /// triggers -- one row stays one row**, and the wrap is a response to
 /// available width alone, never to hover/press/focus state, so D15 still
 /// holds within any single width.
+///
+/// **The field row never stretches wider than [_kMaxRowWidth].** DESIGN-47:
+/// the maintainer's own words, with a screenshot, were *"It must fillup the
+/// fields completely"* -- the screenshot showed two [LayrzPickersTimeField]s
+/// sitting in a very wide host (the old anchored panel, which matched a wide
+/// input field's own width) with the `+`/`−` steppers and suffix labels
+/// bunched at the far edges of each field and a large dead gap in the middle,
+/// because [LayrzNumberInput]'s content is centered within whatever width its
+/// own `Expanded` chrome is given rather than stretched to fill it. The fix
+/// is not inside [LayrzNumberInput] (out of scope for this fix, and shared by
+/// every numeric field in the library) -- it is to stop handing this row more
+/// width than it needs in the first place. [build] centers a
+/// [ConstrainedBox]-capped copy of [availableWidth] and derives every
+/// field-width computation below from that capped value, not the raw
+/// [LayoutBuilder] constraint, so a field reads as one coherent, tightly
+/// packed control regardless of how wide its host (an [LayrzPickerDrawer], a
+/// [LayrzBottomSheet], or the narrower legacy anchored panel still used by
+/// [LayrzTimeInput]) happens to be. **This does not touch the existing
+/// 280px/140px thresholds** ([LayrzPickersTimeField.kNarrowWidth],
+/// [_kFieldFloorWidth]): those are evaluated against the same capped width a
+/// narrow host already provides unchanged (a host narrower than
+/// [_kMaxRowWidth] is unaffected by the cap), so the narrow-width regressions
+/// those constants exist to prevent keep passing exactly as before.
 class LayrzPickersTimeFieldsPanel extends StatelessWidget {
   /// The current time value.
   final LayrzTimeOfDay value;
@@ -163,13 +186,20 @@ class LayrzPickersTimeFieldsPanel extends StatelessWidget {
         builder: (context, constraints) {
           // The row's own measured width, not the viewport (MediaQuery) --
           // this panel is always hosted inside a bounded-width ancestor
-          // (LayrzAnchoredPanel or LayrzBottomSheet's Padding, see the class
-          // doc's _bounded reasoning), so its own constraints -- not the
-          // device's viewport size -- are what determine whether a field's
-          // label fits. Mirrors LayrzDurationPickerPanel's identical
-          // LayoutBuilder-over-MediaQuery choice; see LayrzPickersTimeField
-          // .kNarrowWidth for the measurement basis.
-          final availableWidth = constraints.maxWidth;
+          // (LayrzPickerDrawer, LayrzAnchoredPanel, or LayrzBottomSheet's
+          // Padding, see the class doc's _bounded reasoning), so its own
+          // constraints -- not the device's viewport size -- are what
+          // determine whether a field's label fits. Mirrors
+          // LayrzDurationPickerPanel's identical LayoutBuilder-over-MediaQuery
+          // choice; see LayrzPickersTimeField.kNarrowWidth for the
+          // measurement basis.
+          //
+          // Capped at _kMaxRowWidth (see that constant's doc and this
+          // class's "field row never stretches" note) -- every width
+          // computation below derives from this capped value, not the raw
+          // constraint, so a wide host never leaves the fields stretched
+          // apart with dead space between them.
+          final availableWidth = constraints.maxWidth.clamp(0.0, _kMaxRowWidth);
 
           // Slot count: hour, minute, second (always reserves its slot, see
           // the Visibility(maintainSize: true) below), and the meridiem
@@ -267,27 +297,60 @@ class LayrzPickersTimeFieldsPanel extends StatelessWidget {
             ],
           );
 
-          if (!wrapMeridiem) return timeFieldsRow;
+          final body = wrapMeridiem
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    timeFieldsRow,
+                    SizedBox(height: spacing),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: IntrinsicWidth(
+                        child: _MeridiemControl(isPm: value.isPm, onChanged: _setMeridiem),
+                      ),
+                    ),
+                  ],
+                )
+              : timeFieldsRow;
 
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              timeFieldsRow,
-              SizedBox(height: spacing),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: IntrinsicWidth(
-                  child: _MeridiemControl(isPm: value.isPm, onChanged: _setMeridiem),
-                ),
-              ),
-            ],
+          // Sizes the (possibly capped) body to exactly availableWidth and
+          // centers it within whatever wider width LayoutBuilder's raw
+          // constraints actually offered -- the mechanism behind "the field
+          // row never stretches wider than _kMaxRowWidth" (see this class's
+          // doc comment). When the host is already narrower than
+          // _kMaxRowWidth, availableWidth equals constraints.maxWidth and
+          // this is a no-op: the SizedBox merely matches the width the body
+          // would already have taken.
+          return Center(
+            child: SizedBox(width: availableWidth, child: body),
           );
         },
       ),
     );
   }
 }
+
+/// The field row's own maximum width, in logical pixels, regardless of how
+/// wide its host actually is.
+///
+/// See [LayrzPickersTimeFieldsPanel]'s "field row never stretches wider than
+/// [_kMaxRowWidth]" doc section for the DESIGN-47 problem this solves.
+///
+/// **900.0, not a smaller value** -- the floor is not "whatever fits three
+/// fields", it is "whatever this file's own narrow-width regressions already
+/// rely on staying unabridged." `time_fields_panel_test.dart`'s "at or above
+/// the narrow-width threshold" test pins exactly 900px as the width three
+/// unabridged-label fields ([LayrzPickersTimeField.kNarrowWidth] each, 280.0)
+/// plus two [spacing] (sp1, 6.0) gaps first clears comfortably
+/// (`(900 - 6*2) / 3 = 296px`, just above 280.0). A cap below 900 would
+/// silently re-trigger that same narrow-width label switch this file's own
+/// suite already guards against — 900.0 is the smallest cap that cannot
+/// regress it, not a number chosen for its own sake. Still comfortably below
+/// what a wide desktop input field's anchored-panel width (this panel's other
+/// host, alongside [LayrzPickerDrawer.width] at 420.0, already narrower than
+/// this cap and therefore unaffected by it) can otherwise stretch to.
+const double _kMaxRowWidth = 900.0;
 
 /// A conservative estimate of [_MeridiemControl]'s own rendered width, used
 /// only to reserve its share of [LayoutBuilder]'s measured width before
