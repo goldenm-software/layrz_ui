@@ -185,6 +185,30 @@ class _LayrzTappableState extends State<LayrzTappable> {
   /// cooldown on the callback itself keeps single-tap latency at ~0ms (the
   /// [GestureDetector] arena and its timing are untouched) while still
   /// collapsing a double-tap to exactly one [LayrzTappable.onTap] call.
+  ///
+  /// A third option was evaluated and rejected: putting a
+  /// [SerialTapGestureRecognizer] in the arena (via `RawGestureDetector`)
+  /// instead of a cooldown. It genuinely avoids the `onDoubleTap` latency
+  /// problem above (measured: single-tap resolution stays under 1ms) and it
+  /// is Flutter's own documented mechanism for "fire on every tap, don't
+  /// wait to rule out a double-tap." But it internally arms an
+  /// uncancellable ~[kDoubleTapTimeout] `Timer` after *every* tap to track
+  /// series membership -- `SerialTapGestureRecognizer._serialTapTimer` and
+  /// its start/stop methods are private to `multitap.dart`, so nothing
+  /// outside it can cancel just the timer without disposing the whole
+  /// recognizer (which then can't be reused for the next tap). Flutter's
+  /// test harness asserts no pending `Timer` at the end of every
+  /// `testWidgets`, and a bare `tester.pump()` after a tap (the dominant
+  /// pattern in this repo's suite, not `pumpAndSettle`) does not drain it --
+  /// measured to break 40 tests across 121 at-risk files for one bug fixed.
+  /// The proper long-term fix, if this cooldown is ever revisited, is a
+  /// hand-rolled recognizer (e.g. extending [PrimaryPointerGestureRecognizer]
+  /// directly) that resolves each tap immediately with no `Timer` at all,
+  /// since [LayrzTappable] never needed [SerialTapGestureRecognizer]'s tap
+  /// count -- only "fire per physical tap, don't wait." That is a
+  /// library-wide interaction change affecting all 11 [LayrzTappable]
+  /// consumers, though, and deserves its own task and testing pass rather
+  /// than riding along on [collapseDoubleTap]'s narrower fix.
   Timer? _doubleTapCooldown;
 
   /// Resolves the current surface color based on state.
