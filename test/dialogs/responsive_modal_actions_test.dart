@@ -373,8 +373,7 @@ void main() {
       expect(
         afterScrollRect,
         equals(beforeScrollRect),
-        reason:
-            'the pinned action row must not move when scrollable: false and the builder supplies its own ListView',
+        reason: 'the pinned action row must not move when scrollable: false and the builder supplies its own ListView',
       );
     });
   });
