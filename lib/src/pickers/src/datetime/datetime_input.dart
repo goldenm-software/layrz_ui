@@ -58,6 +58,11 @@ class LayrzDateTimeInput extends StatefulWidget {
   /// identical Cancel/Save commit model and fire [onChanged] at the same
   /// moment — see [LayrzDateTimeInputPresentation]'s own doc for what
   /// genuinely differs between them.
+  @Deprecated(
+    'Ignored as of DESIGN-49: LayrzPickerDrawer always shows the calendar and '
+    'time fields together, so there is no longer a tab strip or step sequence '
+    'to select between. Safe to drop from call sites.',
+  )
   final LayrzDateTimeInputPresentation presentation;
 
   /// The label text displayed above the input field.
@@ -131,7 +136,20 @@ class LayrzDateTimeInput extends StatefulWidget {
     super.key,
     this.value,
     this.onChanged,
-    this.presentation = LayrzDateTimeInputPresentation.tabbed,
+    // Not `this.presentation` shorthand: `@Deprecated` on a `this.`-forwarded
+    // field only flags READS of the field (e.g. `widget.presentation`), not
+    // a caller passing the named argument at the call site — the one place
+    // this annotation actually needs to warn. An explicit parameter
+    // assigned via the initializer list below is what Flutter's own SDK
+    // uses for this exact case (see e.g. AppBarTheme's deprecated `color`
+    // parameter) and is what makes `deprecated_member_use` fire on
+    // `LayrzDateTimeInput(presentation: ...)` itself.
+    @Deprecated(
+      'Ignored as of DESIGN-49: LayrzPickerDrawer always shows the calendar and '
+      'time fields together, so there is no longer a tab strip or step sequence '
+      'to select between. Safe to drop from call sites.',
+    )
+    LayrzDateTimeInputPresentation presentation = LayrzDateTimeInputPresentation.tabbed,
     this.labelText,
     this.hintText,
     this.isRequired = false,
@@ -152,7 +170,12 @@ class LayrzDateTimeInput extends StatefulWidget {
     this.dense = false,
     this.helpTitleText,
     this.helpContentText,
-  }) : assert(
+  }) : // Deliberate: `this.presentation` shorthand would not let `presentation`
+       // carry its own `@Deprecated` distinct from the field's (see the
+       // parameter's own comment above).
+       // ignore: prefer_initializing_formals
+       presentation = presentation,
+       assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
        ),
