@@ -46,6 +46,28 @@ void main() {
       const widget = LayrzDateInput(labelText: 'Date');
       expect(widget.firstDayOfWeek, DateTime.monday);
     });
+
+    // Regression test for a class of bug found across this batch's
+    // scaffolds: `initState` reading `context.l10n` (an inherited-widget
+    // dependency not yet established at that point in the widget
+    // lifecycle) throws "dependOnInheritedWidgetOfExactType() ... called
+    // before initState() completed" on construction with ANY non-null
+    // `value` -- see `_lastValue`'s doc on `_LayrzDateInputState` for the
+    // fix (the summary is computed reactively from `build`, never from
+    // `initState`).
+    guardedTestWidgets('constructing with a non-null value does not throw', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(labelText: 'Date', value: DateTime(2026, 9, 5)),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(LayrzDateInput), findsOneWidget);
+    });
   });
 
   group('LayrzDateInput — rendering', () {
@@ -189,6 +211,26 @@ void main() {
       final icon = tester.widget<Icon>(find.byIcon(MdiIcons.calendarBlankOutline));
       expect(icon.color, tokens.colors.danger);
       expect(icon.color, isNot(tokens.colors.fg1));
+    });
+
+    // Direct assertion on the trap itself, alongside the icon-color proof
+    // above: the inner chrome's own `readOnly` field must stay `false`
+    // even with `errors` non-empty. Hardcoding `readOnly: true` on a
+    // picker anchor is the exact defect `LayrzInputStyleSpec.resolve`'s
+    // `readOnly > error` precedence would silently reward with a
+    // still-grey field despite a present error.
+    guardedTestWidgets('LayrzInputChrome.readOnly stays false even with errors present', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(labelText: 'Date', errors: const ['Required']),
+      );
+
+      final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome).first);
+      expect(chrome.readOnly, isFalse);
     });
   });
 
