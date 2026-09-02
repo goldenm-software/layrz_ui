@@ -83,11 +83,10 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
     super.didUpdateWidget(oldWidget);
     // Involuntary-close discipline: re-seed from `widget.value` on every
     // incoming update, not only in `initState` -- see the implementation
-    // plan's "Involuntary close" section for why this is load-bearing
-    // (`LayrzAnchoredPanel` does not recreate this State per open). This is
-    // now belt-and-suspenders alongside `LayrzDateInput`'s own
-    // `_surfaceGeneration` key, which forces a fresh `State` (and so a
-    // fresh `initState`) on every desktop open regardless.
+    // plan's "Involuntary close" section for why this is load-bearing.
+    // `LayrzAnchoredPanel` constructs `child` eagerly and does not recreate
+    // its `State` between an involuntary close and the next open, so this
+    // re-seed is the only thing that discards a stale browsed-to month.
     if (oldWidget.value != widget.value) {
       _seed();
     }

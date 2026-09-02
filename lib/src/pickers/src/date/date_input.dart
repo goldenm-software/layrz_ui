@@ -157,23 +157,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   /// [LayrzDateSurface]'s `State` — specifically its `_displayedMonth`,
   /// which only re-seeds in `didUpdateWidget` when `widget.value` itself
   /// changes — would otherwise survive a tap-outside/Escape close unchanged.
-  /// A user who browses to a different month without selecting, then closes
-  /// involuntarily, would reopen the panel on that stale browsed-to month
-  /// instead of back on the committed [LayrzDateInput.value]. Changing this
-  /// key on every open forces Flutter to discard and reconstruct
-  /// [LayrzDateSurface]'s `State`, which re-seeds `_displayedMonth` from
-  /// [LayrzDateInput.value] in `initState` unconditionally.
-  ///
-  /// Bumped from [LayrzAnchoredPanel.onOpen] rather than from this widget's
-  /// own `onTap` handler: `onOpen`'s doc guarantees it "fire[s] before the
-  /// overlay is shown" for every open regardless of how it was triggered
-  /// (tap, keyboard activation, or a future programmatic
-  /// `_panelController.open()` call), so it is a strictly more complete
-  /// hook than wrapping only the anchor's own tap handler. The mobile
-  /// bottom-sheet branch needs no equivalent: [LayrzBottomSheet.show] pushes
-  /// a fresh route (and so a fresh `builder` widget) on every call.
-  int _surfaceGeneration = 0;
-
   @override
   void initState() {
     super.initState();
@@ -311,13 +294,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
       maxHeight: 420.0,
       coverAnchor: true,
       childFocusNode: _focusNode,
-      // Bumps `_surfaceGeneration` on every open regardless of how it was
-      // triggered (tap, keyboard activation, or a future programmatic
-      // `_panelController.open()` call this widget doesn't itself make
-      // today) -- `onOpen` is "guaranteed to fire before the overlay is
-      // shown" (`anchored_panel.dart`'s own field doc), which is a strictly
-      // more complete hook than wrapping only this anchor's own `onTap`.
-      onOpen: () => setState(() => _surfaceGeneration++),
       builder: (context, controller) {
         _panelController = controller;
         return _buildInteractiveField(
@@ -330,7 +306,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
         width: tokens.border.base,
       ),
       child: LayrzDateSurface(
-        key: ValueKey(_surfaceGeneration),
         value: widget.value,
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,

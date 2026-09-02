@@ -116,22 +116,6 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
   /// changed since the last build -- which also covers the very first build.
   Object? _lastValue = _unset;
 
-  /// Bumped every time the desktop anchored panel opens, and used as
-  /// [LayrzMonthSurface]'s [Key].
-  ///
-  /// [LayrzAnchoredPanel] constructs [child] eagerly and does not recreate
-  /// its [State] on open/close (`anchored_panel.dart:72`), so without this,
-  /// [LayrzMonthSurface]'s `_displayedYear` would survive an involuntary
-  /// close: navigate to a different year, dismiss without tapping a month,
-  /// reopen — and the surface would still show the year last navigated to
-  /// instead of re-seeding from [LayrzMonthInput.value]. Changing this key
-  /// forces [LayrzMonthSurface] to be torn down and reconstructed fresh on
-  /// every open, which re-runs its `initState` seed unconditionally. The
-  /// mobile bottom-sheet branch does not need this: [LayrzBottomSheet.show]
-  /// already rebuilds [LayrzMonthSurface] from scratch on every call via its
-  /// own `builder`.
-  int _surfaceGeneration = 0;
-
   @override
   void initState() {
     super.initState();
@@ -274,11 +258,6 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
       maxHeight: 420.0,
       coverAnchor: true,
       childFocusNode: _focusNode,
-      // See `_surfaceGeneration`'s doc: bumping it here forces a fresh
-      // LayrzMonthSurface (and thus a fresh `_displayedYear` seed) on every
-      // open, since `LayrzAnchoredPanel` does not recreate `child`'s State
-      // on its own between an involuntary close and the next open.
-      onOpen: () => setState(() => _surfaceGeneration++),
       builder: (context, controller) {
         _panelController = controller;
         return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
@@ -288,7 +267,6 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
         width: tokens.border.base,
       ),
       child: LayrzMonthSurface(
-        key: ValueKey(_surfaceGeneration),
         value: widget.value,
         minimum: widget.minimum,
         maximum: widget.maximum,
