@@ -170,19 +170,33 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
   /// action a non-selectable, non-leaf row supports, rather than being dead
   /// space next to a live chevron.
   ///
-  /// Wrapped in its own [Semantics] with `excludeSemantics: true` beneath it
-  /// (via [ExcludeSemantics] on [widget.child]'s own text) -- the row-level
-  /// [Semantics] built in [build] already merges role, label, hint,
-  /// selected, and expanded state into one node with [onTap] wired to the
-  /// same action, so this inner tap target must not add a second, competing
-  /// announcement or the row would read twice to a screen reader.
+  /// This is a bare [GestureDetector], deliberately **not** [LayrzTappable]:
+  /// [LayrzTappable] paints its own hover/press [DecoratedBox] surface and
+  /// (per its own class doc) leaves a [GestureDetector] in the tree with its
+  /// default semantics contribution intact, so using it here would add both
+  /// a second, unwanted tap target that test suites across this module
+  /// enumerate (`find.byType(LayrzTappable)` is asserted to find exactly one
+  /// match for chevron-only rows and exactly two for chevron+checkbox rows --
+  /// see tree_row_test.dart, tree_view_test.dart and tree_sliver_view_test.dart)
+  /// and a second, competing [SemanticsNode]. The row already paints its own
+  /// hover/pressed feedback at the [DecoratedBox] in [build], so the label
+  /// needs only the tap action itself, not its own visual surface.
+  /// `excludeFromSemantics: true` drops the [GestureDetector]'s own semantics
+  /// annotation (which would otherwise still emit an unmerged `tap`-only
+  /// node), and the nested [ExcludeSemantics] drops [widget.child]'s own
+  /// semantics (its raw text) -- between the two, nothing under the row's
+  /// own [Semantics] in [build] contributes a node of its own, so that node
+  /// (which already merges role, label, hint, selected, and expanded state,
+  /// with [onTap] wired to the same action) is the only one a screen reader
+  /// or `tester.getSemantics` ever finds for this row.
   Widget _buildLabel(LayrzTokens tokens, LayrzTreeRowStyleSpec style) {
     final labelAction = widget.onSelect ?? (widget.isLeaf ? null : widget.onToggle);
 
     return Expanded(
-      child: LayrzTappable(
+      child: GestureDetector(
         onTap: labelAction,
-        borderRadius: BorderRadius.circular(tokens.radius.r1),
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
         child: ExcludeSemantics(
           child: DefaultTextStyle.merge(
             style: TextStyle(color: style.foregroundColor),
