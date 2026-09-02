@@ -4,31 +4,37 @@ import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer.dart';
 import 'datetime_presentation.dart';
 import 'datetime_surface.dart';
 
 /// A Material-free single-datetime input field.
 ///
 /// **DESIGN-51 collapses into this widget** — covered by, not removed, by
-/// [presentation] (see [LayrzDateTimeInputPresentation]'s own doc for why
-/// the two values must be visibly and behaviourally distinct). Composes
-/// [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel] inside **one**
-/// anchored panel via [LayrzDateTimeSurface].
+/// [presentation], though [presentation] itself is now deprecated and
+/// ignored (see [LayrzDateTimeInputPresentation]'s own doc for the DESIGN-49
+/// update). Composes [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel]
+/// stacked in **one** scrollable surface via [LayrzDateTimeSurface].
 ///
-/// **Commit model — in-panel Cancel/Save, not commit-on-tap.** This widget
-/// is single-valued by *type* (one [DateTime]) but collects **two
+/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// below `isCompact`.** This widget previously opened [LayrzDateTimeSurface]
+/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
+/// panel too cramped for every Save-carrying picker widget (see
+/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
+/// a fixed-width drawer instead. The mobile branch is unchanged.
+///
+/// **Commit model — Cancel/Save inside the surface, not commit-on-tap.** This
+/// widget is single-valued by *type* (one [DateTime]) but collects **two
 /// coordinated parts**, exactly as the range widgets coordinate two
 /// endpoints — see the implementation plan's "commit boundary" section for
 /// why the value type is the wrong signal to derive this from. Committing
 /// on the date tap would emit a datetime whose time half the user never
-/// chose, and in [LayrzDateTimeInputPresentation.stepped] it would close the
-/// panel before the time step was reached. [onChanged] fires only once, on
-/// Save, with both parts combined; a half-chosen datetime is never reported.
+/// chose. [onChanged] fires only once, on Save, with both parts combined; a
+/// half-chosen datetime is never reported.
 ///
 /// **No midnight default.** The time part seeds from [value]'s own time
 /// when [value] is non-null; when [value] is `null` the time part starts
@@ -162,7 +168,6 @@ class LayrzDateTimeInput extends StatefulWidget {
 class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   /// The [widget.value] the summary text was last computed for.
   ///
@@ -266,6 +271,36 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
     );
   }
 
+  /// Opens [LayrzDateTimeSurface] in [LayrzPickerDrawer] on desktop —
+  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
+  /// See [LayrzPickerDrawer]'s class doc for why a fresh
+  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
+  /// already reconstructs [LayrzDateTimeSurface]'s `State` from scratch.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    await LayrzPickerDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => LayrzDateTimeSurface(
+        presentation: widget.presentation,
+        initialDate: widget.value,
+        initialTime: widget.value == null ? null : LayrzTimeOfDay.fromDateTime(widget.value!),
+        firstDay: widget.firstDay,
+        lastDay: widget.lastDay,
+        disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onSave: (date, time) {
+          _handleSave(date, time);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
     final tokens = context.tokens;
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
@@ -327,45 +362,6 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 560.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      // `LayrzAnchoredPanel` reconstructs this `child`'s `State` fresh on
-      // every open (verified: `child` is consumed only inside the overlay
-      // builder, torn down and rebuilt on close/reopen -- see
-      // `LayrzDateTimeSurface`'s own class doc), so no generation-counter
-      // key is needed here; `LayrzDateTimeSurface.initState` alone re-seeds
-      // the draft on every open.
-      child: LayrzDateTimeSurface(
-        presentation: widget.presentation,
-        initialDate: widget.value,
-        initialTime: widget.value == null ? null : LayrzTimeOfDay.fromDateTime(widget.value!),
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onSave: (date, time) {
-          _handleSave(date, time);
-          _panelController.close();
-        },
-        onCancel: () => _panelController.close(),
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }

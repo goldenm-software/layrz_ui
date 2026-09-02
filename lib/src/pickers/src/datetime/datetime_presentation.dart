@@ -1,28 +1,32 @@
-/// How [LayrzDateTimeInput] arranges its date and time parts within one
-/// anchored panel.
+/// How [LayrzDateTimeInput] arranges its date and time parts.
 ///
-/// **DESIGN-51 collapsed into [LayrzDateTimeInput] as this enum** — the two
-/// values must be visibly and behaviourally distinct, which is the whole
-/// reason the collapse is justified. Both values share the identical commit
-/// model (in-panel Cancel/Save — see [LayrzDateTimeInput]'s class doc for
-/// why a single-`DateTime`-valued widget still carries a Save button) and
-/// fire `onChanged` at the same moment, on Save. What differs is purely
-/// *how the two parts are reached*:
+/// **Deprecated and ignored as of DESIGN-49.** [LayrzDateTimeInput] moved
+/// from [LayrzAnchoredPanel] to [LayrzPickerDrawer] on desktop; the drawer's
+/// extra vertical room is enough to show the calendar and the time fields
+/// together in one scroll, which is what [LayrzDateTimeSurface] now always
+/// does. Both values of this enum reduce to the same layout — there is no
+/// remaining tab strip or step sequence to select between.
 ///
-/// - [tabbed] shows only one part at a time, switched at will via a real
-///   tab strip.
-/// - [stepped] shows only one part at a time, advanced in a fixed
-///   date-then-time order with no way to jump ahead.
+/// **Kept, not removed, as a no-op.** DESIGN-51 was formally recorded as
+/// *covered by* DESIGN-49 through this enum (`engineering/milestone-4.md`,
+/// decision D75, and the wiki's `LayrzDateTimeInput` page), so silently
+/// deleting it would be a breaking API removal with no migration signal for
+/// an existing caller that passes `presentation:` explicitly — the value
+/// simply stops changing anything, exactly like passing no value at all.
+/// [LayrzDateTimeInput.presentation] still accepts either constant; neither
+/// is read by [LayrzDateTimeSurface] any longer.
+///
+/// [tabbed] and [stepped] are documented here purely for their historical
+/// meaning, since removing the values themselves (as opposed to their
+/// effect) would still be the breaking part of this change.
 enum LayrzDateTimeInputPresentation {
-  /// The date grid and the time fields sit behind two selectable tab
-  /// headers (labelled via `dateTimePickerDate`/`dateTimePickerTime`) inside
-  /// the same panel. Only one half is visible at a time; switching tabs
-  /// never commits or closes the panel — see the tab strip's own class doc.
+  /// Historically: the date grid and the time fields sat behind two
+  /// selectable tab headers inside the same panel. No longer has any effect
+  /// — see this enum's class doc.
   tabbed,
 
-  /// The date grid is shown first; selecting a date advances to the time
-  /// step within the same panel. A back affordance returns to the date
-  /// step without discarding the chosen date. There is no way to reach the
-  /// time step before a date has been picked.
+  /// Historically: the date grid was shown first, and selecting a date
+  /// advanced to a separate time step. No longer has any effect — see this
+  /// enum's class doc.
   stepped,
 }

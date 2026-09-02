@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
@@ -9,28 +8,36 @@ import '../models/date_range.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_drawer_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
 
 /// The surface content for [LayrzDateRangeInput]: a [LayrzPickersDayGrid]
-/// plus a Cancel/Save/Reset footer, driven by [LayrzContiguousRangePolicy].
+/// plus a Cancel/Clear/Save footer, driven by [LayrzContiguousRangePolicy].
 ///
 /// Implements the range selection state machine in full: empty -> anchor ->
 /// complete (auto-swapped) -> endpoint re-tap adjusts that edge, other edge
 /// fixed -> interior tap visibly rejected -> outside tap extends the nearer
 /// endpoint. **The interior-lock model is retired and is not implemented.**
 ///
-/// **Cancel/Save live inside this panel, visible from the first frame** —
-/// `liliana`'s hard requirement that a range surface never leave the user
-/// guessing whether a tap already counted. Reset is visible as soon as a
-/// range exists.
+/// **Cancel/Clear/Save live inside this surface, visible from the first
+/// frame** — `liliana`'s hard requirement that a range surface never leave
+/// the user guessing whether a tap already counted. Clear is visible as soon
+/// as a range exists. Order and styling follow [LayrzPickerDrawerFooter]'s
+/// own doc (DESIGN-46).
+///
+/// **Container**: as of DESIGN-49, [LayrzDateRangeInput] hosts this surface
+/// in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet] below `isCompact` —
+/// see [LayrzPickerDrawer]'s own class doc for the maintainer's ruling.
+/// That container wiring lives in `date_range_input.dart`, not this file.
 ///
 /// **Involuntary close discards the draft**: [initState] and
 /// [didUpdateWidget] both re-seed [_draft] from [widget.value], so a
-/// dismissed panel never leaves stale in-progress state for the next open —
-/// see the implementation plan's "Involuntary close" section, which cites
-/// `LayrzAnchoredPanel`'s eager-child `State` reuse as the mechanism this
-/// guards against.
+/// dismissed surface never leaves stale in-progress state for the next open
+/// — see the implementation plan's "Involuntary close" section. Both
+/// [LayrzPickerDrawer] and [LayrzAnchoredPanel] reconstruct this widget's
+/// `State` fresh on every open, so no generation-counter key is needed for
+/// either container.
 ///
 /// **Owns its own month-navigation header**, exactly like [LayrzDateSurface]
 /// — this widget renders only a single page and exposes no navigation of its
@@ -197,7 +204,6 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final l10n = context.l10n;
 
     final visible = gridPageFor(
       reference: _displayedMonth,
@@ -232,29 +238,10 @@ class _LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
             onDisplayedMonthChanged: _stepMonth,
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
-            children: [
-              if (_draft.anchor != null)
-                Expanded(
-                  child: LayrzButton(
-                    labelText: l10n.pickerRangeReset,
-                    onTap: _handleReset,
-                    type: LayrzButtonType.warning,
-                  ),
-                ),
-              if (_draft.anchor != null) SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.cancel(labelText: l10n.actionCancel, onTap: widget.onCancel),
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.save(
-                  labelText: l10n.actionSave,
-                  onTap: _handleSave,
-                  isDisabled: !_draft.isComplete,
-                ),
-              ),
-            ],
+          LayrzPickerDrawerFooter(
+            onCancel: widget.onCancel,
+            onClear: _draft.anchor != null ? _handleReset : null,
+            onSave: _draft.isComplete ? _handleSave : null,
           ),
         ],
       ),

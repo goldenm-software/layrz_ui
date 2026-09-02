@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
@@ -10,16 +9,22 @@ import '../models/time_of_day.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_drawer_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
 import '../shared/time_fields_panel.dart';
 
 /// The surface content for [LayrzDateTimeRangeInput]: the contiguous date
-/// policy plus a time cluster per endpoint, with Cancel/Save inside the
-/// panel — per the maintainer's ruling for uniformity with the other range
-/// widgets (recorded as R1 in the dossier: `simoncito` argued for a dialog
-/// here, the maintainer ruled anchored-panel-with-Save for consistency
-/// across the whole batch). **No dialog variant.**
+/// policy plus a time cluster per endpoint, with Cancel/Clear/Save inside
+/// its hosting surface — per the maintainer's ruling for uniformity with the
+/// other range widgets (recorded as R1 in the dossier: `simoncito` argued
+/// for a dialog here, the maintainer ruled a shared container with Save for
+/// consistency across the whole batch). **No dialog variant.**
+///
+/// **Hosted in [LayrzPickerDrawer] on desktop as of DESIGN-49** (previously
+/// [LayrzAnchoredPanel]); this widget's own content is unaffected by the
+/// container change beyond the shared [LayrzPickerDrawerFooter] button order
+/// (DESIGN-46: Cancel, Clear, Save — Clear only once a selection exists).
 ///
 /// **No midnight default.** [_startTime]/[_endTime] seed from
 /// [LayrzDateTimeRangeInput]'s own `startTime`/`endTime` when non-null and
@@ -340,25 +345,10 @@ class _LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
             onChanged: (t) => setState(() => _endTime = t),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
-            children: [
-              if (_draft.anchor != null)
-                Expanded(
-                  child: LayrzButton(
-                    labelText: l10n.pickerRangeReset,
-                    onTap: _handleReset,
-                    type: LayrzButtonType.warning,
-                  ),
-                ),
-              if (_draft.anchor != null) SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.cancel(labelText: l10n.actionCancel, onTap: widget.onCancel),
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.save(labelText: l10n.actionSave, onTap: _handleSave, isDisabled: !_canSave),
-              ),
-            ],
+          LayrzPickerDrawerFooter(
+            onCancel: widget.onCancel,
+            onClear: _draft.anchor != null ? _handleReset : null,
+            onSave: _canSave ? _handleSave : null,
           ),
         ],
       ),

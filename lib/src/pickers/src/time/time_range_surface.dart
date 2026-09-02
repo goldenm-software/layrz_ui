@@ -1,14 +1,21 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/time_fields_panel.dart';
+import '../shared/picker_drawer_footer.dart';
 
 /// The surface content for [LayrzTimeRangeInput]: two
 /// [LayrzPickersTimeFieldsPanel] clusters (Start / End) plus a Cancel/Save
 /// footer — **`LayrzTimeRangeInput` counts as a range and gets Save**, per
 /// the implementation plan's explicit ruling.
+///
+/// **Hosted in [LayrzPickerDrawer] on desktop as of DESIGN-49** (previously
+/// [LayrzAnchoredPanel]); this widget's own content is unaffected by the
+/// container change beyond the shared [LayrzPickerDrawerFooter] button order
+/// (DESIGN-46: Cancel, then Save — no Clear affordance existed here before
+/// or after, this cluster pair has nothing to reset to an empty state the
+/// way a range grid does).
 ///
 /// Auto-swaps if the end draft precedes the start draft at Save time, rather
 /// than rejecting — consistent with the contiguous range state machine's
@@ -131,20 +138,9 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
             onChanged: (time) => setState(() => _end = time),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
-            children: [
-              Expanded(
-                child: LayrzButton.cancel(labelText: l10n.actionCancel, onTap: widget.onCancel),
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.save(
-                  labelText: l10n.actionSave,
-                  onTap: _canSave ? _handleSave : () {},
-                  isDisabled: !_canSave,
-                ),
-              ),
-            ],
+          LayrzPickerDrawerFooter(
+            onCancel: widget.onCancel,
+            onSave: _canSave ? _handleSave : null,
           ),
         ],
       ),

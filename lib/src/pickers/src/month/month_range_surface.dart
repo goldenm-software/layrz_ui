@@ -1,16 +1,23 @@
 import 'package:flutter/widgets.dart';
-import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import '../models/month.dart';
 import '../models/month_range.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/month_grid.dart';
+import '../shared/picker_drawer_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
 
 /// The surface content for [LayrzMonthRangeInput]: a [LayrzPickersMonthGrid]
-/// plus a Cancel/Save/Reset footer.
+/// plus a Cancel/Clear/Save footer.
+///
+/// **Container**: as of DESIGN-49, [LayrzMonthRangeInput] hosts this surface
+/// in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet] below `isCompact` —
+/// see [LayrzPickerDrawer]'s own class doc for the maintainer's ruling. That
+/// container wiring lives in `month_range_input.dart`, not this file. Order
+/// and styling of the footer follow [LayrzPickerDrawerFooter]'s own doc
+/// (DESIGN-46).
 ///
 /// **Switches its selection policy by [consecutive]** — [LayrzArbitraryRangePolicy]
 /// (default, set-membership, no adjacency concept) or
@@ -190,7 +197,6 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final l10n = context.l10n;
 
     final visibleMonths = [for (var m = 1; m <= 12; m++) LayrzMonth(year: _displayedYear, month: m)];
 
@@ -228,25 +234,10 @@ class _LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
             ),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
-            children: [
-              if (_hasSelection)
-                Expanded(
-                  child: LayrzButton(
-                    labelText: l10n.pickerRangeReset,
-                    onTap: _handleReset,
-                    type: LayrzButtonType.warning,
-                  ),
-                ),
-              if (_hasSelection) SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.cancel(labelText: l10n.actionCancel, onTap: widget.onCancel),
-              ),
-              SizedBox(width: tokens.spacing.sp2),
-              Expanded(
-                child: LayrzButton.save(labelText: l10n.actionSave, onTap: _handleSave, isDisabled: !_canSave),
-              ),
-            ],
+          LayrzPickerDrawerFooter(
+            onCancel: widget.onCancel,
+            onClear: _hasSelection ? _handleReset : null,
+            onSave: _canSave ? _handleSave : null,
           ),
         ],
       ),

@@ -3,21 +3,29 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/date_range.dart';
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer.dart';
 import 'datetime_range_surface.dart';
 
 /// A Material-free start/end datetime-range input field.
 ///
-/// **Cancel/Save live inside the anchored panel** — the maintainer ruled
+/// **Cancel/Save live inside the hosting surface** — the maintainer ruled
 /// this for uniformity across the whole range-widget batch (recorded as R1
 /// in the dossier: `simoncito` argued this widget's own complexity favored
-/// a dialog; the ruling kept every range widget on the same anchored-panel
-/// container). **No dialog variant.**
+/// a dialog; the ruling kept every range widget on the same container).
+/// **No dialog variant.**
+///
+/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// below `isCompact`.** This widget previously opened
+/// [LayrzDateTimeRangeSurface] through [LayrzAnchoredPanel] on desktop; the
+/// maintainer ruled the anchored panel too cramped for every Save-carrying
+/// picker widget (see [LayrzPickerDrawer]'s own class doc for the ruling
+/// verbatim) and asked for a fixed-width drawer instead. The mobile branch is
+/// unchanged.
 ///
 /// **No midnight default.** Each endpoint's time part seeds from
 /// [startValue]/[endValue]'s own time when that value is non-null; when it
@@ -144,7 +152,6 @@ class LayrzDateTimeRangeInput extends StatefulWidget {
 class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   /// The (start, end) pair the summary text was last computed for.
   ///
@@ -250,6 +257,36 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
     );
   }
 
+  /// Opens [LayrzDateTimeRangeSurface] in [LayrzPickerDrawer] on desktop —
+  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
+  /// See [LayrzPickerDrawer]'s class doc for why a fresh
+  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
+  /// already reconstructs [LayrzDateTimeRangeSurface]'s `State` from scratch.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    await LayrzPickerDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => LayrzDateTimeRangeSurface(
+        value: _rangeValue,
+        startTime: widget.startValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.startValue!),
+        endTime: widget.endValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.endValue!),
+        firstDay: widget.firstDay,
+        lastDay: widget.lastDay,
+        disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onSave: (start, end) {
+          _handleSave(start, end);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
     final tokens = context.tokens;
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
@@ -312,45 +349,6 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 640.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      // `LayrzAnchoredPanel` reconstructs this `child`'s `State` fresh on
-      // every open (verified: `child` is consumed only inside the overlay
-      // builder, torn down and rebuilt on close/reopen -- see
-      // `LayrzDateTimeInput`'s identical citation), so no generation-counter
-      // key is needed here; `LayrzDateTimeRangeSurface.initState` alone
-      // re-seeds the draft on every open.
-      child: LayrzDateTimeRangeSurface(
-        value: _rangeValue,
-        startTime: widget.startValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.startValue!),
-        endTime: widget.endValue == null ? null : LayrzTimeOfDay.fromDateTime(widget.endValue!),
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onSave: (start, end) {
-          _handleSave(start, end);
-          _panelController.close();
-        },
-        onCancel: () => _panelController.close(),
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }

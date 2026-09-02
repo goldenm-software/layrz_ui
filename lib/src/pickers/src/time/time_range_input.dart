@@ -3,19 +3,26 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer.dart';
 import 'time_range_surface.dart';
 
 /// A Material-free start/end time-range input field.
 ///
-/// **Counts as a range and gets Cancel/Save inside the panel** — per the
+/// **Counts as a range and gets Cancel/Save inside its container** — per the
 /// implementation plan's explicit ruling that `LayrzTimeRangeInput` follows
 /// the range rule despite being built from two single-time clusters rather
 /// than a grid.
+///
+/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// below `isCompact`.** This widget previously opened [LayrzTimeRangeSurface]
+/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
+/// panel too cramped for every Save-carrying picker widget (see
+/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
+/// a fixed-width drawer instead. The mobile branch is unchanged.
 class LayrzTimeRangeInput extends StatefulWidget {
   /// The currently committed start time.
   final LayrzTimeOfDay? startValue;
@@ -103,7 +110,6 @@ class LayrzTimeRangeInput extends StatefulWidget {
 class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   // `build()` re-runs `_updateSummary()` only once per distinct
   // (startValue, endValue) pair, mirroring `LayrzTimeInput`'s own
@@ -202,6 +208,30 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     );
   }
 
+  /// Opens [LayrzTimeRangeSurface] in [LayrzPickerDrawer] on desktop —
+  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
+  /// See [LayrzPickerDrawer]'s class doc for why a fresh
+  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
+  /// already reconstructs [LayrzTimeRangeSurface]'s `State` from scratch.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    await LayrzPickerDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => LayrzTimeRangeSurface(
+        startValue: widget.startValue,
+        endValue: widget.endValue,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onSave: (start, end) {
+          _handleSave(start, end);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
     final tokens = context.tokens;
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
@@ -264,33 +294,6 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 480.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      child: LayrzTimeRangeSurface(
-        startValue: widget.startValue,
-        endValue: widget.endValue,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onSave: (start, end) {
-          _handleSave(start, end);
-          _panelController.close();
-        },
-        onCancel: () => _panelController.close(),
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }
