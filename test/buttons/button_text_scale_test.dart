@@ -21,7 +21,7 @@ void main() {
             icon: withIcon ? const IconData(0xe045, fontFamily: 'MaterialIcons') : null,
             onTap: () {},
             type: LayrzButtonType.success,
-            style: LayrzButtonStyle.elevated,
+            style: LayrzButtonStyle.filled,
           ),
         ),
       );

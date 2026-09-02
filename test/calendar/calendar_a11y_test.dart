@@ -348,7 +348,7 @@ void main() {
       }
     });
 
-    testWidgets('the active view-mode switcher entry is visually distinguishable (elevated) from the others', (
+    testWidgets('the active view-mode switcher entry is visually distinguishable (filled) from the others', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -376,7 +376,7 @@ void main() {
         find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'View as week'),
       );
 
-      expect(weekButton.style, LayrzButtonStyle.elevated);
+      expect(weekButton.style, LayrzButtonStyle.filled);
       expect(monthButton.style, LayrzButtonStyle.outlined);
 
       controller.dispose();

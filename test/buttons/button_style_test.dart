@@ -12,9 +12,9 @@ void main() {
         expect(
           LayrzButtonStyle.values,
           containsAll([
-            LayrzButtonStyle.elevated,
+            LayrzButtonStyle.filled,
             LayrzButtonStyle.outlined,
-            LayrzButtonStyle.outlinedTonal,
+            LayrzButtonStyle.text,
           ]),
         );
       });
@@ -23,21 +23,21 @@ void main() {
         expect(
           LayrzButtonStyle.values,
           containsAll([
-            LayrzButtonStyle.elevatedFab,
+            LayrzButtonStyle.filledFab,
             LayrzButtonStyle.outlinedFab,
-            LayrzButtonStyle.outlinedTonalFab,
+            LayrzButtonStyle.textFab,
           ]),
         );
       });
     });
 
     group('isFab extension property', () {
-      test('elevated is not Fab', () {
-        expect(LayrzButtonStyle.elevated.isFab, isFalse);
+      test('filled is not Fab', () {
+        expect(LayrzButtonStyle.filled.isFab, isFalse);
       });
 
-      test('elevatedFab is Fab', () {
-        expect(LayrzButtonStyle.elevatedFab.isFab, isTrue);
+      test('filledFab is Fab', () {
+        expect(LayrzButtonStyle.filledFab.isFab, isTrue);
       });
 
       test('outlined is not Fab', () {
@@ -48,48 +48,22 @@ void main() {
         expect(LayrzButtonStyle.outlinedFab.isFab, isTrue);
       });
 
-      test('outlinedTonal is not Fab', () {
-        expect(LayrzButtonStyle.outlinedTonal.isFab, isFalse);
+      test('text is not Fab', () {
+        expect(LayrzButtonStyle.text.isFab, isFalse);
       });
 
-      test('outlinedTonalFab is Fab', () {
-        expect(LayrzButtonStyle.outlinedTonalFab.isFab, isTrue);
-      });
-    });
-
-    group('isTonal extension property', () {
-      test('elevated is not tonal', () {
-        expect(LayrzButtonStyle.elevated.isTonal, isFalse);
-      });
-
-      test('elevatedFab is not tonal', () {
-        expect(LayrzButtonStyle.elevatedFab.isTonal, isFalse);
-      });
-
-      test('outlined is not tonal', () {
-        expect(LayrzButtonStyle.outlined.isTonal, isFalse);
-      });
-
-      test('outlinedFab is not tonal', () {
-        expect(LayrzButtonStyle.outlinedFab.isTonal, isFalse);
-      });
-
-      test('outlinedTonal is tonal', () {
-        expect(LayrzButtonStyle.outlinedTonal.isTonal, isTrue);
-      });
-
-      test('outlinedTonalFab is tonal', () {
-        expect(LayrzButtonStyle.outlinedTonalFab.isTonal, isTrue);
+      test('textFab is Fab', () {
+        expect(LayrzButtonStyle.textFab.isFab, isTrue);
       });
     });
 
     group('hasBorder extension property', () {
-      test('elevated does not have border', () {
-        expect(LayrzButtonStyle.elevated.hasBorder, isFalse);
+      test('filled does not have border', () {
+        expect(LayrzButtonStyle.filled.hasBorder, isFalse);
       });
 
-      test('elevatedFab does not have border', () {
-        expect(LayrzButtonStyle.elevatedFab.hasBorder, isFalse);
+      test('filledFab does not have border', () {
+        expect(LayrzButtonStyle.filledFab.hasBorder, isFalse);
       });
 
       test('outlined has border', () {
@@ -100,22 +74,22 @@ void main() {
         expect(LayrzButtonStyle.outlinedFab.hasBorder, isTrue);
       });
 
-      test('outlinedTonal has border', () {
-        expect(LayrzButtonStyle.outlinedTonal.hasBorder, isTrue);
+      test('text does not have border', () {
+        expect(LayrzButtonStyle.text.hasBorder, isFalse);
       });
 
-      test('outlinedTonalFab has border', () {
-        expect(LayrzButtonStyle.outlinedTonalFab.hasBorder, isTrue);
+      test('textFab does not have border', () {
+        expect(LayrzButtonStyle.textFab.hasBorder, isFalse);
       });
     });
 
     group('hasShadow extension property', () {
-      test('elevated has shadow', () {
-        expect(LayrzButtonStyle.elevated.hasShadow, isTrue);
+      test('filled has shadow', () {
+        expect(LayrzButtonStyle.filled.hasShadow, isTrue);
       });
 
-      test('elevatedFab has shadow', () {
-        expect(LayrzButtonStyle.elevatedFab.hasShadow, isTrue);
+      test('filledFab has shadow', () {
+        expect(LayrzButtonStyle.filledFab.hasShadow, isTrue);
       });
 
       test('outlined does not have shadow', () {
@@ -126,25 +100,20 @@ void main() {
         expect(LayrzButtonStyle.outlinedFab.hasShadow, isFalse);
       });
 
-      test('outlinedTonal does not have shadow', () {
-        expect(LayrzButtonStyle.outlinedTonal.hasShadow, isFalse);
+      test('text does not have shadow', () {
+        expect(LayrzButtonStyle.text.hasShadow, isFalse);
       });
 
-      test('outlinedTonalFab does not have shadow', () {
-        expect(LayrzButtonStyle.outlinedTonalFab.hasShadow, isFalse);
+      test('textFab does not have shadow', () {
+        expect(LayrzButtonStyle.textFab.hasShadow, isFalse);
       });
     });
 
     group('Extension property matrix (all styles)', () {
-      test('all non-Fab styles match their Fab counterparts in isTonal and hasBorder', () {
+      test('all non-Fab styles match their Fab counterparts in hasBorder and hasShadow', () {
         for (final style in LayrzButtonStyle.values) {
           if (style.isFab) continue;
           final fabStyle = style.asFab;
-          expect(
-            style.isTonal,
-            equals(fabStyle.isTonal),
-            reason: '$style.isTonal should equal $fabStyle.isTonal',
-          );
           expect(
             style.hasBorder,
             equals(fabStyle.hasBorder),
@@ -160,12 +129,12 @@ void main() {
     });
 
     group('asFab extension property', () {
-      test('elevated maps to elevatedFab', () {
-        expect(LayrzButtonStyle.elevated.asFab, equals(LayrzButtonStyle.elevatedFab));
+      test('filled maps to filledFab', () {
+        expect(LayrzButtonStyle.filled.asFab, equals(LayrzButtonStyle.filledFab));
       });
 
-      test('elevatedFab returns itself', () {
-        expect(LayrzButtonStyle.elevatedFab.asFab, equals(LayrzButtonStyle.elevatedFab));
+      test('filledFab returns itself', () {
+        expect(LayrzButtonStyle.filledFab.asFab, equals(LayrzButtonStyle.filledFab));
       });
 
       test('outlined maps to outlinedFab', () {
@@ -176,12 +145,12 @@ void main() {
         expect(LayrzButtonStyle.outlinedFab.asFab, equals(LayrzButtonStyle.outlinedFab));
       });
 
-      test('outlinedTonal maps to outlinedTonalFab', () {
-        expect(LayrzButtonStyle.outlinedTonal.asFab, equals(LayrzButtonStyle.outlinedTonalFab));
+      test('text maps to textFab', () {
+        expect(LayrzButtonStyle.text.asFab, equals(LayrzButtonStyle.textFab));
       });
 
-      test('outlinedTonalFab returns itself', () {
-        expect(LayrzButtonStyle.outlinedTonalFab.asFab, equals(LayrzButtonStyle.outlinedTonalFab));
+      test('textFab returns itself', () {
+        expect(LayrzButtonStyle.textFab.asFab, equals(LayrzButtonStyle.textFab));
       });
     });
   });

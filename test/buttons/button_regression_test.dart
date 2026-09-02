@@ -13,9 +13,9 @@ void main() {
         final widths = <LayrzButtonStyle, double>{};
 
         for (final style in [
-          LayrzButtonStyle.elevated,
+          LayrzButtonStyle.filled,
           LayrzButtonStyle.outlined,
-          LayrzButtonStyle.outlinedTonal,
+          LayrzButtonStyle.text,
         ]) {
           await pumpThemed(
             tester,
@@ -79,7 +79,7 @@ void main() {
     });
 
     group('BUG 2: Border opacity — borderless styles never show visible border', () {
-      test('elevated does not show border in any state', () {
+      test('filled does not show border in any state', () {
         final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
@@ -90,7 +90,7 @@ void main() {
           {WidgetState.pressed},
         ]) {
           final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.elevated,
+            style: LayrzButtonStyle.filled,
             states: state,
             tokens: tokens,
             accent: accent,
@@ -99,12 +99,12 @@ void main() {
           expect(
             spec.borderColor.a,
             equals(0.0),
-            reason: 'elevated borderColor alpha should always be 0',
+            reason: 'filled borderColor alpha should always be 0',
           );
         }
       });
 
-      test('elevatedFab does not show border in any state', () {
+      test('filledFab does not show border in any state', () {
         final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
@@ -115,7 +115,7 @@ void main() {
           {WidgetState.pressed},
         ]) {
           final spec = LayrzButtonStyleSpec.resolve(
-            style: LayrzButtonStyle.elevatedFab,
+            style: LayrzButtonStyle.filledFab,
             states: state,
             tokens: tokens,
             accent: accent,
@@ -124,7 +124,57 @@ void main() {
           expect(
             spec.borderColor.a,
             equals(0.0),
-            reason: 'elevatedFab borderColor alpha should always be 0',
+            reason: 'filledFab borderColor alpha should always be 0',
+          );
+        }
+      });
+
+      test('text does not show border in any state', () {
+        final tokens = LayrzTokens.light();
+        final accent = tokens.colors.primary;
+
+        for (final state in [
+          <WidgetState>{},
+          {WidgetState.disabled},
+          {WidgetState.hovered},
+          {WidgetState.pressed},
+        ]) {
+          final spec = LayrzButtonStyleSpec.resolve(
+            style: LayrzButtonStyle.text,
+            states: state,
+            tokens: tokens,
+            accent: accent,
+          );
+
+          expect(
+            spec.borderColor.a,
+            equals(0.0),
+            reason: 'text borderColor alpha should always be 0',
+          );
+        }
+      });
+
+      test('textFab does not show border in any state', () {
+        final tokens = LayrzTokens.light();
+        final accent = tokens.colors.primary;
+
+        for (final state in [
+          <WidgetState>{},
+          {WidgetState.disabled},
+          {WidgetState.hovered},
+          {WidgetState.pressed},
+        ]) {
+          final spec = LayrzButtonStyleSpec.resolve(
+            style: LayrzButtonStyle.textFab,
+            states: state,
+            tokens: tokens,
+            accent: accent,
+          );
+
+          expect(
+            spec.borderColor.a,
+            equals(0.0),
+            reason: 'textFab borderColor alpha should always be 0',
           );
         }
       });
@@ -189,12 +239,16 @@ void main() {
         );
       });
 
-      test('outlinedTonal shows visible border in disabled state', () {
+      test('text has no border in disabled state (text has never had a border)', () {
+        // The removed tonal-bordered style had both a border and a tonal fill, so its
+        // disabled-state border was asserted visible here. Its replacement, `text`, has
+        // neither — this test now documents that `text` staying borderless when
+        // disabled is correct, not a regression of the old tonal contract.
         final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.outlinedTonal,
+          style: LayrzButtonStyle.text,
           states: {WidgetState.disabled},
           tokens: tokens,
           accent: accent,
@@ -202,17 +256,17 @@ void main() {
 
         expect(
           spec.borderColor.a,
-          greaterThan(0.0),
-          reason: 'outlinedTonal borderColor alpha should be > 0 even when disabled',
+          equals(0.0),
+          reason: 'text borderColor alpha should stay 0 even when disabled',
         );
       });
 
-      test('outlinedTonalFab shows visible border in disabled state', () {
+      test('textFab has no border in disabled state (textFab has never had a border)', () {
         final tokens = LayrzTokens.light();
         final accent = tokens.colors.primary;
 
         final spec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.outlinedTonalFab,
+          style: LayrzButtonStyle.textFab,
           states: {WidgetState.disabled},
           tokens: tokens,
           accent: accent,
@@ -220,8 +274,8 @@ void main() {
 
         expect(
           spec.borderColor.a,
-          greaterThan(0.0),
-          reason: 'outlinedTonalFab borderColor alpha should be > 0 even when disabled',
+          equals(0.0),
+          reason: 'textFab borderColor alpha should stay 0 even when disabled',
         );
       });
     });
@@ -428,14 +482,14 @@ void main() {
         final accent = tokens.colors.primary;
 
         final defaultSpec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.outlinedTonal,
+          style: LayrzButtonStyle.text,
           states: {},
           tokens: tokens,
           accent: accent,
         );
 
         final disabledSpec = LayrzButtonStyleSpec.resolve(
-          style: LayrzButtonStyle.outlinedTonal,
+          style: LayrzButtonStyle.text,
           states: {WidgetState.disabled},
           tokens: tokens,
           accent: accent,

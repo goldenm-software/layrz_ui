@@ -107,7 +107,7 @@ void main() {
 
       final navButtons = tester
           .widgetList<LayrzButton>(find.byType(LayrzButton))
-          .where((button) => button.style == LayrzButtonStyle.outlinedTonalFab)
+          .where((button) => button.style == LayrzButtonStyle.textFab)
           .toList();
 
       expect(
@@ -144,7 +144,7 @@ void main() {
       );
 
       final previousButtonFinder = find.byWidgetPredicate(
-        (widget) => widget is LayrzButton && widget.style == LayrzButtonStyle.outlinedTonalFab,
+        (widget) => widget is LayrzButton && widget.style == LayrzButtonStyle.textFab,
       );
       final previousButton = previousButtonFinder.first;
       final buttonRect = tester.getRect(previousButton);

@@ -159,7 +159,7 @@ void main() {
       expect(find.text('${monthNames[now.month - 1]} ${now.year}'), findsOneWidget);
     });
 
-    guardedTestWidgets('the previous/next navigation buttons use the outlinedTonalFab style', (tester) async {
+    guardedTestWidgets('the previous/next navigation buttons use the textFab style', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -180,8 +180,8 @@ void main() {
         find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Next month'),
       );
 
-      expect(previousButton.style, LayrzButtonStyle.outlinedTonalFab);
-      expect(nextButton.style, LayrzButtonStyle.outlinedTonalFab);
+      expect(previousButton.style, LayrzButtonStyle.textFab);
+      expect(nextButton.style, LayrzButtonStyle.textFab);
     });
 
     guardedTestWidgets('the period label sits between the previous and next buttons', (tester) async {
@@ -296,7 +296,7 @@ void main() {
       },
     );
 
-    guardedTestWidgets('the Today button is elevated when the focused month is not the current month', (
+    guardedTestWidgets('the Today button is filled when the focused month is not the current month', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -315,10 +315,10 @@ void main() {
       final todayButton = tester.widget<LayrzButton>(
         find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today'),
       );
-      expect(todayButton.style, LayrzButtonStyle.elevated);
+      expect(todayButton.style, LayrzButtonStyle.filled);
     });
 
-    guardedTestWidgets('the Today button is outlinedTonal when the focused date is today', (tester) async {
+    guardedTestWidgets('the Today button is text when the focused date is today', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -337,10 +337,10 @@ void main() {
       final todayButton = tester.widget<LayrzButton>(
         find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today'),
       );
-      expect(todayButton.style, LayrzButtonStyle.outlinedTonal);
+      expect(todayButton.style, LayrzButtonStyle.text);
     });
 
-    guardedTestWidgets('the Today button switches from elevated to outlinedTonal once navigation reaches today', (
+    guardedTestWidgets('the Today button switches from filled to text once navigation reaches today', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -361,7 +361,7 @@ void main() {
 
       expect(
         tester.widget<LayrzButton>(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today')).style,
-        LayrzButtonStyle.elevated,
+        LayrzButtonStyle.filled,
       );
 
       controller.goToToday();
@@ -369,7 +369,7 @@ void main() {
 
       expect(
         tester.widget<LayrzButton>(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today')).style,
-        LayrzButtonStyle.outlinedTonal,
+        LayrzButtonStyle.text,
       );
 
       controller.dispose();
