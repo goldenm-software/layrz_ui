@@ -13,7 +13,7 @@ void main() {
     });
 
     group('resolve() - Base state (default, no interactions)', () {
-      test('filled: solid background, contrastColor content, no border, has shadow', () {
+      test('filled: solid background, contrastColor content, no border, no shadow', () {
         final spec = LayrzButtonStyleSpec.resolve(
           style: LayrzButtonStyle.filled,
           states: {},
@@ -24,8 +24,7 @@ void main() {
         expect(spec.backgroundColor, equals(primaryColor));
         expect(spec.contentColor, equals(primaryColor.contrastColor));
         expect(spec.borderColor, equals(const Color(0x00000000)));
-        expect(spec.shadows, isNotEmpty);
-        expect(spec.shadows.length, greaterThan(0));
+        expect(spec.shadows, isEmpty);
       });
 
       test('outlined: transparent background, accent content, accent border, no shadow', () {
@@ -208,7 +207,7 @@ void main() {
     });
 
     group('resolve() - Pressed state', () {
-      test('filled loses shadow when pressed', () {
+      test('filled has no shadow, default or pressed', () {
         final baseSpec = LayrzButtonStyleSpec.resolve(
           style: LayrzButtonStyle.filled,
           states: {},
@@ -223,7 +222,7 @@ void main() {
           accent: primaryColor,
         );
 
-        expect(baseSpec.shadows, isNotEmpty);
+        expect(baseSpec.shadows, isEmpty);
         expect(pressedSpec.shadows, isEmpty);
       });
 
@@ -319,7 +318,7 @@ void main() {
         expect(hoveredSpec.backgroundColor, isNot(equals(baseSpec.backgroundColor)));
       });
 
-      test('hovered state preserves shadows on filled', () {
+      test('hovered state has no shadow on filled', () {
         final filledSpec = LayrzButtonStyleSpec.resolve(
           style: LayrzButtonStyle.filled,
           states: {WidgetState.hovered},
@@ -327,7 +326,7 @@ void main() {
           accent: primaryColor,
         );
 
-        expect(filledSpec.shadows, isNotEmpty);
+        expect(filledSpec.shadows, isEmpty);
       });
 
       test('outlined is not inert on hover: background changes', () {
@@ -922,7 +921,7 @@ void main() {
     });
 
     group('Filled shadow behavior', () {
-      test('filled: shadow present by default, larger when hovered, empty when pressed', () {
+      test('filled: no shadow by default, hovered, or pressed — hover/press distinction is colour-only', () {
         final defaultSpec = LayrzButtonStyleSpec.resolve(
           style: LayrzButtonStyle.filled,
           states: {},
@@ -944,23 +943,26 @@ void main() {
           accent: primaryColor,
         );
 
-        expect(defaultSpec.shadows, isNotEmpty, reason: 'filled default should have shadow');
-        expect(hoveredSpec.shadows, isNotEmpty, reason: 'filled hovered should have shadow');
+        expect(defaultSpec.shadows, isEmpty, reason: 'filled default should have no shadow');
+        expect(hoveredSpec.shadows, isEmpty, reason: 'filled hovered should have no shadow');
         expect(pressedSpec.shadows, isEmpty, reason: 'filled pressed should have no shadow');
 
-        // Hovered shadow should be larger (more blur/offset) than default.
-        expect(hoveredSpec.shadows.length, equals(defaultSpec.shadows.length));
-        // Compare first shadow's blur radius as a proxy for shadow size.
-        if (defaultSpec.shadows.isNotEmpty && hoveredSpec.shadows.isNotEmpty) {
-          expect(
-            hoveredSpec.shadows[0].blurRadius,
-            greaterThan(defaultSpec.shadows[0].blurRadius),
-            reason: 'filled hovered shadow should be larger than default',
-          );
-        }
+        // Filled has no shadow to distinguish states, so the background colour
+        // itself must carry the hover/pressed distinction (per D15: colour may
+        // vary even though geometry and shadow do not).
+        expect(
+          hoveredSpec.backgroundColor,
+          isNot(equals(defaultSpec.backgroundColor)),
+          reason: 'filled hovered background must differ from default without a shadow to rely on',
+        );
+        expect(
+          pressedSpec.backgroundColor,
+          isNot(equals(hoveredSpec.backgroundColor)),
+          reason: 'filled pressed background must differ from hovered without a shadow to rely on',
+        );
       });
 
-      test('filledFab: shadow present by default, larger when hovered, empty when pressed', () {
+      test('filledFab: no shadow by default, hovered, or pressed', () {
         final defaultSpec = LayrzButtonStyleSpec.resolve(
           style: LayrzButtonStyle.filledFab,
           states: {},
@@ -982,13 +984,13 @@ void main() {
           accent: primaryColor,
         );
 
-        expect(defaultSpec.shadows, isNotEmpty, reason: 'filledFab default should have shadow');
-        expect(hoveredSpec.shadows, isNotEmpty, reason: 'filledFab hovered should have shadow');
+        expect(defaultSpec.shadows, isEmpty, reason: 'filledFab default should have no shadow');
+        expect(hoveredSpec.shadows, isEmpty, reason: 'filledFab hovered should have no shadow');
         expect(pressedSpec.shadows, isEmpty, reason: 'filledFab pressed should have no shadow');
       });
     });
 
-    group('Borderless/shadowless shadow invariant', () {
+    group('Shadowless invariant (no style paints a shadow, in any state)', () {
       test('outlined, outlinedFab have no shadow in any state', () {
         final borderlessStyles = [
           LayrzButtonStyle.outlined,
@@ -1026,6 +1028,32 @@ void main() {
             {WidgetState.hovered},
             {WidgetState.focused},
             {WidgetState.pressed},
+          }) {
+            final spec = LayrzButtonStyleSpec.resolve(
+              style: style,
+              states: state,
+              tokens: tokens,
+              accent: primaryColor,
+            );
+
+            expect(spec.shadows, isEmpty, reason: '$style should have no shadow in state $state');
+          }
+        }
+      });
+
+      test('filled, filledFab have no shadow in any state (regression guard: elevation must not return)', () {
+        final flatStyles = [
+          LayrzButtonStyle.filled,
+          LayrzButtonStyle.filledFab,
+        ];
+
+        for (final style in flatStyles) {
+          for (final state in {
+            const <WidgetState>{},
+            {WidgetState.hovered},
+            {WidgetState.focused},
+            {WidgetState.pressed},
+            {WidgetState.disabled},
           }) {
             final spec = LayrzButtonStyleSpec.resolve(
               style: style,

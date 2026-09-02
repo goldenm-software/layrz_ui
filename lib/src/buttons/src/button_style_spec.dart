@@ -103,11 +103,12 @@ class LayrzButtonStyleSpec {
   /// - **Fill ladder** (style-dependent):
   ///   - `text` / `textFab`: transparent → tonal → tonal (stronger)
   ///   - `outlined` / `outlinedFab`: transparent + border → tonal + border → solid + border
-  ///   - `filled` / `filledFab`: solid + shadow → solid + bigger shadow → solid (no shadow)
+  ///   - `filled` / `filledFab`: solid → solid (darker hover tint) → solid (darker pressed tint)
   ///
   /// - **Border invariant**: Outlined pairs keep `borderColor` **identical** across all states
-  /// - **Shadow invariant**: Only `filled` changes shadows (grows on hover, disappears on press);
-  ///   `text` never gains shadows; all others have fixed shadows
+  /// - **Shadow invariant**: No style paints a drop shadow, in any state. `filled` is a flat
+  ///   solid fill — its hover/pressed distinction comes entirely from the background color
+  ///   lerp toward `contentColor`, not from elevation.
   ///
   /// [accent] is the primary color for the button variant (brand color or semantic).
   /// Geometry (height, width, padding, borderWidth) is byte-identical across states
@@ -172,11 +173,8 @@ class LayrzButtonStyleSpec {
           borderColor: const Color(0x00000000),
           borderWidth: tokens.border.base,
           contentColor: contrastColor,
-          // Small components use the compact shadow ramp rather than elevation.
-          // Compact shadows have greater vertical drop and higher opacity so they
-          // provide clear separation at small sizes where elevation's faint offset
-          // shadow would dissolve into the surface.
-          shadows: tokens.shadow.compact1,
+          // Filled is a flat solid fill — no drop shadow in any state.
+          shadows: const [],
         );
 
       case LayrzButtonStyle.outlined || LayrzButtonStyle.outlinedFab:
@@ -243,7 +241,7 @@ class LayrzButtonStyleSpec {
       return baseSpec;
     }
 
-    // Hovered/pressed lerp factors for filled/elevated styles.
+    // Hovered/pressed lerp factors for the filled style.
     const hoveredLerpFactor = 0.18;
     const pressedLerpFactor = 0.34;
 
@@ -251,18 +249,13 @@ class LayrzButtonStyleSpec {
     final contrastColor = accent.contrastColor;
 
     switch (style) {
-      // filled / filledFab: solid + shadow → solid + bigger shadow → solid (no shadow)
+      // filled / filledFab: solid → solid (darker hover tint) → solid (darker pressed tint).
+      // No shadow at any rung — the hover/pressed distinction is colour-only.
       case LayrzButtonStyle.filled || LayrzButtonStyle.filledFab:
         final lerpFactor = rung == _ButtonLadderRung.hovered ? hoveredLerpFactor : pressedLerpFactor;
         final backgroundColor = Color.lerp(baseSpec.backgroundColor, contentColor, lerpFactor)!;
-        final List<BoxShadow> shadows = rung == _ButtonLadderRung.pressed
-            ? const []
-            : rung == _ButtonLadderRung.hovered
-            ? tokens.shadow.compact2
-            : baseSpec.shadows;
         return baseSpec.copyWith(
           backgroundColor: backgroundColor,
-          shadows: shadows,
         );
 
       // outlined / outlinedFab: transparent + border → tonal + border → solid + border

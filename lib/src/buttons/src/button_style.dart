@@ -4,10 +4,11 @@
 /// and shadow properties. Variants are paired with Fab (floating action button)
 /// equivalents that differ only in layout (square vs. rectangular).
 enum LayrzButtonStyle {
-  /// Solid opaque accent fill with elevation shadow, no border.
+  /// Solid opaque accent fill, no border, no shadow.
   ///
-  /// Used for actions that feel prominent or primary. Shadow depth provides
-  /// visual hierarchy. Content color contrasts with background.
+  /// Used for actions that feel prominent or primary. Visual hierarchy comes
+  /// from the solid fill alone — the fill ladder darkens on hover and press.
+  /// Content color contrasts with background.
   filled,
 
   /// Fab variant of [filled] — identical styling, square layout.
@@ -46,14 +47,6 @@ enum LayrzButtonStyle {
   /// when fill is minimal or absent.
   bool get hasBorder => switch (this) {
     outlined || outlinedFab => true,
-    _ => false,
-  };
-
-  /// Whether this style includes an elevation shadow.
-  ///
-  /// Shadowed styles use [LayrzTokens.shadow.elevation1] to create visual depth.
-  bool get hasShadow => switch (this) {
-    filled || filledFab => true,
     _ => false,
   };
 

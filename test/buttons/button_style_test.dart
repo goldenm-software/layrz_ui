@@ -83,34 +83,8 @@ void main() {
       });
     });
 
-    group('hasShadow extension property', () {
-      test('filled has shadow', () {
-        expect(LayrzButtonStyle.filled.hasShadow, isTrue);
-      });
-
-      test('filledFab has shadow', () {
-        expect(LayrzButtonStyle.filledFab.hasShadow, isTrue);
-      });
-
-      test('outlined does not have shadow', () {
-        expect(LayrzButtonStyle.outlined.hasShadow, isFalse);
-      });
-
-      test('outlinedFab does not have shadow', () {
-        expect(LayrzButtonStyle.outlinedFab.hasShadow, isFalse);
-      });
-
-      test('text does not have shadow', () {
-        expect(LayrzButtonStyle.text.hasShadow, isFalse);
-      });
-
-      test('textFab does not have shadow', () {
-        expect(LayrzButtonStyle.textFab.hasShadow, isFalse);
-      });
-    });
-
     group('Extension property matrix (all styles)', () {
-      test('all non-Fab styles match their Fab counterparts in hasBorder and hasShadow', () {
+      test('all non-Fab styles match their Fab counterparts in hasBorder', () {
         for (final style in LayrzButtonStyle.values) {
           if (style.isFab) continue;
           final fabStyle = style.asFab;
@@ -118,11 +92,6 @@ void main() {
             style.hasBorder,
             equals(fabStyle.hasBorder),
             reason: '$style.hasBorder should equal $fabStyle.hasBorder',
-          );
-          expect(
-            style.hasShadow,
-            equals(fabStyle.hasShadow),
-            reason: '$style.hasShadow should equal $fabStyle.hasShadow',
           );
         }
       });

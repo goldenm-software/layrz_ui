@@ -130,7 +130,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates a save button with success accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
@@ -179,7 +179,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates a cancel button with danger accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
@@ -228,7 +228,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates an info button with info accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
@@ -277,7 +277,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates a show button with info accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
@@ -326,7 +326,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates an edit button with warning accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
@@ -375,7 +375,7 @@ class LayrzButton extends StatefulWidget {
   /// Creates a delete button with danger accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.filled] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
   /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
