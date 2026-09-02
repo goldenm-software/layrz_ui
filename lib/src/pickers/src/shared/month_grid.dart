@@ -9,7 +9,8 @@ import 'focus_ring.dart';
 import 'grid_math.dart';
 import 'month_grid_cell.dart';
 
-/// A purpose-built 4×3 month-selection grid with year navigation.
+/// A purpose-built month-selection grid with year navigation, laid out as
+/// 3 rows of 4 columns (January–April on the top row, three rows deep).
 ///
 /// **Built fresh per D72**, same as [LayrzPickersDayGrid] — no import of
 /// `lib/src/calendar/src/*`. Renders all 12 full month names for
@@ -204,14 +205,14 @@ class _LayrzPickersMonthGridState extends State<LayrzPickersMonthGrid> {
                     ],
                   ),
                   SizedBox(height: tokens.spacing.sp2),
-                  for (var row = 0; row < 4; row++)
+                  for (var row = 0; row < 3; row++)
                     Row(
                       children: [
-                        for (var col = 0; col < 3; col++)
+                        for (var col = 0; col < 4; col++)
                           Expanded(
                             child: Builder(
                               builder: (context) {
-                                final month = months[row * 3 + col];
+                                final month = months[row * 4 + col];
                                 final isDisabled = _isDisabled(month);
                                 final isRejected = widget.rejectedMonths.any(
                                   (m) => m.year == month.year && m.month == month.month,

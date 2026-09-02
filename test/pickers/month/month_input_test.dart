@@ -358,7 +358,7 @@ void main() {
         expect(chrome.errors, contains('Required'));
       });
 
-      guardedTestWidgets('no overflow rendering the 4x3 grid on a wide viewport', (tester) async {
+      guardedTestWidgets('no overflow rendering the month grid (3 rows x 4 cols) on a wide viewport', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);

@@ -9,8 +9,9 @@ import '../shared/month_grid.dart';
 /// [LayrzPickersMonthGrid] page with its own year-navigation state.
 ///
 /// **Commit on tap, no Cancel/Save footer** — screenshot 2 (per the
-/// implementation plan) reads as "the 4×3 grid" rather than "a dialog", so
-/// its footer buttons are deliberately not reproduced here.
+/// implementation plan) reads as "the 3-rows-by-4-columns month grid"
+/// rather than "a dialog", so its footer buttons are deliberately not
+/// reproduced here.
 class LayrzMonthSurface extends StatefulWidget {
   /// The currently selected month, or `null`.
   final LayrzMonth? value;

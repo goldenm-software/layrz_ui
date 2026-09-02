@@ -702,7 +702,9 @@ void main() {
         expect(find.byType(LayrzAnchoredPanel), findsOneWidget);
       });
 
-      guardedTestWidgets('no overflow rendering the 4x3 grid plus footer on a wide viewport', (tester) async {
+      guardedTestWidgets('no overflow rendering the month grid (3 rows x 4 cols) plus footer on a wide viewport', (
+        tester,
+      ) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);

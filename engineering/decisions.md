@@ -4841,7 +4841,7 @@ diff by a future reader.
 anchored panel (`LayrzAnchoredPanel`) at ≥960px, `LayrzBottomSheet` below 960px, per D52/D70. **No
 dialog variant for any picker**, despite the old layrz_theme month picker (`ThemedMonthRangePicker`)
 having been a dialog — the old dialog chrome (rounded panel, header, Cancel/Save footer) is read as
-"the 4×3 month grid and its footer actions," not as "must be a dialog route."
+"the 3-rows-by-4-columns month grid and its footer actions," not as "must be a dialog route."
 
 **The commit boundary is "one atomic value vs. multiple coordinated parts" — not single-valued vs.
 range.** Three widgets commit on tap, no Save step at all: `LayrzDateInput`, `LayrzTimeInput`,
