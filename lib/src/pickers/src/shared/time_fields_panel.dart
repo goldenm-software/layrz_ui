@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
 
 import '../models/time_of_day.dart';
 import 'time_field.dart';
@@ -40,6 +41,35 @@ import 'time_field.dart';
 /// right reading order with no custom `FocusTraversalPolicy` needed, since
 /// [LayrzNumberInput] fields already participate in Flutter's default
 /// traversal in source order.
+///
+/// **Narrow-width label switch, no layout reflow (D15).** [build] wraps the
+/// field [Row] in a [LayoutBuilder] and, below
+/// [LayrzPickersTimeField.kNarrowWidth] per field, swaps each field's
+/// unabridged `timePickerHours`/`timePickerMinutes`/`timePickerSeconds`
+/// suffix label for a short, singular/plural-aware abbreviation (mirroring
+/// `LayrzDurationPickerPanel`'s identical field-width-driven split — see
+/// that class's doc comment for the measurement this is based on). Only the
+/// label *text* changes between the two forms; every field keeps the exact
+/// same [Expanded] slot and the same [LayrzNumberInput] chrome either way, so
+/// this never introduces the kind of reflow D15 already forbids for
+/// [showSeconds].
+///
+/// **Meridiem wraps to a second row when even the short-form labels cannot
+/// fit (extreme narrow widths only).** Short-form labels alone cannot
+/// rescue every geometry: a field narrower than [_kFieldFloorWidth] cannot
+/// render [LayrzNumberInput]'s chrome at all -- see that constant's doc
+/// comment for the probe this is based on -- and a real 400px phone width
+/// with [showSeconds] `true` and [use24HourFormat] `false` (hour, minute,
+/// second, and the meridiem control all sharing one row) falls below it even
+/// with 1-character labels. [build] detects this and moves
+/// [_MeridiemControl] onto its own row below the three time fields instead
+/// of splitting the HH:MM:SS group itself -- the three time fields are kept
+/// together because that is the reading order a person expects, mirroring
+/// `LayrzDurationPickerPanel`'s own resolution of the identical problem via
+/// wrapping (see its `_wrapFields`). **Above [_kFieldFloorWidth] this never
+/// triggers -- one row stays one row**, and the wrap is a response to
+/// available width alone, never to hover/press/focus state, so D15 still
+/// holds within any single width.
 class LayrzPickersTimeFieldsPanel extends StatelessWidget {
   /// The current time value.
   final LayrzTimeOfDay value;
@@ -96,76 +126,206 @@ class LayrzPickersTimeFieldsPanel extends StatelessWidget {
     onChanged(value.copyWith(hour: value.hour + delta));
   }
 
+  /// The label shown inside the hour field's [LayrzNumberInput.suffixText].
+  ///
+  /// [isNarrow] selects the short, singular/plural-aware form below
+  /// [LayrzPickersTimeField.kNarrowWidth] -- see that constant's doc comment
+  /// for the measurement this mirrors from `LayrzDurationPickerPanel`.
+  String _hourLabel(LayrzUiL10n l10n, int displayedHour, {required bool isNarrow}) {
+    if (!isNarrow) return l10n.timePickerHours;
+    return displayedHour == 1 ? l10n.timePickerHourShortSingular : l10n.timePickerHourShortPlural;
+  }
+
+  /// The label shown inside the minute field's [LayrzNumberInput.suffixText].
+  ///
+  /// See [_hourLabel] for the narrow/wide split this mirrors.
+  String _minuteLabel(LayrzUiL10n l10n, {required bool isNarrow}) {
+    if (!isNarrow) return l10n.timePickerMinutes;
+    return value.minute == 1 ? l10n.timePickerMinuteShortSingular : l10n.timePickerMinuteShortPlural;
+  }
+
+  /// The label shown inside the second field's [LayrzNumberInput.suffixText].
+  ///
+  /// See [_hourLabel] for the narrow/wide split this mirrors.
+  String _secondLabel(LayrzUiL10n l10n, {required bool isNarrow}) {
+    if (!isNarrow) return l10n.timePickerSeconds;
+    return value.second == 1 ? l10n.timePickerSecondShortSingular : l10n.timePickerSecondShortPlural;
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final l10n = context.l10n;
+    final spacing = tokens.spacing.sp1;
 
     return FocusTraversalGroup(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: use24HourFormat
-                ? LayrzPickersTimeField(
-                    value: value.hour,
-                    minimum: 0,
-                    maximum: 23,
-                    onChanged: _setHour,
-                    label: l10n.timePickerHours,
-                    hintText: l10n.timePickerHours,
-                  )
-                : LayrzPickersTimeField(
-                    value: value.hour12,
-                    minimum: 1,
-                    maximum: 12,
-                    onChanged: (h) => _setHour12(h, isPm: value.isPm),
-                    label: l10n.timePickerHours,
-                    hintText: l10n.timePickerHours,
-                  ),
-          ),
-          SizedBox(width: tokens.spacing.sp1),
-          Expanded(
-            child: LayrzPickersTimeField(
-              value: value.minute,
-              minimum: 0,
-              maximum: 59,
-              onChanged: _setMinute,
-              label: l10n.timePickerMinutes,
-              hintText: l10n.timePickerMinutes,
-            ),
-          ),
-          SizedBox(width: tokens.spacing.sp1),
-          Expanded(
-            // Always present in the tree at the same size, whether visible or
-            // not, so toggling `showSeconds` never reflows the row -- see this
-            // class's doc comment (D15).
-            child: Visibility(
-              visible: showSeconds,
-              maintainState: true,
-              maintainAnimation: true,
-              maintainSize: true,
-              child: LayrzPickersTimeField(
-                value: value.second,
-                minimum: 0,
-                maximum: 59,
-                onChanged: _setSecond,
-                label: l10n.timePickerSeconds,
-                hintText: l10n.timePickerSeconds,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The row's own measured width, not the viewport (MediaQuery) --
+          // this panel is always hosted inside a bounded-width ancestor
+          // (LayrzAnchoredPanel or LayrzBottomSheet's Padding, see the class
+          // doc's _bounded reasoning), so its own constraints -- not the
+          // device's viewport size -- are what determine whether a field's
+          // label fits. Mirrors LayrzDurationPickerPanel's identical
+          // LayoutBuilder-over-MediaQuery choice; see LayrzPickersTimeField
+          // .kNarrowWidth for the measurement basis.
+          final availableWidth = constraints.maxWidth;
+
+          // Slot count: hour, minute, second (always reserves its slot, see
+          // the Visibility(maintainSize: true) below), and the meridiem
+          // control when not in 24h form. The meridiem control is an
+          // IntrinsicWidth column of "AM"/"PM" text, not a suffix-labeled
+          // LayrzNumberInput, so it is excluded from the narrow-width label
+          // decision -- only the three LayrzPickersTimeField slots share
+          // availableWidth for that purpose.
+          const fieldSlots = 3;
+          final meridiemReserved = use24HourFormat ? 0.0 : (spacing + _kMeridiemWidthEstimate);
+
+          // Per-field width if the meridiem control (when shown) stays on
+          // the same row as the three time fields -- the ordinary,
+          // single-row layout.
+          final sameRowFieldsWidth = availableWidth - meridiemReserved - spacing * (fieldSlots - 1);
+          final sameRowPerFieldWidth = sameRowFieldsWidth / fieldSlots;
+
+          // Below _kFieldFloorWidth, LayrzNumberInput's own chrome cannot
+          // render without overflowing regardless of label length -- see
+          // that constant's doc comment. When the meridiem control sharing
+          // the row would push fields below that floor, wrap it onto its
+          // own row instead, so the three time fields divide the full
+          // availableWidth among themselves. See the class doc's "Meridiem
+          // wraps to a second row" section.
+          final wrapMeridiem = !use24HourFormat && sameRowPerFieldWidth < _kFieldFloorWidth;
+
+          final effectiveFieldsWidth = wrapMeridiem ? availableWidth - spacing * (fieldSlots - 1) : sameRowFieldsWidth;
+          final perFieldWidth = effectiveFieldsWidth / fieldSlots;
+          final isNarrow = perFieldWidth < LayrzPickersTimeField.kNarrowWidth;
+
+          final displayedHour = use24HourFormat ? value.hour : value.hour12;
+
+          final timeFieldsRow = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: use24HourFormat
+                    ? LayrzPickersTimeField(
+                        value: value.hour,
+                        minimum: 0,
+                        maximum: 23,
+                        onChanged: _setHour,
+                        label: _hourLabel(l10n, displayedHour, isNarrow: isNarrow),
+                        hintText: l10n.timePickerHours,
+                      )
+                    : LayrzPickersTimeField(
+                        value: value.hour12,
+                        minimum: 1,
+                        maximum: 12,
+                        onChanged: (h) => _setHour12(h, isPm: value.isPm),
+                        label: _hourLabel(l10n, displayedHour, isNarrow: isNarrow),
+                        hintText: l10n.timePickerHours,
+                      ),
               ),
-            ),
-          ),
-          if (!use24HourFormat) ...[
-            SizedBox(width: tokens.spacing.sp1),
-            IntrinsicWidth(
-              child: _MeridiemControl(isPm: value.isPm, onChanged: _setMeridiem),
-            ),
-          ],
-        ],
+              SizedBox(width: spacing),
+              Expanded(
+                child: LayrzPickersTimeField(
+                  value: value.minute,
+                  minimum: 0,
+                  maximum: 59,
+                  onChanged: _setMinute,
+                  label: _minuteLabel(l10n, isNarrow: isNarrow),
+                  hintText: l10n.timePickerMinutes,
+                ),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                // Always present in the tree at the same size, whether visible or
+                // not, so toggling `showSeconds` never reflows the row -- see this
+                // class's doc comment (D15).
+                child: Visibility(
+                  visible: showSeconds,
+                  maintainState: true,
+                  maintainAnimation: true,
+                  maintainSize: true,
+                  child: LayrzPickersTimeField(
+                    value: value.second,
+                    minimum: 0,
+                    maximum: 59,
+                    onChanged: _setSecond,
+                    label: _secondLabel(l10n, isNarrow: isNarrow),
+                    hintText: l10n.timePickerSeconds,
+                  ),
+                ),
+              ),
+              // Only ever shares this row with the time fields when it fits
+              // without pushing any field below _kFieldFloorWidth -- see
+              // wrapMeridiem above.
+              if (!use24HourFormat && !wrapMeridiem) ...[
+                SizedBox(width: spacing),
+                IntrinsicWidth(
+                  child: _MeridiemControl(isPm: value.isPm, onChanged: _setMeridiem),
+                ),
+              ],
+            ],
+          );
+
+          if (!wrapMeridiem) return timeFieldsRow;
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              timeFieldsRow,
+              SizedBox(height: spacing),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: IntrinsicWidth(
+                  child: _MeridiemControl(isPm: value.isPm, onChanged: _setMeridiem),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 }
+
+/// A conservative estimate of [_MeridiemControl]'s own rendered width, used
+/// only to reserve its share of [LayoutBuilder]'s measured width before
+/// dividing the remainder among the three [LayrzPickersTimeField] slots --
+/// see the `meridiemReserved` local in [LayrzPickersTimeFieldsPanel.build].
+///
+/// [_MeridiemControl] sizes itself to its own two-letter "AM"/"PM" text plus
+/// token padding via [IntrinsicWidth], so its real width is small and stable
+/// across locales (unlike the field labels this file's narrow-width split
+/// exists to handle) -- this constant only needs to be roughly right, not
+/// exact, because under-reserving merely makes the narrow-width switch
+/// trigger a few pixels later than ideal rather than causing any overflow of
+/// its own.
+const double _kMeridiemWidthEstimate = 56.0;
+
+/// The absolute minimum width, in logical pixels, a single
+/// [LayrzPickersTimeField] can render at without its [LayrzNumberInput]
+/// chrome overflowing -- independent of label length, unlike
+/// [LayrzPickersTimeField.kNarrowWidth].
+///
+/// Measured directly against [LayrzNumberInput] with `hideStepButtons:
+/// false` (this panel never hides the step buttons) and a single-character
+/// suffix (the shortest label this file's narrow-width switch ever
+/// produces, e.g. "h"): overflow was observed at widths up to and including
+/// 118px, and first stopped at 120px. 140.0 keeps a deliberate 20px margin
+/// above that measured boundary, mirroring the same reasoning
+/// `LayrzDurationPickerPanel`'s own `_kFieldMinWidth` documents for its
+/// 180-184px probe -> 200.0 constant.
+///
+/// This floor is what [LayrzPickersTimeField.kNarrowWidth] alone cannot
+/// rescue: at a real 400px phone width with [LayrzPickersTimeFieldsPanel
+/// .showSeconds] `true` and [LayrzPickersTimeFieldsPanel.use24HourFormat]
+/// `false`, the meridiem control's own reserved width plus inter-field
+/// spacing leaves each of the three time fields only ~113px -- already
+/// below this floor before any label length is even considered. See the
+/// class doc's "Meridiem wraps to a second row" section for how [build]
+/// responds to that case.
+const double _kFieldFloorWidth = 140.0;
 
 /// A two-state AM/PM toggle, rendered as plain text buttons — no Material
 /// `ToggleButtons`, no clock affordance.

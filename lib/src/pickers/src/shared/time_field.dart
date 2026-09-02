@@ -52,6 +52,21 @@ class LayrzPickersTimeField extends StatelessWidget {
     required this.hintText,
   });
 
+  /// The measured width, in logical pixels, below which the field's own
+  /// [label] no longer safely fits [LayrzNumberInput]'s chrome without
+  /// overflowing it.
+  ///
+  /// Identical value and identical measurement basis to
+  /// `LayrzDurationPickerPanel`'s own `_kNarrowFieldWidth`
+  /// (`lib/src/inputs/src/duration/duration_picker_panel.dart`): both wrap
+  /// the same [LayrzNumberInput] primitive and both size an 8-character
+  /// [LayrzNumberInput.suffixText] (e.g. Spanish "Segundos"), so the same
+  /// probe result applies unchanged. See that constant's doc comment for the
+  /// full measurement writeup -- it is not repeated here to avoid the two
+  /// numbers silently drifting apart if one is ever re-measured without the
+  /// other.
+  static const double kNarrowWidth = 280.0;
+
   @override
   Widget build(BuildContext context) {
     return LayrzNumberInput(

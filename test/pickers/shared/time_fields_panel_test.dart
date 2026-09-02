@@ -14,6 +14,10 @@ import '../../helpers/pump_themed.dart';
 /// already provides.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 
+/// Same as [_bounded] but with a caller-chosen [width], for the narrow-width
+/// regressions below that need widths other than the suite's usual 700px.
+Widget _boundedWidth(Widget child, double width) => SizedBox(width: width, child: child);
+
 void main() {
   group('LayrzPickersTimeFieldsPanel — zero clock/dial affordance', () {
     guardedTestWidgets('the tree contains no clock or dial widget of any kind', (tester) async {
@@ -226,6 +230,192 @@ void main() {
 
       expect(reported, isNotNull);
       expect(reported!.hour, 21);
+    });
+  });
+
+  group('LayrzPickersTimeFieldsPanel — narrow-width label switch (no overflow)', () {
+    guardedTestWidgets(
+      'a real 400px phone width with showSeconds true does not overflow LayrzNumberInput chrome',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          _boundedWidth(
+            LayrzPickersTimeFieldsPanel(
+              value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+              showSeconds: true,
+              onChanged: (_) {},
+            ),
+            400,
+          ),
+        );
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'the panel must fall back to the short-form unit labels below '
+              'LayrzPickersTimeField.kNarrowWidth per field so a real 400px phone '
+              'width (the mobile bottom-sheet path on virtually every real device) '
+              'never overflows LayrzNumberInput\'s chrome, mirroring '
+              'duration_picker_panel_test.dart\'s identical 400px regression',
+        );
+      },
+    );
+
+    // At a real 400px phone width, hour/minute/second/meridiem cannot all
+    // share one row even with 1-character labels (see _kFieldFloorWidth's
+    // doc comment in time_fields_panel.dart for the LayrzNumberInput probe
+    // this is based on: overflow persists up to 118px, clean from 120px, and
+    // 400px leaves each of the three time fields only ~113px once the
+    // meridiem control and spacing are reserved). LayrzPickersTimeFieldsPanel
+    // resolves this by wrapping the meridiem control onto its own row below
+    // the three time fields -- this test proves BOTH that nothing overflows
+    // AND that the wrap actually happened (a widget below the row, not just
+    // the absence of an exception), so a regression that silently reintroduces
+    // the overflow some other way would still fail this test.
+    guardedTestWidgets(
+      'a real 400px phone width with showSeconds true and use24HourFormat false wraps the meridiem control '
+      'onto its own row instead of overflowing',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          _boundedWidth(
+            LayrzPickersTimeFieldsPanel(
+              value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+              showSeconds: true,
+              use24HourFormat: false,
+              onChanged: (_) {},
+            ),
+            400,
+          ),
+        );
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'wrapping the meridiem control onto its own row must give the three time fields the full '
+              'available width, clearing _kFieldFloorWidth even at a real 400px phone width',
+        );
+
+        // The meridiem control (found via its "AM"/"PM" text) must sit BELOW
+        // the three time fields (found via the hour field's EditableText),
+        // not to their right -- proving the wrap actually happened, not just
+        // that nothing threw.
+        final hourFieldTop = tester.getTopLeft(find.byType(EditableText).first).dy;
+        final meridiemTop = tester.getTopLeft(find.text('AM')).dy;
+        expect(
+          meridiemTop,
+          greaterThan(hourFieldTop),
+          reason: 'the meridiem control must be wrapped onto a row below the time fields, not beside them',
+        );
+      },
+    );
+
+    guardedTestWidgets(
+      'a comfortable width with showSeconds true and use24HourFormat false keeps the meridiem control on the '
+      'same row as the time fields (the wrap must not become the default)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          _boundedWidth(
+            LayrzPickersTimeFieldsPanel(
+              value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+              showSeconds: true,
+              use24HourFormat: false,
+              onChanged: (_) {},
+            ),
+            900,
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+
+        final hourFieldTop = tester.getTopLeft(find.byType(EditableText).first).dy;
+        final meridiemTop = tester.getTopLeft(find.text('AM')).dy;
+        expect(
+          meridiemTop,
+          closeTo(hourFieldTop, 20),
+          reason:
+              'at a comfortable width the meridiem control must stay on the same row as the time fields '
+              '(a small delta is expected from differing intrinsic content heights within the row; the '
+              'wrapped case above puts it a full row -- tens of pixels -- further down)',
+        );
+      },
+    );
+
+    guardedTestWidgets('below the narrow-width threshold, fields show the short-form unit labels', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // use24HourFormat: true (no meridiem reservation), 3 field slots, sp1
+      // (6px) spacing: perFieldWidth = (800 - 6*2) / 3 ~= 262.7px, below
+      // LayrzPickersTimeField.kNarrowWidth (280.0).
+      await pumpThemed(
+        tester,
+        _boundedWidth(
+          LayrzPickersTimeFieldsPanel(
+            value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+            showSeconds: true,
+            onChanged: (_) {},
+          ),
+          800,
+        ),
+      );
+
+      expect(find.text('Hours'), findsNothing);
+      expect(find.text('Minutes'), findsNothing);
+      expect(find.text('Seconds'), findsNothing);
+      expect(
+        find.text('h'),
+        findsOneWidget,
+        reason: 'hour is 9 (plural form), and singular/plural short forms are both "h" in English',
+      );
+      expect(find.text('m'), findsOneWidget);
+      expect(find.text('s'), findsOneWidget);
+    });
+
+    guardedTestWidgets('at or above the narrow-width threshold, fields show the unabridged unit labels', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // use24HourFormat: true (no meridiem reservation), 3 field slots, sp1
+      // (6px) spacing: perFieldWidth = (900 - 6*2) / 3 = 296px, at or above
+      // LayrzPickersTimeField.kNarrowWidth (280.0).
+      await pumpThemed(
+        tester,
+        _boundedWidth(
+          LayrzPickersTimeFieldsPanel(
+            value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+            showSeconds: true,
+            onChanged: (_) {},
+          ),
+          900,
+        ),
+      );
+
+      expect(find.text('Hours'), findsOneWidget);
+      expect(find.text('Minutes'), findsOneWidget);
+      expect(find.text('Seconds'), findsOneWidget);
+      expect(find.text('h'), findsNothing);
+      expect(find.text('m'), findsNothing);
+      expect(find.text('s'), findsNothing);
     });
   });
 
