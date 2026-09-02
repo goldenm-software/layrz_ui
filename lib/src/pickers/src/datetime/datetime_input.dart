@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -13,25 +14,44 @@ import 'datetime_surface.dart';
 
 /// A Material-free single-datetime input field.
 ///
-/// **DESIGN-51 collapses into this widget** — covered by, not removed.
-/// Composes [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel] inside
-/// **one** anchored panel via [LayrzDateTimeSurface], arranged per
-/// [presentation].
+/// **DESIGN-51 collapses into this widget** — covered by, not removed, by
+/// [presentation] (see [LayrzDateTimeInputPresentation]'s own doc for why
+/// the two values must be visibly and behaviourally distinct). Composes
+/// [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel] inside **one**
+/// anchored panel via [LayrzDateTimeSurface].
 ///
-/// **Commit model**: [onChanged] fires only once both the date and the time
-/// have been chosen — see [LayrzDateTimeSurface]'s class doc for the full
-/// reasoning. There is no Save button; the completing action on whichever
-/// part is chosen last is the commit gesture.
+/// **Commit model — in-panel Cancel/Save, not commit-on-tap.** This widget
+/// is single-valued by *type* (one [DateTime]) but collects **two
+/// coordinated parts**, exactly as the range widgets coordinate two
+/// endpoints — see the implementation plan's "commit boundary" section for
+/// why the value type is the wrong signal to derive this from. Committing
+/// on the date tap would emit a datetime whose time half the user never
+/// chose, and in [LayrzDateTimeInputPresentation.stepped] it would close the
+/// panel before the time step was reached. [onChanged] fires only once, on
+/// Save, with both parts combined; a half-chosen datetime is never reported.
+///
+/// **No midnight default.** The time part seeds from [value]'s own time
+/// when [value] is non-null; when [value] is `null` the time part starts
+/// genuinely unset, never defaulted to midnight — see
+/// [LayrzDateTimeSurface]'s class doc for why a silent default would be
+/// exactly the problem the Save boundary exists to remove.
+///
+/// **Preserves `TZDateTime` zones**: the committed value is built via
+/// `sameZoneDateTime` against [value] (or, when [value] is `null`, against
+/// whichever date the surface reports first), so a caller passing a
+/// `TZDateTime` gets a `TZDateTime` back in the same zone.
 class LayrzDateTimeInput extends StatefulWidget {
   /// The currently selected datetime.
   final DateTime? value;
 
-  /// Called with the newly selected datetime once both date and time are
-  /// chosen.
+  /// Called with the combined date and time once the user presses Save.
+  /// Never called with a value whose time half the user never touched.
   final ValueChanged<DateTime>? onChanged;
 
-  /// Which arrangement this widget's surface uses. Presentation-only — both
-  /// values commit at the same moment.
+  /// Which arrangement this widget's surface uses. Both values share the
+  /// identical Cancel/Save commit model and fire [onChanged] at the same
+  /// moment — see [LayrzDateTimeInputPresentation]'s own doc for what
+  /// genuinely differs between them.
   final LayrzDateTimeInputPresentation presentation;
 
   /// The label text displayed above the input field.
@@ -61,17 +81,28 @@ class LayrzDateTimeInput extends StatefulWidget {
   /// Individually disabled dates.
   final Set<DateTime> disabledDays;
 
+  /// Which [DateTime] weekday constant starts each week in the date grid.
+  /// Defaults to [DateTime.monday] — deliberately differing from
+  /// `LayrzCalendar`'s `DateTime.sunday` default; asserted to be within
+  /// `DateTime.monday..DateTime.sunday`.
+  final int firstDayOfWeek;
+
+  /// Whether the date grid's ISO week-number gutter renders (cut to a thin
+  /// decorative strip below `isCompact`). Defaults to `true`.
+  final bool showWeekNumbers;
+
   /// Whether the seconds field is shown.
   final bool showSeconds;
 
   /// Whether the hour field uses 24-hour form. Defaults to `true`.
   final bool use24HourFormat;
 
-  /// A strftime-style pattern used to format [value] for display. Defaults
-  /// to `'%Y-%m-%d %H:%M'`.
+  /// A strftime-style pattern used to format [value] for display, when
+  /// [formatter] is not supplied. Defaults to `'%Y-%m-%d %H:%M'`.
   final String pattern;
 
-  /// A full-control override for formatting [value] into display text.
+  /// A full-control override for formatting [value] into display text,
+  /// taking precedence over [pattern] when supplied.
   final String Function(DateTime)? formatter;
 
   /// The text editing controller for the anchor field.
@@ -104,6 +135,8 @@ class LayrzDateTimeInput extends StatefulWidget {
     this.firstDay,
     this.lastDay,
     this.disabledDays = const {},
+    this.firstDayOfWeek = DateTime.monday,
+    this.showWeekNumbers = true,
     this.showSeconds = false,
     this.use24HourFormat = true,
     this.pattern = '%Y-%m-%d %H:%M',
@@ -113,7 +146,14 @@ class LayrzDateTimeInput extends StatefulWidget {
     this.dense = false,
     this.helpTitleText,
     this.helpContentText,
-  }) : assert(labelText != null || hintText != null, 'At least one of labelText or hintText must be non-null.');
+  }) : assert(
+         labelText != null || hintText != null,
+         'At least one of labelText or hintText must be non-null.',
+       ),
+       assert(
+         firstDayOfWeek >= DateTime.monday && firstDayOfWeek <= DateTime.sunday,
+         'firstDayOfWeek must be between DateTime.monday (1) and DateTime.sunday (7), got $firstDayOfWeek.',
+       );
 
   @override
   State<LayrzDateTimeInput> createState() => _LayrzDateTimeInputState();
@@ -124,12 +164,27 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  /// The [widget.value] the summary text was last computed for.
+  ///
+  /// Mirrors `LayrzDateInput`/`LayrzTimeInput`'s identical cache: computing
+  /// the summary reads `context.l10n`, which cannot be established from
+  /// `initState` (Flutter throws "dependOnInheritedWidgetOfExactType() ...
+  /// called before initState() completed"), so the summary is instead
+  /// computed reactively from `build` whenever `widget.value` has changed
+  /// since the last computation. A plain `_lastValue` check can't
+  /// distinguish "never computed" from "computed for `null`", so
+  /// [_summaryPrimed] covers the first build explicitly, mirroring
+  /// `LayrzTimeInput`'s identical need.
+  bool _summaryPrimed = false;
+  DateTime? _lastValue;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
+    // Deliberately NOT calling the summary computation here -- see
+    // `_summaryPrimed`'s own doc above.
   }
 
   @override
@@ -143,7 +198,6 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.value != oldWidget.value) _updateSummary();
   }
 
   @override
@@ -163,17 +217,32 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
     _controller.text = widget.formatter?.call(value) ?? formatStrftime(value, widget.pattern, l10n);
   }
 
-  void _handleCommit(DateTime date, LayrzTimeOfDay time) {
-    final combined = DateTime(date.year, date.month, date.day, time.hour, time.minute, time.second);
+  /// Combines [date] and [time] via `sameZoneDateTime`, threaded through
+  /// [widget.value] (or, when that is `null`, through [date] itself) so a
+  /// `TZDateTime` value round-trips in its own zone rather than being
+  /// silently re-anchored to the host's local zone.
+  DateTime _combine(DateTime date, LayrzTimeOfDay time) {
+    final reference = widget.value ?? date;
+    return sameZoneDateTime(reference, date.year, date.month, date.day, time.hour, time.minute, time.second);
+  }
+
+  void _handleSave(DateTime date, LayrzTimeOfDay time) {
+    final combined = _combine(date, time);
     widget.onChanged?.call(combined);
-    _updateSummary();
-    setState(() {});
+    setState(() {
+      _lastValue = combined;
+      _updateSummary();
+    });
   }
 
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
     await LayrzBottomSheet.show<void>(
       context,
+      // Names the sheet's route for screen readers with this field's own
+      // label, mirroring `LayrzTimeInput`'s identical fallback -- without
+      // it the sheet carries no name for what is being picked.
+      semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzDateTimeSurface(
         presentation: widget.presentation,
         initialDate: widget.value,
@@ -181,10 +250,12 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
-        onCommit: (date, time) {
-          _handleCommit(date, time);
+        onSave: (date, time) {
+          _handleSave(date, time);
           Navigator.pop(context);
         },
         onCancel: () => Navigator.pop(context),
@@ -246,6 +317,12 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_summaryPrimed || widget.value != _lastValue) {
+      _summaryPrimed = true;
+      _lastValue = widget.value;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
@@ -266,6 +343,12 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
         width: tokens.border.base,
       ),
+      // `LayrzAnchoredPanel` reconstructs this `child`'s `State` fresh on
+      // every open (verified: `child` is consumed only inside the overlay
+      // builder, torn down and rebuilt on close/reopen -- see
+      // `LayrzDateTimeSurface`'s own class doc), so no generation-counter
+      // key is needed here; `LayrzDateTimeSurface.initState` alone re-seeds
+      // the draft on every open.
       child: LayrzDateTimeSurface(
         presentation: widget.presentation,
         initialDate: widget.value,
@@ -273,10 +356,12 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
-        onCommit: (date, time) {
-          _handleCommit(date, time);
+        onSave: (date, time) {
+          _handleSave(date, time);
           _panelController.close();
         },
         onCancel: () => _panelController.close(),
