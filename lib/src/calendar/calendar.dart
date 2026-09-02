@@ -14,3 +14,8 @@ export 'src/calendar_weekdays.dart';
 export 'src/calendar_week_gutter.dart';
 export 'src/calendar_week_number.dart';
 export 'src/calendar_week_surface.dart';
+// S5 exception (see engineering/decisions.md D72): `lib/src/pickers/` is
+// permitted to consume `sameZoneDate`/`sameZoneDateTime` from this file, and
+// only this file — no other file under `calendar/src/` is a permitted import
+// for the pickers module.
+export 'src/calendar_zone.dart';
