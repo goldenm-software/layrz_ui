@@ -52,7 +52,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(MdiIcons.closeCircle));
+      await tester.tap(find.byIcon(MdiIcons.close));
       expect(deleted, isTrue);
     });
 
@@ -102,7 +102,7 @@ void main() {
       );
 
       // Find all close icons and tap them
-      final closeIcons = find.byIcon(MdiIcons.closeCircle);
+      final closeIcons = find.byIcon(MdiIcons.close);
       expect(closeIcons, findsWidgets);
 
       // Tap first delete icon

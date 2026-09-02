@@ -27,7 +27,7 @@ void main() {
           ),
         );
 
-        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
       });
 
       testWidgets('does not render delete icon when onDelete is null', (tester) async {
@@ -36,7 +36,7 @@ void main() {
           const LayrzChip(labelText: 'Not Deletable'),
         );
 
-        expect(find.byIcon(MdiIcons.closeCircle), findsNothing);
+        expect(find.byIcon(MdiIcons.close), findsNothing);
       });
 
       testWidgets('renders with long labelText', (tester) async {
@@ -171,7 +171,7 @@ void main() {
         expect(deleted, isFalse);
 
         // Tap the delete icon
-        await tester.tap(find.byIcon(MdiIcons.closeCircle));
+        await tester.tap(find.byIcon(MdiIcons.close));
         await tester.pump();
 
         expect(deleted, isTrue);
@@ -289,7 +289,7 @@ void main() {
 
         // Verify both chip label and delete icon are rendered
         expect(find.text('My Chip'), findsOneWidget);
-        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
       });
     });
   });
