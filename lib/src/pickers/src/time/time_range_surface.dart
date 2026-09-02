@@ -13,6 +13,14 @@ import '../shared/time_fields_panel.dart';
 /// Auto-swaps if the end draft precedes the start draft at Save time, rather
 /// than rejecting — consistent with the contiguous range state machine's
 /// "reverse-order selection auto-swaps, never rejects" rule.
+///
+/// **No 9:00–17:00 default.** [_start]/[_end] seed from
+/// [LayrzTimeRangeSurface.startValue]/[LayrzTimeRangeSurface.endValue] when
+/// non-null and stay genuinely `null` otherwise — never defaulted to
+/// business hours. Save is disabled ([_canSave]) until **both** clusters have
+/// been actually edited, mirroring [LayrzDateTimeSurface]'s identical rule;
+/// see that class's doc for why a silently-substituted default is exactly
+/// the problem the Save boundary exists to remove.
 class LayrzTimeRangeSurface extends StatefulWidget {
   /// The currently committed start time, or `null`.
   final LayrzTimeOfDay? startValue;
@@ -48,11 +56,13 @@ class LayrzTimeRangeSurface extends StatefulWidget {
 }
 
 class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
-  static const _defaultStart = LayrzTimeOfDay(hour: 9, minute: 0);
-  static const _defaultEnd = LayrzTimeOfDay(hour: 17, minute: 0);
+  /// The start cluster's draft. `null` until the user actually edits the
+  /// start fields — see the class doc's "No 9:00–17:00 default" note.
+  LayrzTimeOfDay? _start;
 
-  late LayrzTimeOfDay _start;
-  late LayrzTimeOfDay _end;
+  /// The end cluster's draft. `null` until the user actually edits the end
+  /// fields.
+  LayrzTimeOfDay? _end;
 
   @override
   void initState() {
@@ -67,13 +77,21 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   }
 
   void _seed() {
-    _start = widget.startValue ?? _defaultStart;
-    _end = widget.endValue ?? _defaultEnd;
+    _start = widget.startValue;
+    _end = widget.endValue;
   }
 
+  /// Whether Save is reachable: both clusters must have been genuinely
+  /// chosen. Never `true` from a silently-substituted default — see the
+  /// class doc's "No 9:00–17:00 default" note.
+  bool get _canSave => _start != null && _end != null;
+
   void _handleSave() {
-    final swapped = _start.compareTo(_end) > 0;
-    widget.onSave(swapped ? _end : _start, swapped ? _start : _end);
+    final start = _start;
+    final end = _end;
+    if (start == null || end == null) return;
+    final swapped = start.compareTo(end) > 0;
+    widget.onSave(swapped ? end : start, swapped ? start : end);
   }
 
   @override
@@ -90,7 +108,14 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
           Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
           SizedBox(height: tokens.spacing.sp1),
           LayrzPickersTimeFieldsPanel(
-            value: _start,
+            // Genuinely unset until the user edits a field -- never
+            // defaulted to 9:00 (see the class doc). The panel itself
+            // requires a non-null `value` to render, so an unset draft is
+            // shown as 00:00 without ever being *reported* as 00:00: the
+            // `onChanged` callback below is the only path that sets
+            // `_start`, and it only runs when the user actually edits a
+            // field.
+            value: _start ?? const LayrzTimeOfDay(hour: 0, minute: 0),
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (time) => setState(() => _start = time),
@@ -99,7 +124,8 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
           Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
           SizedBox(height: tokens.spacing.sp1),
           LayrzPickersTimeFieldsPanel(
-            value: _end,
+            // See the start cluster's identical comment above.
+            value: _end ?? const LayrzTimeOfDay(hour: 0, minute: 0),
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (time) => setState(() => _end = time),
@@ -112,7 +138,11 @@ class _LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
               ),
               SizedBox(width: tokens.spacing.sp2),
               Expanded(
-                child: LayrzButton.save(labelText: l10n.actionSave, onTap: _handleSave),
+                child: LayrzButton.save(
+                  labelText: l10n.actionSave,
+                  onTap: _canSave ? _handleSave : () {},
+                  isDisabled: !_canSave,
+                ),
               ),
             ],
           ),

@@ -70,7 +70,95 @@ void main() {
       expect(findButtonLabel(const LayrzUiL10nDefault().actionSave), findsOneWidget);
     });
 
-    testWidgets('null startValue/endValue seeds sensible business-hours defaults', (tester) async {
+    testWidgets('null startValue/endValue never seeds a silent default, and Save is disabled', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var saveCalls = 0;
+
+      await pumpThemed(
+        tester,
+        _bounded(
+          LayrzTimeRangeSurface(
+            startValue: null,
+            endValue: null,
+            onSave: (_, _) => saveCalls++,
+            onCancel: () {},
+          ),
+        ),
+      );
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+
+      expect(saveCalls, 0, reason: 'Save must be inert while either cluster is unset -- no silent 9:00-17:00 seed');
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'Save must be visibly disabled, not merely inert');
+    });
+  });
+
+  group('LayrzTimeRangeSurface — Save gating (no silent 9:00-17:00 default)', () {
+    guardedTestWidgets('setting only the start cluster keeps Save disabled', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var saveCalls = 0;
+
+      await pumpThemed(
+        tester,
+        _bounded(
+          LayrzTimeRangeSurface(startValue: null, endValue: null, onSave: (_, _) => saveCalls++, onCancel: () {}),
+        ),
+      );
+
+      // Start cluster: hour(0), minute(1), seconds(2, hidden).
+      await tester.enterText(find.byType(EditableText).first, '11');
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'the end cluster is still unset');
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+      expect(saveCalls, 0);
+    });
+
+    guardedTestWidgets('setting only the end cluster keeps Save disabled', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var saveCalls = 0;
+
+      await pumpThemed(
+        tester,
+        _bounded(
+          LayrzTimeRangeSurface(startValue: null, endValue: null, onSave: (_, _) => saveCalls++, onCancel: () {}),
+        ),
+      );
+
+      // End cluster: hour(3), minute(4), seconds(5, hidden).
+      await tester.enterText(find.byType(EditableText).at(3), '45');
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'the start cluster is still unset');
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+      expect(saveCalls, 0);
+    });
+
+    guardedTestWidgets('setting both clusters enables Save and reports exactly what was typed', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -93,12 +181,48 @@ void main() {
         ),
       );
 
+      await tester.enterText(find.byType(EditableText).first, '11'); // start hour
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(1), '15'); // start minute
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(3), '18'); // end hour
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(4), '45'); // end minute
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isFalse, reason: 'both clusters are now set');
+
       await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
       await tester.pumpAndSettle();
 
-      expect(savedStart, isNotNull);
-      expect(savedEnd, isNotNull);
-      expect(savedStart!.compareTo(savedEnd!), lessThan(0), reason: 'default seed must already be start <= end');
+      expect(savedStart, const LayrzTimeOfDay(hour: 11, minute: 15));
+      expect(savedEnd, const LayrzTimeOfDay(hour: 18, minute: 45));
+    });
+
+    testWidgets('a non-null caller value seeds correctly and Save is enabled immediately', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        _bounded(
+          LayrzTimeRangeSurface(
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onSave: (_, _) {},
+            onCancel: () {},
+          ),
+        ),
+      );
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isFalse, reason: 'a populated field must not regress to disabled');
     });
   });
 

@@ -776,6 +776,131 @@ void main() {
     });
   });
 
+  group('LayrzTimeRangeInput — Save gating (no silent 9:00-17:00 default)', () {
+    guardedTestWidgets('opening with a null value and tapping Save without touching anything fires no onChanged', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        _bounded(LayrzTimeRangeInput(labelText: 'Business hours', onChanged: (_, _) => callCount++)),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'Save must be visibly disabled while both clusters are unset');
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+
+      expect(callCount, 0, reason: 'a null-seeded field must never report a silent 9:00-17:00 default');
+    });
+
+    guardedTestWidgets('setting only the start cluster keeps Save disabled and reports nothing', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var callCount = 0;
+
+      await pumpThemedApp(
+        tester,
+        _bounded(LayrzTimeRangeInput(labelText: 'Business hours', onChanged: (_, _) => callCount++)),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText).first, '11');
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue);
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+      expect(callCount, 0);
+    });
+
+    guardedTestWidgets('setting both clusters enables Save and reports exactly what was typed', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final reported = <(LayrzTimeOfDay, LayrzTimeOfDay)>[];
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(labelText: 'Business hours', onChanged: (start, end) => reported.add((start, end))),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText).first, '11'); // start hour
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(1), '15'); // start minute
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(3), '18'); // end hour
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText).at(4), '45'); // end minute
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isFalse);
+
+      await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+      await tester.pumpAndSettle();
+
+      expect(reported, hasLength(1));
+      expect(reported.single.$1, const LayrzTimeOfDay(hour: 11, minute: 15));
+      expect(reported.single.$2, const LayrzTimeOfDay(hour: 18, minute: 45));
+      expect(reported.single.$1, isNot(const LayrzTimeOfDay(hour: 9, minute: 0)), reason: 'never the removed default');
+      expect(reported.single.$2, isNot(const LayrzTimeOfDay(hour: 17, minute: 0)), reason: 'never the removed default');
+    });
+
+    guardedTestWidgets('a non-null caller value seeds correctly and Save is enabled immediately', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onChanged: (_, _) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel(const LayrzUiL10nDefault().actionSave), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isFalse, reason: 'a populated field must not regress to disabled');
+    });
+  });
+
   group('LayrzTimeRangeInput — start/end groups are distinguishable', () {
     guardedTestWidgets('the panel shows the start and end labels distinctly', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
