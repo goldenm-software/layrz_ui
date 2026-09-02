@@ -22,6 +22,30 @@ import 'tree_style_spec.dart';
 /// [Semantics] node stating role, expansion state, depth, and selection
 /// state, so a screen-reader user gets the announcement sighted users read
 /// for free from the chevron and indentation alone.
+///
+/// **The row's fill never reaches its own outer edge** (maintainer ruling,
+/// DESIGN-171, with photographic evidence): this widget draws no border or
+/// radius of its own -- any rounded frame around a tree (e.g. the showroom's
+/// demo wraps [LayrzTreeView] in its own bordered, rounded `DecoratedBox`) is
+/// entirely the caller's, and this row has no parameter through which a
+/// caller's radius could even reach it. A full-bleed square fill inside a
+/// rounded frame will always show its square corner poking past the frame's
+/// curve for *some* radius, no matter what colour that fill is -- clipping to
+/// a specific radius here would only be correct for the one radius guessed
+/// at, and wrong for every other caller. Instead the painted fill
+/// ([style.backgroundColor], covering hover/pressed/selected/partially
+/// selected -- resting paints nothing at all, see `tree_style_spec.dart`) is
+/// horizontally inset from the row's own bounds by [_fillInset] on each side,
+/// via the [Padding] wrapping the [DecoratedBox] in [build]. That inset makes
+/// the painted rectangle strictly smaller than the row's own box in every
+/// state, so it structurally cannot reach an enclosing container's edge --
+/// let alone its rounded corner -- regardless of that container's radius.
+/// This is a property the row can guarantee entirely on its own; a caller
+/// that also wants the tree's *scrolled content* clipped to its frame (e.g.
+/// so a row's outline or indent guide never draws outside the rounded
+/// corner during a fast scroll) still needs its own `ClipRRect` around
+/// [LayrzTreeView]/[LayrzSliverTreeView], since only the caller knows its own
+/// radius.
 class LayrzTreeRow<T> extends StatefulWidget {
   /// Creates a [LayrzTreeRow].
   const LayrzTreeRow({
@@ -89,6 +113,15 @@ class LayrzTreeRow<T> extends StatefulWidget {
 
 class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
   bool _isHovered = false;
+  bool _isPressed = false;
+
+  /// The horizontal inset applied to the row's own fill on each side (see
+  /// this file's class doc comment for why): kept as a named constant,
+  /// rather than inlined at each of its two call sites in [build], so the
+  /// value the fill is inset by and the value the row's content indents by
+  /// are visibly two independent decisions, not accidentally-shared magic
+  /// numbers.
+  double _fillInset(LayrzTokens tokens) => tokens.spacing.sp1;
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +131,7 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
       isHovered: _isHovered,
       isSelected: widget.isSelected,
       isPartiallySelected: widget.isPartiallySelected,
+      isPressed: _isPressed,
       isActive: widget.isActive,
     );
 
@@ -131,20 +165,37 @@ class _LayrzTreeRowState<T> extends State<LayrzTreeRow<T>> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: style.backgroundColor,
-            border: Border.all(color: style.activeBorderColor, width: tokens.border.stroke1),
-          ),
+        // Pointer-down/up/cancel here drive only [_isPressed] -- the row's own
+        // press *visual* -- and add no gesture recognizer or semantics node of
+        // their own ([Listener] contributes neither), so this cannot become a
+        // third tap target competing with the label's [GestureDetector] and
+        // the chevron/checkbox [LayrzTappable]s that this file's `_buildLabel`
+        // doc comment already accounts for. onPointerCancel matters as much as
+        // onPointerUp: a drag that leaves the row (e.g. starting a scroll)
+        // still releases the pointer without ever calling onPointerUp, and
+        // without this the row would render "pressed" forever.
+        child: Listener(
+          onPointerDown: (_) => setState(() => _isPressed = true),
+          onPointerUp: (_) => setState(() => _isPressed = false),
+          onPointerCancel: (_) => setState(() => _isPressed = false),
           child: Padding(
-            padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp1, horizontal: tokens.spacing.sp2),
-            child: Row(
-              children: [
-                LayrzTreeIndentGuide(depth: widget.depth, color: style.indentGuideColor),
-                _buildChevron(tokens, style),
-                if (widget.onSelect != null) _buildCheckbox(tokens, style),
-                _buildLabel(tokens, style),
-              ],
+            padding: EdgeInsets.symmetric(horizontal: _fillInset(tokens)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: style.backgroundColor,
+                border: Border.all(color: style.activeBorderColor, width: tokens.border.stroke1),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp1, horizontal: tokens.spacing.sp2),
+                child: Row(
+                  children: [
+                    LayrzTreeIndentGuide(depth: widget.depth, color: style.indentGuideColor),
+                    _buildChevron(tokens, style),
+                    if (widget.onSelect != null) _buildCheckbox(tokens, style),
+                    _buildLabel(tokens, style),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

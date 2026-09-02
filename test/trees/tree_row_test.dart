@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -328,7 +329,7 @@ void main() {
       }
     });
 
-    guardedTestWidgets('an unselected, inactive row paints the idle surface -- never a black background', (
+    guardedTestWidgets('an unselected, inactive, idle row is genuinely transparent -- never a black background', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 600);
@@ -349,16 +350,18 @@ void main() {
         ),
       );
 
-      final tokens = LayrzThemeData.light().tokens;
+      // DESIGN-171 (maintainer ruling): resting paints nothing at all, so an
+      // enclosing container's own surface (and its rounded border) shows
+      // through with no seam, rather than an opaque colour that merely
+      // happens to match most containers.
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
       final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, tokens.colors.sf1);
+      expect(decoration.color, const Color(0x00000000));
       expect(decoration.color, isNot(const Color(0xFF000000)));
     });
 
     guardedTestWidgets(
-      'a selected row paints no background fill -- selection is marked by the checkbox alone '
-      '(maintainer review, DESIGN-93: a full-row fill was judged redundant with the checkbox)',
+      'a selected row paints a visible translucent primary tint -- the checkbox is no longer the sole marker',
       (tester) async {
         tester.view.physicalSize = const Size(800, 600);
         tester.view.devicePixelRatio = 1.0;
@@ -390,9 +393,9 @@ void main() {
         );
         final decoration = decoratedBox.decoration as BoxDecoration;
 
-        expect(decoration.color, tokens.colors.sf1);
+        expect(decoration.color, tokens.colors.primary.withValues(alpha: 0.12));
 
-        // Text stays legible against the plain idle surface.
+        // Text stays legible against the translucent tint.
         final defaultTextStyle = tester.widget<DefaultTextStyle>(
           find.descendant(of: find.byType(LayrzTreeRow<String>), matching: find.byType(DefaultTextStyle)).first,
         );
@@ -400,7 +403,7 @@ void main() {
       },
     );
 
-    guardedTestWidgets('selected AND active together: outline marks focus, checkbox marks selection, no fill', (
+    guardedTestWidgets('selected AND active together: outline marks focus, checkbox and tint mark selection', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 600);
@@ -431,12 +434,96 @@ void main() {
       );
       final decoration = decoratedBox.decoration as BoxDecoration;
 
-      expect(decoration.color, tokens.colors.sf1);
+      expect(decoration.color, tokens.colors.primary.withValues(alpha: 0.12));
       expect((decoration.border as Border).top.color, tokens.colors.primary.shade500);
 
-      // The checkbox itself is the visual marker of selection: filled with
-      // the primary colour and painting the check glyph.
+      // The checkbox itself is still a visual marker of selection: filled
+      // with the primary colour and painting the check glyph.
       expect(find.byIcon(MdiIcons.check), findsOneWidget);
+    });
+
+    guardedTestWidgets('hovering paints a visible tint composed over the transparent resting base', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTreeRow<String>(
+          node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+          depth: 0,
+          isExpanded: false,
+          isLeaf: true,
+          isSelected: false,
+          isPartiallySelected: false,
+          totalDepth: 0,
+          child: const Text('Alpha'),
+        ),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(tester.getCenter(find.byType(LayrzTreeRow<String>)));
+      await tester.pump();
+
+      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      final expected = Color.alphaBlend(tokens.colors.sf3.withValues(alpha: 0.6), const Color(0x00000000));
+      expect(decoration.color, expected);
+      expect(decoration.color!.a, greaterThan(0));
+    });
+
+    guardedTestWidgets('the row fill is inset from the row\'s own outer edge in every state, never full-bleed', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Wrap the row exactly like the showroom wraps LayrzTreeView: a
+      // rounded-border container. This reproduces the maintainer's
+      // photographed setup at the single-row level -- the fill must never
+      // reach the container's edge (let alone its rounded corner) regardless
+      // of the state painting it, since the row has no way to know the
+      // container's radius. Hover is the state the maintainer's screenshot
+      // actually showed bleeding, so it is asserted here, not resting (which
+      // paints nothing at all and could never bleed anyway).
+      await pumpThemed(
+        tester,
+        DecoratedBox(
+          decoration: BoxDecoration(border: Border.all(), borderRadius: BorderRadius.circular(12)),
+          child: LayrzTreeRow<String>(
+            node: const LayrzTreeNode<String>(id: 'a', content: 'Alpha'),
+            depth: 0,
+            isExpanded: false,
+            isLeaf: true,
+            isSelected: false,
+            isPartiallySelected: false,
+            totalDepth: 0,
+            child: const Text('Alpha'),
+          ),
+        ),
+      );
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(tester.getCenter(find.byType(LayrzTreeRow<String>)));
+      await tester.pump();
+
+      final rowRect = tester.getRect(find.byType(LayrzTreeRow<String>));
+      final fillRect = tester.getRect(find.byType(DecoratedBox).last);
+
+      // Strictly inside on both left and right -- not merely "no wider than",
+      // which a fill sized exactly to the row's own bounds would also
+      // satisfy. A container border of any radius drawn at rowRect's edges
+      // can never be crossed by a rect that never reaches those edges.
+      expect(fillRect.left, greaterThan(rowRect.left));
+      expect(fillRect.right, lessThan(rowRect.right));
     });
 
     guardedTestWidgets(
