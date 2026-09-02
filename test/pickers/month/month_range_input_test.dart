@@ -825,5 +825,160 @@ void main() {
 
       expect(find.text('Bad value'), findsNothing);
     });
+
+    group('error state stays fully interactive (Finding 4)', () {
+      // Regression test locking in correct behaviour -- see
+      // `date_input_test.dart`'s equivalent group for the full rationale.
+      // `month_range_input.dart`'s `onTap` is gated solely on
+      // `widget.disabled`, never on `widget.errors`.
+      guardedTestWidgets('tapping the anchor opens the panel even with errors present', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzMonthRangeInput(labelText: 'Months', errors: ['Required']),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.text('September'), findsOneWidget);
+        expect(findButtonLabel(const LayrzUiL10nDefault().actionSave), findsOneWidget);
+      });
+
+      guardedTestWidgets('a selection still commits via Save with errors present (arbitrary mode)', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        List<LayrzMonth>? saved;
+
+        await pumpThemedApp(
+          tester,
+          LayrzMonthRangeInput(
+            labelText: 'Months',
+            errors: const ['Required'],
+            onArbitraryChanged: (m) => saved = m,
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('March'));
+        await tester.pumpAndSettle();
+        await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
+        await tester.pumpAndSettle();
+
+        expect(saved, isNotNull);
+        expect(saved, contains(const LayrzMonth(year: 2026, month: 3)));
+      });
+
+      guardedTestWidgets('tapping the anchor opens the bottom sheet on a compact viewport with errors present', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzMonthRangeInput(labelText: 'Months', errors: ['Required']),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.text('September'), findsOneWidget);
+      });
+    });
+
+    group('pattern/formatter changes reflect immediately (Finding 5)', () {
+      // Regression test for DESIGN-45 -- see `date_input_test.dart`'s
+      // equivalent group for the full rationale. Covers both modes' pattern
+      // fields since either can be active depending on `consecutive`.
+      guardedTestWidgets('changing arbitraryPattern alone re-renders the summary with no new selection', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var pattern = '%b %Y';
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayrzMonthRangeInput(
+                    labelText: 'Months',
+                    arbitraryValue: const [LayrzMonth(year: 2026, month: 9)],
+                    arbitraryPattern: pattern,
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => pattern = '%B %Y'),
+                    child: const Text('Change pattern'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+
+        expect(find.text('Sep 2026'), findsOneWidget);
+
+        await tester.tap(find.text('Change pattern'));
+        await tester.pump();
+
+        expect(find.text('September 2026'), findsOneWidget);
+        expect(find.text('Sep 2026'), findsNothing);
+      });
+
+      guardedTestWidgets('changing rangePattern alone re-renders the summary with no new selection', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var pattern = '%B %Y';
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayrzMonthRangeInput(
+                    labelText: 'Months',
+                    consecutive: true,
+                    rangeValue: LayrzMonthRange(
+                      start: const LayrzMonth(year: 2026, month: 1),
+                      end: const LayrzMonth(year: 2026, month: 4),
+                    ),
+                    rangePattern: pattern,
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => pattern = '%b %Y'),
+                    child: const Text('Change pattern'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+
+        expect(find.text('January 2026 – April 2026'), findsOneWidget);
+
+        await tester.tap(find.text('Change pattern'));
+        await tester.pump();
+
+        expect(find.text('Jan 2026 – Apr 2026'), findsOneWidget);
+        expect(find.text('January 2026 – April 2026'), findsNothing);
+      });
+    });
   });
 }

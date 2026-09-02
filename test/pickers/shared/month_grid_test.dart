@@ -1,7 +1,13 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/pickers/src/shared/month_grid.dart';
+import 'package:layrz_ui/src/pickers/src/shared/month_grid_cell.dart';
+import 'package:layrz_ui/src/pickers/src/shared/day_grid_cell.dart' show LayrzPickerCellRole;
+import 'package:layrz_ui/src/pickers/src/shared/range_bar.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
@@ -204,5 +210,271 @@ void main() {
 
       expect(newYear, 2025);
     });
+  });
+
+  group('LayrzPickersMonthGrid — range interior colour (Finding 1)', () {
+    // Same defect and same fix as `LayrzPickersDayGridCell` -- see
+    // `day_grid_test.dart`'s equivalent group for the full root-cause
+    // explanation (`LayrzColorSwatch.fromColor`'s shade50 inversion).
+    guardedTestWidgets('no rendered cell resolves to a near-black fill in a consecutive range', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          rangeStart: DateTime(2026, 2),
+          rangeEnd: DateTime(2026, 5),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final containers = tester.widgetList<Container>(find.byType(Container));
+      for (final container in containers) {
+        final decoration = container.decoration;
+        if (decoration is! BoxDecoration) continue;
+        final color = decoration.color;
+        if (color == null) continue;
+        expect(
+          HSLColor.fromColor(color).lightness,
+          greaterThan(0.05),
+          reason: 'A cell fill resolved to a near-black colour: $color',
+        );
+      }
+    });
+
+    guardedTestWidgets('a rejected cell whose role is not rangeInterior tints with tonalOpacity alpha', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+      final expected = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGridCell(
+          label: 'March',
+          semanticLabel: 'March 2026',
+          role: LayrzPickerCellRole.none,
+          isRejected: true,
+          onTap: null,
+          focusNode: FocusNode(),
+        ),
+      );
+
+      final container = tester.widget<Container>(find.byType(Container).last);
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, expected);
+    });
+  });
+
+  group('LayrzPickersMonthGrid — continuous range bar (Finding 2)', () {
+    guardedTestWidgets('consecutive mode paints a continuous bar across the interior row', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // January through April 2026 -- the grid's first row (row 0, cols
+      // 0-3) per `LayrzPickersMonthGridState.build`'s `row * 4 + col`
+      // layout.
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          rangeStart: DateTime(2026, 1),
+          rangeEnd: DateTime(2026, 4),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final bar = tester.widget<LayrzPickersRangeBar>(find.byType(LayrzPickersRangeBar).first);
+      expect(bar.columns, [
+        LayrzRangeBarColumn.rangeStart,
+        LayrzRangeBarColumn.rangeInterior,
+        LayrzRangeBarColumn.rangeInterior,
+        LayrzRangeBarColumn.rangeEnd,
+      ]);
+
+      // Touching segments -- no gap between February's and March's columns.
+      final segmentsInRow = find.descendant(
+        of: find.byType(LayrzPickersRangeBar).first,
+        matching: find.byType(ColoredBox),
+      );
+      final february = tester.getRect(segmentsInRow.at(0));
+      final march = tester.getRect(segmentsInRow.at(1));
+      expect(february.right, march.left);
+    });
+
+    guardedTestWidgets('arbitrary mode never renders an interior bar -- selected months stay individual pills', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          arbitrarySelection: {DateTime(2026, 1), DateTime(2026, 2), DateTime(2026, 3)},
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final bars = tester.widgetList<LayrzPickersRangeBar>(find.byType(LayrzPickersRangeBar));
+      for (final bar in bars) {
+        expect(bar.columns.every((c) => c == LayrzRangeBarColumn.none), isTrue);
+      }
+    });
+  });
+
+  group('LayrzPickersMonthGrid — cells use LayrzTappable (Finding 3)', () {
+    guardedTestWidgets('a selectable month cell is wrapped in an interactive LayrzTappable', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final cellFinder = find.ancestor(
+        of: find.text('September'),
+        matching: find.byType(LayrzTappable),
+      );
+      expect(cellFinder, findsOneWidget);
+      final tappable = tester.widget<LayrzTappable>(cellFinder);
+      expect(tappable.onTap, isNotNull);
+      expect(
+        find.descendant(of: cellFinder, matching: find.byType(GestureDetector)),
+        findsOneWidget,
+      );
+    });
+
+    guardedTestWidgets('a disabled month cell renders LayrzTappable with a null onTap -- genuinely inert', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          minimum: DateTime(2026, 6),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final cellFinder = find.ancestor(
+        of: find.text('January'),
+        matching: find.byType(LayrzTappable),
+      );
+      expect(cellFinder, findsOneWidget);
+      final tappable = tester.widget<LayrzTappable>(cellFinder);
+      expect(tappable.onTap, isNull);
+      expect(
+        find.descendant(of: cellFinder, matching: find.byType(GestureDetector)),
+        findsNothing,
+      );
+    });
+
+    guardedTestWidgets('hovering a selectable month cell paints the LayrzTappable hover surface', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersMonthGrid(
+          displayedYear: 2026,
+          onYearChanged: (_) {},
+          reference: DateTime(2026),
+          onMonthTap: (_) {},
+        ),
+      );
+
+      final cellFinder = find.ancestor(
+        of: find.text('September'),
+        matching: find.byType(LayrzTappable),
+      );
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: tester.getCenter(cellFinder));
+      addTearDown(gesture.removePointer);
+      await tester.pumpAndSettle();
+
+      final animatedContainer = tester.widget<AnimatedContainer>(
+        find.descendant(of: cellFinder, matching: find.byType(AnimatedContainer)),
+      );
+      final decoration = animatedContainer.decoration as BoxDecoration;
+      final tokens = LayrzTokens.light();
+      expect(decoration.color, isNot(tokens.colors.sf1));
+    });
+
+    guardedTestWidgets(
+      'geometry stays identical (D15): the same cell measures the same box before/after becoming disabled',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        DateTime? minimum;
+        await pumpThemed(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return LayrzPickersMonthGrid(
+                displayedYear: 2026,
+                onYearChanged: (_) {},
+                reference: DateTime(2026),
+                minimum: minimum,
+                onMonthTap: (_) {
+                  setState(() => minimum = DateTime(2026, 6));
+                },
+              );
+            },
+          ),
+        );
+
+        // Same cell (January), same label -- only its interactivity is
+        // about to change, not its own text content.
+        final januaryCellFinder = find.ancestor(
+          of: find.text('January'),
+          matching: find.byType(LayrzTappable),
+        );
+        final sizeBefore = tester.getSize(januaryCellFinder);
+
+        // Trip `minimum` to make January disabled, via the surrounding
+        // StatefulBuilder rather than a fresh pumpThemed -- a second
+        // pumpThemed would rebuild a brand-new Overlay/widget tree instead
+        // of exercising this exact cell's own didUpdateWidget path.
+        await tester.tap(find.text('September'));
+        await tester.pump();
+
+        final sizeAfter = tester.getSize(januaryCellFinder);
+        expect(sizeAfter, sizeBefore);
+      },
+    );
   });
 }

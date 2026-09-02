@@ -494,5 +494,113 @@ void main() {
 
       expect(find.text('Bad value'), findsNothing);
     });
+
+    group('error state stays fully interactive (Finding 4)', () {
+      // Regression test locking in correct behaviour -- see
+      // `date_input_test.dart`'s equivalent group for the full rationale.
+      // `month_input.dart`'s `onTap` is gated solely on `widget.disabled`,
+      // never on `widget.errors`.
+      guardedTestWidgets('tapping the anchor opens the panel even with errors present', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzMonthInput(labelText: 'Month', errors: ['Required']),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.text('September'), findsOneWidget);
+      });
+
+      guardedTestWidgets('a selection still commits onChanged with errors present', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        LayrzMonth? committed;
+
+        await pumpThemedApp(
+          tester,
+          LayrzMonthInput(
+            labelText: 'Month',
+            value: const LayrzMonth(year: 2026, month: 1),
+            errors: const ['Required'],
+            onChanged: (m) => committed = m,
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('September'));
+        await tester.pumpAndSettle();
+
+        expect(committed, const LayrzMonth(year: 2026, month: 9));
+      });
+
+      guardedTestWidgets('tapping the anchor opens the bottom sheet on a compact viewport with errors present', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          const LayrzMonthInput(labelText: 'Month', errors: ['Required']),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.text('September'), findsOneWidget);
+      });
+    });
+
+    group('pattern/formatter changes reflect immediately (Finding 5)', () {
+      // Regression test for DESIGN-45 -- see `date_input_test.dart`'s
+      // equivalent group for the full rationale. `LayrzMonthInput` has no
+      // `pattern` field, only `formatter`, so only that is exercised here.
+      guardedTestWidgets('changing formatter alone re-renders the summary with no new selection', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        String Function(LayrzMonth)? formatter;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayrzMonthInput(
+                    labelText: 'Month',
+                    value: const LayrzMonth(year: 2026, month: 9),
+                    formatter: formatter,
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => formatter = (m) => 'CUSTOM ${m.month}/${m.year}'),
+                    child: const Text('Set formatter'),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+
+        expect(find.text('September 2026'), findsOneWidget);
+
+        await tester.tap(find.text('Set formatter'));
+        await tester.pump();
+
+        expect(find.text('CUSTOM 9/2026'), findsOneWidget);
+        expect(find.text('September 2026'), findsNothing);
+      });
+    });
   });
 }

@@ -733,4 +733,147 @@ void main() {
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
     });
   });
+
+  group('LayrzDateInput — error state stays fully interactive (Finding 4)', () {
+    // Regression test locking in correct behaviour: errors are validation
+    // feedback, not a lock (D75) -- only `disabled: true` may block
+    // interaction. Verified by reading `date_input.dart`'s `build()`: its
+    // `onTap` is gated solely on `widget.disabled`, never on
+    // `widget.errors`, in both the desktop (`LayrzAnchoredPanel.builder`)
+    // and compact (`_openMobileSurface`) branches.
+    guardedTestWidgets('tapping the anchor opens the surface even with errors present', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(labelText: 'Date', errors: const ['Required']),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+    });
+
+    guardedTestWidgets('a selection still commits onChanged with errors present', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      DateTime? changed;
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(
+          labelText: 'Date',
+          value: DateTime(2026, 9, 1),
+          errors: const ['Required'],
+          onChanged: (d) => changed = d,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15').first);
+      await tester.pumpAndSettle();
+
+      expect(changed, isNotNull);
+      expect(changed!.day, 15);
+    });
+
+    guardedTestWidgets('tapping the anchor opens the bottom sheet on a compact viewport with errors present', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateInput(labelText: 'Date', errors: const ['Required']),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+    });
+  });
+
+  group('LayrzDateInput — pattern changes reflect immediately (Finding 5)', () {
+    // Regression test for DESIGN-45: the displayed summary must recompute
+    // as soon as `pattern`/`formatter` changes on an already-built widget,
+    // not only on the next selection. Uses one StatefulBuilder inside a
+    // single pumpThemedApp call -- a second pumpThemedApp would build a
+    // fresh Overlay and re-run initState, hiding the bug this guards
+    // against (see this group's own doc in the implementation notes).
+    guardedTestWidgets('changing pattern alone re-renders the summary with no new selection', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var pattern = '%Y-%m-%d';
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzDateInput(labelText: 'Date', value: DateTime(2026, 9, 5), pattern: pattern),
+                GestureDetector(
+                  onTap: () => setState(() => pattern = '%d/%m/%Y'),
+                  child: const Text('Change pattern'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      expect(find.text('2026-09-05'), findsOneWidget);
+
+      await tester.tap(find.text('Change pattern'));
+      await tester.pump();
+
+      expect(find.text('05/09/2026'), findsOneWidget);
+      expect(find.text('2026-09-05'), findsNothing);
+    });
+
+    guardedTestWidgets('changing formatter alone re-renders the summary with no new selection', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      String Function(DateTime)? formatter;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzDateInput(labelText: 'Date', value: DateTime(2026, 9, 5), formatter: formatter),
+                GestureDetector(
+                  onTap: () => setState(() => formatter = (d) => 'CUSTOM ${d.day}'),
+                  child: const Text('Set formatter'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      expect(find.text('2026-09-05'), findsOneWidget);
+
+      await tester.tap(find.text('Set formatter'));
+      await tester.pump();
+
+      expect(find.text('CUSTOM 5'), findsOneWidget);
+      expect(find.text('2026-09-05'), findsNothing);
+    });
+  });
 }

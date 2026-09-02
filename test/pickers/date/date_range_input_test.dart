@@ -786,4 +786,151 @@ void main() {
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
     });
   });
+
+  group('LayrzDateRangeInput — error state stays fully interactive (Finding 4)', () {
+    // Regression test locking in correct behaviour -- see
+    // `date_input_test.dart`'s equivalent group for the full rationale.
+    // `date_range_input.dart`'s `onTap` is gated solely on
+    // `widget.disabled`, never on `widget.errors`.
+    guardedTestWidgets('tapping the anchor opens the surface even with errors present', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateRangeInput(labelText: 'Range', errors: const ['Required']),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+    });
+
+    guardedTestWidgets('a range selection still commits via Save with errors present', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      LayrzDateRange? changed;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateRangeInput(
+          labelText: 'Range',
+          errors: const ['Required'],
+          onChanged: (r) => changed = r,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('5').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('10').first);
+      await tester.pumpAndSettle();
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(changed, isNotNull);
+      expect(changed!.start.day, 5);
+      expect(changed!.end.day, 10);
+    });
+
+    guardedTestWidgets('tapping the anchor opens the bottom sheet on a compact viewport with errors present', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDateRangeInput(labelText: 'Range', errors: const ['Required']),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+    });
+  });
+
+  group('LayrzDateRangeInput — pattern changes reflect immediately (Finding 5)', () {
+    // Regression test for DESIGN-45 -- see `date_input_test.dart`'s
+    // equivalent group for the full rationale.
+    guardedTestWidgets('changing pattern alone re-renders the summary with no new selection', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      var pattern = '%Y-%m-%d';
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzDateRangeInput(
+                  labelText: 'Range',
+                  value: LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)),
+                  pattern: pattern,
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => pattern = '%d/%m/%Y'),
+                  child: const Text('Change pattern'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      expect(find.text('2026-09-05 – 2026-09-10'), findsOneWidget);
+
+      await tester.tap(find.text('Change pattern'));
+      await tester.pump();
+
+      expect(find.text('05/09/2026 – 10/09/2026'), findsOneWidget);
+      expect(find.text('2026-09-05 – 2026-09-10'), findsNothing);
+    });
+
+    guardedTestWidgets('changing formatter alone re-renders the summary with no new selection', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      String Function(LayrzDateRange)? formatter;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LayrzDateRangeInput(
+                  labelText: 'Range',
+                  value: LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)),
+                  formatter: formatter,
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => formatter = (r) => 'CUSTOM ${r.start.day}-${r.end.day}'),
+                  child: const Text('Set formatter'),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('Set formatter'));
+      await tester.pump();
+
+      expect(find.text('CUSTOM 5-10'), findsOneWidget);
+    });
+  });
 }
