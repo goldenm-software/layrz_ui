@@ -65,9 +65,10 @@ bool isInGridMonth(DateTime date, {required int year, required int month}) => da
 /// Whether [a] and [b] fall on the same calendar day, ignoring time-of-day.
 bool isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Returns the 12 months of [year] laid out as a 4×3 grid, row-major,
-/// each entry a [DateTime] for the first day of that month in the same
-/// zone as [reference] (via [sameZoneDate]).
+/// Returns the 12 months of [year] as a flat, row-major list for a
+/// 3-rows-by-4-columns grid (4 months per row across 3 rows), each entry a
+/// [DateTime] for the first day of that month in the same zone as
+/// [reference] (via [sameZoneDate]).
 List<DateTime> monthGridPageFor({required DateTime reference, required int year}) => [
   for (var month = 1; month <= 12; month++) sameZoneDate(reference, year, month, 1),
 ];

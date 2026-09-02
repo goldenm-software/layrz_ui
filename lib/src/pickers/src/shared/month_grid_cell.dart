@@ -3,7 +3,8 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'day_grid_cell.dart' show LayrzPickerCellRole;
 
-/// One cell of [LayrzPickersMonthGrid]: a full month name in a 4×3 grid.
+/// One cell of [LayrzPickersMonthGrid]: a full month name in the
+/// 3-rows-by-4-columns month grid.
 ///
 /// Shares [LayrzPickerCellRole]'s vocabulary with [LayrzPickersDayGridCell]
 /// so both grids read consistently, but renders as a filled/outlined
