@@ -147,38 +147,38 @@ class _DistinctShortPluralL10nDelegate extends LocalizationsDelegate<LayrzUiL10n
 }
 
 /// Pumps the real [LayrzDurationInput] at a desktop viewport and opens its
-/// desktop anchored panel, optionally overriding l10n via [delegate],
-/// seeding the fields via [value], and constraining the anchor field's own
-/// width via [anchorWidth].
+/// desktop [LayrzEndDrawer] (DESIGN-98), optionally overriding l10n via
+/// [delegate] and seeding the fields via [value].
 ///
 /// Deliberately routes through the real [LayrzDurationInput] rather than
-/// pumping [LayrzDurationPickerPanel] bare at the full viewport width, to
-/// reproduce the actual constraint the picker renders under in production.
-/// `LayrzDurationInput`'s anchored panel is `matchAnchor`
-/// (`duration_input.dart`), so the panel's real available width tracks
-/// whatever width the anchor field itself renders at -- there is no longer a
-/// fixed cap the picker can be tested against independent of the caller's
-/// own layout. [anchorWidth], when supplied, constrains the anchor (and so
-/// the panel) to that width via a [SizedBox]; when null, the anchor is left
-/// to size to the full 1200px viewport under [Center]. A pin test that skips
-/// this indirection risks proving a width, or a key selection, the picker
-/// never actually renders at.
-Future<void> _pumpDesktopAnchored(
+/// pumping [LayrzDurationPickerPanel] bare, to reproduce the actual
+/// constraint the picker renders under in production. **Unlike the previous
+/// `LayrzAnchoredPanel`/`matchAnchor` hosting, the drawer's width is fixed**
+/// (`LayrzEndDrawer.width`, 420px) and independent of the anchor field's own
+/// width entirely -- there is no `anchorWidth` parameter here any more,
+/// because varying the anchor's own width has no effect on the panel's
+/// available width post-DESIGN-98. See `duration_input.dart`'s class doc for
+/// the worked-out consequence: the drawer's fixed width always yields exactly
+/// one field per row, comfortably above `_kNarrowFieldWidth`, so the picker
+/// always reads the long-form labels through this real flow now -- the
+/// narrow, short-form-selecting width this group used to reach via a narrow
+/// `anchorWidth` is reproduced instead by [_pumpNarrowPanel] below, which
+/// pumps the bare panel at an explicit width the real drawer no longer
+/// produces but the panel's own layout logic must still handle correctly
+/// (e.g. a caller embedding it directly, or a future narrower drawer).
+Future<void> _pumpDesktopDrawer(
   WidgetTester tester, {
   LocalizationsDelegate<LayrzUiL10n>? delegate,
   Duration? value,
-  double? anchorWidth,
 }) async {
   tester.view.physicalSize = const Size(1200, 800);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  final anchor = LayrzDurationInput(labelText: 'Duration', value: value);
-
   await tester.pumpWidget(
     LayrzApp(
       home: Center(
-        child: anchorWidth == null ? anchor : SizedBox(width: anchorWidth, child: anchor),
+        child: LayrzDurationInput(labelText: 'Duration', value: value),
       ),
       theme: LayrzThemeData.light(),
       localizationsDelegates: delegate == null ? null : [delegate],
@@ -191,11 +191,47 @@ Future<void> _pumpDesktopAnchored(
   await tester.pumpAndSettle();
 }
 
-/// Convenience wrapper over [_pumpDesktopAnchored] that replaces every
-/// duration field's [LayrzNumberInput.suffixText] source key with [suffix],
-/// optionally constraining the anchor field's own width via [anchorWidth].
-Future<void> _pumpDesktopAnchoredWithSuffix(WidgetTester tester, {required String suffix, double? anchorWidth}) {
-  return _pumpDesktopAnchored(tester, delegate: _SyntheticSuffixL10nDelegate(suffix), anchorWidth: anchorWidth);
+/// Pumps the bare [LayrzDurationPickerPanel] constrained to [panelWidth] via
+/// a [SizedBox], for the narrow-width capacity cases the real desktop
+/// [LayrzEndDrawer] no longer produces (see [_pumpDesktopDrawer]'s own doc for
+/// why: the drawer is now a fixed 420px, always well above
+/// `_kNarrowFieldWidth`). This proves the panel's own layout logic still
+/// behaves correctly at a width the drawer does not currently exercise --
+/// the widget's contract does not depend on which host renders it.
+Future<void> _pumpNarrowPanel(
+  WidgetTester tester, {
+  required double panelWidth,
+  LocalizationsDelegate<LayrzUiL10n>? delegate,
+  Duration? value,
+}) async {
+  tester.view.physicalSize = const Size(1200, 800);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  await tester.pumpWidget(
+    LayrzApp(
+      home: Center(
+        child: SizedBox(
+          width: panelWidth,
+          child: LayrzDurationPickerPanel(
+            initialValue: value,
+            visibleUnits: _allUnits,
+            onChanged: (_) {},
+          ),
+        ),
+      ),
+      theme: LayrzThemeData.light(),
+      localizationsDelegates: delegate == null ? null : [delegate],
+      debugShowCheckedModeBanner: false,
+    ),
+  );
+  await tester.pump();
+}
+
+/// Convenience wrapper over [_pumpNarrowPanel] that replaces every duration
+/// field's [LayrzNumberInput.suffixText] source key with [suffix].
+Future<void> _pumpNarrowPanelWithSuffix(WidgetTester tester, {required String suffix, required double panelWidth}) {
+  return _pumpNarrowPanel(tester, panelWidth: panelWidth, delegate: _SyntheticSuffixL10nDelegate(suffix));
 }
 
 /// Pumps the real [LayrzDurationInput] at a compact (mobile) viewport and
@@ -759,23 +795,22 @@ void main() {
     // `_kNarrowFieldWidth` -- reads the short, count-aware
     // durationUnit*Short{Singular,Plural} keys instead, since real translations
     // of "seconds" are 8 characters in at least four major European languages.
-    // This split is now driven by the panel's own measured per-field width
-    // (see `duration_picker_panel.dart`'s class doc), not by a viewport
-    // breakpoint, so the "desktop" cases below constrain the anchor field's own
-    // width (`anchorWidth`) to force a narrow field through the real anchored
-    // flow -- `_pumpDesktopAnchored`'s default (a field spanning the full
-    // viewport) no longer reproduces a narrow field on its own now that
-    // `matchAnchor` removed the old fixed 480.0 cap. Asserted through the real
-    // end-to-end flow (tap -> sheet / anchored panel), with the actual default
-    // English keys — no l10n override — since this is about which *keys* each
-    // width reads, not about a synthetic width stress case.
+    //
+    // DESIGN-98 changed which width the REAL desktop flow actually produces:
+    // `LayrzDurationInput`'s desktop branch now opens a fixed 420px
+    // `LayrzEndDrawer` rather than a `matchAnchor` panel tracking the anchor
+    // field's own width. Per `duration_input.dart`'s class doc, that fixed
+    // width always yields exactly one field per row at ~372px per field --
+    // comfortably above `_kNarrowFieldWidth` (280.0) -- so the real desktop
+    // flow now ALWAYS reads the long-form keys, never the short ones. The
+    // short-form selection itself is not dead code (a caller could still
+    // embed `LayrzDurationPickerPanel` directly at a narrower width), so the
+    // narrow-width cases below move to `_pumpNarrowPanel`, which pumps the
+    // bare panel at an explicit width instead of through the drawer.
 
-    /// An anchor width narrow enough that `LayrzDurationPickerPanel` renders
-    /// one field per row at well under `_kNarrowFieldWidth` (280.0) per field
-    /// -- see the "narrow anchor field" width tests in
-    /// `duration_input_test.dart` for the same 320.0/240.0 style measurement
-    /// this is based on.
-    const narrowAnchorWidth = 260.0;
+    /// A panel width narrow enough that `LayrzDurationPickerPanel` renders
+    /// one field per row at well under `_kNarrowFieldWidth` (280.0) per field.
+    const narrowPanelWidth = 260.0;
 
     guardedTestWidgets('compact renders the long-form field label as suffixText, through the real sheet flow', (
       tester,
@@ -787,54 +822,71 @@ void main() {
     });
 
     guardedTestWidgets(
-      'a narrow desktop anchor renders the short-form abbreviated label as suffixText, through the real '
-      'anchored flow',
+      'the real desktop drawer flow ALWAYS renders the long-form label as suffixText (DESIGN-98: the '
+      'fixed 420px drawer never yields a field narrower than _kNarrowFieldWidth)',
       (tester) async {
-        await _pumpDesktopAnchored(tester, value: const Duration(days: 2), anchorWidth: narrowAnchorWidth);
+        await _pumpDesktopDrawer(tester, value: const Duration(days: 2));
+
+        final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+        expect(
+          day.suffixText,
+          'Days',
+          reason: 'the drawer\'s fixed 420px width leaves ~372px per field -- above _kNarrowFieldWidth',
+        );
+      },
+    );
+
+    guardedTestWidgets(
+      'a narrow embedded panel (below _kNarrowFieldWidth per field) renders the short-form abbreviated label',
+      (tester) async {
+        await _pumpNarrowPanel(tester, panelWidth: narrowPanelWidth, value: const Duration(days: 2));
 
         final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
         expect(day.suffixText, 'd', reason: 'a narrow field has only ~7 characters of headroom — abbreviates');
       },
     );
 
-    guardedTestWidgets('a narrow desktop anchor picks the short-form SINGULAR key when the field count is exactly 1', (
-      tester,
-    ) async {
-      await _pumpDesktopAnchored(
-        tester,
-        delegate: const _DistinctShortPluralL10nDelegate(),
-        value: const Duration(days: 1, hours: 1, minutes: 1, seconds: 1),
-        anchorWidth: narrowAnchorWidth,
-      );
+    guardedTestWidgets(
+      'a narrow embedded panel picks the short-form SINGULAR key when the field count is exactly 1',
+      (tester) async {
+        await _pumpNarrowPanel(
+          tester,
+          panelWidth: narrowPanelWidth,
+          delegate: const _DistinctShortPluralL10nDelegate(),
+          value: const Duration(days: 1, hours: 1, minutes: 1, seconds: 1),
+        );
 
-      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
-      final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
-      final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
-      final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
-      expect(day.suffixText, _DistinctShortPluralL10n.singular);
-      expect(hour.suffixText, _DistinctShortPluralL10n.singular);
-      expect(minute.suffixText, _DistinctShortPluralL10n.singular);
-      expect(second.suffixText, _DistinctShortPluralL10n.singular);
-    });
+        final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+        final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
+        final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
+        final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
+        expect(day.suffixText, _DistinctShortPluralL10n.singular);
+        expect(hour.suffixText, _DistinctShortPluralL10n.singular);
+        expect(minute.suffixText, _DistinctShortPluralL10n.singular);
+        expect(second.suffixText, _DistinctShortPluralL10n.singular);
+      },
+    );
 
-    guardedTestWidgets('a narrow desktop anchor picks the short-form PLURAL key when the field count is 0 or greater '
-        'than 1', (tester) async {
-      await _pumpDesktopAnchored(
-        tester,
-        delegate: const _DistinctShortPluralL10nDelegate(),
-        value: const Duration(days: 2, hours: 0, minutes: 5, seconds: 0),
-        anchorWidth: narrowAnchorWidth,
-      );
+    guardedTestWidgets(
+      'a narrow embedded panel picks the short-form PLURAL key when the field count is 0 or greater than 1',
+      (tester) async {
+        await _pumpNarrowPanel(
+          tester,
+          panelWidth: narrowPanelWidth,
+          delegate: const _DistinctShortPluralL10nDelegate(),
+          value: const Duration(days: 2, hours: 0, minutes: 5, seconds: 0),
+        );
 
-      final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
-      final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
-      final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
-      final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
-      expect(day.suffixText, _DistinctShortPluralL10n.plural, reason: '2 days is plural');
-      expect(hour.suffixText, _DistinctShortPluralL10n.plural, reason: '0 hours is plural');
-      expect(minute.suffixText, _DistinctShortPluralL10n.plural, reason: '5 minutes is plural');
-      expect(second.suffixText, _DistinctShortPluralL10n.plural, reason: '0 seconds is plural');
-    });
+        final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
+        final hour = tester.widget<LayrzNumberInput>(_numberInputUnder(_hourKey));
+        final minute = tester.widget<LayrzNumberInput>(_numberInputUnder(_minuteKey));
+        final second = tester.widget<LayrzNumberInput>(_numberInputUnder(_secondKey));
+        expect(day.suffixText, _DistinctShortPluralL10n.plural, reason: '2 days is plural');
+        expect(hour.suffixText, _DistinctShortPluralL10n.plural, reason: '0 hours is plural');
+        expect(minute.suffixText, _DistinctShortPluralL10n.plural, reason: '5 minutes is plural');
+        expect(second.suffixText, _DistinctShortPluralL10n.plural, reason: '0 seconds is plural');
+      },
+    );
 
     guardedTestWidgets('compact fits an 8+ character REAL locale word — the premise the decision rests on', (
       tester,
@@ -863,13 +915,22 @@ void main() {
     // RE-DERIVED for `matchAnchor` (previously pinned to a fixed 227px desktop
     // panel width -- see `duration_picker_panel.dart`'s class doc for why that
     // width no longer exists as a constant). The desktop case below now fixes
-    // a concrete `anchorWidth` instead: since the panel's width is
+    // a concrete panel width instead: since the panel's width is
     // caller-determined, the "measured safe boundary" is re-expressed as "at
-    // this specific, still-realistic anchor width, a 7-char label fits and an
+    // this specific, still-realistic width, a 7-char label fits and an
     // 8-char one overflows" -- the same underlying claim (a real capacity
     // ceiling exists, which is why the band-dependent key selection above
     // reads the short keys below `_kNarrowFieldWidth`), reproduced against the
     // new width mechanism.
+    //
+    // RE-DERIVED A THIRD TIME (DESIGN-98): the real desktop `LayrzDurationInput`
+    // flow no longer produces this width at all -- its `LayrzEndDrawer` is a
+    // fixed 420px, always well above `_kNarrowFieldWidth` (see
+    // `duration_input.dart`'s class doc). The desktop cases below now pump
+    // `LayrzDurationPickerPanel` bare via `_pumpNarrowPanel`, at the same
+    // measured `narrowAnchorWidth`, to prove the panel's own layout capacity
+    // ceiling still holds independent of which host renders it -- the widget's
+    // contract does not depend on the drawer being the only caller.
     //
     // RE-DERIVED A SECOND TIME (2026-08-26) after `LayrzTextTheme.body.fontSize`
     // dropped 16 -> 14 and `_InputComfortableSpec` lost its `isCompact` branch
@@ -898,9 +959,9 @@ void main() {
     // stays rather than being dropped now that English clears easily.
     //
     // If this trips again: re-run the same bisection (temporary probes,
-    // deleted) against `_pumpDesktopAnchoredWithSuffix` for a 7-char
+    // deleted) against `_pumpNarrowPanelWithSuffix` for a 7-char
     // synthetic suffix and the real 8-char words above, at a spread of
-    // `anchorWidth` values bracketing the current `narrowAnchorWidth`. If the
+    // `panelWidth` values bracketing the current `narrowAnchorWidth`. If the
     // 7-char boundary and the 8-char boundary have drifted apart (capacity
     // widened), re-center `narrowAnchorWidth` in the new window the same way.
     // If capacity ever grows enough that even the real 8-char translations
@@ -930,16 +991,15 @@ void main() {
     );
 
     guardedTestWidgets(
-      'a 7-char synthetic suffix (the measured safe boundary) fits the real desktop anchored-panel flow at a '
-      'narrow anchor width',
+      'a 7-char synthetic suffix (the measured safe boundary) fits a narrow embedded panel',
       (tester) async {
         // 7 chars, not the English default.
-        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzz', anchorWidth: narrowAnchorWidth);
+        await _pumpNarrowPanelWithSuffix(tester, suffix: 'Zzzzzzz', panelWidth: narrowAnchorWidth);
 
         expect(
           tester.takeException(),
           isNull,
-          reason: '7-char labels must fit one field per row at the narrow anchor\'s real, measured width',
+          reason: '7-char labels must fit one field per row at the narrow panel\'s real, measured width',
         );
         final dayRect = tester.getRect(find.byKey(_dayKey));
         final hourRect = tester.getRect(find.byKey(_hourKey));
@@ -948,20 +1008,20 @@ void main() {
     );
 
     guardedTestWidgets(
-      'CAPACITY TRIP-WIRE: a narrow desktop anchor still cannot take an 8-char suffix — this is WHY the short '
+      'CAPACITY TRIP-WIRE: a narrow embedded panel still cannot take an 8-char suffix — this is WHY the short '
       'keys are used there, not merely a fact about it',
       (tester) async {
         // 8 chars, one over the safe boundary.
-        await _pumpDesktopAnchoredWithSuffix(tester, suffix: 'Zzzzzzzz', anchorWidth: narrowAnchorWidth);
+        await _pumpNarrowPanelWithSuffix(tester, suffix: 'Zzzzzzzz', panelWidth: narrowAnchorWidth);
 
-        // This assertion is deliberately inverted: it pins the narrow-anchor
+        // This assertion is deliberately inverted: it pins the narrow-panel
         // layout's character capacity, which has not changed in kind -- only
-        // in which width exhibits it, now that the panel's width is
-        // caller-determined instead of built-in. What changed is that a
-        // desktop field narrower than `_kNarrowFieldWidth` no longer *feeds*
-        // this layout an 8-character string — it now reads the short
-        // durationUnit*Short{Singular,Plural} keys precisely because this
-        // capacity ceiling exists.
+        // in which width exhibits it, and (DESIGN-98) in which caller reaches
+        // that width -- the real desktop drawer no longer does, see the group
+        // doc comment above. What changed is that a field narrower than
+        // `_kNarrowFieldWidth` no longer *feeds* this layout an 8-character
+        // string — it now reads the short durationUnit*Short{Singular,Plural}
+        // keys precisely because this capacity ceiling exists.
         //
         // If this ever starts passing at `narrowAnchorWidth`, see the group
         // doc comment above ("If this trips again") for the re-derivation
@@ -970,7 +1030,7 @@ void main() {
           tester.takeException(),
           isNotNull,
           reason:
-              'a $narrowAnchorWidth-wide anchor\'s layout capacity currently fits a real 7-char label but not a '
+              'a $narrowAnchorWidth-wide panel\'s layout capacity currently fits a real 7-char label but not a '
               'real 8-char one (e.g. "Segundos"); if this starts passing, the capacity grew and the short-key '
               'decision above should be revisited',
         );

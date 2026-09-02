@@ -1155,141 +1155,16 @@ void main() {
       );
     });
 
-    // Shell-parity regressions: `LayrzDurationInput` adopts the same panel
-    // chrome `LayrzSelectInput` already has (`coverAnchor: true` plus a
-    // primary/danger `LayrzAnchoredPanelBorder`), while its width policy
-    // (`contentSized`, 280.0-480.0) and 400.0 height cap are deliberately left
-    // unchanged -- see the class doc on `_LayrzDurationInputState.build`.
-    guardedTestWidgets('the panel covers the field -- its rect starts at the anchor\'s own top-left corner', (
+    // DESIGN-98: `LayrzDurationInput` moved off `LayrzAnchoredPanel` onto
+    // `LayrzEndDrawer` with a Cancel/Save action row -- see the class doc on
+    // `_LayrzDurationInputState.build`. The old `matchAnchor`/`coverAnchor`
+    // rect-tracking, primary/danger `LayrzAnchoredPanelBorder`, and
+    // width-follows-the-field behavior these tests used to assert are gone:
+    // the drawer is a fixed-width (`LayrzEndDrawer.width`, 420px) right-edge
+    // panel independent of the anchor field's own rect or width.
+    guardedTestWidgets('the drawer opens with a fixed 420px width, independent of the anchor field\'s own width', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(),
-      );
-
-      // `RawMenuAnchor` measures its `anchorRect` from the entire widget
-      // `_buildAnchor` returns -- the outermost `GestureDetector` wrapping the
-      // label, bordered field row, and footer -- not from `LayrzInputChrome`
-      // alone. `LayrzInputChrome`'s own rect sits inset from that by the
-      // field row's own border width (`tokens.border.base`, painted with the
-      // default inside `strokeAlign` in `_buildFieldRow`), so the anchor
-      // widget itself is the correct rect to compare against.
-      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelRect = tester.getRect(find.byType(LayrzDurationPickerPanel));
-
-      // `coverAnchor: true` starts the panel's top-left exactly at the
-      // anchor's own top-left, clamped into overlay bounds -- mirroring
-      // `LayrzSelectInput`'s DESIGN-145 defect-1 regression.
-      expect(panelRect.top, equals(anchorRect.top));
-      expect(panelRect.left, equals(anchorRect.left));
-    });
-
-    guardedTestWidgets('the panel is bordered in the primary color when the field has no errors', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      late LayrzTokens tokens;
-
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) {
-            tokens = context.tokens;
-            return LayrzDurationInput(labelText: 'Duration');
-          },
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
-      expect(decoration.border, isNotNull);
-      expect((decoration.border as Border).top.color, equals(tokens.colors.primary));
-      expect((decoration.border as Border).top.width, equals(tokens.border.base));
-    });
-
-    guardedTestWidgets('the panel is bordered in the danger color when the field has errors', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      late LayrzTokens tokens;
-
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) {
-            tokens = context.tokens;
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              errors: const ['Required'],
-            );
-          },
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
-      expect(decoration.border, isNotNull);
-      expect((decoration.border as Border).top.color, equals(tokens.colors.danger));
-    });
-
-    // Device-reported defect fix, reversing an earlier decision: the panel used to
-    // stay `contentSized` within a fixed 280.0-480.0 band regardless of the anchor
-    // field's own width, so on a wide field it visually occupied only a small
-    // fraction of it. `matchAnchor` (mirroring `LayrzSelectInput`) makes the panel
-    // span the field's actual rendered width instead -- see the class doc on
-    // `_LayrzDurationInputState.build` for the full reasoning.
-    guardedTestWidgets('the panel spans the anchor field\'s full width (matchAnchor), not a fixed 280.0-480.0 band', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(labelText: 'Duration'),
-      );
-
-      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-
-      expect(
-        panelWidth,
-        greaterThan(480.0),
-        reason: 'the old contentSized cap must no longer bound the panel on a wide field',
-      );
-      // The anchor here spans the full 1200px overlay, so LayrzAnchoredPanelLayoutDelegate's
-      // own overlay-bounds clamp (overlaySize.width - 2 * sp2) legitimately trims a few
-      // pixels off matchAnchor's raw anchorRect.width -- a wide tolerance distinguishes that
-      // expected clamp from the old, much narrower 280.0-480.0 contentSized cap this test
-      // guards against regressing to.
-      expect(
-        panelWidth,
-        closeTo(anchorRect.width, 25.0),
-        reason: 'matchAnchor makes the panel width track the anchor field\'s own rendered width',
-      );
-    });
-
-    guardedTestWidgets('a narrow anchor field yields a narrow matchAnchor panel', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1307,33 +1182,11 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-      expect(panelWidth, closeTo(320.0, 1.0));
+      final drawerWidth = tester.getSize(find.byType(LayrzDurationPickerPanel)).width;
+      expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
     });
 
-    guardedTestWidgets('a wide anchor field yields a matchAnchor panel wider than the old 480.0 cap', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        Center(
-          child: SizedBox(
-            width: 900.0,
-            child: LayrzDurationInput(labelText: 'Duration'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-      expect(panelWidth, closeTo(900.0, 1.0));
-    });
-
-    guardedTestWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {
+    guardedTestWidgets('the drawer carries a Cancel and a Save action', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1346,8 +1199,96 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final panelHeight = tester.getSize(find.byType(SingleChildScrollView)).height;
-      expect(panelHeight, lessThanOrEqualTo(400.0));
+      expect(findButtonLabel('Cancel'), findsOneWidget);
+      expect(findButtonLabel('Save'), findsOneWidget);
+    });
+
+    guardedTestWidgets('pressing Cancel reverts live field edits back to the value in effect when the drawer opened', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 1),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(hours: 1, days: 1), reason: 'the live edit must still report immediately');
+
+      await tester.tap(findButtonLabel('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(
+        changedValue,
+        const Duration(hours: 1),
+        reason: 'Cancel must revert the live edit back to the drawer\'s original opening value',
+      );
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Cancel closes the drawer');
+    });
+
+    guardedTestWidgets('pressing Save closes the drawer, keeping whatever the live edits already reported', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 1),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(
+        changedValue,
+        const Duration(hours: 1, days: 1),
+        reason: 'Save has nothing to commit -- the edit already reported live',
+      );
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Save closes the drawer');
     });
   });
 
@@ -1663,17 +1604,4 @@ void main() {
       },
     );
   });
-}
-
-/// Locates the `Container` [LayrzAnchoredPanel] itself builds around its
-/// scroll viewport -- the one carrying `sf1`/shadow/radius and, when set, the
-/// border -- identified structurally as the closest `Container` ancestor of
-/// the panel's [SingleChildScrollView]. Mirrors the identical helper in
-/// `test/overlays/anchored_panel_border_test.dart`; duplicated locally rather
-/// than shared, since these two test files own disjoint concerns.
-Container _panelDecoratedBox(WidgetTester tester) {
-  final scrollViewElement = tester.element(find.byType(SingleChildScrollView));
-  final ancestor = scrollViewElement.findAncestorWidgetOfExactType<Container>();
-  expect(ancestor, isNotNull, reason: 'LayrzAnchoredPanel must wrap its scroll viewport in a Container.');
-  return ancestor!;
 }

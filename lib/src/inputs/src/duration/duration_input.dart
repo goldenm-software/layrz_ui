@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -81,8 +81,38 @@ String _formatUnitPart(LayrzUiL10n l10n, LayrzDurationFormat format, LayrzDurati
 ///
 /// [LayrzDurationInput] captures a [Duration] value through a configurable picker
 /// showing day, hour, minute, and second fields. The picker adapts to screen size:
-/// - **Desktop/wide** (>= 960px, `!context.isCompact`): anchored panel positioned below the field
+/// - **Desktop/wide** (>= 960px, `!context.isCompact`): [LayrzEndDrawer] with a
+///   pinned Cancel/Save action row (DESIGN-98)
 /// - **Mobile/compact** (< 960px, `context.isCompact`): bottom sheet covering the lower screen
+///
+/// **DESIGN-98: moved from the anchored panel to [LayrzEndDrawer].** The
+/// maintainer reported the anchored overlay "kinda weird" for this field after
+/// live usage. Unlike the other seven DESIGN-98 pickers, this one's fields
+/// already reported through [onChanged] on every edit with no draft state to
+/// buffer -- see [_LayrzDurationInputState._openDesktopDrawer]'s own doc for
+/// why that live contract is kept unchanged, with Save simply closing the
+/// drawer and Cancel reverting the live edits back to the value in effect when
+/// the drawer opened.
+///
+/// **The fixed 420px drawer width ([LayrzEndDrawer.width]) is narrower than
+/// this panel used to render on a wide field, and now forces one field per
+/// row.** Before DESIGN-98, the panel's width tracked the anchor field's own
+/// rendered width (`LayrzAnchoredPanelWidthPolicy.matchAnchor`), which on a
+/// wide field could exceed 900px and comfortably fit all four unit fields on
+/// one row using the long-form labels (`_kNarrowFieldWidth`, 280px per
+/// field). Inside the drawer, [LayrzDurationPickerPanel]'s own
+/// `EdgeInsets.all(sp2)` padding (20px) leaves 372px of measured width for
+/// its [LayoutBuilder]; solving `_kFieldMinWidth`'s own
+/// `n * 200 + (n-1) * sp1 <= 372` yields `n = 1` -- so with all four default
+/// units visible, the panel now stacks day/hour/minute/second into four
+/// single-field rows instead of one shared row, and every field renders at
+/// its own full 372px width, comfortably above `_kNarrowFieldWidth` (280px),
+/// so the **long-form** unit labels stay reachable (unlike
+/// [LayrzTimeInput]'s fields panel, whose narrower per-field share inside the
+/// same 420px drawer makes its own short-form labels permanently the only
+/// option -- see that widget's class doc). The user-visible change here is a
+/// taller, single-column picker rather than the previous compact grid, not a
+/// loss of the long-form labels.
 ///
 /// **Unit bounds and capping:**
 /// - **Day**: no upper bound (0 to infinity)
@@ -221,7 +251,6 @@ class LayrzDurationInput extends StatefulWidget {
 class _LayrzDurationInputState extends State<LayrzDurationInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
   Duration? _lastValue;
 
   @override
@@ -371,6 +400,85 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       widget.onChanged?.call(resetValue);
       _updateSummary();
     }
+  }
+
+  /// Opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] on desktop (DESIGN-98),
+  /// replacing the previous [LayrzAnchoredPanel] hosting.
+  ///
+  /// **Cancel/Save is additive here, not a live-to-draft rewrite.** Unlike the
+  /// other seven DESIGN-98 pickers, this panel's fields have always reported
+  /// through [LayrzDurationInput.onChanged] on every keystroke/+/- tap, with no
+  /// draft state of its own to commit later (see the class doc's "Unsupported
+  /// units" section neighbor, [LayrzDurationPickerPanel]'s own `onChanged` doc).
+  /// Changing that live-report contract to a buffered draft would be a real
+  /// breaking change for existing callers relying on "every edit reports
+  /// immediately" -- so [onChanged] below keeps firing live, completely
+  /// unchanged. **Save** therefore has nothing left to commit; it simply closes
+  /// the drawer. **Cancel** is the one action that does something the live
+  /// contract could not already do on its own: it restores [originalValue] (the
+  /// value in effect when the drawer opened) via [onChanged], discarding
+  /// whatever live edits happened since, then closes -- mirroring the
+  /// discard-the-draft contract every other DESIGN-98 picker's Cancel has, even
+  /// though this one is reverting already-reported live values rather than an
+  /// unreported draft.
+  ///
+  /// [originalValue] is captured once, by the caller, before the drawer opens
+  /// (see `build`) rather than re-read from `widget.value` inside this method:
+  /// `widget.value` may already have moved by the time Cancel is pressed, since
+  /// every live edit reports through `onChanged` and a controlled caller
+  /// typically feeds that straight back into `value`.
+  Future<void> _openDesktopDrawer({required Duration? originalValue}) async {
+    if (widget.disabled) return;
+
+    void handleCancel() {
+      widget.onChanged?.call(originalValue);
+      if (mounted) {
+        _updateSummary();
+      }
+      Navigator.pop(context);
+    }
+
+    await LayrzEndDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even with
+      // actions present -- mirrors every other DESIGN-98 picker's identical
+      // override of LayrzEndDrawer.show's actions-present-infers-false
+      // default. See `LayrzDateRangeInput._openDesktopDrawer`'s doc for the
+      // full rationale.
+      canDismiss: true,
+      builder: (context) => LayrzDurationPickerPanel(
+        initialValue: widget.value,
+        visibleUnits: widget.visibleUnits,
+        // Field edits (typing, +/- taps) report the new value and update the
+        // anchor's summary live -- unchanged from the pre-DESIGN-98 contract,
+        // see this method's own doc comment for why that stays live rather
+        // than becoming a buffered draft.
+        onChanged: (duration) {
+          widget.onChanged?.call(duration);
+          _updateSummary();
+        },
+        // Reset stays a deliberate "clear and I'm done" gesture distinct from
+        // an in-progress field edit -- it reports the zeroed duration and
+        // closes the drawer, exactly like it closed the anchored panel before.
+        onReset: (duration) {
+          widget.onChanged?.call(duration);
+          _updateSummary();
+          Navigator.pop(context);
+        },
+      ),
+      actions: [
+        LayrzButton.cancel(
+          labelText: context.l10n.actionCancel,
+          onTap: handleCancel,
+          style: LayrzButtonStyle.text,
+        ),
+        LayrzButton.save(
+          labelText: context.l10n.actionSave,
+          onTap: () => Navigator.pop(context),
+        ),
+      ],
+    );
   }
 
   /// Builds the clock-style icon that identifies this field as a duration picker.
@@ -657,14 +765,6 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     );
   }
 
-  /// Builds the anchor widget for desktop anchored panel.
-  Widget _buildAnchor(BuildContext context, MenuController controller) {
-    return _buildInteractiveField(
-      context: context,
-      onTap: widget.disabled ? null : controller.open,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.value != _lastValue) {
@@ -682,68 +782,15 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         onTap: widget.disabled ? null : _openMobileSurface,
       );
     } else {
-      // Desktop: return an anchored panel that covers the field itself, mirroring
-      // `LayrzSelectInput`'s "elevated field" illusion (DESIGN-145) -- see the
-      // `border` argument below for why. `widthPolicy: matchAnchor` -- the panel
-      // spans the field's full rendered width, exactly like `LayrzSelectInput`.
-      //
-      // This REVERSES an earlier decision (device-tested and reported by the
-      // maintainer): the panel previously stayed `contentSized` within
-      // 280.0-480.0 on the reasoning that `LayrzDurationPickerPanel`'s
-      // two-column grid depended on that exact width range (the measured
-      // 227px/7-character constraint documented on that widget's class doc).
-      // On a wide anchor field, `contentSized` made the panel occupy only a
-      // small fraction of the field -- visually wrong, and rejected on sight.
-      // `LayrzDurationPickerPanel` no longer depends on a capped width: its own
-      // per-unit fields now carry a minimum width and wrap to additional rows
-      // via a `LayoutBuilder` that reads the panel's own measured width,
-      // instead of the old fixed two-column `LayrzRow`/`LayrzCol` grid, so
-      // they stay legible at whatever width `matchAnchor` actually provides --
-      // see that widget's class doc for the new mechanism.
-      final tokens = context.tokens;
-      final hasErrors = widget.errors.isNotEmpty;
-
-      return LayrzAnchoredPanel(
-        widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-        maxHeight: 400.0,
-        coverAnchor: true,
-        childFocusNode: _focusNode,
-        builder: (context, controller) {
-          _panelController = controller;
-          return _buildAnchor(context, controller);
-        },
-        // Painted by the panel around its own capped viewport, not by this
-        // widget around its content -- see `LayrzAnchoredPanelBorder`'s own doc
-        // comment for why that distinction matters. Mirrors
-        // `select_input.dart`'s identical border, colored the same way
-        // (primary, or danger when the field has errors).
-        border: LayrzAnchoredPanelBorder(
-          color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-          width: tokens.border.base,
-        ),
-        child: LayrzDurationPickerPanel(
-          initialValue: widget.value,
-          visibleUnits: widget.visibleUnits,
-          // Field edits (typing, +/- taps) report the new value and update the
-          // anchor's summary, but deliberately do NOT close the panel -- a user
-          // composing a duration across multiple fields (day, then hour, then
-          // minute) needs the panel to stay open between edits. Only `onReset`
-          // below closes it; see that callback's wiring for why.
-          onChanged: (duration) {
-            widget.onChanged?.call(duration);
-            _updateSummary();
-          },
-          // Reset is the one action in the panel meant to close it: it is a
-          // deliberate "clear and I'm done" gesture, unlike an in-progress field
-          // edit. Wiring this separately from `onChanged` above is what stops
-          // every +/- tap and keystroke from closing the panel too -- they used
-          // to share one callback that always closed it.
-          onReset: (duration) {
-            widget.onChanged?.call(duration);
-            _updateSummary();
-            _panelController.close();
-          },
-        ),
+      // Desktop: opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] with a
+      // Cancel/Save action row (DESIGN-98) -- replacing the previous
+      // `LayrzAnchoredPanel` hosting. See [_openDesktopDrawer]'s own doc
+      // comment for why Save has nothing left to commit (the field already
+      // reports live) while Cancel still has real, distinct work to do
+      // (reverting those live reports back to the drawer's opening value).
+      return _buildInteractiveField(
+        context: context,
+        onTap: widget.disabled ? null : () => _openDesktopDrawer(originalValue: widget.value),
       );
     }
   }
