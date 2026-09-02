@@ -3,22 +3,37 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'date_surface.dart';
 
 /// A Material-free single-date input field.
 ///
-/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzDateSurface]
-/// through [LayrzAnchoredPanel] on desktop (`>= 960px`) or [LayrzBottomSheet]
-/// below `isCompact`, mirroring `LayrzDurationInput`'s structure — see that
-/// widget's file for the fully-commented template this follows.
+/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzDateSurface] in
+/// [LayrzEndDrawer] on desktop (`>= 960px`) or [LayrzBottomSheet] below
+/// `isCompact`.
 ///
-/// **Commit on tap**: the surface reports the tapped date via [onChanged]
-/// and the panel/sheet closes on that same gesture — there is no Save
-/// footer for this widget.
+/// **DESIGN-98: no longer commits on tap.** Before DESIGN-98 this widget
+/// opened [LayrzDateSurface] through [LayrzAnchoredPanel] and closed
+/// immediately on the tapped date, with no Save footer at all — see decision
+/// D75 (`engineering/milestone-4.md`) for that original "one atomic value,
+/// no Save boundary" ruling. The maintainer's DESIGN-98 instruction is
+/// explicit and supersedes it: *"All of the date related inputs ... must use
+/// the LayrzEndDrawer with actions."* [onChanged] now fires only once, on
+/// Save, with the drafted date; a tap alone no longer commits anything, and
+/// Cancel discards the draft. See [LayrzDateSurfaceState]'s class doc for the
+/// surface-side half of this.
+///
+/// **No Clear action.** A single-date field's only content is the one value
+/// being picked — clearing it back to "nothing selected" is not a
+/// draft-editing operation the way it is for a range (there is no partial
+/// selection to reset to empty independently of Cancel), and Cancel already
+/// covers "back out without changing anything." A Clear button here would
+/// duplicate Cancel's own effect from the user's point of view while adding
+/// a second, harder-to-justify affordance, so this widget's `actions` row is
+/// Cancel/Save only.
 ///
 /// **Preserves `TZDateTime` zones**: [value] and every date [onChanged]
 /// reports are constructed via `sameZoneDate`, so a caller passing a
@@ -134,7 +149,6 @@ class LayrzDateInput extends StatefulWidget {
 class _LayrzDateInputState extends State<LayrzDateInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   /// The `(value, pattern, formatter)` combination the summary text was
   /// last computed for.
@@ -160,14 +174,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   /// own, with no selection required.
   (DateTime?, String, String Function(DateTime)?)? _lastValue;
 
-  /// Bumped by [LayrzAnchoredPanel.onOpen] on every desktop panel open, and
-  /// used as [LayrzDateSurface]'s [Key].
-  ///
-  /// **Involuntary-close fix.** `LayrzAnchoredPanel` takes its `child`
-  /// eagerly (`anchored_panel.dart:72`) and never recreates it per open, so
-  /// [LayrzDateSurface]'s `State` — specifically its `_displayedMonth`,
-  /// which only re-seeds in `didUpdateWidget` when `widget.value` itself
-  /// changes — would otherwise survive a tap-outside/Escape close unchanged.
   @override
   void initState() {
     super.initState();
@@ -217,24 +223,102 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
 
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: false);
+    }
+
     await LayrzBottomSheet.show<void>(
       context,
+      semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzDateSurface(
+        key: surfaceKey,
         value: widget.value,
         firstDay: widget.firstDay,
         lastDay: widget.lastDay,
         disabledDays: widget.disabledDays,
         firstDayOfWeek: widget.firstDayOfWeek,
         showWeekNumbers: widget.showWeekNumbers,
+        onDraftChanged: syncDraftState,
         onDateSelected: (date) {
           _handleSelected(date);
           Navigator.pop(context);
         },
+        onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
       initialSize: 0.6,
       maxSize: 0.9,
       snapSizes: const [0.6, 0.9],
     );
+
+    draftState.dispose();
+  }
+
+  /// Opens [LayrzDateSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98). This surface has no Clear affordance (see this
+  /// widget's own class doc), so `hasSelection` is always `false`.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzDateSurfaceState>();
+
+    void syncDraftState() {
+      final state = surfaceKey.currentState;
+      if (state == null) return;
+      draftState.value = (canSave: state.canSave, hasSelection: false);
+    }
+
+    await LayrzEndDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
+      builder: (context) => LayrzDateSurface(
+        key: surfaceKey,
+        value: widget.value,
+        firstDay: widget.firstDay,
+        lastDay: widget.lastDay,
+        disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
+        onDraftChanged: syncDraftState,
+        onDateSelected: (date) {
+          _handleSelected(date);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
+    );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
@@ -298,37 +382,6 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 420.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(
-          context: context,
-          onTap: widget.disabled ? null : controller.open,
-        );
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      child: LayrzDateSurface(
-        value: widget.value,
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        onDateSelected: (date) {
-          _handleSelected(date);
-          _panelController.close();
-        },
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }

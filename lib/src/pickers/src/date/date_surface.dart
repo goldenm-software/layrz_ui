@@ -7,18 +7,22 @@ import 'package:layrz_ui/src/formatting/formatting.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_inline_footer.dart';
 
 /// The desktop/mobile-shared surface content for [LayrzDateInput]: a month
 /// navigation header above a single [LayrzPickersDayGrid] page. Composed by
-/// [LayrzDateInput] inside either [LayrzAnchoredPanel] (desktop) or
-/// [LayrzBottomSheet] (compact) — see that widget's own doc for the
-/// surface-selection rule (D52/D70).
+/// [LayrzDateInput] inside [LayrzEndDrawer] (desktop) or [LayrzBottomSheet]
+/// (compact).
 ///
-/// **Commit on tap.** [onDateSelected] fires once, with the tapped date, and
-/// [LayrzDateInput] is responsible for closing whichever surface hosts this
-/// widget immediately afterward — this widget itself has no notion of
-/// "close". There is no Cancel/Save footer: single-valued widgets in this
-/// batch commit on the one atomic tap.
+/// **DESIGN-98: no longer commits on tap.** Before DESIGN-98, tapping a day
+/// fired [onDateSelected] immediately and [LayrzDateInput] closed the
+/// hosting surface on that same gesture. The maintainer's instruction moved
+/// every date-related input onto [LayrzEndDrawer] **with actions**,
+/// including this one — a tap now only updates this surface's own in-progress
+/// [_draft]; nothing is reported or closed until Save. See
+/// [LayrzDateSurfaceState]'s class doc for the full Cancel/Save contract and
+/// [LayrzDateInput]'s own doc for why this reverses a previously-settled
+/// decision (D75, `engineering/milestone-4.md`).
 ///
 /// **Owns its own month-navigation header.** Unlike
 /// [LayrzPickersMonthGrid] — which renders its year-navigation chrome
@@ -50,8 +54,33 @@ class LayrzDateSurface extends StatefulWidget {
   /// Whether the ISO week-number gutter renders.
   final bool showWeekNumbers;
 
-  /// Called with the tapped date. Never called for a disabled cell.
+  /// Called with the drafted date when the user presses Save. Never called
+  /// with a disabled or unselected value.
   final ValueChanged<DateTime> onDateSelected;
+
+  /// Called when the user presses Cancel or otherwise dismisses the surface
+  /// involuntarily. The caller is responsible for actually closing the
+  /// hosting surface; this widget only reports the intent. `null` on the
+  /// mobile [LayrzBottomSheet] path, which has no Cancel action of its own
+  /// (tap-outside/Escape/back dismiss it directly).
+  final VoidCallback? onCancel;
+
+  /// Called on every draft mutation (a day tap), so [LayrzDateInput] can
+  /// refresh the `actions` it builds outside this surface. Ignored when
+  /// [showInlineFooter] is `true`.
+  final VoidCallback? onDraftChanged;
+
+  /// Whether this surface renders its own Cancel/Save footer inline, as the
+  /// last child of its scrolling body.
+  ///
+  /// Defaults to `false` — unlike the five range-shaped surfaces, this
+  /// widget has no pre-DESIGN-98 mobile footer to preserve (it committed on
+  /// tap everywhere), so both the desktop [LayrzEndDrawer] and mobile
+  /// [LayrzBottomSheet] paths now render Cancel/Save the same way: via
+  /// `actions`, built by [LayrzDateInput]. See
+  /// [LayrzDateRangeSurface.showInlineFooter]'s doc for the general
+  /// mechanism this reuses.
+  final bool showInlineFooter;
 
   /// Creates a new [LayrzDateSurface].
   const LayrzDateSurface({
@@ -63,19 +92,37 @@ class LayrzDateSurface extends StatefulWidget {
     this.firstDayOfWeek = DateTime.monday,
     this.showWeekNumbers = true,
     required this.onDateSelected,
+    this.onCancel,
+    this.onDraftChanged,
+    this.showInlineFooter = false,
   });
 
   @override
-  State<LayrzDateSurface> createState() => _LayrzDateSurfaceState();
+  State<LayrzDateSurface> createState() => LayrzDateSurfaceState();
 }
 
-class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
+/// State for [LayrzDateSurface].
+///
+/// **Public, not library-private, so [LayrzDateInput] can reach it through a
+/// [GlobalKey]** (DESIGN-98) — see [LayrzDateRangeSurfaceState]'s identical
+/// class doc for the full rationale. [_draft] holds the tapped-but-unsaved
+/// date; [canSave] and [save] are the surface of that draft [LayrzDateInput]
+/// reads and drives from its `actions` row.
+class LayrzDateSurfaceState extends State<LayrzDateSurface> {
   late DateTime _displayedMonth;
+
+  /// The tapped-but-unsaved date. `null` until the user taps a day, mirroring
+  /// every other picker surface's "never silently default" discipline —
+  /// [LayrzDateInput] renders Save disabled until this is set.
+  DateTime? _draft;
 
   @override
   void initState() {
     super.initState();
     _seed();
+    // Syncs the caller's external draft-state mirror immediately -- see
+    // LayrzDateRangeSurfaceState's identical initState comment for why.
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
   @override
@@ -84,9 +131,6 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
     // Involuntary-close discipline: re-seed from `widget.value` on every
     // incoming update, not only in `initState` -- see the implementation
     // plan's "Involuntary close" section for why this is load-bearing.
-    // `LayrzAnchoredPanel` constructs `child` eagerly and does not recreate
-    // its `State` between an involuntary close and the next open, so this
-    // re-seed is the only thing that discards a stale browsed-to month.
     if (oldWidget.value != widget.value) {
       _seed();
     }
@@ -94,6 +138,20 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
 
   void _seed() {
     _displayedMonth = widget.value ?? DateTime.now();
+    _draft = widget.value;
+  }
+
+  /// Whether a draft date has been tapped and Save is reachable. Read by
+  /// [LayrzDateInput] through a [GlobalKey].
+  bool get canSave => _draft != null;
+
+  /// Commits the draft via [LayrzDateSurface.onDateSelected]. Invoked by
+  /// [LayrzDateInput] through a [GlobalKey] when the Save action it builds
+  /// is pressed.
+  void save() {
+    final draft = _draft;
+    if (draft == null) return;
+    widget.onDateSelected(draft);
   }
 
   /// Steps [_displayedMonth] by [months], through [sameZoneDate] rather
@@ -123,6 +181,11 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
   }
 
   DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  void _handleTap(DateTime date) {
+    setState(() => _draft = date);
+    widget.onDraftChanged?.call();
+  }
 
   Widget _buildHeader(BuildContext context) {
     final tokens = context.tokens;
@@ -171,20 +234,27 @@ class _LayrzDateSurfaceState extends State<LayrzDateSurface> {
           SizedBox(height: tokens.spacing.sp2),
           LayrzPickersDayGrid(
             displayedMonth: _displayedMonth,
-            selectedDate: widget.value,
+            selectedDate: _draft,
             firstDay: widget.firstDay,
             lastDay: widget.lastDay,
             disabledDays: widget.disabledDays,
             firstDayOfWeek: widget.firstDayOfWeek,
             showWeekNumbers: widget.showWeekNumbers,
-            onDayTap: widget.onDateSelected,
+            onDayTap: _handleTap,
             keyboardHandler: buildDayGridKeyboardHandler(
               isDisabled: _isDisabled,
-              onSelect: widget.onDateSelected,
+              onSelect: _handleTap,
               firstDayOfWeek: widget.firstDayOfWeek,
             ),
             onDisplayedMonthChanged: _stepMonth,
           ),
+          if (widget.showInlineFooter && widget.onCancel != null) ...[
+            SizedBox(height: tokens.spacing.sp3),
+            LayrzPickerInlineFooter(
+              onCancel: widget.onCancel!,
+              onSave: canSave ? save : null,
+            ),
+          ],
         ],
       ),
     );

@@ -3,27 +3,30 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer_actions.dart';
 import 'time_surface.dart';
 
 /// A Material-free single-time input field.
 ///
-/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzTimeSurface]
-/// through [LayrzAnchoredPanel] on desktop or [LayrzBottomSheet] below
-/// `isCompact`, mirroring `LayrzDurationInput`'s structure.
+/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzTimeSurface] in
+/// [LayrzEndDrawer] on desktop or [LayrzBottomSheet] below `isCompact`.
 ///
-/// **The time-fields surface has no discrete "tap to commit" gesture** — its
-/// fields report continuously via `onChanged` (trap 4 discipline: the
-/// hosting surface never closes on a field edit). So for this single-valued
-/// widget, every field edit **is** the commit: [onChanged] fires live as the
-/// user types or steps a field, and the surface stays open until the user
-/// dismisses it (tap-outside, Escape, or the mobile sheet's own dismissal) —
-/// there is no separate "commit gesture" distinct from editing, unlike
-/// [LayrzDateInput]'s single discrete day tap.
+/// **DESIGN-98: Cancel/Save, not live commit.** Before DESIGN-98, this
+/// widget's fields reported continuously via `onChanged` with no discrete
+/// commit gesture at all — every field edit fired [onChanged] live (decision
+/// D75, `engineering/milestone-4.md`). The maintainer's DESIGN-98 instruction
+/// moves this widget onto [LayrzEndDrawer] **with actions**, which
+/// supersedes that: [onChanged] now fires only once, on Save, with whatever
+/// the fields currently hold; Cancel discards the edits back to [value]. See
+/// [LayrzTimeSurfaceState]'s class doc for why Save is always enabled here,
+/// unlike the other seven widgets.
+///
+/// **No Clear action** — see [LayrzDateInput]'s identical doc for why a
+/// single-value picker's `actions` row is Cancel/Save only.
 ///
 /// **Zero clock or dial affordance anywhere in the tree** — see
 /// [LayrzPickersTimeFieldsPanel]'s class doc, which this widget's surface
@@ -170,12 +173,8 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
     _controller.text = widget.formatter?.call(value) ?? formatStrftime(_asDateTime(value), widget.pattern, l10n);
   }
 
-  void _handleTimeChanged(LayrzTimeOfDay time) {
+  void _handleSave(LayrzTimeOfDay time) {
     widget.onChanged?.call(time);
-    // Trap 4 discipline: this callback only reports the edit and refreshes
-    // the anchor's own summary text -- it never closes the surface (no
-    // `Navigator.pop`, no `controller.close()`), regardless of whether the
-    // caller's `onChanged` updates `widget.value` synchronously.
     setState(() {
       _lastValue = time;
       _updateSummary();
@@ -184,6 +183,9 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
 
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: true, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzTimeSurfaceState>();
+
     await LayrzBottomSheet.show<void>(
       context,
       // Names the sheet's route for screen readers with this field's own
@@ -194,15 +196,76 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       // labelText-or-hintText constructor assertion.
       semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzTimeSurface(
+        key: surfaceKey,
         value: widget.value ?? _midnight,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
-        onTimeChanged: _handleTimeChanged,
+        onTimeChanged: (time) {
+          _handleSave(time);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
       ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
       initialSize: 0.4,
       maxSize: 0.7,
       snapSizes: const [0.4, 0.7],
     );
+
+    draftState.dispose();
+  }
+
+  /// Opens [LayrzTimeSurface] in [LayrzEndDrawer] on desktop — see
+  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
+  /// rationale (DESIGN-98). `draftState` never changes after construction:
+  /// [LayrzTimeSurfaceState.canSave] is always `true` (see that class's own
+  /// doc), so there is nothing for `onDraftChanged` to report here.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: true, hasSelection: false));
+    final surfaceKey = GlobalKey<LayrzTimeSurfaceState>();
+
+    await LayrzEndDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      // Escape and the barrier tap must still cancel a picker draft even
+      // with actions present -- a settled ruling distinct from
+      // LayrzDialog's "answered, not escaped" contract (that dialog-level
+      // rule is about a DECISION being skipped; a picker's Cancel/Escape/
+      // barrier tap are all equally safe "discard the draft" gestures, and
+      // Escape=Cancel specifically is required by every picker test in
+      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // actions-present-infers-false default.
+      canDismiss: true,
+      builder: (context) => LayrzTimeSurface(
+        key: surfaceKey,
+        value: widget.value ?? _midnight,
+        showSeconds: widget.showSeconds,
+        use24HourFormat: widget.use24HourFormat,
+        onTimeChanged: (time) {
+          _handleSave(time);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+      actions: [
+        LayrzPickerDrawerActions(
+          draftState: draftState,
+          onCancel: () => Navigator.pop(context),
+          onClear: () {},
+          onSave: () => surfaceKey.currentState?.save(),
+        ),
+      ],
+    );
+
+    draftState.dispose();
   }
 
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
@@ -266,26 +329,6 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 200.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) =>
-          _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open),
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      child: LayrzTimeSurface(
-        value: widget.value ?? _midnight,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onTimeChanged: _handleTimeChanged,
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }
