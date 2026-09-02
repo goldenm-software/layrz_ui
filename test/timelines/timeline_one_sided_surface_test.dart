@@ -61,6 +61,43 @@ void main() {
       expect(find.byType(LayrzTimelineConnector), findsNWidgets(2));
     });
 
+    guardedTestWidgets(
+      'a neutral entry paints a lighter marker fill and a darker, visible connector',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        const entries = [
+          LayrzTimelineEntry(labelText: 'A'),
+          LayrzTimelineEntry(labelText: 'B'),
+        ];
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 800,
+            child: LayrzTimelineOneSidedSurface(entries: entries, cardBuilder: buildCard),
+          ),
+        );
+
+        final tokens = LayrzTheme.of(tester.element(find.byType(LayrzTimelineMarker).first)).tokens;
+
+        final marker = tester.widget<Container>(
+          find.descendant(of: find.byType(LayrzTimelineMarker).first, matching: find.byType(Container)).first,
+        );
+        expect((marker.decoration as BoxDecoration).color, tokens.colors.sf4);
+
+        final connector = tester.widget<LayrzTimelineConnector>(find.byType(LayrzTimelineConnector).first);
+        expect(connector.color, tokens.colors.fg3);
+
+        // The whole point of splitting the two tokens: the marker fill reads
+        // lighter than the connector line, so a light neutral marker does not
+        // also wash out the spine into invisibility.
+        expect(tokens.colors.sf4.computeLuminance(), greaterThan(tokens.colors.fg3.computeLuminance()));
+      },
+    );
+
     guardedTestWidgets('renders no markers or cards for an empty entry list', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;

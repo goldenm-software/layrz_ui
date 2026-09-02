@@ -132,11 +132,11 @@ class _TwoSidedRow extends StatelessWidget {
           Column(
             children: [
               Expanded(
-                child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+                child: isFirst ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.connectorColor),
               ),
               LayrzTimelineMarker(spec: spec, icon: entry.icon),
               Expanded(
-                child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.markerColor),
+                child: isLast ? const SizedBox.shrink() : LayrzTimelineConnector(color: spec.connectorColor),
               ),
             ],
           ),

@@ -9,15 +9,34 @@ void main() {
   group('LayrzTimelineStyleSpec', () {
     final tokens = LayrzThemeData.light().tokens;
 
-    test('resolve falls back to tokens.colors.fg3 when accentColor is null', () {
+    test('resolve falls back to tokens.colors.sf4 for the marker when accentColor is null', () {
       final spec = LayrzTimelineStyleSpec.resolve(accentColor: null, tokens: tokens);
-      expect(spec.markerColor, tokens.colors.fg3);
+      expect(spec.markerColor, tokens.colors.sf4);
     });
 
-    test('resolve honours an explicit accentColor', () {
+    test('resolve falls back to tokens.colors.fg3 for the connector when accentColor is null', () {
+      final spec = LayrzTimelineStyleSpec.resolve(accentColor: null, tokens: tokens);
+      expect(spec.connectorColor, tokens.colors.fg3);
+    });
+
+    test('resolve keeps the neutral marker lighter than the neutral connector', () {
+      final spec = LayrzTimelineStyleSpec.resolve(accentColor: null, tokens: tokens);
+      expect(spec.markerColor.computeLuminance(), greaterThan(spec.connectorColor.computeLuminance()));
+    });
+
+    test('resolve honours an explicit accentColor for both the marker and the connector', () {
       const accent = Color(0xFF123456);
       final spec = LayrzTimelineStyleSpec.resolve(accentColor: accent, tokens: tokens);
       expect(spec.markerColor, accent);
+      expect(spec.connectorColor, accent);
+    });
+
+    test('resolve derives markerContentColor from the marker fill via contrastColor', () {
+      final spec = LayrzTimelineStyleSpec.resolve(accentColor: null, tokens: tokens);
+      expect(spec.markerContentColor, tokens.colors.sf4.contrastColor);
+      // sf4 is a light surface grey (luminance well above the 0.3373 crossover),
+      // so its content color must resolve dark for the icon to stay legible.
+      expect(spec.markerContentColor, const Color(0xFF000000));
     });
 
     test('copyWith replaces only the given fields', () {
@@ -26,11 +45,21 @@ void main() {
       final copy = spec.copyWith(markerColor: replacement);
 
       expect(copy.markerColor, replacement);
+      expect(copy.connectorColor, spec.connectorColor);
       expect(copy.markerContentColor, spec.markerContentColor);
       expect(copy.cardBackgroundColor, spec.cardBackgroundColor);
       expect(copy.labelColor, spec.labelColor);
       expect(copy.descriptionColor, spec.descriptionColor);
       expect(copy.timestampColor, spec.timestampColor);
+    });
+
+    test('copyWith replaces connectorColor independently of markerColor', () {
+      final spec = LayrzTimelineStyleSpec.resolve(accentColor: null, tokens: tokens);
+      const replacement = Color(0xFFAABBCC);
+      final copy = spec.copyWith(connectorColor: replacement);
+
+      expect(copy.connectorColor, replacement);
+      expect(copy.markerColor, spec.markerColor);
     });
 
     test('copyWith with no arguments returns an equal spec', () {

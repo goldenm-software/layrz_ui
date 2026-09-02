@@ -19,7 +19,7 @@ const double kLayrzTimelineConnectorThickness = 2.0;
 /// Unlike the stepper's connector, this one has no "progressed" vs. "neutral"
 /// state to render — a timeline has no active/completed step to progress
 /// through. Its only visual parameter is [color], resolved per-segment by the
-/// caller from the entry's own [LayrzTimelineStyleSpec.markerColor].
+/// caller from the entry's own [LayrzTimelineStyleSpec.connectorColor].
 class LayrzTimelineConnector extends StatelessWidget {
   /// Creates a [LayrzTimelineConnector].
   const LayrzTimelineConnector({

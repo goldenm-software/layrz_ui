@@ -427,7 +427,7 @@ class _LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
                 child: LayrzButton(
                   labelText: l10n.durationReset,
                   onTap: _handleReset,
-                  type: LayrzButtonType.info,
+                  type: LayrzButtonType.warning,
                 ),
               ),
             ],

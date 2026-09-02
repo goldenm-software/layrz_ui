@@ -499,6 +499,36 @@ void main() {
         expect(find.byType(LayrzButton), findsOneWidget, reason: 'the reset button renders regardless of field count');
       });
     });
+
+    group('reset button semantic color', () {
+      guardedTestWidgets('the reset button is type warning, not info', (tester) async {
+        await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(
+          button.type,
+          LayrzButtonType.warning,
+          reason:
+              'Reset zeroes every field -- a destructive-ish action -- so it must read as warning, not the '
+              'neutral/auxiliary info type',
+        );
+      });
+
+      guardedTestWidgets('the reset button paints tokens.colors.warning as its fill, not tokens.colors.info', (
+        tester,
+      ) async {
+        await _pumpPanel(tester, viewportSize: _wideViewport, visibleUnits: _allUnits);
+
+        final tokens = LayrzTheme.of(tester.element(find.byType(LayrzButton))).tokens;
+        final animatedContainer = tester.widget<AnimatedContainer>(
+          find.descendant(of: find.byType(LayrzButton), matching: find.byType(AnimatedContainer)).first,
+        );
+        final fill = (animatedContainer.decoration as BoxDecoration).color;
+
+        expect(fill, tokens.colors.warning);
+        expect(fill, isNot(tokens.colors.info));
+      });
+    });
   });
 
   group('LayrzDurationPickerPanel value binding', () {
