@@ -8,6 +8,7 @@ import 'day_grid_cell.dart' show LayrzPickerCellRole;
 import 'focus_ring.dart';
 import 'grid_math.dart';
 import 'month_grid_cell.dart';
+import 'range_bar.dart';
 
 /// A purpose-built month-selection grid with year navigation, laid out as
 /// 3 rows of 4 columns (January–April on the top row, three rows deep).
@@ -137,6 +138,32 @@ class _LayrzPickersMonthGridState extends State<LayrzPickersMonthGrid> {
     return LayrzPickerCellRole.none;
   }
 
+  /// Classifies [month] for [LayrzPickersRangeBar] — see
+  /// `LayrzPickersDayGrid._rangeBarColumnFor`'s doc comment for the full
+  /// reasoning, which applies identically here.
+  ///
+  /// **Arbitrary (non-consecutive) mode never reaches a non-[none] branch**:
+  /// [widget.rangeStart] is only ever supplied by a consecutive-mode caller
+  /// (`LayrzMonthRangeSurface` threads `rangeStart`/`rangeEnd` only when
+  /// `consecutive: true`; arbitrary mode's selection lives in
+  /// [widget.arbitrarySelection] instead, which this method never reads) —
+  /// so arbitrary mode's `start == null` short-circuit above is what keeps
+  /// its selected months as individual filled pills with no interior bar,
+  /// satisfying Finding 2's "arbitrary month mode has no interior" carve-out
+  /// without a separate `widget.consecutive` check here.
+  LayrzRangeBarColumn _rangeBarColumnFor(DateTime month) {
+    final start = widget.rangeStart;
+    final end = widget.rangeEnd;
+    if (start == null || end == null) return LayrzRangeBarColumn.none;
+    final isStart = start.year == month.year && start.month == month.month;
+    final isEnd = end.year == month.year && end.month == month.month;
+    if (isStart && isEnd) return LayrzRangeBarColumn.rangeStartAndEnd;
+    if (isStart) return LayrzRangeBarColumn.rangeStart;
+    if (isEnd) return LayrzRangeBarColumn.rangeEnd;
+    if (month.isAfter(start) && month.isBefore(end)) return LayrzRangeBarColumn.rangeInterior;
+    return LayrzRangeBarColumn.none;
+  }
+
   String _monthLabel(int month, LayrzUiL10n l10n) {
     const getters = <int, String Function(LayrzUiL10n)>{
       1: _jan,
@@ -206,41 +233,59 @@ class _LayrzPickersMonthGridState extends State<LayrzPickersMonthGrid> {
                   ),
                   SizedBox(height: tokens.spacing.sp2),
                   for (var row = 0; row < 3; row++)
-                    Row(
+                    // Stack, not a bare Row: the range bar paints as a
+                    // background sibling *behind* this row's cells, per
+                    // Finding 2 -- see `LayrzPickersRangeBar`'s own "Sizing"
+                    // doc for why the Row of cells (not the bar) is the
+                    // Stack's only non-positioned child. The Stack sizes to
+                    // that Row's own intrinsic (pill) height, then
+                    // Positioned.fill stretches the bar to match -- D15: the
+                    // cell row's own geometry is completely unaffected by
+                    // the bar's presence.
+                    Stack(
                       children: [
-                        for (var col = 0; col < 4; col++)
-                          Expanded(
-                            child: Builder(
-                              builder: (context) {
-                                final month = months[row * 4 + col];
-                                final isDisabled = _isDisabled(month);
-                                final isRejected = widget.rejectedMonths.any(
-                                  (m) => m.year == month.year && m.month == month.month,
-                                );
-                                return Focus(
-                                  onKeyEvent: widget.keyboardHandler == null
-                                      ? null
-                                      : (node, event) => widget.keyboardHandler!(
-                                          event,
-                                          month,
-                                          (key) => _focusNodeFor(key).requestFocus(),
-                                        ),
-                                  child: LayrzFocusRing(
-                                    focusNode: _focusNodeFor(month),
-                                    child: LayrzPickersMonthGridCell(
-                                      label: _monthLabel(month.month, l10n),
-                                      semanticLabel: '${_monthLabel(month.month, l10n)} ${month.year}',
-                                      role: _roleFor(month, today),
-                                      isDisabled: isDisabled,
-                                      isRejected: isRejected,
-                                      onTap: (isDisabled || isRejected) ? null : () => widget.onMonthTap(month),
-                                      focusNode: _focusNodeFor(month),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                        Positioned.fill(
+                          child: LayrzPickersRangeBar(
+                            columns: [for (var col = 0; col < 4; col++) _rangeBarColumnFor(months[row * 4 + col])],
                           ),
+                        ),
+                        Row(
+                          children: [
+                            for (var col = 0; col < 4; col++)
+                              Expanded(
+                                child: Builder(
+                                  builder: (context) {
+                                    final month = months[row * 4 + col];
+                                    final isDisabled = _isDisabled(month);
+                                    final isRejected = widget.rejectedMonths.any(
+                                      (m) => m.year == month.year && m.month == month.month,
+                                    );
+                                    return Focus(
+                                      onKeyEvent: widget.keyboardHandler == null
+                                          ? null
+                                          : (node, event) => widget.keyboardHandler!(
+                                              event,
+                                              month,
+                                              (key) => _focusNodeFor(key).requestFocus(),
+                                            ),
+                                      child: LayrzFocusRing(
+                                        focusNode: _focusNodeFor(month),
+                                        child: LayrzPickersMonthGridCell(
+                                          label: _monthLabel(month.month, l10n),
+                                          semanticLabel: '${_monthLabel(month.month, l10n)} ${month.year}',
+                                          role: _roleFor(month, today),
+                                          isDisabled: isDisabled,
+                                          isRejected: isRejected,
+                                          onTap: (isDisabled || isRejected) ? null : () => widget.onMonthTap(month),
+                                          focusNode: _focusNodeFor(month),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                          ],
+                        ),
                       ],
                     ),
                 ],

@@ -105,15 +105,23 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
-  /// The [widget.value] the summary text was last computed for.
+  /// The `(value, formatter)` combination the summary text was last
+  /// computed for, or [_unset] before the first build.
   ///
   /// Mirrors `LayrzDurationInput`'s own `_lastValue` guard
   /// (`duration_input.dart`'s `build()`): [_updateSummary] reads
   /// `context.l10n`, which asserts if called before this widget's
   /// [BuildContext] has an established `Localizations` dependency. Calling
   /// it eagerly from [initState] throws exactly that assertion, so instead
-  /// [build] recomputes the summary only when [widget.value] has actually
-  /// changed since the last build -- which also covers the very first build.
+  /// [build] recomputes the summary only when this tuple has actually
+  /// changed since the last build -- which also covers the very first
+  /// build.
+  ///
+  /// **Widened beyond just `value` per DESIGN-45's "pattern changes must
+  /// reflect immediately" finding** — see `LayrzDateInput._lastValue`'s own
+  /// doc for the full rationale. This widget has no `pattern` field (only
+  /// [LayrzMonthInput.formatter]), so `formatter` is the only addition
+  /// needed here.
   Object? _lastValue = _unset;
 
   @override
@@ -241,8 +249,9 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
 
   @override
   Widget build(BuildContext context) {
-    if (!identical(_lastValue, widget.value) && _lastValue != widget.value) {
-      _lastValue = widget.value;
+    final currentValue = (widget.value, widget.formatter);
+    if (!identical(_lastValue, currentValue) && _lastValue != currentValue) {
+      _lastValue = currentValue;
       _updateSummary();
     }
 

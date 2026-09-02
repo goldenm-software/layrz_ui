@@ -113,20 +113,29 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
-  /// The [widget.value] the summary text was last computed for.
+  /// The `(value, pattern, formatter)` combination the summary text was
+  /// last computed for.
   ///
   /// [_updateSummary] reads `context.l10n`, which depends on the
   /// [Localizations] inherited widget — that dependency cannot be
   /// established from `initState` (Flutter throws
   /// "dependOnInheritedWidgetOfExactType() ... called before initState()
   /// completed"). Mirroring `LayrzDateInput`'s own `_lastValue` cache,
-  /// [build] compares [widget.value] against this field and only calls
-  /// [_updateSummary] when it actually changed, which is always safe
-  /// because [build] runs with a fully established inherited-widget
-  /// dependency. **The scaffold called `_updateSummary()` directly from
-  /// `initState`, which crashes on construction with any non-null [value]**
-  /// — this field and the `build`-time check below are the fix.
-  LayrzDateRange? _lastValue;
+  /// [build] compares this tuple against [widget]'s current
+  /// `(value, pattern, formatter)` and only calls [_updateSummary] when it
+  /// actually changed, which is always safe because [build] runs with a
+  /// fully established inherited-widget dependency. **The scaffold called
+  /// `_updateSummary()` directly from `initState`, which crashes on
+  /// construction with any non-null [value]** — this field and the
+  /// `build`-time check below are the fix.
+  ///
+  /// **Widened beyond just `value` per DESIGN-45's "pattern changes must
+  /// reflect immediately" finding** — see `LayrzDateInput._lastValue`'s own
+  /// doc for the full rationale, which applies identically here: without
+  /// `pattern`/`formatter` in the tuple, editing either on an already-built
+  /// widget left the old summary text on screen until the next range was
+  /// saved.
+  (LayrzDateRange?, String, String Function(LayrzDateRange)?)? _lastValue;
 
   @override
   void initState() {
@@ -259,8 +268,9 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.value != _lastValue) {
-      _lastValue = widget.value;
+    final currentValue = (widget.value, widget.pattern, widget.formatter);
+    if (_lastValue != currentValue) {
+      _lastValue = currentValue;
       _updateSummary();
     }
 

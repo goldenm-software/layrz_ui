@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
 import 'day_grid_cell.dart' show LayrzPickerCellRole;
 
@@ -70,11 +71,31 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
       case LayrzPickerCellRole.today:
         border = Border.all(color: tokens.colors.primary, width: tokens.border.base);
       case LayrzPickerCellRole.rangeInterior:
-        fillColor = tokens.colors.primary.shade50;
+        // No pill fill here in consecutive-range mode -- the continuous
+        // range bar ([LayrzPickersMonthGrid]'s own per-row background,
+        // painted behind this cell) already provides the interior's light
+        // primary tint edge-to-edge across the row. Painting a second,
+        // separately-shaped fill on top of it would double the tint and
+        // reintroduce the "separate pills" look Finding 2 replaces. Text
+        // stays at its ordinary (non-selected) color, set above. Arbitrary
+        // (non-consecutive) mode never assigns this role -- see
+        // `LayrzPickersMonthGrid._roleFor`'s `arbitrarySelection` branch,
+        // which reads `selected` instead -- so arbitrary-mode months keep
+        // their individual filled pills exactly as before.
+        break;
     }
 
+    // A rejected cell that is not itself a range-interior cell (defensive,
+    // same reasoning as `LayrzPickersDayGridCell`) falls back to a light
+    // primary tint. `primary.shade50` is not used here: see
+    // `LayrzPickersDayGridCell.build`'s own doc comment on this exact
+    // point -- [LayrzColorSwatch.fromColor] derives shade50 by subtracting
+    // 0.40 from the seed's HSL lightness, which clamps to fully opaque
+    // black for a dark seed (e.g. the default `kPrimaryColor`). Applying
+    // [tokens.colors.tonalOpacity] alpha to the seed colour directly
+    // sidesteps that defect entirely.
     if (isRejected && role != LayrzPickerCellRole.rangeInterior) {
-      fillColor = tokens.colors.primary.shade50;
+      fillColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
     }
 
     final semanticsExtras = StringBuffer(semanticLabel);
@@ -91,17 +112,27 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
       enabled: !isInert,
       selected: role == LayrzPickerCellRole.selected || role == LayrzPickerCellRole.rangeEndpoint,
       onTap: isInert ? null : onTap,
-      child: MouseRegion(
-        cursor: isInert ? MouseCursor.defer : SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: isInert ? null : onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Focus(
-            focusNode: focusNode,
-            skipTraversal: isInert,
-            child: ExcludeSemantics(
+      child: Focus(
+        focusNode: focusNode,
+        skipTraversal: isInert,
+        child: ExcludeSemantics(
+          child: Container(
+            margin: EdgeInsets.all(tokens.spacing.sp1),
+            // [LayrzTappable] paints its own hover/pressed surface via a
+            // plain [DecoratedBox]/[AnimatedContainer] *underneath* [child]
+            // -- `borderRadius: tokens.radius.br2` matches the same rounded
+            // rectangle the fill itself paints below, so hover/press never
+            // reads as a squared-off surface behind a rounded pill. Inert
+            // cells (disabled/rejected) pass a `null` `onTap`, which routes
+            // [LayrzTappable] through its own "inert path": a bare
+            // [DecoratedBox] with no [MouseRegion]/[GestureDetector] at
+            // all -- no hover tint, no pointer cursor. D15: only the
+            // tappable's own colour/opacity vary by state; this outer
+            // [Container]'s margin/size never changes.
+            child: LayrzTappable(
+              onTap: isInert ? null : onTap,
+              borderRadius: tokens.radius.br2,
               child: Container(
-                margin: EdgeInsets.all(tokens.spacing.sp1),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: fillColor,

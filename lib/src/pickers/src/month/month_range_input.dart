@@ -167,8 +167,9 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
   /// maintainer review per the implementation plan.
   static const _overflowThreshold = 4;
 
-  /// The [widget.arbitraryValue]/[widget.rangeValue]/[widget.consecutive]
-  /// combination the summary text was last computed for.
+  /// The `(consecutive, arbitraryValue, rangeValue, arbitraryPattern,
+  /// rangePattern, arbitraryFormatter, rangeFormatter)` combination the
+  /// summary text was last computed for.
   ///
   /// Mirrors `LayrzMonthInput`'s own `_lastValue` guard: [_updateSummary]
   /// reads `context.l10n` (via [formatStrftime]), which asserts if called
@@ -178,7 +179,22 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
   /// `build`-time check below are the fix: [build] recomputes the summary
   /// only when the relevant value actually changed since the last build,
   /// which also covers the very first build.
-  (bool, List<LayrzMonth>, LayrzMonthRange?)? _lastValue;
+  ///
+  /// **Widened beyond `(consecutive, arbitraryValue, rangeValue)` per
+  /// DESIGN-45's "pattern changes must reflect immediately" finding** — see
+  /// `LayrzDateInput._lastValue`'s own doc for the full rationale. Both
+  /// modes' pattern/formatter pairs are included since either can be active
+  /// depending on [LayrzMonthRangeInput.consecutive].
+  (
+    bool,
+    List<LayrzMonth>,
+    LayrzMonthRange?,
+    String,
+    String,
+    String Function(List<LayrzMonth>)?,
+    String Function(LayrzMonthRange)?,
+  )?
+  _lastValue;
 
   @override
   void initState() {
@@ -352,7 +368,15 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
 
   @override
   Widget build(BuildContext context) {
-    final currentValue = (widget.consecutive, widget.arbitraryValue, widget.rangeValue);
+    final currentValue = (
+      widget.consecutive,
+      widget.arbitraryValue,
+      widget.rangeValue,
+      widget.arbitraryPattern,
+      widget.rangePattern,
+      widget.arbitraryFormatter,
+      widget.rangeFormatter,
+    );
     if (_lastValue != currentValue) {
       _lastValue = currentValue;
       _updateSummary();

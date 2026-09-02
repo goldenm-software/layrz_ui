@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
 
 /// The visual/interaction role a single [LayrzPickersDayGridCell] plays
 /// within its grid, driving which of the mutually-exclusive selected/today
@@ -119,11 +120,30 @@ class LayrzPickersDayGridCell extends StatelessWidget {
         fillColor = tokens.colors.primary;
         textColor = tokens.colors.sf1;
       case LayrzPickerCellRole.rangeInterior:
-        fillColor = tokens.colors.primary.shade50;
+        // No circle fill here -- the continuous range bar
+        // ([LayrzPickersDayGrid]'s own per-row background, painted behind
+        // this cell) already provides the interior's light primary tint
+        // edge-to-edge across the row. Painting a second, separately-shaped
+        // fill on top of it would double the tint and reintroduce the
+        // "separate circles" look Finding 2 replaces. Text stays at its
+        // ordinary (non-selected) color, set above.
+        break;
     }
 
+    // A rejected cell that is not itself a range-interior cell (defensive:
+    // every current caller only ever marks interior cells as rejected, but
+    // this keeps a rejected cell visibly distinct even if that ever
+    // changes) falls back to a light primary tint. `primary.shade50` is not
+    // used here: [LayrzColorSwatch.fromColor] derives shade50 by
+    // subtracting 0.40 from the seed's HSL lightness, which clamps to fully
+    // opaque black for any seed under that lightness (e.g. the default
+    // `kPrimaryColor`, ~0.19) -- this is the exact "solid black" defect
+    // already diagnosed and worked around the same way in
+    // `LayrzTreeRowStyleSpec.resolve` (see that file's doc comment).
+    // Applying [tokens.colors.tonalOpacity] alpha to the seed colour itself
+    // sidesteps the swatch derivation entirely and can never clamp to black.
     if (isRejected && role != LayrzPickerCellRole.rangeInterior) {
-      fillColor = tokens.colors.primary.shade50;
+      fillColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
     }
 
     final semanticsExtras = StringBuffer(semanticLabel);
@@ -140,31 +160,41 @@ class LayrzPickersDayGridCell extends StatelessWidget {
       enabled: !isInert,
       selected: role == LayrzPickerCellRole.selected || role == LayrzPickerCellRole.rangeEndpoint,
       onTap: isInert ? null : onTap,
-      child: MouseRegion(
-        cursor: isInert ? MouseCursor.defer : SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: isInert ? null : onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Focus(
-            focusNode: focusNode,
-            skipTraversal: isInert,
-            child: ExcludeSemantics(
-              child: Center(
-                child: Container(
-                  width: 32.0,
-                  height: 32.0,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: fillColor,
-                    border: ring,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    label,
-                    style: tokens.typography.body.copyWith(color: textColor),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      child: Focus(
+        focusNode: focusNode,
+        skipTraversal: isInert,
+        child: ExcludeSemantics(
+          child: Center(
+            // A circular 32x32 hit/paint target. [LayrzTappable] renders its
+            // own hover/pressed surface *underneath* [child] via a plain
+            // [DecoratedBox]/[AnimatedContainer] -- `borderRadius: 16.0`
+            // (half of 32.0) rounds that surface to the same circle the
+            // cell itself paints, rather than a hover square peeking out
+            // from behind a circular label. Inert cells (disabled/rejected)
+            // never reach [LayrzTappable] with a non-null `onTap`, so they
+            // stay genuinely inert: no hover tint, no pointer cursor -- see
+            // [LayrzTappable]'s own "inert path" branch, which renders a
+            // bare [DecoratedBox] with no [MouseRegion]/[GestureDetector]
+            // at all when `onTap`/`onLongPress`/`onSecondaryTap` are all
+            // null. D15: only the tappable's own colour/opacity vary by
+            // state; this cell's 32x32 box never changes size.
+            child: LayrzTappable(
+              onTap: isInert ? null : onTap,
+              borderRadius: BorderRadius.circular(16.0),
+              child: Container(
+                width: 32.0,
+                height: 32.0,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: fillColor,
+                  border: ring,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  label,
+                  style: tokens.typography.body.copyWith(color: textColor),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),

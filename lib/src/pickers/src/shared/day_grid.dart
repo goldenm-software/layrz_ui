@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'day_grid_cell.dart';
 import 'focus_ring.dart';
 import 'grid_math.dart';
+import 'range_bar.dart';
 import 'week_number_gutter.dart';
 import 'weekday_header.dart';
 
@@ -281,6 +282,32 @@ class _LayrzPickersDayGridState extends State<LayrzPickersDayGrid> {
     return LayrzPickerCellRole.none;
   }
 
+  /// Classifies [date] for [LayrzPickersRangeBar] — see Finding 2's
+  /// continuous-bar ruling. Distinct from [_roleFor], which drives the
+  /// individual cell's own foreground styling: this only says whether the
+  /// bar fills under this column and where its rounded caps land.
+  ///
+  /// A completed range's true start/end always rounds off here, **even
+  /// when that day falls on a row's own leading/trailing edge** — the
+  /// "square where the range continues into the next row" rule only
+  /// applies to a row edge the range crosses *without* ending, which this
+  /// classification alone (independent of row position) already captures:
+  /// [LayrzPickersRangeBar] squares off a column only when its neighbour
+  /// in the same row is also in-range, and a `rangeStart`/`rangeEnd`
+  /// column's *far* side (the side away from the range) is never adjacent
+  /// to another in-range column by construction, so it can never square
+  /// off there regardless of which column of the row it lands in.
+  LayrzRangeBarColumn _rangeBarColumnFor(DateTime date) {
+    final start = widget.rangeStart;
+    final end = widget.rangeEnd;
+    if (start == null || end == null) return LayrzRangeBarColumn.none;
+    if (isSameDay(start, end) && isSameDay(date, start)) return LayrzRangeBarColumn.rangeStartAndEnd;
+    if (isSameDay(date, start)) return LayrzRangeBarColumn.rangeStart;
+    if (isSameDay(date, end)) return LayrzRangeBarColumn.rangeEnd;
+    if (date.isAfter(start) && date.isBefore(end)) return LayrzRangeBarColumn.rangeInterior;
+    return LayrzRangeBarColumn.none;
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -332,43 +359,64 @@ class _LayrzPickersDayGridState extends State<LayrzPickersDayGrid> {
                             for (final row in rows)
                               SizedBox(
                                 height: rowHeight,
-                                child: Row(
+                                // Stack, not a bare Row: the range bar paints
+                                // as a background sibling *behind* the row of
+                                // cells, per Finding 2 -- it never becomes
+                                // part of any individual cell's own box, so
+                                // the cells above measure identically with or
+                                // without an active range (D15). Positioned to
+                                // the full stack size (matching the Row below)
+                                // rather than fit: StackFit.expand, so the bar
+                                // sizing follows the same Expanded-column
+                                // logic doc'd on LayrzPickersRangeBar.
+                                child: Stack(
                                   children: [
-                                    for (final date in row)
-                                      Expanded(
-                                        child: Builder(
-                                          builder: (context) {
-                                            final isAdjacent = !isInGridMonth(
-                                              date,
-                                              year: widget.displayedMonth.year,
-                                              month: widget.displayedMonth.month,
-                                            );
-                                            final isDisabled = _isDisabled(date) || isAdjacent;
-                                            final isRejected = widget.rejectedDates.any((d) => isSameDay(d, date));
-                                            return Focus(
-                                              onKeyEvent: widget.keyboardHandler == null
-                                                  ? null
-                                                  : (node, event) =>
-                                                        widget.keyboardHandler!(event, date, _requestFocus),
-                                              child: LayrzFocusRing(
-                                                focusNode: _focusNodeFor(date),
-                                                child: LayrzPickersDayGridCell(
-                                                  label: '${date.day}',
-                                                  semanticLabel: _semanticDateLabel(date, l10n),
-                                                  role: _roleFor(date, today),
-                                                  isAdjacentPeriod: isAdjacent,
-                                                  isDisabled: isDisabled,
-                                                  isRejected: isRejected,
-                                                  onTap: (isDisabled || isRejected)
-                                                      ? null
-                                                      : () => widget.onDayTap(date),
-                                                  focusNode: _focusNodeFor(date),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
+                                    Positioned.fill(
+                                      child: LayrzPickersRangeBar(
+                                        columns: [for (final date in row) _rangeBarColumnFor(date)],
                                       ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        for (final date in row)
+                                          Expanded(
+                                            child: Builder(
+                                              builder: (context) {
+                                                final isAdjacent = !isInGridMonth(
+                                                  date,
+                                                  year: widget.displayedMonth.year,
+                                                  month: widget.displayedMonth.month,
+                                                );
+                                                final isDisabled = _isDisabled(date) || isAdjacent;
+                                                final isRejected = widget.rejectedDates.any(
+                                                  (d) => isSameDay(d, date),
+                                                );
+                                                return Focus(
+                                                  onKeyEvent: widget.keyboardHandler == null
+                                                      ? null
+                                                      : (node, event) =>
+                                                            widget.keyboardHandler!(event, date, _requestFocus),
+                                                  child: LayrzFocusRing(
+                                                    focusNode: _focusNodeFor(date),
+                                                    child: LayrzPickersDayGridCell(
+                                                      label: '${date.day}',
+                                                      semanticLabel: _semanticDateLabel(date, l10n),
+                                                      role: _roleFor(date, today),
+                                                      isAdjacentPeriod: isAdjacent,
+                                                      isDisabled: isDisabled,
+                                                      isRejected: isRejected,
+                                                      onTap: (isDisabled || isRejected)
+                                                          ? null
+                                                          : () => widget.onDayTap(date),
+                                                      focusNode: _focusNodeFor(date),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),

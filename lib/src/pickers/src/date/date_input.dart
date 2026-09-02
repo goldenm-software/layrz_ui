@@ -136,18 +136,29 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
-  /// The [widget.value] the summary text was last computed for.
+  /// The `(value, pattern, formatter)` combination the summary text was
+  /// last computed for.
   ///
   /// [_updateSummary] reads `context.l10n`, which depends on the
   /// [Localizations] inherited widget — that dependency cannot be
   /// established from `initState` (Flutter throws
   /// "dependOnInheritedWidgetOfExactType() ... called before initState()
   /// completed"). Mirroring `LayrzDurationInput`'s own `_lastValue` cache,
-  /// [build] compares [widget.value] against this field and only calls
-  /// [_updateSummary] when it actually changed, which is always safe
-  /// because [build] runs with a fully established inherited-widget
-  /// dependency.
-  DateTime? _lastValue;
+  /// [build] compares this tuple against [widget]'s current
+  /// `(value, pattern, formatter)` and only calls [_updateSummary] when it
+  /// actually changed, which is always safe because [build] runs with a
+  /// fully established inherited-widget dependency.
+  ///
+  /// **Widened beyond just `value` per DESIGN-45's "pattern changes must
+  /// reflect immediately" finding**: the scaffold this replaced compared
+  /// only [DateTime.value], so editing [LayrzDateInput.pattern] or
+  /// [LayrzDateInput.formatter] on an already-built widget left the old
+  /// summary text on screen until the next date selection recomputed it —
+  /// the field looked like it ignored the new pattern entirely until the
+  /// user picked a new date. Including `pattern`/`formatter` in the tuple
+  /// makes a `didUpdateWidget` rebuild with either changed dirty on its
+  /// own, with no selection required.
+  (DateTime?, String, String Function(DateTime)?)? _lastValue;
 
   /// Bumped by [LayrzAnchoredPanel.onOpen] on every desktop panel open, and
   /// used as [LayrzDateSurface]'s [Key].
@@ -277,8 +288,9 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.value != _lastValue) {
-      _lastValue = widget.value;
+    final currentValue = (widget.value, widget.pattern, widget.formatter);
+    if (_lastValue != currentValue) {
+      _lastValue = currentValue;
       _updateSummary();
     }
 
