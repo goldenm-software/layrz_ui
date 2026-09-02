@@ -3,12 +3,12 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/month.dart';
 import '../models/month_range.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer.dart';
 import 'month_range_surface.dart';
 
 /// A Material-free month-range input field.
@@ -27,14 +27,22 @@ import 'month_range_surface.dart';
 /// [rangeValue] and one of [onArbitraryChanged]/[onRangeChanged] is
 /// meaningful at a time, selected by [consecutive].
 ///
-/// **Cancel/Save live inside the anchored panel/bottom sheet, visible from
-/// the first frame** — this is one of the five widgets in the batch that
-/// coordinate multiple parts rather than committing on a single tap.
-/// **Involuntary close discards the draft** — reopening always starts clean
-/// from [arbitraryValue]/[rangeValue].
+/// **Cancel/Save live inside the drawer/bottom sheet, visible from the first
+/// frame** — this is one of the five widgets in the batch that coordinate
+/// multiple parts rather than committing on a single tap. **Involuntary
+/// close discards the draft** — reopening always starts clean from
+/// [arbitraryValue]/[rangeValue].
 ///
 /// [disabledMonths] is documented as **ignored in consecutive mode**,
 /// matching old layrz_theme behaviour.
+///
+/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// below `isCompact`.** This widget previously opened
+/// [LayrzMonthRangeSurface] through [LayrzAnchoredPanel] on desktop; the
+/// maintainer ruled the anchored panel too cramped for every Save-carrying
+/// picker widget (see [LayrzPickerDrawer]'s own class doc for the ruling
+/// verbatim) and asked for a fixed-width drawer instead. The mobile branch
+/// is unchanged.
 class LayrzMonthRangeInput extends StatefulWidget {
   /// Whether this widget operates in consecutive (contiguous) mode rather
   /// than the default arbitrary (non-contiguous) multi-select mode.
@@ -151,7 +159,6 @@ class LayrzMonthRangeInput extends StatefulWidget {
 class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   /// The maximum number of months rendered as a comma-joined list in
   /// arbitrary mode before the summary collapses to a count instead.
@@ -317,6 +324,36 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     );
   }
 
+  /// Opens [LayrzMonthRangeSurface] in [LayrzPickerDrawer] on desktop —
+  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
+  /// See [LayrzPickerDrawer]'s class doc for why a fresh
+  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
+  /// already reconstructs [LayrzMonthRangeSurface]'s `State` from scratch.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    await LayrzPickerDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => LayrzMonthRangeSurface(
+        consecutive: widget.consecutive,
+        arbitraryValue: widget.arbitraryValue,
+        rangeValue: widget.rangeValue,
+        minimum: widget.minimum,
+        maximum: widget.maximum,
+        disabledMonths: widget.disabledMonths,
+        onArbitrarySave: (months) {
+          _handleArbitrarySave(months);
+          Navigator.pop(context);
+        },
+        onRangeSave: (range) {
+          _handleRangeSave(range);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
     final tokens = context.tokens;
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
@@ -386,39 +423,6 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 520.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      child: LayrzMonthRangeSurface(
-        consecutive: widget.consecutive,
-        arbitraryValue: widget.arbitraryValue,
-        rangeValue: widget.rangeValue,
-        minimum: widget.minimum,
-        maximum: widget.maximum,
-        disabledMonths: widget.disabledMonths,
-        onArbitrarySave: (months) {
-          _handleArbitrarySave(months);
-          _panelController.close();
-        },
-        onRangeSave: (range) {
-          _handleRangeSave(range);
-          _panelController.close();
-        },
-        onCancel: () => _panelController.close(),
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }

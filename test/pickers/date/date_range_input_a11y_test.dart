@@ -107,7 +107,7 @@ void main() {
       }
     });
 
-    guardedTestWidgets('the open desktop panel exposes Cancel and Save as semantics labels', (tester) async {
+    guardedTestWidgets('the open desktop drawer exposes Cancel and Save as semantics labels', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);

@@ -3,20 +3,27 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../models/date_range.dart';
 import '../shared/picker_anchor.dart';
+import '../shared/picker_drawer.dart';
 import 'date_range_surface.dart';
 
 /// A Material-free date-range input field.
 ///
-/// **Cancel/Save live inside the anchored panel/bottom sheet, visible from
-/// the first frame** — see [LayrzDateRangeSurface]'s class doc for the full
-/// range selection state machine this widget's surface implements.
+/// **Cancel/Save live inside the drawer/bottom sheet, visible from the first
+/// frame** — see [LayrzDateRangeSurface]'s class doc for the full range
+/// selection state machine this widget's surface implements.
 /// **Involuntary close discards the draft** — reopening always starts clean
 /// from [value].
+///
+/// **DESIGN-49: opens in [LayrzPickerDrawer] on desktop, [LayrzBottomSheet]
+/// below `isCompact`.** This widget previously opened [LayrzDateRangeSurface]
+/// through [LayrzAnchoredPanel] on desktop; the maintainer ruled the anchored
+/// panel too cramped for every Save-carrying picker widget (see
+/// [LayrzPickerDrawer]'s own class doc for the ruling verbatim) and asked for
+/// a fixed-width drawer instead. The mobile branch is unchanged.
 class LayrzDateRangeInput extends StatefulWidget {
   /// The currently committed range.
   final LayrzDateRange? value;
@@ -111,7 +118,6 @@ class LayrzDateRangeInput extends StatefulWidget {
 class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
 
   /// The `(value, pattern, formatter)` combination the summary text was
   /// last computed for.
@@ -217,6 +223,32 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
     );
   }
 
+  /// Opens [LayrzDateRangeSurface] in [LayrzPickerDrawer] on desktop —
+  /// DESIGN-49's replacement for the previous [LayrzAnchoredPanel] container.
+  /// See [LayrzPickerDrawer]'s class doc for why a fresh
+  /// [LayrzPickerDrawer.show] call needs no generation-key trick: every open
+  /// already reconstructs [LayrzDateRangeSurface]'s `State` from scratch.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+    await LayrzPickerDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText ?? widget.hintText,
+      builder: (context) => LayrzDateRangeSurface(
+        value: widget.value,
+        firstDay: widget.firstDay,
+        lastDay: widget.lastDay,
+        disabledDays: widget.disabledDays,
+        firstDayOfWeek: widget.firstDayOfWeek,
+        showWeekNumbers: widget.showWeekNumbers,
+        onSave: (range) {
+          _handleSave(range);
+          Navigator.pop(context);
+        },
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+
   Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
     final tokens = context.tokens;
     final displayText = _controller.text.isEmpty ? (widget.hintText ?? '') : _controller.text;
@@ -278,35 +310,6 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
 
-    final tokens = context.tokens;
-    final hasErrors = widget.errors.isNotEmpty;
-
-    return LayrzAnchoredPanel(
-      widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-      maxHeight: 520.0,
-      coverAnchor: true,
-      childFocusNode: _focusNode,
-      builder: (context, controller) {
-        _panelController = controller;
-        return _buildInteractiveField(context: context, onTap: widget.disabled ? null : controller.open);
-      },
-      border: LayrzAnchoredPanelBorder(
-        color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-        width: tokens.border.base,
-      ),
-      child: LayrzDateRangeSurface(
-        value: widget.value,
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        onSave: (range) {
-          _handleSave(range);
-          _panelController.close();
-        },
-        onCancel: () => _panelController.close(),
-      ),
-    );
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
   }
 }

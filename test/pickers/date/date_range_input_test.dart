@@ -3,6 +3,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
+import 'package:layrz_ui/src/pickers/src/date/date_range_surface.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -155,6 +156,25 @@ void main() {
 
       expect(findButtonLabel('Save'), findsOneWidget);
       expect(findButtonLabel('Cancel'), findsOneWidget);
+    });
+
+    // DESIGN-49: this widget no longer opens LayrzAnchoredPanel on desktop --
+    // it opens LayrzPickerDrawer, a fixed-width (420px) drawer. See
+    // `datetime_input_test.dart`'s equivalent group for the reference
+    // conversion this test follows.
+    guardedTestWidgets('the desktop drawer is fixed-width, not the anchor\'s width', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(tester, LayrzDateRangeInput(labelText: 'Range'));
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDateRangeSurface), findsOneWidget);
+      final surfaceWidth = tester.getSize(find.byType(LayrzDateRangeSurface)).width;
+      expect(surfaceWidth, lessThanOrEqualTo(420.0));
     });
   });
 
@@ -748,7 +768,15 @@ void main() {
   });
 
   group('LayrzDateRangeInput — viewport branch selection', () {
-    guardedTestWidgets('opens the anchored panel (not a bottom sheet route) at a wide viewport', (tester) async {
+    // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
+    // viewport -- desktop opens LayrzPickerDrawer, compact opens
+    // LayrzBottomSheet. Both push a route rather than mounting inline, so
+    // neither surface is present before the tap. See
+    // `datetime_input_test.dart`'s equivalent group for the reference
+    // conversion this test follows.
+    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width drawer, never an anchored panel', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -761,13 +789,20 @@ void main() {
         ),
       );
 
+      expect(find.byType(LayrzAnchoredPanel), findsNothing);
+
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+      expect(find.byType(LayrzDateRangeSurface), findsOneWidget);
+      final surfaceWidth = tester.getSize(find.byType(LayrzDateRangeSurface)).width;
+      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: "the drawer is fixed-width, not the anchor's width");
     });
 
-    guardedTestWidgets('opens a bottom sheet route (not an anchored panel) below isCompact', (tester) async {
+    guardedTestWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel or a drawer', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -780,10 +815,17 @@ void main() {
         ),
       );
 
+      expect(
+        find.byType(LayrzAnchoredPanel),
+        findsNothing,
+        reason: 'the compact branch must not build an anchored panel at all',
+      );
+
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+      expect(find.byType(LayrzDateRangeSurface), findsOneWidget);
     });
   });
 
