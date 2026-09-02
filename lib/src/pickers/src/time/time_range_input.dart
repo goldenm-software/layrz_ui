@@ -105,12 +105,25 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
   late FocusNode _focusNode;
   late MenuController _panelController;
 
+  // `build()` re-runs `_updateSummary()` only once per distinct
+  // (startValue, endValue) pair, mirroring `LayrzTimeInput`'s own
+  // `_summaryPrimed`/`_lastValue` dirty-check. `_updateSummary()` reads
+  // `context.l10n`, an inherited-widget lookup that is illegal from
+  // `initState()` -- calling it there throws
+  // "dependOnInheritedWidgetOfExactType... called before initState()
+  // completed." So the summary is never primed in `initState`; the first
+  // `build()` call computes it instead, once the tree is attached. A plain
+  // `_lastStart`/`_lastEnd` check alone can't distinguish "never computed"
+  // from "computed for null, null", hence `_summaryPrimed`.
+  bool _summaryPrimed = false;
+  LayrzTimeOfDay? _lastStart;
+  LayrzTimeOfDay? _lastEnd;
+
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    _updateSummary();
   }
 
   @override
@@ -124,7 +137,11 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
-    if (widget.startValue != oldWidget.startValue || widget.endValue != oldWidget.endValue) _updateSummary();
+    if (widget.startValue != oldWidget.startValue || widget.endValue != oldWidget.endValue) {
+      _lastStart = widget.startValue;
+      _lastEnd = widget.endValue;
+      _updateSummary();
+    }
   }
 
   @override
@@ -163,6 +180,11 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     if (widget.disabled) return;
     await LayrzBottomSheet.show<void>(
       context,
+      // Names the sheet's route for screen readers with this field's own
+      // label -- without it LayrzBottomSheet.show adds no route semantics at
+      // all. Falls back to hintText when labelText is null, matching this
+      // widget's own labelText-or-hintText constructor assertion.
+      semanticLabel: widget.labelText ?? widget.hintText,
       builder: (context) => LayrzTimeRangeSurface(
         startValue: widget.startValue,
         endValue: widget.endValue,
@@ -231,6 +253,13 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_summaryPrimed || widget.startValue != _lastStart || widget.endValue != _lastEnd) {
+      _summaryPrimed = true;
+      _lastStart = widget.startValue;
+      _lastEnd = widget.endValue;
+      _updateSummary();
+    }
+
     if (context.isCompact) {
       return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
     }
