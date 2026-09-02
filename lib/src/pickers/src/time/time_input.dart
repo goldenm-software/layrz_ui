@@ -234,7 +234,10 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
 
     await LayrzEndDrawer.show<void>(
       context,
-      semanticLabel: widget.labelText ?? widget.hintText,
+      // `title` below carries `labelText` visibly, so `semanticLabel` falls
+      // back to `hintText` only -- see LayrzDateInput's identical doc for
+      // why passing `labelText` to both would double the announcement.
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
@@ -244,6 +247,10 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       // this batch). Explicitly overrides LayrzEndDrawer.show's own
       // actions-present-infers-false default.
       canDismiss: true,
+      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
+      // should be the labelText of the input" -- see LayrzDateInput's
+      // identical doc for the full rationale.
+      title: widget.labelText != null ? Text(widget.labelText!) : null,
       builder: (context) => LayrzTimeSurface(
         key: surfaceKey,
         value: widget.value ?? _midnight,

@@ -283,7 +283,19 @@ class _LayrzDateInputState extends State<LayrzDateInput> {
 
     await LayrzEndDrawer.show<void>(
       context,
-      semanticLabel: widget.labelText ?? widget.hintText,
+      // DESIGN-98 Finding 5: the maintainer's explicit ruling is
+      // "title should be the labelText of the input" -- before this, the
+      // label reached the drawer only as `semanticLabel` (screen-reader
+      // only), so a sighted user saw no visible title at all. `title` below
+      // now carries `labelText` visibly whenever it is set. `semanticLabel`
+      // is passed only as a fallback for the `hintText`-only case (no
+      // `title`) -- when `title` is non-null, its own rendered `Text`
+      // already produces a Semantics node with that exact label, so also
+      // passing it as `semanticLabel` would announce it a second time (see
+      // end_drawer.dart's own doc: "passing both usually reads as a
+      // duplicate title, not a title plus a caption").
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      title: widget.labelText != null ? Text(widget.labelText!) : null,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
