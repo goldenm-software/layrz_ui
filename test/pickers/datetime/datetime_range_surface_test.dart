@@ -168,6 +168,17 @@ void main() {
         ),
       );
 
+      // `LayrzDateTimeRangeSurfaceState.canSave` (commit 83ba2e0) is
+      // `_draft.isComplete` alone. Asserting `isDisabled` directly is what
+      // actually pins that gate: `save()` has its own independent
+      // `startDate == null || endDate == null` guard, so a `saveCount == 0`
+      // assertion alone would still pass even if `canSave` were forced to
+      // `true` -- only the button's own disabled state proves the gate.
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel('Save'), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'the date draft is empty -- Save must be visibly disabled');
+
       await tester.tap(findButtonLabel('Save'));
       await tester.pump();
 
@@ -192,6 +203,14 @@ void main() {
 
       await tester.tap(find.text('5').first);
       await tester.pump();
+
+      // See the identical reasoning in the "date draft is empty" test above
+      // -- `saveCount == 0` alone doesn't pin `canSave`, since `save()`
+      // independently no-ops on a half-open draft regardless of the gate.
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel('Save'), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'only the anchor is set -- Save must be visibly disabled');
 
       await tester.tap(findButtonLabel('Save'));
       await tester.pump();

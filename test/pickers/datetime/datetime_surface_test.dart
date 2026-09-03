@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/pickers/src/datetime/datetime_presentation.dart';
 import 'package:layrz_ui/src/pickers/src/datetime/datetime_surface.dart';
 import 'package:layrz_ui/src/pickers/src/models/time_of_day.dart';
@@ -76,6 +77,37 @@ void main() {
         expect(findButtonLabel('Save'), findsOneWidget, reason: '$presentation');
         expect(findButtonLabel('Cancel'), findsOneWidget, reason: '$presentation');
       }
+    });
+
+    guardedTestWidgets('Save stays disabled and commits nothing when no date has been chosen', (tester) async {
+      setWide(tester);
+      var saveCalls = 0;
+      await pumpThemed(
+        tester,
+        LayrzDateTimeSurface(
+          presentation: LayrzDateTimeInputPresentation.tabbed,
+          initialDate: null,
+          initialTime: null,
+          onSave: (_, _) => saveCalls++,
+          onCancel: () {},
+        ),
+      );
+
+      // `LayrzDateTimeSurfaceState.canSave` (commit 83ba2e0) is `_date !=
+      // null` alone -- unlike the time part, the date is never defaulted,
+      // so a null seed must leave Save genuinely unreachable. This is the
+      // one guard still load-bearing after the midnight-default change, and
+      // it needs its own fail-injection-proof test rather than riding along
+      // on the "commits midnight" tests above.
+      final saveButton = tester.widget<LayrzButton>(
+        find.ancestor(of: findButtonLabel('Save'), matching: find.byType(LayrzButton)),
+      );
+      expect(saveButton.isDisabled, isTrue, reason: 'no date has been chosen -- Save must be visibly disabled');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(saveCalls, 0, reason: 'a null date must never commit, even with the time defaulted to midnight');
     });
 
     guardedTestWidgets('Save commits once, with the time part defaulted to midnight, when only the date is set', (
