@@ -78,24 +78,38 @@ void main() {
       }
     });
 
-    guardedTestWidgets('Save is a no-op while either part is unset', (tester) async {
+    guardedTestWidgets('Save commits once, with the time part defaulted to midnight, when only the date is set', (
+      tester,
+    ) async {
       setWide(tester);
       var saveCalls = 0;
+      DateTime? savedDate;
+      LayrzTimeOfDay? savedTime;
       await pumpThemed(
         tester,
         LayrzDateTimeSurface(
           presentation: LayrzDateTimeInputPresentation.tabbed,
           initialDate: DateTime(2026, 9, 1),
           initialTime: null,
-          onSave: (_, _) => saveCalls++,
+          onSave: (date, time) {
+            saveCalls++;
+            savedDate = date;
+            savedTime = time;
+          },
           onCancel: () {},
         ),
       );
 
+      // `LayrzDateTimeSurfaceState.canSave` (commit 83ba2e0) is `_date !=
+      // null` alone -- the time part is a `late` field seeded to midnight
+      // when `initialTime` is null, so Save is reachable and commits
+      // 00:00:00 without the user ever touching a time field.
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
-      expect(saveCalls, 0);
+      expect(saveCalls, 1);
+      expect(savedDate, DateTime(2026, 9, 1));
+      expect(savedTime, const LayrzTimeOfDay(hour: 0, minute: 0, second: 0));
     });
 
     guardedTestWidgets('Save fires onSave exactly once with the chosen date and time', (tester) async {
@@ -149,28 +163,39 @@ void main() {
     });
   });
 
-  group('LayrzDateTimeSurface — no midnight default', () {
-    guardedTestWidgets('a date-only seed never becomes committable without touching a time field', (tester) async {
+  group('LayrzDateTimeSurface — midnight is a valid default', () {
+    guardedTestWidgets('a date-only seed commits immediately with the time defaulted to midnight', (tester) async {
       setWide(tester);
       var saveCalls = 0;
+      DateTime? savedDate;
+      LayrzTimeOfDay? savedTime;
       await pumpThemed(
         tester,
         LayrzDateTimeSurface(
           presentation: LayrzDateTimeInputPresentation.tabbed,
           initialDate: DateTime(2026, 9, 1),
           initialTime: null,
-          onSave: (_, _) => saveCalls++,
+          onSave: (date, time) {
+            saveCalls++;
+            savedDate = date;
+            savedTime = time;
+          },
           onCancel: () {},
         ),
       );
 
+      // No time field is ever touched here -- `canSave` (commit 83ba2e0)
+      // no longer requires it, so Save must already be reachable and commit
+      // the midnight-defaulted time on the very first tap.
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
-      expect(saveCalls, 0, reason: 'the time half was never touched, so Save must remain a no-op');
+      expect(saveCalls, 1, reason: 'the date alone is enough to make Save committable');
+      expect(savedDate, DateTime(2026, 9, 1));
+      expect(savedTime, const LayrzTimeOfDay(hour: 0, minute: 0, second: 0));
     });
 
-    guardedTestWidgets('editing a time field makes Save committable', (tester) async {
+    guardedTestWidgets('editing a time field overrides the midnight default', (tester) async {
       setWide(tester);
       var saveCalls = 0;
       LayrzTimeOfDay? savedTime;

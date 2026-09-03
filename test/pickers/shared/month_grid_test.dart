@@ -280,11 +280,11 @@ void main() {
       expect(decoration.color, expected);
     });
 
-    // Finding 2c regression: a consecutive month range's endpoint/interior
-    // months previously rendered a bordered card/pill of their own (visible
-    // in the maintainer's screenshot), on top of the continuous bar. This
-    // asserts neither role paints a fill/border of its own any longer.
-    guardedTestWidgets('a consecutive range endpoint/interior month paints no card of its own (Finding 2c)', (
+    // The maintainer's fix (commit 83ba2e0) reunited `rangeEndpoint`/
+    // `rangeInterior` with `selected` in the same switch branch: each month
+    // in a consecutive range now paints its own solid `primary` card fill
+    // on top of the continuous bar, same as an arbitrarily-selected month.
+    guardedTestWidgets('a consecutive range endpoint/interior month paints its own primary card fill', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -313,6 +313,7 @@ void main() {
       // Feb (start), Mar/Apr (interior), May (end) -- four cells total.
       expect(rangeCells.length, 4);
 
+      final tokens = LayrzTokens.light();
       for (final label in ['February', 'March', 'April', 'May']) {
         final cellFinder = find.byWidgetPredicate(
           (widget) =>
@@ -332,7 +333,7 @@ void main() {
         );
         final innerContainer = containers.last;
         final decoration = innerContainer.decoration as BoxDecoration;
-        expect(decoration.color, isNull, reason: '$label must not paint its own card fill');
+        expect(decoration.color, tokens.colors.primary, reason: '$label must paint its own card fill');
         expect(decoration.border, isNull, reason: '$label must not paint its own card border');
 
         // Finding 1 regression (maintainer review): "MonthRange has the same
@@ -416,7 +417,14 @@ void main() {
               (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
         );
         final text = tester.widget<Text>(find.descendant(of: cellFinder, matching: find.byType(Text)).first);
-        expect(text.style?.color, tokens.colors.sf1, reason: '$label must use the contrasting foreground');
+        // The maintainer's fix (commit 83ba2e0) resolves the range-role
+        // foreground from `primary.contrastColor` (computed luminance
+        // against the actual seed) rather than the fixed `sf1` token.
+        expect(
+          text.style?.color,
+          tokens.colors.primary.contrastColor,
+          reason: '$label must use the contrasting foreground',
+        );
       }
     });
   });

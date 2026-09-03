@@ -169,7 +169,7 @@ void main() {
       expect(findButtonLabel('Save'), findsOneWidget);
     });
 
-    guardedTestWidgets('no midnight default: a never-touched time half is not silently committed', (tester) async {
+    guardedTestWidgets('midnight is a valid default: a never-touched time half commits as 00:00', (tester) async {
       setWide(tester);
       DateTime? changed;
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', onChanged: (v) => changed = v));
@@ -183,8 +183,14 @@ void main() {
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
-      // Save must be a no-op: the time half was never chosen.
-      expect(changed, isNull);
+      // `LayrzDateTimeSurfaceState.canSave` (commit 83ba2e0) is `_date !=
+      // null` alone -- the time part is a `late` field seeded to midnight,
+      // so Save commits once the date is picked, with the never-touched
+      // time half reported as 00:00 rather than staying a no-op.
+      expect(changed, isNotNull);
+      expect(changed!.day, 15);
+      expect(changed!.hour, 0);
+      expect(changed!.minute, 0);
     });
 
     guardedTestWidgets('Save commits the combined datetime and closes the drawer', (tester) async {

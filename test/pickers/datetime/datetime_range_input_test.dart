@@ -521,7 +521,7 @@ void main() {
     });
   });
 
-  group('LayrzDateTimeRangeInput — no midnight default, Save reachability', () {
+  group('LayrzDateTimeRangeInput — midnight is a valid default, Save reachability', () {
     guardedTestWidgets('Save is disabled while the date range is incomplete even with times set', (
       tester,
     ) async {
@@ -541,29 +541,59 @@ void main() {
       expect(saveButton.isDisabled, isTrue);
     });
 
-    guardedTestWidgets('Save is disabled when the date range is complete but a time part was never touched', (
-      tester,
-    ) async {
-      setWide(tester);
-      await pumpThemedApp(tester, _bounded(LayrzDateTimeRangeInput(labelText: 'Trip', onChanged: (_, _) {})));
+    guardedTestWidgets(
+      'Save is enabled once the date range is complete, even with neither time part ever touched, and commits '
+      'midnight for both endpoints',
+      (tester) async {
+        setWide(tester);
+        DateTime? savedStart;
+        DateTime? savedEnd;
+        await pumpThemedApp(
+          tester,
+          _bounded(
+            LayrzDateTimeRangeInput(
+              labelText: 'Trip',
+              onChanged: (s, e) {
+                savedStart = s;
+                savedEnd = e;
+              },
+            ),
+          ),
+        );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.text('5').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('10').first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('5').first);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('10').first);
+        await tester.pumpAndSettle();
 
-      // Date range complete, but neither time cluster was ever edited.
-      final saveButton = tester.widget<LayrzButton>(
-        find.ancestor(of: findButtonLabel('Save'), matching: find.byType(LayrzButton)).first,
-      );
-      expect(saveButton.isDisabled, isTrue);
-    });
+        // Date range complete, but neither time cluster was ever edited.
+        // `LayrzDateTimeRangeSurfaceState.canSave` (commit 83ba2e0) is
+        // `_draft.isComplete` alone -- `_startTime`/`_endTime` are `late`
+        // fields seeded to midnight, so Save is reachable here.
+        final saveButton = tester.widget<LayrzButton>(
+          find.ancestor(of: findButtonLabel('Save'), matching: find.byType(LayrzButton)).first,
+        );
+        expect(saveButton.isDisabled, isFalse);
 
-    guardedTestWidgets('Save becomes enabled once the date range is complete and both times are set, and a '
-        'never-touched time is never silently committed as midnight', (tester) async {
+        await tester.tap(findButtonLabel('Save'));
+        await tester.pumpAndSettle();
+
+        expect(savedStart, isNotNull);
+        expect(savedEnd, isNotNull);
+        expect(savedStart!.day, 5);
+        expect(savedStart!.hour, 0);
+        expect(savedStart!.minute, 0);
+        expect(savedEnd!.day, 10);
+        expect(savedEnd!.hour, 0);
+        expect(savedEnd!.minute, 0);
+      },
+    );
+
+    guardedTestWidgets('Save reports both explicitly-typed times unchanged when neither is left at its midnight '
+        'default', (tester) async {
       setWide(tester);
       DateTime? savedStart;
       DateTime? savedEnd;

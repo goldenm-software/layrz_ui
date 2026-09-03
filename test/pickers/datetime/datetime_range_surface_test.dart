@@ -200,10 +200,12 @@ void main() {
     });
 
     guardedTestWidgets(
-      'Save stays disabled when the date range is complete but the time parts were never touched '
-      '(no midnight default)',
+      'Save commits once, with both time parts defaulted to midnight, when the date range is complete but '
+      'the time parts were never touched (midnight is a valid default)',
       (tester) async {
         setWide(tester);
+        DateTime? savedStart;
+        DateTime? savedEnd;
         var saveCount = 0;
         await pumpThemed(
           tester,
@@ -212,7 +214,11 @@ void main() {
               value: null,
               startTime: null,
               endTime: null,
-              onSave: (_, _) => saveCount++,
+              onSave: (s, e) {
+                savedStart = s;
+                savedEnd = e;
+                saveCount++;
+              },
               onCancel: () {},
             ),
           ),
@@ -223,10 +229,20 @@ void main() {
         await tester.tap(find.text('10').first);
         await tester.pump();
 
+        // `LayrzDateTimeRangeSurfaceState.canSave` (commit 83ba2e0) is
+        // `_draft.isComplete` alone -- neither `_startTime` nor `_endTime`
+        // gates it any longer, and both are `late` fields seeded to
+        // midnight when the caller's `startTime`/`endTime` are null.
         await tester.tap(findButtonLabel('Save'));
         await tester.pump();
 
-        expect(saveCount, 0);
+        expect(saveCount, 1, reason: 'the completed date range alone is enough to make Save committable');
+        expect(savedStart!.day, 5);
+        expect(savedStart!.hour, 0);
+        expect(savedStart!.minute, 0);
+        expect(savedEnd!.day, 10);
+        expect(savedEnd!.hour, 0);
+        expect(savedEnd!.minute, 0);
       },
     );
 

@@ -257,9 +257,7 @@ void main() {
       },
     );
 
-    guardedTestWidgets('a range-interior cell paints its tint via the bar, not the cell -- no double-tint', (
-      tester,
-    ) async {
+    guardedTestWidgets('a range-interior cell paints its own primary fill on top of the bar', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -284,19 +282,18 @@ void main() {
         find.descendant(of: cellFinder, matching: find.byType(Container)).first,
       );
       final decoration = container.decoration as BoxDecoration;
-      // The cell's own circle paints no fill -- the bar behind it (asserted
-      // in the "continuous range bar" group below) supplies the tint.
-      expect(decoration.color, isNull);
+      // The maintainer's fix (commit 83ba2e0) reunited `rangeInterior` with
+      // `selected` in the same switch branch: the cell now paints its own
+      // solid `primary` circle fill, same as any other selected cell,
+      // rather than relying solely on the row bar behind it.
+      final tokens = LayrzTokens.light();
+      expect(decoration.color, tokens.colors.primary);
     });
 
-    // Finding 2a regression: a completed range's endpoints previously
-    // painted their own full-strength filled circle on top of the bar --
-    // "instead of adding the circles, just let's do the row, the circle
-    // looks weird" (the maintainer's words). This asserts an endpoint cell
-    // paints no shape of its own at all, exactly like an interior cell.
-    guardedTestWidgets('a range endpoint cell paints no fill/shape of its own -- no circle on the bar', (
-      tester,
-    ) async {
+    // The maintainer's fix (commit 83ba2e0) reverted the "no circle" ruling:
+    // a range endpoint now paints its own solid `primary` circle fill, same
+    // as `selected` and `rangeInterior`.
+    guardedTestWidgets('a range endpoint cell paints its own primary circle fill', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -319,6 +316,7 @@ void main() {
       // Exactly the two endpoints -- Sept 5 and Sept 20 -- render this role.
       expect(endpointCells.length, 2);
 
+      final tokens = LayrzTokens.light();
       for (final label in ['5', '20']) {
         final cellFinder = find.byWidgetPredicate(
           (widget) =>
@@ -336,7 +334,7 @@ void main() {
               (c) => c.constraints == const BoxConstraints.tightFor(width: 32.0, height: 32.0),
             );
         final decoration = container.decoration as BoxDecoration;
-        expect(decoration.color, isNull, reason: 'endpoint "$label" must not paint its own circle fill');
+        expect(decoration.color, tokens.colors.primary, reason: 'endpoint "$label" must paint its own circle fill');
 
         // Finding 1 regression (maintainer review, from a device
         // screenshot): an endpoint/interior cell is selectable (not
@@ -436,7 +434,14 @@ void main() {
               (widget.role == LayrzPickerCellRole.rangeEndpoint || widget.role == LayrzPickerCellRole.rangeInterior),
         );
         final text = tester.widget<Text>(find.descendant(of: cellFinder, matching: find.byType(Text)).first);
-        expect(text.style?.color, tokens.colors.sf1, reason: 'day "$label" must use the contrasting foreground');
+        // The maintainer's fix (commit 83ba2e0) resolves the range-role
+        // foreground from `primary.contrastColor` (computed luminance
+        // against the actual seed) rather than the fixed `sf1` token.
+        expect(
+          text.style?.color,
+          tokens.colors.primary.contrastColor,
+          reason: 'day "$label" must use the contrasting foreground',
+        );
       }
     });
   });
