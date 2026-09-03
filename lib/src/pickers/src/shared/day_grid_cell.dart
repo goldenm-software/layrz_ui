@@ -111,6 +111,7 @@ class LayrzPickersDayGridCell extends StatelessWidget {
     final tokens = context.tokens;
     final l10n = context.l10n;
     final isInert = isDisabled || isRejected;
+    final isRangeMember = role == LayrzPickerCellRole.rangeEndpoint || role == LayrzPickerCellRole.rangeInterior;
 
     Color textColor;
     Color? fillColor;
@@ -160,6 +161,23 @@ class LayrzPickersDayGridCell extends StatelessWidget {
     if (isRejected && role != LayrzPickerCellRole.rangeInterior) {
       fillColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
     }
+
+    // A range member's hover must read against `LayrzPickersRangeBar`'s solid
+    // `primary` fill, not against the page background every other cell hovers
+    // over (Finding 4, maintainer review). `tokens.colors.sf3` -- the default
+    // hover token, a light surface colour -- painted a white-ish circle over
+    // the navy bar on hover, hiding the numeral underneath it: the exact same
+    // class of defect the idle surface was already fixed for above, now
+    // showing up one interaction state later. A lighter tint of `primary`
+    // itself (not a surface colour) keeps the hover legible against the bar
+    // while still reading as "responding to the pointer" -- `sf1` text (the
+    // range-member foreground assigned above) stays legible against it since
+    // the blend never lightens past a mid tone. `Color.lerp` rather than
+    // `LayrzColorSwatch.fromColor`'s `.shadeXXX` ramp: that derivation
+    // inverts for a dark seed like the default `kPrimaryColor` (see
+    // `LayrzPickersRangeBar`'s own doc), clamping to black instead of
+    // lightening.
+    final hoverColor = isRangeMember ? Color.lerp(tokens.colors.primary, const Color(0xFFFFFFFF), 0.18)! : null;
 
     final semanticsExtras = StringBuffer(semanticLabel);
     if (role == LayrzPickerCellRole.today) semanticsExtras.write(', ${l10n.pickerTodayLabel}');
@@ -219,19 +237,23 @@ class LayrzPickersDayGridCell extends StatelessWidget {
               // workaround for that shared widget's default, not a new one.
               //
               // Transparent-at-the-hover-hue, not literal black (Finding 5,
-              // same review pass). `tokens.colors.sf3.withValues(alpha: 0)`
-              // rather than `Color(0x00000000)`: the latter's RGB channels
-              // are black regardless of alpha, so animating from it to the
-              // hover state (`hoverColor` here, `tokens.colors.sf3`) ramps
-              // black upward alongside the alpha and visibly darkens mid-tween
-              // before settling at the lighter `sf3` -- the exact "black
+              // same review pass). `(hoverColor ?? tokens.colors.sf3)
+              // .withValues(alpha: 0)` rather than `Color(0x00000000)`: the
+              // latter's RGB channels are black regardless of alpha, so
+              // animating from it to the hover state ramps black upward
+              // alongside the alpha and visibly darkens mid-tween before
+              // settling at the lighter hover colour -- the exact "black
               // blink" reported for `combobox_surface.dart`'s identical
               // idle-to-hover tween (see that file's own fix and doc for the
               // measured lightness dip this avoids). Starting from the same
               // hue at zero alpha keeps every intermediate frame's RGB
-              // already correct, so only the alpha ramps.
-              color: tokens.colors.sf3.withValues(alpha: 0),
-              hoverColor: tokens.colors.sf3,
+              // already correct, so only the alpha ramps -- this holds for a
+              // range member's own lighter-primary hover exactly as it did
+              // for every other cell's `sf3` hover; non-range cells are
+              // unaffected (`hoverColor` above is `null` for them, so this
+              // falls back to the previous `sf3` idle/hover pair unchanged).
+              color: (hoverColor ?? tokens.colors.sf3).withValues(alpha: 0),
+              hoverColor: hoverColor ?? tokens.colors.sf3,
               borderRadius: BorderRadius.circular(16.0),
               child: Container(
                 width: 32.0,

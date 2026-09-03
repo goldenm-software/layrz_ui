@@ -67,6 +67,7 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
     final tokens = context.tokens;
     final l10n = context.l10n;
     final isInert = isDisabled || isRejected;
+    final isRangeMember = role == LayrzPickerCellRole.rangeEndpoint || role == LayrzPickerCellRole.rangeInterior;
 
     var textColor = isDisabled ? tokens.colors.fg4 : tokens.colors.fg1;
     Color? fillColor;
@@ -112,6 +113,12 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
     if (isRejected && role != LayrzPickerCellRole.rangeInterior) {
       fillColor = tokens.colors.primary.withValues(alpha: tokens.colors.tonalOpacity);
     }
+
+    // A range member's hover must read against `LayrzPickersRangeBar`'s solid
+    // `primary` fill, not against the page background every other cell hovers
+    // over -- see `LayrzPickersDayGridCell`'s identical fix and doc for the
+    // full rationale (Finding 4, maintainer review).
+    final hoverColor = isRangeMember ? Color.lerp(tokens.colors.primary, const Color(0xFFFFFFFF), 0.18)! : null;
 
     final semanticsExtras = StringBuffer(semanticLabel);
     if (role == LayrzPickerCellRole.today) semanticsExtras.write(', ${l10n.pickerTodayLabel}');
@@ -163,8 +170,14 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
               // same review pass) -- see `LayrzPickersDayGridCell`'s
               // identical fix and doc for why `Color(0x00000000)` would
               // reintroduce a "black blink" tween into the hover state.
-              color: tokens.colors.sf3.withValues(alpha: 0),
-              hoverColor: tokens.colors.sf3,
+              //
+              // `hoverColor` swaps to a lighter tint of `primary` for a range
+              // member (Finding 4, maintainer review) -- see
+              // `LayrzPickersDayGridCell`'s identical fix and doc for the
+              // full rationale; non-range cells keep the previous `sf3`
+              // hover unchanged, since `hoverColor` is `null` for them.
+              color: (hoverColor ?? tokens.colors.sf3).withValues(alpha: 0),
+              hoverColor: hoverColor ?? tokens.colors.sf3,
               borderRadius: tokens.radius.br2,
               child: Container(
                 alignment: Alignment.center,
