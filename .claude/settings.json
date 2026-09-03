@@ -1,0 +1,34 @@
+{
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: None configured",
+      "**Primary use of Claude Code**: software development (Flutter/Dart package: layrz_ui)",
+      "**Cloud provider(s)**: None configured",
+      "**Repository visibility**: PUBLIC — goldenm-software/layrz_ui (github.com:goldenm-software/layrz_ui.git). Any push here is publishing.",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: Default branch `main`; `development` is the working branch (per CLAUDE.md, always branch from development, never main). Rulesets active: Commit sign, Coverage requirement, Dart protection, General protection. Many feature/chore branches also listed as protected (100+, truncated) — treat all listed and rulesetted branches as protected even though `Protected branches: none listed` was not the case here (rulesets present).",
+      "**CI/CD deploy targets**: None configured — repo has .github/workflows (checks.yaml, publish.yaml) publishing to pub.dev and a web showroom via tool/deploy_web.py, but no specific deploy host/credential was gathered",
+      "**Network posture**: None configured",
+      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine with open internet",
+      "### Trust",
+      "**Source control**: The trusted repo (goldenm-software/layrz_ui) and its origin remote only (no additional orgs configured)",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: None configured",
+      "**Internal package registry**: None configured — package is published to pub.dev (public registry), not an internal one",
+      "### Sensitivity",
+      "**Sensitive data locations & audiences**: any file or store holding personal data, confidential business data, credentials, regulated data, or similarly sensitive material; preserve exact handles when known and share only with audiences cleared at the [named+specifics] bar",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace, host, or container whose name carries `prod` or `production` as a whole word or name segment",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: software development, routine under this project (layrz_ui, a Flutter/Dart design-system package)",
+      "**Trusted repo**: /home/mochi/Projects/layrz_ui and its origin remote (github.com:goldenm-software/layrz_ui.git) — PUBLIC repo, so only this repo's own work should be pushed/committed there; confidential material is never cleared into it by visibility",
+      "**Org-specific CLIs**: None configured — project uses standard flutter/dart tooling plus gh; k8s namespace flags seen (`lib`, `textarea`, `tool`) appear to be test/coverage directory names, not real cluster namespaces — no org-specific k8s context found",
+      "routine under layrz_ui/ prefix: flutter build/test/analyze commands, gh CLI for PRs/issues on goldenm-software/layrz_ui, make targets (build-android, checks, clean, coverage, coverage-html, get, get-example, install-hooks, run-android/ios/linux/macos/windows)"
+    ]
+  }
+}
