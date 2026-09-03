@@ -15,10 +15,39 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// without Material and without an ink splash.
 ///
 /// **Surface painting:**
-/// - Default surface is transparent (no tint when idle).
-/// - Hover paints a tint using the `hoverColor` or the default hover token.
-/// - Pressed paints a tint using the `pressedColor` or the default pressed token.
+/// - **Idle is `tokens.colors.sf1` by default, not transparent** -- despite
+///   what this sentence used to say. `sf1` is an **opaque** surface colour;
+///   with no `color:` supplied, every idle [LayrzTappable] paints that
+///   colour underneath its child, filling its full [borderRadius] region.
+///   This read as invisible for callers compositing over a plain page
+///   background (`sf1` matches it closely enough not to notice), but it is
+///   not actually transparent, and a caller compositing over anything else
+///   -- most concretely, a day/month grid cell rendered on top of
+///   [LayrzPickersRangeBar]'s solid `primary` fill -- gets a visibly
+///   opaque `sf1` disc/card painted over that background, hiding whatever
+///   is under it. **Pass `color: const Color(0x00000000)` explicitly** (or
+///   any other colour matching your own background) whenever idle must
+///   actually read as transparent; see `day_grid_cell.dart`,
+///   `month_grid_cell.dart`, `select_input.dart`, and
+///   `combobox_surface.dart` for four call sites that already do this.
+/// - Hover paints a tint using `hoverColor` or the default hover token
+///   (`tokens.colors.sf3`).
+/// - Pressed paints a tint using `pressedColor` or the default pressed
+///   token (`tokens.colors.sf4`).
 /// - Disabled state disables all gestures and paints a disabled-state tint.
+///
+/// **A transparent idle colour must share its hover/pressed colour's hue,
+/// not be literal black-at-zero-alpha.** `Color(0x00000000)`'s RGB channels
+/// are black regardless of alpha; animating from it to an opaque, lighter
+/// hover colour makes [AnimatedContainer]'s `Color.lerp` ramp those black
+/// channels upward alongside the alpha, which visibly darkens the surface
+/// mid-transition before it settles at the lighter hover tone -- a "black
+/// blink" on hover, reported from a device screenshot. Prefer
+/// `hoverColor.withValues(alpha: 0)` (or `tokens.colors.sf3.withValues(alpha:
+/// 0)` when relying on the default hover token) as the idle `color`, and
+/// pass that same `hoverColor` explicitly alongside it -- see
+/// `combobox_surface.dart`'s `_ComboBoxSheetOptionRow` and the two grid-cell
+/// files above for the fix in place.
 ///
 /// **States:**
 /// - **Hovered**: the pointer is over the widget (desktop/mouse only).
@@ -59,10 +88,13 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// - [borderRadius]: the border radius applied to the painted surface. Defaults to
 ///   [BorderRadius.zero] (sharp corners). This should match the child's own border
 ///   radius to avoid misaligned painting.
-/// - [color]: the idle surface color. Defaults to transparent. When null, no tint
-///   is applied while idle.
+/// - [color]: the idle surface color. **Defaults to `tokens.colors.sf1`, an
+///   opaque surface colour -- not transparent** (see this class's own
+///   "Surface painting" section above for why that matters and how to opt
+///   out). Pass an explicit colour to override it; `null` means "use the
+///   `sf1` default", not "no tint".
 /// - [hoverColor]: the surface color when hovered. Defaults to null, which uses
-///   [LayrzTokens.colors.sf2] (the second surface level). When non-null, overrides
+///   [LayrzTokens.colors.sf3] (the third surface level). When non-null, overrides
 ///   the token-based hover color.
 /// - [pressedColor]: the surface color when pressed. Defaults to null, which uses
 ///   [LayrzTokens.colors.sf3] (the third surface level). When non-null, overrides
@@ -106,12 +138,17 @@ class LayrzTappable extends StatefulWidget {
 
   /// The idle surface color.
   ///
-  /// When null, defaults to transparent (no tint applied while idle).
+  /// **Defaults to `tokens.colors.sf1` when null -- an opaque surface
+  /// colour, not transparent.** See the class doc's "Surface painting"
+  /// section for why the difference matters (an opaque idle surface
+  /// composited over anything but a plain page background stays visibly
+  /// painted) and for the `Color(0x00000000)` (or, better, a
+  /// hover-colour-matched transparent) pattern to opt out of it.
   final Color? color;
 
   /// The surface color when hovered.
   ///
-  /// Defaults to null, which uses [LayrzTokens.colors.sf2] (the second surface level).
+  /// Defaults to null, which uses [LayrzTokens.colors.sf3] (the third surface level).
   /// When non-null, overrides the token-based hover color.
   final Color? hoverColor;
 
