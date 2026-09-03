@@ -147,11 +147,11 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
 
   /// The start endpoint's time-of-day. `null` until the user edits the start
   /// fields — see the class doc's "No midnight default" note.
-  LayrzTimeOfDay? _startTime;
+  late LayrzTimeOfDay _startTime;
 
   /// The end endpoint's time-of-day. `null` until the user edits the end
   /// fields.
-  LayrzTimeOfDay? _endTime;
+  late LayrzTimeOfDay _endTime;
 
   final _policy = LayrzContiguousRangePolicy<DateTime>(compare: (a, b) => _dayOnly(a).compareTo(_dayOnly(b)));
 
@@ -190,8 +190,8 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
         ? const LayrzRangeDraft<DateTime>.empty()
         : LayrzRangeDraft<DateTime>.complete(anchor: _dayOnly(value.start), end: _dayOnly(value.end));
     _displayedMonth = value?.start ?? DateTime.now();
-    _startTime = widget.startTime;
-    _endTime = widget.endTime;
+    _startTime = widget.startTime ?? const LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
+    _endTime = widget.endTime ?? const LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
   }
 
   /// Steps [_displayedMonth] by [months] through [sameZoneDate], mirroring
@@ -244,7 +244,7 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
   /// time parts must have been genuinely chosen. Never `true` from a
   /// silently-substituted default — see the class doc's "No midnight
   /// default" note. Read by [LayrzDateTimeRangeInput] through a [GlobalKey].
-  bool get canSave => _draft.isComplete && _startTime != null && _endTime != null;
+  bool get canSave => _draft.isComplete;
 
   /// Commits the draft via [LayrzDateTimeRangeSurface.onSave]. Invoked by
   /// [LayrzDateTimeRangeInput] through a [GlobalKey] when the Save action it
@@ -254,7 +254,7 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
     final endDate = _draft.end;
     final startTime = _startTime;
     final endTime = _endTime;
-    if (startDate == null || endDate == null || startTime == null || endTime == null) return;
+    if (startDate == null || endDate == null) return;
 
     var start = sameZoneDateTime(
       startDate,
@@ -372,7 +372,7 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
             // shown as 00:00 without ever being *reported* as 00:00:
             // `onChanged` below is the only path that sets `_startTime`, and
             // it only runs when the user actually edits a field.
-            value: _startTime ?? const LayrzTimeOfDay(hour: 0, minute: 0),
+            value: _startTime,
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (t) {
@@ -384,7 +384,7 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
           Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
           SizedBox(height: tokens.spacing.sp1),
           LayrzPickersTimeFieldsPanel(
-            value: _endTime ?? const LayrzTimeOfDay(hour: 0, minute: 0),
+            value: _endTime,
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (t) {

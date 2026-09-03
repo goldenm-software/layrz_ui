@@ -129,21 +129,21 @@ class LayrzPickersDayGridCell extends StatelessWidget {
       case LayrzPickerCellRole.none:
         break;
       case LayrzPickerCellRole.selected:
-        fillColor = tokens.colors.primary;
-        textColor = tokens.colors.sf1;
-      case LayrzPickerCellRole.today:
-        ring = Border.all(color: tokens.colors.primary, width: tokens.border.base);
       case LayrzPickerCellRole.rangeEndpoint:
       case LayrzPickerCellRole.rangeInterior:
-        // No circle fill for either role -- the continuous range bar
-        // ([LayrzPickersDayGrid]'s own per-row background, painted behind
-        // this cell) already carries the whole selection, endpoints
-        // included, per Finding 2a (see this class's own doc). The bar now
-        // paints flat `primary` (Finding 2b, no tonal tint -- see
-        // `LayrzPickersRangeBar`'s own doc), so the numeral needs the same
-        // contrasting foreground the `selected`/`today` roles would use
-        // against a solid primary fill, or it is unreadable against it.
-        textColor = tokens.colors.sf1;
+        fillColor = tokens.colors.primary;
+        textColor = tokens.colors.primary.contrastColor;
+        break;
+      case LayrzPickerCellRole.today:
+        ring = Border.all(color: tokens.colors.primary, width: tokens.border.base);
+      // No circle fill for either role -- the continuous range bar
+      // ([LayrzPickersDayGrid]'s own per-row background, painted behind
+      // this cell) already carries the whole selection, endpoints
+      // included, per Finding 2a (see this class's own doc). The bar now
+      // paints flat `primary` (Finding 2b, no tonal tint -- see
+      // `LayrzPickersRangeBar`'s own doc), so the numeral needs the same
+      // contrasting foreground the `selected`/`today` roles would use
+      // against a solid primary fill, or it is unreadable against it.
     }
 
     // A rejected cell that is not itself a range-interior cell (defensive:

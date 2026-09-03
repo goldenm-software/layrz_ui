@@ -89,11 +89,11 @@ class LayrzTimeRangeSurface extends StatefulWidget {
 class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   /// The start cluster's draft. `null` until the user actually edits the
   /// start fields — see the class doc's "No 9:00–17:00 default" note.
-  LayrzTimeOfDay? _start;
+  late LayrzTimeOfDay _start;
 
   /// The end cluster's draft. `null` until the user actually edits the end
   /// fields.
-  LayrzTimeOfDay? _end;
+  late LayrzTimeOfDay _end;
 
   @override
   void initState() {
@@ -111,15 +111,9 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   }
 
   void _seed() {
-    _start = widget.startValue;
-    _end = widget.endValue;
+    _start = widget.startValue ?? LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
+    _end = widget.endValue ?? LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
   }
-
-  /// Whether Save is reachable: both clusters must have been genuinely
-  /// chosen. Never `true` from a silently-substituted default — see the
-  /// class doc's "No 9:00–17:00 default" note. Read by [LayrzTimeRangeInput]
-  /// through a [GlobalKey] (see [LayrzTimeRangeSurfaceState]'s class doc).
-  bool get canSave => _start != null && _end != null;
 
   /// Commits the draft via [LayrzTimeRangeSurface.onSave]. Invoked by
   /// [LayrzTimeRangeInput] through a [GlobalKey] when the Save action it
@@ -127,7 +121,6 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
   void save() {
     final start = _start;
     final end = _end;
-    if (start == null || end == null) return;
     final swapped = start.compareTo(end) > 0;
     widget.onSave(swapped ? end : start, swapped ? start : end);
   }
@@ -153,7 +146,7 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
             // `onChanged` callback below is the only path that sets
             // `_start`, and it only runs when the user actually edits a
             // field.
-            value: _start ?? const LayrzTimeOfDay(hour: 0, minute: 0),
+            value: _start,
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (time) {
@@ -166,7 +159,7 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
           SizedBox(height: tokens.spacing.sp1),
           LayrzPickersTimeFieldsPanel(
             // See the start cluster's identical comment above.
-            value: _end ?? const LayrzTimeOfDay(hour: 0, minute: 0),
+            value: _end,
             showSeconds: widget.showSeconds,
             use24HourFormat: widget.use24HourFormat,
             onChanged: (time) {
@@ -178,7 +171,7 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
             SizedBox(height: tokens.spacing.sp3),
             LayrzPickerInlineFooter(
               onCancel: widget.onCancel,
-              onSave: canSave ? save : null,
+              onSave: save,
             ),
           ],
         ],

@@ -210,8 +210,9 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    // Deliberately NOT calling the summary computation here -- see
-    // `_summaryPrimed`'s own doc above.
+
+    _lastValue = widget.value;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateSummary());
   }
 
   @override
@@ -235,13 +236,16 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
   }
 
   void _updateSummary() {
-    final value = widget.value;
-    if (value == null) {
+    if (_lastValue == null) {
       _controller.text = '';
       return;
     }
+    if (widget.formatter != null) {
+      _controller.text = widget.formatter!(_lastValue!);
+      return;
+    }
     final l10n = context.l10n;
-    _controller.text = widget.formatter?.call(value) ?? formatStrftime(value, widget.pattern, l10n);
+    _controller.text = formatStrftime(_lastValue!, widget.pattern, l10n);
   }
 
   /// Combines [date] and [time] via `sameZoneDateTime`, threaded through

@@ -77,15 +77,12 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
       case LayrzPickerCellRole.none:
         break;
       case LayrzPickerCellRole.selected:
+      case LayrzPickerCellRole.rangeEndpoint:
+      case LayrzPickerCellRole.rangeInterior:
         // Arbitrary (non-consecutive) mode's individual filled pill --
         // unaffected by Finding 2, which is a range-mode ruling only. See
         // this class's own doc.
-        fillColor = tokens.colors.primary;
-        textColor = tokens.colors.sf1;
-      case LayrzPickerCellRole.today:
-        border = Border.all(color: tokens.colors.primary, width: tokens.border.base);
-      case LayrzPickerCellRole.rangeEndpoint:
-      case LayrzPickerCellRole.rangeInterior:
+        //
         // No pill fill for either role in consecutive-range mode -- the
         // continuous range bar ([LayrzPickersMonthGrid]'s own per-row
         // background, painted behind this cell) already carries the whole
@@ -98,7 +95,10 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
         // `LayrzPickersMonthGrid._roleFor`'s `arbitrarySelection` branch,
         // which reads `selected` instead -- so arbitrary-mode months keep
         // their individual filled pills exactly as before.
-        textColor = tokens.colors.sf1;
+        fillColor = tokens.colors.primary;
+        textColor = tokens.colors.primary.contrastColor;
+      case LayrzPickerCellRole.today:
+        border = Border.all(color: tokens.colors.primary, width: tokens.border.base);
     }
 
     // A rejected cell that is not itself a range-interior cell (defensive,

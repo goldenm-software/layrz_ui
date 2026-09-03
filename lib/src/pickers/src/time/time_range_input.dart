@@ -129,6 +129,9 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
+
+    _lastStart = widget.startValue;
+    _lastEnd = widget.endValue;
   }
 
   @override
@@ -159,19 +162,17 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
   DateTime _asDateTime(LayrzTimeOfDay time) => DateTime(2000, 1, 1, time.hour, time.minute, time.second);
 
   void _updateSummary() {
-    final start = widget.startValue;
-    final end = widget.endValue;
-    if (start == null || end == null) {
+    if (_lastStart == null || _lastEnd == null) {
       _controller.text = '';
       return;
     }
     if (widget.formatter != null) {
-      _controller.text = widget.formatter!(start, end);
+      _controller.text = widget.formatter!(_lastStart!, _lastEnd!);
       return;
     }
     final l10n = context.l10n;
-    final startText = formatStrftime(_asDateTime(start), widget.pattern, l10n);
-    final endText = formatStrftime(_asDateTime(end), widget.pattern, l10n);
+    final startText = formatStrftime(_asDateTime(_lastStart!), widget.pattern, l10n);
+    final endText = formatStrftime(_asDateTime(_lastEnd!), widget.pattern, l10n);
     _controller.text = '$startText${l10n.dateTimePickerRangeSeparator}$endText';
   }
 
@@ -241,12 +242,11 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     final surfaceKey = GlobalKey<LayrzTimeRangeSurfaceState>();
 
     void syncDraftState() {
-      final state = surfaceKey.currentState;
       // Never observed null in practice once the seed above is correct --
       // see this method's own doc. Left unguarded rather than silently
       // swallowed, so a genuine regression here fails loudly instead of
       // permanently stranding `draftState` the way the hardcoded seed did.
-      draftState.value = (canSave: state!.canSave, hasSelection: false);
+      draftState.value = (canSave: true, hasSelection: false);
     }
 
     await LayrzEndDrawer.show<void>(

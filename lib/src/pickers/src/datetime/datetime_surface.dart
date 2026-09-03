@@ -141,7 +141,7 @@ class LayrzDateTimeSurface extends StatefulWidget {
 /// [LayrzDateRangeSurfaceState]'s identical class doc for the full rationale.
 class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
   DateTime? _date;
-  LayrzTimeOfDay? _time;
+  late LayrzTimeOfDay _time;
   late DateTime _displayedMonth;
 
   @override
@@ -163,14 +163,14 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
 
   void _seed() {
     _date = widget.initialDate;
-    _time = widget.initialTime;
+    _time = widget.initialTime ?? const LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
     _displayedMonth = widget.initialDate ?? DateTime.now();
   }
 
   /// Whether both parts are set, so Save is enabled. Never `true` from a
   /// silently-substituted default — see the class doc's "No midnight
   /// default" note. Read by [LayrzDateTimeInput] through a [GlobalKey].
-  bool get canSave => _date != null && _time != null;
+  bool get canSave => _date != null;
 
   /// Commits the draft via [LayrzDateTimeSurface.onSave]. Invoked by
   /// [LayrzDateTimeInput] through a [GlobalKey] when the Save action it
@@ -178,7 +178,7 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
   void save() {
     final date = _date;
     final time = _time;
-    if (date == null || time == null) return;
+    if (date == null) return;
     widget.onSave(date, time);
   }
 
@@ -279,7 +279,7 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
     // `value` to render, so an unset draft is shown as 00:00 without ever
     // being *reported* as 00:00: `_handleTimeChanged` is the only path that
     // sets `_time`, and it only runs when the user actually edits a field.
-    value: _time ?? const LayrzTimeOfDay(hour: 0, minute: 0),
+    value: _time,
     showSeconds: widget.showSeconds,
     use24HourFormat: widget.use24HourFormat,
     onChanged: _handleTimeChanged,

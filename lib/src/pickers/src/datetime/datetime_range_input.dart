@@ -171,8 +171,7 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
-    // Deliberately NOT calling the summary computation here -- see
-    // `_summaryPrimed`'s own doc above.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateSummary());
   }
 
   @override
@@ -196,19 +195,17 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
   }
 
   void _updateSummary() {
-    final start = widget.startValue;
-    final end = widget.endValue;
-    if (start == null || end == null) {
+    if (_lastStartValue == null || _lastEndValue == null) {
       _controller.text = '';
       return;
     }
     if (widget.formatter != null) {
-      _controller.text = widget.formatter!(start, end);
+      _controller.text = widget.formatter!(_lastStartValue!, _lastEndValue!);
       return;
     }
     final l10n = context.l10n;
-    final startText = formatStrftime(start, widget.pattern, l10n);
-    final endText = formatStrftime(end, widget.pattern, l10n);
+    final startText = formatStrftime(_lastStartValue!, widget.pattern, l10n);
+    final endText = formatStrftime(_lastEndValue!, widget.pattern, l10n);
     _controller.text = '$startText${l10n.dateTimePickerRangeSeparator}$endText';
   }
 

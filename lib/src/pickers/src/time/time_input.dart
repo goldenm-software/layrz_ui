@@ -135,6 +135,7 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
+    _lastValue = widget.value;
   }
 
   @override
@@ -149,7 +150,7 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       _focusNode = widget.focusNode ?? FocusNode();
     }
     if (widget.value != oldWidget.value) {
-      _lastValue = widget.value;
+      _lastValue = widget.value ?? LayrzTimeOfDay(hour: 0, minute: 0, second: 0);
       _updateSummary();
     }
   }
@@ -164,13 +165,23 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
   DateTime _asDateTime(LayrzTimeOfDay time) => DateTime(2000, 1, 1, time.hour, time.minute, time.second);
 
   void _updateSummary() {
-    final value = widget.value;
-    if (value == null) {
+    if (!_summaryPrimed) {
+      _controller.text = '';
+      _summaryPrimed = true;
+      return;
+    }
+    if (_lastValue == null) {
       _controller.text = '';
       return;
     }
+
+    if (widget.formatter != null) {
+      _controller.text = widget.formatter!(_lastValue!);
+      return;
+    }
+
     final l10n = context.l10n;
-    _controller.text = widget.formatter?.call(value) ?? formatStrftime(_asDateTime(value), widget.pattern, l10n);
+    _controller.text = formatStrftime(_asDateTime(_lastValue!), widget.pattern, l10n);
   }
 
   void _handleSave(LayrzTimeOfDay time) {
