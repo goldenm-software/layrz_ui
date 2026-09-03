@@ -104,6 +104,18 @@ presentation mode alongside the default `tabbed` mode), `LayrzDateTimeRangeInput
 boundary model, no-`intl` formatting, typed ranges, contiguity policy, endpoint-adjust selection,
 keyboard nav, 24h default, text-only time entry, frozen `LayrzInputChrome`)
 
+**Superseded by D76 (DESIGN-98, on-device review, same day)**: D75's container and commit-boundary
+rulings above no longer describe the shipped widgets. All eight pickers now open the new public
+`LayrzEndDrawer` on desktop (`LayrzBottomSheet` unchanged below `960px`), not
+`LayrzAnchoredPanel`/`LayrzBottomSheet`. The three-commit-on-tap/five-Save split is retired — every
+picker, plus `LayrzDurationInput`, now carries Save (Select/ComboBox keep `actions: null`, tap/type
+is the decision). Midnight (`00:00`) and `Duration.zero` are valid, committable values; Save's
+enablement follows the date/draft, never "was the time touched." See
+[D76](decisions.md#d76-amendment-to-d75--design-98-promotes-layrzenddrawer-retires-the-commit-on-tap-split-restores-midnightzero-as-valid-values)
+for the full record. D75's non-container, non-commit-model rulings (no `intl`, typed ranges,
+contiguity policy, endpoint-adjust selection, keyboard nav, 24h default, text-only time entry,
+frozen `LayrzInputChrome`) are untouched by this supersession.
+
 **Notion tracking corrections applied in this batch**: the stale `Blocker` field
 ("Localisation strategy undecided") was cleared on all eight in-scope rows — it was resolved once the
 l10n keys above were added. The stale `Primitive` field ("composes LayrzTextInput") was also cleared
@@ -146,15 +158,22 @@ invariant. `LayrzDynamicAvatarInput` (59) is blocked on `LayrzAvatarInput`, `Lay
 
 ---
 
-## Decisions Made (D74–D75)
+## Decisions Made (D74–D76)
 
-Both recorded in `engineering/decisions.md`:
+All three recorded in `engineering/decisions.md`:
 
 - **D74** (Amendment to D72): `sameZoneDate`/`sameZoneDateTime` exported from the calendar module for
   picker use — a narrow exception that does not reopen D72 for the grid, controller, or surfaces
 - **D75** (M4 DateTime Pickers Batch): container, commit-boundary model, no-`intl` formatting, typed
   ranges, contiguity policy, endpoint-adjust range selection, keyboard navigation, and the frozen-chrome
-  outcome for this batch
+  outcome for this batch — **its container and commit-boundary rulings are superseded by D76** (see
+  below); the rest stands
+- **D76** (Amendment to D75, DESIGN-98): the public `LayrzEndDrawer` container replaces
+  anchored-panel/bottom-sheet for all eight pickers plus `LayrzDurationInput`/`LayrzSelectInput`/
+  `LayrzComboBoxInput`; the three-commit-on-tap/five-Save split is retired in favor of Save on all
+  eight pickers; midnight/`Duration.zero` are restored as valid, committable values; the range bar
+  is a flat continuous `primary` fill with no per-cell shapes; `LayrzDateTimeInputPresentation` is
+  fully inert and `@Deprecated`; ComboBox gains a bold custom-value row and rebuilt keyboard nav
 
 ---
 
@@ -173,5 +192,5 @@ Both recorded in `engineering/decisions.md`:
 
 **Milestone 4 started**: 2026-09-02
 **Last updated**: 2026-09-02
-**Related documents**: [Roadmap](roadmap.md), [Decisions D74–D75](decisions.md#d74),
+**Related documents**: [Roadmap](roadmap.md), [Decisions D74–D76](decisions.md#d74),
 [Component Catalog](https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog)

@@ -4967,3 +4967,129 @@ Recorded here as evidence that the frozen-chrome constraint (see `CLAUDE.md`'s r
 - **D15**: Interaction-state feedback (locked-interior styling, rejected-tap reaction, `showSeconds`
   toggle) stays colour/opacity/cursor only — applied throughout this entry.
 
+---
+
+## D76: Amendment to D75 — DESIGN-98 Promotes `LayrzEndDrawer`, Retires the Commit-on-Tap Split,
+Restores Midnight/Zero as Valid Values
+
+**Date**: 2026-09-02
+**Status**: Decided (amends D75)
+**Category**: Component Scope / API Design / Interaction Design
+
+### Context
+
+D75 settled the M4 DateTime Pickers batch on an anchored-panel/bottom-sheet container, split the
+eight widgets into three that commit on tap (`LayrzDateInput`, `LayrzTimeInput`,
+`LayrzMonthInput`) and five that carry an in-panel Cancel/Save footer, and ruled out silent
+defaults — removing the midnight (`00:00`) default from `LayrzDateTimeInput`/
+`LayrzDateTimeRangeInput` and the `9:00`–`17:00` default from `LayrzTimeRangeInput`, gating Save
+on the user having genuinely touched every part.
+
+On-device review of the shipped batch (DESIGN-98) reversed all three of these calls. The
+maintainer's own words, against the picker drawer's Cancel/Clear/Save footer sitting inside a
+too-short anchored panel: *"Be like the BottomSheet and Dialog, place actions slot, this way we
+can set sticked to end."* That single container change cascaded into the commit-model and
+silent-default reversals below, because a widget that gains a real actions slot no longer has a
+reason to special-case "commits on tap" or "Save disabled until touched."
+
+### Decisions
+
+**One container, promoted to a public component.** Every one of the eight date/time pickers, plus
+`LayrzDurationInput`, `LayrzSelectInput`, and `LayrzComboBoxInput`, now opens
+[`LayrzEndDrawer`](https://github.com/goldenm-software/layrz_ui/blob/main/lib/src/sheets/src/end_drawer.dart)
+on desktop (`>= 960px`) and `LayrzBottomSheet` below that — replacing D75's
+`LayrzAnchoredPanel`/`LayrzBottomSheet` pairing for the eight pickers, and `LayrzAnchoredPanel`
+directly for Select and ComboBox. `LayrzEndDrawer` is a right-edge, fixed-420px-wide modal drawer
+with a pinned `actions` slot (a sibling of the scrolling body, not nested inside it, so it always
+sits flush with the drawer's bottom edge regardless of content height) and an optional `title`
+slot. It is the public promotion of what was briefly a picker-private `LayrzPickerDrawer`
+(DESIGN-49) — `LayrzSearchInput` is the one holdout, staying on `LayrzAnchoredPanel`.
+
+**The three-commit-on-tap/five-Save split is retired. All eight pickers now carry Save.**
+`LayrzDateInput`, `LayrzTimeInput`, and `LayrzMonthInput` — D75's "one atomic value, no Save
+needed" widgets — move onto the drawer with a Cancel/Save `actions` row (Cancel/Save only, no
+Clear: a single value has nothing to reset to empty independently of Cancel). A tap on a day or
+month cell, or an edit to a time field, no longer commits or closes anything by itself; only Save
+does, and Escape/the barrier tap/Cancel all discard the draft equally. `LayrzDurationInput` gains
+Cancel and Save alongside its existing Reset (Reset remains its own "clear and I'm done" gesture,
+distinct from Save). `LayrzSelectInput` and `LayrzComboBoxInput` are the explicit exception: they
+keep `actions: null` — picking an item, or committing typed text, is itself the decision, with no
+second value to coordinate first, so a Save button below the list would be pure friction.
+
+**"No silent defaults" is reversed — midnight and `Duration.zero` are valid, committable
+values.** D75's rule ("a time part the user never touched is never committed on the caller's
+behalf; Save stays disabled until every part is genuinely set") no longer holds. `LayrzTimeInput`
+and the time half of `LayrzDateTimeInput`/`LayrzDateTimeRangeInput` now seed an unset time part to
+midnight (`00:00`) rather than leaving it `null`, and Save's enablement follows the **date** (or
+draft completeness for a range), never whether the time was independently touched —
+`LayrzDateTimeSurfaceState.canSave => _date != null` reads only the date part.
+`LayrzTimeRangeSurface`'s `_start`/`_end` fields are non-nullable, seeded to midnight when unset,
+with no `canSave` gate at all — Save is always reachable. `LayrzDurationInput`'s Save is likewise
+always enabled, and a non-null `Duration.zero` is a genuine, displayable, committable value, not a
+placeholder for "unset." A future reader should treat any surviving doc-comment claiming "no
+midnight default" or "Save disabled until touched" against these surfaces as stale prose D76
+superseded, not as the current contract — `canSave`'s own predicate in each `*_surface.dart` file
+is authoritative.
+
+**Range visuals: a flat, continuous `primary` bar, no per-cell shapes.** A completed range renders
+as one unbroken `LayrzPickersRangeBar` behind the row — flat `LayrzColorTokens.primary` at full
+opacity, no tonal tint — with rounded caps only at the range's true start/end and square edges
+where the range continues into an adjacent row. `LayrzPickerCellRole.rangeEndpoint`/
+`.rangeInterior` paint no fill, ring, or shape of their own on top of the bar; the day/month
+numeral switches to the primary color's contrasting foreground so it stays legible against the
+solid fill. This applies to `LayrzPickersDayGridCell`; `LayrzPickersMonthGridCell` follows the
+identical "no per-cell shape in range mode" rule for `LayrzMonthRangeInput`'s `consecutive: true`
+mode only — arbitrary (non-consecutive) month selection is unaffected and keeps each selected
+month as its own filled rounded-rectangle pill, since there is no contiguous run to draw a bar
+under.
+
+**`LayrzDateTimeInputPresentation` (`tabbed`/`stepped`) is now fully inert.** The drawer has the
+vertical room to show the date grid and the time fields together in one scroll, so the
+tabbed-vs-stepped arrangement this enum selected has no layout left to apply to. The enum is kept,
+not removed (deleting it would be a breaking removal with no migration signal), and is marked
+`@Deprecated` — `LayrzDateTimeSurface` accepts and ignores it unconditionally.
+
+**ComboBox drops its live-reparented field in favor of an independent surface, and gains a bold
+custom-value row and rebuilt keyboard navigation.** Before DESIGN-98, `LayrzComboBoxInput`'s
+closed field and its open `LayrzAnchoredPanel`'s first row shared the same `TextEditingController`/
+`FocusNode`, reparented across the open transition so typing continued uninterrupted. A
+`Navigator.push`-based route (what both `LayrzEndDrawer` and `LayrzBottomSheet` are) has no
+equivalent single-pass reparenting point, so this trick is retired: the drawer now always opens
+with an independent, empty search field, matching the mobile bottom-sheet path exactly — a real,
+user-visible behavior change on desktop. In exchange, the opened surface gains a **bold
+custom-value row** (`FontWeight.w600`, no "custom ..." label or icon — weight alone is the
+indicator, per the maintainer's explicit reversal of an earlier "custom ..." label design) shown
+as the first row whenever the typed text matches no existing option, and **keyboard navigation**
+(arrow-up/down highlights across the custom-value row plus the filtered options, Enter commits the
+highlighted row) rebuilt from scratch for the new surface, since a bare option list has no
+keyboard affordance of its own the way the retired `RawMenuAnchor`-hosted panel did.
+
+### Consequences
+
+- `lib/src/sheets/src/end_drawer.dart` is new, public, and exported from `lib/src/sheets/sheets.dart`.
+- Every `*_input.dart` file under `lib/src/pickers/src/*/` gained an `_openDesktopDrawer` method
+  replacing its D75-era anchored-panel path; `lib/src/inputs/src/duration/duration_input.dart`,
+  `lib/src/inputs/src/select/select_input.dart`, and `lib/src/inputs/src/combobox/combobox_input.dart`
+  likewise.
+- Every `*_surface.dart`'s `State` class needed to become public (no longer library-private) so its
+  hosting `*_input.dart` can reach `canSave`/`save()` through a `GlobalKey` from the `actions` row
+  built at the `LayrzEndDrawer.show` call site — a structural consequence of `actions` being a
+  sibling parameter of `builder`, not composed inside it.
+- `engineering/milestone-4.md`'s Status table and D74/D75 cross-references needed a note pointing to
+  this entry; `wiki/Widgets/` picker and Select/ComboBox/Duration pages needed a full rewrite of
+  their "Composition and Container" and "Commit Model" sections.
+- **A future reader must not assume the D75-era three-tap/five-Save split still describes any
+  shipped widget** — this entry is the current, authoritative commit-model record for all eleven
+  affected widgets.
+
+### Related Decisions
+
+- **D75**: The decision this entry amends. D75's non-container, non-commit-model rulings (no
+  `intl`, typed ranges, contiguity policy, endpoint-adjust selection, 24h default, text-only time
+  entry, frozen `LayrzInputChrome`) are untouched.
+- **D52 / D70**: The anchored-panel/bottom-sheet adaptive container D75 reused and this entry
+  partially retires (for the eleven widgets listed above; every other input in the library keeps
+  that container unchanged).
+- **D15**: Interaction-state feedback for the range bar and its cells stays colour/opacity/cursor
+  only — the flat-`primary`-bar ruling in this entry is a direct application, not an exception.
+
