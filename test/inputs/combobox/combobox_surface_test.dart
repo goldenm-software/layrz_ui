@@ -34,6 +34,16 @@ List<String> dumpSemanticsLabels(WidgetTester tester) {
   return labels;
 }
 
+/// Finds the plain [Text] widget(s) whose [Text.data] equals [text].
+///
+/// Unlike `find.text`, which also matches an [EditableText] whose current
+/// controller value equals [text] (a real risk in this file, since the
+/// custom-value row's own text always equals whatever was just typed into
+/// the search field), this only ever matches a rendered [Text] widget.
+Finder findRowText(String text) {
+  return find.byWidgetPredicate((widget) => widget is Text && widget.data == text);
+}
+
 void main() {
   group('LayrzComboBoxPanelContent', () {
     testWidgets('renders the field row first, always', (tester) async {
@@ -366,7 +376,12 @@ void main() {
       expect(find.text('Banana'), findsNothing);
     });
 
-    testWidgets('filtering down to no matches shows the empty text', (tester) async {
+    // Restored (bold custom-value row): a non-empty query that matches no
+    // option now shows the bold custom-value row instead of the empty-text
+    // state -- see BottomSheetContent's own class doc's "The bold
+    // custom-value row" section. The empty-text state is reserved for a
+    // literally empty query, covered by the group below instead.
+    testWidgets('filtering down to no matches shows the bold custom-value row, not the empty text', (tester) async {
       await pumpThemed(
         tester,
         const BottomSheetContent(
@@ -380,7 +395,13 @@ void main() {
 
       expect(find.text('Apple'), findsNothing);
       expect(find.text('Banana'), findsNothing);
-      expect(find.text('No matches'), findsOneWidget);
+      expect(find.text('No matches'), findsNothing);
+      // find.text('zzz') also matches the search field's own EditableText
+      // (whose current value is also "zzz") -- narrow to the plain Text
+      // widget the custom-value row renders (see _ComboBoxSheetOptionRow),
+      // which is the actual assertion this test is about.
+      final customValueRowText = tester.widgetList<Text>(find.byType(Text)).where((t) => t.data == 'zzz');
+      expect(customValueRowText, isNotEmpty, reason: 'the custom-value row must render the typed text');
     });
 
     testWidgets('clearing the search field via its suffix restores the full list', (tester) async {
@@ -503,6 +524,236 @@ void main() {
       );
 
       handle.dispose();
+    });
+
+    testWidgets('showInlineTitle: false omits the inline heading, but the Semantics name is unaffected', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+          labelText: 'Item picker',
+          showInlineTitle: false,
+        ),
+      );
+
+      expect(
+        find.text('Item picker'),
+        findsNothing,
+        reason: 'showInlineTitle: false must suppress the visible inline heading',
+      );
+
+      final labels = dumpSemanticsLabels(tester);
+      expect(
+        labels,
+        contains('Item picker'),
+        reason: 'labelText must still name the Semantics subtree regardless of showInlineTitle',
+      );
+
+      handle.dispose();
+    });
+  });
+
+  // Restores the bold custom-value row DESIGN-98 initially retired, at the
+  // maintainer's own explicit reversal: "now we need it back, not exactly
+  // with 'custom ...', well... using bold as indicator". See
+  // BottomSheetContent's class doc's "The bold custom-value row" section for
+  // the full contract this group pins.
+  group('BottomSheetContent custom-value row', () {
+    testWidgets('does not render when the search text is empty', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      // Only the two real options render -- two Text widgets in the list,
+      // plus the search field's own EditableText, and nothing extra.
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Bravo'), findsOneWidget);
+    });
+
+    testWidgets('does not render when the search text exactly matches an option (case-insensitively)', (
+      tester,
+    ) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'alpha');
+      await tester.pump();
+
+      // 'alpha' matches 'Alpha' case-insensitively -- no second, duplicate
+      // row for the same value. findRowText (not find.text) is used because
+      // find.text also matches the search EditableText's own current value,
+      // which is 'alpha' here.
+      expect(findRowText('Alpha'), findsOneWidget);
+      expect(findRowText('alpha'), findsNothing);
+    });
+
+    testWidgets('renders bold (w600), while ordinary option rows render at the default weight', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'Zzz');
+      await tester.pump();
+
+      final customRowText = tester.widget<Text>(findRowText('Zzz'));
+      expect(
+        customRowText.style?.fontWeight,
+        FontWeight.w600,
+        reason: 'the custom-value row must render in the design system\'s own semi-bold weight',
+      );
+
+      // An ordinary option row (queried with a match instead) must NOT carry
+      // that weight -- the emphasis is reserved for the custom-value row only.
+      await tester.enterText(find.byType(EditableText), 'Alpha');
+      await tester.pump();
+      final optionRowText = tester.widget<Text>(findRowText('Alpha'));
+      expect(
+        optionRowText.style?.fontWeight,
+        isNot(FontWeight.w600),
+        reason: 'ordinary option rows must not render bold -- only the custom-value row does',
+      );
+    });
+
+    testWidgets('is tappable and commits the exact typed text, once', (tester) async {
+      String? result;
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) {
+            return GestureDetector(
+              onTap: () async {
+                result = await LayrzBottomSheet.show<String?>(
+                  context,
+                  builder: (context) => const BottomSheetContent(
+                    options: ['Alpha', 'Bravo'],
+                    emptyText: 'Nothing here',
+                  ),
+                  scrollable: false,
+                );
+              },
+              child: const Text('open sheet'),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.text('open sheet'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(EditableText), 'Charlie');
+      await tester.pumpAndSettle();
+
+      await tester.tap(findRowText('Charlie'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BottomSheetContent), findsNothing);
+      expect(result, 'Charlie');
+    });
+
+    testWidgets('renders no "custom" label, prefix, suffix, or icon -- bold weight is the only indicator', (
+      tester,
+    ) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'Charlie');
+      await tester.pump();
+
+      // No literal "custom" text anywhere, and no icon beside the row other
+      // than the search field's own magnifier/clear icons.
+      expect(find.textContaining('custom', findRichText: true), findsNothing);
+      expect(find.byIcon(MdiIcons.check), findsNothing);
+    });
+  });
+
+  // Fixes a device-reported defect: option rows read as centered with no
+  // hover feedback. Root cause (centering): LayrzEndDrawer's own outer
+  // Column had no explicit crossAxisAlignment (defaulting to center), and
+  // BottomSheetContent's own Column and each row's own Container likewise
+  // never stretched to fill the available width -- an unconstrained
+  // Container shrink-wraps to its Text's own intrinsic width and reads as
+  // centered inside whatever wider box its ancestor gives it. Root cause
+  // (no hover): a bare GestureDetector, never LayrzTappable, wrapped each
+  // row -- the same defect the calendar cells had before adopting
+  // LayrzTappable (a raw GestureDetector never paints a hover tint on its
+  // own).
+  group('BottomSheetContent row alignment and hover (device-reported defect)', () {
+    testWidgets('every row (including the custom-value row) stretches to the list\'s full width', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      final listWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
+
+      // The rendered width of each row's own LayrzTappable, not the
+      // Container's `constraints` field -- `width: double.infinity` is
+      // applied via Container's convenience parameter, which resolves into
+      // BoxConstraints during layout rather than populating the
+      // `constraints` field itself, so the actually-painted size is the only
+      // reliable signal here. Checked with the unfiltered list first (an
+      // ordinary option row).
+      final optionRowSize = tester.getSize(
+        find.ancestor(of: findRowText('Alpha'), matching: find.byType(LayrzTappable)).first,
+      );
+      expect(optionRowSize.width, closeTo(listWidth, 0.5));
+
+      // Then with a non-matching query, so "Charlie" renders as the
+      // custom-value row instead (Alpha/Bravo are filtered out entirely).
+      await tester.enterText(find.byType(EditableText), 'Charlie');
+      await tester.pump();
+
+      final customRowSize = tester.getSize(
+        find.ancestor(of: findRowText('Charlie'), matching: find.byType(LayrzTappable)).first,
+      );
+      expect(customRowSize.width, closeTo(listWidth, 0.5));
+    });
+
+    testWidgets('every row is wrapped in LayrzTappable, for hover feedback', (tester) async {
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+
+      expect(
+        find.ancestor(of: find.text('Alpha'), matching: find.byType(LayrzTappable)),
+        findsOneWidget,
+        reason: 'option rows must use LayrzTappable, not a bare GestureDetector, for hover feedback',
+      );
+      expect(
+        find.ancestor(of: find.text('Bravo'), matching: find.byType(LayrzTappable)),
+        findsOneWidget,
+      );
     });
   });
 }

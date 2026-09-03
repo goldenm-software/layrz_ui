@@ -915,107 +915,139 @@ void main() {
       });
     });
 
-    // DESIGN-98 REMOVES in-panel keyboard navigation on desktop -- flagged for
-    // the maintainer, not silently absorbed.
+    // Keyboard navigation inside the drawer, RESTORED.
     //
     // Before DESIGN-98, `LayrzComboBoxPanelContent` carried its own
-    // `highlightedIndex` state, and arrow-down/arrow-up/Enter/Escape all
-    // navigated and committed rows in that in-place panel via
-    // `_handleKeyEvent` (bound to a `Focus` wrapping the field's own
-    // subtree, which stayed live inside the anchored panel). DESIGN-98's
-    // `LayrzEndDrawer` hosts `BottomSheetContent` instead -- a route-based,
-    // wholly independent widget with NO keyboard-navigable highlight state
-    // at all (confirmed: `BottomSheetContent` has no `highlightedIndex`,
-    // no `onKeyEvent`, nothing arrow-key-reachable). Once the drawer opens,
-    // arrow-up/down no longer move a highlight, and Enter no longer commits
-    // a highlighted row -- selecting an option now requires a tap (or,
-    // still, typing the option's exact text and pressing Enter to submit
-    // free-form). Escape still closes the drawer (via `LayrzEndDrawer`'s own
-    // dismiss handling, since this widget passes `actions: null`), and
-    // typing continues to filter/report through the closed field as before.
-    //
-    // This group proves what the maintainer should know changed, rather than
-    // silently deleting the coverage: arrow-key highlight navigation inside
-    // the option list is gone on desktop, matching the mobile band (which
-    // never had it either).
-    group('keyboard behavior post-DESIGN-98 (in-panel arrow-key navigation removed)', () {
+    // `highlightedIndex` state, and arrow-down/arrow-up/Enter all navigated
+    // and committed rows in that in-place panel via `_handleKeyEvent` (bound
+    // to a `Focus` wrapping the field's own subtree, which stayed live inside
+    // the anchored panel). DESIGN-98 initially replaced that panel with
+    // `LayrzEndDrawer` hosting `BottomSheetContent` with no keyboard
+    // affordance at all, which was a real, reported UX loss. It has since
+    // been rebuilt INSIDE `BottomSheetContent` itself (see that class's own
+    // "Keyboard navigation" doc section) -- both bands now share this
+    // behavior, since both open the identical widget (verified below via a
+    // desktop test here and the compact-band coverage that already existed
+    // for the same widget in `combobox_surface_test.dart`).
+    group('keyboard navigation inside the drawer (restored)', () {
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
       }
 
-      testWidgets(
-        'arrow-down/up inside the open drawer no longer highlight any row -- BottomSheetContent has no highlight state',
-        (tester) async {
-          setDesktopSize(tester);
+      testWidgets('arrow-down highlights the first filtered option, and Enter commits it', (tester) async {
+        setDesktopSize(tester);
+        var submitCount = 0;
+        String? lastSubmitted;
 
-          await pumpThemedApp(
-            tester,
-            const LayrzComboBoxInput(
-              labelText: 'Choose',
-              options: ['Alabama', 'Alaska'],
-            ),
-          );
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alpha', 'Bravo'],
+            onSubmit: (value) {
+              submitCount++;
+              lastSubmitted = value;
+            },
+          ),
+        );
 
-          await tester.enterText(find.byType(EditableText), 'Ala');
-          await tester.pumpAndSettle();
-          await tester.tap(find.byType(EditableText));
-          await tester.pumpAndSettle();
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        expect(find.byType(BottomSheetContent), findsOneWidget);
 
-          expect(
-            find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(GestureDetector)),
-            findsWidgets,
-          );
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
 
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-          await tester.pump();
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-          await tester.pump();
-
-          // No exception either way -- arrow keys are simply inert now, not
-          // wired to anything inside BottomSheetContent.
-          expect(tester.takeException(), isNull);
-          expect(find.byType(BottomSheetContent), findsOneWidget, reason: 'the drawer stays open through both keys');
-        },
-      );
+        expect(submitCount, 1, reason: 'Enter on the highlighted option must commit exactly once');
+        expect(lastSubmitted, 'Alpha');
+      });
 
       testWidgets(
-        'Enter inside the open drawer does not commit any option -- only typing + Enter, or a tap, commits',
+        'when the typed text matches no option, the bold custom-value row is highlighted by DEFAULT -- Enter '
+        'commits it with no Down press needed',
         (tester) async {
           setDesktopSize(tester);
           var submitCount = 0;
+          String? lastSubmitted;
 
           await pumpThemedApp(
             tester,
             LayrzComboBoxInput(
               labelText: 'Choose',
               options: const ['Alpha', 'Bravo'],
-              onSubmit: (_) => submitCount++,
+              onSubmit: (value) {
+                submitCount++;
+                lastSubmitted = value;
+              },
             ),
           );
 
+          // Type a non-matching value BEFORE opening -- opening now moves
+          // focus into the drawer's own independent search field (Q3 no
+          // longer applies), so the closed field's own typed text does not
+          // continue into the drawer; typing must happen inside it instead.
           await tester.tap(find.byType(EditableText));
           await tester.pumpAndSettle();
 
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+          final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+          await tester.enterText(drawerField, 'Charlie');
           await tester.pump();
-          await tester.testTextInput.receiveAction(TextInputAction.done);
+
+          // No Down press: the custom-value row is highlighted by default
+          // the moment it appears -- see BottomSheetContent's own
+          // "Keyboard navigation" doc section for why.
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
           await tester.pumpAndSettle();
 
-          expect(
-            submitCount,
-            0,
-            reason:
-                'there is no highlighted row for Enter to commit post-DESIGN-98 -- committing now requires a '
-                'tap on an option in the drawer, or typing the exact text and submitting the closed field',
-          );
+          expect(submitCount, 1, reason: 'Enter must commit the custom value with no prior Down press');
+          expect(lastSubmitted, 'Charlie');
         },
       );
 
+      testWidgets('arrow-down past the custom-value row reaches the filtered options', (tester) async {
+        setDesktopSize(tester);
+        var submitCount = 0;
+        String? lastSubmitted;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alabama', 'Alaska'],
+            onSubmit: (value) {
+              submitCount++;
+              lastSubmitted = value;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+        await tester.enterText(drawerField, 'Ala');
+        await tester.pump();
+
+        // Row 0 is the custom-value row ("Ala" matches neither option
+        // exactly); Down once more reaches row 1, the first filtered option.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(submitCount, 1);
+        expect(lastSubmitted, 'Alabama');
+      });
+
       testWidgets(
         'typing a free-form value that matches no option is still retained via onChanged (closed field, before opening)',
-        (tester) async {
+        (
+          tester,
+        ) async {
           setDesktopSize(tester);
           final changes = <String>[];
 

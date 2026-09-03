@@ -471,15 +471,26 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// from it, at the cost of the closed field's typed text and caret position
   /// not continuing into the drawer -- the drawer opens with its own empty
   /// search field instead of the closed field's current text.
+  ///
+  /// **Title (DESIGN-98 follow-up).** [LayrzEndDrawer.show]'s `title` slot
+  /// renders [widget.labelText] as a real title (headline, left-aligned) --
+  /// [BottomSheetContent.showInlineTitle] is `false` here so that widget does
+  /// not ALSO render its own small, caption-styled inline heading for the
+  /// same text; passing both would stack a title over a duplicate caption.
+  /// The mobile bottom sheet path above keeps `showInlineTitle`'s default
+  /// (`true`) unchanged, since [LayrzBottomSheet] has no title slot of its
+  /// own to defer to.
   Future<void> _openDesktopDrawer() async {
     final filtered = _getFilteredOptions();
     final selected = await LayrzEndDrawer.show<String?>(
       context,
       semanticLabel: widget.labelText,
+      title: widget.labelText == null ? null : Text(widget.labelText!),
       builder: (context) => BottomSheetContent(
         options: filtered,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
         labelText: widget.labelText,
+        showInlineTitle: false,
       ),
     );
 
