@@ -48,3 +48,5 @@ MSG.md
 
 # FVM Version Cache
 .fvm/
+
+.vscode/settings.json
