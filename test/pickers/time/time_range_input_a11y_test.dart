@@ -226,19 +226,23 @@ void main() {
       }
     });
 
-    testWidgets('hour and minute fields expose distinct semantic labels for both clusters', (tester) async {
+    // CHANGED (Finding 3, DESIGN-98): this test previously asserted the
+    // drawer's fixed width forces the SHORT h/m label form for both
+    // clusters. That no longer holds: `LayrzPickersTimeFieldsPanel` now
+    // derives `fieldsPerRow` from `LayrzPickersTimeField.kNarrowWidth`
+    // itself (see that panel's own class doc), so at the drawer's own
+    // ~372px panel width it wraps to one field per row, each at the full
+    // ~372px -- comfortably above the 280px threshold. Both clusters now
+    // expose the unabridged "Hours"/"Minutes" label form instead.
+    testWidgets('hour and minute fields expose the unabridged label form for both clusters (Finding 3)', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       try {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        // The anchor field's own width no longer matters here (see
-        // _wideThreeSlot's updated doc): LayrzPickerDrawer is fixed at
-        // LayrzPickerDrawer.width (420px), which is below
-        // LayrzPickersTimeField.kNarrowWidth for a 2-slot cluster, so the
-        // panel renders the SHORT h/m label form regardless of _bounded vs
-        // _wideThreeSlot.
         await pumpThemedApp(
           tester,
           _wideThreeSlot(
@@ -257,14 +261,19 @@ void main() {
         final l10n = LayrzUiL10n.of(tester.element(find.byType(LayrzTimeRangeInput)));
         final labels = dumpSemanticsLabels(tester);
 
+        final hourLongLabels = labels.where((l) => l.contains(l10n.timePickerHours));
+        final minuteLongLabels = labels.where((l) => l.contains(l10n.timePickerMinutes));
+        expect(hourLongLabels.length, greaterThanOrEqualTo(2), reason: 'one per cluster, start and end');
+        expect(minuteLongLabels.length, greaterThanOrEqualTo(2), reason: 'one per cluster, start and end');
+
         final hourShortLabels = labels.where(
           (l) => l == l10n.timePickerHourShortSingular || l == l10n.timePickerHourShortPlural,
         );
-        final minuteShortLabels = labels.where(
-          (l) => l == l10n.timePickerMinuteShortSingular || l == l10n.timePickerMinuteShortPlural,
+        expect(
+          hourShortLabels,
+          isEmpty,
+          reason: 'one field per row at drawer width clears kNarrowWidth -- the short form must not render',
         );
-        expect(hourShortLabels.length, greaterThanOrEqualTo(2));
-        expect(minuteShortLabels.length, greaterThanOrEqualTo(2));
       } finally {
         handle.dispose();
       }

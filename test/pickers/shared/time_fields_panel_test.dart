@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/inputs/src/number/number_input.dart';
 import 'package:layrz_ui/src/pickers/src/models/time_of_day.dart';
 import 'package:layrz_ui/src/pickers/src/shared/time_fields_panel.dart';
 
@@ -356,14 +357,29 @@ void main() {
       },
     );
 
+    // CHANGED (Finding 3, DESIGN-98): this test previously pumped at 800px
+    // and expected short-form labels, on the assumption that the three time
+    // fields always share a single row (perFieldWidth = (800 - 6*2)/3 ~=
+    // 262.7px, below kNarrowWidth). That assumption no longer holds: `build`
+    // now derives `fieldsPerRow` FROM kNarrowWidth itself (see the class
+    // doc's "Fields wrap across rows" section and the `fieldsPerRow` local
+    // in `build`), so fieldsPerRow can never resolve to a count whose
+    // resulting perFieldWidth falls below kNarrowWidth -- at 800px this now
+    // solves to 2 fields per row at ~397px each, comfortably long-form. The
+    // narrow-label switch is only reachable when the PANEL ITSELF is
+    // narrower than kNarrowWidth (280.0): fieldsPerRow is already clamped to
+    // its floor of 1 at that point, so a lone field still cannot clear the
+    // threshold no matter how few fields share its row. This test now
+    // exercises that genuinely narrow case instead of the retired
+    // three-fields-forced-onto-one-row scenario.
     guardedTestWidgets('below the narrow-width threshold, fields show the short-form unit labels', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      // use24HourFormat: true (no meridiem reservation), 3 field slots, sp1
-      // (6px) spacing: perFieldWidth = (800 - 6*2) / 3 ~= 262.7px, below
-      // LayrzPickersTimeField.kNarrowWidth (280.0).
+      // fieldsPerRow floors to 1 at any width (fields wrap one per row well
+      // before this point), so a 250px panel gives the lone field the full
+      // 250px -- below LayrzPickersTimeField.kNarrowWidth (280.0).
       await pumpThemed(
         tester,
         _boundedWidth(
@@ -372,7 +388,7 @@ void main() {
             showSeconds: true,
             onChanged: (_) {},
           ),
-          800,
+          250,
         ),
       );
 
@@ -388,6 +404,11 @@ void main() {
       expect(find.text('s'), findsOneWidget);
     });
 
+    // CHANGED (Finding 3, DESIGN-98): 900px trivially stays long-form under
+    // the new arithmetic too (fieldsPerRow=3, perField=296px, same as
+    // before) -- kept at 900px specifically so this test's own comment
+    // continues to double as a sanity check that _kMaxRowWidth (900.0) does
+    // not regress the case it was originally measured against.
     guardedTestWidgets('at or above the narrow-width threshold, fields show the unabridged unit labels', (
       tester,
     ) async {
@@ -395,9 +416,10 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      // use24HourFormat: true (no meridiem reservation), 3 field slots, sp1
-      // (6px) spacing: perFieldWidth = (900 - 6*2) / 3 = 296px, at or above
-      // LayrzPickersTimeField.kNarrowWidth (280.0).
+      // use24HourFormat: true (no meridiem reservation): fieldsPerRow solves
+      // to 3 at 900px (900 capped by _kMaxRowWidth), perFieldWidth =
+      // (900 - 6*2)/3 = 296px, at or above LayrzPickersTimeField.kNarrowWidth
+      // (280.0).
       await pumpThemed(
         tester,
         _boundedWidth(
@@ -416,6 +438,56 @@ void main() {
       expect(find.text('h'), findsNothing);
       expect(find.text('m'), findsNothing);
       expect(find.text('s'), findsNothing);
+    });
+
+    // NEW (Finding 3, DESIGN-98): the actual regression this whole change
+    // targets -- inside the real LayrzEndDrawer's ~372px, the three time
+    // fields must stack one per row, each spanning the panel's own full
+    // width, with the long-form labels restored (the maintainer's own
+    // words: "it should look like the number input").
+    guardedTestWidgets('at drawer width (372px), fields stack one per row with unabridged labels restored', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        _boundedWidth(
+          LayrzPickersTimeFieldsPanel(
+            value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+            showSeconds: true,
+            onChanged: (_) {},
+          ),
+          372,
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Hours'), findsOneWidget);
+      expect(find.text('Minutes'), findsOneWidget);
+      expect(find.text('Seconds'), findsOneWidget);
+
+      // Each field occupies its own row: the minute field's top sits below
+      // the hour field's bottom edge, and the second field's top sits below
+      // the minute field's bottom edge -- proving three stacked rows, not
+      // one row of three fields side by side.
+      final hourRect = tester.getRect(find.byType(EditableText).at(0));
+      final minuteRect = tester.getRect(find.byType(EditableText).at(1));
+      final secondRect = tester.getRect(find.byType(EditableText).at(2));
+      expect(minuteRect.top, greaterThanOrEqualTo(hourRect.bottom));
+      expect(secondRect.top, greaterThanOrEqualTo(minuteRect.bottom));
+
+      // Each field's own LayrzNumberInput chrome spans (approximately) the
+      // panel's own full width -- the "look like the number input"
+      // full-width row shape, not a narrow field stranded in a wide row.
+      // Measured via LayrzNumberInput's own outer box, not its innermost
+      // EditableText (which does not itself stretch to fill the chrome
+      // around it).
+      final panelWidth = tester.getSize(find.byType(LayrzPickersTimeFieldsPanel)).width;
+      final hourFieldWidth = tester.getSize(find.byType(LayrzNumberInput).first).width;
+      expect(hourFieldWidth, greaterThan(panelWidth * 0.8));
     });
   });
 
