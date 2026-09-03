@@ -502,4 +502,140 @@ void main() {
       }
     });
   });
+
+  // The title slot, added after the maintainer's device review reported
+  // "labelText IS a title, not like the image" against a caller
+  // (LayrzComboBoxInput) that was rendering its own small, centered,
+  // caption-styled `labelText` inside the drawer's scrolling body instead of
+  // a real title. `LayrzEndDrawer` had no visible title mechanism of its own
+  // before this -- `semanticLabel` only ever reached a screen reader. This
+  // slot fixes that at the source, mirroring `LayrzDialog`'s own `title`
+  // slot styling (headline, left-aligned) exactly, so every future
+  // `LayrzEndDrawer` caller gets a real title for free instead of
+  // reinventing (and mis-styling) one per surface.
+  group('LayrzEndDrawer -- title slot', () {
+    guardedTestWidgets('renders the title styled with LayrzTextTheme.headline, above the scrolling body', (
+      tester,
+    ) async {
+      setWideViewport(tester);
+      late LayrzTokens tokens;
+
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) {
+                tokens = context.tokens;
+                return GestureDetector(
+                  onTap: () {
+                    LayrzEndDrawer.show<void>(
+                      context,
+                      semanticLabel: 'Choose an option',
+                      title: const Text('Country'),
+                      builder: (context) => const SizedBox(height: 40, child: Text('Body')),
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final titleFinder = find.text('Country');
+      expect(titleFinder, findsOneWidget);
+
+      final resolvedStyle = DefaultTextStyle.of(tester.element(titleFinder)).style;
+      expect(resolvedStyle.fontSize, tokens.typography.headline.fontSize);
+      expect(resolvedStyle.fontWeight, tokens.typography.headline.fontWeight);
+
+      final titleTop = tester.getTopLeft(titleFinder).dy;
+      final bodyTop = tester.getTopLeft(find.text('Body')).dy;
+      expect(titleTop, lessThan(bodyTop), reason: 'the title must render above the scrolling body');
+    });
+
+    guardedTestWidgets('title is left-aligned, not centered, matching LayrzDialog\'s own title convention', (
+      tester,
+    ) async {
+      setWideViewport(tester);
+
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzEndDrawer.show<void>(
+                    context,
+                    semanticLabel: 'Choose an option',
+                    title: const Text('Country'),
+                    builder: (context) => const SizedBox(height: 40, child: Text('Body')),
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final titleRect = tester.getRect(find.text('Country'));
+      final drawerRect = tester.getRect(
+        find.byWidgetPredicate((widget) => widget is SizedBox && widget.width == LayrzEndDrawer.width),
+      );
+
+      // Left-aligned means the title's own left edge sits close to the
+      // drawer's left edge (well within its own padding), not floating in
+      // the middle of the drawer's width the way a centered title would.
+      expect(titleRect.left - drawerRect.left, lessThan(LayrzEndDrawer.width / 4));
+    });
+
+    guardedTestWidgets('omitting title renders no title row at all', (tester) async {
+      setWideViewport(tester);
+
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzEndDrawer.show<void>(
+                    context,
+                    semanticLabel: 'Choose an option',
+                    builder: (context) => const SizedBox(height: 40, child: Text('Body')),
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Body'), findsOneWidget);
+      // Nothing else in the tree carries the (deliberately distinct) title
+      // text used by the other tests in this group -- the closest available
+      // proxy for "no title row was built" without a widget key to search by.
+      expect(find.text('Country'), findsNothing);
+    });
+  });
 }

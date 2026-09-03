@@ -128,12 +128,28 @@ class LayrzEndDrawer {
   ///   mirroring [LayrzBottomSheet.show]'s identical `semanticLabel` contract
   ///   (see its own doc for why this is not defaulted to a generic string).
   ///   Must be localized by the caller.
+  /// - [title]: optional visible title, rendered above the scrolling
+  ///   [builder] content -- styled with [LayrzTextTheme.headline] and
+  ///   left-aligned, mirroring [LayrzDialog]'s own `title` slot exactly (see
+  ///   that class's `_buildSlots` for the identical convention this copies).
+  ///   `null` (the default) renders nothing; the drawer has no title row at
+  ///   all in that case, matching every caller before this parameter existed.
+  ///
+  ///   **This is a real, separate slot, not a restyle of [semanticLabel].**
+  ///   [semanticLabel] only ever reached a screen reader, as
+  ///   [Semantics.label] -- no caller before this parameter had any way to
+  ///   put visible title text in the drawer at all. A caller that previously
+  ///   relied on some other widget's own caption-styled `labelText` rendering
+  ///   inside its `builder` content (small, centered, muted) to stand in for
+  ///   a title should switch to this slot instead of stacking both: passing
+  ///   both usually reads as a duplicate title, not a title plus a caption.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
     List<Widget>? actions,
     bool? canDismiss,
     String? semanticLabel,
+    Widget? title,
   }) {
     final navigator = Navigator.of(context, rootNavigator: true);
 
@@ -153,6 +169,7 @@ class LayrzEndDrawer {
         actions: actions,
         canDismiss: effectiveCanDismiss,
         semanticLabel: semanticLabel,
+        title: title,
       ),
     );
   }
@@ -171,6 +188,7 @@ class _EndDrawerRoute<T> extends LayrzModalRoute<T> {
     required List<Widget>? actions,
     required bool canDismiss,
     required this.semanticLabel,
+    required Widget? title,
   }) : super(
          pageBuilder: (context, animation, secondaryAnimation) {
            return _EndDrawerContent(
@@ -178,6 +196,7 @@ class _EndDrawerRoute<T> extends LayrzModalRoute<T> {
              actions: actions,
              canDismiss: canDismiss,
              semanticLabel: semanticLabel,
+             title: title,
            );
          },
          barrierDismissible: canDismiss,
@@ -247,12 +266,17 @@ class _EndDrawerContent extends StatefulWidget {
   /// Semantic label for screen readers (caller-supplied, optional).
   final String? semanticLabel;
 
+  /// Optional visible title, rendered above the scrolling [builder] content.
+  /// See [LayrzEndDrawer.show]'s `title` doc for the full contract.
+  final Widget? title;
+
   /// Creates a new drawer content widget.
   const _EndDrawerContent({
     required this.builder,
     required this.actions,
     required this.canDismiss,
     required this.semanticLabel,
+    required this.title,
   });
 
   @override
@@ -309,7 +333,40 @@ class _EndDrawerContentState extends State<_EndDrawerContent> {
           ),
           child: SafeArea(
             child: Column(
+              // Stretches every child (the title row, the scrolling body,
+              // the actions row) to the drawer's own fixed 420px width.
+              // Without this, `Column`'s default `CrossAxisAlignment.center`
+              // shrink-wraps each child to its own intrinsic width and
+              // centers it -- exactly the device-reported defect the
+              // maintainer found in `LayrzComboBoxInput`'s option rows
+              // (centered instead of left-aligned) before this line existed,
+              // and the same defect this drawer's own new `title` slot would
+              // otherwise reproduce for every future caller (a title padded
+              // at `sp3` but centered inside the drawer reads nothing like
+              // `LayrzDialog`'s left-aligned title).
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Title -- a plain, non-expanded Column child above the
+                // scrolling body, mirroring LayrzDialog's own title row
+                // (_buildSlots) in styling (headline, left-aligned) and
+                // spacing (sp3 below). Padded on all sides at sp3 to match
+                // the actions row's own padding, since -- unlike LayrzDialog,
+                // which pads its whole slot column once -- this drawer's body
+                // has no outer padding of its own; each `builder` supplies
+                // its own.
+                if (widget.title != null)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      tokens.spacing.sp3,
+                      tokens.spacing.sp3,
+                      tokens.spacing.sp3,
+                      0,
+                    ),
+                    child: DefaultTextStyle.merge(
+                      style: tokens.typography.headline,
+                      child: widget.title!,
+                    ),
+                  ),
                 Expanded(
                   child: SingleChildScrollView(
                     child: widget.builder(context),
