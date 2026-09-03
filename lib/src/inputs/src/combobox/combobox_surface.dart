@@ -215,7 +215,24 @@ class _ComboBoxSheetOptionRow extends StatelessWidget {
 
     return LayrzTappable(
       onTap: onTap,
-      color: isHighlighted ? tokens.colors.sf2 : const Color(0x00000000),
+      // Finding 5 (maintainer review): "transparent transition to the hover
+      // color causes a black blink". `Color(0x00000000)`'s RGB channels are
+      // literally black -- only its alpha is zero -- so `AnimatedContainer`'s
+      // `Color.lerp` from this idle color to `LayrzTappable`'s hover color
+      // (`hoverColor` here, `tokens.colors.sf3`) ramps the black RGB
+      // channels up alongside the alpha, producing a visibly darker
+      // composited color at the transition's midpoint than at either
+      // endpoint (measured: lightness dips from 1.0 at idle to ~0.73 mid-tween
+      // before settling at sf3's own ~0.94, for this token set -- worse for a
+      // darker or more saturated hover token). The fix is to start the tween
+      // from the *same* colour the hover state ends at, just at zero alpha,
+      // so every intermediate frame's RGB already matches the hover hue and
+      // only the alpha ramps -- no dip, monotonic lightening throughout.
+      // `hoverColor` is passed explicitly (even though it already matches
+      // `LayrzTappable`'s own default) so the two colors can never drift
+      // apart if that default ever changes.
+      color: isHighlighted ? tokens.colors.sf2 : tokens.colors.sf3.withValues(alpha: 0),
+      hoverColor: tokens.colors.sf3,
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(

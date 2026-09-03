@@ -1,4 +1,6 @@
-import 'package:flutter/semantics.dart';
+import 'dart:ui' show PointerDeviceKind;
+
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -754,6 +756,77 @@ void main() {
         find.ancestor(of: find.text('Bravo'), matching: find.byType(LayrzTappable)),
         findsOneWidget,
       );
+    });
+
+    // Finding 5 (maintainer review): "ComboBox hover effect is buggy ...
+    // transparent transition to the hover color causes a black blink".
+    // `Color(0x00000000)`'s RGB channels are literally black regardless of
+    // alpha, so an `AnimatedContainer`'s `Color.lerp` from that idle colour
+    // to a lighter hover colour ramps black upward alongside the alpha,
+    // visibly darkening mid-transition before settling at the lighter
+    // target. Mirrors `day_grid_test.dart`'s identical regression test.
+    //
+    // Reads the actual interpolated colour off the rendered `DecoratedBox`
+    // (via `tester.renderObject`), not `tester.widget<AnimatedContainer>` --
+    // the latter only ever reports the widget's own target `decoration`
+    // (the value `build()` was called with), never the animation's current
+    // in-flight value.
+    testWidgets('the hover tween never dips darker than either endpoint (no black blink)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const BottomSheetContent(
+          options: ['Alpha', 'Bravo'],
+          emptyText: 'Nothing here',
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final rowFinder = find.ancestor(of: find.text('Alpha'), matching: find.byType(LayrzTappable));
+      final decoratedBoxFinder = find
+          .descendant(
+            of: find.descendant(of: rowFinder, matching: find.byType(AnimatedContainer)),
+            matching: find.byType(DecoratedBox),
+          )
+          .first;
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(tester.getCenter(rowFinder));
+      await tester.pump();
+
+      final tokens = LayrzTokens.light();
+      const idleLightness = 1.0; // fully transparent composites as the white sheet background.
+      final hoverLightness = HSLColor.fromColor(
+        Color.alphaBlend(tokens.colors.sf3, const Color(0xFFFFFFFF)),
+      ).lightness;
+      final lighterEndpoint = idleLightness > hoverLightness ? idleLightness : hoverLightness;
+      final darkerEndpoint = idleLightness < hoverLightness ? idleLightness : hoverLightness;
+
+      // kHoverDuration is 100ms -- sample every 10ms across the whole
+      // tween, not just one midpoint, so no in-flight frame is missed.
+      for (var elapsed = 0; elapsed <= 100; elapsed += 10) {
+        final renderObject = tester.renderObject(decoratedBoxFinder) as RenderDecoratedBox;
+        final frameColor = (renderObject.decoration as BoxDecoration).color;
+        expect(frameColor, isNotNull);
+        final composited = Color.alphaBlend(frameColor!, const Color(0xFFFFFFFF));
+        final frameLightness = HSLColor.fromColor(composited).lightness;
+        expect(
+          frameLightness,
+          inInclusiveRange(darkerEndpoint - 0.01, lighterEndpoint + 0.01),
+          reason:
+              'at elapsed=${elapsed}ms the tween is darker than both endpoints -- exactly the '
+              '"black blink" this regresses: $frameColor',
+        );
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+
+      await tester.pumpAndSettle();
     });
   });
 }
