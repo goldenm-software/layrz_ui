@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,29 @@ import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
+
+/// Collects every semantics label under [tester]'s current tree.
+///
+/// Mirrors `select_input_test.dart`'s own `dumpSemanticsLabels` -- used
+/// here, rather than `find.bySemanticsLabel`, because that matcher also
+/// matches literal text on renderable widgets and has already produced a
+/// false green in this repo (DESIGN-161).
+List<String> dumpSemanticsLabels(WidgetTester tester) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final labels = <String>[];
+  void walk(SemanticsNode node) {
+    final label = node.getSemanticsData().label;
+    if (label.isNotEmpty) labels.add(label);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return labels;
+}
 
 void main() {
   group('LayrzComboBoxInput', () {
@@ -37,18 +61,23 @@ void main() {
     testWidgets('calls onChanged when value changes', (tester) async {
       // Explicit desktop size (DESIGN-161): this test's own gesture --
       // tapping the chrome and expecting `find.byType(EditableText)` to
-      // resolve to a single field -- only holds on the desktop branch, where
-      // the field's own EditableText is the sole one in the tree. Left
-      // unset, this ran at flutter_test's 800x600 default, which
-      // `context.isCompact` (< 960px) reads as compact -- opening the mobile
-      // bottom sheet instead, which (since DESIGN-161 gave it its own search
-      // field) now has an EditableText of its own too, so `enterText` found
-      // two and threw "Too many elements" rather than testing what this test
-      // names.
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
+      // resolve to a single field -- only holds before the field has opened
+      // any overlay. Left unset, this ran at flutter_test's 800x600 default,
+      // which `context.isCompact` (< 960px) reads as compact.
+      //
+      // DESIGN-98: typing now happens BEFORE tapping, not after. Before
+      // DESIGN-98 the closed field's own `EditableText` continued live into
+      // the opened `LayrzAnchoredPanel` (Q3), so typing after the tap still
+      // resolved to a single `EditableText` in the tree. DESIGN-98 replaced
+      // that panel with `LayrzEndDrawer` hosting a wholly independent
+      // `BottomSheetContent` surface (its own search field) -- once the
+      // drawer is open there are genuinely TWO `EditableText`s in the tree
+      // (the closed field's, still mounted underneath the drawer, and the
+      // drawer's own), so `find.byType(EditableText)` after opening now
+      // throws "Too many elements". Typing before ever tapping keeps this
+      // test exercising exactly one `EditableText` -- the closed field's own,
+      // which still reports every keystroke via `onChanged` regardless of
+      // whether anything is open.
       final options = ['Option 1', 'Option 2'];
       String? lastValue;
 
@@ -61,11 +90,6 @@ void main() {
         ),
       );
 
-      // Tap field
-      await tester.tap(find.byType(LayrzInputChrome));
-      await tester.pumpAndSettle();
-
-      // Type text
       await tester.enterText(find.byType(EditableText), 'test');
       await tester.pumpAndSettle();
 
@@ -168,15 +192,10 @@ void main() {
     });
 
     testWidgets('allows free-form entry when allowFreeForm is true', (tester) async {
-      // Explicit desktop size (DESIGN-161) -- see the identical note on
-      // 'calls onChanged when value changes' above: left unset, this test's
-      // `find.byType(EditableText)` silently ran the compact bottom-sheet
-      // branch, which now has a second EditableText of its own (the sheet's
-      // own search field), and `enterText` threw "Too many elements".
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
+      // DESIGN-98: types before ever opening the overlay -- see 'calls
+      // onChanged when value changes' above for why (opening now mounts a
+      // second, independent EditableText via LayrzEndDrawer/BottomSheetContent,
+      // so `find.byType(EditableText)` after opening is no longer unique).
       final options = ['Option 1', 'Option 2'];
       String? lastSubmitted;
 
@@ -193,11 +212,7 @@ void main() {
         ),
       );
 
-      // Tap field
-      await tester.tap(find.byType(LayrzInputChrome));
-      await tester.pumpAndSettle();
-
-      // Type arbitrary text
+      // Type arbitrary text, without ever opening the overlay.
       await tester.enterText(find.byType(EditableText), 'CustomValue');
       await tester.pumpAndSettle();
 
@@ -267,12 +282,8 @@ void main() {
     });
 
     testWidgets('filters options when text is typed', (tester) async {
-      // Explicit desktop size (DESIGN-161) -- see the identical note on
-      // 'calls onChanged when value changes' above.
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
+      // DESIGN-98: types without ever opening the overlay -- see 'calls
+      // onChanged when value changes' above for why.
       final options = ['Apple', 'Apricot', 'Banana'];
 
       String? lastValue;
@@ -285,10 +296,6 @@ void main() {
           onChanged: (value) => lastValue = value,
         ),
       );
-
-      // Tap field
-      await tester.tap(find.byType(LayrzInputChrome));
-      await tester.pumpAndSettle();
 
       // Type to filter
       await tester.enterText(find.byType(EditableText), 'app');
@@ -334,18 +341,17 @@ void main() {
     });
 
     testWidgets(
-      "the desktop panel's rect overlaps the field's own rect, not sits below it (Q3/Q9 -- coverAnchor)",
+      "the desktop drawer's rect does not overlap the field's own rect (DESIGN-98 retires coverAnchor)",
       (tester) async {
-        // Superseded by U3: the pre-parity combobox opened a panel below/above
-        // the field with a small gap, using its own hand-rolled
-        // `ComboBoxLayoutDelegate`. Parity with `LayrzSelectInput` (Q3) means
-        // `coverAnchor: true` on `LayrzAnchoredPanel` instead -- the panel now
-        // starts at the field's own top-left corner, exactly like DESIGN-145's
-        // "elevated field" illusion for Select. Mirrors
-        // `select_input_test.dart`'s own defect-1 regression: 0.0 tolerance,
-        // not a loose one -- there is no border-inset side effect here either,
-        // since U1's `LayrzAnchoredPanelBorder` is painted with
-        // `strokeAlign: BorderSide.strokeAlignOutside`.
+        // DESIGN-98 retired the Q3/Q9 `coverAnchor: true` illusion this test
+        // used to pin: the maintainer's own instruction moved this widget's
+        // desktop overlay onto `LayrzEndDrawer`, a fixed-width right-edge
+        // drawer that does not anchor to (or cover) the field's rect at all --
+        // mirroring `LayrzSelectInput`'s own DESIGN-98 rewrite in
+        // `select_input_test.dart`. There is no more `LayrzComboBoxPanelContent`
+        // in the real desktop flow either (see `combobox_input.dart`'s class
+        // doc): the drawer hosts the same independent `BottomSheetContent`
+        // surface the mobile band already opened.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -358,32 +364,17 @@ void main() {
           ),
         );
 
-        // The FIELD's own rect, not `LayrzComboBoxInput`'s whole rect: since the
-        // label/error hoisting fix (parity with `LayrzSelectInput`'s
-        // `_appendExtras`), the label renders OUTSIDE the anchor passed to
-        // `LayrzAnchoredPanel` -- the panel now covers the field exactly, not
-        // the field-plus-label the widget's outer rect includes.
         final field = tester.getRect(find.byType(LayrzInputChrome).first);
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
 
-        // `LayrzComboBoxPanelContent` is the panel's own content -- its rect
-        // spans the input row, the divider, and the option list together,
-        // unlike `OptionItem`'s rect, which covers only the list below the
-        // live input and so never overlaps the field on its own.
-        final panel = tester.getRect(find.byType(LayrzComboBoxPanelContent));
+        final drawer = tester.getRect(find.byType(BottomSheetContent));
 
-        expect(panel.overlaps(field), isTrue, reason: 'the panel must cover the field, not sit beside it');
         expect(
-          panel.left,
-          closeTo(field.left, 0.5),
-          reason: 'a web-style combobox list matches its field width and left edge',
-        );
-        expect(
-          panel.top,
-          closeTo(field.top, 0.5),
-          reason: "coverAnchor starts the panel exactly at the field's own top-left corner (Q9)",
+          drawer.overlaps(field),
+          isFalse,
+          reason: 'the drawer is a separate, fixed-width right-edge panel -- it must not cover the field in place',
         );
       },
     );
@@ -480,7 +471,7 @@ void main() {
       (tester) async {
         // Pins the contract restored for combobox-commit-notify: onChanged now
         // fires exactly once per genuine *commit* — tapping an option, pressing
-        // Enter on a highlighted option, or picking from the bottom sheet —
+        // Enter on a highlighted option, or picking from the bottom sheet/drawer —
         // regardless of whether the resulting text differs from what the field
         // already showed. onSubmit already fired unconditionally on every
         // commit; onChanged now carries the same guarantee for a real commit,
@@ -494,6 +485,11 @@ void main() {
         // displayed text already equal to the committed value at the moment of
         // commit) — fixing one necessarily fixes the other, since the two are
         // mechanically indistinguishable at commit time.
+        //
+        // DESIGN-98: taps the drawer's own `BottomSheetContent` option text
+        // directly, not `OptionItem` -- `LayrzComboBoxPanelContent`/`OptionItem`
+        // are no longer built by the real desktop flow (see the class doc's
+        // Q3 section).
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -513,7 +509,7 @@ void main() {
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
+        await tester.tap(find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Bravo')));
         await tester.pumpAndSettle();
 
         expect(changedCount, 1, reason: 'the first selection is a genuine text change, "" -> "Bravo"');
@@ -523,7 +519,7 @@ void main() {
         // reads "Bravo", so the option list is filtered down to that single entry.
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo')));
+        await tester.tap(find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Bravo')));
         await tester.pumpAndSettle();
 
         expect(
@@ -540,9 +536,17 @@ void main() {
       (tester) async {
         // This is the exact defect reported for LayrzComboBoxInput: "clicking an
         // option does not select it". It only reproduces once the field's text
-        // already equals the option being tapped — the ordinary way to reach
-        // that is to type the option's full text and then click it in the still-
-        // open overlay, which is what this test does.
+        // already equals the option being tapped.
+        //
+        // DESIGN-98 changed WHEN the typing must happen: before DESIGN-98, the
+        // field's own `EditableText` continued live into the still-open
+        // `LayrzAnchoredPanel` (Q3), so typing after the tap (in the still-open
+        // overlay) reproduced the defect. DESIGN-98 replaced that panel with
+        // `LayrzEndDrawer` hosting an independent `BottomSheetContent` --
+        // opening it computes the filtered option pool once, at open time (see
+        // `_openDesktopDrawer`'s own doc), so typing must now happen BEFORE the
+        // tap that opens it, mirroring the compact variant of this test below,
+        // which already followed this pattern.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -562,9 +566,6 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-
         // Typing the option's full text is itself a genuine change and already
         // notifies once — isolate that from the tap's own notification below.
         await tester.enterText(find.byType(EditableText), 'Beta');
@@ -572,7 +573,13 @@ void main() {
         expect(changedCount, 1, reason: 'typing "Beta" from empty text is a genuine change');
         changedCount = 0;
 
-        await tester.tap(find.descendant(of: find.byType(OptionItem), matching: find.text('Beta')));
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        final drawerOption = find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Beta'));
+        expect(drawerOption, findsOneWidget, reason: 'the drawer opens already filtered to "Beta"');
+
+        await tester.tap(drawerOption);
         await tester.pumpAndSettle();
 
         expect(
@@ -639,20 +646,25 @@ void main() {
       },
     );
 
-    group('panel tap region (H1)', () {
-      // Regression coverage for the reported defect: "tapping an option in
-      // LayrzComboBoxInput's overlay does nothing." Root cause: the overlay
-      // was not grouped with the field's own `TextFieldTapRegion`, so a
-      // mouse-kind tap-down on an option counted as "outside" the field for
-      // `EditableText`'s own (mouse-unconditional, touch-conditional) tap-
-      // outside handling, unfocusing it; `_handleFocusChange` then called
-      // `_handleBlur`, which closed the overlay mid-gesture via
-      // `_menuController.close()` before the option's own `onTap` ever fired
-      // on pointer-up. `flutter_test`'s default synthetic taps use
-      // `PointerDeviceKind.touch`, which this SDK path never unfocuses for —
-      // which is exactly why 2648 prior passing tests said nothing about a
-      // widget the maintainer could not use with a mouse. These tests
-      // exercise a real `PointerDeviceKind.mouse` gesture instead.
+    group('panel tap region (H1) -- superseded by DESIGN-98\'s drawer/route model', () {
+      // The original regression here ("tapping an option in
+      // LayrzComboBoxInput's overlay does nothing") was rooted in a
+      // `RawMenuAnchor`-hosted, in-place overlay sharing a widget subtree with
+      // the field's own `EditableText`: a mouse-kind tap-down on an option
+      // could count as "outside" the field for `EditableText`'s own tap-
+      // outside handling, unfocusing it and closing the overlay before the
+      // option's own `onTap` ever fired.
+      //
+      // DESIGN-98 makes that entire failure mode structurally impossible: the
+      // overlay is now `LayrzEndDrawer`, a [Navigator.push]ed route with its
+      // own modal barrier and its own [BottomSheetContent] subtree, wholly
+      // separate from the closed field's. A tap on an option inside the
+      // drawer is never in the same gesture arena as the closed field's own
+      // `EditableText` at all -- there is no "outside the field, inside the
+      // overlay" ambiguity left to regress. These tests assert the DESIGN-98
+      // equivalent: mouse and touch taps on the drawer's own option both
+      // still commit, and a barrier tap still closes the drawer without
+      // committing.
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -664,7 +676,7 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      testWidgets('a mouse tap on an option commits the selection', (tester) async {
+      testWidgets('a mouse tap on the drawer\'s own option commits the selection', (tester) async {
         setDesktopSize(tester);
         var changedCount = 0;
         String? lastChanged;
@@ -683,7 +695,7 @@ void main() {
 
         await openOverlay(tester);
 
-        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
+        final optionFinder = find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Bravo'));
         expect(optionFinder, findsOneWidget, reason: 'option must be visible before tapping it');
         final optionCenter = tester.getCenter(optionFinder);
 
@@ -692,15 +704,13 @@ void main() {
         await gesture.up();
         await tester.pumpAndSettle();
 
-        expect(
-          changedCount,
-          1,
-          reason: 'a mouse tap on the option must commit the selection exactly once, not be destroyed',
-        );
+        expect(changedCount, 1, reason: 'a mouse tap on the option must commit the selection exactly once');
         expect(lastChanged, 'Bravo');
       });
 
-      testWidgets('a touch tap on an option commits the selection, matching mouse behavior', (tester) async {
+      testWidgets('a touch tap on the drawer\'s own option commits the selection, matching mouse behavior', (
+        tester,
+      ) async {
         setDesktopSize(tester);
         var changedCount = 0;
         String? lastChanged;
@@ -719,7 +729,7 @@ void main() {
 
         await openOverlay(tester);
 
-        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
+        final optionFinder = find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Bravo'));
         final optionCenter = tester.getCenter(optionFinder);
 
         final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.touch);
@@ -731,123 +741,61 @@ void main() {
         expect(lastChanged, 'Bravo');
       });
 
-      testWidgets('tapping an option with a mouse pointer keeps the field focused', (tester) async {
+      testWidgets('a barrier tap outside the drawer closes it without committing', (tester) async {
         setDesktopSize(tester);
-        final focusNode = FocusNode();
-        addTearDown(focusNode.dispose);
+        var changedCount = 0;
 
         await pumpThemedApp(
           tester,
           LayrzComboBoxInput(
             labelText: 'Choose',
             options: const ['Alpha', 'Bravo', 'Charlie'],
-            focusNode: focusNode,
+            onChanged: (_) => changedCount++,
           ),
         );
 
         await openOverlay(tester);
-        expect(focusNode.hasFocus, isTrue, reason: 'opening the overlay must keep the field focused');
+        expect(find.byType(BottomSheetContent), findsOneWidget, reason: 'drawer must be open before the tap');
 
-        final optionFinder = find.descendant(of: find.byType(OptionItem), matching: find.text('Bravo'));
-        final optionCenter = tester.getCenter(optionFinder);
-
-        final gesture = await tester.startGesture(optionCenter, kind: PointerDeviceKind.mouse);
-        await tester.pump();
-
-        expect(
-          focusNode.hasFocus,
-          isTrue,
-          reason: 'a tap landing inside the overlay must never unfocus the field mid-gesture',
-        );
-
-        await gesture.up();
-        await tester.pumpAndSettle();
-      });
-
-      testWidgets('a genuine mouse tap outside the field and overlay closes it without committing', (tester) async {
-        setDesktopSize(tester);
-        var changedCount = 0;
-
-        await pumpThemedApp(
-          tester,
-          Column(
-            children: [
-              LayrzComboBoxInput(
-                labelText: 'Choose',
-                options: const ['Alpha', 'Bravo', 'Charlie'],
-                onChanged: (_) => changedCount++,
-              ),
-              const SizedBox(height: 400),
-            ],
-          ),
-        );
-
-        await openOverlay(tester);
-        expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
-
-        // (20, 1150) lands in the trailing SizedBox, well below the panel: with
-        // `coverAnchor: true` (Q3/Q9) the panel now covers the field itself
-        // (see the "the desktop panel's rect overlaps the field's own rect"
-        // test above), so a point that used to sit safely in the gap above a
-        // below-the-field panel -- (20, 20) -- is now inside the covering
-        // panel's own rect and is no longer a genuine outside tap.
-        final gesture = await tester.startGesture(const Offset(20, 1150), kind: PointerDeviceKind.mouse);
-        await tester.pump();
-        await gesture.up();
+        // The drawer sits at the right edge (LayrzEndDrawer.width, 420px) --
+        // a point near the top-left of the 1600px-wide viewport always lands
+        // on the barrier, well clear of the drawer itself.
+        await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
 
-        expect(find.byType(OptionItem), findsNothing, reason: 'a genuine outside tap must close the overlay');
-        expect(changedCount, 0, reason: 'dismissing outside must not commit any option');
+        expect(find.byType(BottomSheetContent), findsNothing, reason: 'a barrier tap must close the drawer');
+        expect(changedCount, 0, reason: 'dismissing via the barrier must not commit any option');
       });
-
-      testWidgets(
-        'a genuine touch tap outside the field and overlay closes it, matching mouse behavior',
-        (tester) async {
-          setDesktopSize(tester);
-          var changedCount = 0;
-
-          await pumpThemedApp(
-            tester,
-            Column(
-              children: [
-                LayrzComboBoxInput(
-                  labelText: 'Choose',
-                  options: const ['Alpha', 'Bravo', 'Charlie'],
-                  onChanged: (_) => changedCount++,
-                ),
-                const SizedBox(height: 400),
-              ],
-            ),
-          );
-
-          await openOverlay(tester);
-          expect(find.byType(OptionItem), findsWidgets, reason: 'overlay must be open before the outside tap');
-
-          // See the mouse variant above for why (20, 1150), not (20, 20).
-          final gesture = await tester.startGesture(const Offset(20, 1150), kind: PointerDeviceKind.touch);
-          await tester.pump();
-          await gesture.up();
-          await tester.pumpAndSettle();
-
-          expect(find.byType(OptionItem), findsNothing, reason: 'a genuine outside tap must close the overlay');
-          expect(changedCount, 0, reason: 'dismissing outside must not commit any option');
-        },
-      );
     });
 
-    group('text/caret/focus continuity across the open transition (Q3, plan verification requirement)', () {
-      // U3's plan flags this group explicitly: "the unit most likely to pass
-      // its tests and feel wrong on device." These four tests are the
-      // required, non-negotiable proof -- if any of them cannot be made to
-      // pass, the plan says stop and report rather than ship a partial
-      // transition. All four pass here.
+    group('the closed field and the opened drawer, post-DESIGN-98 (Q3 retired)', () {
+      // U3's original plan flagged the pre-DESIGN-98 Q3 continuity contract
+      // as "the unit most likely to pass its tests and feel wrong on
+      // device", and required non-negotiable proof that the SAME live field
+      // (controller, focus node, caret) continued unbroken from the closed
+      // slot into the open `LayrzAnchoredPanel`'s first row.
+      //
+      // DESIGN-98 retires that contract entirely, deliberately, on the
+      // maintainer's own instruction: the desktop overlay is now
+      // `LayrzEndDrawer`, hosting a wholly independent `BottomSheetContent`
+      // surface -- the same one the mobile band already opened -- with its
+      // OWN search controller and focus node (see `combobox_input.dart`'s
+      // class doc). There is no more field to reparent, no more caret to
+      // preserve across the transition, and no more shared focus node to
+      // hand off: the closed field and the drawer's own search field are two
+      // separate, independently-focused widgets from the moment the drawer
+      // opens. This group proves the NEW contract instead of the old one --
+      // what a caller can still rely on, and what they explicitly cannot
+      // anymore.
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
       }
 
-      testWidgets('typing before open and continuing after open loses no characters', (tester) async {
+      testWidgets('text typed into the closed field before opening is preserved -- the field stays live underneath', (
+        tester,
+      ) async {
         setDesktopSize(tester);
         final controller = TextEditingController();
         addTearDown(controller.dispose);
@@ -861,108 +809,110 @@ void main() {
           ),
         );
 
-        // Type before the panel opens (opening is triggered by the field's
-        // own onTap, not by typing) -- then continue typing after it is open.
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
+        // Type into the closed field, THEN open the drawer -- typing after
+        // opening is no longer meaningful for the closed field's own
+        // EditableText, since the drawer's own independent field is what
+        // receives focus and input once open (see the next test).
         await tester.enterText(find.byType(EditableText), 'Ala');
         await tester.pumpAndSettle();
-
-        expect(controller.text, 'Ala', reason: 'text typed before the panel settles must not be lost');
-        expect(find.byType(OptionItem), findsWidgets, reason: 'the panel must be open by now');
-
-        // Continue typing after the transition -- the SAME EditableText
-        // (structurally, the same controller/focus node) must still be live
-        // and receiving input, whether it is rendered by the closed field's
-        // slot or the panel's first row.
-        await tester.enterText(find.byType(EditableText), 'Alaska');
-        await tester.pumpAndSettle();
-
-        expect(controller.text, 'Alaska', reason: 'no characters may be lost continuing to type after open');
-      });
-
-      testWidgets('the caret position does not jump across the open transition', (tester) async {
-        setDesktopSize(tester);
-        final controller = TextEditingController();
-        addTearDown(controller.dispose);
-
-        await pumpThemedApp(
-          tester,
-          LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: const ['Alabama', 'Alaska'],
-            controller: controller,
-          ),
-        );
-
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-        await tester.enterText(find.byType(EditableText), 'Alaska');
-        await tester.pumpAndSettle();
-
-        // Move the caret to a specific, known offset (not the end) before the
-        // transition settles further, then confirm it holds.
-        final editableState = tester.state<EditableTextState>(find.byType(EditableText));
-        editableState.userUpdateTextEditingValue(
-          controller.value.copyWith(selection: const TextSelection.collapsed(offset: 3)),
-          SelectionChangedCause.keyboard,
-        );
-        await tester.pump();
-
-        expect(controller.selection, const TextSelection.collapsed(offset: 3));
-
-        // Force a further rebuild of the open panel (mirroring what a
-        // highlight change or option filter would do) and confirm the caret
-        // offset is unaffected -- it must still be governed by the SAME
-        // controller instance, not reset because a new widget instance was
-        // mounted.
-        await tester.pump();
-        expect(
-          controller.selection,
-          const TextSelection.collapsed(offset: 3),
-          reason: 'the caret must not jump when the panel content rebuilds',
-        );
-      });
-
-      testWidgets('focus lands in the panel input on open, not the closed field or the panel root', (tester) async {
-        setDesktopSize(tester);
-        final focusNode = FocusNode();
-        addTearDown(focusNode.dispose);
-
-        await pumpThemedApp(
-          tester,
-          LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: const ['Alpha', 'Bravo'],
-            focusNode: focusNode,
-          ),
-        );
-
-        expect(focusNode.hasFocus, isFalse, reason: 'nothing is focused before any interaction');
+        expect(controller.text, 'Ala');
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
 
-        expect(find.byType(OptionItem), findsWidgets, reason: 'the panel must be open');
-        // The SAME field focus node -- shared, by instance, between the
-        // closed field and the panel's first row (Q3) -- must hold focus once
-        // the panel has settled. There is exactly one EditableText in the
-        // tree at this point (the panel's own field row; the closed slot
-        // renders a non-editable placeholder while open), so this also pins
-        // that there is no duplicate, competing EditableText fighting for
-        // focus.
-        expect(focusNode.hasFocus, isTrue, reason: "focus must land in the panel's own input, not nowhere");
-        expect(find.byType(EditableText), findsOneWidget, reason: 'exactly one live EditableText while open');
-
-        final editableState = tester.state<EditableTextState>(find.byType(EditableText));
+        expect(find.byType(BottomSheetContent), findsOneWidget, reason: 'the drawer must be open by now');
         expect(
-          editableState.widget.focusNode,
-          same(focusNode),
-          reason: 'the live EditableText while open must be bound to the SAME focus node as the closed field',
+          controller.text,
+          'Ala',
+          reason: "the closed field's own text must survive opening the drawer, unmodified",
         );
       });
 
-      testWidgets('onChanged dedupe survives the open transition: no extra notification from the field swap', (
+      testWidgets(
+        'the drawer opens with its OWN empty search field -- it does not continue the closed field\'s text or caret',
+        (tester) async {
+          setDesktopSize(tester);
+          final controller = TextEditingController();
+          addTearDown(controller.dispose);
+
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              labelText: 'Choose',
+              options: const ['Alabama', 'Alaska'],
+              controller: controller,
+            ),
+          );
+
+          await tester.enterText(find.byType(EditableText), 'Alaska');
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+
+          // Post-DESIGN-98 there are genuinely TWO EditableTexts once the
+          // drawer is open: the closed field's own (still mounted, holding
+          // "Alaska") and the drawer's own search field (a fresh,
+          // independent TextEditingController, starting empty).
+          expect(find.byType(EditableText), findsNWidgets(2));
+
+          final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+          final drawerState = tester.state<EditableTextState>(drawerField);
+          expect(
+            drawerState.widget.controller.text,
+            isEmpty,
+            reason: "the drawer's own search field is independent -- it does not inherit the closed field's text",
+          );
+        },
+      );
+
+      testWidgets(
+        "opening the drawer moves focus off the closed field -- BottomSheetContent's own search field does NOT "
+        'autofocus (a pre-existing characteristic shared with the mobile band, not a DESIGN-98 regression)',
+        (tester) async {
+          setDesktopSize(tester);
+          final focusNode = FocusNode();
+          addTearDown(focusNode.dispose);
+
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              labelText: 'Choose',
+              options: const ['Alpha', 'Bravo'],
+              focusNode: focusNode,
+            ),
+          );
+
+          expect(focusNode.hasFocus, isFalse, reason: 'nothing is focused before any interaction');
+
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(BottomSheetContent), findsOneWidget, reason: 'the drawer must be open');
+          expect(
+            focusNode.hasFocus,
+            isFalse,
+            reason: "the closed field's own focus node must not still hold focus once the drawer is open",
+          );
+
+          // BottomSheetContent's own search field passes `autofocus: false`
+          // (combobox_surface.dart) -- it does not request focus for itself.
+          // LayrzEndDrawer instead autofocuses its own wrapper Focus node
+          // (see end_drawer.dart's `_EndDrawerContentState.initState`), so
+          // opening the drawer leaves the wrapper -- not the search field --
+          // focused, exactly like opening the mobile bottom sheet already
+          // did before DESIGN-98.
+          final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+          final drawerState = tester.state<EditableTextState>(drawerField);
+          expect(
+            drawerState.widget.focusNode.hasFocus,
+            isFalse,
+            reason: "the drawer's own search field does not autofocus -- the user must tap it to type",
+          );
+        },
+      );
+
+      testWidgets('typing in the closed field alone -- with the drawer never opened -- still reports via onChanged', (
         tester,
       ) async {
         setDesktopSize(tester);
@@ -981,88 +931,206 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-
-        expect(
-          changedCount,
-          0,
-          reason: 'opening the panel alone -- with no text typed -- must not fire onChanged by itself',
-        );
-
         await tester.enterText(find.byType(EditableText), 'Al');
         await tester.pumpAndSettle();
 
-        expect(
-          changedCount,
-          1,
-          reason:
-              'exactly one onChanged for the genuine text change, even though the field instance is '
-              'reparented between the closed slot and the panel row across this same interaction',
-        );
+        expect(changedCount, 1, reason: 'the closed field alone still reports every genuine text change');
         expect(values, ['Al']);
+      });
+
+      // Maintainer review, Finding 6: after selecting "Canada", reopening the
+      // drawer showed ONLY "Canada" -- every other option had become
+      // unreachable. Root cause was `_openDesktopDrawer`/`_openMobileSurface`
+      // passing `_getFilteredOptions()`'s result (filtered against
+      // `_controller.text`, the CLOSED field's own display text) as the
+      // pool handed to `BottomSheetContent`. That filter is reasonable while
+      // the user is actively typing a query, but the closed field's text is
+      // also a committed selection's full text once one exists -- filtering
+      // the pool by "Canada" left only options starting with "canada", i.e.
+      // Canada alone. The fix passes `widget.options` unfiltered every time;
+      // `BottomSheetContent`'s own independent search field (starting empty)
+      // is the only filter left, so every option is always reachable on
+      // open, with the committed value visible only as the closed field's
+      // own text once the drawer is dismissed.
+      testWidgets('reopening after selecting one option still shows every other option, not just the selected one', (
+        tester,
+      ) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Country',
+            options: const ['Canada', 'Chile', 'China', 'Colombia'],
+            onChanged: (_) => changedCount++,
+          ),
+        );
+
+        // Open and tap the "Canada" option row directly to commit it --
+        // mirrors the maintainer's own "selects Canada" repro step.
+        await tester.tap(find.byType(EditableText).first);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Canada')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(changedCount, 1);
+        expect(find.byType(BottomSheetContent), findsNothing, reason: 'committing a value closes the drawer');
+
+        // Reopen: every option -- not just "Canada" -- must be reachable.
+        await tester.tap(find.byType(EditableText).first);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheetContent), findsOneWidget);
+        for (final option in const ['Canada', 'Chile', 'China', 'Colombia']) {
+          expect(
+            find.descendant(of: find.byType(BottomSheetContent), matching: find.text(option)),
+            findsOneWidget,
+            reason: '"$option" must still be reachable after "Canada" was already committed',
+          );
+        }
+
+        final reopenedDrawerField = find.descendant(
+          of: find.byType(BottomSheetContent),
+          matching: find.byType(EditableText),
+        );
+        final reopenedState = tester.state<EditableTextState>(reopenedDrawerField);
+        expect(
+          reopenedState.widget.controller.text,
+          isEmpty,
+          reason: "the drawer's own search field opens empty, not pre-filled with the committed value",
+        );
       });
     });
 
-    group('keyboard navigation (custom-value row removed)', () {
+    // The drawer's title (DESIGN-98) and the duplicate-announcement trap
+    // (maintainer review). `combobox_input.dart:_openDesktopDrawer` passed
+    // `semanticLabel: widget.labelText` unconditionally alongside its own
+    // `title:` -- doubling the accessibility announcement once `title`'s own
+    // `Text` already produces a Semantics node with that exact label. Mirrors
+    // `LayrzDateInput`/`LayrzSelectInput`/`LayrzDurationInput`'s identical
+    // fix and tests.
+    group('the drawer title and its semantic label (maintainer review)', () {
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
       }
 
-      // NOTE on an arrow-down-opens-when-closed test: `_handleKeyEvent`
-      // implements that branch (see `combobox_input.dart`'s `!isOpen` case),
-      // preserved verbatim from the pre-parity implementation. It is not
-      // exercisable from a widget test in EITHER version, before or after
-      // this unit: `RawMenuAnchor.buildAnchor` wraps its `builder:` slot
-      // (where the closed field lives) in its own `Shortcuts` mapping
-      // `arrowDown` to a `DirectionalFocusIntent`, which -- being on a
-      // descendant `Focus` node relative to this widget's own
-      // `Focus(onKeyEvent: _handleKeyEvent)` -- intercepts the key event
-      // first. Confirmed pre-existing, not a regression: the pre-parity
-      // implementation wrapped its own `RawMenuAnchor` inside an identical
-      // `Focus(onKeyEvent: ...)` with the same branch, and the same
-      // interception applies to it. Once the panel is open, the field lives
-      // in the panel's overlay instead (a different `RawMenuAnchor` slot,
-      // not wrapped by that `Shortcuts`), which is why arrow-key navigation
-      // *while open* -- covered by the tests below -- works correctly.
-
-      testWidgets('arrow-down highlights the first option directly, with no index shift', (tester) async {
+      testWidgets('renders labelText as a visible title', (tester) async {
         setDesktopSize(tester);
 
         await pumpThemedApp(
           tester,
-          const LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: ['Alabama', 'Alaska'],
+          LayrzComboBoxInput(
+            labelText: 'Choose a state',
+            options: const ['Alabama', 'Alaska', 'Arizona'],
           ),
         );
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        // "Ala" matches both options by prefix but is not an exact match to
-        // either -- previously this also shown the custom-value row at index
-        // 0; the row is gone, so the list itself is the whole navigable set.
-        await tester.enterText(find.byType(EditableText), 'Ala');
-        await tester.pumpAndSettle();
 
-        expect(find.byType(OptionItem), findsNWidgets(2));
-
-        // A single arrow-down must land directly on the first option (index
-        // 0) -- no longer requiring a second arrow-down to get past a row
-        // that no longer exists.
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-        await tester.pump();
-        final afterFirstDown = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
-        expect(
-          afterFirstDown.highlightedIndex,
-          0,
-          reason: 'with the custom-value row gone, the first arrow-down lands on the first option directly',
-        );
+        expect(find.text('Choose a state'), findsOneWidget, reason: 'the drawer must render a visible title Text');
       });
 
-      testWidgets('committing a highlighted option via Enter reports the option value exactly once', (tester) async {
+      testWidgets('falls back to hintText for the semantic label when labelText is null', (tester) async {
+        setDesktopSize(tester);
+
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              hintText: 'Pick a state',
+              options: const ['Alabama', 'Alaska', 'Arizona'],
+            ),
+          );
+
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+
+          final labels = dumpSemanticsLabels(tester);
+          expect(labels.any((l) => l.contains('Pick a state')), isTrue);
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets(
+        'does not add a third, route-level announcement of labelText once title carries it visibly',
+        (tester) async {
+          setDesktopSize(tester);
+
+          final handle = tester.ensureSemantics();
+          try {
+            await pumpThemedApp(
+              tester,
+              LayrzComboBoxInput(
+                labelText: 'Choose a state',
+                options: const ['Alabama', 'Alaska', 'Arizona'],
+              ),
+            );
+
+            await tester.tap(find.byType(EditableText));
+            await tester.pumpAndSettle();
+
+            final labels = dumpSemanticsLabels(tester);
+            final matches = labels.where((l) => l == 'Choose a state').length;
+            // Two legitimate, DIFFERENT nodes both carry this exact text even
+            // after the fix: `title`'s own visible `Text` widget, and
+            // `BottomSheetContent`'s own `Semantics(container: true, label:
+            // labelText)` naming its content (unrelated to the drawer's
+            // title -- see that class's own doc). That second one is not the
+            // bug; it exists for every Save-carrying picker in this batch
+            // too, just without a second name to collide with, since none of
+            // them pass `labelText` into their own surface widget.
+            //
+            // The bug was a THIRD node: `LayrzEndDrawer.show`'s own
+            // `semanticLabel` parameter, before this fix, wrapped the whole
+            // route in `Semantics(scopesRoute: true, namesRoute: true, label:
+            // widget.labelText)` -- a route-level announcement stacked on
+            // top of the two content-level ones above. Reverting this fix
+            // locally and re-running confirms the count: 3 occurrences
+            // before the fix, 2 after.
+            expect(
+              matches,
+              2,
+              reason:
+                  'expected exactly title\'s Text plus BottomSheetContent\'s own content name (2) -- a third '
+                  'occurrence means semanticLabel is re-adding the route-level announcement this fix removes',
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
+    });
+
+    // Keyboard navigation inside the drawer, RESTORED.
+    //
+    // Before DESIGN-98, `LayrzComboBoxPanelContent` carried its own
+    // `highlightedIndex` state, and arrow-down/arrow-up/Enter all navigated
+    // and committed rows in that in-place panel via `_handleKeyEvent` (bound
+    // to a `Focus` wrapping the field's own subtree, which stayed live inside
+    // the anchored panel). DESIGN-98 initially replaced that panel with
+    // `LayrzEndDrawer` hosting `BottomSheetContent` with no keyboard
+    // affordance at all, which was a real, reported UX loss. It has since
+    // been rebuilt INSIDE `BottomSheetContent` itself (see that class's own
+    // "Keyboard navigation" doc section) -- both bands now share this
+    // behavior, since both open the identical widget (verified below via a
+    // desktop test here and the compact-band coverage that already existed
+    // for the same widget in `combobox_surface_test.dart`).
+    group('keyboard navigation inside the drawer (restored)', () {
+      void setDesktopSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      testWidgets('arrow-down highlights the first filtered option, and Enter commits it', (tester) async {
         setDesktopSize(tester);
         var submitCount = 0;
         String? lastSubmitted;
@@ -1081,10 +1149,11 @@ void main() {
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
+        expect(find.byType(BottomSheetContent), findsOneWidget);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
         await tester.pump();
-        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pumpAndSettle();
 
         expect(submitCount, 1, reason: 'Enter on the highlighted option must commit exactly once');
@@ -1092,8 +1161,87 @@ void main() {
       });
 
       testWidgets(
-        'typing a free-form value that matches no option is still retained via onChanged, with no committed row to confirm it',
+        'when the typed text matches no option, the bold custom-value row is highlighted by DEFAULT -- Enter '
+        'commits it with no Down press needed',
         (tester) async {
+          setDesktopSize(tester);
+          var submitCount = 0;
+          String? lastSubmitted;
+
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              labelText: 'Choose',
+              options: const ['Alpha', 'Bravo'],
+              onSubmit: (value) {
+                submitCount++;
+                lastSubmitted = value;
+              },
+            ),
+          );
+
+          // Type a non-matching value BEFORE opening -- opening now moves
+          // focus into the drawer's own independent search field (Q3 no
+          // longer applies), so the closed field's own typed text does not
+          // continue into the drawer; typing must happen inside it instead.
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+
+          final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+          await tester.enterText(drawerField, 'Charlie');
+          await tester.pump();
+
+          // No Down press: the custom-value row is highlighted by default
+          // the moment it appears -- see BottomSheetContent's own
+          // "Keyboard navigation" doc section for why.
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+
+          expect(submitCount, 1, reason: 'Enter must commit the custom value with no prior Down press');
+          expect(lastSubmitted, 'Charlie');
+        },
+      );
+
+      testWidgets('arrow-down past the custom-value row reaches the filtered options', (tester) async {
+        setDesktopSize(tester);
+        var submitCount = 0;
+        String? lastSubmitted;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose',
+            options: const ['Alabama', 'Alaska'],
+            onSubmit: (value) {
+              submitCount++;
+              lastSubmitted = value;
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        final drawerField = find.descendant(of: find.byType(BottomSheetContent), matching: find.byType(EditableText));
+        await tester.enterText(drawerField, 'Ala');
+        await tester.pump();
+
+        // Row 0 is the custom-value row ("Ala" matches neither option
+        // exactly); Down once more reaches row 1, the first filtered option.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+
+        expect(submitCount, 1);
+        expect(lastSubmitted, 'Alabama');
+      });
+
+      testWidgets(
+        'typing a free-form value that matches no option is still retained via onChanged (closed field, before opening)',
+        (
+          tester,
+        ) async {
           setDesktopSize(tester);
           final changes = <String>[];
 
@@ -1106,33 +1254,17 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byType(EditableText));
-          await tester.pumpAndSettle();
           await tester.enterText(find.byType(EditableText), 'zzz-no-match');
           await tester.pumpAndSettle();
 
-          // The typed value is already the value -- reported live via
-          // onChanged as the user types, with no confirmation row rendered
-          // anywhere in the panel.
           expect(changes, contains('zzz-no-match'));
           expect(find.text('zzz-no-match', findRichText: true), findsWidgets);
-          expect(
-            find.byType(OptionItem),
-            findsNothing,
-            reason: 'the typed text matches no option, so the filtered list is empty',
-          );
-
-          // With no options in the navigable list, arrow-down is a no-op --
-          // there is nothing to highlight or commit via Enter.
-          await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
-          await tester.pump();
-          expect(tester.takeException(), isNull);
-          final panel = tester.widget<LayrzComboBoxPanelContent>(find.byType(LayrzComboBoxPanelContent));
-          expect(panel.highlightedIndex, -1);
         },
       );
 
-      testWidgets('escape closes the panel via the keyboard without committing', (tester) async {
+      testWidgets('escape still closes the drawer via LayrzEndDrawer\'s own dismiss handling, without committing', (
+        tester,
+      ) async {
         setDesktopSize(tester);
         var changedCount = 0;
 
@@ -1147,41 +1279,22 @@ void main() {
 
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
-        expect(find.byType(OptionItem), findsWidgets);
+        expect(find.byType(BottomSheetContent), findsOneWidget);
 
         await tester.sendKeyEvent(LogicalKeyboardKey.escape);
         await tester.pumpAndSettle();
 
-        expect(find.byType(OptionItem), findsNothing, reason: 'Escape must close the panel');
+        expect(find.byType(BottomSheetContent), findsNothing, reason: 'Escape must close the drawer');
         expect(changedCount, 0, reason: 'Escape must not commit anything');
-      });
-
-      testWidgets('arrow up from no highlight wraps to the last navigable row', (tester) async {
-        setDesktopSize(tester);
-
-        await pumpThemedApp(
-          tester,
-          const LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: ['Alpha', 'Bravo', 'Charlie'],
-          ),
-        );
-
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-
-        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-        await tester.pump();
-
-        // No exception, and the panel stays open with all three options still
-        // present -- arrow-up wrapping must not throw or lose the list.
-        expect(tester.takeException(), isNull);
-        expect(find.byType(OptionItem), findsNWidgets(3));
       });
     });
 
     group('allowFreeForm: false revert-on-blur', () {
       testWidgets('a genuine loss of focus reverts non-matching text to the last valid option', (tester) async {
+        // DESIGN-98: does not tap the field first (that now opens the
+        // drawer, mounting a second EditableText and making
+        // `find.byType(EditableText)` ambiguous) -- `enterText` focuses the
+        // field on its own, which is all this test needs.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -1210,8 +1323,6 @@ void main() {
           ),
         );
 
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
         await tester.enterText(find.byType(EditableText), 'not a real option');
         await tester.pumpAndSettle();
 

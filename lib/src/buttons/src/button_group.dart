@@ -117,7 +117,7 @@ class LayrzButtonGroup extends StatelessWidget {
   /// The [builder] receives the menu [MenuController] and must wire it to the
   /// trigger's own tap handler. This allows the caller to supply any trigger
   /// widget and style it freely, unlike the default constructor which uses a
-  /// hardcoded [LayrzButtonStyle.elevatedFab] trigger.
+  /// hardcoded [LayrzButtonStyle.filledFab] trigger.
   ///
   /// In row mode, the builder is never called and the group renders its items
   /// as usual. Set `useDropdown: false` to see only the row and skip the builder.
@@ -168,7 +168,7 @@ class LayrzButtonGroup extends StatelessWidget {
         (context, controller) => LayrzButton(
           labelText: triggerHintText!,
           icon: triggerIcon ?? MdiIcons.dotsVertical,
-          style: LayrzButtonStyle.elevatedFab,
+          style: LayrzButtonStyle.filledFab,
           onTap: controller.isOpen ? controller.close : controller.open,
         );
 
@@ -196,7 +196,7 @@ class LayrzButtonGroup extends StatelessWidget {
       isDisabled: isDisabled,
       type: LayrzButtonType.custom,
       color: entry.resolveAccent(tokens),
-      style: LayrzButtonStyle.elevated,
+      style: LayrzButtonStyle.filled,
     );
   }
 }

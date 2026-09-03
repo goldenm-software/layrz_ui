@@ -25,6 +25,7 @@ import 'src/sections/motion_section.dart';
 import 'src/sections/progress_section.dart';
 import 'src/sections/radius_section.dart';
 import 'src/sections/refresh_section.dart';
+import 'src/sections/responsive_modal_section.dart';
 import 'src/sections/sheets_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
@@ -127,6 +128,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/dialogs',
           pageBuilder: (context, state) => NoTransitionPage(child: DialogsSection()),
+        ),
+        GoRoute(
+          path: '/responsive-modal',
+          pageBuilder: (context, state) => NoTransitionPage(child: ResponsiveModalSection()),
         ),
         GoRoute(
           path: '/sheets',
@@ -240,17 +245,20 @@ class ShowroomApp extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle.dark.copyWith(
-        statusBarBrightness: .dark,
-        statusBarIconBrightness: .dark,
+        statusBarBrightness: LayrzPlatform.isIOS ? .light : .dark,
+        statusBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
         systemStatusBarContrastEnforced: true,
-        systemNavigationBarIconBrightness: .dark,
+        systemNavigationBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
         systemNavigationBarContrastEnforced: true,
       ),
     );
     return LayrzApp.router(
       routerConfig: _router,
       title: kAppTitle,
-      theme: LayrzThemeData.light(font: font),
+      theme: LayrzThemeData.light(
+        font: font,
+        // primaryColor: LayrzColors.cyan,
+      ),
       // To view the original component showroom, uncomment:
       // home: const Showroom(),
     );

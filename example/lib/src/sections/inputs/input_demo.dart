@@ -16,7 +16,7 @@ final class InputDemo {
   final String name;
 
   /// The category this component belongs to.
-  /// Categories: "Text", "Numeric", "Boolean", "Choice", "Search", "Flow".
+  /// Categories: "Text", "Numeric", "Boolean", "Choice", "Search", "Flow", "Date & Time".
   final String category;
 
   /// Builder for the detail pane content.

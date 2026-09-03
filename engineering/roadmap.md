@@ -92,7 +92,9 @@ See [**milestone-1.md**](milestone-1.md) for the detailed 12-item plan, executio
 
 **Goal**: Specialized input widgets for date, time, and selection of complex types.
 
-**Naming note**: The group name "Pickers" refers to the **interaction pattern** — inputs that open a selection surface on tap. All components in this milestone are named `Layrz*Input` and compose `LayrzTextInput` internally, rendered read-only. None are named `*Picker`; that suffix from layrz_theme is retired entirely. See [`input-contract.md`](input-contract.md) for the shared input family contract.
+**Naming note**: The group name "Pickers" refers to the **interaction pattern** — inputs that open a selection surface on tap. All components in this milestone are named `Layrz*Input` and compose `LayrzInputChrome` directly (per [D63](decisions.md#d63-no-input-wraps-another-input--every-field-composes-layrzinputchrome-directly)), never `LayrzTextInput`. None are named `*Picker`; that suffix from layrz_theme is retired entirely. See the wiki's [Input Contract](https://github.com/goldenm-software/layrz_ui/wiki/Input-Contract) for the shared input family contract.
+
+**Container note (DESIGN-98, see [D76](decisions.md#d76-amendment-to-d75--design-98-promotes-layrzenddrawer-retires-the-commit-on-tap-split-restores-midnightzero-as-valid-values))**: all eight pickers, plus `LayrzDurationInput`, open the public `LayrzEndDrawer` on desktop and `LayrzBottomSheet` below `960px`, superseding this milestone's original anchored-panel/bottom-sheet pairing (D52/D70) for these widgets specifically.
 
 **Deliverables**:
 - Date input (single date)

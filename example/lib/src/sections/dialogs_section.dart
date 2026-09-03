@@ -5,13 +5,14 @@ import '../common/showroom_section.dart';
 
 /// Builds the dialogs section for the showroom.
 ///
-/// Demonstrates [LayrzDialog] (a centered, page-relative modal with
-/// `title`/`content`/`actions` slots or a `child` escape hatch) and
-/// [LayrzResponsiveModal] (which resolves once, at `show()` time, to either a
-/// [LayrzDialog] or a `LayrzBottomSheet` depending on viewport width).
+/// Demonstrates [LayrzDialog] -- a centered, page-relative modal with
+/// `title`/`content`/`actions` slots or a `child` escape hatch. The
+/// viewport-aware [LayrzResponsiveModal] chooser has its own dedicated
+/// showroom entry (`ResponsiveModalSection`, at `/responsive-modal`) rather
+/// than being demonstrated here (DESIGN-164) -- see the pointer card below.
 ///
-/// Every showcase here opens on the root navigator automatically — both
-/// components always push there intrinsically, which matters because this
+/// Every showcase here opens on the root navigator automatically — this
+/// component always pushes there intrinsically, which matters because this
 /// section is rendered inside `ShowroomLayout`'s `ShellRoute` — a nested
 /// `Navigator` — and a dialog opened on the nearest navigator would otherwise
 /// be confined to the page body instead of covering the whole shell.
@@ -27,10 +28,6 @@ class _DialogsSectionState extends State<DialogsSection> {
   /// The result returned by the last confirm/cancel dialog, or `null` if it
   /// has not been opened yet, or was dismissed without a value.
   bool? _lastConfirmResult;
-
-  /// The [LayrzModalPresentation] the last [LayrzResponsiveModal] resolved to,
-  /// captured so the demo can show what was actually chosen at open time.
-  String? _lastModalPresentation;
 
   @override
   Widget build(BuildContext context) {
@@ -148,15 +145,13 @@ class _DialogsSectionState extends State<DialogsSection> {
           _DialogShowcaseCard(
             title: 'LayrzResponsiveModal',
             description:
-                'Chooses a LayrzDialog at/above a 960px viewport width, or a bottom sheet '
-                'below it -- decided once, at the moment show() is called.',
-            child: _ResponsiveModalShowcase(
-              lastPresentation: _lastModalPresentation,
-              onPresentationResolved: (label) {
-                setState(() {
-                  _lastModalPresentation = label;
-                });
-              },
+                'The viewport-aware dialog/bottom-sheet chooser now has its own dedicated '
+                'showroom entry -- see "Responsive Modal" in the navigation, which covers the '
+                'dialog/sheet switch, the pinned actions row, and both LayrzDialogConfig and '
+                'LayrzBottomSheetConfig.',
+            child: Text(
+              'See the "Responsive Modal" section.',
+              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
           ),
         ],
@@ -216,123 +211,6 @@ class _DialogShowcaseCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Showcase for [LayrzResponsiveModal], teaching its one deliberate non-goal:
-/// the chosen surface (dialog vs. bottom sheet) is decided once at `show()`
-/// time and never re-evaluated, so resizing the window mid-route does not
-/// swap the presentation of an already-open modal.
-class _ResponsiveModalShowcase extends StatelessWidget {
-  /// The [LayrzModalPresentation] label the most recent `show()` call
-  /// resolved to, or `null` if the modal has not been opened yet.
-  final String? lastPresentation;
-
-  /// Called with a human-readable presentation label every time a modal is
-  /// opened, so the parent can display which surface was actually chosen.
-  final ValueChanged<String> onPresentationResolved;
-
-  /// Creates a new [_ResponsiveModalShowcase].
-  const _ResponsiveModalShowcase({
-    required this.lastPresentation,
-    required this.onPresentationResolved,
-  });
-
-  /// Opens the responsive modal, optionally forcing [isCompact] to override
-  /// the viewport-based choice, and records which presentation was used.
-  void _open(BuildContext context, {bool? isCompact}) async {
-    final willBeCompact = isCompact ?? context.isCompact;
-    final presentationLabel = willBeCompact ? 'bottom sheet (compact)' : 'dialog (wide)';
-
-    await LayrzResponsiveModal.show<void>(
-      context,
-      isCompact: isCompact,
-      semanticLabel: 'Responsive modal',
-      builder: (sheetContext) {
-        final tokens = sheetContext.tokens;
-        return Padding(
-          padding: EdgeInsets.all(tokens.spacing.sp3),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            spacing: tokens.spacing.sp2,
-            children: [
-              Text('Presented as: $presentationLabel', style: tokens.typography.title),
-              Text(
-                'This surface was chosen once, when show() was called, from the viewport '
-                'width at that moment. Resizing the window while this is open will not '
-                'swap it to the other surface -- that is a deliberate non-goal, not a bug. '
-                'Close this and resize before opening again to see a different choice.',
-                style: tokens.typography.body,
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: LayrzButton.save(
-                  labelText: 'Close',
-                  onTap: () => Navigator.of(sheetContext, rootNavigator: true).pop(),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    onPresentationResolved(presentationLabel);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = MediaQuery.sizeOf(context).width;
-        final wouldBeCompact = context.isCompact;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: tokens.spacing.sp2,
-          children: [
-            Text(
-              'Live viewport width: ${width.round()}px -- next show() call would choose: '
-              '${wouldBeCompact ? 'bottom sheet (< 960px)' : 'dialog (>= 960px)'}',
-              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
-            ),
-            Text(
-              'Resize this window and reopen the modal below to see the choice change. '
-              'An already-open modal never swaps surfaces mid-route.',
-              style: tokens.typography.label.copyWith(color: tokens.colors.fg4),
-            ),
-            if (lastPresentation != null)
-              Text(
-                'Last opened as: $lastPresentation',
-                style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
-              ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              spacing: tokens.spacing.sp2,
-              children: [
-                LayrzButton(
-                  labelText: 'Open (auto)',
-                  onTap: () => _open(context),
-                ),
-                LayrzButton(
-                  labelText: 'Force sheet',
-                  style: LayrzButtonStyle.outlined,
-                  onTap: () => _open(context, isCompact: true),
-                ),
-                LayrzButton(
-                  labelText: 'Force dialog',
-                  style: LayrzButtonStyle.outlined,
-                  onTap: () => _open(context, isCompact: false),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
     );
   }
 }

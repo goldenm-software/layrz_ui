@@ -126,6 +126,42 @@ void main() {
       }
     });
 
+    testWidgets('a tiny non-zero value announces 1% rather than 0%', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(tester, const LayrzProgressBar(value: 0.001));
+
+        expect(
+          tester.getSemantics(find.byType(LayrzProgressBar)),
+          matchesSemantics(label: 'Progress', value: '1%', isLiveRegion: true),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('a value just below 1.0 announces 99% rather than 100%', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(tester, const LayrzProgressBar(value: 0.999));
+
+        expect(
+          tester.getSemantics(find.byType(LayrzProgressBar)),
+          matchesSemantics(label: 'Progress', value: '99%', isLiveRegion: true),
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
     testWidgets('semantics node is a live region so value changes are announced', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;

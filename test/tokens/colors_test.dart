@@ -40,7 +40,7 @@ void main() {
       final tokens = LayrzColorTokens.light();
       expect(tokens.danger.shade500, equals(const Color(0xFFF44336))); // red 500
       expect(tokens.success.shade500, equals(const Color(0xFF4CAF50))); // green 500
-      expect(tokens.warning.shade500, equals(const Color(0xFFFF9800))); // orange 500
+      expect(tokens.warning.shade500, equals(const Color(0xFFEF6C00))); // warningOrange 500
       expect(tokens.info.shade500, equals(const Color(0xFF2196F3))); // blue 500
     });
 

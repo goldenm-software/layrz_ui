@@ -18,7 +18,7 @@ import 'button_type.dart';
 
 /// A Material-free button widget in the layrz_ui design system.
 ///
-/// [LayrzButton] supports three visual styles (elevated, outlined, outlinedTonal),
+/// [LayrzButton] supports three visual styles (filled, outlined, text),
 /// each with a Fab (floating action button) variant, optional loading/cooldown indicators,
 /// and semantic factories for common actions.
 ///
@@ -119,7 +119,7 @@ class LayrzButton extends StatefulWidget {
     this.controller,
     this.type = LayrzButtonType.custom,
     this.color,
-    this.style = LayrzButtonStyle.elevated,
+    this.style = LayrzButtonStyle.filled,
     this.hintText,
     this.tooltipPosition = LayrzPreferredSide.bottom,
   }) : assert(
@@ -130,9 +130,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates a save button with success accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -150,7 +150,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
@@ -179,9 +179,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates a cancel button with danger accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -199,7 +199,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
@@ -228,9 +228,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates an info button with info accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -248,7 +248,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
@@ -277,9 +277,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates a show button with info accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -297,7 +297,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
@@ -326,9 +326,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates an edit button with warning accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -346,7 +346,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,
@@ -375,9 +375,9 @@ class LayrzButton extends StatefulWidget {
   /// Creates a delete button with danger accent and optional Fab layout.
   ///
   /// The [style] parameter determines the button's visual appearance:
-  /// - [LayrzButtonStyle.elevated] (default): solid fill with shadow
+  /// - [LayrzButtonStyle.filled] (default): solid fill, no shadow
   /// - [LayrzButtonStyle.outlined]: border only, no fill
-  /// - [LayrzButtonStyle.outlinedTonal]: border with subtle tonal fill
+  /// - [LayrzButtonStyle.text]: no fill or border, accent-coloured content only
   ///
   /// The [isFab] parameter switches the button to icon-only square mode. When `true`,
   /// the non-Fab [style] is automatically mapped to its Fab variant.
@@ -395,7 +395,7 @@ class LayrzButton extends StatefulWidget {
     required String labelText,
     required VoidCallback onTap,
     bool isFab = false,
-    LayrzButtonStyle style = LayrzButtonStyle.elevated,
+    LayrzButtonStyle style = LayrzButtonStyle.filled,
     bool isDisabled = false,
     LayrzButtonController? controller,
     String? hintText,

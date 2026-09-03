@@ -12,10 +12,10 @@ import 'calendar_mode.dart';
 /// previous/next buttons flanking the focused period's label (`[◀] August
 /// 2026 [▶]`), a "Today" shortcut, and a view-mode switcher row.
 ///
-/// The previous/next buttons render as [LayrzButtonStyle.outlinedTonalFab] —
-/// tonal rather than plain outlined, so the navigation chrome reads as a
-/// cohesive, lower-emphasis unit around the period label. See [focusedDate]'s
-/// field doc for how the "Today" button's own style is chosen.
+/// The previous/next buttons render as [LayrzButtonStyle.textFab] — no fill
+/// or border, so the navigation chrome reads as a cohesive, lower-emphasis
+/// unit around the period label. See [focusedDate]'s field doc for how the
+/// "Today" button's own style is chosen.
 ///
 /// **The previous/next buttons' label and behaviour are mode-aware.** In
 /// month mode they read "Previous/Next month" and call [onPrevious]/[onNext]
@@ -27,7 +27,7 @@ import 'calendar_mode.dart';
 ///
 /// **The switcher is selectable across all three [LayrzCalendarMode]
 /// values** — month, week and day all dispatch through [onModeChanged] when
-/// tapped, and the active mode renders as [LayrzButtonStyle.elevated] while
+/// tapped, and the active mode renders as [LayrzButtonStyle.filled] while
 /// the other two render [LayrzButtonStyle.outlined].
 class LayrzCalendarHeader extends StatelessWidget {
   /// Creates a [LayrzCalendarHeader].
@@ -50,8 +50,8 @@ class LayrzCalendarHeader extends StatelessWidget {
   /// [LayrzCalendarMode.week].
   ///
   /// Also drives the "Today" button's style: the button reads as
-  /// [LayrzButtonStyle.elevated] (attention-grabbing) whenever [focusedDate]
-  /// is not today's calendar date, and as [LayrzButtonStyle.outlinedTonal]
+  /// [LayrzButtonStyle.filled] (attention-grabbing) whenever [focusedDate]
+  /// is not today's calendar date, and as [LayrzButtonStyle.text]
   /// (de-emphasised) when it is — comparing year/month/day only, the same
   /// granularity `LayrzCalendarController.focusedDate` is normalized to.
   /// This reads "focused on today" as "the period currently in view is the
@@ -127,7 +127,7 @@ class LayrzCalendarHeader extends StatelessWidget {
                   LayrzButton(
                     labelText: _previousLabel(l10n),
                     icon: MdiIcons.chevronLeft,
-                    style: LayrzButtonStyle.outlinedTonalFab,
+                    style: LayrzButtonStyle.textFab,
                     onTap: onPrevious,
                     // The nav row sits directly above the mode switcher, so
                     // a bottom-anchored tooltip (the button's own default)
@@ -147,7 +147,7 @@ class LayrzCalendarHeader extends StatelessWidget {
                   LayrzButton(
                     labelText: _nextLabel(l10n),
                     icon: MdiIcons.chevronRight,
-                    style: LayrzButtonStyle.outlinedTonalFab,
+                    style: LayrzButtonStyle.textFab,
                     onTap: onNext,
                     // See the previous button's tooltipPosition comment above.
                     tooltipPosition: LayrzPreferredSide.top,
@@ -157,12 +157,12 @@ class LayrzCalendarHeader extends StatelessWidget {
             ),
             LayrzButton(
               labelText: l10n.calendarToday,
-              // Elevated draws attention back to today when the calendar is
-              // focused elsewhere; outlinedTonal de-emphasises the button
-              // once the caller is already looking at today, since tapping
-              // it again would be a no-op. See `focusedDate`'s field doc for
-              // what "focused on today" means here.
-              style: isFocusedOnToday ? LayrzButtonStyle.outlinedTonal : LayrzButtonStyle.elevated,
+              // Filled draws attention back to today when the calendar is
+              // focused elsewhere; text de-emphasises the button once the
+              // caller is already looking at today, since tapping it again
+              // would be a no-op. See `focusedDate`'s field doc for what
+              // "focused on today" means here.
+              style: isFocusedOnToday ? LayrzButtonStyle.text : LayrzButtonStyle.filled,
               onTap: onToday,
             ),
           ],
@@ -269,7 +269,7 @@ class _ModeSwitcher extends StatelessWidget {
 
     return LayrzButton(
       labelText: label,
-      style: isSelected ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+      style: isSelected ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
       onTap: onModeChanged != null ? () => onModeChanged!(buttonMode) : null,
     );
   }

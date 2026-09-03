@@ -528,7 +528,7 @@ class _DialogContentState extends State<_DialogContent> {
               // composed into the title row itself (see _buildSlots), so no
               // floating overlay is needed here.
               ? Padding(
-                  padding: EdgeInsets.all(tokens.spacing.sp3),
+                  padding: EdgeInsets.all(tokens.spacing.sp4),
                   child: _buildSlots(context),
                 )
               // No title -- either bare slots (content/actions only) or the
@@ -676,7 +676,7 @@ class _DialogContentState extends State<_DialogContent> {
             children: [
               Expanded(
                 child: DefaultTextStyle.merge(
-                  style: tokens.typography.title,
+                  style: tokens.typography.headline,
                   child: widget.title!,
                 ),
               ),

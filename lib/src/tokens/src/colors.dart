@@ -117,7 +117,11 @@ class LayrzColorTokens {
       // now defined as static constants in [LayrzColors] to centralize the palette.
       danger: LayrzColors.red,
       success: LayrzColors.green,
-      warning: LayrzColors.orange,
+      // Previous: LayrzColors.orange (Material orange, 500 = #FF9800). Replaced because
+      // its luminance (0.4372) made contrastColor pick black for content; #EF6C00
+      // (luminance 0.2908, LayrzColors.warningOrange) picks white. Restore this line to
+      // revert.
+      warning: LayrzColors.warningOrange,
       info: LayrzColors.blue,
       contextual: LayrzColors.grey,
       divider: const Color(0xFFE0E0E0),

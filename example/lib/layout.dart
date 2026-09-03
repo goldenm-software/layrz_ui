@@ -177,6 +177,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/dialogs'),
       ),
       LayrzNavigatorPage(
+        id: '/responsive-modal',
+        labelText: 'Responsive Modal',
+        icon: MdiIcons.monitorCellphone,
+        isSelected: currentRoute == '/responsive-modal',
+        onTap: () => _navigateTo(context, '/responsive-modal'),
+      ),
+      LayrzNavigatorPage(
         id: '/sheets',
         labelText: 'Sheets',
         icon: MdiIcons.trayArrowUp,

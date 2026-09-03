@@ -272,6 +272,34 @@ abstract final class LayrzColors {
     },
   );
 
+  /// The warning-orange swatch used by [LayrzColorTokens.warning]. Its 500 shade is
+  /// #EF6C00 — Material orange's own 800 shade, reused here as the primary so that
+  /// content painted on it via [LayrzColorExtensions.contrastColor] resolves to white
+  /// (luminance 0.2908) rather than black, which Material orange's lighter 500 shade
+  /// (#FF9800, luminance 0.4372) produced.
+  ///
+  /// Shades 50–400 keep Material orange's own light tints unchanged (they remain valid,
+  /// lighter-than-500 tones for future tonal fills). Shades 600–900 continue darkening
+  /// in the same warm hue family, sourced from Material orange900 and deepOrange's
+  /// 800/900 shades, with 900 hand-extrapolated to keep the ramp monotonically darker.
+  /// This is a distinct swatch from [orange] — [orange] is untouched and keeps its
+  /// exact Material values.
+  static const LayrzColorSwatch warningOrange = LayrzColorSwatch(
+    0xFFEF6C00,
+    <int, Color>{
+      50: Color(0xFFFFF3E0),
+      100: Color(0xFFFFE0B2),
+      200: Color(0xFFFFCC80),
+      300: Color(0xFFFFB74D),
+      400: Color(0xFFFFA726),
+      500: Color(0xFFEF6C00),
+      600: Color(0xFFE65100),
+      700: Color(0xFFD84315),
+      800: Color(0xFFBF360C),
+      900: Color(0xFF8A2705),
+    },
+  );
+
   /// The Material deep orange swatch. Its 500 shade is #FF5722.
   static const LayrzColorSwatch deepOrange = LayrzColorSwatch(
     0xFFFF5722,

@@ -395,6 +395,287 @@ void main() {
     });
   });
 
+  group('LayrzProgressBar showLabel placement and color', () {
+    /// Finds the [LayrzProgressLabelPainter] painting the label on top of
+    /// the given [LayrzProgressBar] (found by [value]'s text search is not
+    /// reliable across decimals, so this grabs the label-specific
+    /// [CustomPaint] directly — the second [CustomPaint] under the [Stack]:
+    /// the bar itself is the first, the label overlay is the second).
+    LayrzProgressLabelPainter labelPainterOf(WidgetTester tester) {
+      final painters = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<LayrzProgressLabelPainter>();
+      expect(painters, hasLength(1));
+      return painters.single;
+    }
+
+    /// Independently measures [text] under the painter's own resolved
+    /// [TextStyle], mirroring what the painter itself lays out internally.
+    double measureWidth(String text, TextStyle style) {
+      final measured = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      return measured.width;
+    }
+
+    testWidgets('a wide bar (68%) places the label inside the bar, right-aligned and inset', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 0.68, showLabel: true)),
+        theme: theme,
+      );
+
+      final labelPainter = labelPainterOf(tester);
+      expect(labelPainter.value, 0.68);
+
+      final labelWidth = measureWidth('68%', labelPainter.style);
+      final boundary = 300 * 0.68;
+
+      // Paint against the real, resolved 300px-wide box to assert the
+      // actual geometry the widget renders, not merely the input value.
+      expect(
+        (Canvas canvas) => labelPainter.paint(canvas, const Size(300, kLayrzProgressBarHeight)),
+        paints..something((symbol, arguments) {
+          if (symbol != #drawParagraph) return false;
+          final offset = arguments[1] as Offset;
+          expect(offset.dx, closeTo(boundary - labelPainter.inset - labelWidth, 0.5));
+          expect(offset.dx + labelWidth, lessThanOrEqualTo(boundary));
+          return true;
+        }),
+      );
+    });
+
+    testWidgets('a narrow bar (3%) flips the label onto the track', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 0.03, showLabel: true)),
+        theme: theme,
+      );
+
+      final labelPainter = labelPainterOf(tester);
+      expect(labelPainter.value, 0.03);
+
+      final labelWidth = measureWidth('3%', labelPainter.style);
+      final boundary = 300 * 0.03;
+      // Sanity: at 3% of 300px (9px) minus the inset, there is no room for
+      // the label — this is the flip case, not the inside-bar case.
+      expect(boundary - labelPainter.inset, lessThan(labelWidth));
+
+      expect(
+        (Canvas canvas) => labelPainter.paint(canvas, const Size(300, kLayrzProgressBarHeight)),
+        paints..something((symbol, arguments) {
+          if (symbol != #drawParagraph) return false;
+          final offset = arguments[1] as Offset;
+          expect(offset.dx, closeTo(boundary + labelPainter.inset, 0.5));
+          expect(offset.dx, greaterThanOrEqualTo(boundary));
+          return true;
+        }),
+      );
+    });
+
+    testWidgets('value 0.0 flips the label to the track (zero-width bar)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 0.0, showLabel: true)),
+      );
+
+      final labelPainter = labelPainterOf(tester);
+      expect(labelPainter.value, 0.0);
+
+      expect(
+        (Canvas canvas) => labelPainter.paint(canvas, const Size(300, kLayrzProgressBarHeight)),
+        paints..something((symbol, arguments) {
+          if (symbol != #drawParagraph) return false;
+          final offset = arguments[1] as Offset;
+          expect(offset.dx, closeTo(labelPainter.inset, 0.5));
+          return true;
+        }),
+      );
+    });
+
+    testWidgets('value 1.0 keeps the label inside the bar (no track remains)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 1.0, showLabel: true)),
+      );
+
+      final labelPainter = labelPainterOf(tester);
+      expect(labelPainter.value, 1.0);
+
+      final labelWidth = measureWidth('100%', labelPainter.style);
+      expect(
+        (Canvas canvas) => labelPainter.paint(canvas, const Size(300, kLayrzProgressBarHeight)),
+        paints..something((symbol, arguments) {
+          if (symbol != #drawParagraph) return false;
+          final offset = arguments[1] as Offset;
+          expect(offset.dx, closeTo(300 - labelPainter.inset - labelWidth, 0.5));
+          // Wholly inside the bar: never past the right edge of the box.
+          expect(offset.dx + labelWidth, lessThanOrEqualTo(300));
+          return true;
+        }),
+      );
+    });
+
+    testWidgets('the resolved indicator and track contrast colors track the semantic style', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(
+        tester,
+        const SizedBox(
+          width: 300,
+          child: LayrzProgressBar(value: 0.5, showLabel: true, type: LayrzProgressType.warning),
+        ),
+        theme: theme,
+      );
+
+      final style = LayrzProgressStyleSpec.resolve(
+        type: LayrzProgressType.warning,
+        color: null,
+        tokens: theme.tokens,
+      );
+      final labelPainter = labelPainterOf(tester);
+
+      // Derived, not hardcoded: whatever the current warning indicator/track
+      // colors resolve to, the label's two contrast colors must be exactly
+      // those colors' own contrastColor — so a future change to the warning
+      // swatch (e.g. a darkened orange) is picked up automatically here,
+      // without this test needing to hardcode black/white.
+      expect(labelPainter.indicatorContrastColor, style.indicatorColor.contrastColor);
+      expect(labelPainter.trackContrastColor, style.trackColor.contrastColor);
+      // The two must differ in this design system's normal case (a
+      // saturated accent fill against a light neutral track) — if they were
+      // ever equal, flipping to the track would be visually indistinguishable
+      // from staying in the bar, defeating the point of deriving both.
+      expect(labelPainter.indicatorContrastColor, isNot(labelPainter.trackContrastColor));
+    });
+
+    testWidgets('a very small non-zero value (1%) still flips to the track', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 0.01, showLabel: true)),
+      );
+
+      final labelPainter = labelPainterOf(tester);
+      expect(labelPainter.value, 0.01);
+
+      final labelWidth = measureWidth('1%', labelPainter.style);
+      const boundary = 300 * 0.01;
+      expect(boundary - labelPainter.inset, lessThan(labelWidth));
+
+      expect(
+        (Canvas canvas) => labelPainter.paint(canvas, const Size(300, kLayrzProgressBarHeight)),
+        paints..something((symbol, arguments) {
+          if (symbol != #drawParagraph) return false;
+          final offset = arguments[1] as Offset;
+          expect(offset.dx, closeTo(boundary + labelPainter.inset, 0.5));
+          expect(offset.dx, greaterThanOrEqualTo(boundary));
+          return true;
+        }),
+      );
+    });
+
+    testWidgets('showLabel false paints no label painter at all', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(value: 0.5));
+
+      final painters = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<LayrzProgressLabelPainter>();
+      expect(painters, isEmpty);
+    });
+
+    testWidgets('showLabel is ignored in circular format', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const LayrzProgressBar(value: 0.5, format: LayrzProgressFormat.circular, showLabel: true),
+      );
+
+      final painters = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<LayrzProgressLabelPainter>();
+      expect(painters, isEmpty);
+    });
+
+    testWidgets('the label CustomPaint resolves a finite width from its parent constraints', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Regression guard: LayrzProgressBar's own `CustomPaint(size: ...)`
+      // hint is Size(double.infinity, height) for the linear format — only
+      // a *preferred* size — so this confirms the label's CustomPaint
+      // actually resolves a real, finite width from the SizedBox(width:
+      // 300) ancestor at layout time, which is what fixed a bug where the
+      // label's placement was computed from the unresolved infinite hint
+      // and always landed at x == 0.
+      await pumpThemed(
+        tester,
+        const SizedBox(width: 300, child: LayrzProgressBar(value: 0.68, showLabel: true)),
+      );
+
+      final labelCustomPaintFinder = find.byWidgetPredicate(
+        (widget) => widget is CustomPaint && widget.painter is LayrzProgressLabelPainter,
+      );
+      final renderBox = tester.renderObject<RenderBox>(labelCustomPaintFinder);
+
+      expect(renderBox.size.width, 300.0);
+      expect(renderBox.size.width.isFinite, isTrue);
+    });
+
+    testWidgets('showLabel is ignored in indeterminate mode', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzProgressBar(showLabel: true));
+
+      final painters = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<LayrzProgressLabelPainter>();
+      expect(painters, isEmpty);
+
+      // Stop the repeating ticker before the test ends.
+      await tester.pump(const Duration(milliseconds: 10));
+    });
+  });
+
   group('LayrzProgressBar circular mode', () {
     testWidgets('renders determinate circular without an animation controller ticking', (tester) async {
       tester.view.physicalSize = const Size(800, 600);

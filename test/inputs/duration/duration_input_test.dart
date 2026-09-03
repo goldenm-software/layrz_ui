@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:layrz_ui/src/inputs/src/shared/input_slot.dart';
 import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed_app.dart';
+import '../../helpers/thin_router.dart';
 
 void main() {
   group('LayrzDurationInput', () {
@@ -175,6 +177,120 @@ void main() {
       // Verify the bottom sheet is visible with number inputs
       expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
       expect(find.byType(LayrzNumberInput), findsWidgets);
+    });
+
+    // Regression for DESIGN-170 (parent DESIGN-44): on a compact viewport, interacting
+    // with the picker inside the mobile bottom sheet dismissed the sheet instead of
+    // registering the edit. Root cause was `_openMobileSurface` wiring
+    // `LayrzDurationPickerPanel.onChanged` -- which fires on every field edit, not just a
+    // deliberate reset -- straight to `Navigator.pop(context, duration)`, so the very
+    // first +/- tap or keystroke inside the sheet popped it. This is the bottom-sheet
+    // counterpart of the bug `28c9680` already fixed for the desktop anchored panel (see
+    // the "tapping a field's increment control updates the value and keeps the panel
+    // open" test above and `duration_input.dart`'s `onChanged`/`onReset` split) -- that
+    // split was never carried over to the mobile branch, so the same failure mode
+    // regressed here. Asserts BOTH that the sheet is still present after the interaction
+    // AND that the value actually changed -- either alone would miss half of the bug: a
+    // sheet that silently ignored every tap (never popping, but never registering the
+    // edit either) would also leave the sheet present.
+    guardedTestWidgets(
+      'tapping a field\'s increment control inside the mobile bottom sheet updates the '
+      'value and keeps the sheet open',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        Duration? changedValue;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              return LayrzDurationInput(
+                labelText: 'Duration',
+                value: changedValue,
+                onChanged: (value) => setState(() => changedValue = value),
+              );
+            },
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+        final dayIncrement = find.descendant(
+          of: find.byKey(const ValueKey('layrz_duration_field_day')),
+          matching: find.bySemanticsLabel('Increase value'),
+        );
+        expect(dayIncrement, findsOneWidget);
+
+        await tester.tap(dayIncrement);
+        await tester.pumpAndSettle();
+
+        expect(
+          changedValue,
+          const Duration(days: 1),
+          reason: 'the field edit must actually be registered, not silently swallowed',
+        );
+        expect(
+          find.byType(LayrzDurationPickerPanel),
+          findsWidgets,
+          reason: 'a field edit inside the mobile bottom sheet must not close it -- only Reset does',
+        );
+
+        // The sheet must still be interactive after the edit -- a second increment
+        // proves the sheet did not just fail to pop while silently losing focus/input.
+        await tester.tap(dayIncrement);
+        await tester.pumpAndSettle();
+
+        expect(changedValue, const Duration(days: 2));
+        expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+      },
+    );
+
+    // Companion to the increment-control regression above: Reset is the one action in
+    // the mobile picker meant to close the sheet (mirroring the desktop panel's
+    // `onReset` contract) -- this proves that contract still holds after the fix, i.e.
+    // the fix did not accidentally make the sheet un-closeable altogether.
+    guardedTestWidgets('pressing reset inside the mobile bottom sheet closes it and reports zero', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 5),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets);
+
+      await tester.tap(findButtonLabel('Reset'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, Duration.zero);
+      expect(
+        find.byType(LayrzDurationPickerPanel),
+        findsNothing,
+        reason: 'Reset is the one action meant to close the mobile sheet',
+      );
     });
 
     guardedTestWidgets('applies disabled state correctly', (WidgetTester tester) async {
@@ -909,7 +1025,11 @@ void main() {
     // `_panelController.close()`. See `duration_input.dart`'s `onChanged` vs
     // `onReset` wiring on `LayrzDurationPickerPanel` for the fix: only a
     // genuine reset closes the panel now.
-    guardedTestWidgets('tapping a field\'s increment control updates the value and keeps the panel open', (
+    // Updated for Finding 4: a field edit now only buffers the draft --
+    // `onChanged` fires once, on Save, not on every +/- tap. The panel
+    // staying open on a field edit is unchanged; what changed is that
+    // `onChanged` no longer fires until Save is pressed.
+    guardedTestWidgets('tapping a field\'s increment control updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -945,15 +1065,19 @@ void main() {
       await tester.tap(dayIncrement);
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(days: 1));
+      expect(changedValue, isNull, reason: 'a field edit must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'a field edit must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(days: 1), reason: 'Save must commit the buffered draft');
     });
 
-    guardedTestWidgets('tapping a field\'s decrement control updates the value and keeps the panel open', (
+    guardedTestWidgets('tapping a field\'s decrement control updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -989,15 +1113,19 @@ void main() {
       await tester.tap(hourDecrement);
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(hours: 4));
+      expect(changedValue, isNull, reason: 'a field edit must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'a field edit must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(hours: 4), reason: 'Save must commit the buffered draft');
     });
 
-    guardedTestWidgets('typing directly into a field\'s text box updates the value and keeps the panel open', (
+    guardedTestWidgets('typing directly into a field\'s text box updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1033,149 +1161,30 @@ void main() {
       await tester.enterText(minuteField, '15');
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(minutes: 15));
+      expect(changedValue, isNull, reason: 'typing into a field must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'typing into a field must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(minutes: 15), reason: 'Save must commit the buffered draft');
     });
 
-    // Shell-parity regressions: `LayrzDurationInput` adopts the same panel
-    // chrome `LayrzSelectInput` already has (`coverAnchor: true` plus a
-    // primary/danger `LayrzAnchoredPanelBorder`), while its width policy
-    // (`contentSized`, 280.0-480.0) and 400.0 height cap are deliberately left
-    // unchanged -- see the class doc on `_LayrzDurationInputState.build`.
-    guardedTestWidgets('the panel covers the field -- its rect starts at the anchor\'s own top-left corner', (
+    // DESIGN-98: `LayrzDurationInput` moved off `LayrzAnchoredPanel` onto
+    // `LayrzEndDrawer` -- see the class doc on `_LayrzDurationInputState.build`.
+    // The old `matchAnchor`/`coverAnchor` rect-tracking, primary/danger
+    // `LayrzAnchoredPanelBorder`, and width-follows-the-field behavior these
+    // tests used to assert are gone: the drawer is a fixed-width
+    // (`LayrzEndDrawer.width`, 420px) right-edge panel independent of the
+    // anchor field's own rect or width. This is a container change only --
+    // the only functional move is Reset, relocated from the panel's own
+    // inline footer into the drawer's `actions` slot; no Cancel/Save added.
+    guardedTestWidgets('the drawer opens with a fixed 420px width, independent of the anchor field\'s own width', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(),
-      );
-
-      // `RawMenuAnchor` measures its `anchorRect` from the entire widget
-      // `_buildAnchor` returns -- the outermost `GestureDetector` wrapping the
-      // label, bordered field row, and footer -- not from `LayrzInputChrome`
-      // alone. `LayrzInputChrome`'s own rect sits inset from that by the
-      // field row's own border width (`tokens.border.base`, painted with the
-      // default inside `strokeAlign` in `_buildFieldRow`), so the anchor
-      // widget itself is the correct rect to compare against.
-      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelRect = tester.getRect(find.byType(LayrzDurationPickerPanel));
-
-      // `coverAnchor: true` starts the panel's top-left exactly at the
-      // anchor's own top-left, clamped into overlay bounds -- mirroring
-      // `LayrzSelectInput`'s DESIGN-145 defect-1 regression.
-      expect(panelRect.top, equals(anchorRect.top));
-      expect(panelRect.left, equals(anchorRect.left));
-    });
-
-    guardedTestWidgets('the panel is bordered in the primary color when the field has no errors', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      late LayrzTokens tokens;
-
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) {
-            tokens = context.tokens;
-            return LayrzDurationInput(labelText: 'Duration');
-          },
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
-      expect(decoration.border, isNotNull);
-      expect((decoration.border as Border).top.color, equals(tokens.colors.primary));
-      expect((decoration.border as Border).top.width, equals(tokens.border.base));
-    });
-
-    guardedTestWidgets('the panel is bordered in the danger color when the field has errors', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      late LayrzTokens tokens;
-
-      await pumpThemedApp(
-        tester,
-        Builder(
-          builder: (context) {
-            tokens = context.tokens;
-            return LayrzDurationInput(
-              labelText: 'Duration',
-              errors: const ['Required'],
-            );
-          },
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final decoration = _panelDecoratedBox(tester).decoration as BoxDecoration;
-      expect(decoration.border, isNotNull);
-      expect((decoration.border as Border).top.color, equals(tokens.colors.danger));
-    });
-
-    // Device-reported defect fix, reversing an earlier decision: the panel used to
-    // stay `contentSized` within a fixed 280.0-480.0 band regardless of the anchor
-    // field's own width, so on a wide field it visually occupied only a small
-    // fraction of it. `matchAnchor` (mirroring `LayrzSelectInput`) makes the panel
-    // span the field's actual rendered width instead -- see the class doc on
-    // `_LayrzDurationInputState.build` for the full reasoning.
-    guardedTestWidgets('the panel spans the anchor field\'s full width (matchAnchor), not a fixed 280.0-480.0 band', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(labelText: 'Duration'),
-      );
-
-      final anchorRect = tester.getRect(find.byType(GestureDetector).first);
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-
-      expect(
-        panelWidth,
-        greaterThan(480.0),
-        reason: 'the old contentSized cap must no longer bound the panel on a wide field',
-      );
-      // The anchor here spans the full 1200px overlay, so LayrzAnchoredPanelLayoutDelegate's
-      // own overlay-bounds clamp (overlaySize.width - 2 * sp2) legitimately trims a few
-      // pixels off matchAnchor's raw anchorRect.width -- a wide tolerance distinguishes that
-      // expected clamp from the old, much narrower 280.0-480.0 contentSized cap this test
-      // guards against regressing to.
-      expect(
-        panelWidth,
-        closeTo(anchorRect.width, 25.0),
-        reason: 'matchAnchor makes the panel width track the anchor field\'s own rendered width',
-      );
-    });
-
-    guardedTestWidgets('a narrow anchor field yields a narrow matchAnchor panel', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1193,33 +1202,15 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-      expect(panelWidth, closeTo(320.0, 1.0));
+      final drawerWidth = tester.getSize(find.byType(LayrzDurationPickerPanel)).width;
+      expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
     });
 
-    guardedTestWidgets('a wide anchor field yields a matchAnchor panel wider than the old 480.0 cap', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      await pumpThemedApp(
-        tester,
-        Center(
-          child: SizedBox(
-            width: 900.0,
-            child: LayrzDurationInput(labelText: 'Duration'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
-
-      final panelWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
-      expect(panelWidth, closeTo(900.0, 1.0));
-    });
-
-    guardedTestWidgets('the maxHeight cap stays 400.0, unaffected by the border/coverAnchor', (tester) async {
+    // Finding 2 (maintainer review): "Duration ... didn't display the
+    // labelText above on the Drawer" -- confirmed by grep: this widget's
+    // `_openDesktopDrawer` passed zero `title:` arguments. Mirrors
+    // `LayrzDateInput`'s identical fix and test.
+    guardedTestWidgets('the drawer renders labelText as a visible title (DESIGN-98 Finding 2)', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1232,9 +1223,288 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final panelHeight = tester.getSize(find.byType(SingleChildScrollView)).height;
-      expect(panelHeight, lessThanOrEqualTo(400.0));
+      // `LayrzDurationPickerPanel` renders no inline caption of its own
+      // (unlike ComboBox's `showInlineTitle`), so a bare `find.text` for the
+      // title is unambiguous -- the closed field's own label renders via
+      // `LayrzInputChrome`'s RichText/TextSpan, not a plain Text.
+      expect(find.text('Duration'), findsOneWidget, reason: 'the drawer must render a visible title Text');
     });
+
+    // Escape and the barrier tap must still cancel the draft even with
+    // Cancel/Reset/Save actions present now (Finding 4) -- mirrors every
+    // other Save-carrying picker's `canDismiss: true` override.
+    guardedTestWidgets('Escape cancels and discards the draft, matching every other Save-carrying picker', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 1),
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, isNull, reason: 'Escape must discard the draft without reporting it');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Escape must close the drawer');
+    });
+
+    // Updated for Finding 4 (maintainer review): this widget's actions row
+    // now carries Cancel/Reset/Save, reversing the earlier "Reset alone, no
+    // Cancel/Save" decision this test used to assert -- see
+    // `_LayrzDurationInputState._openDesktopDrawer`'s own doc for the full
+    // rationale. Order and styling follow `LayrzPickerDrawerFooter`'s
+    // established convention: Cancel/Reset as `.text`, Save as the only
+    // `.filled` button.
+    guardedTestWidgets('the drawer carries Cancel, Reset, and Save actions', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(labelText: 'Duration'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(findButtonLabel('Cancel'), findsOneWidget, reason: 'Cancel discards the draft without committing it');
+      expect(findButtonLabel('Reset'), findsOneWidget, reason: 'Reset still lives in the drawer actions slot');
+      expect(findButtonLabel('Save'), findsOneWidget, reason: 'Save now commits the buffered draft');
+    });
+
+    // Updated for Finding 4: field edits inside the drawer now only update a
+    // local draft -- `widget.onChanged` no longer fires until Save is
+    // pressed. This replaces the old "field edits inside the drawer still
+    // report live" test, which asserted exactly the opposite of the new
+    // contract.
+    guardedTestWidgets('field edits inside the drawer only update the draft -- onChanged does not fire until Save', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            return LayrzDurationInput(
+              labelText: 'Duration',
+              value: changedValue ?? const Duration(hours: 1),
+              onChanged: (value) => setState(() => changedValue = value),
+            );
+          },
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, isNull, reason: 'a field edit must only update the draft, not report it yet');
+      expect(find.byType(LayrzDurationPickerPanel), findsWidgets, reason: 'a field edit must not close the drawer');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(hours: 1, days: 1), reason: 'Save must commit the buffered draft');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Save must close the drawer');
+    });
+
+    // Cancel discards the buffered draft and reports nothing, mirroring
+    // every other Save-carrying picker's Cancel contract.
+    guardedTestWidgets('Cancel discards the draft without reporting anything', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 1),
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      await tester.tap(findButtonLabel('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, isNull, reason: 'Cancel must not report the discarded draft');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Cancel must close the drawer');
+    });
+
+    // Save is reachable with zero interaction, exactly like every field's
+    // Duration.zero (or any concrete value) is never an "unset" state to
+    // gate Save behind -- see `_LayrzDurationInputState._openDesktopDrawer`'s
+    // own "Save is always enabled" doc.
+    guardedTestWidgets('Save is already enabled on open, with zero interaction, and commits the seeded value', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: Duration.zero,
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must be enabled for a genuine zero duration');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, Duration.zero, reason: 'Save must commit the exact zero duration, not treat it as unset');
+    });
+
+    // Note: Reset's full zero-and-close-and-report behavior is already
+    // covered above by "resetting the panel fires onChanged, updates the
+    // summary, and closes the panel" -- that test needed no change here,
+    // since `findButtonLabel('Reset')` finds the button in the drawer's
+    // `actions` slot exactly as it found it inline before DESIGN-98.
+
+    // Maintainer-reported crash (Finding 2): "'currentConfiguration.isNotEmpty'
+    // — You have popped the last page off of the stack", thrown from
+    // `_LayrzDurationInputState._openDesktopDrawer`'s Save `onTap` per the
+    // reported stack trace. Root cause: every action button in that drawer's
+    // `actions` list called `Navigator.pop(context)` using the METHOD's own
+    // `context` (the anchor field's, captured once when `_openDesktopDrawer`
+    // runs) rather than a context genuinely inside the drawer's route. A
+    // plain imperative `Navigator` tolerates popping from the wrong context
+    // silently (it just resolves to the same, single root Navigator in
+    // practice) -- but this app hosts a real *declarative*, page-based
+    // Navigator via `go_router`, whose delegate asserts
+    // `currentConfiguration.isNotEmpty` when a page is popped out from under
+    // it while its own bookkeeping still expects that page present. This
+    // package has no dependency on `go_router` itself, so this test builds a
+    // minimal stand-in `RouterDelegate` around a real, page-based `Navigator`
+    // (not `WidgetsApp`'s own imperative one) that reproduces the identical
+    // invariant: `ThinRouterDelegate.currentConfiguration` asserts its own
+    // page stack is non-empty, exactly like go_router's real delegate does.
+    //
+    // Reproduced via `ThinRouterDelegate` (see `test/helpers/thin_router.dart`):
+    // a real page-based `Navigator`, exactly like `go_router` builds, whose
+    // delegate throws when asked for `currentConfiguration` after its own
+    // root page has been popped out from under it -- mirroring
+    // `GoRouterDelegate`'s real `'currentConfiguration.isNotEmpty'`
+    // assertion. Verified by hand against a genuine double pop (not a single
+    // tap, which this package's own suite already covered without ever
+    // catching the bug): a first `Navigator.pop` removes only
+    // `LayrzEndDrawer`'s own imperative route, harmlessly, exactly as
+    // intended; a SECOND pop attempt arriving after the first -- from a
+    // duplicated gesture callback, a race between two actions, or (as
+    // `_openDesktopDrawer`'s own doc now explains) simply the wrong
+    // safeguard being absent -- then pops the router delegate's own root
+    // page instead, which is what the maintainer's crash trace actually
+    // reports.
+    guardedTestWidgets(
+      'a second pop after Save already closed the drawer does not also pop the hosting router\'s own page',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final delegate = ThinRouterDelegate(
+          builder: (context) => LayrzDurationInput(labelText: 'Duration', value: const Duration(hours: 1)),
+        );
+
+        await tester.pumpWidget(
+          LayrzApp.router(
+            theme: LayrzThemeData.light(),
+            routerDelegate: delegate,
+            routeInformationParser: ThinRouteInformationParser(),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
+        final saveButtonFinder = findButtonLabel('Save');
+        expect(saveButtonFinder, findsOneWidget);
+
+        // Invoke the real Save action's own `onTap` twice in immediate
+        // succession, with no pump in between -- simulating the exact race
+        // `LayrzModalRoute.popIfCurrent`'s own doc comment describes ("a
+        // fast double tap ... could call Navigator.pop twice in quick
+        // succession"), against `duration_input.dart`'s ACTUAL Save `onTap`
+        // closure (whichever `context` `_openDesktopDrawer` itself closed
+        // over) rather than a hand-written stand-in.
+        final saveButton = tester.widget<LayrzButton>(
+          find.ancestor(of: saveButtonFinder, matching: find.byType(LayrzButton)).first,
+        );
+        saveButton.onTap!();
+        saveButton.onTap!();
+        await tester.pump();
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'a second pop must never remove the hosting router\'s own root page',
+        );
+        expect(delegate.popped, isFalse, reason: 'the router\'s own root page must never be popped by this drawer');
+        expect(
+          () => delegate.currentConfiguration,
+          returnsNormally,
+          reason: 'a real go_router delegate would throw exactly here once its page is gone',
+        );
+      },
+    );
   });
 
   group('LayrzDurationInput controller/focusNode lifecycle updates', () {
@@ -1425,7 +1695,10 @@ void main() {
 
       final tokens = LayrzTokens.light();
       final icon = tester.widget<Icon>(find.byIcon(MdiIcons.clockOutline));
-      expect(icon.color, tokens.colors.fg1);
+      // DESIGN-106 follow-up: the icon derives its color from `spec.textColor`, which now
+      // resolves to `colors.danger` in the error state (previously left at plain fg1).
+      expect(icon.color, tokens.colors.danger);
+      expect(icon.color, isNot(tokens.colors.fg1));
       expect(icon.color, isNot(tokens.colors.fg4));
     });
 
@@ -1546,17 +1819,4 @@ void main() {
       },
     );
   });
-}
-
-/// Locates the `Container` [LayrzAnchoredPanel] itself builds around its
-/// scroll viewport -- the one carrying `sf1`/shadow/radius and, when set, the
-/// border -- identified structurally as the closest `Container` ancestor of
-/// the panel's [SingleChildScrollView]. Mirrors the identical helper in
-/// `test/overlays/anchored_panel_border_test.dart`; duplicated locally rather
-/// than shared, since these two test files own disjoint concerns.
-Container _panelDecoratedBox(WidgetTester tester) {
-  final scrollViewElement = tester.element(find.byType(SingleChildScrollView));
-  final ancestor = scrollViewElement.findAncestorWidgetOfExactType<Container>();
-  expect(ancestor, isNotNull, reason: 'LayrzAnchoredPanel must wrap its scroll viewport in a Container.');
-  return ancestor!;
 }

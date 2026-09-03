@@ -10,6 +10,13 @@ import '../common/showroom_section.dart';
 /// - Indeterminate mode (a permanent loading sweep)
 /// - All six semantic types (info, success, warning, danger, context, custom)
 /// - A custom height and border radius override
+/// - The value label (`showLabel`/`decimals`, DESIGN-169): a labeled bar with
+///   the label right-aligned inside the fill, `decimals` 0/1/2 side by side,
+///   a low value (~3%) where the fill is too narrow to hold the label and it
+///   flips onto the track instead, a genuinely tiny value (`0.001`) proving a
+///   started bar never rounds down to `'0%'`, and confirmation that
+///   indeterminate mode never shows a label since there is no percentage to
+///   show
 /// - Circular mode: determinate and indeterminate rings, a couple of
 ///   semantic colors, and a size/thickness override
 class ProgressSection extends StatefulWidget {
@@ -42,6 +49,7 @@ class _ProgressSectionState extends State<ProgressSection> {
           _IndeterminateShowcase(tokens: tokens),
           _TypesShowcase(tokens: tokens),
           const _CustomizationShowcase(),
+          _ValueLabelShowcase(tokens: tokens),
           _CircularShowcase(
             tokens: tokens,
             value: _demoValue,
@@ -164,6 +172,114 @@ class _CustomizationShowcase extends StatelessWidget {
           borderRadius: tokens.radius.r1,
           type: LayrzProgressType.success,
           semanticLabel: 'Custom style demo',
+        ),
+      ],
+    );
+  }
+}
+
+/// Showcase of the value label added by DESIGN-169
+/// ([LayrzProgressBar.showLabel] / [LayrzProgressBar.decimals]).
+///
+/// Covers, in order:
+/// - `showLabel: true` on a linear determinate bar -- the label lands
+///   right-aligned inside the filled portion, inset from the fill/track
+///   boundary, colored with that fill color's contrast color
+/// - `decimals` 0, 1, and 2 at the same value, so the formatting difference
+///   between e.g. `'42%'`, `'42.0%'`, and `'42.00%'` is directly comparable
+/// - A low value (~3%), where the fill is too narrow to hold the label and
+///   it flips to just outside the bar -- onto the track -- colored with the
+///   *track* color's contrast color instead, so it stays legible against
+///   whichever region it actually sits on
+/// - A genuinely tiny value (`0.001`), which rounds to zero at `decimals: 0`
+///   yet still formats as `'1%'` rather than `'0%'` -- a started bar never
+///   reads as not started, per [formatLayrzProgressValue]
+/// - The label suppressed on the indeterminate form, since a percentage is
+///   meaningless while progress is unknown -- `showLabel: true` is passed
+///   here deliberately, to demonstrate that the widget ignores it rather
+///   than merely omitting the flag
+///
+/// `showLabel` only applies to the linear, determinate form -- see
+/// [LayrzProgressBar.showLabel]'s own doc. It is not demonstrated on the
+/// circular format here for that reason; the circular showcase below stays
+/// label-free.
+class _ValueLabelShowcase extends StatelessWidget {
+  /// Design tokens used to style the showcase's own text.
+  final LayrzTokens tokens;
+
+  /// Creates a new [_ValueLabelShowcase].
+  const _ValueLabelShowcase({required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp2,
+      children: [
+        Text('Value Label (showLabel / decimals)', style: tokens.typography.title),
+        Text('showLabel: true', style: tokens.typography.label),
+        const LayrzProgressBar(
+          value: 0.68,
+          showLabel: true,
+          semanticLabel: 'Labeled progress demo',
+        ),
+        SizedBox(height: tokens.spacing.sp1),
+        Text('decimals: 0, 1, 2 -- same value (0.6789)', style: tokens.typography.label),
+        Column(
+          spacing: tokens.spacing.sp2,
+          children: const [
+            LayrzProgressBar(
+              value: 0.6789,
+              showLabel: true,
+              decimals: 0,
+              semanticLabel: 'Decimals: 0',
+            ),
+            LayrzProgressBar(
+              value: 0.6789,
+              showLabel: true,
+              decimals: 1,
+              semanticLabel: 'Decimals: 1',
+            ),
+            LayrzProgressBar(
+              value: 0.6789,
+              showLabel: true,
+              decimals: 2,
+              semanticLabel: 'Decimals: 2',
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp1),
+        Text(
+          '~3% -- the fill is too narrow to hold the label, so it flips outside the bar, '
+          'onto the track',
+          style: tokens.typography.label,
+        ),
+        const LayrzProgressBar(
+          value: 0.03,
+          showLabel: true,
+          type: LayrzProgressType.success,
+          semanticLabel: 'Flip-to-track label demo',
+        ),
+        SizedBox(height: tokens.spacing.sp1),
+        Text(
+          '0.1% -- a genuinely-started value never reads as 0%, even though it rounds to '
+          'zero at decimals: 0',
+          style: tokens.typography.label,
+        ),
+        const LayrzProgressBar(
+          value: 0.001,
+          showLabel: true,
+          type: LayrzProgressType.warning,
+          semanticLabel: 'Tiny non-zero value demo',
+        ),
+        SizedBox(height: tokens.spacing.sp1),
+        Text(
+          'Indeterminate -- showLabel is ignored, since there is no percentage to show',
+          style: tokens.typography.label,
+        ),
+        const LayrzProgressBar(
+          showLabel: true,
+          semanticLabel: 'Indeterminate with showLabel ignored',
         ),
       ],
     );

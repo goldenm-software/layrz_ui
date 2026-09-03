@@ -37,6 +37,14 @@ class ListPanel<T> extends StatefulWidget {
   /// If null, a localized default message is displayed.
   final Widget? emptyState;
 
+  /// The panel's fixed width, in logical pixels.
+  ///
+  /// If null, the panel uses its default width of `300`. A fold-aware layout
+  /// passes the leading pane's extent (mapped from the physical seam) here
+  /// instead, so the list panel occupies exactly the space up to the crease
+  /// rather than its usual fixed width.
+  final double? width;
+
   /// Creates a new [ListPanel].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -47,6 +55,8 @@ class ListPanel<T> extends StatefulWidget {
   /// - [title]: Optional title widget rendered above the search field. Defaults to null.
   /// - [itemExtent]: The item extent for the list panel. Required.
   /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
+  /// - [width]: The panel's fixed width, in logical pixels. Defaults to null, which
+  ///   keeps the panel's default width of `300`.
   const ListPanel({
     super.key,
     required this.items,
@@ -57,6 +67,7 @@ class ListPanel<T> extends StatefulWidget {
     this.title,
     required this.itemExtent,
     this.emptyState,
+    this.width,
   });
 
   @override
@@ -114,7 +125,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     final tokens = context.tokens;
 
     return Container(
-      width: 300,
+      width: widget.width ?? 300,
       margin: EdgeInsets.only(top: tokens.spacing.sp1),
       padding: tokens.spacing.pd1,
       color: tokens.colors.sf1,

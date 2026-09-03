@@ -337,6 +337,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       hintText: widget.hintText,
       disabled: widget.disabled,
       readOnly: widget.readOnly,
+      errors: widget.errors,
       controller: _controller,
       focusNode: _focusNode,
       onChanged: widget.onChanged,

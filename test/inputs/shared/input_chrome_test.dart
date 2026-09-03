@@ -190,6 +190,95 @@ void main() {
       expect(find.text('%'), findsOneWidget);
     });
 
+    group('Affix icon color follows the resolved textColor (DESIGN-106 follow-up)', () {
+      // The maintainer reported that, on device, the error state colored the
+      // border and background red but left the suffix icons and field text
+      // uncolored. `_buildSlotContent` in this same file paints icon slots
+      // with `spec.textColor` (see `Icon(slot.icon!, color: spec.textColor)`),
+      // so once `LayrzInputStyleSpec.resolve` returns the correct danger color
+      // for `textColor` in the error branch, the affix icons follow it for free
+      // — these tests assert that wiring end-to-end through the chrome.
+      testWidgets('prefix and suffix icons are danger-colored in the error state', (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzInputChrome(
+            labelText: 'Field',
+            isRequired: false,
+            prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.emailOutline),
+            suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.checkCircleOutline),
+            disabled: false,
+            readOnly: false,
+            errors: ['Already taken'],
+            hideDetails: false,
+            states: {},
+            child: Container(),
+          ),
+        );
+
+        final tokens = LayrzThemeData.light().tokens;
+        final prefixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.emailOutline));
+        final suffixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.checkCircleOutline));
+
+        expect(prefixIcon.color, tokens.colors.danger);
+        expect(suffixIcon.color, tokens.colors.danger);
+        expect(suffixIcon.color, isNot(tokens.colors.fg1));
+      });
+
+      testWidgets('prefix and suffix icons are primary-colored when focused', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzInputChrome(
+            labelText: 'Field',
+            isRequired: false,
+            prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.emailOutline),
+            suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.checkCircleOutline),
+            disabled: false,
+            readOnly: false,
+            errors: [],
+            hideDetails: false,
+            states: {WidgetState.focused},
+            child: Container(),
+          ),
+        );
+
+        final tokens = LayrzThemeData.light().tokens;
+        final prefixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.emailOutline));
+        final suffixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.checkCircleOutline));
+
+        expect(prefixIcon.color, tokens.colors.primary);
+        expect(suffixIcon.color, tokens.colors.primary);
+      });
+
+      testWidgets('prefix and suffix icons are plain fg1 in the default state', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzInputChrome(
+            labelText: 'Field',
+            isRequired: false,
+            prefixSlot: LayrzInputPrefixSlot(icon: MdiIcons.emailOutline),
+            suffixSlot: LayrzInputSuffixSlot(icon: MdiIcons.checkCircleOutline),
+            disabled: false,
+            readOnly: false,
+            errors: [],
+            hideDetails: false,
+            states: {},
+            child: Container(),
+          ),
+        );
+
+        final tokens = LayrzThemeData.light().tokens;
+        final prefixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.emailOutline));
+        final suffixIcon = tester.widget<Icon>(find.byIcon(MdiIcons.checkCircleOutline));
+
+        expect(prefixIcon.color, tokens.colors.fg1);
+        expect(suffixIcon.color, tokens.colors.fg1);
+      });
+    });
+
     testWidgets('renders shortcut text when provided (desktop)', (tester) async {
       try {
         debugDefaultTargetPlatformOverride = TargetPlatform.linux;
@@ -1166,13 +1255,20 @@ void main() {
             ),
           );
 
-          // Verify the error state takes precedence: the spec should use fg1 (error text color), not primary
+          // Verify the error state takes precedence over focus (border/text stay danger, not primary).
+          // DESIGN-106 follow-up: the error branch's textColor was fixed from fg1 to danger, so the
+          // icon now agrees with the danger border and background instead of reading as plain text.
           final icon = tester.widget<Icon>(find.byIcon(prefixIcon));
           final tokens = LayrzTokens.light();
           expect(
             icon.color,
-            equals(tokens.colors.fg1),
-            reason: 'Prefix icon should remain fg1 when focused AND in error (error takes precedence)',
+            equals(tokens.colors.danger),
+            reason: 'Prefix icon should be danger-colored when focused AND in error (error takes precedence)',
+          );
+          expect(
+            icon.color,
+            isNot(equals(tokens.colors.primary)),
+            reason: 'Error precedence means focus (primary) must not win the icon color',
           );
         });
 

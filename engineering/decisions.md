@@ -4519,3 +4519,577 @@ The maintainer's reasoning was never that `LayrzCalendar` is incapable of the in
 - Month-grid arithmetic may still be duplicated between the two rather than shared through an extracted primitive; this decision forecloses that extraction too — see the pass-2 plan's explicit non-goal, "no shared picker primitive extraction."
 - Any future M4 planning should treat this as settled rather than reopening it: the question was asked and answered here so it does not need rediscovering when the pickers actually start.
 
+---
+
+## D73: Foldable-Hinge-Aware `LayrzScaffoldShell` — Vertical-Only Split, Gated on Shell Height, Not Modal Under D69
+
+**Date**: 2026-08-31  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+Foldable phones report their physical seam to Flutter as a `DisplayFeature`, and `LayrzScaffoldShell`
+had no concept of it. Two concrete defects follow from that gap. First, a Z Fold's unfolded inner
+screen measures **~904dp wide in portrait** — below the 960dp `sm`→`md` threshold `LayrzBreakpointTokens`
+draws between narrow and wide — so the most capable foldable screen on the market gets the narrow
+list-plus-sheet presentation when it has ample width for a genuine two-pane split. Second, a Z Flip's
+vertical crease (reached by rotating the device to landscape) is felt and seen by the user but never
+consulted: the detail always arrives as a modal sheet at an arbitrary fraction of the screen, ignoring
+the seam entirely.
+
+Wiring a fix surfaces a real tension between two standing decisions:
+
+- **D37** rules `LayrzScaffoldShell` **container-driven**: its band is resolved from `LayoutBuilder`
+  constraints via `bandAt`, not from the viewport.
+- **D69** — decided later than D37, and naming `LayrzScaffoldShell` as its own cautionary precedent —
+  rules that a presentation is resolved **once**, at open time, and never re-evaluated across a live
+  breakpoint crossing. It cites the 0.0.14 `setState() or markNeedsBuild() called during build` crash,
+  produced by exactly the "re-evaluate presentation across a live breakpoint crossing" design D69
+  rules out.
+
+A fold split is inherently **live** in a way neither decision was written against: unfolding,
+rotating, and the keyboard opening or closing all change the seam's position and relevance mid-session,
+without the app ever navigating anywhere. The shell cannot honor D69's "decide once" literally and
+also honor a hinge that moves under it.
+
+### Options Considered
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| Extend D69's decide-once rule to the fold split (resolve the split once, e.g. at first build, never re-evaluate) | One rule, no new carve-out to document; mechanically simplest | Wrong on its face: unfolding a Fold mid-session, rotating a Flip, or the keyboard opening would freeze the shell on a stale split, reintroducing the exact "screen doesn't match the content" defect this feature exists to fix. D69's rule was written for a widget that owns a `ModalRoute`; the inline shell owns none |
+| Read D69 as blocking any re-evaluation anywhere in `LayrzScaffoldShell`, and decline the live fold feature entirely | Zero risk of resurrecting the 0.0.14 crash class | Leaves both measured defects unfixed for no reason connected to what D69 actually protects against; treats a decision about modal-route caching as though it were a decision about `LayoutBuilder` itself, which D37 already established as this shell's live, reactive input |
+| **(Chosen) Scope D69's rule to modal routes; keep the inline split reactive, governed by the existing post-frame discipline** | Fixes both measured defects; does not weaken the guarantee D69 actually protects (no modal route in this library re-evaluates its surface after opening); reuses discipline already proven safe in this exact file | Requires this entry to state precisely why the inline case is different, so a future reader does not mistake this for a quiet reversal of D69 |
+
+### Decision
+
+**D69's once-only rule governs modal routes — dialogs and sheets that cache their page widget as
+`ModalRoute._page` and cannot safely re-resolve it. It does not govern an inline two-pane shell that
+pushes no route in its split band.** `LayrzScaffoldShell`'s fold-aware layout stays fully reactive:
+`resolveFoldSplit` re-resolves on every rebuild the same way `bandAt` already does, and responds live
+to a fold appearing or disappearing, a posture change, a rotation, or the keyboard opening or closing.
+
+The 0.0.14 crash class — `setState`/`markNeedsBuild` during build — remains guarded exactly as it is
+today: every transition that needs to mutate widget state as a result of a layout change (popping the
+narrow sheet on a band crossing, popping it again on a fold appearing) is deferred to a post-frame
+callback, per the existing discipline at `scaffold_shell.dart:150-161`. Every new fold transition
+follows that same discipline, and the existing regression test
+`test/scaffold/scaffold_shell_breakpoint_transition_test.dart` keeps covering the crash class this
+rule guards against; the new fold-specific transitions get their own coverage in
+`test/scaffold/scaffold_shell_fold_test.dart` rather than replacing it.
+
+**`resolveFoldSplit` (`lib/src/scaffold/src/fold_split.dart`) resolves a split through exactly three
+gates**, all of which must pass before the shell touches its layout at all:
+
+1. **Axis.** A seam's own shape decides its `LayrzFoldAxis` — taller than wide is `vertical`, wider
+   than tall is `horizontal` — but **only a vertical seam ever produces a split**. A horizontal seam
+   is still classified, purely for documentary value, and then unconditionally rejected:
+   `resolveFoldSplit` returns `null` for it, exactly as if no `DisplayFeature` had been reported at
+   all, and the shell falls through to its existing `bandAt(constraints.maxWidth)` behavior (wide
+   side-by-side or narrow list+sheet). Reachable as: Z Fold portrait / Z Flip landscape → vertical
+   (splits); Z Flip portrait / Z Fold landscape → horizontal (no split). The seam's axis follows
+   device rotation, which is never locked by this feature.
+2. **Minimum shell height.** `kLayrzFoldMinSplitHeight = 480.0`. A vertical seam only splits when the
+   shell's own height (`shellRect.height`, not either pane's width) clears this threshold. This guards
+   the shell's **main axis**, a wholly distinct concern from `minPaneExtent`'s **cross-axis**
+   (pane-width) guard — conflating those two axes was the flaw in the design this entry replaces. A
+   deliberate, valuable side effect: the keyboard opening shrinks the shell's own height, so **the
+   split disappears on its own** the moment the shell drops below 480dp, with no keyboard-aware code
+   anywhere in the fold path and no presentation switch to drive.
+3. **Seam selection.** When more than one vertical seam qualifies at once — the Galaxy Z TriFold
+   (shipped hardware) reports two, splitting its inner display into three panels — the seam whose
+   `leadingExtent` lands nearest `kLayrzFoldPreferredListFraction = 1/3` of the shell's width wins; the
+   remaining seam(s) are absorbed into the detail pane, and only that one seam's divider is ever drawn.
+   This is a selection over every independently-qualifying candidate, not a first-match: a tie is
+   broken toward the leading-most (smallest `leadingExtent`) candidate, deterministically, so the
+   result is order-independent by construction rather than dependent on the order `features` happens
+   to list them in.
+
+Additional rulings folded into this same decision, settled together because they came from the same
+piece of work:
+
+- **Hinge bounds are mapped into the shell's own local box via `RenderBox`, never assumed to already
+  be shell-local.** `DisplayFeature.bounds` is reported in the coordinate space of the whole Flutter
+  view, already in **logical pixels** — it must never be divided by device pixel ratio. Measured on a
+  Galaxy Z Flip 3 (SM-F711B) under the primary composition (`LayrzLayout`'s 178px rail plus its top
+  bar): treating view-space bounds as shell-local misplaces the divider by **49.9dp in portrait** and
+  **110.0dp in landscape**, where the rail's 220dp inset compounds the error. The correct landscape
+  split is genuinely asymmetric — **282.9dp / 502.9dp**, measured, not 50/50 — because the rail has
+  already consumed part of the physical leading pane before the shell ever sees its own constraints.
+  The implementation must not equalize the panes to make the numbers look tidier; the asymmetry is
+  correct.
+- **`DisplayFeatureType.cutout` is excluded from consideration, unconditionally.** A real Z Flip 3
+  reports a camera cutout as its own feature, measured at `Rect.fromLTRB(192, 0, 219, 36)`. Splitting
+  the shell's content at a cutout would be a serious bug, not a fold-aware layout, so only `fold` and
+  `hinge` feature types are ever considered.
+- **`DisplayFeatureState.postureHalfOpened` is fully supported, not excluded.** It is treated exactly
+  like `postureFlat` — `resolveFoldSplit` does not filter on posture at all. Verified on a Pixel 10 Pro
+  Fold emulator, which **boots in `postureHalfOpened`** with a viewport (851.7 x 882.9 logical pixels
+  at DPR 2.4375) identical to `postureFlat` in every measured respect but the enum value itself; that
+  viewport is itself below the 960dp `md` threshold even at full width, so excluding this posture would
+  have silently sent exactly the device this feature exists for back to the narrow list+sheet layout.
+
+### Rationale
+
+**D69's protection is about a specific failure mode — a `ModalRoute` re-resolving the surface it was
+pushed with — not about liveness in general.** `LayrzResponsiveModal` picks `LayrzDialog` or
+`LayrzBottomSheet` once and pushes a route that then owns its own cached page widget for the life of
+that route; re-evaluating the choice after push means either mutating a route's cached page (unsafe)
+or tearing it down and pushing a different one mid-flight (the transition-state risk D69's rationale
+explicitly names). Neither hazard applies to `LayrzScaffoldShell`'s split band: `LayoutBuilder` and
+`MediaQuery.displayFeaturesOf` are read on every build the same way `bandAt(constraints.maxWidth)`
+already is, and the arrangement of already-mounted, already-alive `ListPanel`/`DetailPane` widgets
+changes — no route is pushed, cached, or torn down to do it. D37 already established that this shell
+is a `LayoutBuilder`-driven, reactive widget; the fold split is one more reactive input into a widget
+that was never "decide once" to begin with, for the plain reason that D69 postdates D37 and was never
+written to reach backward and re-govern it.
+
+**The distinction is drawn at the level D69 itself argues from, not asserted by fiat.** D69's own
+rationale is explicit that its rule exists because "`ModalRoute` caches its page widget rather than
+rebuilding it on every inset or layout change" — a statement about a specific Flutter mechanism, not
+a general prohibition on any widget re-reading `MediaQuery` or `LayoutBuilder` after its first frame.
+Reading D69 as reaching into every widget in the scaffold module, including the inline band the shell
+already re-resolves live per D37, would make D69 quietly overrule D37 by implication — which D69 never
+states and does not intend, since it names `LayrzScaffoldShell` only as the source of the 0.0.14 crash
+class, not as an example of a widget that must stop re-resolving its layout.
+
+**The horizontal-seam-produces-a-stacked-split design was built, tested on real hardware, and
+deleted — the axis gate exists because of two distinct, device-confirmed failures, not as a
+precaution.** The original design stacked the panes top/bottom on a horizontal seam and promoted the
+detail into a `LayrzBottomSheet` whenever the keyboard opened. On the horizontal case (Z Flip
+portrait), the promotion destroyed the very focus that had opened the keyboard, as a direct
+consequence of that widget gaining focus during the promotion — which closed the keyboard, which
+reverted the promotion, which restored focus, which reopened the keyboard, forever. In the
+maintainer's own words: *"it's impossible to get the keyboard fully opened, because the code detects
+the keyboard opening, and switches to the bottom sheet, and well, lost focus so keyboard closed."* On
+the vertical case (Z Fold portrait) the keyboard rule never even fired — there was no presentation
+switch tied to a vertical seam to begin with — so the shell simply collapsed to a measured 435dp with
+both panes crushed to an unusable height, unguarded by anything. **The height gate this entry adopts
+subsumes the need for any keyboard rule at all**: a Z Fold in portrait measures 731.9dp with the
+keyboard down and 435.0dp with it up, straddling the 480dp threshold in exactly the direction needed,
+so the split retracts on its own the moment the keyboard opens — the same outcome the deleted
+promotion rule was chasing, produced as a side effect of a guard that has nothing to do with the
+keyboard specifically. That the correct fix turned out to be a plain height comparison, not a
+keyboard-aware presentation switch, is itself the evidence that the keyboard-promotion mechanism was
+the wrong tool for the problem.
+
+**The 49.9dp/110.0dp coordinate errors are measured, not theorized, and settle why the `RenderBox`
+mapping step is required rather than a nice-to-have.** A naive implementation that assumed the shell's
+box began at the view's origin would have shipped a divider visibly detached from the physical crease
+on the exact hardware this feature targets. The landscape case additionally proves the panes must be
+allowed to come out asymmetric: forcing a 50/50 split at the mapped seam position would still be
+wrong, because the rail has already consumed part of one pane before the shell's own `LayoutBuilder`
+constraints are handed down.
+
+**The multi-seam rule exists because shipped hardware, not a hypothetical, reports more than one
+qualifying seam at once.** The Galaxy Z TriFold splits its inner display with two creases; picking the
+first-encountered seam would make the result depend on the order `MediaQuery.displayFeaturesOf`
+happens to report them in, which is not a contract this function should lean on. Choosing the seam
+nearest the `1/3` list-pane proportion keeps the shell's two-pane list/detail model intact on a
+three-panel device rather than growing a third pane, and the deterministic tiebreak keeps the choice
+reproducible rather than becoming an intermittent layout bug on the rare device where two candidates
+land equidistant from the target.
+
+### Consequences
+
+- `LayrzScaffoldShell`'s split-band layout re-resolves `resolveFoldSplit` on every build, exactly as
+  it already re-resolves `bandAt` — this is a continuation of D37's container-driven design, not a new
+  liveness rule requiring its own decision if D37 did not already require one.
+- D69 is **not** amended, superseded, or narrowed by this entry for the case it actually governs.
+  `LayrzResponsiveModal`, `LayrzDialog`, and `LayrzBottomSheet` keep resolving their surface exactly
+  once at open time; nothing about this decision changes that. This entry only states, for the first
+  time explicitly, that D69's rule was always scoped to modal routes and was never meant to reach an
+  inline, route-free layout branch — the scope was implicit in D69's own rationale and is now written
+  down because the fold work is the first case that needed the boundary made explicit.
+- Every new fold-driven transition (sheet popped on a fold appearing, on a posture change, on a
+  rotation) must go through a post-frame callback, matching `scaffold_shell.dart:150-161`. A
+  synchronous `setState`/`markNeedsBuild` introduced in any of these paths reintroduces the exact
+  0.0.14 crash class this decision explicitly keeps guarded.
+- `LayrzBreakpointTokens` is unchanged: no new `LayrzBreakpoint` band is added, and the 600/960/1264/1904px
+  thresholds keep governing every one of their 19 existing consumers exactly as before. The fold
+  override sits above `bandAt`'s outcome, not inside it.
+- `ListPanel`'s fixed 300px width becomes overridable (an optional `width`, defaulting to the current
+  300px) so the vertical-seam split can size the leading pane to the mapped seam position instead of
+  the panel's usual fixed width — additive, no existing caller is affected.
+- There is deliberately no keyboard-aware term anywhere in `resolveFoldSplit` or its callers; the
+  minimum-height gate is the sole mechanism that makes the split retract when the keyboard opens.
+  Re-adding a keyboard-specific check would be redundant with this guard, not a complement to it, and
+  risks reintroducing the exact oscillation the deleted design suffered from.
+- Tri-fold behavior (the multi-seam selection rule) is verified by unit test against synthetic
+  multi-feature input, not against real or emulated tri-fold hardware. Emulating a tri-fold AVD to get
+  device-level coverage was attempted and **does not work**: Android's foldable emulator support gates
+  hinge behavior on the device *profile*, not on the number of hinges declared, and a single hinge
+  fails identically on a custom profile that isn't one of the emulator's built-in foldable profiles —
+  so the gap is not specific to three hinges and there is currently no available emulator path to close
+  it. This is a known coverage limitation, not an oversight.
+
+### Review Trigger
+
+If `postureHalfOpened` handling is later found to need different treatment from `postureFlat` on some
+device this decision was not tested against, that is a new row, not a reopening of this one — this
+decision explicitly treats them identically based on the Pixel 10 Pro Fold evidence above. If a
+tri-fold-capable AVD profile becomes available, add the resulting device-level coverage to
+`test/scaffold/scaffold_shell_fold_test.dart` rather than reopening this entry.
+
+### Related Decisions
+
+- **D37**: Establishes `LayrzScaffoldShell` as container-driven via `LayoutBuilder`/`bandAt`, which
+  this decision's fold override sits on top of without modifying, and whose own DESIGN-140 amendment
+  (mobile bottom-sheet presentation) is the origin of the narrow-band sheet whose dismissal discipline
+  the new fold transitions reuse.
+- **D69**: The decide-once rule this decision scopes to modal routes. `LayrzScaffoldShell`'s inline
+  split is the case this entry draws the boundary against, using D69's own cited precedent (the 0.0.14
+  crash) as the shared reference point for what both decisions are actually protecting.
+
+---
+
+## D74: Amendment to D72 — `sameZoneDate`/`sameZoneDateTime` Exported for Picker Use (S5)
+
+**Date**: 2026-09-02
+**Status**: Decided (amends D72)
+**Category**: Component Scope / API Design
+
+### Context
+
+**D72** declined to make `LayrzCalendar` the shared base for the M4 date pickers, and along with that
+declined the calendar module's month-grid arithmetic as a shared extraction — pickers were to duplicate
+it rather than depend on `LayrzCalendar`'s internals.
+
+Building the M4 date/time/month pickers surfaced a defect that predates this batch:
+`lib/src/calendar/src/calendar_zone.dart` documents that every internal date computation in the
+calendar module used to read `.year`/`.month`/`.day` off a caller-supplied `DateTime` and feed those
+fields straight into the plain `DateTime(year, month, day)` constructor. That constructor **always**
+returns a value in the *host's local zone*, silently discarding whatever zone the original value
+carried — so a caller passing a `package:timezone` `TZDateTime` (which `extends DateTime` and is
+therefore accepted anywhere a `DateTime` parameter is declared) got silently re-anchored to the host's
+zone on every truncation. `sameZoneDate`/`sameZoneDateTime` were written to fix this: they preserve the
+subtype and `location` of whatever `DateTime` was passed in, and were **library-private** to the
+calendar module.
+
+The M4 pickers truncate dates to calendar-day granularity constantly — every day/month-grid cell,
+every "step displayed month by n" call, every range endpoint. Building this batch's day-grid and
+month-grid surfaces against the plain `DateTime` constructor would have reintroduced the exact same
+zone-dropping defect one level up, in new code. The defect was in fact caught and fixed during this
+batch in `lib/src/pickers/src/date/date_range_surface.dart` and
+`lib/src/pickers/src/datetime/datetime_range_surface.dart`, both of which now truncate and step through
+`sameZoneDate` instead of the plain constructor.
+
+The maintainer granted a narrow export of these two functions for picker use rather than have every
+picker surface re-implement the same subtype-preserving truncation logic independently.
+
+### Decision
+
+**`sameZoneDate` and `sameZoneDateTime` are exported from `lib/src/calendar/calendar.dart`** (the
+calendar module's public barrel) so picker code under `lib/src/pickers/` can consume them.
+
+**This exception is narrow and covers only these two utilities.** It does **not** reopen D72 for
+anything else: the month-grid arithmetic, day-of-week/week-number computation, range-selection state
+machine, and every other piece of calendar-adjacent logic remain independently implemented in
+`lib/src/pickers/`, exactly as D72 required. `LayrzCalendar` itself gains no new picker-facing surface
+from this — its own internals still call these functions the same way they always did; only the export
+boundary moved.
+
+### Rationale
+
+D72's reasoning was scope discipline against `LayrzCalendar` absorbing picker-only concerns (a
+selection model, picker-specific chrome) that would grow the display surface for a use case it does not
+itself need. `sameZoneDate`/`sameZoneDateTime` are not picker-only concerns growing onto the calendar —
+they are a correctness fix for date-truncation arithmetic that both the calendar and the pickers need
+identically, already written, already tested against the calendar's own consumers, and with a **known,
+demonstrated defect** on the other side of not sharing it (the two range-surface bugs this batch fixed).
+Duplicating month-grid *arithmetic* is cheap, per D72's own rationale; duplicating a *zone-preservation
+bugfix* is not cheap — it is re-introducing a bug that was already found and fixed once.
+
+### Consequences
+
+- `lib/src/calendar/calendar.dart` exports `src/calendar_zone.dart`. This is the only surface-level
+  change D72 did not already anticipate.
+- Every picker call site that truncates or steps a `DateTime` to day/month granularity from a caller
+  value must go through `sameZoneDate`/`sameZoneDateTime`, never the plain `DateTime(...)` constructor
+  directly — see `date_range_surface.dart:90-97` and `datetime_range_surface.dart:128-135` for the
+  pattern, and their doc comments for the specific bug each fixes.
+- **A future reader must not treat this export as reopening D72's boundary in general.** No further
+  calendar-module internals (grid arithmetic, selection state, chrome) are shared with pickers as a
+  result of this entry. If a future change wants to share something else across the boundary, that is a
+  new decision, argued on its own merits — this entry does not set that precedent.
+
+### Related Decisions
+
+- **D72**: The decision this entry amends. D72's core ruling (no shared base, no shared chrome, no
+  selection-model extraction) is otherwise untouched.
+
+---
+
+## D75: M4 DateTime Pickers Batch — Container, Commit Boundary, No `intl`, Typed Ranges, Contiguity
+Policy, Endpoint-Adjust Selection
+
+**Date**: 2026-09-02
+**Status**: Decided
+**Category**: Component Scope / API Design / Interaction Design
+
+### Context
+
+This entry records the settled calls made by the maintainer across the M4 date/time/month picker
+batch — eight public widget classes covering nine Notion rows (DESIGN-45, 46, 47, 48/new,
+49 with 51 collapsed in, 50, 52, 53; DESIGN-41 `LayrzMultiSelectInput` excluded, its own batch) —
+so the reasoning behind this batch's shape is recorded once rather than reconstructed from the
+diff by a future reader.
+
+### Decisions
+
+**One container for the whole family.** Every picker surfaces through the same adaptive container:
+anchored panel (`LayrzAnchoredPanel`) at ≥960px, `LayrzBottomSheet` below 960px, per D52/D70. **No
+dialog variant for any picker**, despite the old layrz_theme month picker (`ThemedMonthRangePicker`)
+having been a dialog — the old dialog chrome (rounded panel, header, Cancel/Save footer) is read as
+"the 3-rows-by-4-columns month grid and its footer actions," not as "must be a dialog route."
+
+**The commit boundary is "one atomic value vs. multiple coordinated parts" — not single-valued vs.
+range.** Three widgets commit on tap, no Save step at all: `LayrzDateInput`, `LayrzTimeInput`,
+`LayrzMonthInput`. Five widgets carry in-panel Cancel/Save: `LayrzDateRangeInput`,
+`LayrzTimeRangeInput`, `LayrzDateTimeInput`, `LayrzDateTimeRangeInput`, `LayrzMonthRangeInput`.
+Notably, **`LayrzDateTimeInput` is single-valued *by type* (`DateTime?`) and still carries Save** —
+its value is one `DateTime`, but committing it requires the date part and the time part to both be
+genuinely set, which is a multi-part commit exactly like a range's two endpoints. A widget's value
+type is what misleads a reader into guessing its commit model; the number of coordinated parts a
+single Save/tap must reconcile is the actual rule. Each picker must be **visually self-consistent
+about its commit model from the first frame** — a user must never have to guess whether a tap already
+committed a value.
+
+**No silent defaults.** A time part the user never touched is never committed on the caller's behalf;
+Save stays **disabled** until every part the widget needs is genuinely set by the user. Concretely:
+midnight (`00:00`) defaults were removed from both `LayrzDateTimeInput` and
+`LayrzDateTimeRangeInput`'s time parts, and the old `9:00`–`17:00` default was removed from
+`LayrzTimeRangeInput`. All three removals follow the same reasoning: defaulting a value the user never
+chose is exactly the silent-value problem the Save boundary exists to prevent, so a default that
+bypasses it defeats the boundary's own purpose.
+
+**No `intl`.** All date/time formatting goes through a house `strftime`-style formatter
+(`lib/src/formatting/`, public API), taking Python `strftime` directives — `%Y %y %m %d %H %I %M %S
+%B %b %A %a %p %j %%` — because that is the formatting convention already standard across the team's
+stack, not because of any technical limitation in `intl`. Malformed or unsupported directives **pass
+through literally and never throw** — a deliberate compatibility commitment, since the formatter is
+public API and a throwing formatter would be a breaking hazard for every caller-supplied pattern
+string. **`strptime`-style parsing is deliberately not provided**: every picker in this batch has a
+read-only text anchor and commits only from a tap or a Save action, so there is no free-text input to
+parse back into a `DateTime` — providing a parser would be unused surface area. **Migration
+continuity**: `strftime` directives are what the old layrz_theme pickers already used, so consumers
+porting from `ThemedDatePicker`/`ThemedDateRangePicker`/etc. keep their existing `'%Y-%m-%d'`-style
+format strings working unchanged — the one place in this batch where the old API is preserved rather
+than broken.
+
+**Typed range classes, not a runtime-asserted list.** `LayrzDateRange` and `LayrzMonthRange` are
+immutable classes with **non-nullable** `start`/`end` fields, replacing the old layrz_theme shape of a
+`List<DateTime>` runtime-asserted to have exactly two elements. Explicit non-goal: **no library-wide
+generic range type** (e.g. `LayrzRange<T>`). Each range type is scoped to this batch and shaped for its
+own domain.
+
+**Contiguity is a policy object, with two concrete classes behind one interface — not one generic
+class.** `LayrzContiguousRangePolicy` and `LayrzArbitraryRangePolicy` implement a shared policy
+interface. These are not the same policy parameterized differently: contiguous-date selection needs
+calendar-day adjacency (stepping across leap years and month-length boundaries) that arbitrary-month
+selection has no equivalent for at all — arbitrary selection needs only set membership, no adjacency
+concept whatsoever. The domains differ in kind, not merely in the type parameter, which is why this is
+two classes rather than one generic one.
+
+**Range selection uses the endpoint-adjust model. The old "interior locked, only endpoints
+deselectable" model, as documented in the old layrz_theme month-range picker's own docs, is
+RETIRED.** Verified against the old pickers before retiring it: that "interior locked" language
+appears twice in the old month-range picker's documentation and **not at all** in the old date-range
+picker's documentation — so it was a month-specific behavior in the old family, never a date-range
+behavior, and this batch does not need to preserve it as a cross-widget contract. The retained model,
+applied uniformly across every range widget in this batch:
+
+- Empty → tap sets the anchor (first endpoint).
+- Anchor → a second tap completes the range, auto-swapping start/end if the second tap lands before
+  the anchor (so the user never has to tap in chronological order).
+- Complete → **re-tapping either endpoint adjusts that edge**, the other edge stays fixed — this
+  replaces the old "endpoints only, interior locked" rule with "either single endpoint is directly
+  redraggable via re-tap."
+- Complete → a tap on an **interior cell is visibly rejected**. Locked interior cells are styled
+  persistently non-interactive **from the moment a range exists** (not only after a rejected tap), so
+  a user reads them as locked before ever tapping one — silent rejection (no visible reaction to the
+  tap) reads as a broken app and is not acceptable.
+- Complete → a tap **outside** the current range extends the nearer endpoint toward the tapped cell.
+
+Per D15, all of this feedback — the locked-interior styling and the rejection reaction — is
+**colour/opacity/cursor only, never a geometry change**.
+
+**Only month range allows non-consecutive (arbitrary) selection.** Every other range widget in this
+library (date, time, datetime) is contiguous-only. This was an explicit, direct requirement from the
+maintainer, not inferred from the old widgets' behavior.
+
+**The validation-vs-selection-surface general rule.** Anything shaped like "is this value or range
+*valid*" — range-length limits, restricted/blacked-out time windows, disabled weekdays, and any future
+ask in the same shape — is a **validation and `errors` concern, owned by the caller via the existing
+`errors` parameter, not a selection-surface concern** the picker widget itself should encode. This
+batch's range-length-limit and restricted-time-window asks were both ruled out of scope on this
+basis. Recorded here once so a future "can the picker disable X" question is answered by this rule
+rather than re-litigated per widget.
+
+**`firstDayOfWeek` defaults to Monday**, a deliberate difference from `LayrzCalendar`'s Sunday
+default — the two components are allowed to diverge on this because they serve different reference
+material (the M4 picker screenshot reference is Monday-first) and D72 already established they share
+no base to keep consistent.
+
+**Keyboard: WCAG 2.1.1 Level A is required, not optional**, matching the library's existing
+accessibility bar rather than being treated as picker-specific scope. In the day/month grids: arrow
+keys move focus, Enter/Space selects the focused cell, Page Up/Down changes the displayed
+month/period. In the time text fields: **Up/Down arrows step the field's value; Left/Right keep
+normal text-caret movement** — `LayrzNumberInput` already owns all text-field key handling for these
+fields, and only the vertical arrows are overridden for the step behavior, so horizontal caret
+movement and text selection inside the field are unaffected.
+
+**24-hour format by default; 12-hour format supported** as an explicit opt-in, not the default.
+
+**Time entry is text fields only — no clock face, dial, or spinner affordance of any kind.** The
+maintainer was emphatic on this point in the original request ("I just want fields, not a clock,
+fields please"). `showSeconds` toggles the seconds field's visibility **without any layout reflow**
+of the surrounding fields, per D15.
+
+**`LayrzInputChrome` remained frozen throughout this batch.** No parameter was added to it and no
+change was made to its layout, despite eight new input widgets being built against it concurrently.
+Recorded here as evidence that the frozen-chrome constraint (see `CLAUDE.md`'s rule on
+`LayrzInputChrome`) held under real, sustained pressure from a large batch, not only in theory.
+
+### Related Decisions
+
+- **D52 / D70**: Establish the anchored-panel/bottom-sheet adaptive container this batch's single
+  container decision reuses without modification.
+- **D34**: Caller-owned `errors`, which the validation-vs-selection-surface rule in this entry is a
+  direct application of.
+- **D53**: `LayrzSelectItem<T>` — not reused by this batch's grids directly, but the same
+  minimal-shared-type philosophy this entry's range-class non-goal follows.
+- **D63**: No input wraps another input; every field composes `LayrzInputChrome` directly — the
+  standing rule this batch's Notion `Primitive` field corrections (see the accompanying milestone-4
+  tracking) bring the record back into alignment with.
+- **D72 / D74**: `LayrzCalendar` remains independent of the picker family; D74 is the narrow,
+  explicitly bounded exception to that boundary this batch needed.
+- **D15**: Interaction-state feedback (locked-interior styling, rejected-tap reaction, `showSeconds`
+  toggle) stays colour/opacity/cursor only — applied throughout this entry.
+
+---
+
+## D76: Amendment to D75 — DESIGN-98 Promotes `LayrzEndDrawer`, Retires the Commit-on-Tap Split,
+Restores Midnight/Zero as Valid Values
+
+**Date**: 2026-09-02
+**Status**: Decided (amends D75)
+**Category**: Component Scope / API Design / Interaction Design
+
+### Context
+
+D75 settled the M4 DateTime Pickers batch on an anchored-panel/bottom-sheet container, split the
+eight widgets into three that commit on tap (`LayrzDateInput`, `LayrzTimeInput`,
+`LayrzMonthInput`) and five that carry an in-panel Cancel/Save footer, and ruled out silent
+defaults — removing the midnight (`00:00`) default from `LayrzDateTimeInput`/
+`LayrzDateTimeRangeInput` and the `9:00`–`17:00` default from `LayrzTimeRangeInput`, gating Save
+on the user having genuinely touched every part.
+
+On-device review of the shipped batch (DESIGN-98) reversed all three of these calls. The
+maintainer's own words, against the picker drawer's Cancel/Clear/Save footer sitting inside a
+too-short anchored panel: *"Be like the BottomSheet and Dialog, place actions slot, this way we
+can set sticked to end."* That single container change cascaded into the commit-model and
+silent-default reversals below, because a widget that gains a real actions slot no longer has a
+reason to special-case "commits on tap" or "Save disabled until touched."
+
+### Decisions
+
+**One container, promoted to a public component.** Every one of the eight date/time pickers, plus
+`LayrzDurationInput`, `LayrzSelectInput`, and `LayrzComboBoxInput`, now opens
+[`LayrzEndDrawer`](https://github.com/goldenm-software/layrz_ui/blob/main/lib/src/sheets/src/end_drawer.dart)
+on desktop (`>= 960px`) and `LayrzBottomSheet` below that — replacing D75's
+`LayrzAnchoredPanel`/`LayrzBottomSheet` pairing for the eight pickers, and `LayrzAnchoredPanel`
+directly for Select and ComboBox. `LayrzEndDrawer` is a right-edge, fixed-420px-wide modal drawer
+with a pinned `actions` slot (a sibling of the scrolling body, not nested inside it, so it always
+sits flush with the drawer's bottom edge regardless of content height) and an optional `title`
+slot. It is the public promotion of what was briefly a picker-private `LayrzPickerDrawer`
+(DESIGN-49) — `LayrzSearchInput` is the one holdout, staying on `LayrzAnchoredPanel`.
+
+**The three-commit-on-tap/five-Save split is retired. All eight pickers now carry Save.**
+`LayrzDateInput`, `LayrzTimeInput`, and `LayrzMonthInput` — D75's "one atomic value, no Save
+needed" widgets — move onto the drawer with a Cancel/Save `actions` row (Cancel/Save only, no
+Clear: a single value has nothing to reset to empty independently of Cancel). A tap on a day or
+month cell, or an edit to a time field, no longer commits or closes anything by itself; only Save
+does, and Escape/the barrier tap/Cancel all discard the draft equally. `LayrzDurationInput` gains
+Cancel and Save alongside its existing Reset (Reset remains its own "clear and I'm done" gesture,
+distinct from Save). `LayrzSelectInput` and `LayrzComboBoxInput` are the explicit exception: they
+keep `actions: null` — picking an item, or committing typed text, is itself the decision, with no
+second value to coordinate first, so a Save button below the list would be pure friction.
+
+**"No silent defaults" is reversed — midnight and `Duration.zero` are valid, committable
+values.** D75's rule ("a time part the user never touched is never committed on the caller's
+behalf; Save stays disabled until every part is genuinely set") no longer holds. `LayrzTimeInput`
+and the time half of `LayrzDateTimeInput`/`LayrzDateTimeRangeInput` now seed an unset time part to
+midnight (`00:00`) rather than leaving it `null`, and Save's enablement follows the **date** (or
+draft completeness for a range), never whether the time was independently touched —
+`LayrzDateTimeSurfaceState.canSave => _date != null` reads only the date part.
+`LayrzTimeRangeSurface`'s `_start`/`_end` fields are non-nullable, seeded to midnight when unset,
+with no `canSave` gate at all — Save is always reachable. `LayrzDurationInput`'s Save is likewise
+always enabled, and a non-null `Duration.zero` is a genuine, displayable, committable value, not a
+placeholder for "unset." A future reader should treat any surviving doc-comment claiming "no
+midnight default" or "Save disabled until touched" against these surfaces as stale prose D76
+superseded, not as the current contract — `canSave`'s own predicate in each `*_surface.dart` file
+is authoritative.
+
+**Range visuals: a flat, continuous `primary` bar, no per-cell shapes.** A completed range renders
+as one unbroken `LayrzPickersRangeBar` behind the row — flat `LayrzColorTokens.primary` at full
+opacity, no tonal tint — with rounded caps only at the range's true start/end and square edges
+where the range continues into an adjacent row. `LayrzPickerCellRole.rangeEndpoint`/
+`.rangeInterior` paint no fill, ring, or shape of their own on top of the bar; the day/month
+numeral switches to the primary color's contrasting foreground so it stays legible against the
+solid fill. This applies to `LayrzPickersDayGridCell`; `LayrzPickersMonthGridCell` follows the
+identical "no per-cell shape in range mode" rule for `LayrzMonthRangeInput`'s `consecutive: true`
+mode only — arbitrary (non-consecutive) month selection is unaffected and keeps each selected
+month as its own filled rounded-rectangle pill, since there is no contiguous run to draw a bar
+under.
+
+**`LayrzDateTimeInputPresentation` (`tabbed`/`stepped`) is now fully inert.** The drawer has the
+vertical room to show the date grid and the time fields together in one scroll, so the
+tabbed-vs-stepped arrangement this enum selected has no layout left to apply to. The enum is kept,
+not removed (deleting it would be a breaking removal with no migration signal), and is marked
+`@Deprecated` — `LayrzDateTimeSurface` accepts and ignores it unconditionally.
+
+**ComboBox drops its live-reparented field in favor of an independent surface, and gains a bold
+custom-value row and rebuilt keyboard navigation.** Before DESIGN-98, `LayrzComboBoxInput`'s
+closed field and its open `LayrzAnchoredPanel`'s first row shared the same `TextEditingController`/
+`FocusNode`, reparented across the open transition so typing continued uninterrupted. A
+`Navigator.push`-based route (what both `LayrzEndDrawer` and `LayrzBottomSheet` are) has no
+equivalent single-pass reparenting point, so this trick is retired: the drawer now always opens
+with an independent, empty search field, matching the mobile bottom-sheet path exactly — a real,
+user-visible behavior change on desktop. In exchange, the opened surface gains a **bold
+custom-value row** (`FontWeight.w600`, no "custom ..." label or icon — weight alone is the
+indicator, per the maintainer's explicit reversal of an earlier "custom ..." label design) shown
+as the first row whenever the typed text matches no existing option, and **keyboard navigation**
+(arrow-up/down highlights across the custom-value row plus the filtered options, Enter commits the
+highlighted row) rebuilt from scratch for the new surface, since a bare option list has no
+keyboard affordance of its own the way the retired `RawMenuAnchor`-hosted panel did.
+
+### Consequences
+
+- `lib/src/sheets/src/end_drawer.dart` is new, public, and exported from `lib/src/sheets/sheets.dart`.
+- Every `*_input.dart` file under `lib/src/pickers/src/*/` gained an `_openDesktopDrawer` method
+  replacing its D75-era anchored-panel path; `lib/src/inputs/src/duration/duration_input.dart`,
+  `lib/src/inputs/src/select/select_input.dart`, and `lib/src/inputs/src/combobox/combobox_input.dart`
+  likewise.
+- Every `*_surface.dart`'s `State` class needed to become public (no longer library-private) so its
+  hosting `*_input.dart` can reach `canSave`/`save()` through a `GlobalKey` from the `actions` row
+  built at the `LayrzEndDrawer.show` call site — a structural consequence of `actions` being a
+  sibling parameter of `builder`, not composed inside it.
+- `engineering/milestone-4.md`'s Status table and D74/D75 cross-references needed a note pointing to
+  this entry; `wiki/Widgets/` picker and Select/ComboBox/Duration pages needed a full rewrite of
+  their "Composition and Container" and "Commit Model" sections.
+- **A future reader must not assume the D75-era three-tap/five-Save split still describes any
+  shipped widget** — this entry is the current, authoritative commit-model record for all eleven
+  affected widgets.
+
+### Related Decisions
+
+- **D75**: The decision this entry amends. D75's non-container, non-commit-model rulings (no
+  `intl`, typed ranges, contiguity policy, endpoint-adjust selection, 24h default, text-only time
+  entry, frozen `LayrzInputChrome`) are untouched.
+- **D52 / D70**: The anchored-panel/bottom-sheet adaptive container D75 reused and this entry
+  partially retires (for the eleven widgets listed above; every other input in the library keeps
+  that container unchanged).
+- **D15**: Interaction-state feedback for the range bar and its cells stays colour/opacity/cursor
+  only — the flat-`primary`-bar ruling in this entry is a direct application, not an exception.
+

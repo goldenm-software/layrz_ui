@@ -52,23 +52,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(MdiIcons.closeCircle));
+      await tester.tap(find.byIcon(MdiIcons.close));
       expect(deleted, isTrue);
-    });
-
-    testWidgets('chip with leading icon is accessible', (tester) async {
-      await pumpThemed(
-        tester,
-        LayrzChip(
-          labelText: 'With Icon',
-          leadingIcon: MdiIcons.checkCircleOutline,
-        ),
-      );
-
-      // Verify the chip, label text, and icon are rendered
-      expect(find.byType(LayrzChip), findsOneWidget);
-      expect(find.text('With Icon'), findsOneWidget);
-      expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
     });
 
     testWidgets('chip group items are all accessible', (tester) async {
@@ -117,7 +102,7 @@ void main() {
       );
 
       // Find all close icons and tap them
-      final closeIcons = find.byIcon(MdiIcons.closeCircle);
+      final closeIcons = find.byIcon(MdiIcons.close);
       expect(closeIcons, findsWidgets);
 
       // Tap first delete icon

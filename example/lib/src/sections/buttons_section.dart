@@ -44,11 +44,11 @@ class _ButtonsSectionState extends State<ButtonsSection> {
 
     return ShowroomSection(
       title: 'Buttons',
-      description: 'Material-free button component with twelve styles, semantic factories, and live state indicators',
+      description: 'Material-free button component with six styles, semantic factories, and live state indicators',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. All twelve styles
+          // 1. All six styles
           _StylesDemo(tokens: tokens),
 
           SizedBox(height: tokens.spacing.sp5),
@@ -110,7 +110,7 @@ class _ButtonsSectionState extends State<ButtonsSection> {
   }
 }
 
-/// Demonstrates all twelve [LayrzButtonStyle] values.
+/// Demonstrates all six [LayrzButtonStyle] values.
 class _StylesDemo extends StatelessWidget {
   /// Creates a new [_StylesDemo].
   const _StylesDemo({required this.tokens});
@@ -126,9 +126,9 @@ class _StylesDemo extends StatelessWidget {
       children: [
         Text('All Styles (from LayrzButtonStyle.values)', style: tokens.typography.title),
         ...{
-          "Elevated (Default)": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
+          "Filled (Default)": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
           "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
-          "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
+          "Text": [LayrzButtonStyle.text, LayrzButtonStyle.textFab],
         }.entries.map((e) {
           return LayrzRow(
             children: [
@@ -165,7 +165,7 @@ class _StylesDemo extends StatelessWidget {
 }
 
 /// Demonstrates the six semantic factories with both normal and Fab layouts,
-/// and style variants (elevated, outlined, outlinedTonal).
+/// and style variants (filled, outlined, text).
 class _SemanticFactoriesDemo extends StatelessWidget {
   /// Creates a new [_SemanticFactoriesDemo].
   const _SemanticFactoriesDemo({required this.tokens});
@@ -219,12 +219,12 @@ class _SemanticFactoriesDemo extends StatelessWidget {
         SizedBox(height: tokens.spacing.sp3),
 
         // Normal layout, all styles
-        Text('Normal Layout - Elevated (default)', style: tokens.typography.label),
+        Text('Normal Layout - Filled (default)', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp2),
         Wrap(
           spacing: tokens.spacing.sp3,
           runSpacing: tokens.spacing.sp3,
-          children: semanticButtons.map((e) => e.$2(isFab: false, style: LayrzButtonStyle.elevated)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: false, style: LayrzButtonStyle.filled)).toList(),
         ),
 
         SizedBox(height: tokens.spacing.sp3),
@@ -239,23 +239,23 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp3),
 
-        Text('Normal Layout - OutlinedTonal', style: tokens.typography.label),
+        Text('Normal Layout - Text', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp2),
         Wrap(
           spacing: tokens.spacing.sp3,
           runSpacing: tokens.spacing.sp3,
-          children: semanticButtons.map((e) => e.$2(isFab: false, style: LayrzButtonStyle.outlinedTonal)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: false, style: LayrzButtonStyle.text)).toList(),
         ),
 
         SizedBox(height: tokens.spacing.sp3),
 
         // Mobile (Fab) layout, all styles
-        Text('Fab Layout - Elevated (default)', style: tokens.typography.label),
+        Text('Fab Layout - Filled (default)', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp2),
         Wrap(
           spacing: tokens.spacing.sp3,
           runSpacing: tokens.spacing.sp3,
-          children: semanticButtons.map((e) => e.$2(isFab: true, style: LayrzButtonStyle.elevated)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: true, style: LayrzButtonStyle.filled)).toList(),
         ),
 
         SizedBox(height: tokens.spacing.sp3),
@@ -270,12 +270,12 @@ class _SemanticFactoriesDemo extends StatelessWidget {
 
         SizedBox(height: tokens.spacing.sp3),
 
-        Text('Fab Layout - OutlinedTonal', style: tokens.typography.label),
+        Text('Fab Layout - Text', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp2),
         Wrap(
           spacing: tokens.spacing.sp3,
           runSpacing: tokens.spacing.sp3,
-          children: semanticButtons.map((e) => e.$2(isFab: true, style: LayrzButtonStyle.outlinedTonal)).toList(),
+          children: semanticButtons.map((e) => e.$2(isFab: true, style: LayrzButtonStyle.text)).toList(),
         ),
       ],
     );
@@ -377,7 +377,7 @@ class _CooldownDemo extends StatelessWidget {
                   children: [
                     LayrzButton(
                       labelText: isActive ? 'Clear Cooldown' : 'Start 5s Cooldown',
-                      style: LayrzButtonStyle.elevated,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (isActive) {
                           controller.clearCooldown();
@@ -646,7 +646,7 @@ class _SharedControllerDemo extends StatelessWidget {
                   children: [
                     LayrzButton(
                       labelText: controller.isLoading ? 'Stop Loading' : 'Start Loading',
-                      style: LayrzButtonStyle.elevated,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (controller.isLoading) {
                           controller.stopLoading();
@@ -657,7 +657,7 @@ class _SharedControllerDemo extends StatelessWidget {
                     ),
                     LayrzButton(
                       labelText: controller.cooldownTotal != null ? 'Clear Cooldown' : 'Start 3s Cooldown',
-                      style: LayrzButtonStyle.elevated,
+                      style: LayrzButtonStyle.filled,
                       onTap: () {
                         if (controller.cooldownTotal != null) {
                           controller.clearCooldown();
@@ -672,9 +672,9 @@ class _SharedControllerDemo extends StatelessWidget {
             ),
             // Shared buttons (all three use the same controller)
             ...{
-              "Elevated": [LayrzButtonStyle.elevated, LayrzButtonStyle.elevatedFab],
+              "Filled": [LayrzButtonStyle.filled, LayrzButtonStyle.filledFab],
               "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
-              "OutlinedTonal": [LayrzButtonStyle.outlinedTonal, LayrzButtonStyle.outlinedTonalFab],
+              "Text": [LayrzButtonStyle.text, LayrzButtonStyle.textFab],
             }.entries.map((e) {
               return Row(
                 spacing: tokens.spacing.sp3,

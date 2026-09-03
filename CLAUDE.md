@@ -310,6 +310,8 @@ The barrel file must contain **only** `export` statements — no logic, no class
 
 `lib/src/inputs/src/shared/input_chrome.dart` is **frozen**. It is the shared chrome behind every input in the library — text, textarea, number, password, search, select, combobox, duration, and every input added later. A change there lands in all of them at once, and nothing in the test suite will tell you which one you broke.
 
+**This freeze covers that ONE file, not the `lib/src/inputs/` tree.** The other files under `inputs/` — `duration_input.dart`, `select_input.dart`, `combobox_input.dart`, `search_input.dart`, `number_input.dart` and the rest — are normal code, editable like anything else with the usual care and tests. Do not treat the whole directory as read-only; that over-application has caused real work to be skipped.
+
 **Do not add a parameter to it. Do not change its layout. Do not change how it resolves style, precedence, or state. Do not "just" add an optional flag with a safe default.**
 
 An optional parameter with a default is still a change to the shared contract, and "it defaults to the old behaviour" is the argument that makes these changes feel free. They are not free.

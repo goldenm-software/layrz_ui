@@ -174,6 +174,67 @@ void main() {
         expect(LayrzColors.orange.shade900, equals(const Color(0xFFE65100)));
       });
 
+      test('warningOrange has all ten shades and a consistent primary', () {
+        // warningOrange is a layrz_ui-specific swatch (not a Material palette member,
+        // hence not part of the `swatches` completeness/primary-consistency loops above),
+        // so it gets its own coverage here.
+        const swatch = LayrzColors.warningOrange;
+        expect(swatch.shade50, isA<Color>());
+        expect(swatch.shade100, isA<Color>());
+        expect(swatch.shade200, isA<Color>());
+        expect(swatch.shade300, isA<Color>());
+        expect(swatch.shade400, isA<Color>());
+        expect(swatch.shade500, isA<Color>());
+        expect(swatch.shade600, isA<Color>());
+        expect(swatch.shade700, isA<Color>());
+        expect(swatch.shade800, isA<Color>());
+        expect(swatch.shade900, isA<Color>());
+        expect(swatch.shade500.toARGB32(), equals(swatch.toARGB32()));
+      });
+
+      test('warningOrange palette values and monotonic darkening', () {
+        expect(LayrzColors.warningOrange.shade50, equals(const Color(0xFFFFF3E0)));
+        expect(LayrzColors.warningOrange.shade100, equals(const Color(0xFFFFE0B2)));
+        expect(LayrzColors.warningOrange.shade200, equals(const Color(0xFFFFCC80)));
+        expect(LayrzColors.warningOrange.shade300, equals(const Color(0xFFFFB74D)));
+        expect(LayrzColors.warningOrange.shade400, equals(const Color(0xFFFFA726)));
+        expect(LayrzColors.warningOrange.shade500, equals(const Color(0xFFEF6C00)));
+        expect(LayrzColors.warningOrange.shade600, equals(const Color(0xFFE65100)));
+        expect(LayrzColors.warningOrange.shade700, equals(const Color(0xFFD84315)));
+        expect(LayrzColors.warningOrange.shade800, equals(const Color(0xFFBF360C)));
+        expect(LayrzColors.warningOrange.shade900, equals(const Color(0xFF8A2705)));
+
+        // Each shade must be darker (lower luminance) than the previous one, so the
+        // ramp reads coherently from lightest (50) to darkest (900).
+        final shades = [
+          LayrzColors.warningOrange.shade50,
+          LayrzColors.warningOrange.shade100,
+          LayrzColors.warningOrange.shade200,
+          LayrzColors.warningOrange.shade300,
+          LayrzColors.warningOrange.shade400,
+          LayrzColors.warningOrange.shade500,
+          LayrzColors.warningOrange.shade600,
+          LayrzColors.warningOrange.shade700,
+          LayrzColors.warningOrange.shade800,
+          LayrzColors.warningOrange.shade900,
+        ];
+        for (var i = 1; i < shades.length; i++) {
+          expect(
+            shades[i].computeLuminance(),
+            lessThan(shades[i - 1].computeLuminance()),
+            reason: 'shade at index $i should be darker than the previous shade',
+          );
+        }
+      });
+
+      test('warningOrange 500 resolves white content, unlike Material orange 500', () {
+        // The actual maintainer-facing contract: content (text/icons/badge counts)
+        // painted on the warning accent must come out white.
+        expect(LayrzColors.warningOrange.shade500.contrastColor, equals(const Color(0xFFFFFFFF)));
+        // And this is genuinely a fix, not a no-op: the old Material orange 500 picked black.
+        expect(LayrzColors.orange.shade500.contrastColor, equals(const Color(0xFF000000)));
+      });
+
       test('deepOrange palette matches Material', () {
         expect(LayrzColors.deepOrange.shade500, equals(const Color(0xFFFF5722)));
         expect(LayrzColors.deepOrange.shade50, equals(const Color(0xFFFBE9E7)));
@@ -255,21 +316,30 @@ void main() {
 
       test('warning color tokens remain byte-identical', () {
         final tokens = LayrzColorTokens.light();
-        // Verify warning is the orange swatch
-        expect(tokens.warning, equals(LayrzColors.orange));
-        // Verify primary value unchanged
-        expect(tokens.warning.shade500, equals(const Color(0xFFFF9800)));
-        // Verify all shades match exactly
+        // Verify warning is the dedicated warningOrange swatch (not the Material orange
+        // palette swatch, which keeps its own untouched values — see the "orange palette
+        // matches Material" test above).
+        expect(tokens.warning, equals(LayrzColors.warningOrange));
+        // Verify primary value is the darkened 500 (Material orange's own 800 shade).
+        expect(tokens.warning.shade500, equals(const Color(0xFFEF6C00)));
+        // Verify all shades match exactly.
         expect(tokens.warning.shade50, equals(const Color(0xFFFFF3E0)));
         expect(tokens.warning.shade100, equals(const Color(0xFFFFE0B2)));
         expect(tokens.warning.shade200, equals(const Color(0xFFFFCC80)));
         expect(tokens.warning.shade300, equals(const Color(0xFFFFB74D)));
         expect(tokens.warning.shade400, equals(const Color(0xFFFFA726)));
-        expect(tokens.warning.shade500, equals(const Color(0xFFFF9800)));
-        expect(tokens.warning.shade600, equals(const Color(0xFFFB8C00)));
-        expect(tokens.warning.shade700, equals(const Color(0xFFF57C00)));
-        expect(tokens.warning.shade800, equals(const Color(0xFFEF6C00)));
-        expect(tokens.warning.shade900, equals(const Color(0xFFE65100)));
+        expect(tokens.warning.shade500, equals(const Color(0xFFEF6C00)));
+        expect(tokens.warning.shade600, equals(const Color(0xFFE65100)));
+        expect(tokens.warning.shade700, equals(const Color(0xFFD84315)));
+        expect(tokens.warning.shade800, equals(const Color(0xFFBF360C)));
+        expect(tokens.warning.shade900, equals(const Color(0xFF8A2705)));
+      });
+
+      test('warning content color resolves to white', () {
+        // The real contract: content (text/icons/badge counts) painted on
+        // tokens.colors.warning must come out white, not black.
+        final tokens = LayrzColorTokens.light();
+        expect(tokens.warning.shade500.contrastColor, equals(const Color(0xFFFFFFFF)));
       });
 
       test('info color tokens remain byte-identical', () {

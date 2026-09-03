@@ -110,7 +110,8 @@ void main() {
         // identity: the card's own semantics label (asserted above in other
         // tests) is what a screen reader relies on, independent of color.
         final marker = tester.widget<LayrzTimelineMarker>(find.byType(LayrzTimelineMarker));
-        expect(marker.spec.markerColor, isNotNull);
+        final tokens = LayrzTheme.of(tester.element(find.byType(LayrzTimelineMarker))).tokens;
+        expect(marker.spec.markerColor, tokens.colors.sf4);
       } finally {
         handle.dispose();
       }

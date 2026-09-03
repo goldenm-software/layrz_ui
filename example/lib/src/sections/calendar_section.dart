@@ -267,21 +267,21 @@ class _CalendarSectionState extends State<CalendarSection> {
         children: [
           LayrzButton(
             labelText: isMondayFirst ? 'Week starts Monday' : 'Week starts Sunday (default)',
-            style: isMondayFirst ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+            style: isMondayFirst ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
             onTap: () {
               setState(() => _firstDayOfWeek = isMondayFirst ? DateTime.sunday : DateTime.monday);
             },
           ),
           LayrzButton(
             labelText: isAmPm ? 'Time format: AM/PM' : 'Time format: 24h (default)',
-            style: isAmPm ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+            style: isAmPm ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
             onTap: () {
               setState(() => _timeFormat = isAmPm ? LayrzTimeFormat.h24 : LayrzTimeFormat.amPm);
             },
           ),
           LayrzButton(
             labelText: _tapEnabled ? 'Taps: wired' : 'Taps: disabled',
-            style: _tapEnabled ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+            style: _tapEnabled ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
             onTap: () {
               setState(() {
                 _tapEnabled = !_tapEnabled;

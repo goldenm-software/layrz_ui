@@ -97,7 +97,7 @@ class _TimelineSectionState extends State<TimelineSection> {
             children: [
               LayrzButton(
                 labelText: _forceOneSided ? 'Showing one-sided (forced)' : 'Showing automatic layout',
-                style: _forceOneSided ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+                style: _forceOneSided ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
                 onTap: () => setState(() => _forceOneSided = !_forceOneSided),
               ),
             ],

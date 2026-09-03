@@ -344,7 +344,7 @@ void main() {
             tester,
             LayrzButton(
               labelText: 'Fab Accessible Label',
-              style: LayrzButtonStyle.outlinedTonalFab,
+              style: LayrzButtonStyle.textFab,
               onTap: () {},
             ),
           );
@@ -469,7 +469,7 @@ void main() {
             tester,
             LayrzButton(
               labelText: 'Fab Exact Label',
-              style: LayrzButtonStyle.outlinedTonalFab,
+              style: LayrzButtonStyle.textFab,
               onTap: () {},
             ),
           );

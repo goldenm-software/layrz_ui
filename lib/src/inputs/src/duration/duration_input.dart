@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
-import 'package:layrz_ui/src/overlays/overlays.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -81,8 +81,39 @@ String _formatUnitPart(LayrzUiL10n l10n, LayrzDurationFormat format, LayrzDurati
 ///
 /// [LayrzDurationInput] captures a [Duration] value through a configurable picker
 /// showing day, hour, minute, and second fields. The picker adapts to screen size:
-/// - **Desktop/wide** (>= 960px, `!context.isCompact`): anchored panel positioned below the field
+/// - **Desktop/wide** (>= 960px, `!context.isCompact`): [LayrzEndDrawer] with a
+///   pinned Reset action (DESIGN-98)
 /// - **Mobile/compact** (< 960px, `context.isCompact`): bottom sheet covering the lower screen
+///
+/// **DESIGN-98: moved from the anchored panel to [LayrzEndDrawer].** The
+/// maintainer reported the anchored overlay "kinda weird" for this field after
+/// live usage. This is a container change only, not a commit-model change --
+/// this widget's fields already reported through [onChanged] on every edit
+/// with no draft state to buffer, and that live contract is kept completely
+/// unchanged. See [_LayrzDurationInputState._openDesktopDrawer]'s own doc for
+/// why: the only thing that moves is the existing Reset button, from the
+/// panel's own inline footer into the drawer's `actions` slot. No Cancel or
+/// Save is added.
+///
+/// **The fixed 420px drawer width ([LayrzEndDrawer.width]) is narrower than
+/// this panel used to render on a wide field, and now forces one field per
+/// row.** Before DESIGN-98, the panel's width tracked the anchor field's own
+/// rendered width (`LayrzAnchoredPanelWidthPolicy.matchAnchor`), which on a
+/// wide field could exceed 900px and comfortably fit all four unit fields on
+/// one row using the long-form labels (`_kNarrowFieldWidth`, 280px per
+/// field). Inside the drawer, [LayrzDurationPickerPanel]'s own
+/// `EdgeInsets.all(sp2)` padding (20px) leaves 372px of measured width for
+/// its [LayoutBuilder]; solving `_kFieldMinWidth`'s own
+/// `n * 200 + (n-1) * sp1 <= 372` yields `n = 1` -- so with all four default
+/// units visible, the panel now stacks day/hour/minute/second into four
+/// single-field rows instead of one shared row, and every field renders at
+/// its own full 372px width, comfortably above `_kNarrowFieldWidth` (280px),
+/// so the **long-form** unit labels stay reachable (unlike
+/// [LayrzTimeInput]'s fields panel, whose narrower per-field share inside the
+/// same 420px drawer makes its own short-form labels permanently the only
+/// option -- see that widget's class doc). The user-visible change here is a
+/// taller, single-column picker rather than the previous compact grid, not a
+/// loss of the long-form labels.
 ///
 /// **Unit bounds and capping:**
 /// - **Day**: no upper bound (0 to infinity)
@@ -221,7 +252,6 @@ class LayrzDurationInput extends StatefulWidget {
 class _LayrzDurationInputState extends State<LayrzDurationInput> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  late MenuController _panelController;
   Duration? _lastValue;
 
   @override
@@ -311,16 +341,55 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     _controller.text = parts.join(separator);
   }
 
+  /// Opens the mobile bottom sheet surface hosting [LayrzDurationPickerPanel].
+  ///
+  /// **Regression fix (DESIGN-170):** [LayrzDurationPickerPanel.onChanged] fires on
+  /// *every* field edit -- each +/- tap or keystroke on day/hour/minute/second, not just
+  /// a deliberate reset (see that callback's own doc comment). An earlier version of this
+  /// method wired `onChanged` straight to `Navigator.pop(context, duration)`, so the very
+  /// first field edit inside the sheet popped it immediately -- the bottom sheet equivalent
+  /// of the bug `28c9680` (`fix(duration): stop field edits from closing the panel...`)
+  /// already fixed for the desktop anchored panel below, by splitting that panel's
+  /// `onChanged` (live updates, panel stays open) from its `onReset` (closes the panel).
+  /// That split was never carried over to this mobile branch, so the same failure mode
+  /// regressed here: on a compact viewport, interacting with any picker field dismissed
+  /// the sheet instead of registering the edit.
+  ///
+  /// This mirrors the desktop branch's contract exactly: [onChanged] below reports the
+  /// live value to the caller and refreshes the anchor's summary text on every field edit,
+  /// same as the desktop panel does, but never pops the sheet -- only [onReset] does that,
+  /// since Reset is the one action in the picker meant to close it (see the desktop
+  /// branch's own `onReset` doc for why). The sheet's return value is used only to detect
+  /// "was this dismissed via Reset" versus "was this dismissed some other way" (the
+  /// barrier, Escape, drag-to-dismiss, or the system back gesture) -- those other exits
+  /// intentionally keep whatever value the live [onChanged] calls already reported, exactly
+  /// like closing the desktop panel without pressing Reset keeps its last live value.
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
 
-    final result = await LayrzBottomSheet.show<Duration?>(
+    final resetValue = await LayrzBottomSheet.show<Duration?>(
       context,
       builder: (context) => LayrzDurationPickerPanel(
         initialValue: widget.value,
         visibleUnits: widget.visibleUnits,
+        // Field edits (typing, +/- taps) report the new value and refresh the anchor's
+        // summary, but deliberately do NOT close the sheet -- see this method's doc
+        // comment for why. Mirrors the desktop anchored panel's own `onChanged` below.
         onChanged: (duration) {
-          Navigator.pop(context, duration);
+          widget.onChanged?.call(duration);
+          if (mounted) {
+            _updateSummary();
+          }
+        },
+        // Reset is the one action meant to close the sheet -- a deliberate "clear and
+        // I'm done" gesture, unlike an in-progress field edit. `LayrzDurationPickerPanel`
+        // routes a reset through `onReset` INSTEAD OF `onChanged` (see its own
+        // `_handleReset`, which calls `(widget.onReset ?? widget.onChanged)(...)` exactly
+        // once), so supplying this callback means the reset value has NOT already been
+        // reported by the `onChanged` above -- popping with it here is what reports it,
+        // mirrored by the `widget.onChanged?.call(resetValue)` below once the sheet closes.
+        onReset: (duration) {
+          LayrzModalRoute.popIfCurrent(context, duration);
         },
       ),
       initialSize: 0.5,
@@ -328,10 +397,152 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
       snapSizes: const [0.5, 0.9],
     );
 
-    if (result != null && mounted) {
-      widget.onChanged?.call(result);
+    if (resetValue != null && mounted) {
+      widget.onChanged?.call(resetValue);
       _updateSummary();
     }
+  }
+
+  /// Opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] on desktop (DESIGN-98),
+  /// replacing the previous [LayrzAnchoredPanel] hosting.
+  ///
+  /// **Commit model reversed (maintainer review, Finding 4): draft-then-Save,
+  /// not live commit.** Before this, every field edit inside the drawer
+  /// forwarded straight to [LayrzDurationInput.onChanged] with no discrete
+  /// commit gesture at all -- the drawer carried Reset alone, on the
+  /// reasoning that live reporting left nothing for a Save to commit. The
+  /// maintainer's explicit follow-up reverses that: *"it needs the save and
+  /// cancel buttons on actions."* [_draft] now buffers every field edit
+  /// locally; [widget.onChanged] fires exactly once, when Save is pressed,
+  /// mirroring [LayrzTimeInput]/[LayrzDateRangeInput]/every other
+  /// Save-carrying picker in this batch rather than leaving Duration as the
+  /// one widget whose caller sees values it never confirmed. Cancel discards
+  /// [_draft] and closes without reporting anything, restoring
+  /// [LayrzDurationInput.value] on the next open (a fresh [_draft] is seeded
+  /// from [widget.value] every time this method runs, so nothing needs to be
+  /// explicitly rolled back). Reset stays a deliberate "clear and I'm done"
+  /// gesture distinct from Save: it zeroes [_draft], reports the zeroed
+  /// duration immediately, and closes the drawer, exactly as it did before
+  /// this change -- unlike the eight date/time pickers' own Clear (which only
+  /// empties the draft and leaves Save to actually commit), Duration's Reset
+  /// has always been both the clear-and-commit action in one gesture, and
+  /// that stays true here.
+  ///
+  /// **Save is always enabled.** Unlike the eight date/time pickers (whose
+  /// Save is gated on "has the user actually chosen something", since those
+  /// widgets start from a genuinely empty state), every duration field
+  /// already holds a concrete integer the moment the drawer opens -- there is
+  /// no "nothing chosen yet" state for a live field cluster to be in, exactly
+  /// the same reasoning [LayrzTimeSurfaceState.canSave] documents for time
+  /// fields. `actions` being non-empty means [LayrzEndDrawer.show]'s own
+  /// `canDismiss` inference now defaults to `false`; Cancel and Escape/the
+  /// barrier tap must still discard the draft exactly like every other
+  /// picker in this batch, so `canDismiss: true` is passed explicitly.
+  Future<void> _openDesktopDrawer() async {
+    if (widget.disabled) return;
+
+    final panelKey = GlobalKey<LayrzDurationPickerPanelState>();
+    var draft = widget.value;
+
+    await LayrzEndDrawer.show<void>(
+      context,
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // DESIGN-98 Finding 5 (maintainer review): "title should be the
+      // labelText of the input" -- see LayrzDateInput's identical doc for the
+      // full rationale, including why `semanticLabel` above falls back to
+      // `hintText` only rather than doubling this announcement.
+      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // Escape and the barrier tap must still cancel the draft even with
+      // actions present -- matches every other Save-carrying picker in this
+      // batch (see e.g. LayrzTimeInput._openDesktopDrawer's identical
+      // override and doc).
+      canDismiss: true,
+      builder: (context) => LayrzDurationPickerPanel(
+        key: panelKey,
+        initialValue: widget.value,
+        visibleUnits: widget.visibleUnits,
+        showInlineFooter: false,
+        // Field edits (typing, +/- taps) only update the local draft now --
+        // see this method's own doc for why this no longer forwards straight
+        // to widget.onChanged.
+        onChanged: (duration) => draft = duration,
+        // Reset remains its own deliberate commit-and-close gesture, distinct
+        // from Save -- see this method's own doc.
+        onReset: (duration) {
+          widget.onChanged?.call(duration);
+          _updateSummary();
+          LayrzModalRoute.popIfCurrent(context);
+        },
+      ),
+      // **`actions` is wrapped in its own `Builder` so its `onTap` closures
+      // capture a `context` genuinely inside the drawer's route (maintainer
+      // review, Finding 2).** `_openDesktopDrawer`'s own `context` -- the
+      // anchor field's, captured once when this method runs -- is what an
+      // ordinary closure written directly in this list would capture
+      // instead, and `ModalRoute.of` on that outer context resolves to the
+      // app's base route, not this drawer: `LayrzModalRoute.popIfCurrent`
+      // would then read that base route's `isCurrent` (always `false` while
+      // the drawer sits on top of it) and silently never pop. This is the
+      // structural fix behind the maintainer's reported crash: `'currentConfiguration.isNotEmpty'
+      // — You have popped the last page off of the stack`, thrown from this
+      // exact `onTap` (`duration_input.dart:497` in the original report) --
+      // the previous, unguarded `Navigator.pop(context)` used that same
+      // wrong outer context, and popping the *base* route out from under
+      // `go_router`'s delegate is exactly what asserts. `Builder` supplies a
+      // fresh `context` from inside this subtree -- which [LayrzEndDrawer]
+      // renders as a sibling of the scrolling `builder` body, both inside
+      // the same pushed route -- so `LayrzModalRoute.popIfCurrent` resolves
+      // the drawer's own route and a second call, from any cause, is
+      // guaranteed a no-op rather than a double pop.
+      actions: [
+        Builder(
+          builder: (drawerContext) {
+            final tokens = drawerContext.tokens;
+            // Each button wrapped in Flexible, not left to size itself --
+            // mirrors LayrzPickerDrawerActions's identical Cancel/Clear/Save
+            // row so Duration's own Cancel/Reset/Save combination never
+            // overflows the drawer's padded width the same way that shared
+            // widget's own doc explains.
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: LayrzButton.cancel(
+                    labelText: drawerContext.l10n.actionCancel,
+                    onTap: () => LayrzModalRoute.popIfCurrent(drawerContext),
+                    style: LayrzButtonStyle.text,
+                  ),
+                ),
+                SizedBox(width: tokens.spacing.sp2),
+                // Matches the picker Clear button's own styling convention
+                // (LayrzPickerDrawerFooter: warning type, text style) --
+                // Reset here plays the identical "destructive, not the
+                // primary action" role.
+                Flexible(
+                  child: LayrzButton(
+                    labelText: drawerContext.l10n.durationReset,
+                    onTap: () => panelKey.currentState?.reset(),
+                    type: LayrzButtonType.warning,
+                    style: LayrzButtonStyle.text,
+                  ),
+                ),
+                SizedBox(width: tokens.spacing.sp2),
+                Flexible(
+                  child: LayrzButton.save(
+                    labelText: drawerContext.l10n.actionSave,
+                    onTap: () {
+                      widget.onChanged?.call(draft);
+                      _updateSummary();
+                      LayrzModalRoute.popIfCurrent(drawerContext);
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 
   /// Builds the clock-style icon that identifies this field as a duration picker.
@@ -618,14 +829,6 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
     );
   }
 
-  /// Builds the anchor widget for desktop anchored panel.
-  Widget _buildAnchor(BuildContext context, MenuController controller) {
-    return _buildInteractiveField(
-      context: context,
-      onTap: widget.disabled ? null : controller.open,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.value != _lastValue) {
@@ -643,68 +846,14 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         onTap: widget.disabled ? null : _openMobileSurface,
       );
     } else {
-      // Desktop: return an anchored panel that covers the field itself, mirroring
-      // `LayrzSelectInput`'s "elevated field" illusion (DESIGN-145) -- see the
-      // `border` argument below for why. `widthPolicy: matchAnchor` -- the panel
-      // spans the field's full rendered width, exactly like `LayrzSelectInput`.
-      //
-      // This REVERSES an earlier decision (device-tested and reported by the
-      // maintainer): the panel previously stayed `contentSized` within
-      // 280.0-480.0 on the reasoning that `LayrzDurationPickerPanel`'s
-      // two-column grid depended on that exact width range (the measured
-      // 227px/7-character constraint documented on that widget's class doc).
-      // On a wide anchor field, `contentSized` made the panel occupy only a
-      // small fraction of the field -- visually wrong, and rejected on sight.
-      // `LayrzDurationPickerPanel` no longer depends on a capped width: its own
-      // per-unit fields now carry a minimum width and wrap to additional rows
-      // via a `LayoutBuilder` that reads the panel's own measured width,
-      // instead of the old fixed two-column `LayrzRow`/`LayrzCol` grid, so
-      // they stay legible at whatever width `matchAnchor` actually provides --
-      // see that widget's class doc for the new mechanism.
-      final tokens = context.tokens;
-      final hasErrors = widget.errors.isNotEmpty;
-
-      return LayrzAnchoredPanel(
-        widthPolicy: LayrzAnchoredPanelWidthPolicy.matchAnchor,
-        maxHeight: 400.0,
-        coverAnchor: true,
-        childFocusNode: _focusNode,
-        builder: (context, controller) {
-          _panelController = controller;
-          return _buildAnchor(context, controller);
-        },
-        // Painted by the panel around its own capped viewport, not by this
-        // widget around its content -- see `LayrzAnchoredPanelBorder`'s own doc
-        // comment for why that distinction matters. Mirrors
-        // `select_input.dart`'s identical border, colored the same way
-        // (primary, or danger when the field has errors).
-        border: LayrzAnchoredPanelBorder(
-          color: hasErrors ? tokens.colors.danger : tokens.colors.primary,
-          width: tokens.border.base,
-        ),
-        child: LayrzDurationPickerPanel(
-          initialValue: widget.value,
-          visibleUnits: widget.visibleUnits,
-          // Field edits (typing, +/- taps) report the new value and update the
-          // anchor's summary, but deliberately do NOT close the panel -- a user
-          // composing a duration across multiple fields (day, then hour, then
-          // minute) needs the panel to stay open between edits. Only `onReset`
-          // below closes it; see that callback's wiring for why.
-          onChanged: (duration) {
-            widget.onChanged?.call(duration);
-            _updateSummary();
-          },
-          // Reset is the one action in the panel meant to close it: it is a
-          // deliberate "clear and I'm done" gesture, unlike an in-progress field
-          // edit. Wiring this separately from `onChanged` above is what stops
-          // every +/- tap and keystroke from closing the panel too -- they used
-          // to share one callback that always closed it.
-          onReset: (duration) {
-            widget.onChanged?.call(duration);
-            _updateSummary();
-            _panelController.close();
-          },
-        ),
+      // Desktop: opens [LayrzDurationPickerPanel] in [LayrzEndDrawer]
+      // (DESIGN-98) -- replacing the previous `LayrzAnchoredPanel` hosting.
+      // See [_openDesktopDrawer]'s own doc comment for why this is a
+      // container change only, with Reset moved into the drawer's `actions`
+      // slot and no Cancel/Save added.
+      return _buildInteractiveField(
+        context: context,
+        onTap: widget.disabled ? null : _openDesktopDrawer,
       );
     }
   }

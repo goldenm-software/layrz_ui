@@ -18,19 +18,6 @@ void main() {
         expect(find.byType(LayrzChip), findsOneWidget);
       });
 
-      testWidgets('renders with leading icon', (tester) async {
-        await pumpThemed(
-          tester,
-          LayrzChip(
-            labelText: 'With Icon',
-            leadingIcon: MdiIcons.checkCircleOutline,
-          ),
-        );
-
-        expect(find.byType(LayrzChip), findsOneWidget);
-        expect(find.byIcon(MdiIcons.checkCircleOutline), findsOneWidget);
-      });
-
       testWidgets('renders delete icon when onDelete is non-null', (tester) async {
         await pumpThemed(
           tester,
@@ -40,7 +27,7 @@ void main() {
           ),
         );
 
-        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
       });
 
       testWidgets('does not render delete icon when onDelete is null', (tester) async {
@@ -49,7 +36,7 @@ void main() {
           const LayrzChip(labelText: 'Not Deletable'),
         );
 
-        expect(find.byIcon(MdiIcons.closeCircle), findsNothing);
+        expect(find.byIcon(MdiIcons.close), findsNothing);
       });
 
       testWidgets('renders with long labelText', (tester) async {
@@ -184,7 +171,7 @@ void main() {
         expect(deleted, isFalse);
 
         // Tap the delete icon
-        await tester.tap(find.byIcon(MdiIcons.closeCircle));
+        await tester.tap(find.byIcon(MdiIcons.close));
         await tester.pump();
 
         expect(deleted, isTrue);
@@ -249,35 +236,6 @@ void main() {
         expect(width, lessThan(500)); // Sanity check for reasonable width
       });
 
-      testWidgets('computeWidth grows with leading icon', (tester) async {
-        await pumpThemed(tester, const LayrzChip(labelText: 'Base'));
-
-        final baseWidth = tester
-            .widget<LayrzChip>(find.byType(LayrzChip))
-            .computeWidth(
-              tester.element(find.byType(LayrzChip)),
-            );
-
-        await tester.pumpWidget(
-          Container(), // Reset
-        );
-        await pumpThemed(
-          tester,
-          LayrzChip(
-            labelText: 'Base',
-            leadingIcon: MdiIcons.checkCircleOutline,
-          ),
-        );
-
-        final widthWithIcon = tester
-            .widget<LayrzChip>(find.byType(LayrzChip))
-            .computeWidth(
-              tester.element(find.byType(LayrzChip)),
-            );
-
-        expect(widthWithIcon, greaterThan(baseWidth));
-      });
-
       testWidgets('computeWidth grows with delete icon', (tester) async {
         await pumpThemed(tester, const LayrzChip(labelText: 'Base'));
 
@@ -331,7 +289,7 @@ void main() {
 
         // Verify both chip label and delete icon are rendered
         expect(find.text('My Chip'), findsOneWidget);
-        expect(find.byIcon(MdiIcons.closeCircle), findsOneWidget);
+        expect(find.byIcon(MdiIcons.close), findsOneWidget);
       });
     });
   });

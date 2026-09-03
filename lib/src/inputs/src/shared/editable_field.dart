@@ -5,6 +5,8 @@ import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
+import 'input_style_spec.dart';
+
 /// Library-private configuration for the EditableText widget.
 ///
 /// Used internally by LayrzTextInput and LayrzTextAreaInput to avoid duplicating
@@ -22,6 +24,19 @@ class LayrzEditableFieldConfig {
 
   /// Whether the field is read-only.
   final bool readOnly;
+
+  /// The list of error messages associated with the field.
+  ///
+  /// A non-empty list marks the field as errored for the purpose of resolving
+  /// the editable text's own color: DESIGN-106 requires that color to follow
+  /// the exact same [LayrzInputStyleSpec] precedence
+  /// (`disabled > readOnly > error > pressed > hover/focused > default`) used
+  /// by [LayrzInputChrome] for the border, so a focused-and-errored field
+  /// still reads as danger rather than as focus. Defaults to `const []`
+  /// (no errors) so existing call sites that predate this field keep their
+  /// prior "always fg1 unless disabled" behavior only if they truly have no
+  /// error state to report.
+  final List<String> errors;
 
   /// The text editing controller for the input field.
   final TextEditingController? controller;
@@ -92,6 +107,7 @@ class LayrzEditableFieldConfig {
     required this.hintText,
     required this.disabled,
     required this.readOnly,
+    this.errors = const [],
     required this.controller,
     required this.focusNode,
     required this.onChanged,
@@ -390,12 +406,27 @@ class LayrzEditableFieldState extends State<LayrzEditableField> implements TextS
     );
   }
 
-  /// Computes the text color based on field state.
+  /// Computes the color of the editable text itself for the current field state.
+  ///
+  /// DESIGN-106: the typed text must track the same color as the surrounding
+  /// [LayrzInputChrome] border and its prefix/suffix affixes, which are both
+  /// resolved from [LayrzInputStyleSpec.resolve] (e.g. `tokens.colors.primary`
+  /// on focus). Prior to this fix, this method reimplemented a private,
+  /// incomplete copy of that precedence -- checking only [LayrzEditableFieldConfig.disabled]
+  /// -- so the caret/text color never reflected focus, hover, or even error
+  /// state. Delegating to the shared resolver keeps this in lockstep with the
+  /// chrome by construction, using the same
+  /// `disabled > readOnly > error > pressed > hover/focused > default`
+  /// precedence, so a focused-and-errored field still reads as danger, and a
+  /// disabled field never picks up focus coloring.
   Color _getTextColor(LayrzTokens tokens) {
-    if (widget.config.disabled) {
-      return tokens.colors.fg4;
-    }
-    return tokens.colors.fg1;
+    final spec = LayrzInputStyleSpec.resolve(
+      states: _states,
+      tokens: tokens,
+      hasErrors: widget.config.errors.isNotEmpty,
+      readOnly: widget.config.readOnly,
+    );
+    return spec.textColor;
   }
 
   void _handleTap() {

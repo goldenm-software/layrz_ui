@@ -1,0 +1,474 @@
+import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/l10n/l10n.dart';
+
+import 'day_grid_cell.dart';
+import 'focus_ring.dart';
+import 'grid_math.dart';
+import 'range_bar.dart';
+import 'week_number_gutter.dart';
+import 'weekday_header.dart';
+
+/// The maximum width, in logical pixels, [LayrzPickersDayGrid] centres
+/// itself within under a wide anchor.
+///
+/// Prevents a ~7-column day grid from stretching illegibly thin-and-wide
+/// under [LayrzAnchoredPanelWidthPolicy.matchAnchor] on a very wide field —
+/// see the implementation plan's Risk section, which cites
+/// `LayrzDurationInput`'s `contentSized` rejection for the *inverse* failure
+/// (too narrow) as the reason this grid must handle its own width instead of
+/// assuming the panel already constrains it usefully.
+const double kDayGridMaxWidth = 360.0;
+
+/// A single key mapped to a cell's [FocusNode], used by [LayrzPickersDayGrid]
+/// to build the grid's [FocusTraversalGroup] and by an injected
+/// [LayrzGridKeyboardHandler] (see that typedef) to move focus between
+/// cells.
+typedef LayrzGridFocusKey = DateTime;
+
+/// The signature `U10`'s keyboard-handler implementations satisfy.
+///
+/// [LayrzPickersDayGrid] and [LayrzPickersMonthGrid] own focus-traversal
+/// *structure* (the [FocusTraversalGroup] and one [FocusNode] per cell) so
+/// callers never re-wire keyboard behavior themselves, but delegate actual
+/// key handling — arrow-key movement between cells, Enter/Space to select —
+/// through this injectable seam rather than hardcoding it, so `U10` can land
+/// its own `grid_keyboard_handler.dart` against this contract without
+/// editing any file this unit owns.
+///
+/// Returns [KeyEventResult.handled] when [event] was consumed, otherwise
+/// [KeyEventResult.ignored] so it falls through to Flutter's default focus
+/// traversal. [focusedKey] is the grid value ([DateTime] for the day grid,
+/// also [DateTime] — the first-of-month — for the month grid) currently
+/// focused. [requestFocus] lets the handler move focus to a different cell
+/// by key.
+typedef LayrzGridKeyboardHandler = KeyEventResult Function(
+  KeyEvent event,
+  LayrzGridFocusKey focusedKey,
+  void Function(LayrzGridFocusKey key) requestFocus,
+);
+
+/// A compact, purpose-built month-grid day picker surface.
+///
+/// **Built fresh per D72** — this widget does not import, wrap, subclass, or
+/// extract from `lib/src/calendar/src/*`; `grid_math.dart`'s doc comment
+/// records why the underlying arithmetic is deliberately re-derived rather
+/// than shared.
+///
+/// Renders a Monday-first-by-default (see [firstDayOfWeek]) 6-row grid: a
+/// [LayrzPickersWeekdayHeader], optionally a [LayrzPickersWeekNumberGutter],
+/// and 42 [LayrzPickersDayGridCell]s spanning the leading/trailing edges of
+/// adjacent months. Selection/today/range/disabled vocabulary is entirely
+/// [LayrzPickersDayGridCell]'s — this widget only classifies each date into
+/// a role and wires taps to [onDayTap].
+///
+/// **Own focus traversal.** Every cell gets its own [FocusNode], wrapped in
+/// one [FocusTraversalGroup] for the whole grid, so a caller never has to
+/// re-wire arrow-key or tab behavior. Actual key handling is delegated
+/// through [keyboardHandler] — see [LayrzGridKeyboardHandler]'s doc for why
+/// this is an injectable seam rather than hardcoded here. A key move that
+/// crosses this page's own 42-cell window (`PageUp`/`PageDown`, or an
+/// arrow/Home/End jump the handler resolves to a date outside the page) is
+/// reported to the caller via [onDisplayedMonthChanged] and re-focused
+/// automatically once the caller's rebuild lands the new page — see that
+/// field's doc.
+///
+/// **Stays legible under `matchAnchor` on a wide field** via the outer
+/// [LayoutBuilder]: the grid centres itself and caps at [kDayGridMaxWidth]
+/// rather than stretching its 7 columns across the full panel width.
+class LayrzPickersDayGrid extends StatefulWidget {
+  /// The month this grid page displays, as any [DateTime] within that month
+  /// (only its year/month fields are read). Also supplies the [DateTime]
+  /// subtype (plain or `TZDateTime`) every generated cell date is built in,
+  /// via `sameZoneDate`.
+  final DateTime displayedMonth;
+
+  /// The currently selected single date, or `null`. Renders as
+  /// [LayrzPickerCellRole.selected]. Mutually exclusive with [rangeStart]/
+  /// [rangeEnd] — callers pass one or the other, never both.
+  final DateTime? selectedDate;
+
+  /// The start of a completed or in-progress contiguous range, or `null`.
+  final DateTime? rangeStart;
+
+  /// The end of a completed contiguous range, or `null`. `null` while the
+  /// range is half-open (only [rangeStart] chosen).
+  final DateTime? rangeEnd;
+
+  /// Dates that render as [LayrzPickerCellRole.rangeInterior] and reject
+  /// taps — supplied by the caller's range policy (`isRejected`) rather than
+  /// recomputed here, so this widget stays a pure renderer of whatever
+  /// selection state it is handed.
+  final Set<DateTime> rejectedDates;
+
+  /// The earliest selectable date, inclusive. `null` means no lower bound.
+  final DateTime? firstDay;
+
+  /// The latest selectable date, inclusive. `null` means no upper bound.
+  final DateTime? lastDay;
+
+  /// Individually disabled dates, beyond the [firstDay]/[lastDay] bounds.
+  final Set<DateTime> disabledDays;
+
+  /// Which [DateTime] weekday constant starts each week. Defaults to
+  /// [DateTime.monday] — deliberately differing from `LayrzCalendar`'s
+  /// `DateTime.sunday` default; see the implementation plan's Q16.
+  final int firstDayOfWeek;
+
+  /// Whether the ISO week-number gutter renders. Defaults to `true`; cut to
+  /// a thin decorative strip below `isCompact` regardless of this value —
+  /// see [LayrzPickersWeekNumberGutter]'s class doc.
+  final bool showWeekNumbers;
+
+  /// Called when a selectable day cell is tapped, with the tapped date.
+  /// Never called for a disabled or rejected cell.
+  final ValueChanged<DateTime> onDayTap;
+
+  /// Optional keyboard-handling delegate — see [LayrzGridKeyboardHandler].
+  /// `null` means only Flutter's default [FocusTraversalGroup] behavior
+  /// (Tab/Shift+Tab) applies; arrow-key movement is a no-op until `U10`
+  /// supplies a handler.
+  final LayrzGridKeyboardHandler? keyboardHandler;
+
+  /// Called when keyboard navigation needs to move off this page — a
+  /// `PageUp`/`PageDown` step, or an arrow key crossing this page's
+  /// leading/trailing edge — with the number of months to step (usually
+  /// `-1` or `1`). `null` (the default) means this grid exposes no way to
+  /// change [displayedMonth] itself, matching every existing caller before
+  /// `U10`: this widget renders only a single page and never owned
+  /// navigation of its own (see the class doc) — see `LayrzPickersMonthGrid
+  /// .onYearChanged` for the same shape one level up (year, not month).
+  ///
+  /// **Additive and optional** so the six widgets already composing this
+  /// grid (`LayrzDateSurface`, `LayrzDateRangeSurface`,
+  /// `LayrzDateTimeSurface`, `LayrzDateTimeRangeSurface`) keep compiling and
+  /// behaving identically until each one is wired to supply it — leaving it
+  /// unset degrades gracefully to "keyboard can't leave the visible page",
+  /// never to a crash or a required-parameter break.
+  final ValueChanged<int>? onDisplayedMonthChanged;
+
+  /// Creates a new [LayrzPickersDayGrid].
+  const LayrzPickersDayGrid({
+    super.key,
+    required this.displayedMonth,
+    this.selectedDate,
+    this.rangeStart,
+    this.rangeEnd,
+    this.rejectedDates = const {},
+    this.firstDay,
+    this.lastDay,
+    this.disabledDays = const {},
+    this.firstDayOfWeek = DateTime.monday,
+    this.showWeekNumbers = true,
+    required this.onDayTap,
+    this.keyboardHandler,
+    this.onDisplayedMonthChanged,
+  }) : assert(
+         firstDayOfWeek >= DateTime.monday && firstDayOfWeek <= DateTime.sunday,
+         'firstDayOfWeek must be between DateTime.monday (1) and DateTime.sunday (7), got $firstDayOfWeek.',
+       );
+
+  @override
+  State<LayrzPickersDayGrid> createState() => _LayrzPickersDayGridState();
+}
+
+class _LayrzPickersDayGridState extends State<LayrzPickersDayGrid> {
+  final Map<DateTime, FocusNode> _focusNodes = {};
+
+  /// A focus target requested while it fell outside the page rendered at
+  /// request time, applied once the next frame (after [widget]
+  /// `.displayedMonth` has advanced and a fresh set of cells/[FocusNode]s
+  /// exists) via [_applyPendingFocus] — see [_requestFocus].
+  DateTime? _pendingFocusDate;
+
+  FocusNode _focusNodeFor(DateTime date) => _focusNodes.putIfAbsent(date, () => FocusNode(debugLabel: '$date'));
+
+  /// The [LayrzGridKeyboardHandler] callback `U10`'s handler receives as its
+  /// `requestFocus` parameter.
+  ///
+  /// Handles the case [LayrzGridKeyboardHandler] alone cannot: [key] asking
+  /// for a different displayed month than [widget.displayedMonth] — a
+  /// `PageUp`/`PageDown` step, or an arrow/Home/End move landing beyond the
+  /// rendered 42-day window. Routes through [widget.onDisplayedMonthChanged]
+  /// whenever [key]'s month/year differs from the currently displayed one,
+  /// **even when this page already happens to render a [FocusNode] for
+  /// [key]** as a greyed leading/trailing adjacent-month cell (see
+  /// `isAdjacent` in [build]) — reusing that pre-existing node directly
+  /// would silently skip the month-change callback the caller (and its own
+  /// header/other state) needs to run, since "the cell is already on
+  /// screen" and "the grid's own notion of which month is displayed should
+  /// advance" are different facts a `PageUp` always wants both of. Only a
+  /// same-month key (an ordinary arrow/Home/End move that never leaves
+  /// [widget.displayedMonth]) takes the direct fast path.
+  void _requestFocus(DateTime key) {
+    final isSameDisplayedMonth = key.year == widget.displayedMonth.year && key.month == widget.displayedMonth.month;
+    if (isSameDisplayedMonth) {
+      _focusNodeFor(key).requestFocus();
+      return;
+    }
+
+    final onChanged = widget.onDisplayedMonthChanged;
+    if (onChanged == null) {
+      // No seam to change the displayed month -- fall back to the direct
+      // node if this page happens to render one anyway (an adjacent-period
+      // cell within the same 42-day page), so arrow/Home/End movement still
+      // works for a caller that has not wired month navigation.
+      _focusNodes[key]?.requestFocus();
+      return;
+    }
+
+    final months = (key.year - widget.displayedMonth.year) * 12 + (key.month - widget.displayedMonth.month);
+    if (months == 0) return;
+
+    _pendingFocusDate = key;
+    onChanged(months);
+  }
+
+  /// Focuses [_pendingFocusDate] once the page it lives on has actually
+  /// rendered — scheduled from [didUpdateWidget] via a post-frame callback
+  /// so it runs after this [State]'s own rebuild (and so after
+  /// [_focusNodeFor] has allocated the new page's nodes), not synchronously
+  /// inside `setState`.
+  void _applyPendingFocus() {
+    final pending = _pendingFocusDate;
+    if (pending == null) return;
+    _pendingFocusDate = null;
+    _focusNodeFor(pending).requestFocus();
+  }
+
+  @override
+  void didUpdateWidget(LayrzPickersDayGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_pendingFocusDate != null && !isSameDay(oldWidget.displayedMonth, widget.displayedMonth)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _applyPendingFocus();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  bool _isDisabled(DateTime date) {
+    if (widget.firstDay != null && date.isBefore(_dayOnly(widget.firstDay!))) return true;
+    if (widget.lastDay != null && date.isAfter(_dayOnly(widget.lastDay!))) return true;
+    return widget.disabledDays.any((d) => isSameDay(d, date));
+  }
+
+  DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  LayrzPickerCellRole _roleFor(DateTime date, DateTime today) {
+    if (widget.rangeStart != null) {
+      final start = widget.rangeStart!;
+      final end = widget.rangeEnd;
+      if (isSameDay(date, start) || (end != null && isSameDay(date, end))) {
+        return LayrzPickerCellRole.rangeEndpoint;
+      }
+      if (end != null && date.isAfter(start) && date.isBefore(end)) {
+        return LayrzPickerCellRole.rangeInterior;
+      }
+    }
+    if (widget.selectedDate != null && isSameDay(date, widget.selectedDate!)) {
+      return LayrzPickerCellRole.selected;
+    }
+    if (isSameDay(date, today)) {
+      return LayrzPickerCellRole.today;
+    }
+    return LayrzPickerCellRole.none;
+  }
+
+  /// Classifies [date] for [LayrzPickersRangeBar] — see Finding 2's
+  /// continuous-bar ruling. Distinct from [_roleFor], which drives the
+  /// individual cell's own foreground styling: this only says whether the
+  /// bar fills under this column and where its rounded caps land.
+  ///
+  /// A completed range's true start/end always rounds off here, **even
+  /// when that day falls on a row's own leading/trailing edge** — the
+  /// "square where the range continues into the next row" rule only
+  /// applies to a row edge the range crosses *without* ending, which this
+  /// classification alone (independent of row position) already captures:
+  /// [LayrzPickersRangeBar] squares off a column only when its neighbour
+  /// in the same row is also in-range, and a `rangeStart`/`rangeEnd`
+  /// column's *far* side (the side away from the range) is never adjacent
+  /// to another in-range column by construction, so it can never square
+  /// off there regardless of which column of the row it lands in.
+  LayrzRangeBarColumn _rangeBarColumnFor(DateTime date) {
+    final start = widget.rangeStart;
+    final end = widget.rangeEnd;
+    if (start == null || end == null) return LayrzRangeBarColumn.none;
+    if (isSameDay(start, end) && isSameDay(date, start)) return LayrzRangeBarColumn.rangeStartAndEnd;
+    if (isSameDay(date, start)) return LayrzRangeBarColumn.rangeStart;
+    if (isSameDay(date, end)) return LayrzRangeBarColumn.rangeEnd;
+    if (date.isAfter(start) && date.isBefore(end)) return LayrzRangeBarColumn.rangeInterior;
+    return LayrzRangeBarColumn.none;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final l10n = context.l10n;
+    final today = DateTime.now();
+
+    final gridDates = gridPageFor(
+      reference: widget.displayedMonth,
+      year: widget.displayedMonth.year,
+      month: widget.displayedMonth.month,
+      firstDayOfWeek: widget.firstDayOfWeek,
+    );
+
+    final rows = <List<DateTime>>[
+      for (var r = 0; r < 6; r++) gridDates.sublist(r * 7, r * 7 + 7),
+    ];
+    final rowStartDates = [for (final row in rows) row.first];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth.clamp(0.0, kDayGridMaxWidth)
+            : kDayGridMaxWidth;
+        final gutterWidth = widget.showWeekNumbers
+            ? (context.isCompact ? kWeekNumberGutterCompactWidth : kWeekNumberGutterWidth)
+            : 0.0;
+        const rowHeight = 40.0;
+
+        return Center(
+          child: SizedBox(
+            width: availableWidth,
+            child: FocusTraversalGroup(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LayrzPickersWeekdayHeader(firstDayOfWeek: widget.firstDayOfWeek, gutterWidth: gutterWidth),
+                  SizedBox(height: tokens.spacing.sp1),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LayrzPickersWeekNumberGutter(
+                        rowStartDates: rowStartDates,
+                        rowHeight: rowHeight,
+                        visible: widget.showWeekNumbers,
+                      ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            for (final row in rows)
+                              SizedBox(
+                                height: rowHeight,
+                                // Stack, not a bare Row: the range bar paints
+                                // as a background sibling *behind* the row of
+                                // cells, per Finding 2 -- it never becomes
+                                // part of any individual cell's own box, so
+                                // the cells above measure identically with or
+                                // without an active range (D15). Positioned to
+                                // the full stack size (matching the Row below)
+                                // rather than fit: StackFit.expand, so the bar
+                                // sizing follows the same Expanded-column
+                                // logic doc'd on LayrzPickersRangeBar.
+                                child: Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      child: LayrzPickersRangeBar(
+                                        columns: [for (final date in row) _rangeBarColumnFor(date)],
+                                      ),
+                                    ),
+                                    Row(
+                                      children: [
+                                        for (final date in row)
+                                          Expanded(
+                                            child: Builder(
+                                              builder: (context) {
+                                                final isAdjacent = !isInGridMonth(
+                                                  date,
+                                                  year: widget.displayedMonth.year,
+                                                  month: widget.displayedMonth.month,
+                                                );
+                                                final isDisabled = _isDisabled(date) || isAdjacent;
+                                                final isRejected = widget.rejectedDates.any(
+                                                  (d) => isSameDay(d, date),
+                                                );
+                                                return Focus(
+                                                  onKeyEvent: widget.keyboardHandler == null
+                                                      ? null
+                                                      : (node, event) =>
+                                                            widget.keyboardHandler!(event, date, _requestFocus),
+                                                  child: LayrzFocusRing(
+                                                    focusNode: _focusNodeFor(date),
+                                                    child: LayrzPickersDayGridCell(
+                                                      label: '${date.day}',
+                                                      semanticLabel: _semanticDateLabel(date, l10n),
+                                                      role: _roleFor(date, today),
+                                                      isAdjacentPeriod: isAdjacent,
+                                                      isDisabled: isDisabled,
+                                                      isRejected: isRejected,
+                                                      onTap: (isDisabled || isRejected)
+                                                          ? null
+                                                          : () => widget.onDayTap(date),
+                                                      focusNode: _focusNodeFor(date),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Builds a full localized "Weekday, Month D, Year" screen-reader label for
+/// [date], independent of the visible cell text (which is just the day
+/// number).
+String _semanticDateLabel(DateTime date, LayrzUiL10n l10n) {
+  final monthName = _monthNameOf(date.month, l10n);
+  final weekdayName = weekdayFullNameFor(date.weekday, l10n);
+  return '$weekdayName, $monthName ${date.day}, ${date.year}';
+}
+
+String _monthNameOf(int month, LayrzUiL10n l10n) {
+  switch (month) {
+    case 1:
+      return l10n.monthJanuary;
+    case 2:
+      return l10n.monthFebruary;
+    case 3:
+      return l10n.monthMarch;
+    case 4:
+      return l10n.monthApril;
+    case 5:
+      return l10n.monthMay;
+    case 6:
+      return l10n.monthJune;
+    case 7:
+      return l10n.monthJuly;
+    case 8:
+      return l10n.monthAugust;
+    case 9:
+      return l10n.monthSeptember;
+    case 10:
+      return l10n.monthOctober;
+    case 11:
+      return l10n.monthNovember;
+    default:
+      return l10n.monthDecember;
+  }
+}

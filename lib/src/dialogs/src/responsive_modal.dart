@@ -141,16 +141,19 @@ class LayrzResponsiveModal {
   /// - [builder]: a builder function that constructs the modal's content. The
   ///   builder receives the surface's own context as an argument, matching
   ///   [LayrzBottomSheet.show]'s `builder` shape. For the dialog branch, the
-  ///   built widget is passed as [LayrzDialog.show]'s `child` escape hatch —
-  ///   [LayrzResponsiveModal] does not compose the dialog's `title`/`content`/
-  ///   `actions` slots, since a single [builder] must describe one piece of
-  ///   content usable on both surfaces. **This is a deliberate API limitation,
-  ///   not an oversight**: a caller that wants the dialog branch's structured
-  ///   `title`/`content`/`actions` slots — rather than one freeform widget —
-  ///   cannot get them through this wrapper, because the same [builder] result
-  ///   is also handed to [LayrzBottomSheet.show], which has no equivalent
-  ///   slotted shape to receive them. Call [LayrzDialog.show] directly when
-  ///   those slots matter more than responsive presentation.
+  ///   built widget ends up inside [LayrzDialog.show]'s `child` escape hatch
+  ///   (see [actions]'s own doc for exactly how, once [actions] is also
+  ///   supplied) — [LayrzResponsiveModal] does not compose the dialog's
+  ///   `title`/`content` slots, since a single [builder] must describe one
+  ///   piece of content usable on both surfaces. **This remains a deliberate
+  ///   API limitation for `title`/`content` specifically, not an oversight**:
+  ///   a caller that wants the dialog branch's structured `title`/`content`
+  ///   slots — rather than one freeform widget — cannot get them through this
+  ///   wrapper, because the same [builder] result is also handed to
+  ///   [LayrzBottomSheet.show], which has no equivalent slotted shape to
+  ///   receive them. Call [LayrzDialog.show] directly when those two slots
+  ///   matter more than responsive presentation. [actions], unlike `title`/
+  ///   `content`, is available on this wrapper — see its own doc.
   /// - [isCompact]: overrides which surface is chosen, regardless of viewport
   ///   width. Defaults to `context.isCompact` (`true` below the `sm`/`md`
   ///   breakpoint boundary at 960 logical pixels — see
@@ -161,19 +164,32 @@ class LayrzResponsiveModal {
   ///   sheet even at a wider breakpoint than a two-button confirm would.
   /// - [canDismiss]: whether the modal can be dismissed by any route other than an
   ///   explicit action (barrier tap, Escape, the X icon on the dialog branch, drag-dismiss
-  ///   on the sheet branch, and the system/Android back gesture on both). **Forwarded to
-  ///   both branches** — [LayrzDialog.show]'s `canDismiss` (where a null value falls back to
-  ///   that method's own default: conservative when `actions` are present) and
-  ///   [LayrzBottomSheet.show]'s `canDismiss` (where `null` is not accepted; this wrapper
-  ///   maps a null override here to that method's own default of `true`, since the sheet has
-  ///   no `actions` slot to infer a conservative default from — see [LayrzBottomSheet.show]'s
-  ///   own `canDismiss` doc for why). This used to be dialog-branch-only, silently dropped on
-  ///   the sheet branch — a caller passing `canDismiss: false` got a non-dismissable dialog on
-  ///   a wide viewport and a freely-dismissable sheet on a narrow one. Both branches now honor
-  ///   the same flag, so the resolved presentation no longer changes what `canDismiss` means.
+  ///   on the sheet branch, and the system/Android back gesture on both).
+  ///
+  ///   `null` (the default) **infers from [actions]**, mirroring [LayrzDialog.show]'s own
+  ///   rule exactly: dismissable (`true`) when [actions] is null or empty (nothing to answer
+  ///   with), not dismissable (`false`) when [actions] is a non-empty list (a decision-bearing
+  ///   modal should not be escapable by anything other than answering it). This resolved value
+  ///   — computed once, before branching, as `canDismiss ?? (actions == null || actions.isEmpty)`
+  ///   — is forwarded to **both** branches: [LayrzDialog.show]'s `canDismiss` and
+  ///   [LayrzBottomSheet.show]'s `canDismiss` (non-nullable there, so it receives the resolved
+  ///   `bool` directly). An explicit `true`/`false` from the caller always wins over the
+  ///   inference in either direction — only the unset (`null`) case infers.
+  ///
+  ///   **This used to be different and was corrected.** Earlier versions composed [actions]
+  ///   into the dialog branch's `child` (see [_DialogBodyWithPinnedActions]) rather than
+  ///   forwarding them to [LayrzDialog.show]'s own `actions` parameter, so that method always
+  ///   saw `actions: null` and inferred a freely-dismissable default regardless of whether
+  ///   this wrapper's own [actions] were supplied — the "lock in" a caller expected from
+  ///   passing [actions] silently did not happen on either branch. The sheet branch
+  ///   separately hardcoded `canDismiss ?? true`, with no inference from [actions] at all.
+  ///   Both gaps are closed: the inference above is computed from this wrapper's own
+  ///   [actions] (not from what either branch happens to receive) and applied uniformly, so
+  ///   the resolved presentation no longer changes what "pass [actions] to lock in" means.
   ///   See [LayrzDialog.show]'s own `canDismiss` doc for the four-route dialog contract, and
   ///   [LayrzBottomSheet.show]'s for how the equivalent three-route sheet contract composes
-  ///   with `isPersistent` and drag-to-dismiss.
+  ///   with `isPersistent` and drag-to-dismiss — drag-to-dismiss included, since
+  ///   [LayrzBottomSheet.show]'s single `canDismiss` flag already gates that route too.
   /// - [semanticLabel]: semantic label describing the modal's purpose for
   ///   screen readers, forwarded to whichever branch is chosen. Must be
   ///   equivalent regardless of which surface is presented, since an
@@ -184,9 +200,55 @@ class LayrzResponsiveModal {
   /// - [sheet]: sheet-branch-only configuration (snap sizes, initial/min/max
   ///   size, drag handle, scrollable). Ignored when the dialog branch is
   ///   chosen. Defaults to `const LayrzBottomSheetConfig()`.
+  /// - [actions]: optional list of widgets (typically `LayrzButton`s), rendered in a row
+  ///   **pinned below [builder]'s content, on both branches**. `null` (the default, or an
+  ///   empty list) renders nothing and changes no layout, matching every existing caller
+  ///   today.
+  ///
+  ///   **This closes the API limitation this wrapper previously documented and shipped
+  ///   with**: both [LayrzDialog.show] and [LayrzBottomSheet.show] already offer their own
+  ///   `actions` slot, each pinned outside that branch's own scrollable content area, but
+  ///   [LayrzResponsiveModal.show] used to expose neither — a caller wanting a "locked in"
+  ///   footer row had no way to get one without abandoning responsive presentation and
+  ///   calling one branch directly.
+  ///
+  ///   **Sheet branch**: [actions] is forwarded verbatim to [LayrzBottomSheet.show]'s own
+  ///   `actions` parameter, which already pins it below the sheet's content — scrollable or
+  ///   not, per [LayrzBottomSheetConfig.scrollable] — and clear of both the keyboard and the
+  ///   device's bottom safe-area inset. See [LayrzBottomSheet.show]'s own `actions` doc for
+  ///   the full contract.
+  ///
+  ///   **Dialog branch**: [actions] is **not** forwarded to [LayrzDialog.show]'s own
+  ///   `actions` parameter, because that parameter is mutually exclusive with `child` at
+  ///   [LayrzDialog.show]'s own call site — an assertion fires if both are supplied — and
+  ///   `child` is what [builder]'s result is always passed as (see [builder]'s own doc for
+  ///   why `child`, not `content`, is required to keep fill-height builder content such as
+  ///   `Expanded`/`ListView` working on this branch). Instead, this method composes the row
+  ///   itself: `child` becomes a `Column` (`mainAxisSize: MainAxisSize.min`) whose children
+  ///   are the built widget, wrapped in a `Flexible` (loose fit, not `Expanded`'s tight fit —
+  ///   see [_DialogBodyWithPinnedActions]'s own doc for why the distinction matters: a tight
+  ///   fit would force the panel to `maxHeight` even for a couple of lines of content),
+  ///   followed by the actions row — built with the same spacing, right alignment, and
+  ///   inter-button gap [LayrzDialog.show]'s own `actions` slot uses, so the two read as the
+  ///   same row regardless of which path produced them. Because this row is a sibling of the
+  ///   `Flexible` builder content in that `Column` — not nested inside it — it is pinned
+  ///   below the content and is never pushed off-screen or scrolled away by it, exactly like
+  ///   [LayrzDialog.show]'s own `actions` sits outside its `content` scroll view.
+  ///
+  ///   **[canDismiss]'s inference is computed from this wrapper's own [actions], not from
+  ///   what either branch happens to receive.** Because [actions] is composed into `child`
+  ///   here rather than forwarded to [LayrzDialog.show]'s own `actions` parameter, that
+  ///   method always sees `actions: null` from this wrapper and — left to its own inference —
+  ///   would default to freely dismissable regardless of whether this wrapper's [actions]
+  ///   were supplied. [show] does not rely on that: it resolves `canDismiss` itself, from
+  ///   this wrapper's own [actions], and passes the already-resolved value to
+  ///   [LayrzDialog.show]'s `canDismiss` — so the dialog branch locks in exactly when a
+  ///   caller of *this* method supplies non-empty [actions], not only when a caller of
+  ///   [LayrzDialog.show] directly does. See [canDismiss]'s own doc for the exact rule.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
+    List<Widget>? actions,
     bool? isCompact,
     bool? canDismiss,
     String? semanticLabel,
@@ -195,15 +257,26 @@ class LayrzResponsiveModal {
   }) {
     final effectiveIsCompact = isCompact ?? context.isCompact;
 
+    // Single source of truth for canDismiss's inference, mirroring LayrzDialog.show's own
+    // rule exactly (see dialog.dart's effectiveCanDismiss) -- computed once, here, from this
+    // wrapper's own `actions`, and forwarded to BOTH branches below. An empty list is treated
+    // the same as null: there are no buttons to answer with, so it must not lock the caller
+    // in with no way out -- matching _DialogBodyWithPinnedActions's own `hasActions` check
+    // (actions != null && actions.isNotEmpty), which is exactly when that widget renders a row
+    // at all. An explicit canDismiss from the caller always wins in either direction; only the
+    // unset (null) case infers.
+    final effectiveCanDismiss = canDismiss ?? (actions == null || actions.isEmpty);
+
     if (effectiveIsCompact) {
       return LayrzBottomSheet.show<T>(
         context,
         builder: builder,
-        // LayrzBottomSheet.show's canDismiss is non-nullable (default true, since the
-        // sheet has no actions slot to infer a conservative default from -- see its own
-        // doc). A null override here maps to that same default rather than to false, so
-        // an unset canDismiss behaves identically to calling LayrzBottomSheet.show directly.
-        canDismiss: canDismiss ?? true,
+        actions: actions,
+        // LayrzBottomSheet.show's canDismiss is non-nullable, so it receives the already-
+        // resolved value directly -- see effectiveCanDismiss's own comment above and
+        // canDismiss's doc for the full rule. This used to hardcode `canDismiss ?? true`,
+        // which never locked the sheet in even when actions were present.
+        canDismiss: effectiveCanDismiss,
         semanticLabel: semanticLabel,
         snapSizes: sheet.snapSizes,
         initialSize: sheet.initialSize,
@@ -217,11 +290,100 @@ class LayrzResponsiveModal {
 
     return LayrzDialog.show<T>(
       context,
-      child: Builder(builder: builder),
-      canDismiss: canDismiss,
+      // actions cannot be forwarded to LayrzDialog.show's own `actions` parameter here --
+      // that parameter is mutually exclusive with `child` at LayrzDialog.show's own call
+      // site (an assertion fires if both are non-null), and `child` is what builder's result
+      // is always passed as, to preserve fill-height builder content on this branch (see
+      // this method's own `builder` doc). _DialogBodyWithPinnedActions composes the pinned
+      // row itself instead -- see `actions`'s own doc above for the full reasoning.
+      child: _DialogBodyWithPinnedActions(builder: builder, actions: actions),
+      // LayrzDialog.show's own `canDismiss` would infer from its OWN `actions` parameter,
+      // which this call site always passes as null (see the comment on `child` above) -- so
+      // passing the raw, possibly-null `canDismiss` through here would always resolve to
+      // freely dismissable, regardless of whether THIS wrapper's `actions` were supplied.
+      // effectiveCanDismiss is resolved from this wrapper's own `actions` instead (see its
+      // own comment above), so the dialog branch locks in exactly when a caller of
+      // LayrzResponsiveModal.show supplies non-empty actions.
+      canDismiss: effectiveCanDismiss,
       semanticLabel: semanticLabel,
       maxWidth: dialog.maxWidth,
       maxHeight: dialog.maxHeight,
+    );
+  }
+}
+
+/// Composes [builder]'s content with a pinned [actions] row for
+/// [LayrzResponsiveModal.show]'s dialog branch.
+///
+/// Exists because [LayrzDialog.show]'s own `actions` parameter cannot be used here: it is
+/// mutually exclusive with `child` at that method's own call site, and `child` is required
+/// (rather than `content`) to keep fill-height builder content such as `Expanded` or a bare
+/// `ListView`/`GridView` working — see [LayrzResponsiveModal.show]'s own `actions` and
+/// `builder` docs for the full reasoning.
+///
+/// [builder]'s result sits in a [Flexible] (loose fit, not [Expanded]'s tight fit) inside
+/// this widget's own `Column`, which is itself sized with `mainAxisSize: MainAxisSize.min`.
+/// [Flexible] is what lets the panel shrink-wrap to short content instead of always
+/// growing to fill [LayrzDialog.show]'s `maxHeight`-bounded `child` slot: a tight
+/// [Expanded] would force the built content — and therefore this whole `Column`, and
+/// therefore the panel — to that full height regardless of how little the builder
+/// actually produced, stranding the action row far below a few lines of text. [Flexible]
+/// still caps the built content at whatever height remains once the action row and its
+/// gap are laid out, so a builder taller than the dialog's `maxHeight` (e.g. a bare
+/// `ListView`, matching this method's own `builder` doc) is still bounded and scrolls
+/// internally rather than overflowing — mirroring exactly how [LayrzDialog.show]'s own
+/// `content` slot uses a [Flexible] around its scroll view (see `dialog.dart`'s
+/// `_buildSlots`) to get the same shrink-wrap-or-scroll behaviour. [actions] is a sibling
+/// of that [Flexible], not nested inside it, so a tall or scrolling [builder] never pushes
+/// the row off-screen or carries it away in its own scroll — the row is genuinely pinned
+/// below the content, not merely placed after it in a list that could still scroll as a
+/// whole. The row's own spacing (a gap above, right alignment, and an inter-button gap)
+/// matches [LayrzDialog.show]'s own `actions` slot exactly, so the two read as the same
+/// component regardless of which path built them.
+class _DialogBodyWithPinnedActions extends StatelessWidget {
+  /// Builds the modal's own body content, exactly as passed to
+  /// [LayrzResponsiveModal.show]'s `builder`.
+  final WidgetBuilder builder;
+
+  /// The pinned action row's widgets, exactly as passed to
+  /// [LayrzResponsiveModal.show]'s `actions`. `null` or empty renders no row at all, so
+  /// this widget's layout is unchanged from before [actions] existed on that method.
+  final List<Widget>? actions;
+
+  /// Creates a dialog body that pins [actions] below [builder]'s content.
+  const _DialogBodyWithPinnedActions({
+    required this.builder,
+    required this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasActions = actions != null && actions!.isNotEmpty;
+    if (!hasActions) {
+      // No actions at all: preserve the exact widget this method built before `actions`
+      // existed on LayrzResponsiveModal.show, so a caller that never passes it sees no
+      // layout change whatsoever -- no Column, no Expanded, just the built content.
+      return Builder(builder: builder);
+    }
+
+    final tokens = context.tokens;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Flexible(child: Builder(builder: builder)),
+        SizedBox(height: tokens.spacing.sp3),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            for (int i = 0; i < actions!.length; i++) ...[
+              if (i > 0) SizedBox(width: tokens.spacing.sp2),
+              actions![i],
+            ],
+          ],
+        ),
+      ],
     );
   }
 }

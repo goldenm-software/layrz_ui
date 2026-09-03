@@ -13,6 +13,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 | 1 | LayrzLayout (application shell with sidebar/drawer nav, drawer floating-page reveal transition, flat navigator items, user menu, notifications) | Done |
 | 2 | LayrzScaffoldShell<T> (adaptive list-detail shell, container-driven breakpoints) | Done |
 | 2a | DESIGN-140: LayrzScaffoldShell mobile refinement (narrow band detail in modal bottom sheet, selection persistence across breakpoint crossing) | In progress |
+| 2b | Foldable-hinge-aware LayrzScaffoldShell (D73: only a vertical seam splits, mapped via RenderBox into the shell's own local box; a horizontal seam never splits; a `kLayrzFoldMinSplitHeight` shell-height gate retracts the split when the keyboard opens; multiple qualifying seams (Z TriFold) pick the one nearest 1/3 of the shell's width; `cutout` features ignored, `postureHalfOpened` supported like `postureFlat`) | In progress |
 | 3 | LayrzScrollbar (Material-free on RawScrollbar, installed by default in LayrzApp) | Done |
 | 4 | LayrzTabView and LayrzTab (horizontal tabs with Material 3 styling) | Todo |
 | 5 | LayrzSnackbar and LayrzSnackbarMessenger (transient feedback) | Todo |

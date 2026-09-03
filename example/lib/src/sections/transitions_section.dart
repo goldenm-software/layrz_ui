@@ -66,7 +66,7 @@ class _TransitionsSectionState extends State<TransitionsSection> {
 
   /// Builds the row of [LayrzButton]s that select which [LayrzTransitionType]
   /// the next push uses. The active selection renders
-  /// [LayrzButtonStyle.elevated]; the rest render
+  /// [LayrzButtonStyle.filled]; the rest render
   /// [LayrzButtonStyle.outlined] — the same selected/unselected convention
   /// used by the steppers showroom page.
   Widget _buildTypeSelector(LayrzTokens tokens) {
@@ -78,7 +78,7 @@ class _TransitionsSectionState extends State<TransitionsSection> {
           for (final type in LayrzTransitionType.values)
             LayrzButton(
               labelText: type.name,
-              style: _selectedType == type ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+              style: _selectedType == type ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
               onTap: () => setState(() => _selectedType = type),
             ),
         ],
@@ -92,7 +92,7 @@ class _TransitionsSectionState extends State<TransitionsSection> {
   Widget _buildReduceMotionToggle(LayrzTokens tokens) {
     return LayrzButton(
       labelText: _reduceMotion ? 'Reduce motion: on' : 'Reduce motion: off',
-      style: _reduceMotion ? LayrzButtonStyle.elevated : LayrzButtonStyle.outlined,
+      style: _reduceMotion ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
       onTap: () => setState(() => _reduceMotion = !_reduceMotion),
     );
   }
