@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1023,7 +1024,11 @@ void main() {
     // `_panelController.close()`. See `duration_input.dart`'s `onChanged` vs
     // `onReset` wiring on `LayrzDurationPickerPanel` for the fix: only a
     // genuine reset closes the panel now.
-    guardedTestWidgets('tapping a field\'s increment control updates the value and keeps the panel open', (
+    // Updated for Finding 4: a field edit now only buffers the draft --
+    // `onChanged` fires once, on Save, not on every +/- tap. The panel
+    // staying open on a field edit is unchanged; what changed is that
+    // `onChanged` no longer fires until Save is pressed.
+    guardedTestWidgets('tapping a field\'s increment control updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1059,15 +1064,19 @@ void main() {
       await tester.tap(dayIncrement);
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(days: 1));
+      expect(changedValue, isNull, reason: 'a field edit must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'a field edit must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(days: 1), reason: 'Save must commit the buffered draft');
     });
 
-    guardedTestWidgets('tapping a field\'s decrement control updates the value and keeps the panel open', (
+    guardedTestWidgets('tapping a field\'s decrement control updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1103,15 +1112,19 @@ void main() {
       await tester.tap(hourDecrement);
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(hours: 4));
+      expect(changedValue, isNull, reason: 'a field edit must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'a field edit must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(hours: 4), reason: 'Save must commit the buffered draft');
     });
 
-    guardedTestWidgets('typing directly into a field\'s text box updates the value and keeps the panel open', (
+    guardedTestWidgets('typing directly into a field\'s text box updates the draft and keeps the panel open', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1147,12 +1160,16 @@ void main() {
       await tester.enterText(minuteField, '15');
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(minutes: 15));
+      expect(changedValue, isNull, reason: 'typing into a field must only buffer the draft, not report it yet');
       expect(
         find.byType(LayrzDurationPickerPanel),
         findsWidgets,
         reason: 'typing into a field must not close the panel -- only Reset does',
       );
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+      expect(changedValue, const Duration(minutes: 15), reason: 'Save must commit the buffered draft');
     });
 
     // DESIGN-98: `LayrzDurationInput` moved off `LayrzAnchoredPanel` onto
@@ -1188,9 +1205,11 @@ void main() {
       expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
     });
 
-    guardedTestWidgets('the drawer carries a single Reset action, relocated from the panel\'s own inline footer', (
-      tester,
-    ) async {
+    // Finding 2 (maintainer review): "Duration ... didn't display the
+    // labelText above on the Drawer" -- confirmed by grep: this widget's
+    // `_openDesktopDrawer` passed zero `title:` arguments. Mirrors
+    // `LayrzDateInput`'s identical fix and test.
+    guardedTestWidgets('the drawer renders labelText as a visible title (DESIGN-98 Finding 2)', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1203,20 +1222,82 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      expect(findButtonLabel('Reset'), findsOneWidget, reason: 'Reset now lives in the drawer actions slot');
-      expect(
-        findButtonLabel('Cancel'),
-        findsNothing,
-        reason: 'this widget never buffered a draft -- no Cancel is added',
-      );
-      expect(
-        findButtonLabel('Save'),
-        findsNothing,
-        reason: 'every field edit already reports live -- no Save is added',
-      );
+      // `LayrzDurationPickerPanel` renders no inline caption of its own
+      // (unlike ComboBox's `showInlineTitle`), so a bare `find.text` for the
+      // title is unambiguous -- the closed field's own label renders via
+      // `LayrzInputChrome`'s RichText/TextSpan, not a plain Text.
+      expect(find.text('Duration'), findsOneWidget, reason: 'the drawer must render a visible title Text');
     });
 
-    guardedTestWidgets('field edits inside the drawer still report live, exactly as before DESIGN-98', (
+    // Escape and the barrier tap must still cancel the draft even with
+    // Cancel/Reset/Save actions present now (Finding 4) -- mirrors every
+    // other Save-carrying picker's `canDismiss: true` override.
+    guardedTestWidgets('Escape cancels and discards the draft, matching every other Save-carrying picker', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 1),
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, isNull, reason: 'Escape must discard the draft without reporting it');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Escape must close the drawer');
+    });
+
+    // Updated for Finding 4 (maintainer review): this widget's actions row
+    // now carries Cancel/Reset/Save, reversing the earlier "Reset alone, no
+    // Cancel/Save" decision this test used to assert -- see
+    // `_LayrzDurationInputState._openDesktopDrawer`'s own doc for the full
+    // rationale. Order and styling follow `LayrzPickerDrawerFooter`'s
+    // established convention: Cancel/Reset as `.text`, Save as the only
+    // `.filled` button.
+    guardedTestWidgets('the drawer carries Cancel, Reset, and Save actions', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(labelText: 'Duration'),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      expect(findButtonLabel('Cancel'), findsOneWidget, reason: 'Cancel discards the draft without committing it');
+      expect(findButtonLabel('Reset'), findsOneWidget, reason: 'Reset still lives in the drawer actions slot');
+      expect(findButtonLabel('Save'), findsOneWidget, reason: 'Save now commits the buffered draft');
+    });
+
+    // Updated for Finding 4: field edits inside the drawer now only update a
+    // local draft -- `widget.onChanged` no longer fires until Save is
+    // pressed. This replaces the old "field edits inside the drawer still
+    // report live" test, which asserted exactly the opposite of the new
+    // contract.
+    guardedTestWidgets('field edits inside the drawer only update the draft -- onChanged does not fire until Save', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1248,8 +1329,87 @@ void main() {
       await tester.tap(dayIncrement);
       await tester.pumpAndSettle();
 
-      expect(changedValue, const Duration(hours: 1, days: 1), reason: 'the live edit must still report immediately');
+      expect(changedValue, isNull, reason: 'a field edit must only update the draft, not report it yet');
       expect(find.byType(LayrzDurationPickerPanel), findsWidgets, reason: 'a field edit must not close the drawer');
+
+      await tester.tap(findButtonLabel('Save'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, const Duration(hours: 1, days: 1), reason: 'Save must commit the buffered draft');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Save must close the drawer');
+    });
+
+    // Cancel discards the buffered draft and reports nothing, mirroring
+    // every other Save-carrying picker's Cancel contract.
+    guardedTestWidgets('Cancel discards the draft without reporting anything', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: const Duration(hours: 1),
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final dayIncrement = find.descendant(
+        of: find.byKey(const ValueKey('layrz_duration_field_day')),
+        matching: find.bySemanticsLabel('Increase value'),
+      );
+      await tester.tap(dayIncrement);
+      await tester.pumpAndSettle();
+
+      await tester.tap(findButtonLabel('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(changedValue, isNull, reason: 'Cancel must not report the discarded draft');
+      expect(find.byType(LayrzDurationPickerPanel), findsNothing, reason: 'Cancel must close the drawer');
+    });
+
+    // Save is reachable with zero interaction, exactly like every field's
+    // Duration.zero (or any concrete value) is never an "unset" state to
+    // gate Save behind -- see `_LayrzDurationInputState._openDesktopDrawer`'s
+    // own "Save is always enabled" doc.
+    guardedTestWidgets('Save is already enabled on open, with zero interaction, and commits the seeded value', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Duration? changedValue;
+
+      await pumpThemedApp(
+        tester,
+        LayrzDurationInput(
+          labelText: 'Duration',
+          value: Duration.zero,
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      final saveButton = findButtonLabel('Save');
+      expect(saveButton, findsOneWidget);
+      final saveWidget = tester.widget<LayrzButton>(
+        find.ancestor(of: saveButton, matching: find.byType(LayrzButton)).first,
+      );
+      expect(saveWidget.onTap, isNotNull, reason: 'Save must be enabled for a genuine zero duration');
+
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+
+      expect(changedValue, Duration.zero, reason: 'Save must commit the exact zero duration, not treat it as unset');
     });
 
     // Note: Reset's full zero-and-close-and-report behavior is already

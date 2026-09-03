@@ -406,48 +406,68 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
   /// Opens [LayrzDurationPickerPanel] in [LayrzEndDrawer] on desktop (DESIGN-98),
   /// replacing the previous [LayrzAnchoredPanel] hosting.
   ///
-  /// **Container change only -- not a commit-model change.** This panel's
-  /// fields have always reported through [LayrzDurationInput.onChanged] on
-  /// every keystroke/+/- tap, with no draft state of its own to buffer (see
-  /// [LayrzDurationPickerPanel]'s own `onChanged` doc). That live-report
-  /// contract is kept completely unchanged here -- [onChanged] below still
-  /// fires on every field edit, exactly as before DESIGN-98. The only thing
-  /// that moves is Reset: previously rendered inline as the panel's own
-  /// full-width button, it now renders as a single action in the drawer's
-  /// `actions` slot instead, driven through [_panelKey] (mirroring
-  /// [LayrzDateRangeSurfaceState]'s identical `GlobalKey` pattern) with
-  /// [LayrzDurationPickerPanel.showInlineFooter] `false` suppressing the
-  /// panel's own copy of it. No Cancel/Save: unlike the eight date/time
-  /// pickers, this widget never buffered a draft to discard, so there is
-  /// nothing for Cancel to revert and nothing left for Save to commit.
-  /// `actions: [reset]` alone still infers `canDismiss: true` from
-  /// [LayrzEndDrawer.show]'s own inference (a single reset action, not a
-  /// decision-bearing Save, leaves the drawer freely dismissable) -- no
-  /// override needed here, unlike the Cancel/Save pickers.
+  /// **Commit model reversed (maintainer review, Finding 4): draft-then-Save,
+  /// not live commit.** Before this, every field edit inside the drawer
+  /// forwarded straight to [LayrzDurationInput.onChanged] with no discrete
+  /// commit gesture at all -- the drawer carried Reset alone, on the
+  /// reasoning that live reporting left nothing for a Save to commit. The
+  /// maintainer's explicit follow-up reverses that: *"it needs the save and
+  /// cancel buttons on actions."* [_draft] now buffers every field edit
+  /// locally; [widget.onChanged] fires exactly once, when Save is pressed,
+  /// mirroring [LayrzTimeInput]/[LayrzDateRangeInput]/every other
+  /// Save-carrying picker in this batch rather than leaving Duration as the
+  /// one widget whose caller sees values it never confirmed. Cancel discards
+  /// [_draft] and closes without reporting anything, restoring
+  /// [LayrzDurationInput.value] on the next open (a fresh [_draft] is seeded
+  /// from [widget.value] every time this method runs, so nothing needs to be
+  /// explicitly rolled back). Reset stays a deliberate "clear and I'm done"
+  /// gesture distinct from Save: it zeroes [_draft], reports the zeroed
+  /// duration immediately, and closes the drawer, exactly as it did before
+  /// this change -- unlike the eight date/time pickers' own Clear (which only
+  /// empties the draft and leaves Save to actually commit), Duration's Reset
+  /// has always been both the clear-and-commit action in one gesture, and
+  /// that stays true here.
+  ///
+  /// **Save is always enabled.** Unlike the eight date/time pickers (whose
+  /// Save is gated on "has the user actually chosen something", since those
+  /// widgets start from a genuinely empty state), every duration field
+  /// already holds a concrete integer the moment the drawer opens -- there is
+  /// no "nothing chosen yet" state for a live field cluster to be in, exactly
+  /// the same reasoning [LayrzTimeSurfaceState.canSave] documents for time
+  /// fields. `actions` being non-empty means [LayrzEndDrawer.show]'s own
+  /// `canDismiss` inference now defaults to `false`; Cancel and Escape/the
+  /// barrier tap must still discard the draft exactly like every other
+  /// picker in this batch, so `canDismiss: true` is passed explicitly.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
 
     final panelKey = GlobalKey<LayrzDurationPickerPanelState>();
+    var draft = widget.value;
 
     await LayrzEndDrawer.show<void>(
       context,
-      semanticLabel: widget.labelText ?? widget.hintText,
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // DESIGN-98 Finding 5 (maintainer review): "title should be the
+      // labelText of the input" -- see LayrzDateInput's identical doc for the
+      // full rationale, including why `semanticLabel` above falls back to
+      // `hintText` only rather than doubling this announcement.
+      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // Escape and the barrier tap must still cancel the draft even with
+      // actions present -- matches every other Save-carrying picker in this
+      // batch (see e.g. LayrzTimeInput._openDesktopDrawer's identical
+      // override and doc).
+      canDismiss: true,
       builder: (context) => LayrzDurationPickerPanel(
         key: panelKey,
         initialValue: widget.value,
         visibleUnits: widget.visibleUnits,
         showInlineFooter: false,
-        // Field edits (typing, +/- taps) report the new value and update the
-        // anchor's summary live -- unchanged from the pre-DESIGN-98 contract,
-        // see this method's own doc comment for why that stays live rather
-        // than becoming a buffered draft.
-        onChanged: (duration) {
-          widget.onChanged?.call(duration);
-          _updateSummary();
-        },
-        // Reset stays a deliberate "clear and I'm done" gesture distinct from
-        // an in-progress field edit -- it reports the zeroed duration and
-        // closes the drawer, exactly like it closed the anchored panel before.
+        // Field edits (typing, +/- taps) only update the local draft now --
+        // see this method's own doc for why this no longer forwards straight
+        // to widget.onChanged.
+        onChanged: (duration) => draft = duration,
+        // Reset remains its own deliberate commit-and-close gesture, distinct
+        // from Save -- see this method's own doc.
         onReset: (duration) {
           widget.onChanged?.call(duration);
           _updateSummary();
@@ -455,6 +475,11 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         },
       ),
       actions: [
+        LayrzButton.cancel(
+          labelText: context.l10n.actionCancel,
+          onTap: () => Navigator.pop(context),
+          style: LayrzButtonStyle.text,
+        ),
         // Matches the picker Clear button's own styling convention
         // (LayrzPickerDrawerFooter: warning type, text style) -- Reset here
         // plays the identical "destructive, not the primary action" role.
@@ -463,6 +488,14 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
           onTap: () => panelKey.currentState?.reset(),
           type: LayrzButtonType.warning,
           style: LayrzButtonStyle.text,
+        ),
+        LayrzButton.save(
+          labelText: context.l10n.actionSave,
+          onTap: () {
+            widget.onChanged?.call(draft);
+            _updateSummary();
+            Navigator.pop(context);
+          },
         ),
       ],
     );
