@@ -40,7 +40,8 @@ abstract class LayrzModalRoute<T> extends RawDialogRoute<T> {
   });
 
   /// Pops [context]'s nearest route, but only if it is still the current
-  /// (topmost) route.
+  /// (topmost) route. Optionally carries [result] back to the route's
+  /// caller, exactly like [Navigator.pop]'s own second parameter.
   ///
   /// This is the fix for a release-only data-loss bug shipped in 0.0.14: a
   /// fast double tap on a modal's barrier could call [Navigator.pop] twice
@@ -49,11 +50,28 @@ abstract class LayrzModalRoute<T> extends RawDialogRoute<T> {
   /// it as well, silently dismissing the caller's own page in a release
   /// build. [ModalRoute.of]'s `isCurrent` is the SDK's own purpose-built
   /// answer to "is this route still the one to pop", and every dismiss site
-  /// on a [LayrzModalRoute] subclass (barrier tap, Escape key, drag-dismiss)
+  /// on a [LayrzModalRoute] subclass (barrier tap, Escape key, drag-dismiss,
+  /// **and every Cancel/Save/Reset/Clear action a hosted surface builds**)
   /// must call this helper instead of popping directly.
-  static void popIfCurrent(BuildContext context) {
+  ///
+  /// **Widened beyond barrier/Escape/back-gesture dismissal (maintainer
+  /// review, Finding 2).** The action buttons every picker/duration surface
+  /// builds (`Cancel`, `Save`, `Clear`, `Reset`) called `Navigator.pop`
+  /// directly rather than through this guard — safe against the barrier or
+  /// Escape racing a second dismissal, but not against two of *those*
+  /// buttons' own gestures racing each other (or a genuinely duplicated tap
+  /// callback), which is exactly the shape of the maintainer's reported
+  /// crash: `'currentConfiguration.isNotEmpty' — You have popped the last
+  /// page off of the stack`, thrown from `go_router`'s delegate rather than
+  /// silently no-opping the way a bare [Navigator] would. [result] exists
+  /// because [LayrzDurationInput]'s mobile Reset path pops with a value
+  /// (`Navigator.pop(context, duration)`) that its caller reads back to
+  /// distinguish "closed via Reset" from every other dismissal route -- a
+  /// value-less guard would have forced that call site back onto the
+  /// unguarded [Navigator.pop] it is meant to replace.
+  static void popIfCurrent<T extends Object?>(BuildContext context, [T? result]) {
     if (ModalRoute.of(context)?.isCurrent ?? false) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop<T>(result);
     }
   }
 

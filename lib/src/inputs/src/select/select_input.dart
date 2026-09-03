@@ -365,7 +365,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
           emptyListText: widget.emptyListText,
           itemExtent: widget.itemExtent,
           onItemSelected: (item) {
-            Navigator.pop(context, item);
+            LayrzModalRoute.popIfCurrent(context, item);
           },
         ),
       ),
@@ -676,7 +676,7 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
             emptyListText: widget.emptyListText,
             itemExtent: widget.itemExtent,
             onItemSelected: (item) {
-              Navigator.pop(context, item);
+              LayrzModalRoute.popIfCurrent(context, item);
             },
           ),
         ),

@@ -202,16 +202,16 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
         use24HourFormat: widget.use24HourFormat,
         onTimeChanged: (time) {
           _handleSave(time);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () {},
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) {},
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
       initialSize: 0.4,
@@ -258,16 +258,16 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
         use24HourFormat: widget.use24HourFormat,
         onTimeChanged: (time) {
           _handleSave(time);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () {},
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) {},
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
     );

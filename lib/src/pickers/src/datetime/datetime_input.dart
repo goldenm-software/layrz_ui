@@ -283,9 +283,9 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         use24HourFormat: widget.use24HourFormat,
         onSave: (date, time) {
           _handleSave(date, time);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       initialSize: 0.85,
       maxSize: 0.95,
@@ -297,15 +297,38 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
   /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
   /// rationale (DESIGN-98). This surface has no Clear affordance, so
   /// `hasSelection` is always `false`.
+  ///
+  /// **The race that made Save appear to do nothing (maintainer review,
+  /// Finding 1).** `draftState` used to seed `canSave` from a hardcoded
+  /// `false`, relying entirely on [LayrzDateTimeSurfaceState.initState]'s own
+  /// post-frame callback to correct it via `syncDraftState`. [LayrzEndDrawer]
+  /// hosts the surface behind a 300ms routed slide transition, so that
+  /// callback can fire before [surfaceKey.currentState] is attached --
+  /// `syncDraftState` then silently returned on a `null` state, and nothing
+  /// else ever re-primed `draftState`: Save rendered permanently disabled
+  /// for the rest of that open, even after the user picked both a date and a
+  /// time. Reopening won because a fresh `State` wins the race the next
+  /// time. Computing the seed from [widget.value] directly (mirroring
+  /// [LayrzDateTimeSurfaceState.canSave]'s own `_date != null && _time !=
+  /// null` predicate) makes `draftState` correct from its very first frame,
+  /// before any callback runs at all -- `syncDraftState` below then only
+  /// ever updates an already-correct value, so losing the race no longer
+  /// matters.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
+      canSave: widget.value != null,
+      hasSelection: false,
+    ));
     final surfaceKey = GlobalKey<LayrzDateTimeSurfaceState>();
 
     void syncDraftState() {
       final state = surfaceKey.currentState;
-      if (state == null) return;
-      draftState.value = (canSave: state.canSave, hasSelection: false);
+      // Never observed null in practice once the seed above is correct --
+      // see this method's own doc. Left unguarded rather than silently
+      // swallowed, so a genuine regression here fails loudly instead of
+      // permanently stranding `draftState` the way the hardcoded seed did.
+      draftState.value = (canSave: state!.canSave, hasSelection: false);
     }
 
     await LayrzEndDrawer.show<void>(
@@ -343,16 +366,16 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         onDraftChanged: syncDraftState,
         onSave: (date, time) {
           _handleSave(date, time);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () {},
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) {},
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
     );

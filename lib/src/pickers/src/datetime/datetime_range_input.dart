@@ -246,9 +246,9 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         use24HourFormat: widget.use24HourFormat,
         onSave: (start, end) {
           _handleSave(start, end);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       initialSize: 0.9,
       maxSize: 0.98,
@@ -259,15 +259,34 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
   /// Opens [LayrzDateTimeRangeSurface] in [LayrzEndDrawer] on desktop — see
   /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
   /// rationale (DESIGN-98).
+  ///
+  /// **Seeded from the widget's own values, not a hardcoded `false`
+  /// (maintainer review, Finding 1).** [LayrzEndDrawer] hosts this surface
+  /// behind a 300ms routed slide transition, so the surface's own post-frame
+  /// `onDraftChanged` priming call can land before [surfaceKey.currentState]
+  /// is attached -- when that happens, seeding `draftState` from a hardcoded
+  /// `false` leaves Save permanently disabled for the rest of that open, even
+  /// once a complete range already exists, since nothing else ever re-primes
+  /// it. Computing the seed from [_rangeValue] directly (mirroring
+  /// [LayrzDateTimeRangeSurfaceState.canSave]/`.hasSelection`'s own
+  /// predicates) makes `draftState` correct from its very first frame, before
+  /// any callback runs at all -- `syncDraftState` below then only ever
+  /// updates an already-correct value.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
+      canSave: _rangeValue != null,
+      hasSelection: _rangeValue != null,
+    ));
     final surfaceKey = GlobalKey<LayrzDateTimeRangeSurfaceState>();
 
     void syncDraftState() {
       final state = surfaceKey.currentState;
-      if (state == null) return;
-      draftState.value = (canSave: state.canSave, hasSelection: state.hasSelection);
+      // Never observed null in practice once the seed above is correct --
+      // see this method's own doc. Left unguarded rather than silently
+      // swallowed, so a genuine regression here fails loudly instead of
+      // permanently stranding `draftState`.
+      draftState.value = (canSave: state!.canSave, hasSelection: state.hasSelection);
     }
 
     await LayrzEndDrawer.show<void>(
@@ -305,16 +324,16 @@ class _LayrzDateTimeRangeInputState extends State<LayrzDateTimeRangeInput> {
         onDraftChanged: syncDraftState,
         onSave: (start, end) {
           _handleSave(start, end);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () => surfaceKey.currentState?.clear(),
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) => surfaceKey.currentState?.clear(),
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
     );

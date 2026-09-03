@@ -389,7 +389,7 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         // reported by the `onChanged` above -- popping with it here is what reports it,
         // mirrored by the `widget.onChanged?.call(resetValue)` below once the sheet closes.
         onReset: (duration) {
-          Navigator.pop(context, duration);
+          LayrzModalRoute.popIfCurrent(context, duration);
         },
       ),
       initialSize: 0.5,
@@ -471,30 +471,74 @@ class _LayrzDurationInputState extends State<LayrzDurationInput> {
         onReset: (duration) {
           widget.onChanged?.call(duration);
           _updateSummary();
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
       ),
+      // **`actions` is wrapped in its own `Builder` so its `onTap` closures
+      // capture a `context` genuinely inside the drawer's route (maintainer
+      // review, Finding 2).** `_openDesktopDrawer`'s own `context` -- the
+      // anchor field's, captured once when this method runs -- is what an
+      // ordinary closure written directly in this list would capture
+      // instead, and `ModalRoute.of` on that outer context resolves to the
+      // app's base route, not this drawer: `LayrzModalRoute.popIfCurrent`
+      // would then read that base route's `isCurrent` (always `false` while
+      // the drawer sits on top of it) and silently never pop. This is the
+      // structural fix behind the maintainer's reported crash: `'currentConfiguration.isNotEmpty'
+      // — You have popped the last page off of the stack`, thrown from this
+      // exact `onTap` (`duration_input.dart:497` in the original report) --
+      // the previous, unguarded `Navigator.pop(context)` used that same
+      // wrong outer context, and popping the *base* route out from under
+      // `go_router`'s delegate is exactly what asserts. `Builder` supplies a
+      // fresh `context` from inside this subtree -- which [LayrzEndDrawer]
+      // renders as a sibling of the scrolling `builder` body, both inside
+      // the same pushed route -- so `LayrzModalRoute.popIfCurrent` resolves
+      // the drawer's own route and a second call, from any cause, is
+      // guaranteed a no-op rather than a double pop.
       actions: [
-        LayrzButton.cancel(
-          labelText: context.l10n.actionCancel,
-          onTap: () => Navigator.pop(context),
-          style: LayrzButtonStyle.text,
-        ),
-        // Matches the picker Clear button's own styling convention
-        // (LayrzPickerDrawerFooter: warning type, text style) -- Reset here
-        // plays the identical "destructive, not the primary action" role.
-        LayrzButton(
-          labelText: context.l10n.durationReset,
-          onTap: () => panelKey.currentState?.reset(),
-          type: LayrzButtonType.warning,
-          style: LayrzButtonStyle.text,
-        ),
-        LayrzButton.save(
-          labelText: context.l10n.actionSave,
-          onTap: () {
-            widget.onChanged?.call(draft);
-            _updateSummary();
-            Navigator.pop(context);
+        Builder(
+          builder: (drawerContext) {
+            final tokens = drawerContext.tokens;
+            // Each button wrapped in Flexible, not left to size itself --
+            // mirrors LayrzPickerDrawerActions's identical Cancel/Clear/Save
+            // row so Duration's own Cancel/Reset/Save combination never
+            // overflows the drawer's padded width the same way that shared
+            // widget's own doc explains.
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: LayrzButton.cancel(
+                    labelText: drawerContext.l10n.actionCancel,
+                    onTap: () => LayrzModalRoute.popIfCurrent(drawerContext),
+                    style: LayrzButtonStyle.text,
+                  ),
+                ),
+                SizedBox(width: tokens.spacing.sp2),
+                // Matches the picker Clear button's own styling convention
+                // (LayrzPickerDrawerFooter: warning type, text style) --
+                // Reset here plays the identical "destructive, not the
+                // primary action" role.
+                Flexible(
+                  child: LayrzButton(
+                    labelText: drawerContext.l10n.durationReset,
+                    onTap: () => panelKey.currentState?.reset(),
+                    type: LayrzButtonType.warning,
+                    style: LayrzButtonStyle.text,
+                  ),
+                ),
+                SizedBox(width: tokens.spacing.sp2),
+                Flexible(
+                  child: LayrzButton.save(
+                    labelText: drawerContext.l10n.actionSave,
+                    onTap: () {
+                      widget.onChanged?.call(draft);
+                      _updateSummary();
+                      LayrzModalRoute.popIfCurrent(drawerContext);
+                    },
+                  ),
+                ),
+              ],
+            );
           },
         ),
       ],

@@ -66,9 +66,36 @@ import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 ///   context,
 ///   semanticLabel: 'Choose a date',
 ///   builder: (context) => MyPickerSurface(),
+///   // `actions` is a separate parameter from `builder`, built at the SAME
+///   // call site as `show` itself -- so a naive `onTap: () =>
+///   // Navigator.pop(context)` here would close over the CALLER's own
+///   // `context` (e.g. the anchor field's), not one inside this drawer's
+///   // route. `ModalRoute.of` on that outer context resolves to whatever
+///   // route the caller itself lives in, not this drawer -- harmless for a
+///   // plain `Navigator.pop` (there is usually only one `Navigator`, so it
+///   // still finds and pops the topmost route), but wrong for
+///   // `LayrzModalRoute.popIfCurrent`'s own guard, and a real risk if two
+///   // pop attempts ever land in quick succession (see that method's own
+///   // doc for the double-pop bug class this guards against). `Builder`
+///   // below supplies a `context` genuinely inside this drawer's route --
+///   // see `LayrzPickerDrawerActions`'s own doc for the identical fix this
+///   // package's own picker inputs apply.
 ///   actions: [
-///     LayrzButton.cancel(labelText: 'Cancel', onTap: () => Navigator.pop(context)),
-///     LayrzButton.save(labelText: 'Save', onTap: () => Navigator.pop(context)),
+///     Builder(
+///       builder: (drawerContext) => Row(
+///         mainAxisSize: MainAxisSize.min,
+///         children: [
+///           LayrzButton.cancel(
+///             labelText: 'Cancel',
+///             onTap: () => LayrzModalRoute.popIfCurrent(drawerContext),
+///           ),
+///           LayrzButton.save(
+///             labelText: 'Save',
+///             onTap: () => LayrzModalRoute.popIfCurrent(drawerContext),
+///           ),
+///         ],
+///       ),
+///     ),
 ///   ],
 /// );
 /// ```

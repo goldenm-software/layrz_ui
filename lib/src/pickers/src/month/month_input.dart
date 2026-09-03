@@ -183,13 +183,19 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
 
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    // Seeded from `widget.value` directly -- see `_openDesktopDrawer`'s own
+    // doc for the race this closes.
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
+      canSave: widget.value != null,
+      hasSelection: false,
+    ));
     final surfaceKey = GlobalKey<LayrzMonthSurfaceState>();
 
     void syncDraftState() {
       final state = surfaceKey.currentState;
-      if (state == null) return;
-      draftState.value = (canSave: state.canSave, hasSelection: false);
+      // Never observed null in practice once the seed above is correct --
+      // see `_openDesktopDrawer`'s own doc.
+      draftState.value = (canSave: state!.canSave, hasSelection: false);
     }
 
     await LayrzBottomSheet.show<void>(
@@ -204,16 +210,16 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
         onDraftChanged: syncDraftState,
         onMonthSelected: (month) {
           _handleSelected(month);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () {},
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) {},
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
       initialSize: 0.6,
@@ -228,15 +234,32 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
   /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
   /// rationale (DESIGN-98). This surface has no Clear affordance, so
   /// `hasSelection` is always `false`.
+  ///
+  /// **Seeded from `widget.value`, not a hardcoded `false` (maintainer
+  /// review, Finding 1).** [LayrzEndDrawer] hosts this surface behind a
+  /// 300ms routed slide transition, so the surface's own post-frame
+  /// `onDraftChanged` priming call can land before [surfaceKey.currentState]
+  /// is attached -- when that happens, seeding `draftState` from a hardcoded
+  /// `false` leaves Save permanently disabled for the rest of that open, even
+  /// though [widget.value] was already non-null, since nothing else ever
+  /// re-primes it. Computing the seed from [widget.value] directly (mirroring
+  /// [LayrzMonthSurfaceState.canSave]'s own `_draft != null` predicate) makes
+  /// `draftState` correct from its very first frame, before any callback
+  /// runs at all -- `syncDraftState` below then only ever updates an
+  /// already-correct value.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
+    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
+      canSave: widget.value != null,
+      hasSelection: false,
+    ));
     final surfaceKey = GlobalKey<LayrzMonthSurfaceState>();
 
     void syncDraftState() {
       final state = surfaceKey.currentState;
-      if (state == null) return;
-      draftState.value = (canSave: state.canSave, hasSelection: false);
+      // Never observed null in practice once the seed above is correct --
+      // see this method's own doc.
+      draftState.value = (canSave: state!.canSave, hasSelection: false);
     }
 
     await LayrzEndDrawer.show<void>(
@@ -267,16 +290,16 @@ class _LayrzMonthInputState extends State<LayrzMonthInput> {
         onDraftChanged: syncDraftState,
         onMonthSelected: (month) {
           _handleSelected(month);
-          Navigator.pop(context);
+          LayrzModalRoute.popIfCurrent(context);
         },
-        onCancel: () => Navigator.pop(context),
+        onCancel: () => LayrzModalRoute.popIfCurrent(context),
       ),
       actions: [
         LayrzPickerDrawerActions(
           draftState: draftState,
-          onCancel: () => Navigator.pop(context),
-          onClear: () {},
-          onSave: () => surfaceKey.currentState?.save(),
+          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
+          onClear: (_) {},
+          onSave: (_) => surfaceKey.currentState?.save(),
         ),
       ],
     );

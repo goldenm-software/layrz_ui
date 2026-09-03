@@ -23,22 +23,42 @@ import 'picker_drawer_footer.dart';
 /// Every one of the eight date-related inputs uses this exact pattern: a
 /// [ValueNotifier] created in the input's `_openDesktopDrawer`, written to by
 /// the surface's `onDraftChanged` callback via a [GlobalKey], and read here.
+///
+/// **Callbacks receive this widget's own `context` (maintainer review,
+/// Finding 2).** [onCancel]/[onClear]/[onSave] each take a [BuildContext]
+/// parameter rather than being plain [VoidCallback]s, so a caller wanting to
+/// pop the hosting drawer via [LayrzModalRoute.popIfCurrent] can use the
+/// context this method's own `build` supplies -- which is genuinely inside
+/// the drawer's route -- instead of whatever `context` the caller closed
+/// over when constructing this widget. [LayrzEndDrawer.show]'s `builder` and
+/// `actions` are captured at the same call site (typically a method on the
+/// input's own `State`, e.g. `_openDesktopDrawer`), so a naive closure like
+/// `onCancel: () => LayrzModalRoute.popIfCurrent(context)` written there
+/// captures that method's own `context` -- the anchor field's context,
+/// **outside** the drawer's route entirely. `ModalRoute.of` on that context
+/// resolves to the app's base route, whose `isCurrent` is permanently
+/// `false` once the drawer is open on top of it, so `popIfCurrent` silently
+/// no-ops forever and the drawer never closes. Passing this context through
+/// explicitly is what makes `popIfCurrent` resolve the actual drawer route.
 class LayrzPickerDrawerActions extends StatelessWidget {
   /// The surface's live draft state, updated on every mutation. `canSave`
   /// gates the Save button; `hasSelection` gates whether Clear renders at
   /// all.
   final ValueListenable<({bool canSave, bool hasSelection})> draftState;
 
-  /// Called when Cancel is pressed. Always shown.
-  final VoidCallback onCancel;
+  /// Called when Cancel is pressed, with this widget's own (route-scoped)
+  /// [BuildContext]. Always shown.
+  final ValueChanged<BuildContext> onCancel;
 
-  /// Called when Clear is pressed, while `draftState.hasSelection` is `true`.
-  /// Ignored (and the button omitted) while `hasSelection` is `false`.
-  final VoidCallback onClear;
+  /// Called when Clear is pressed, with this widget's own (route-scoped)
+  /// [BuildContext], while `draftState.hasSelection` is `true`. Ignored (and
+  /// the button omitted) while `hasSelection` is `false`.
+  final ValueChanged<BuildContext> onClear;
 
-  /// Called when Save is pressed, while `draftState.canSave` is `true`. Save
-  /// renders disabled, not omitted, while `canSave` is `false`.
-  final VoidCallback onSave;
+  /// Called when Save is pressed, with this widget's own (route-scoped)
+  /// [BuildContext], while `draftState.canSave` is `true`. Save renders
+  /// disabled, not omitted, while `canSave` is `false`.
+  final ValueChanged<BuildContext> onSave;
 
   /// Creates a new [LayrzPickerDrawerActions].
   const LayrzPickerDrawerActions({
@@ -58,9 +78,9 @@ class LayrzPickerDrawerActions extends StatelessWidget {
       builder: (context, state, _) {
         final actions = LayrzPickerDrawerFooter.build(
           context,
-          onCancel: onCancel,
-          onClear: state.hasSelection ? onClear : null,
-          onSave: state.canSave ? onSave : null,
+          onCancel: () => onCancel(context),
+          onClear: state.hasSelection ? () => onClear(context) : null,
+          onSave: state.canSave ? () => onSave(context) : null,
         );
 
         // Each button is wrapped in Flexible (not left to size itself) so

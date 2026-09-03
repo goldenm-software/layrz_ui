@@ -5,6 +5,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 
 import '../shared/editable_field.dart';
@@ -238,7 +239,11 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
       if (widget.panelController != null) {
         widget.panelController!.close();
       } else {
-        Navigator.pop(context);
+        // Guards against exactly the double-pop shape this method's own doc
+        // comment already diagnoses above -- see that comment for the
+        // original bug this line replaced a bare `Navigator.pop(context)`
+        // for.
+        LayrzModalRoute.popIfCurrent(context);
       }
       return KeyEventResult.handled;
     }
