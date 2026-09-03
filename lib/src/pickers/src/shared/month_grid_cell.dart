@@ -151,6 +151,20 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
               // pick it back up as the movable endpoint, which the default
               // double-tap cooldown would otherwise swallow on this cell.
               collapseDoubleTap: false,
+              // Explicit transparent idle surface (Finding 1, maintainer
+              // review) -- see `LayrzPickersDayGridCell`'s identical fix and
+              // doc comment for the full explanation: [LayrzTappable]'s own
+              // idle default paints a solid `sf1` surface, not transparent,
+              // which punched the same illegible disc out of
+              // [LayrzPickersRangeBar]'s solid fill for a consecutive
+              // range's month cells.
+              //
+              // Transparent-at-the-hover-hue, not literal black (Finding 5,
+              // same review pass) -- see `LayrzPickersDayGridCell`'s
+              // identical fix and doc for why `Color(0x00000000)` would
+              // reintroduce a "black blink" tween into the hover state.
+              color: tokens.colors.sf3.withValues(alpha: 0),
+              hoverColor: tokens.colors.sf3,
               borderRadius: tokens.radius.br2,
               child: Container(
                 alignment: Alignment.center,

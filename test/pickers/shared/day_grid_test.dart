@@ -1,5 +1,6 @@
 import 'dart:ui' show PointerDeviceKind;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -197,6 +198,12 @@ void main() {
         if (decoration is! BoxDecoration) continue;
         final color = decoration.color;
         if (color == null) continue;
+        // A fully transparent fill (alpha 0, e.g. LayrzTappable's own idle
+        // surface -- Finding 1, see `LayrzPickersDayGridCell`'s doc) paints
+        // nothing at all, so its HSL lightness is meaningless: `Color(
+        // 0x00000000)` is literally black at alpha 0, which would otherwise
+        // false-positive this near-black check despite being invisible.
+        if (color.a == 0.0) continue;
         // Near-black would be an HSL lightness close to 0.0 -- the swatch
         // defect clamps all the way to it. A light tint (tonalOpacity
         // alpha over the seed, or the seed itself for endpoints) never
@@ -321,12 +328,8 @@ void main() {
         );
         expect(cellFinder, findsOneWidget, reason: 'endpoint cell "$label" not found');
 
-        // A selectable (non-rejected) cell's LayrzTappable also renders its
-        // own idle-state Container (sf1 fill) ahead of the cell's actual
-        // 32x32 box in descendant order -- see LayrzPickersDayGridCell's own
-        // `LayrzTappable` composition doc. Match on the fixed 32x32
-        // constraint the cell's own Container is built with, rather than
-        // assuming descendant order.
+        // Match on the fixed 32x32 constraint the cell's own Container is
+        // built with, rather than assuming descendant order.
         final container = tester
             .widgetList<Container>(find.descendant(of: cellFinder, matching: find.byType(Container)))
             .firstWhere(
@@ -334,6 +337,30 @@ void main() {
             );
         final decoration = container.decoration as BoxDecoration;
         expect(decoration.color, isNull, reason: 'endpoint "$label" must not paint its own circle fill');
+
+        // Finding 1 regression (maintainer review, from a device
+        // screenshot): an endpoint/interior cell is selectable (not
+        // rejected), so it reaches `LayrzTappable` with a non-null `onTap`
+        // and renders its own `AnimatedContainer` surface underneath this
+        // 32x32 box. Before the fix, `LayrzTappable`'s idle surface
+        // defaulted to `tokens.colors.sf1` (not transparent, despite its own
+        // class doc) -- painted as a filled, fully rounded 32x32 box, that
+        // read as a bright disc punched out of the navy bar behind it,
+        // hiding the day number completely. Asserting the `AnimatedContainer`
+        // itself (not just the cell's own inner Container above) is what
+        // actually catches that: a test only checking the inner box would
+        // pass against the exact bug this regresses.
+        final animatedContainer = tester
+            .widgetList<AnimatedContainer>(find.descendant(of: cellFinder, matching: find.byType(AnimatedContainer)))
+            .first;
+        final surfaceDecoration = animatedContainer.decoration as BoxDecoration;
+        expect(
+          surfaceDecoration.color?.a ?? 0.0,
+          0.0,
+          reason:
+              'endpoint "$label" must have a fully transparent (alpha 0) idle surface -- any visible alpha '
+              'here paints a disc over the range bar, exactly the "white circles hide the day numbers" defect',
+        );
       }
     });
 
@@ -685,12 +712,86 @@ void main() {
         find.descendant(of: cellFinder, matching: find.byType(AnimatedContainer)),
       );
       final decoration = animatedContainer.decoration as BoxDecoration;
-      // Idle colour is `tokens.colors.sf1` -- hovered must differ from it,
-      // proving hover feedback actually paints rather than the cell simply
-      // being tappable with no visual state change (D15's colour-only
-      // requirement, verified for real rather than assumed).
+      // Idle colour is transparent (Finding 1 fix) -- hovered must resolve
+      // to a fully opaque `sf3`, proving hover feedback actually paints
+      // rather than the cell simply being tappable with no visual state
+      // change (D15's colour-only requirement, verified for real rather
+      // than assumed).
       final tokens = LayrzTokens.light();
-      expect(decoration.color, isNot(tokens.colors.sf1));
+      expect(decoration.color, tokens.colors.sf3);
+    });
+
+    // Finding 5 (maintainer review), mirrored from the ComboBox fix: idle
+    // must be transparent AT THE HOVER HUE, not literal black, or the
+    // AnimatedContainer's Color.lerp ramps black RGB channels upward
+    // alongside the alpha and visibly darkens mid-transition before
+    // settling at the lighter hover colour. Asserts an intermediate frame,
+    // not just the endpoints -- a test checking only idle and settled hover
+    // would pass against the exact bug this regresses.
+    //
+    // Reads the actual interpolated colour off the rendered `DecoratedBox`
+    // (via `tester.renderObject`), not `tester.widget<AnimatedContainer>` --
+    // the latter only ever reports the widget's own target `decoration` (the
+    // value `build()` was called with), never the animation's current
+    // in-flight value. Sampling the widget instead of the render object
+    // would silently always read the settled target and could never catch
+    // a real interpolation defect.
+    guardedTestWidgets('the hover tween never dips darker than either endpoint (no black blink)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickersDayGrid(displayedMonth: DateTime(2026, 9), onDayTap: (_) {}),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final cellFinder = find.ancestor(
+        of: find.text('15').first,
+        matching: find.byType(LayrzTappable),
+      );
+      final decoratedBoxFinder = find
+          .descendant(
+            of: find.descendant(of: cellFinder, matching: find.byType(AnimatedContainer)),
+            matching: find.byType(DecoratedBox),
+          )
+          .first;
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      await tester.pump();
+      await gesture.moveTo(tester.getCenter(cellFinder));
+      await tester.pump();
+
+      final tokens = LayrzTokens.light();
+      const idleLightness = 1.0; // fully transparent composites as the white page background.
+      final hoverLightness = HSLColor.fromColor(
+        Color.alphaBlend(tokens.colors.sf3, const Color(0xFFFFFFFF)),
+      ).lightness;
+      final lighterEndpoint = idleLightness > hoverLightness ? idleLightness : hoverLightness;
+      final darkerEndpoint = idleLightness < hoverLightness ? idleLightness : hoverLightness;
+
+      // kHoverDuration is 100ms -- sample every 10ms across the whole
+      // tween, not just one midpoint, so no in-flight frame is missed.
+      for (var elapsed = 0; elapsed <= 100; elapsed += 10) {
+        final renderObject = tester.renderObject(decoratedBoxFinder) as RenderDecoratedBox;
+        final frameColor = (renderObject.decoration as BoxDecoration).color;
+        expect(frameColor, isNotNull);
+        final composited = Color.alphaBlend(frameColor!, const Color(0xFFFFFFFF));
+        final frameLightness = HSLColor.fromColor(composited).lightness;
+        expect(
+          frameLightness,
+          inInclusiveRange(darkerEndpoint - 0.01, lighterEndpoint + 0.01),
+          reason:
+              'at elapsed=${elapsed}ms the tween is darker than both endpoints -- exactly the '
+              '"black blink" this regresses: $frameColor',
+        );
+        await tester.pump(const Duration(milliseconds: 10));
+      }
+
+      await tester.pumpAndSettle();
     });
 
     guardedTestWidgets('geometry stays identical (D15): a disabled/inert cell measures the same as a selectable one', (

@@ -239,6 +239,12 @@ void main() {
         if (decoration is! BoxDecoration) continue;
         final color = decoration.color;
         if (color == null) continue;
+        // A fully transparent fill (alpha 0, e.g. LayrzTappable's own idle
+        // surface -- Finding 1, see `LayrzPickersMonthGridCell`'s doc) paints
+        // nothing at all, so its HSL lightness is meaningless: `Color(
+        // 0x00000000)` is literally black at alpha 0, which would otherwise
+        // false-positive this near-black check despite being invisible.
+        if (color.a == 0.0) continue;
         expect(
           HSLColor.fromColor(color).lightness,
           greaterThan(0.05),
@@ -328,6 +334,25 @@ void main() {
         final decoration = innerContainer.decoration as BoxDecoration;
         expect(decoration.color, isNull, reason: '$label must not paint its own card fill');
         expect(decoration.border, isNull, reason: '$label must not paint its own card border');
+
+        // Finding 1 regression (maintainer review): "MonthRange has the same
+        // issue as Date" -- a selectable (non-rejected) cell reaches
+        // `LayrzTappable` with a non-null `onTap` and renders its own
+        // `AnimatedContainer` surface. Before the fix, that surface's idle
+        // color defaulted to `tokens.colors.sf1`, which painted a visible
+        // card-shaped disc over the range bar underneath, hiding the month
+        // label. See `LayrzPickersMonthGridCell`'s own doc for the fix.
+        final animatedContainer = tester
+            .widgetList<AnimatedContainer>(find.descendant(of: cellFinder, matching: find.byType(AnimatedContainer)))
+            .first;
+        final surfaceDecoration = animatedContainer.decoration as BoxDecoration;
+        expect(
+          surfaceDecoration.color?.a ?? 0.0,
+          0.0,
+          reason:
+              '$label must have a fully transparent (alpha 0) idle surface -- any visible alpha here '
+              'paints a disc over the range bar, the same "white circles" defect as the day grid',
+        );
       }
     });
 

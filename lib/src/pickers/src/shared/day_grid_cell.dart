@@ -201,6 +201,37 @@ class LayrzPickersDayGridCell extends StatelessWidget {
               // double-tap cooldown would swallow that second tap on the
               // same cell, so it is opted out of here.
               collapseDoubleTap: false,
+              // Explicit transparent idle surface (Finding 1, maintainer
+              // review). [LayrzTappable]'s own idle default is
+              // `tokens.colors.sf1`, not transparent, despite its class doc
+              // claiming otherwise -- every cell painted a solid `sf1` circle
+              // underneath its own content regardless of role. Invisible
+              // against the page background for a `none`-role cell, but a
+              // `rangeEndpoint`/`rangeInterior` cell sits on top of
+              // [LayrzPickersRangeBar]'s solid `primary` fill, so that same
+              // `sf1` circle punched a bright, illegible disc out of the
+              // navy bar and hid the day number underneath it -- reported
+              // directly from a device screenshot. Fixing this here, at the
+              // call site, rather than in `LayrzTappable` itself: every other
+              // caller that needs a transparent idle surface already passes
+              // this exact literal (see `select_input.dart`,
+              // `combobox_surface.dart`), so this is the established
+              // workaround for that shared widget's default, not a new one.
+              //
+              // Transparent-at-the-hover-hue, not literal black (Finding 5,
+              // same review pass). `tokens.colors.sf3.withValues(alpha: 0)`
+              // rather than `Color(0x00000000)`: the latter's RGB channels
+              // are black regardless of alpha, so animating from it to the
+              // hover state (`hoverColor` here, `tokens.colors.sf3`) ramps
+              // black upward alongside the alpha and visibly darkens mid-tween
+              // before settling at the lighter `sf3` -- the exact "black
+              // blink" reported for `combobox_surface.dart`'s identical
+              // idle-to-hover tween (see that file's own fix and doc for the
+              // measured lightness dip this avoids). Starting from the same
+              // hue at zero alpha keeps every intermediate frame's RGB
+              // already correct, so only the alpha ramps.
+              color: tokens.colors.sf3.withValues(alpha: 0),
+              hoverColor: tokens.colors.sf3,
               borderRadius: BorderRadius.circular(16.0),
               child: Container(
                 width: 32.0,
