@@ -348,6 +348,19 @@ class BottomSheetContent extends StatefulWidget {
   /// [Semantics] name either way.
   final bool showInlineTitle;
 
+  /// Whether this surface's own search field filters [options] as the user
+  /// types into it. Defaults to `true`.
+  ///
+  /// Mirrors [LayrzComboBoxInput.enableAutocomplete]'s documented contract
+  /// ("if false, all options are always displayed") onto this surface's own
+  /// search field -- the sole remaining filter mechanism as of the
+  /// maintainer's Finding 6 fix (see [LayrzComboBoxInput._openDesktopDrawer]'s
+  /// own doc for why the caller no longer pre-filters [options] before
+  /// handing them to this widget). When `false`, typing into the search
+  /// field still updates its own text (so the custom-value row and Enter-to-
+  /// commit-typed-text keep working), but never narrows [options] itself.
+  final bool enableAutocomplete;
+
   /// Creates bottom sheet content.
   const BottomSheetContent({
     super.key,
@@ -355,6 +368,7 @@ class BottomSheetContent extends StatefulWidget {
     required this.emptyText,
     this.labelText,
     this.showInlineTitle = true,
+    this.enableAutocomplete = true,
   });
 
   @override
@@ -447,8 +461,17 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
 
   /// Re-derives [_filteredOptions] from [widget.options] and the current
   /// search text -- case-insensitive, matching from the start of each option,
-  /// mirroring `LayrzComboBoxInput._getFilteredOptions`'s own semantics.
+  /// mirroring `LayrzComboBoxInput`'s own historical filter semantics.
+  ///
+  /// A no-op pass-through of [widget.options] when
+  /// [BottomSheetContent.enableAutocomplete] is `false` -- see that field's
+  /// own doc for why this is now the sole place that flag's contract is
+  /// honored.
   void _updateFilteredOptions() {
+    if (!widget.enableAutocomplete) {
+      _filteredOptions = widget.options;
+      return;
+    }
     final query = _searchController.text.toLowerCase();
     _filteredOptions = query.isEmpty
         ? widget.options
@@ -459,7 +482,13 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
   /// bold custom-value row" section for the full contract: present whenever
   /// the search text is non-empty and does not exactly match (case-
   /// insensitively) any of [widget.options].
+  ///
+  /// Suppressed entirely when [BottomSheetContent.enableAutocomplete] is
+  /// `false`: that flag's contract is "all options are always displayed",
+  /// which a custom-value commit row -- offering to commit text that matches
+  /// none of them -- would sit oddly alongside.
   bool get _hasCustomValueRow {
+    if (!widget.enableAutocomplete) return false;
     final query = _searchController.text;
     if (query.isEmpty) return false;
     final lowerQuery = query.toLowerCase();

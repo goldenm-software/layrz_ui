@@ -398,20 +398,6 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     }
   }
 
-  /// Filters options based on current text.
-  List<String> _getFilteredOptions() {
-    if (!widget.enableAutocomplete) {
-      return widget.options;
-    }
-
-    final text = _controller.text.toLowerCase();
-    if (text.isEmpty) {
-      return widget.options;
-    }
-
-    return widget.options.where((option) => option.toLowerCase().startsWith(text)).toList();
-  }
-
   void _openOverlay() {
     if (context.isCompact) {
       _openBottomSheet();
@@ -421,13 +407,13 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   }
 
   Future<void> _openBottomSheet() async {
-    final filtered = _getFilteredOptions();
     final selected = await LayrzBottomSheet.show<String?>(
       context,
       builder: (context) => BottomSheetContent(
-        options: filtered,
+        options: widget.options,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
         labelText: widget.labelText,
+        enableAutocomplete: widget.enableAutocomplete,
       ),
       // BottomSheetContent renders a plain Column, never a same-axis ListView, so
       // it needs no lazy-loading scrollable of its own — but it still needs a
@@ -464,13 +450,33 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// [_handleBlur] was written against, this time across a route boundary
   /// instead of a single frame), this reuses [BottomSheetContent] verbatim --
   /// the same self-contained surface the mobile branch already uses, with its
-  /// own independent search field, filtering [_getFilteredOptions] pool taken
-  /// at open time, and commit-by-pop contract (see that class's own doc for
-  /// why it has no callback-based commit path). This makes desktop's drawer
-  /// behavior consistent with mobile's sheet instead of continuing to differ
-  /// from it, at the cost of the closed field's typed text and caret position
-  /// not continuing into the drawer -- the drawer opens with its own empty
+  /// own independent search field over the full [widget.options] pool, and
+  /// commit-by-pop contract (see that class's own doc for why it has no
+  /// callback-based commit path). This makes desktop's drawer behavior
+  /// consistent with mobile's sheet instead of continuing to differ from it,
+  /// at the cost of the closed field's typed text and caret position not
+  /// continuing into the drawer -- the drawer opens with its own empty
   /// search field instead of the closed field's current text.
+  ///
+  /// **The pool handed to [BottomSheetContent] is always [widget.options]
+  /// unfiltered by the closed field's own text (maintainer review, Finding
+  /// 6).** An earlier revision passed a `_getFilteredOptions()` helper's
+  /// result instead (since removed) -- filtered against `_controller.text`,
+  /// the closed field's own display text. That is a reasonable filter while
+  /// the user is actively typing a query, but the closed field also holds
+  /// the full text of an already-*committed* selection (e.g. "Canada") once
+  /// one exists, and that helper could not tell those two cases apart.
+  /// Reopening the drawer after selecting "Canada" pre-filtered the pool
+  /// down to only options whose name starts with "canada" -- i.e. "Canada"
+  /// alone -- stranding every other option unreachable. [BottomSheetContent]
+  /// already owns its own independent search field, starting empty on every
+  /// open (see that class's own doc); this pre-filter pass only ever
+  /// narrowed what that field's own live filtering could reach, so it is
+  /// removed rather than special-cased for "was this text typed or
+  /// committed" (a distinction this widget has no reliable way to make from
+  /// `_controller.text` alone). The full list is always reachable on open;
+  /// the committed value stays visible as the closed field's own text once
+  /// the drawer is dismissed.
   ///
   /// **Title (DESIGN-98 follow-up).** [LayrzEndDrawer.show]'s `title` slot
   /// renders [widget.labelText] as a real title (headline, left-aligned) --
@@ -491,16 +497,16 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// only fills the gap when there is no visible `title` to announce it
   /// instead.
   Future<void> _openDesktopDrawer() async {
-    final filtered = _getFilteredOptions();
     final selected = await LayrzEndDrawer.show<String?>(
       context,
       semanticLabel: widget.labelText == null ? widget.hintText : null,
       title: widget.labelText == null ? null : Text(widget.labelText!),
       builder: (context) => BottomSheetContent(
-        options: filtered,
+        options: widget.options,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
         labelText: widget.labelText,
         showInlineTitle: false,
+        enableAutocomplete: widget.enableAutocomplete,
       ),
     );
 
