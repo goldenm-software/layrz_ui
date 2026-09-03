@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,29 @@ import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
 import '../../helpers/find_button_label.dart';
+
+/// Collects every semantics label under [tester]'s current tree.
+///
+/// Mirrors `time_range_input_a11y_test.dart`'s own `dumpSemanticsLabels` --
+/// used here, rather than `find.bySemanticsLabel`, because that matcher also
+/// matches literal text on renderable widgets and has already produced a
+/// false green in this repo (DESIGN-161).
+List<String> dumpSemanticsLabels(WidgetTester tester) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final labels = <String>[];
+  void walk(SemanticsNode node) {
+    final label = node.getSemanticsData().label;
+    if (label.isNotEmpty) labels.add(label);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return labels;
+}
 
 void main() {
   group('LayrzSelectInput', () {
@@ -525,6 +549,102 @@ void main() {
       // Desktop opens the selection surface via LayrzEndDrawer (DESIGN-98),
       // replacing the previous LayrzAnchoredPanel hosting.
       expect(find.byType(LayrzSelectInputSurface<String>), findsOneWidget);
+    });
+
+    // Finding 2 (maintainer review): "Select ... didn't display the
+    // labelText above on the Drawer" -- confirmed by grep: this widget's
+    // `_openDesktopDrawer` passed zero `title:` arguments to
+    // `LayrzEndDrawer.show`, unlike the eight date/time pickers. Mirrors
+    // `LayrzDateInput`'s identical fix and test.
+    testWidgets('the drawer renders labelText as a visible title (DESIGN-98 Finding 2)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        LayrzSelectInput<String>(
+          itemExtent: 40,
+          items: items,
+          labelText: 'Choose one',
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome));
+      await tester.pumpAndSettle();
+
+      // The closed field's own label renders via `LayrzInputChrome`'s
+      // RichText/TextSpan, not a plain Text -- so a bare `find.text` before
+      // this fix would already find nothing for the drawer's title. The
+      // drawer's own `title` slot renders a real `Text` widget, which is
+      // exactly what a caller before this fix never got.
+      expect(find.text('Choose one'), findsOneWidget, reason: 'the drawer must render a visible title Text');
+    });
+
+    // A caller with no labelText but a hintText must not lose the drawer's
+    // only accessible name -- semanticLabel falls back to hintText exactly
+    // like LayrzDateInput's identical fallback.
+    testWidgets('falls back to hintText for the drawer\'s semantic label when labelText is null', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(
+            itemExtent: 40,
+            items: items,
+            hintText: 'Pick something',
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        final labels = dumpSemanticsLabels(tester);
+        expect(labels.any((l) => l.contains('Pick something')), isTrue);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    // Beware the duplicate-announcement trap (`end_drawer.dart`'s own doc):
+    // when `title` already carries `labelText` visibly, passing the same
+    // text as `semanticLabel` too would double the accessibility
+    // announcement. `semanticLabel` must fall back to `hintText` only.
+    testWidgets('does not double-announce labelText once title carries it visibly', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemedApp(
+          tester,
+          LayrzSelectInput<String>(
+            itemExtent: 40,
+            items: items,
+            labelText: 'Choose one',
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzInputChrome));
+        await tester.pumpAndSettle();
+
+        final labels = dumpSemanticsLabels(tester);
+        final matches = labels.where((l) => l == 'Choose one').length;
+        expect(
+          matches,
+          1,
+          reason:
+              'the drawer\'s visible title Text already produces one Semantics node for "Choose one" -- '
+              'passing labelText as semanticLabel too would announce it a second time',
+        );
+      } finally {
+        handle.dispose();
+      }
     });
 
     testWidgets('desktop viewport opens panel on tap', (tester) async {

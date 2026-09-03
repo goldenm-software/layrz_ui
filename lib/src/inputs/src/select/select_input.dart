@@ -650,7 +650,20 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   Future<void> _openDesktopDrawer(BuildContext context) async {
     final result = await LayrzEndDrawer.show<LayrzSelectItem<T>?>(
       context,
-      semanticLabel: widget.labelText ?? widget.hintText,
+      // DESIGN-98 Finding 2 (maintainer review): before this, `labelText`
+      // reached the drawer only as `semanticLabel` (screen-reader only), so a
+      // sighted user saw no visible title at all. `title` below now carries
+      // `labelText` visibly whenever it is set, mirroring `LayrzDateInput`'s
+      // identical fix -- see that widget's own doc for the full rationale.
+      // `semanticLabel` falls back to `hintText` only: when `title` is
+      // non-null, its own rendered `Text` already produces a Semantics node
+      // with that exact label, so also passing it as `semanticLabel` would
+      // announce it a second time (see end_drawer.dart's own doc: "passing
+      // both usually reads as a duplicate title, not a title plus a
+      // caption"). `LayrzSelectInputSurface` renders no inline caption of its
+      // own, so there is no `showInlineTitle`-style flag to suppress here.
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      title: widget.labelText != null ? Text(widget.labelText!) : null,
       builder: (context) => ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 300.0),
         child: SingleChildScrollView(
