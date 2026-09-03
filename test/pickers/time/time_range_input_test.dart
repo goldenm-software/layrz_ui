@@ -221,6 +221,65 @@ void main() {
       expect(find.byType(LayrzTimeRangeSurface), findsNothing, reason: 'Cancel must close the panel');
       expect(find.text('09:00 – 17:00'), findsOneWidget, reason: 'the committed value must remain unchanged');
     });
+
+    // Maintainer review, Finding 3: screenshot 25 showed 0 Hours / 0 Minutes
+    // in both clusters with Save greyed out. Midnight is a valid, deliberately
+    // chosen time -- only a genuinely unset (`null`) endpoint should ever
+    // disable Save; `LayrzTimeRangeSurfaceState.canSave`'s own predicate
+    // (`_start != null && _end != null`) already never special-cases
+    // midnight, so this is not a distinct "zero looks unset" bug in that
+    // predicate. It is a SYMPTOM of Finding 1's seeding race: `draftState`
+    // used to seed `canSave` from a hardcoded `false`, correctable only by a
+    // post-frame callback that can lose the race against
+    // `LayrzEndDrawer`'s 300ms slide transition -- when it does, Save stays
+    // disabled regardless of what value is already seeded, all-zero or
+    // otherwise. Stepping frames explicitly (never `pumpAndSettle`, which
+    // conceals the race) through the transition is what actually exercises
+    // this, mirroring the identical test on `LayrzDateTimeInput`.
+    guardedTestWidgets(
+      'Save is enabled at every stepped frame for an already-midnight (00:00/00:00) range, not just after pumpAndSettle',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemedApp(
+          tester,
+          _bounded(
+            LayrzTimeRangeInput(
+              labelText: 'Business hours',
+              startValue: const LayrzTimeOfDay(hour: 0, minute: 0),
+              endValue: const LayrzTimeOfDay(hour: 0, minute: 0),
+            ),
+          ),
+        );
+
+        await tester.tap(find.byType(LayrzTimeRangeInput));
+
+        for (var elapsed = 0; elapsed <= 300; elapsed += 20) {
+          await tester.pump(const Duration(milliseconds: 20));
+          final saveButtonFinder = findButtonLabel(const LayrzUiL10nDefault().actionSave);
+          if (saveButtonFinder.evaluate().isEmpty) continue;
+          final saveWidget = tester.widget<LayrzButton>(
+            find.ancestor(of: saveButtonFinder, matching: find.byType(LayrzButton)).first,
+          );
+          expect(
+            saveWidget.onTap,
+            isNotNull,
+            reason:
+                'Save must be enabled at every frame once it renders (elapsed ${elapsed}ms) for an '
+                'all-zero range that was never actually unset.',
+          );
+        }
+
+        await tester.pumpAndSettle();
+        final settledSave = findButtonLabel(const LayrzUiL10nDefault().actionSave);
+        expect(settledSave, findsOneWidget);
+        await tester.tap(settledSave);
+        await tester.pumpAndSettle();
+        expect(find.byType(LayrzTimeRangeSurface), findsNothing, reason: 'Save must actually close the panel');
+      },
+    );
   });
 
   group('LayrzTimeRangeInput — auto-swap on reversed selection', () {

@@ -937,6 +937,72 @@ void main() {
         expect(changedCount, 1, reason: 'the closed field alone still reports every genuine text change');
         expect(values, ['Al']);
       });
+
+      // Maintainer review, Finding 6: after selecting "Canada", reopening the
+      // drawer showed ONLY "Canada" -- every other option had become
+      // unreachable. Root cause was `_openDesktopDrawer`/`_openMobileSurface`
+      // passing `_getFilteredOptions()`'s result (filtered against
+      // `_controller.text`, the CLOSED field's own display text) as the
+      // pool handed to `BottomSheetContent`. That filter is reasonable while
+      // the user is actively typing a query, but the closed field's text is
+      // also a committed selection's full text once one exists -- filtering
+      // the pool by "Canada" left only options starting with "canada", i.e.
+      // Canada alone. The fix passes `widget.options` unfiltered every time;
+      // `BottomSheetContent`'s own independent search field (starting empty)
+      // is the only filter left, so every option is always reachable on
+      // open, with the committed value visible only as the closed field's
+      // own text once the drawer is dismissed.
+      testWidgets('reopening after selecting one option still shows every other option, not just the selected one', (
+        tester,
+      ) async {
+        setDesktopSize(tester);
+        var changedCount = 0;
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Country',
+            options: const ['Canada', 'Chile', 'China', 'Colombia'],
+            onChanged: (_) => changedCount++,
+          ),
+        );
+
+        // Open and tap the "Canada" option row directly to commit it --
+        // mirrors the maintainer's own "selects Canada" repro step.
+        await tester.tap(find.byType(EditableText).first);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(of: find.byType(BottomSheetContent), matching: find.text('Canada')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(changedCount, 1);
+        expect(find.byType(BottomSheetContent), findsNothing, reason: 'committing a value closes the drawer');
+
+        // Reopen: every option -- not just "Canada" -- must be reachable.
+        await tester.tap(find.byType(EditableText).first);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(BottomSheetContent), findsOneWidget);
+        for (final option in const ['Canada', 'Chile', 'China', 'Colombia']) {
+          expect(
+            find.descendant(of: find.byType(BottomSheetContent), matching: find.text(option)),
+            findsOneWidget,
+            reason: '"$option" must still be reachable after "Canada" was already committed',
+          );
+        }
+
+        final reopenedDrawerField = find.descendant(
+          of: find.byType(BottomSheetContent),
+          matching: find.byType(EditableText),
+        );
+        final reopenedState = tester.state<EditableTextState>(reopenedDrawerField);
+        expect(
+          reopenedState.widget.controller.text,
+          isEmpty,
+          reason: "the drawer's own search field opens empty, not pre-filled with the committed value",
+        );
+      });
     });
 
     // The drawer's title (DESIGN-98) and the duplicate-announcement trap

@@ -247,6 +247,68 @@ void main() {
       expect(changed, DateTime(2026, 9, 1, 8, 0));
     });
 
+    // DESIGN-98 regression, round 2: the maintainer reported this exact bug a
+    // THIRD time after two rounds were both declared fixed on the strength of
+    // the "Save is already enabled on open..." test above -- which uses
+    // `pumpAndSettle()`. `pumpAndSettle` flushes every pending frame,
+    // including `LayrzDateTimeSurfaceState.initState`'s post-frame callback
+    // that primes `draftState`, so that test always observes the primed
+    // state and never exercises the real race: `LayrzEndDrawer` is a routed
+    // page with a 300ms slide transition, and the draft-state notifier used
+    // to seed `canSave` from a hardcoded `false`, correctable only by that
+    // post-frame callback finding `surfaceKey.currentState` already attached.
+    // Under real frame scheduling the callback can fire before the drawer's
+    // `builder` subtree (and therefore the surface's `State`) exists yet,
+    // which left Save disabled for the rest of that open regardless of what
+    // `value` was -- reopening "fixed" it only because a fresh `State` wins
+    // the race the next time. Stepping frames explicitly, including the very
+    // first frame after the drawer opens, is what actually exercises this.
+    guardedTestWidgets(
+      'Save is enabled at every stepped frame through the drawer-open transition, not just after pumpAndSettle',
+      (tester) async {
+        setWide(tester);
+        await pumpThemedApp(
+          tester,
+          LayrzDateTimeInput(labelText: 'When', value: DateTime(2026, 9, 1, 8, 0)),
+        );
+        await tester.tap(find.byType(LayrzInputChrome).first);
+
+        // Step through LayrzEndDrawer's 300ms slide transition frame by
+        // frame -- never pumpAndSettle, which is what concealed this bug.
+        for (var elapsed = 0; elapsed <= 300; elapsed += 20) {
+          await tester.pump(const Duration(milliseconds: 20));
+          final saveButtonFinder = findButtonLabel('Save');
+          if (saveButtonFinder.evaluate().isEmpty) continue;
+          final saveWidget = tester.widget<LayrzButton>(
+            find.ancestor(of: saveButtonFinder, matching: find.byType(LayrzButton)).first,
+          );
+          expect(
+            saveWidget.onTap,
+            isNotNull,
+            reason:
+                'Save must be enabled at every frame once it renders (elapsed ${elapsed}ms) -- '
+                'the draft-state notifier must be seeded correctly from `value`, not primed '
+                'later by a post-frame callback that can lose the race against the drawer\'s '
+                'own slide transition.',
+          );
+        }
+
+        // And after the transition settles, a real tap must still work with
+        // zero further interaction -- proving the enabled state above was
+        // not a false positive from a button that renders enabled but has a
+        // stale/no-op onTap.
+        await tester.pumpAndSettle();
+        final settledSave = findButtonLabel('Save');
+        expect(settledSave, findsOneWidget);
+        await tester.tap(settledSave);
+        await tester.pumpAndSettle();
+        // The drawer closed and committed -- if Save had actually been a
+        // no-op (the race's real symptom), the drawer would still be open
+        // and this Save label would still be found.
+        expect(findButtonLabel('Save'), findsNothing);
+      },
+    );
+
     guardedTestWidgets('Cancel reverts and closes without reporting anything', (tester) async {
       setWide(tester);
       DateTime? changed;

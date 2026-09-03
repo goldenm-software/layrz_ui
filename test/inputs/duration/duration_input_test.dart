@@ -10,6 +10,7 @@ import 'package:layrz_ui/src/inputs/src/shared/input_slot.dart';
 import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed_app.dart';
+import '../../helpers/thin_router.dart';
 
 void main() {
   group('LayrzDurationInput', () {
@@ -1417,6 +1418,93 @@ void main() {
     // summary, and closes the panel" -- that test needed no change here,
     // since `findButtonLabel('Reset')` finds the button in the drawer's
     // `actions` slot exactly as it found it inline before DESIGN-98.
+
+    // Maintainer-reported crash (Finding 2): "'currentConfiguration.isNotEmpty'
+    // — You have popped the last page off of the stack", thrown from
+    // `_LayrzDurationInputState._openDesktopDrawer`'s Save `onTap` per the
+    // reported stack trace. Root cause: every action button in that drawer's
+    // `actions` list called `Navigator.pop(context)` using the METHOD's own
+    // `context` (the anchor field's, captured once when `_openDesktopDrawer`
+    // runs) rather than a context genuinely inside the drawer's route. A
+    // plain imperative `Navigator` tolerates popping from the wrong context
+    // silently (it just resolves to the same, single root Navigator in
+    // practice) -- but this app hosts a real *declarative*, page-based
+    // Navigator via `go_router`, whose delegate asserts
+    // `currentConfiguration.isNotEmpty` when a page is popped out from under
+    // it while its own bookkeeping still expects that page present. This
+    // package has no dependency on `go_router` itself, so this test builds a
+    // minimal stand-in `RouterDelegate` around a real, page-based `Navigator`
+    // (not `WidgetsApp`'s own imperative one) that reproduces the identical
+    // invariant: `ThinRouterDelegate.currentConfiguration` asserts its own
+    // page stack is non-empty, exactly like go_router's real delegate does.
+    //
+    // Reproduced via `ThinRouterDelegate` (see `test/helpers/thin_router.dart`):
+    // a real page-based `Navigator`, exactly like `go_router` builds, whose
+    // delegate throws when asked for `currentConfiguration` after its own
+    // root page has been popped out from under it -- mirroring
+    // `GoRouterDelegate`'s real `'currentConfiguration.isNotEmpty'`
+    // assertion. Verified by hand against a genuine double pop (not a single
+    // tap, which this package's own suite already covered without ever
+    // catching the bug): a first `Navigator.pop` removes only
+    // `LayrzEndDrawer`'s own imperative route, harmlessly, exactly as
+    // intended; a SECOND pop attempt arriving after the first -- from a
+    // duplicated gesture callback, a race between two actions, or (as
+    // `_openDesktopDrawer`'s own doc now explains) simply the wrong
+    // safeguard being absent -- then pops the router delegate's own root
+    // page instead, which is what the maintainer's crash trace actually
+    // reports.
+    guardedTestWidgets(
+      'a second pop after Save already closed the drawer does not also pop the hosting router\'s own page',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final delegate = ThinRouterDelegate(
+          builder: (context) => LayrzDurationInput(labelText: 'Duration', value: const Duration(hours: 1)),
+        );
+
+        await tester.pumpWidget(
+          LayrzApp.router(
+            theme: LayrzThemeData.light(),
+            routerDelegate: delegate,
+            routeInformationParser: ThinRouteInformationParser(),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
+        final saveButtonFinder = findButtonLabel('Save');
+        expect(saveButtonFinder, findsOneWidget);
+
+        // Invoke the real Save action's own `onTap` twice in immediate
+        // succession, with no pump in between -- simulating the exact race
+        // `LayrzModalRoute.popIfCurrent`'s own doc comment describes ("a
+        // fast double tap ... could call Navigator.pop twice in quick
+        // succession"), against `duration_input.dart`'s ACTUAL Save `onTap`
+        // closure (whichever `context` `_openDesktopDrawer` itself closed
+        // over) rather than a hand-written stand-in.
+        final saveButton = tester.widget<LayrzButton>(
+          find.ancestor(of: saveButtonFinder, matching: find.byType(LayrzButton)).first,
+        );
+        saveButton.onTap!();
+        saveButton.onTap!();
+        await tester.pump();
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'a second pop must never remove the hosting router\'s own root page',
+        );
+        expect(delegate.popped, isFalse, reason: 'the router\'s own root page must never be popped by this drawer');
+        expect(
+          () => delegate.currentConfiguration,
+          returnsNormally,
+          reason: 'a real go_router delegate would throw exactly here once its page is gone',
+        );
+      },
+    );
   });
 
   group('LayrzDurationInput controller/focusNode lifecycle updates', () {
