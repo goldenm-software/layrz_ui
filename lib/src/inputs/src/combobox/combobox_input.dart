@@ -480,11 +480,21 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// The mobile bottom sheet path above keeps `showInlineTitle`'s default
   /// (`true`) unchanged, since [LayrzBottomSheet] has no title slot of its
   /// own to defer to.
+  ///
+  /// **`semanticLabel` falls back to `hintText` only (maintainer review).**
+  /// Before this, `semanticLabel` passed `widget.labelText` unconditionally,
+  /// alongside `title` above already rendering that exact text as a real
+  /// `Text` widget -- doubling the accessibility announcement, exactly the
+  /// trap `end_drawer.dart`'s own doc warns about ("passing both usually
+  /// reads as a duplicate title, not a title plus a caption"). Mirrors
+  /// `LayrzDateInput`/`LayrzSelectInput`'s identical fix: `semanticLabel`
+  /// only fills the gap when there is no visible `title` to announce it
+  /// instead.
   Future<void> _openDesktopDrawer() async {
     final filtered = _getFilteredOptions();
     final selected = await LayrzEndDrawer.show<String?>(
       context,
-      semanticLabel: widget.labelText,
+      semanticLabel: widget.labelText == null ? widget.hintText : null,
       title: widget.labelText == null ? null : Text(widget.labelText!),
       builder: (context) => BottomSheetContent(
         options: filtered,

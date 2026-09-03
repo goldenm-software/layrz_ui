@@ -1,4 +1,5 @@
 import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,29 @@ import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed_app.dart';
+
+/// Collects every semantics label under [tester]'s current tree.
+///
+/// Mirrors `select_input_test.dart`'s own `dumpSemanticsLabels` -- used
+/// here, rather than `find.bySemanticsLabel`, because that matcher also
+/// matches literal text on renderable widgets and has already produced a
+/// false green in this repo (DESIGN-161).
+List<String> dumpSemanticsLabels(WidgetTester tester) {
+  // ignore: deprecated_member_use
+  final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+  final labels = <String>[];
+  void walk(SemanticsNode node) {
+    final label = node.getSemanticsData().label;
+    if (label.isNotEmpty) labels.add(label);
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(root);
+  return labels;
+}
 
 void main() {
   group('LayrzComboBoxInput', () {
@@ -913,6 +937,110 @@ void main() {
         expect(changedCount, 1, reason: 'the closed field alone still reports every genuine text change');
         expect(values, ['Al']);
       });
+    });
+
+    // The drawer's title (DESIGN-98) and the duplicate-announcement trap
+    // (maintainer review). `combobox_input.dart:_openDesktopDrawer` passed
+    // `semanticLabel: widget.labelText` unconditionally alongside its own
+    // `title:` -- doubling the accessibility announcement once `title`'s own
+    // `Text` already produces a Semantics node with that exact label. Mirrors
+    // `LayrzDateInput`/`LayrzSelectInput`/`LayrzDurationInput`'s identical
+    // fix and tests.
+    group('the drawer title and its semantic label (maintainer review)', () {
+      void setDesktopSize(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      testWidgets('renders labelText as a visible title', (tester) async {
+        setDesktopSize(tester);
+
+        await pumpThemedApp(
+          tester,
+          LayrzComboBoxInput(
+            labelText: 'Choose a state',
+            options: const ['Alabama', 'Alaska', 'Arizona'],
+          ),
+        );
+
+        await tester.tap(find.byType(EditableText));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Choose a state'), findsOneWidget, reason: 'the drawer must render a visible title Text');
+      });
+
+      testWidgets('falls back to hintText for the semantic label when labelText is null', (tester) async {
+        setDesktopSize(tester);
+
+        final handle = tester.ensureSemantics();
+        try {
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              hintText: 'Pick a state',
+              options: const ['Alabama', 'Alaska', 'Arizona'],
+            ),
+          );
+
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+
+          final labels = dumpSemanticsLabels(tester);
+          expect(labels.any((l) => l.contains('Pick a state')), isTrue);
+        } finally {
+          handle.dispose();
+        }
+      });
+
+      testWidgets(
+        'does not add a third, route-level announcement of labelText once title carries it visibly',
+        (tester) async {
+          setDesktopSize(tester);
+
+          final handle = tester.ensureSemantics();
+          try {
+            await pumpThemedApp(
+              tester,
+              LayrzComboBoxInput(
+                labelText: 'Choose a state',
+                options: const ['Alabama', 'Alaska', 'Arizona'],
+              ),
+            );
+
+            await tester.tap(find.byType(EditableText));
+            await tester.pumpAndSettle();
+
+            final labels = dumpSemanticsLabels(tester);
+            final matches = labels.where((l) => l == 'Choose a state').length;
+            // Two legitimate, DIFFERENT nodes both carry this exact text even
+            // after the fix: `title`'s own visible `Text` widget, and
+            // `BottomSheetContent`'s own `Semantics(container: true, label:
+            // labelText)` naming its content (unrelated to the drawer's
+            // title -- see that class's own doc). That second one is not the
+            // bug; it exists for every Save-carrying picker in this batch
+            // too, just without a second name to collide with, since none of
+            // them pass `labelText` into their own surface widget.
+            //
+            // The bug was a THIRD node: `LayrzEndDrawer.show`'s own
+            // `semanticLabel` parameter, before this fix, wrapped the whole
+            // route in `Semantics(scopesRoute: true, namesRoute: true, label:
+            // widget.labelText)` -- a route-level announcement stacked on
+            // top of the two content-level ones above. Reverting this fix
+            // locally and re-running confirms the count: 3 occurrences
+            // before the fix, 2 after.
+            expect(
+              matches,
+              2,
+              reason:
+                  'expected exactly title\'s Text plus BottomSheetContent\'s own content name (2) -- a third '
+                  'occurrence means semanticLabel is re-adding the route-level announcement this fix removes',
+            );
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
     });
 
     // Keyboard navigation inside the drawer, RESTORED.
