@@ -14,6 +14,7 @@ import 'demos/search_input_demo.dart';
 import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
 import 'demos/duration_input_demo.dart';
+import 'demos/login_input_demo.dart';
 import 'demos/date_input_demo.dart';
 import 'demos/date_range_input_demo.dart';
 import 'demos/time_input_demo.dart';
@@ -127,6 +128,15 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Search',
       details: SearchInputDemo(),
       icon: MdiIcons.magnify,
+    ),
+
+    // Login category
+    InputDemo(
+      id: 'login-input',
+      name: 'Login Inputs',
+      category: 'Login',
+      details: LoginInputDemo(),
+      icon: MdiIcons.formTextboxPassword,
     ),
 
     // Date & Time category
