@@ -200,9 +200,25 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
             curve: tokens.motion.easingEmphasized,
           ),
           headerBuilder: (context, animation) => _buildHeader(context, tokens, spec, animation),
-          bodyBuilder: (context, animation) => widget.body,
+          bodyBuilder: (context, animation) => _buildBody(spec),
         ),
       ),
+    );
+  }
+
+  /// Wraps [LayrzAccordion.body] in a surface that shares [spec]'s header
+  /// background color.
+  ///
+  /// Without this, the body paints on whatever is behind the accordion --
+  /// transparent by default -- so an expanded panel reads as a filled header
+  /// floating above a detached body. Filling the body with the same color as
+  /// the header makes the two read as one continuous panel surface with no
+  /// seam, which is only ever visible while expanded since the collapsed body
+  /// is absent from the tree (`maintainState: false`).
+  Widget _buildBody(LayrzAccordionStyleSpec spec) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: spec.headerBackgroundColor),
+      child: widget.body,
     );
   }
 

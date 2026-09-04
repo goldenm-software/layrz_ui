@@ -314,6 +314,33 @@ void main() {
       expect(beforeSize, equals(afterSize));
     });
 
+    testWidgets('expanded body surface shares the header background color -- no seam', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzAccordion(
+          titleText: 'Continuous surface',
+          expanded: true,
+          onExpansionChanged: (_) {},
+          body: const _BodyMarker(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final headerContainer = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      final headerColor = (headerContainer.decoration as BoxDecoration).color;
+
+      final bodyDecoratedBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(_BodyMarker), matching: find.byType(DecoratedBox)).first,
+      );
+      final bodyColor = (bodyDecoratedBox.decoration as BoxDecoration).color;
+
+      expect(bodyColor, equals(headerColor));
+    });
+
     testWidgets('rotates the chevron between collapsed and expanded', (tester) async {
       bool expanded = false;
 
