@@ -1,23 +1,40 @@
 part of 'login_web_field_web.dart';
 
-/// DOM construction (container/label/input/icons/selection style) and the
-/// floating-label state machine for [_LayrzLoginWebFieldState].
+/// DOM construction (container/placeholder/input/icons/selection style) for
+/// [_LayrzLoginWebFieldState].
 ///
 /// Split out of `login_web_field_web.dart` as a `part` (not a standalone library)
 /// because [_registerViewFactory] both reads shared instance state (`widget`,
 /// `_viewType`) and writes back every stored element reference (`_inputElement`,
-/// `_containerElement`, `_labelElement`, `_prefixIconPathElement`,
-/// `_suffixIconPathElement`, `_selectionStyleElement`, `_applyFloatState`) that the rest
-/// of the state class depends on — a `part` file shares its enclosing library's privacy
-/// scope, so this state stays private without having to be exposed for a normal
-/// cross-file import.
+/// `_containerElement`, `_placeholderElement`, `_prefixIconPathElement`,
+/// `_suffixIconPathElement`, `_selectionStyleElement`) that the rest of the state class
+/// depends on — a `part` file shares its enclosing library's privacy scope, so this
+/// state stays private without having to be exposed for a normal cross-file import.
 ///
-/// Ported from `layrz_session`'s `native_autofill_field_web_dom.dart`. The DOM
-/// construction mechanism (honeypot rules, floating-label state machine, event wiring)
-/// is preserved verbatim in behavior; every dimension/color assignment is redirected
-/// to read from [LayrzTokens]/[LayrzInputStyleSpec] (via `login_web_field_web_theme
-/// .dart`) instead of `layrz_session`'s hardcoded `ThemedInputBorder`-derived CSS
-/// constants — see that file's own doc comment for the full rationale.
+/// Ported from `layrz_session`'s `native_autofill_field_web_dom.dart`, but the visual
+/// mechanism is NOT preserved verbatim: `layrz_session` invented a Material-style
+/// floating label (label animates center→top, scales down when focused or filled) that
+/// has no equivalent anywhere in layrz_ui — [LayrzInputChrome] (`input_chrome.dart`)
+/// renders a STATIC label above the box and, inside the box, a placeholder that is
+/// simply shown when the field is empty and hidden the instant it has a value (see
+/// `input_chrome.dart:417-449`'s `ValueListenableBuilder`-gated hint `Text`). Animating
+/// the label into a shrunken caption on top of the typed value — as the floating
+/// mechanism did — produced the reported overlapping/garbled text bug, because both the
+/// label and the value shared the same box with no mutual exclusion once a value
+/// existed. This file now replicates the REAL chrome behavior instead:
+///  - The floating `<label>` is gone. The label is rendered once, statically, by
+///    `login_web_field_web.dart`'s `build()` as an ordinary Flutter `Text` row above the
+///    `HtmlElementView` — exactly where [LayrzInputChrome] puts it.
+///  - A `<span>` placeholder sits inside the box, in the same slot as the `<input>`, and
+///    is toggled by CSS `visibility` based on `input.value.isEmpty` — never editable,
+///    never focusable, purely decorative, matching the chrome's hint-text overlay.
+///  - The honeypot-avoidance rules (never zero-size, never `display: none`, never
+///    `opacity: 0` on the `<input>`) and all autofill/event wiring are preserved
+///    verbatim; only the label/placeholder visual mechanism changed. Every
+///    dimension/color assignment reads from [LayrzTokens]/[LayrzInputStyleSpec] (via
+///    `login_web_field_web_theme.dart`) instead of `layrz_session`'s hardcoded
+///    `ThemedInputBorder`-derived CSS constants — see that file's own doc comment for
+///    the full rationale.
 extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
   /// Registers the platform view factory that builds the real DOM element for this
   /// field instance.
@@ -25,7 +42,8 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
   /// The built element is never zero-sized and never set to `display: none` — both are
   /// known triggers for Flutter's autofill DOM pruning (flutter/flutter#105485), which
   /// is part of the same bug family this widget works around. Nor is it ever made
-  /// transparent (`opacity: 0`) — see [applyFloatState]'s doc comment for why.
+  /// transparent (`opacity: 0`) — see `applyPlaceholderVisibility`'s doc comment
+  /// (inside this method's body) for why.
   void _registerViewFactory() {
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       final isPassword = widget.kind == LayrzLoginFieldKind.password;
@@ -40,18 +58,21 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       final colors = _resolveThemeColors();
       final fillColor = colors.fillColor;
       final iconColor = colors.iconColor;
-      final labelColor = colors.labelColor;
+      final placeholderColor = colors.labelColor;
       final textColor = colors.textColor;
       final accentHex = colors.accentHex;
 
       // Outer filled pill, mirroring [LayrzInputChrome]'s own container: radius from
       // `tokens.radius.br2`, border color/width from [LayrzInputStyleSpec] (transparent
-      // at rest/hover, `colors.primary` when focused, `colors.danger` on error — the
-      // same precedence [LayrzInputChrome] resolves), padding from `tokens.spacing.pd1`/
-      // `pd2` (dense) or `pd2`/`pd3` (regular) — approximated here by the single scalar
-      // `density` above, since the DOM chrome (unlike the Flutter chrome) has no
-      // separate compact/regular viewport distinction to key off of; `dense` alone
-      // selects the tighter scale.
+      // at rest/hover/disabled/read-only, `colors.primary` when focused, `colors.danger`
+      // on error — the same precedence [LayrzInputChrome] resolves; note rest/hover
+      // really do resolve to a fully transparent border there too, so the "no visible
+      // border at rest" look this produces is CORRECT, not a bug — the fill-color step
+      // from `sf2` to `sf3` is what the real chrome uses to signal hover instead), and
+      // padding from `tokens.spacing.pd1`/`pd2` (dense) or `pd2`/`pd3` (regular) —
+      // approximated here by the single scalar `density` above, since the DOM chrome
+      // (unlike the Flutter chrome) has no separate compact/regular viewport distinction
+      // to key off of; `dense` alone selects the tighter scale.
       final container = web.document.createElement('div') as web.HTMLDivElement;
       container.style.width = '100%';
       container.style.height = '100%';
@@ -66,9 +87,7 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       container.style.padding = '${density}px';
       container.style.setProperty('gap', '${tokens.spacing.sp2}px');
 
-      // Icon sits in its own fixed-height cell centered against the FULL field height,
-      // independent of the label/value stack next to it, so it never moves when the
-      // label floats up.
+      // Icon sits in its own fixed-height cell centered against the FULL field height.
       final iconSlot = web.document.createElement('div') as web.HTMLDivElement;
       iconSlot.style.display = 'flex';
       iconSlot.style.alignItems = 'center';
@@ -79,45 +98,47 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       final prefixIcon = buildLoginIconSvg(prefixIconPath, iconColor);
       iconSlot.appendChild(prefixIcon.svg);
 
-      // Stack occupying the full field height: the label is absolutely positioned
-      // inside it so it can animate between "centered, scale 1" (idle) and "pinned to
-      // the top, scaled down to a small caption" (floated) without reflowing or
-      // resizing the input underneath it. The input always keeps its natural, real
-      // size — see the note on [applyFloatState] below for why it must never be shrunk
-      // to animate the transition.
+      // Stack occupying the full field height: the placeholder sits absolutely
+      // positioned in the SAME box the `<input>` occupies (mirroring
+      // [LayrzInputChrome]'s `Stack` at `input_chrome.dart:415-454`, where the hint
+      // `Text` and the child are both aligned into the same cell) and is toggled purely
+      // by `visibility`/`display` based on whether the input is empty — it never
+      // animates, never shrinks, and is never shown at the same time as a non-empty
+      // value. This is what eliminates the overlapping-text bug: exactly one of
+      // "placeholder" or "typed value" is ever visible at once, never both.
       final stack = web.document.createElement('div') as web.HTMLDivElement;
       stack.style.position = 'relative';
       stack.style.setProperty('flex', '1 1 auto');
       stack.style.minWidth = '0';
       stack.style.alignSelf = 'stretch';
+      stack.style.display = 'flex';
+      stack.style.alignItems = 'center';
 
-      final label = web.document.createElement('label') as web.HTMLLabelElement;
-      label.textContent = widget.labelText ?? '';
-      label.style.position = 'absolute';
-      label.style.left = '0';
-      label.style.right = '0';
-      label.style.fontFamily = cssFontFamily;
-      label.style.fontWeight = 'inherit';
-      label.style.color = labelColor;
-      label.style.userSelect = 'none';
-      label.style.setProperty('line-height', '1.3');
-      label.style.setProperty('white-space', 'nowrap');
-      label.style.setProperty('overflow', 'hidden');
-      label.style.setProperty('text-overflow', 'ellipsis');
-      label.style.transition = _LayrzLoginWebFieldState._labelTransitionCss;
-      // Matches [LayrzInputChrome]'s own body text size (`tokens.typography.body
-      // .fontSize`) for both label and input — the floated ("small") look is achieved
-      // purely via `transform: scale()`, never by changing `fontSize` (see
-      // [_LayrzLoginWebFieldState._labelTransitionCss] for why animating font-size is
-      // avoided).
       final bodyFontSize = tokens.typography.body.fontSize ?? 16.0;
-      label.style.fontSize = '${bodyFontSize}px';
-      label.style.setProperty('transform-origin', 'left top');
-      // `top` is assigned exactly ONCE, here, and is never touched again — see
-      // [applyFloatState] below for why all vertical motion instead happens purely via
-      // `transform: translateY(...) scale(...)`.
-      label.style.top = '0';
-      label.style.setProperty('transform', 'translateY(${bodyFontSize * 0.6}px) scale(1)');
+
+      // Decorative placeholder — mirrors [LayrzInputChrome]'s hint-text overlay
+      // (`density.textStyle.copyWith(color: tokens.colors.fg3)`, shown only while the
+      // controller is empty). Never focusable, never editable, and excluded from
+      // accessibility (the accessible label lives on the `<input>` itself via
+      // `aria-label`, set below) so assistive tech never announces two labels for one
+      // field.
+      final placeholder = web.document.createElement('span') as web.HTMLSpanElement;
+      placeholder.textContent = widget.labelText ?? '';
+      placeholder.style.position = 'absolute';
+      placeholder.style.left = '0';
+      placeholder.style.right = '0';
+      placeholder.style.fontFamily = cssFontFamily;
+      placeholder.style.fontWeight = 'inherit';
+      placeholder.style.color = placeholderColor;
+      placeholder.style.userSelect = 'none';
+      placeholder.style.setProperty('pointer-events', 'none');
+      placeholder.style.setProperty('line-height', '1.3');
+      placeholder.style.setProperty('white-space', 'nowrap');
+      placeholder.style.setProperty('overflow', 'hidden');
+      placeholder.style.setProperty('text-overflow', 'ellipsis');
+      placeholder.style.fontSize = '${bodyFontSize}px';
+      placeholder.setAttribute('aria-hidden', 'true');
+      placeholder.style.display = widget.value.isEmpty ? 'block' : 'none';
 
       final input = web.document.createElement('input') as web.HTMLInputElement;
       input.type = isPassword ? 'password' : 'text';
@@ -147,15 +168,17 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       input.id = _selectionClass;
       input.value = widget.value;
       input.disabled = widget.disabled;
-      input.style.position = 'absolute';
-      input.style.left = '0';
-      input.style.right = '0';
+      // An ordinary flex child of `stack` now — not absolutely positioned — since
+      // there is no longer a floating label sharing the box that it needs to make room
+      // for underneath. `stack`'s own `align-items: center` centers it vertically,
+      // matching [LayrzInputChrome]'s `Align(alignment: Alignment.center, child: child)`
+      // at `input_chrome.dart:450-453`.
       input.style.width = '100%';
       input.style.boxSizing = 'border-box';
       input.style.border = 'none';
       input.style.outline = 'none';
       input.style.background = 'transparent';
-      // These MUST be set as individual longhand properties (matching `label.style
+      // These MUST be set as individual longhand properties (matching `placeholder.style
       // .fontFamily` above) — NOT via the `font` shorthand, whose grammar rejects the
       // bare keyword fallback this file's font resolution can produce.
       input.style.fontFamily = cssFontFamily;
@@ -165,16 +188,19 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       input.style.color = textColor;
       input.style.padding = '0';
       input.style.margin = '0';
-      // Bottom-aligned so the value line sits on the field's lower half once the label
-      // floats up to the top, leaving room for both without overflowing the field
-      // height.
-      input.style.bottom = '2px';
-      // Never allow the input to collapse to zero *size*, and never resize or
-      // reposition it as part of the float transition — a zero-sized (width/height 0)
+      // Sets the accessible name directly on the input (the placeholder is
+      // `aria-hidden`, so this is the ONLY accessible name source for the field, on top
+      // of the static label row `login_web_field_web.dart`'s `build()` renders in
+      // Flutter — matching how [LayrzTextInput] wraps its own chrome in a
+      // `Semantics(label: widget.labelText, ...)`, see `text_input.dart:375-377`).
+      if (widget.labelText != null && widget.labelText!.isNotEmpty) {
+        input.setAttribute('aria-label', widget.labelText!);
+      }
+      // Never allow the input to collapse to zero *size* — a zero-sized (width/height 0)
       // or `display: none` input is the exact condition that triggers Flutter's own
       // autofill-proxy DOM pruning bug this widget exists to route around
-      // (flutter/flutter#105485). The input's box therefore stays constant at all
-      // times, and its `opacity` is likewise NEVER touched — see [applyFloatState].
+      // (flutter/flutter#105485). Its `opacity` is likewise NEVER touched — see
+      // `applyPlaceholderVisibility` below.
       input.style.height = '${bodyFontSize + 2}px';
       input.style.minHeight = '${bodyFontSize + 2}px';
 
@@ -197,7 +223,11 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       selectionStyle.textContent =
           '.$_selectionClass::selection { background: $selectionBackground; color: $textColor; }';
 
-      stack.appendChild(label);
+      // `placeholder` is absolutely positioned so it overlays `input` in the same cell
+      // (append order doesn't matter for stacking since `position: absolute` already
+      // takes it out of flex flow), and it is only ever visible while `input` is empty
+      // — see `applyPlaceholderVisibility` below.
+      stack.appendChild(placeholder);
       stack.appendChild(input);
 
       container.appendChild(selectionStyle);
@@ -206,8 +236,8 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
 
       web.HTMLSpanElement? suffixButton;
       if (isPassword) {
-        // Suffix button sits in its own full-height cell too, for the same reason as
-        // the prefix icon: it must stay put while the label floats.
+        // Suffix button sits in its own full-height cell so it never shifts as the
+        // input's value changes.
         suffixButton = web.document.createElement('span') as web.HTMLSpanElement;
         suffixButton.style.display = 'flex';
         suffixButton.style.alignItems = 'center';
@@ -269,20 +299,14 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         container.appendChild(suffixButton);
       }
 
-      // Tracks focus state independently of `document.activeElement`, so the float
-      // check works identically from all three events without extra DOM reads. Updated
-      // first by `focus`/`blur`, then read by the shared [applyFloatState] below
-      // (including from the `input` event, since autofill can populate `input.value`
-      // and fire an `input` event without ever dispatching a user-driven `focus`
-      // first).
-      var isFocused = false;
-
-      /// Applies (or removes) the floated — label-at-top — visual state.
-      ///
-      /// The floated state is `focused || value.isNotEmpty`, matching Material's
-      /// `floatingLabelBehavior: auto`: a filled-but-unfocused field (e.g. autofilled,
-      /// then tabbed away from) must keep its label floated rather than snapping back
-      /// to the centered idle look.
+      /// Shows or hides the decorative placeholder based purely on whether [input] is
+      /// currently empty — mirroring [LayrzInputChrome]'s own hint-text
+      /// `ValueListenableBuilder` (`input_chrome.dart:417-434`), which shows the hint
+      /// only while `value.text.isEmpty` and hides it the instant a value exists. No
+      /// animation, no transform, no scaling: exactly one of "placeholder" or "typed
+      /// value" is visible at any time, which is what makes overlap impossible — unlike
+      /// the previous floating-label mechanism, where the shrunken label and the input's
+      /// own value both occupied the same box simultaneously once focused-or-filled.
       ///
       /// ## The input is NEVER made transparent — not even at rest
       /// Browser password managers treat a fully transparent (`opacity: 0`) form field
@@ -293,44 +317,19 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       /// see cannot be offered for autofill, no matter how correct every other signal
       /// (`autocomplete`, `name`, `id`, `<form>` association) is. `input.style.opacity`
       /// is therefore never set anywhere in this file — the element simply keeps the
-      /// browser's default (fully opaque) at all times, in both the resting and
-      /// floated states.
-      ///
-      /// The centered-label-as-placeholder look this widget wants at rest falls out for
-      /// free from the input simply being EMPTY there: combined with `background:
-      /// transparent` and no border/outline, a resting, opaque, empty input is visually
-      /// indistinguishable from no input being there at all.
-      void applyFloatState() {
-        final shouldFloat = isFocused || input.value.isNotEmpty;
-        if (shouldFloat) {
-          label.style.setProperty('transform', 'translateY(1px) scale(0.75)');
-        } else {
-          label.style.setProperty('transform', 'translateY(${bodyFontSize * 0.6}px) scale(1)');
-        }
+      /// browser's default (fully opaque) at all times.
+      void applyPlaceholderVisibility() {
+        placeholder.style.display = input.value.isEmpty ? 'block' : 'none';
       }
 
-      input.addEventListener(
-        'focus',
-        (web.Event event) {
-          isFocused = true;
-          applyFloatState();
-        }.toJS,
-      );
-      input.addEventListener(
-        'blur',
-        (web.Event event) {
-          isFocused = false;
-          applyFloatState();
-        }.toJS,
-      );
       input.addEventListener(
         'input',
         (web.Event event) {
           widget.onChanged?.call(input.value);
           // Autofill (and other programmatic value changes) can populate the field and
-          // fire `input` without ever focusing it first, so the float check must also
-          // run here, not just on focus/blur.
-          applyFloatState();
+          // fire `input` without ever dispatching a user-driven `focus` first, so the
+          // placeholder check must run here too, not just be seeded once at creation.
+          applyPlaceholderVisibility();
         }.toJS,
       );
       input.addEventListener(
@@ -343,14 +342,14 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         }.toJS,
       );
 
-      // Seed the initial float state from the value the widget was created with, in
-      // case it starts non-empty.
-      applyFloatState();
+      // Seed the initial placeholder visibility from the value the widget was created
+      // with, in case it starts non-empty.
+      applyPlaceholderVisibility();
 
       _inputElement = input;
-      _applyFloatState = applyFloatState;
+      _applyPlaceholderVisibility = applyPlaceholderVisibility;
       _containerElement = container;
-      _labelElement = label;
+      _placeholderElement = placeholder;
       _prefixIconPathElement = prefixIcon.path;
       _selectionStyleElement = selectionStyle;
       // Re-derives colors from the CURRENT widget (rather than trusting the

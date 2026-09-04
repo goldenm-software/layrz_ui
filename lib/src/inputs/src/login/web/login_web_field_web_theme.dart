@@ -4,10 +4,10 @@ part of 'login_web_field_web.dart';
 ///
 /// Split out of `login_web_field_web.dart` as a `part` (not a standalone library)
 /// because every method here reads or writes private instance state shared with the
-/// rest of the state class (`_containerElement`, `_labelElement`, `_prefixIconPathElement`,
-/// `_suffixIconPathElement`, `_selectionStyleElement`) — a `part` file shares its
-/// enclosing library's privacy scope, so this state stays private without having to be
-/// exposed for a normal cross-file import.
+/// rest of the state class (`_containerElement`, `_placeholderElement`,
+/// `_prefixIconPathElement`, `_suffixIconPathElement`, `_selectionStyleElement`) — a
+/// `part` file shares its enclosing library's privacy scope, so this state stays
+/// private without having to be exposed for a normal cross-file import.
 ///
 /// **This file is the U6 visual-fidelity contract.** Unlike `layrz_session`'s
 /// `native_autofill_field_web_theme.dart` (which hardcodes `ThemedInputBorder`'s CSS hex
@@ -54,12 +54,14 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
   /// (`disabled > readOnly > error > pressed > hover/focused > default`) rather than a
   /// second, hand-maintained state machine that could drift from it.
   ///
-  /// Colors not modeled by [LayrzInputStyleSpec] (the icon/label tints) are read
-  /// directly from [LayrzTokens.colors]: `fg2` for the resting label (matching the
-  /// chrome's own label-row color, see `input_chrome.dart`'s label `TextSpan`), `fg3`
-  /// for icons (matching the chrome's hint-text/lock-icon secondary tone), and
-  /// `colors.primary` for the caret/selection accent (matching the focus border color
-  /// the spec resolves to).
+  /// Colors not modeled by [LayrzInputStyleSpec] (the icon/placeholder tints) are read
+  /// directly from [LayrzTokens.colors]: `fg2` (or `danger` while in the error state)
+  /// for the in-box placeholder — note this placeholder is a DIFFERENT element from the
+  /// static label row `login_web_field_web.dart`'s `build()` renders above the box
+  /// (which always stays `fg2`, matching [LayrzInputChrome]'s own label `TextSpan`
+  /// exactly); `fg3` for icons (matching the chrome's hint-text/lock-icon secondary
+  /// tone); and `colors.primary` for the caret/selection accent (matching the focus
+  /// border color the spec resolves to).
   _LoginFieldColors _resolveThemeColors() {
     final tokens = widget.tokens;
     final hasErrors = this.hasErrors;
@@ -129,8 +131,8 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
         ? '${colors.borderWidthPx}px solid ${colors.borderColor}'
         : 'none';
 
-    _labelElement?.style.color = colors.labelColor;
-    _labelElement?.textContent = widget.labelText ?? '';
+    _placeholderElement?.style.color = colors.labelColor;
+    _placeholderElement?.textContent = widget.labelText ?? '';
 
     _prefixIconPathElement?.setAttribute('fill', colors.iconColor);
     _suffixIconPathElement?.setAttribute('fill', colors.iconColor);
@@ -173,8 +175,10 @@ class _LoginFieldColors {
   /// carries validation errors, otherwise `fg3`.
   final String iconColor;
 
-  /// The floating label's text color — `danger` when in the error state, otherwise
-  /// `fg2`, matching [LayrzInputChrome]'s own label `TextSpan` color.
+  /// The in-box placeholder's text color — `danger` when in the error state, otherwise
+  /// `fg2`. Distinct from the static label row above the box (always `fg2`, rendered
+  /// in Flutter by `login_web_field_web.dart`'s `build()`, matching
+  /// [LayrzInputChrome]'s own label `TextSpan` color).
   final String labelColor;
 
   /// The typed-value text color, from [LayrzInputStyleSpec.textColor].

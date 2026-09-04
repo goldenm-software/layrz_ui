@@ -7,19 +7,26 @@
 /// ## File layout
 /// [_LayrzLoginWebFieldState] is split across several `part` files, grouped by
 /// responsibility, since a naive split into separate top-level classes would require
-/// exposing the state class's private fields (`_inputElement`, `_labelElement`,
-/// `_containerElement`, `_applyFloatState`, `_effectiveFormId`, etc.) that its methods
-/// share heavily. A `part` file shares its enclosing library's privacy scope, so
-/// splitting this way keeps every field genuinely private while still breaking the
-/// implementation into focused, independently readable files:
+/// exposing the state class's private fields (`_inputElement`, `_placeholderElement`,
+/// `_containerElement`, `_applyPlaceholderVisibility`, `_effectiveFormId`, etc.) that
+/// its methods share heavily. A `part` file shares its enclosing library's privacy
+/// scope, so splitting this way keeps every field genuinely private while still
+/// breaking the implementation into focused, independently readable files:
 ///  - `login_web_field_web_dom.dart` — DOM construction (the platform view factory:
-///    container/label/input/icons/selection style) and the floating-label state
-///    machine.
+///    container/placeholder/input/icons/selection style) and the empty/filled
+///    placeholder-visibility toggle.
 ///  - `login_web_field_web_theme.dart` — theme colour resolution (sourced from
 ///    [LayrzTokens]/[LayrzInputStyleSpec], the same resolver [LayrzInputChrome] uses)
 ///    and `_applyThemeStyles`.
 ///  - `login_web_field_web_form.dart` — `<form>` association, `aria-hidden` removal,
 ///    and their deferred connection verification.
+///
+/// The field's LABEL is rendered once, statically, by this file's own `build()` — an
+/// ordinary Flutter `Text` row above the `HtmlElementView`, mirroring exactly where
+/// [LayrzInputChrome] places its label (`input_chrome.dart:290-316`). The DOM layer
+/// itself renders no label at all; see `login_web_field_web_dom.dart`'s doc comment for
+/// why the previous Material-style floating label (ported unmodified from
+/// `layrz_session`) was replaced.
 ///
 /// Each `part` above is written as an `extension on _LayrzLoginWebFieldState` rather
 /// than literally reopening the class body (Dart has no syntax for the latter):
@@ -172,15 +179,6 @@ class LayrzLoginWebField extends StatefulWidget implements LayrzLoginWebFieldCon
 }
 
 class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
-  /// Duration of the label float-up/float-down transition.
-  ///
-  /// Only `transform` and `color` are transitioned — deliberately NOT `font-size`.
-  /// Animating `font-size` forces the browser to re-layout and re-rasterize glyphs on
-  /// every frame, which reads as visible stepping/shimmer instead of smooth motion.
-  static const String _labelTransitionCss =
-      'transform 200ms cubic-bezier(0.0, 0.0, 0.2, 1), '
-      'color 200ms cubic-bezier(0.0, 0.0, 0.2, 1)';
-
   /// Incrementing id so every instance of this widget registers its own, uniquely
   /// named platform view factory — reusing a view type across distinct widgets would
   /// make the platform view registry serve the wrong element.
@@ -194,10 +192,10 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
   /// theme-relevant fields change after the platform view has already been created.
   web.HTMLDivElement? _containerElement;
 
-  /// Floating label element, stored so `_applyThemeStyles` can restyle its `color`
-  /// (theme change) and re-set its `textContent` (label-text/locale change) after
-  /// creation.
-  web.HTMLLabelElement? _labelElement;
+  /// Decorative placeholder element (shown only while the input is empty), stored so
+  /// `_applyThemeStyles` can restyle its `color` (theme change) and re-set its
+  /// `textContent` (label-text/locale change) after creation.
+  web.HTMLSpanElement? _placeholderElement;
 
   /// `<path>` node inside the prefix icon `<svg>`, stored so `_applyThemeStyles` can
   /// restyle its `fill` in place.
@@ -212,12 +210,12 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
   /// changes.
   web.HTMLStyleElement? _selectionStyleElement;
 
-  /// Re-runs the floated-label check for the current native element, set by
+  /// Re-runs the placeholder-visibility check for the current native element, set by
   /// `_registerViewFactory` (in `login_web_field_web_dom.dart`) once the element
-  /// exists. Exposed so [didUpdateWidget] can re-sync the visual float state after
+  /// exists. Exposed so [didUpdateWidget] can re-sync placeholder visibility after
   /// resetting `input.value` from outside, since that assignment does not itself fire
   /// an `input` event.
-  VoidCallback? _applyFloatState;
+  VoidCallback? _applyPlaceholderVisibility;
 
   /// This field's resolved `<form>` id, or `null` if it should not be associated with
   /// any form.
@@ -284,8 +282,8 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
     if (input != null && widget.value != input.value && widget.value.isEmpty) {
       input.value = widget.value;
       // Assigning `.value` directly does not dispatch an `input` event, so the
-      // floated-label state would otherwise go stale.
-      _applyFloatState?.call();
+      // placeholder visibility would otherwise go stale.
+      _applyPlaceholderVisibility?.call();
     }
 
     if (input != null) {
@@ -329,7 +327,26 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
     // SingleChildScrollView (flutter/flutter#132183 and related issues).
     field = PointerInterceptor(child: field);
 
-    if (widget.errors.isEmpty) {
+    // Static label row above the field, mirroring [LayrzInputChrome]'s own label
+    // (`input_chrome.dart`'s `labelText` `Padding`/`RichText`): always `fg2`, never
+    // recolored on error — only the box itself (fill/border/icons) changes state. The
+    // DOM layer no longer renders any label of its own; see
+    // `login_web_field_web_dom.dart`'s doc comment on why the previous
+    // absolutely-positioned floating label was removed.
+    final labelText = widget.labelText;
+    final label = labelText == null || labelText.isEmpty
+        ? null
+        : Padding(
+            padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+            child: ExcludeSemantics(
+              child: Text(
+                labelText,
+                style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
+              ),
+            ),
+          );
+
+    if (widget.errors.isEmpty && label == null) {
       return field;
     }
 
@@ -337,14 +354,16 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
+        ?label,
         field,
-        Padding(
-          padding: EdgeInsets.only(top: tokens.spacing.sp1, left: tokens.spacing.sp3),
-          child: Text(
-            widget.errors.first,
-            style: tokens.typography.label.copyWith(color: tokens.colors.danger),
+        if (widget.errors.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.only(top: tokens.spacing.sp1, left: tokens.spacing.sp3),
+            child: Text(
+              widget.errors.first,
+              style: tokens.typography.label.copyWith(color: tokens.colors.danger),
+            ),
           ),
-        ),
       ],
     );
   }
