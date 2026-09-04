@@ -37,7 +37,12 @@ void main() {
           shaderRect: rect,
         );
 
-        final stops = shimmer.gradient.stops!;
+        // At the very start/end of the cycle the band's center hasn't
+        // entered [0.0, 1.0] yet, so gradient falls back to a flat two-color
+        // gradient with no explicit stops -- nothing to check ordering on.
+        final stops = shimmer.gradient.stops;
+        if (stops == null) continue;
+
         for (var j = 1; j < stops.length; j++) {
           expect(
             stops[j],
@@ -151,35 +156,55 @@ void main() {
       expect(a, isNot(equals(b)));
     });
 
-    test('position 0.0 places the band entirely before the visible range', () {
+    test(
+      'position 0.0 (band entirely before the visible range) and 1.0 (entirely past it) '
+      'fall back to a flat baseColor gradient instead of a collapsed highlight stop',
+      () {
+        // Regression: clamping the band's stops into [0.0, 1.0] when the band
+        // sits entirely outside that range used to collapse bandStart,
+        // bandCenter and bandEnd onto the same clamped value while colors
+        // still placed highlightColor at that point -- LinearGradient then
+        // interpolated a zero-width jump into and back out of
+        // highlightColor right at the shape's edge, painting a thin bright
+        // line pinned to it every animation cycle. The fix returns a flat
+        // two-stop [baseColor, baseColor] gradient whenever the band's
+        // unclamped extent doesn't intersect [0.0, 1.0] at all.
+        for (final value in [0.0, 1.0]) {
+          final shimmer = LayrzShimmerGradient.forAnimationValue(
+            value: value,
+            baseColor: baseColor,
+            highlightColor: highlightColor,
+            shaderRect: rect,
+          );
+
+          final gradient = shimmer.gradient;
+          expect(gradient.colors, equals([baseColor, baseColor]), reason: 'at position=$value');
+          expect(gradient.stops, isNull, reason: 'at position=$value');
+        }
+      },
+    );
+
+    test('a partially-entered band never places highlightColor at stop 0.0', () {
+      // At position 0.15 the band's true center (~0.045) has just crossed
+      // into [0.0, 1.0], so this renders the banded gradient rather than
+      // the flat fallback above -- a fast but continuous ramp, not the
+      // zero-width discontinuity that motivated it. highlightColor must
+      // never land exactly on the shape's edge stop (0.0) here.
       final shimmer = LayrzShimmerGradient.forAnimationValue(
-        value: 0.0,
+        value: 0.15,
         baseColor: baseColor,
         highlightColor: highlightColor,
         shaderRect: rect,
       );
 
-      // At position 0.0 the band's center sits before the rect (clamped to
-      // 0.0), so the gradient degenerates toward baseColor across most of
-      // the visible range — verified via the stops staying clamped and
-      // ordered rather than a specific pixel color, since LinearGradient
-      // does not expose sampled colors directly.
-      final stops = shimmer.gradient.stops!;
-      expect(stops.first, equals(0.0));
-      expect(stops.last, equals(1.0));
-    });
-
-    test('position 1.0 places the band entirely past the visible range', () {
-      final shimmer = LayrzShimmerGradient.forAnimationValue(
-        value: 1.0,
-        baseColor: baseColor,
-        highlightColor: highlightColor,
-        shaderRect: rect,
-      );
-
-      final stops = shimmer.gradient.stops!;
-      expect(stops.first, equals(0.0));
-      expect(stops.last, equals(1.0));
+      final gradient = shimmer.gradient;
+      final stops = gradient.stops!;
+      final colors = gradient.colors;
+      for (var i = 0; i < stops.length; i++) {
+        if (stops[i] == 0.0) {
+          expect(colors[i], equals(baseColor), reason: 'stop 0.0 must never carry highlightColor');
+        }
+      }
     });
   });
 }

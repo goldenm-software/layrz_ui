@@ -79,34 +79,66 @@ class LayrzShimmerGradient {
     );
   }
 
-  /// The gradient stops for the moving band, in the fixed order
-  /// `[start, bandStart, bandCenter, bandEnd, end]`, monotonically
-  /// non-decreasing and clamped to `[0.0, 1.0]` as required by [LinearGradient].
-  List<double> get _stops {
+  /// The unclamped band extent, `[center - half, center + half]`, before
+  /// clamping to the `[0.0, 1.0]` range gradient stops require.
+  ///
+  /// Used by [gradient] to detect when the band has fully entered or fully
+  /// exited the visible range -- see the class-level note on why that case
+  /// needs its own path.
+  (double start, double end) get _unclampedBand {
     final half = bandWidth / 2;
     // position travels across [-bandWidth, 1.0 + bandWidth] conceptually so
-    // the band fully enters and exits; remapped here into stops clamped to
-    // the valid [0.0, 1.0] range gradient stops require.
+    // the band fully enters and exits.
     final center = position * (1.0 + bandWidth) - bandWidth / 2;
-    final bandStart = (center - half).clamp(0.0, 1.0);
-    final bandEnd = (center + half).clamp(0.0, 1.0);
-    final clampedCenter = center.clamp(0.0, 1.0);
-
-    final stops = <double>[0.0, bandStart, clampedCenter, bandEnd, 1.0];
-    for (var i = 1; i < stops.length; i++) {
-      if (stops[i] < stops[i - 1]) stops[i] = stops[i - 1];
-    }
-    return stops;
+    return (center - half, center + half);
   }
 
   /// Builds the [LinearGradient] for this sweep state, left-to-right across
   /// [shaderRect].
-  LinearGradient get gradient => LinearGradient(
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-    colors: [baseColor, baseColor, highlightColor, baseColor, baseColor],
-    stops: _stops,
-  );
+  ///
+  /// Near the very start and end of a sweep cycle, the highlight band's
+  /// center sits outside `[0.0, 1.0]` while its near edge has already (or
+  /// still) clamps into range. Naively clamping `bandStart`/`bandCenter`
+  /// onto the same boundary value (`0.0` or `1.0`) while [colors] still
+  /// places [highlightColor] at that collapsed stop makes [LinearGradient]
+  /// interpolate a hard, near-zero-width jump into and back out of
+  /// [highlightColor] right at the shape's edge -- painting a thin bright
+  /// line pinned to it every cycle, exactly the stray "border" this shimmer
+  /// must never show. The fix: only ever include the [highlightColor] stop
+  /// when the band's true, unclamped center itself lies within
+  /// `[0.0, 1.0]`. Whenever the center has not yet entered (or has already
+  /// left) that range, this returns a flat two-stop [baseColor] gradient --
+  /// the visible portion of the band at that point in the cycle is far
+  /// enough from its peak that a flat base fill is indistinguishable from
+  /// the true (barely-brightened) ramp, and never introduces a coincident
+  /// highlight-at-the-edge stop.
+  LinearGradient get gradient {
+    final (bandStartRaw, bandEndRaw) = _unclampedBand;
+    final centerRaw = (bandStartRaw + bandEndRaw) / 2;
+
+    if (centerRaw <= 0.0 || centerRaw >= 1.0) {
+      return LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [baseColor, baseColor],
+      );
+    }
+
+    final bandStart = bandStartRaw.clamp(0.0, 1.0);
+    final bandEnd = bandEndRaw.clamp(0.0, 1.0);
+
+    final stops = <double>[0.0, bandStart, centerRaw, bandEnd, 1.0];
+    for (var i = 1; i < stops.length; i++) {
+      if (stops[i] < stops[i - 1]) stops[i] = stops[i - 1];
+    }
+
+    return LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [baseColor, baseColor, highlightColor, baseColor, baseColor],
+      stops: stops,
+    );
+  }
 
   /// Creates the [Shader] for this sweep state, ready to return from a
   /// `ShaderMask.shaderCallback`.
