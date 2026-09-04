@@ -4,6 +4,7 @@ export 'src/number/decimal_separator.dart';
 export 'src/duration/duration_format.dart';
 export 'src/duration/duration_input.dart';
 export 'src/duration/duration_unit.dart';
+export 'src/login/form.dart';
 export 'src/login/password_input.dart';
 export 'src/login/password_strength.dart';
 export 'src/login/password_strength_meter.dart';
