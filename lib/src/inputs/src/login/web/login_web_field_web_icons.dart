@@ -43,18 +43,42 @@ const String kShieldKeyIconPath =
     '12,3.18L5,6.3V11.22C5,15.54 8.25,20 12,21M12,6A3,3 0 0,1 15,9C15,10.31 14.17,11.42 13,11.83V14H15V16H13V18H11V'
     '11.83C9.83,11.42 9,10.31 9,9A3,3 0 0,1 12,6M12,8A1,1 0 0,0 11,9A1,1 0 0,0 12,10A1,1 0 0,0 13,9A1,1 0 0,0 12,8Z';
 
-/// Open-eye outline path data for the "show password" suffix icon state.
+/// Open-eye outline path data, matching `MdiIcons.eyeOutline` exactly, used for the
+/// "show password" suffix icon state.
+///
+/// The exact `d` string, verified byte-for-byte against `assets/eye-outline.svg` (the
+/// reference SVG committed alongside this file) — replaces the earlier hand-
+/// approximated path data, matching [kShieldAccountIconPath]'s and
+/// [kShieldKeyIconPath]'s doc comments on why exactness matters here.
 const String kEyeIconPath =
-    'M12 5c-5 0-9.27 3.11-11 7 1.73 3.89 6 7 11 7s9.27-3.11 11-7c-1.73-3.89-6-7-11-7zm0 '
-    '11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9zm0-7.2a2.7 2.7 0 1 0 0 5.4 2.7 2.7 0 0 0 0-5.4z';
+    'M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9M12,4.5C17,4.5 21.27,7.61 23,12C21.27,16.39 '
+    '17,19.5 12,19.5C7,19.5 2.73,16.39 1,12C2.73,7.61 7,4.5 12,4.5M3.18,12C4.83,15.36 8.24,17.5 12,17.5C15.76,17.5 '
+    '19.17,15.36 20.82,12C19.17,8.64 15.76,6.5 12,6.5C8.24,6.5 4.83,8.64 3.18,12Z';
 
-/// Eye-with-slash outline path data for the "hide password" suffix icon state.
+/// Eye-with-slash outline path data, matching `MdiIcons.eyeOffOutline` exactly, used
+/// for the "hide password" suffix icon state.
+///
+/// The exact `d` string, verified byte-for-byte against `assets/eye-off-outline.svg`
+/// (the reference SVG committed alongside this file) — see [kEyeIconPath]'s doc
+/// comment for why this replaced the earlier hand-approximated path data.
 const String kEyeOffIconPath =
-    'M3.28 2.22 2.22 3.28l3.2 3.2C3.6 7.79 2.06 9.68 1 12c1.73 3.89 6 7 11 7 1.77 0 '
-    '3.44-.39 4.93-1.09l3.79 3.79 1.06-1.06L3.28 2.22zM12 16.5c-.62 0-1.2-.14-1.72-.38l1.29-1.29c.14.03.28.05.43.05a2.7 '
-    '2.7 0 0 0 2.7-2.7c0-.15-.02-.29-.05-.43l1.29-1.29c.24.52.38 1.1.38 1.72a4.5 4.5 0 0 1-4.5 4.5zm0-11.7c1.77 0 '
-    '3.44.39 4.93 1.09l-1.6 1.6A4.5 4.5 0 0 0 9.6 13.2l-2.02 2.02C6.03 14.06 4.62 12.66 3.7 12 5.43 9.36 8.5 6.5 12 '
-    '6.5c0-.62.62-1.2 0-1.7z';
+    'M2,5.27L3.28,4L20,20.72L18.73,22L15.65,18.92C14.5,19.3 13.28,19.5 12,19.5C7,19.5 2.73,16.39 1,12C1.69,10.24 '
+    '2.79,8.69 4.19,7.46L2,5.27M12,9A3,3 0 0,1 15,12C15,12.35 14.94,12.69 14.83,13L11,9.17C11.31,9.06 11.65,9 12,9M12,'
+    '4.5C17,4.5 21.27,7.61 23,12C22.18,14.08 20.79,15.88 19,17.19L17.58,15.76C18.94,14.82 20.06,13.54 20.82,12C19.17,'
+    '8.64 15.76,6.5 12,6.5C10.91,6.5 9.84,6.68 8.84,7L7.3,5.47C8.74,4.85 10.33,4.5 12,4.5M3.18,12C4.83,15.36 8.24,17.5 '
+    '12,17.5C12.69,17.5 13.37,17.43 14,17.29L11.72,15C10.29,14.85 9.15,13.71 9,12.28L5.6,8.87C4.61,9.72 3.78,10.78 '
+    '3.18,12Z';
+
+/// Alert/warning triangle outline path data, matching `MdiIcons.alertOutline` exactly,
+/// used for the error-state suffix icon on both username and password fields.
+///
+/// The exact `d` string, verified byte-for-byte against `assets/alert-outline.svg` (the
+/// reference SVG committed alongside this file), and against the native
+/// `MdiIcons.alertOutline` glyph [LayrzInputChrome] itself renders for its own trailing
+/// error icon (`input_chrome.dart:556`) — this widget draws the equivalent glyph
+/// directly in the DOM since it has no access to the `flutter_material_design_icons`
+/// font on this platform-view layer.
+const String kAlertIconPath = 'M12,2L1,21H23M12,6L19.53,19H4.47M11,10V14H13V10M11,16V18H13V16';
 
 /// Builds an inline `<svg>` element rendering [pathData] as an outline icon of
 /// [colorHex], sized to fill its container (18x18 via CSS).

@@ -136,6 +136,11 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
 
     _prefixIconPathElement?.setAttribute('fill', colors.iconColor);
     _suffixIconPathElement?.setAttribute('fill', colors.iconColor);
+    _errorIconPathElement?.setAttribute('fill', colors.iconColor);
+    // The error icon's very presence (not just its tint) tracks the CURRENT
+    // [_LayrzLoginWebFieldState.hasErrors] — see [_errorIconSlotElement]'s doc comment
+    // for why this can change after the platform view already exists.
+    _errorIconSlotElement?.style.display = hasErrors ? 'flex' : 'none';
 
     final input = _inputElement;
     if (input != null) {

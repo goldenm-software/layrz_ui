@@ -205,6 +205,17 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
   /// username field, which has no suffix icon.
   web.SVGPathElement? _suffixIconPathElement;
 
+  /// `<path>` node inside the error/alert icon `<svg>`, stored so `_applyThemeStyles`
+  /// can restyle its `fill` in place. Present on both username and password fields —
+  /// unlike [_suffixIconPathElement], this icon is not password-specific.
+  web.SVGPathElement? _errorIconPathElement;
+
+  /// The error/alert icon's own cell `<div>`, stored so `_applyThemeStyles` can toggle
+  /// its `display` based on the CURRENT [hasErrors] — this icon's presence, not merely
+  /// its tint, depends on error state, which can change after the platform view already
+  /// exists (e.g. validation errors appearing after a failed submit).
+  web.HTMLDivElement? _errorIconSlotElement;
+
   /// The injected `<style>` element carrying this instance's `::selection` rule, stored
   /// so `_applyThemeStyles` can rewrite its `textContent` when the accent or text color
   /// changes.
@@ -236,18 +247,24 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
   /// danger/error state, per [LayrzInputStyleSpec.resolve].
   bool get hasErrors => widget.errors.isNotEmpty;
 
+  /// Whether the underlying DOM `<input>` currently has real browser focus.
+  ///
+  /// Set by the `focus`/`blur` listeners registered in `_registerViewFactory` (see
+  /// `login_web_field_web_dom.dart`), and read by [states] so the field's chrome
+  /// resolves the same focused border [LayrzInputChrome] paints while focused. Each
+  /// listener calls [_applyThemeStyles] directly after updating this field — the DOM
+  /// is restyled in place; no Flutter rebuild is needed or triggered.
+  bool _isFocused = false;
+
   /// The [WidgetState] set this field resolves its chrome from.
   ///
-  /// The DOM `<input>` owns real focus/hover natively, but this Dart-side state set
-  /// only drives the STATIC disabled/error/default resolution — [_applyThemeStyles] is
-  /// only re-invoked from [didUpdateWidget] (a widget-level rebuild), not on every
-  /// native `focus`/`blur`/hover DOM event, matching the acceptance bar of "states
-  /// match [LayrzInputChrome]'s resolution" for the states this Flutter-side widget can
-  /// actually observe. A live DOM `:focus`/`:hover` visual response is provided
-  /// separately by the browser's own default text-selection/caret rendering on the
-  /// input itself, and is not required for parity with the resolver's static states.
+  /// Includes [WidgetState.focused] whenever [_isFocused] is true, so
+  /// [LayrzInputStyleSpec.resolve] paints the same primary-color focus border
+  /// [LayrzInputChrome] does while the native `<input>` has real DOM focus — see the
+  /// `focus`/`blur` listeners in `login_web_field_web_dom.dart`.
   Set<WidgetState> get states => {
     if (widget.disabled) WidgetState.disabled,
+    if (_isFocused) WidgetState.focused,
   };
 
   /// The accessible label for the password show/hide toggle while the password is

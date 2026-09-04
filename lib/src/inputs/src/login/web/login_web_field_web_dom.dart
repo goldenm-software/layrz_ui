@@ -299,6 +299,30 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         container.appendChild(suffixButton);
       }
 
+      // Error/alert icon cell — mirrors [LayrzInputChrome]'s own trailing-icon
+      // canonical order `shortcut → suffix → lock → help → error`
+      // (`input_chrome.dart:497,552`), where the error icon (`MdiIcons.alertOutline`) is
+      // always rendered LAST/rightmost, alongside whatever suffix content already
+      // exists rather than replacing it — on the password field this sits to the right
+      // of the eye toggle, both visible together, exactly as the chrome renders its
+      // suffix slot and error icon side by side. Always created (so [_applyThemeStyles]
+      // has a stable element to toggle later, since unlike the prefix/suffix icons this
+      // one's very presence — not just its tint — depends on error state, which can
+      // change after this platform view already exists), but only shown when
+      // [hasErrors] is currently true.
+      final errorIconSlot = web.document.createElement('div') as web.HTMLDivElement;
+      errorIconSlot.style.display = hasErrors ? 'flex' : 'none';
+      errorIconSlot.style.alignItems = 'center';
+      errorIconSlot.style.justifyContent = 'center';
+      errorIconSlot.style.alignSelf = 'stretch';
+      errorIconSlot.style.setProperty('flex-shrink', '0');
+      errorIconSlot.setAttribute('aria-hidden', 'true');
+      final errorIcon = buildLoginIconSvg(kAlertIconPath, colors.iconColor);
+      errorIconSlot.appendChild(errorIcon.svg);
+      _errorIconPathElement = errorIcon.path;
+      _errorIconSlotElement = errorIconSlot;
+      container.appendChild(errorIconSlot);
+
       /// Shows or hides the decorative placeholder based purely on whether [input] is
       /// currently empty — mirroring [LayrzInputChrome]'s own hint-text
       /// `ValueListenableBuilder` (`input_chrome.dart:417-434`), which shows the hint
@@ -338,7 +362,41 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
           final keyboardEvent = event as web.KeyboardEvent;
           if (keyboardEvent.key == 'Enter') {
             widget.onSubmit?.call(input.value);
+            return;
           }
+          // Ctrl+A (Cmd+A on macOS) must select this input's own text, not the whole
+          // page. Flutter web's platform-view/pointer-interceptor layer otherwise lets
+          // the shortcut escape to the document, which the browser then resolves as
+          // "select all" over the entire page instead of this field's content.
+          // `stopPropagation` keeps it from bubbling up to Flutter/the document at all,
+          // and `preventDefault` suppresses the browser's own document-wide fallback;
+          // `input.select()` performs the actual field-scoped selection. Every other
+          // key (typing, Enter above) is left untouched.
+          final isSelectAll = (keyboardEvent.ctrlKey || keyboardEvent.metaKey) && keyboardEvent.key == 'a';
+          if (isSelectAll) {
+            keyboardEvent.preventDefault();
+            keyboardEvent.stopPropagation();
+            input.select();
+          }
+        }.toJS,
+      );
+      // Drives the focused [WidgetState] on the Dart side (see
+      // [_LayrzLoginWebFieldState.states]) so the chrome's primary-color focus border
+      // paints while this native `<input>` has real DOM focus, matching
+      // [LayrzInputChrome]'s own focused resolution. `_applyThemeStyles` mutates the
+      // already-built DOM in place — no Flutter rebuild is involved or needed.
+      input.addEventListener(
+        'focus',
+        (web.Event event) {
+          _isFocused = true;
+          _applyThemeStyles();
+        }.toJS,
+      );
+      input.addEventListener(
+        'blur',
+        (web.Event event) {
+          _isFocused = false;
+          _applyThemeStyles();
         }.toJS,
       );
 
