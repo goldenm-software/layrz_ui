@@ -513,6 +513,27 @@ void main() {
       expect(find.text('Drop your files here'), findsNothing);
       expect(find.byType(LayrzFileInputPreview), findsOneWidget);
     });
+
+    testWidgets('the empty box paints the sf2 background, not black', (tester) async {
+      // Regression guard for the Impeller clip+border-on-AnimatedContainer
+      // artifact: the box's rounded clip must come from its own `ClipRRect`
+      // (with `AnimatedContainer.clipBehavior` left at its default `Clip.none`)
+      // rather than the container clipping its own animated decoration, since
+      // that combination painted solid black on Linux/Vulkan. This asserts
+      // both the resolved fill color and the render-structure fix.
+      final tokens = LayrzTokens.light();
+      await pumpWide(tester, const LayrzFileInput());
+
+      final container = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, tokens.colors.sf2);
+      expect(container.clipBehavior, Clip.none);
+
+      expect(
+        find.ancestor(of: find.byType(AnimatedContainer), matching: find.byType(ClipRRect)),
+        findsOneWidget,
+      );
+    });
   });
 
   group('LayrzFileInput label and error composition', () {

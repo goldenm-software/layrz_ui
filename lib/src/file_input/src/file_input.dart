@@ -416,18 +416,30 @@ class _LayrzFileInputState extends State<LayrzFileInput> {
   Widget _buildBox(BuildContext context, LayrzTokens tokens, LayrzFileInputStyleSpec spec) {
     final isEmpty = _displayedFiles.isEmpty;
 
-    final content = AnimatedContainer(
-      duration: tokens.motion.dHover,
-      curve: tokens.motion.easing,
-      height: widget.height,
-      decoration: BoxDecoration(
-        color: spec.backgroundColor,
-        borderRadius: tokens.radius.br2,
-        border: Border.all(color: spec.borderColor, width: spec.borderWidth),
+    // The rounded clip is deliberately its own `ClipRRect` layer, separate from
+    // the `AnimatedContainer` that carries the fill/border decoration.
+    // Combining `clipBehavior: Clip.antiAlias` with an animated `BoxDecoration`
+    // fill+border on the SAME container is a known Impeller artifact (observed
+    // on Linux/Vulkan): the clip region paints solid black instead of the
+    // decoration's fill during the animated transition. Splitting the clip out
+    // into its own non-decorated `ClipRRect` wrapper -- with the fill/border
+    // painted by the `AnimatedContainer` it wraps, not by itself -- avoids the
+    // combination entirely while keeping the same rounded corners, the same
+    // colour/border transition (D15), and the same geometry.
+    final content = ClipRRect(
+      borderRadius: tokens.radius.br2,
+      child: AnimatedContainer(
+        duration: tokens.motion.dHover,
+        curve: tokens.motion.easing,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: spec.backgroundColor,
+          borderRadius: tokens.radius.br2,
+          border: Border.all(color: spec.borderColor, width: spec.borderWidth),
+        ),
+        padding: EdgeInsets.all(tokens.spacing.sp3),
+        child: isEmpty ? _buildEmptyContent(tokens, spec) : _buildPopulatedContent(context, tokens, spec),
       ),
-      clipBehavior: Clip.antiAlias,
-      padding: EdgeInsets.all(tokens.spacing.sp3),
-      child: isEmpty ? _buildEmptyContent(tokens, spec) : _buildPopulatedContent(context, tokens, spec),
     );
 
     final focusable = FocusableActionDetector(
