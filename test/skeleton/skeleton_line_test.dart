@@ -44,7 +44,8 @@ void main() {
       );
 
       final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonLine));
-      expect(box.size, const Size(150, 30));
+      // 20 * 1.5 = 30, plus the .5 sub-pixel-seam adjustment in _resolvedHeight.
+      expect(box.size, const Size(150, 30.5));
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -62,7 +63,8 @@ void main() {
       );
 
       final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonLine));
-      expect(box.size, const Size(150, 12));
+      // 10 * 1.2 = 12, plus the .5 sub-pixel-seam adjustment in _resolvedHeight.
+      expect(box.size, const Size(150, 12.5));
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
