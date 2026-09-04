@@ -14,25 +14,34 @@ library;
 
 import 'package:web/web.dart' as web;
 
-/// Shield-with-account outline path data, approximating
-/// `MdiIcons.shieldAccountOutline`, used as the username field's prefix icon.
+/// Shield-with-account outline path data, matching `MdiIcons.shieldAccountOutline`
+/// exactly, used as the username field's prefix icon.
 ///
-/// Matches the brief's requested icon for the username field (a shield rather than a
-/// plain account glyph, signalling "this identifies a protected credential") rather
-/// than `layrz_session`'s plain person-in-circle icon — see the implementation plan's
-/// icon note.
+/// The exact `d` string, verified byte-for-byte against `assets/shield-account-outline
+/// .svg` (the reference SVG committed alongside this file) and against the native
+/// `MdiIcons.shieldAccountOutline` glyph the username field's native path
+/// (`username_input.dart`) renders — this widget's earlier hand-approximated path
+/// data has been replaced so the web prefix icon is pixel-identical to the native one,
+/// not merely similar.
 const String kShieldAccountIconPath =
-    'M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm0 2.18 6 2.25V11c0 '
-    '4.52-2.98 8.69-6 9.93C8.98 19.69 6 15.52 6 11V6.43l6-2.25zM9.5 12.5a2.5 2.5 0 1 1 '
-    '4 2v-2h-4v2zm2.5-6a4 4 0 0 1 4 4c0 .35-.04.69-.12 1.02A4.49 4.49 0 0 0 12 10.5a4.49 '
-    '4.49 0 0 0-3.88 1.02A3.97 3.97 0 0 1 8 10.5a4 4 0 0 1 4-4z';
+    'M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,3.18L19,6.3V11.22C19,12.92 18.5,'
+    '14.65 17.65,16.17C16,14.94 13.26,14.5 12,14.5C10.74,14.5 8,14.94 6.35,16.17C5.5,14.65 5,12.92 5,11.22V6.3L12,'
+    '3.18M12,6A3.5,3.5 0 0,0 8.5,9.5A3.5,3.5 0 0,0 12,13A3.5,3.5 0 0,0 15.5,9.5A3.5,3.5 0 0,0 12,6M12,8A1.5,1.5 0 '
+    '0,1 13.5,9.5A1.5,1.5 0 0,1 12,11A1.5,1.5 0 0,1 10.5,9.5A1.5,1.5 0 0,1 12,8M12,16.5C13.57,16.5 15.64,17.11 '
+    '16.53,17.84C15.29,19.38 13.7,20.55 12,21C10.3,20.55 8.71,19.38 7.47,17.84C8.37,17.11 10.43,16.5 12,16.5Z';
 
-/// Shield-with-keyhole outline path data, approximating
-/// `MdiIcons.shieldKeyOutline`, used as the password field's prefix icon.
+/// Shield-with-keyhole outline path data, matching `MdiIcons.shieldKeyOutline` exactly,
+/// used as the password field's prefix icon.
+///
+/// The exact `d` string, verified byte-for-byte against `assets/shield-key-outline.svg`
+/// (the reference SVG committed alongside this file) and against the native
+/// `MdiIcons.shieldKeyOutline` glyph the password field's native path
+/// (`password_input.dart`) renders — see [kShieldAccountIconPath]'s doc comment for
+/// why this replaced the earlier hand-approximated path data.
 const String kShieldKeyIconPath =
-    'M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm0 2.18 6 2.25V11c0 '
-    '4.52-2.98 8.69-6 9.93C8.98 19.69 6 15.52 6 11V6.43l6-2.25zM12 8a2.5 2.5 0 0 0-1 '
-    '4.79V15h2v-1h1v-2h-1v-.21A2.5 2.5 0 0 0 12 8z';
+    'M21,11C21,16.55 17.16,21.74 12,23C6.84,21.74 3,16.55 3,11V5L12,1L21,5V11M12,21C15.75,20 19,15.54 19,11.22V6.3L'
+    '12,3.18L5,6.3V11.22C5,15.54 8.25,20 12,21M12,6A3,3 0 0,1 15,9C15,10.31 14.17,11.42 13,11.83V14H15V16H13V18H11V'
+    '11.83C9.83,11.42 9,10.31 9,9A3,3 0 0,1 12,6M12,8A1,1 0 0,0 11,9A1,1 0 0,0 12,10A1,1 0 0,0 13,9A1,1 0 0,0 12,8Z';
 
 /// Open-eye outline path data for the "show password" suffix icon state.
 const String kEyeIconPath =
