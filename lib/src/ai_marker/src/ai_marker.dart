@@ -171,16 +171,16 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
   /// **Tuning knob, not a public parameter.** The small star's inward offset,
   /// in logical pixels, from the container's bottom edge.
   // ignore: unnecessary_nullable_for_final_variable_declarations
-  static const double? _kSmallStarBottom = -5.0;
+  static const double? _kSmallStarBottom = -3.5;
 
   /// **Tuning knob, not a public parameter.** The small star's inward offset,
   /// in logical pixels, from the container's right edge.
   // ignore: unnecessary_nullable_for_final_variable_declarations
-  static const double? _kSmallStarRight = -5.0;
+  static const double? _kSmallStarRight = -3.5;
 
   /// **Tuning knob, not a public parameter.** The side length, in logical
   /// pixels, of the smaller, bottom-right-anchored accent star glyph.
-  static const double _kSmallStarSize = 30.0;
+  static const double _kSmallStarSize = 26.0;
 
   /// The big star's resolved placement, built from the [_kBigStarTop] /
   /// [_kBigStarLeft] / [_kBigStarBottom] / [_kBigStarRight] /

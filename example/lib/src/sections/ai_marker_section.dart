@@ -29,16 +29,8 @@ class AiMarkerSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Inline marker, by size', style: tokens.typography.title),
-          SizedBox(height: tokens.spacing.sp3),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              const LayrzAiMarker(size: LayrzAiMarkerSize.small),
-              SizedBox(width: tokens.spacing.sp5),
-              const LayrzAiMarker(),
-            ],
-          ),
+          Text('Inline marker', style: tokens.typography.title),
+          const LayrzAiMarker(),
           SizedBox(height: tokens.spacing.sp4),
           Text('Overlaid via LayrzAiMarker.wrap -- all four corners', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp2),
