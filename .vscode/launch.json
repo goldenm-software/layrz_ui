@@ -15,6 +15,14 @@
       "cwd": "example",
       "program": "lib/main.dart",
       "args": ["--profile"]
+    },
+    {
+      "name": "Run example (web-server)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "example",
+      "program": "lib/main.dart",
+      "args": ["-d", "web-server", "--web-port", "8080"]
     }
   ]
 }
