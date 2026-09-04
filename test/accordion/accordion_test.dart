@@ -341,6 +341,84 @@ void main() {
       expect(bodyColor, equals(headerColor));
     });
 
+    testWidgets(
+      'header bottom-edge geometry animates on the body reveal timeline, not a separate one (no blink)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        bool expanded = false;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) => LayrzAccordion(
+              titleText: 'Timeline check',
+              expanded: expanded,
+              onExpansionChanged: (value) => setState(() => expanded = value),
+              body: const _BodyMarker(),
+            ),
+          ),
+        );
+
+        BorderRadius headerBorderRadius() {
+          final decoratedBox = tester.widget<DecoratedBox>(
+            find.ancestor(of: find.byType(AnimatedContainer), matching: find.byType(DecoratedBox)).first,
+          );
+          return (decoratedBox.decoration as BoxDecoration).borderRadius! as BorderRadius;
+        }
+
+        BorderSide headerBottomBorder() {
+          final decoratedBox = tester.widget<DecoratedBox>(
+            find.ancestor(of: find.byType(AnimatedContainer), matching: find.byType(DecoratedBox)).first,
+          );
+          return (decoratedBox.decoration as BoxDecoration).border!.bottom;
+        }
+
+        // Fully collapsed: bottom corners are rounded and the bottom border
+        // is present, matching the closed panel's outline.
+        expect(headerBorderRadius().bottomLeft, equals(const Radius.circular(10.0)));
+        expect(headerBottomBorder().width, greaterThan(0.0));
+
+        await tester.tap(find.text('Timeline check'));
+        await tester.pump();
+
+        // Pump to roughly the midpoint of the 200ms dTransition reveal, well
+        // past the 100ms dHover duration a header-only color animation would
+        // already have finished within. If header geometry were still driven
+        // by dHover, the bottom radius/border would already have snapped to
+        // their fully-expanded values (Radius.zero / BorderSide.none) here --
+        // the very blink this fix removes.
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final midRadius = headerBorderRadius().bottomLeft;
+        expect(
+          midRadius,
+          isNot(equals(Radius.zero)),
+          reason: 'header bottom radius must not have reached its expanded value before the body reveal finishes',
+        );
+        expect(
+          midRadius,
+          isNot(equals(const Radius.circular(10.0))),
+          reason: 'header bottom radius must be interpolating, not stuck at its collapsed value',
+        );
+        expect(
+          headerBottomBorder().width,
+          allOf(greaterThan(0.0), lessThan(1.5)),
+          reason: 'header bottom border width must be interpolating in step with the radius',
+        );
+
+        await tester.pumpAndSettle();
+
+        // Fully expanded and settled: bottom corners are square and the
+        // bottom border has been removed, landing in the same frame the body
+        // finished revealing.
+        expect(headerBorderRadius().bottomLeft, equals(Radius.zero));
+        expect(headerBottomBorder(), equals(BorderSide.none));
+      },
+    );
+
     testWidgets('rotates the chevron between collapsed and expanded', (tester) async {
       bool expanded = false;
 

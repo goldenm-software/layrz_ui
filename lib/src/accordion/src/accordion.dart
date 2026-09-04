@@ -49,6 +49,19 @@ import 'accordion_style_spec.dart';
 /// a height change large enough that the standard [LayrzMotionTokens.easing]
 /// reads as too subtle.
 ///
+/// The header's own expand-state geometry -- the bottom corners collapsing to
+/// [Radius.zero] and the bottom border disappearing once the body attaches --
+/// is driven by that same [LayrzMotionTokens.dTransition] /
+/// [LayrzMotionTokens.easingEmphasized] timeline, via the `animation` value
+/// [Expansible.headerBuilder] supplies. It is deliberately *not* part of the
+/// header's [AnimatedContainer], which instead animates only hover/press/focus
+/// color changes on the snappier [LayrzMotionTokens.dHover]. Coupling both
+/// concerns to one [AnimatedContainer] duration previously forced a choice
+/// between a sluggish hover and a header whose corners/border snapped to
+/// their expanded state before the body finished revealing -- visible as a
+/// "blink" on both expand and collapse. Driving geometry from the reveal's own
+/// animation keeps the two perfectly in lockstep instead.
+///
 /// **Interaction states.** Per decision D15, hovering, focusing, or pressing
 /// the header only ever changes colour -- never its size, padding, or border
 /// width. The header's own height change on expand/collapse is the widget's
@@ -240,12 +253,20 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// the innermost [Semantics] carrying the merged toggle/label/expanded
   /// contract and the title [Text] excluded from semantics beneath it so its
   /// string is not announced twice.
+  ///
+  /// [animation] is the raw, linear controller [Expansible] drives over
+  /// [LayrzMotionTokens.dTransition] -- the same timeline (once curved by
+  /// [LayrzMotionTokens.easingEmphasized] below) that the body reveal uses.
+  /// It is wrapped in a [CurvedAnimation] here so the header's expand-state
+  /// geometry (see [_buildHeaderGeometry]) tracks the exact eased progress of
+  /// the body's height factor, not merely the same duration.
   Widget _buildHeader(
     BuildContext context,
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
     Animation<double> animation,
   ) {
+    final expandProgress = CurvedAnimation(parent: animation, curve: tokens.motion.easingEmphasized);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _isDisabled ? null : _toggle,
@@ -276,55 +297,94 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
             enabled: !_isDisabled,
             expanded: widget.expanded,
             onTap: _isDisabled ? null : _toggle,
-            child: AnimatedContainer(
-              duration: tokens.motion.dHover,
-              curve: tokens.motion.easing,
-              padding: tokens.spacing.pd3,
-              decoration: BoxDecoration(
+            child: AnimatedBuilder(
+              animation: expandProgress,
+              builder: (context, child) => _buildHeaderShell(tokens, spec, expandProgress.value, child!),
+              child: AnimatedContainer(
+                duration: tokens.motion.dHover,
+                curve: tokens.motion.easing,
+                padding: tokens.spacing.pd3,
                 color: spec.headerBackgroundColor,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(tokens.radius.r2),
-                  topRight: Radius.circular(tokens.radius.r2),
-                  bottomLeft: widget.expanded ? Radius.zero : Radius.circular(tokens.radius.r2),
-                  bottomRight: widget.expanded ? Radius.zero : Radius.circular(tokens.radius.r2),
-                ),
-                border: Border(
-                  top: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-                  left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-                  right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-                  bottom: widget.expanded
-                      ? BorderSide.none
-                      : BorderSide(
-                          color: spec.borderColor,
-                          width: spec.borderWidth,
+                child: Row(
+                  children: [
+                    if (widget.leadingIcon != null) ...[
+                      Icon(widget.leadingIcon, color: spec.headerContentColor, size: 20),
+                      SizedBox(width: tokens.spacing.sp2),
+                    ],
+                    Expanded(
+                      child: ExcludeSemantics(
+                        child: Text(
+                          widget.titleText,
+                          style: tokens.typography.body.copyWith(color: spec.headerContentColor),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  if (widget.leadingIcon != null) ...[
-                    Icon(widget.leadingIcon, color: spec.headerContentColor, size: 20),
-                    SizedBox(width: tokens.spacing.sp2),
-                  ],
-                  Expanded(
-                    child: ExcludeSemantics(
-                      child: Text(
-                        widget.titleText,
-                        style: tokens.typography.body.copyWith(color: spec.headerContentColor),
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  SizedBox(width: tokens.spacing.sp2),
-                  RotationTransition(
-                    turns: animation.drive(Tween<double>(begin: 0.0, end: 0.5)),
-                    child: Icon(MdiIcons.chevronDown, color: spec.headerContentColor, size: 20),
-                  ),
-                ],
+                    SizedBox(width: tokens.spacing.sp2),
+                    RotationTransition(
+                      turns: animation.drive(Tween<double>(begin: 0.0, end: 0.5)),
+                      child: Icon(MdiIcons.chevronDown, color: spec.headerContentColor, size: 20),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Wraps [child] (the header's color-and-content layer) in the border and
+  /// corner radius that interpolate with [progress] -- the eased expand/collapse
+  /// progress from [_buildHeader]'s `expandProgress`, where 0.0 is fully
+  /// collapsed and 1.0 is fully expanded.
+  ///
+  /// This geometry is intentionally split out of the color-animating
+  /// [AnimatedContainer] passed as [child]: the bottom corners collapsing to
+  /// [Radius.zero] and the bottom border fading out must land in the same
+  /// frame the body finishes revealing, which only holds if both are driven
+  /// by the same [Animation] -- not by a separately-timed [AnimatedContainer]
+  /// running on [LayrzMotionTokens.dHover]. See the [LayrzAccordion] class
+  /// docs for the blink this replaces.
+  ///
+  /// The top corners and top/left/right border are constant regardless of
+  /// [progress] -- only the edge shared with the body (bottom) animates.
+  Widget _buildHeaderShell(
+    LayrzTokens tokens,
+    LayrzAccordionStyleSpec spec,
+    double progress,
+    Widget child,
+  ) {
+    final bottomRadius = Radius.circular(tokens.radius.r2 * (1 - progress));
+    final borderRadius = BorderRadius.only(
+      topLeft: Radius.circular(tokens.radius.r2),
+      topRight: Radius.circular(tokens.radius.r2),
+      bottomLeft: bottomRadius,
+      bottomRight: bottomRadius,
+    );
+    final bottomBorderWidth = spec.borderWidth * (1 - progress);
+    // A hairline (width: 0.0) solid BorderSide cannot be painted alongside a
+    // non-zero BorderRadius -- Flutter's Border painter asserts on that
+    // combination. At full expansion the interpolated width lands on exactly
+    // 0.0, so it must become BorderSide.none rather than a zero-width side.
+    final bottomBorder = bottomBorderWidth <= 0
+        ? BorderSide.none
+        : BorderSide(color: spec.borderColor, width: bottomBorderWidth);
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          border: Border(
+            top: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+            left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+            right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+            bottom: bottomBorder,
+          ),
+        ),
+        child: child,
       ),
     );
   }
