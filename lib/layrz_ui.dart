@@ -1,3 +1,4 @@
+export 'src/accordion/accordion.dart';
 export 'src/alerts/alerts.dart';
 export 'src/app/app.dart';
 export 'src/badges/badges.dart';
