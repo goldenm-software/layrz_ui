@@ -7,6 +7,8 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 import 'layout.dart';
 import 'src/sections/access_paths_section.dart';
+import 'src/sections/accordion_section.dart';
+import 'src/sections/ai_marker_section.dart';
 import 'src/sections/alerts_section.dart';
 import 'src/sections/badge_section.dart';
 import 'src/sections/borders_section.dart';
@@ -17,6 +19,8 @@ import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
 import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
+import 'src/sections/file_input_section.dart';
+import 'src/sections/form_section.dart';
 import 'src/sections/grid_section.dart';
 import 'src/sections/images_section.dart';
 import 'src/sections/inputs_section.dart';
@@ -27,6 +31,7 @@ import 'src/sections/radius_section.dart';
 import 'src/sections/refresh_section.dart';
 import 'src/sections/responsive_modal_section.dart';
 import 'src/sections/sheets_section.dart';
+import 'src/sections/skeleton_section.dart';
 import 'src/sections/snackbar_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
@@ -225,6 +230,26 @@ final _router = GoRouter(
         GoRoute(
           path: '/snackbar',
           pageBuilder: (context, state) => NoTransitionPage(child: SnackbarSection()),
+        ),
+        GoRoute(
+          path: '/accordion',
+          pageBuilder: (context, state) => NoTransitionPage(child: AccordionSection()),
+        ),
+        GoRoute(
+          path: '/ai-marker',
+          pageBuilder: (context, state) => NoTransitionPage(child: AiMarkerSection()),
+        ),
+        GoRoute(
+          path: '/skeleton',
+          pageBuilder: (context, state) => NoTransitionPage(child: SkeletonSection()),
+        ),
+        GoRoute(
+          path: '/form',
+          pageBuilder: (context, state) => NoTransitionPage(child: FormSection()),
+        ),
+        GoRoute(
+          path: '/file-input',
+          pageBuilder: (context, state) => NoTransitionPage(child: FileInputSection()),
         ),
       ],
     ),
