@@ -10,6 +10,7 @@ export 'src/chips/chips.dart';
 export 'src/constants/constants.dart';
 export 'src/dialogs/dialogs.dart';
 export 'src/extensions/extensions.dart';
+export 'src/file_input/file_input.dart';
 export 'src/fonts/fonts.dart';
 export 'src/formatting/formatting.dart';
 export 'src/grid/grid.dart';
