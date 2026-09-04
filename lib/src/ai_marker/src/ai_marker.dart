@@ -14,11 +14,15 @@ import 'ai_marker_wrapper.dart';
 ///
 /// [LayrzAiMarker] renders two overlapping `MdiIcons.starFourPointsSmall`
 /// glyphs — a larger sparkle behind a smaller one in front, the conventional
-/// "AI sparkle" motif — tinted with `tokens.colors.aiAccent`. It is
-/// deliberately **icon-only**: there is no visible text label parameter, and
-/// none should be added. Disclosure is carried instead by two mandatory,
-/// always-present mechanisms, both sourced from [LayrzUiL10n] and **not**
-/// configurable by the caller:
+/// "AI sparkle" motif — in white, on top of a fully-rounded container filled
+/// with `tokens.colors.aiAccent`. The orange-on-orange contrast of an earlier
+/// revision (bare orange stars directly on the page background) was too weak
+/// against light surfaces; painting the accent as a solid pill behind white
+/// glyphs keeps the marker legible everywhere it's dropped (Kenny,
+/// 2026-09-04). It is deliberately **icon-only**: there is no visible text
+/// label parameter, and none should be added. Disclosure is carried instead
+/// by two mandatory, always-present mechanisms, both sourced from
+/// [LayrzUiL10n] and **not** configurable by the caller:
 ///
 /// 1. A [Semantics] label (`LayrzUiL10n.aiGeneratedLabel`) announced to
 ///    screen readers.
@@ -48,11 +52,11 @@ import 'ai_marker_wrapper.dart';
 ///   phase-offset behind the big star's (see [LayrzAiMarkerBurst]), settling
 ///   between repeats. This must read as an AI *twinkle*, never as a spinning
 ///   loading indicator — there is no rotation anywhere in this widget.
-/// - **Shine** — a moving-gradient glint sweeps across the glyphs via
-///   [LayrzShimmerGradient] (`lib/src/skeleton/src/shimmer_painter.dart`),
-///   the same internal helper `LayrzSkeleton` uses for its shimmer. Sharing
-///   one implementation avoids two divergent "moving highlight" effects in
-///   the library.
+/// - **Shine** — a moving-gradient glint sweeps across the whole container
+///   (background pill and glyphs alike) via [LayrzShimmerGradient]
+///   (`lib/src/skeleton/src/shimmer_painter.dart`), the same internal helper
+///   `LayrzSkeleton` uses for its shimmer. Sharing one implementation avoids
+///   two divergent "moving highlight" effects in the library.
 ///
 /// **Reduce motion:** when `MediaQuery.disableAnimationsOf(context)` is true,
 /// both the burst and the glint are switched off entirely and the stars
@@ -92,9 +96,10 @@ class LayrzAiMarker extends StatefulWidget {
 
   /// The overall footprint of the marker, in logical pixels.
   ///
-  /// The larger (back) star occupies the full [size]; the smaller (front)
-  /// star is scaled down from it. Defaults to `24.0`, matching the design
-  /// system's common inline-icon size.
+  /// This is the diameter of the rounded `tokens.colors.aiAccent` container;
+  /// the star pair is rendered inside it, inset on every side so the glyphs
+  /// don't touch the container's edge. Defaults to `24.0`, matching the
+  /// design system's common inline-icon size.
   final double size;
 
   @override
@@ -145,10 +150,16 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     final tokens = context.tokens;
     final controller = _controller;
 
+    // The stars sit inside the accent pill with breathing room on every
+    // side rather than touching its edge -- inset by 18% of the marker's
+    // own size on each side (64% of size left for the pair), which at the
+    // default 24.0 size leaves a comfortable ~4.3px margin.
+    final innerSize = widget.size * 0.64;
+
     final Widget stars = controller == null
         ? _StarPair(
-            size: widget.size,
-            color: tokens.colors.aiAccent,
+            size: innerSize,
+            color: const Color(0xFFFFFFFF),
             big: kLayrzAiMarkerSettledFrame,
             small: kLayrzAiMarkerSettledFrame,
           )
@@ -156,16 +167,24 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             animation: controller,
             builder: (context, _) {
               return _StarPair(
-                size: widget.size,
-                color: tokens.colors.aiAccent,
+                size: innerSize,
+                color: const Color(0xFFFFFFFF),
                 big: _burst.bigStarAt(controller.value),
                 small: _burst.smallStarAt(controller.value),
               );
             },
           );
 
+    final Widget container = DecoratedBox(
+      decoration: BoxDecoration(
+        color: tokens.colors.aiAccent,
+        borderRadius: BorderRadius.circular(tokens.radius.full),
+      ),
+      child: Center(child: stars),
+    );
+
     final Widget shined = controller == null
-        ? stars
+        ? container
         : AnimatedBuilder(
             animation: controller,
             builder: (context, child) {
@@ -174,14 +193,14 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
                 shaderCallback: (rect) => LayrzShimmerGradient.forAnimationValue(
                   value: controller.value,
                   baseColor: tokens.colors.aiAccent,
-                  highlightColor: tokens.colors.sf1,
+                  highlightColor: const Color(0xFFFFFFFF),
                   shaderRect: rect,
                   bandWidth: 0.5,
                 ).createShader(),
                 child: child,
               );
             },
-            child: stars,
+            child: container,
           );
 
     final l10n = context.l10n;

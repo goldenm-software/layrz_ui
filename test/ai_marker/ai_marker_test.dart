@@ -32,7 +32,7 @@ void main() {
       expect(find.byType(Text), findsNothing);
     });
 
-    testWidgets('star color resolves to tokens.colors.aiAccent', (tester) async {
+    testWidgets('star color resolves to white, on an aiAccent container', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -45,8 +45,29 @@ void main() {
       );
       expect(icons, isNotEmpty);
       for (final icon in icons) {
-        expect(icon.color, theme.tokens.colors.aiAccent);
+        expect(icon.color, const Color(0xFFFFFFFF));
       }
+
+      final container = tester.widget<DecoratedBox>(
+        find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, theme.tokens.colors.aiAccent);
+    });
+
+    testWidgets('the container is fully rounded via the radius tokens', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(tester, const LayrzAiMarker(), theme: theme);
+
+      final container = tester.widget<DecoratedBox>(
+        find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.full));
     });
 
     testWidgets('the marker footprint matches the size parameter', (tester) async {
