@@ -68,9 +68,10 @@ lib/
     fonts/
       fonts.dart                 # Per-module barrel
       src/
-        font.dart                # LayrzFont, LayrzFontSource
-        font_handler.dart        # LayrzFontHandler interface
-        google_fonts_handler.dart # LayrzGoogleFontsHandler implementation
+        font.dart                # LayrzFont (abstract), LayrzRobotoFont
+        register_web_font.dart          # Conditional-export selector for browser @font-face registration
+        register_web_font_stub.dart     # Native no-op (no package:web import)
+        register_web_font_web.dart      # Web impl using package:web + dart:js_interop
     grid/
       grid.dart                  # Per-module barrel
       src/

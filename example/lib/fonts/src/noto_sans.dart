@@ -1,18 +1,15 @@
-// Font family definitions for variable fonts hosted on the Layrz CDN.
+// Font family definition for a variable font hosted on the Layrz CDN.
 //
-// Four variable fonts are available via https://cdn.layrz.com/fonts/:
-// - Roboto: A clean sans-serif with excellent readability
-// - Open Sans: A friendly, open design optimized for web and print
-// - Noto Sans: Google's multilingual sans-serif covering extensive Unicode ranges
-// - Inter: A modern sans-serif designed for computer screens
+// Noto Sans (Google's multilingual sans-serif, covering extensive Unicode ranges) is
+// available at https://cdn.layrz.com/fonts/Noto-Sans.ttf as a single variable font
+// file with a full `wght` (weight) axis. This font is fetched directly with
+// `package:http` rather than through any font-handler abstraction — layrz_ui does not
+// ship one; each [LayrzFont] implementation is responsible for its own fetch.
 //
-// Each font supports a full `wght` (weight) axis and is available as a single
-// .ttf variable font file. Use these definitions with LayrzCdnFontHandler
-// to load fonts from the CDN with automatic caching and preload support.
-//
-// Example usage:
-//   final handler = LayrzCdnFontHandler();
-//   await handler.preload(kLayrzFontRoboto);
+// This is also the reference implementation for [LayrzFont.registerOnWeb]: since this
+// font is loaded from a URL (not a bundled asset), it can register a browser
+// `@font-face` so DOM-rendered content — e.g. layrz_ui's web login fields — resolves
+// the same font layrz_ui's Flutter-engine-rendered text uses.
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -21,6 +18,10 @@ import 'package:http/http.dart' as http;
 
 class NotoSansFont extends LayrzFont {
   const NotoSansFont() : super(name: 'Noto Sans');
+
+  /// The CDN URL this font's bytes are fetched from, for both [load] (engine) and
+  /// [registerOnWeb] (browser DOM).
+  static const String _url = 'https://cdn.layrz.com/fonts/Noto-Sans.ttf';
 
   @override
   TextStyle get display => TextStyle(
@@ -59,7 +60,7 @@ class NotoSansFont extends LayrzFont {
 
   @override
   Future<void> load() async {
-    final response = await http.get(Uri.parse('https://cdn.layrz.com/fonts/Noto-Sans.ttf'));
+    final response = await http.get(Uri.parse(_url));
     if (response.statusCode != 200) {
       throw Exception('Failed to load Noto Sans font from CDN');
     }
@@ -67,6 +68,11 @@ class NotoSansFont extends LayrzFont {
     final loader = FontLoader('Noto Sans');
     loader.addFont(Future.value(ByteData.view(response.bodyBytes.buffer)));
     await loader.load();
+  }
+
+  @override
+  Future<void> registerOnWeb() async {
+    await registerWebFont(family: name, url: _url);
   }
 }
 
