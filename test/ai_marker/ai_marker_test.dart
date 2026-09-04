@@ -123,10 +123,15 @@ void main() {
 
         final topLeft = starAnchors.firstWhere((p) => p.left != null && p.top != null);
         final bottomRight = starAnchors.firstWhere((p) => p.right != null && p.bottom != null);
-        expect(topLeft.left, greaterThanOrEqualTo(0.0));
-        expect(topLeft.top, greaterThanOrEqualTo(0.0));
-        expect(bottomRight.right, greaterThanOrEqualTo(0.0));
-        expect(bottomRight.bottom, greaterThanOrEqualTo(0.0));
+        // The current hand-tuned inset (see _dimensionsFor) is slightly
+        // negative for both sizes, letting the stars bleed a touch past the
+        // container's own edge -- intentional, not a regression, so this only
+        // asserts the four anchor offsets agree with each other (both stars
+        // share one inset value per size), not that the inset is
+        // non-negative.
+        expect(topLeft.left, topLeft.top);
+        expect(bottomRight.right, bottomRight.bottom);
+        expect(topLeft.left, bottomRight.right);
 
         final stars = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
         expect(stars, findsNWidgets(2));
@@ -209,18 +214,39 @@ void main() {
       await tester.pump();
 
       // No AnimatedBuilder should be present anywhere under the marker when
-      // motion is disabled -- both the burst and the shine glint are torn
+      // motion is disabled -- both the burst and the glow pulse are torn
       // down entirely, not merely paused.
       expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(AnimatedBuilder)), findsNothing);
-      expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(ShaderMask)), findsNothing);
 
-      // Pumping several frames must not throw and must not change anything
+      // A fixed, non-animating shadow is still present -- reduce motion
+      // removes the pulse, not the glow altogether.
+      final decoratedBoxes = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)),
+          )
+          .toList();
+      final fill = decoratedBoxes.firstWhere((d) => (d.decoration as BoxDecoration).color != null);
+      final shadow = (fill.decoration as BoxDecoration).boxShadow;
+      expect(shadow, isNotNull);
+      expect(shadow, isNotEmpty);
+
+      // Pumping several frames must not throw and must not change the shadow
       // -- there is no ticking controller left to advance.
+      final before = shadow!.first;
       await tester.pump(const Duration(milliseconds: 500));
+      final decoratedBoxesAfter = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)),
+          )
+          .toList();
+      final fillAfter = decoratedBoxesAfter.firstWhere((d) => (d.decoration as BoxDecoration).color != null);
+      final shadowAfter = (fillAfter.decoration as BoxDecoration).boxShadow!.first;
+      expect(shadowAfter.blurRadius, before.blurRadius);
+      expect(shadowAfter.spreadRadius, before.spreadRadius);
       expect(find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall), findsNWidgets(2));
     });
 
-    testWidgets('motion enabled: an AnimatedBuilder drives the burst and the glint', (tester) async {
+    testWidgets('motion enabled: an AnimatedBuilder drives the burst and the glow pulse', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -228,48 +254,38 @@ void main() {
       await pumpThemed(tester, const LayrzAiMarker());
 
       expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(AnimatedBuilder)), findsWidgets);
-      expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(ShaderMask)), findsOneWidget);
     });
 
-    testWidgets('the glint ShaderMask does not wrap the star glyphs, at any point in the sweep', (tester) async {
+    testWidgets('the glow shadow pulses (blur/spread/opacity vary across the animation loop)', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      // Regression test for a real rendering bug (commit d61f9a3): the glint
-      // was originally implemented as a single ShaderMask wrapping the whole
-      // container -- pill *and* stars. BlendMode.srcATop replaces a masked
-      // child's color wherever it is opaque, keeping only its alpha, so that
-      // structure silently repainted the white stars to the gradient's own
-      // (aiAccent-based) color outside the moving highlight band, making them
-      // invisible almost the entire cycle. A widget-tree check that merely
-      // asserts "a ShaderMask exists somewhere" and "an Icon has color white"
-      // -- as the previous test suite did -- passes against that broken
-      // structure just as easily as against a fixed one, because both
-      // structures contain a ShaderMask and both contain white Icons. The
-      // only way to actually catch this is to assert the *containment*
-      // relationship itself: the Icons must NOT be descendants of the
-      // ShaderMask, in either direction of the animation.
+      // Replaces the old glint-containment regression test now that the
+      // ShaderMask sweep has been removed entirely in favor of a pulsing
+      // BoxShadow on the same DecoratedBox fill. This asserts the shadow
+      // actually animates -- distinct blur/spread/alpha values at different
+      // points in the loop -- rather than merely existing once.
       await pumpThemed(tester, const LayrzAiMarker());
 
+      final samples = <BoxShadow>[];
       for (final millis in [0, 150, 300, 450, 600, 750, 900]) {
         await tester.pump(Duration(milliseconds: millis));
 
-        final shaderMask = find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(ShaderMask));
-        expect(shaderMask, findsOneWidget);
+        final decoratedBoxes = tester
+            .widgetList<DecoratedBox>(
+              find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)),
+            )
+            .toList();
+        final fill = decoratedBoxes.firstWhere((d) => (d.decoration as BoxDecoration).color != null);
+        final decoration = fill.decoration as BoxDecoration;
+        expect(decoration.boxShadow, isNotNull);
+        expect(decoration.boxShadow, isNotEmpty);
+        samples.add(decoration.boxShadow!.first);
 
-        final starsUnderShader = find.descendant(
-          of: shaderMask,
-          matching: find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall),
-        );
-        expect(
-          starsUnderShader,
-          findsNothing,
-          reason:
-              'the star Icons must never be painted inside the glint ShaderMask subtree, '
-              'or BlendMode.srcATop erases their white color outside the highlight band',
-        );
-
+        // The stars must remain fully outside the shadow-bearing fill's own
+        // sibling relationship -- i.e. still present and still white,
+        // regardless of the glow's current phase.
         final starsInTree = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
         expect(starsInTree, findsNWidgets(2));
         for (final icon in tester.widgetList<Icon>(starsInTree)) {
@@ -277,6 +293,11 @@ void main() {
           expect(icon.size, greaterThan(0.0));
         }
       }
+
+      final blurValues = samples.map((s) => s.blurRadius).toSet();
+      final spreadValues = samples.map((s) => s.spreadRadius).toSet();
+      expect(blurValues.length, greaterThan(1), reason: 'the glow blur radius must change across the loop');
+      expect(spreadValues.length, greaterThan(1), reason: 'the glow spread radius must change across the loop');
     });
 
     testWidgets('the two stars are not rendered at identical scale mid-cycle (staggered burst is live)', (

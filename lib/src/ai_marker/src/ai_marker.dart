@@ -1,8 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/skeleton/src/shimmer_painter.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 import 'ai_marker_burst.dart';
@@ -54,29 +55,30 @@ import 'ai_marker_wrapper.dart';
 ///   phase-offset behind the big star's (see [LayrzAiMarkerBurst]), settling
 ///   between repeats. This must read as an AI *twinkle*, never as a spinning
 ///   loading indicator — there is no rotation anywhere in this widget.
-/// - **Shine** — a moving-gradient glint sweeps across the background pill
-///   only via [LayrzShimmerGradient] (`lib/src/skeleton/src/shimmer_painter.dart`),
-///   the same internal helper `LayrzSkeleton` uses for its shimmer. Sharing
-///   one implementation avoids two divergent "moving highlight" effects in
-///   the library.
+/// - **Glow** — a soft [BoxShadow] in `tokens.colors.aiAccent` pulses on the
+///   container, growing its blur/spread and fading its opacity out, then back
+///   in, on a continuous loop (see [_glowFor]). This replaced an earlier
+///   moving-gradient glint swept across the pill via [ShaderMask] +
+///   `LayrzShimmerGradient` (the same helper `LayrzSkeleton` still uses for
+///   its own shimmer); the glint read as a highlight crossing a static
+///   surface, whereas the pulsing shadow reads as the marker itself
+///   "breathing" — a better match for a living, AI-generated disclosure
+///   (Kenny, 2026-09-04).
 ///
-///   **The glint's [ShaderMask] wraps only the [DecoratedBox] fill, never the
-///   star glyphs.** `BlendMode.srcATop` keeps the masked child's *alpha* but
-///   replaces its *color* with the shader's color at every opaque pixel — so
-///   an earlier revision that wrapped the whole container (pill *and* stars)
-///   in one `ShaderMask` silently repainted the white stars to the gradient's
-///   `aiAccent` color everywhere outside the moving highlight band, making
-///   them functionally invisible except for an instant as the band crossed
-///   them (Kenny, live showroom screenshot, 2026-09-04). The stars are now
-///   painted as a sibling on top of the shaded fill, entirely outside the
-///   `ShaderMask` subtree, so the glint can only ever affect the pill's own
-///   color and can never touch the glyphs.
+///   **Both the burst and the glow are driven by the same
+///   [AnimationController]**, so the star pop and the shadow's breathing
+///   cycle stay in the same cadence rather than drifting apart over repeats.
+///   The shadow is painted on the container's own [BoxDecoration] — sibling
+///   to, not wrapping, the star glyphs — so it can never affect their color,
+///   and the containing [Stack] uses `clipBehavior: Clip.none` so the glow is
+///   never clipped away at the container's own bounds.
 ///
 /// **Reduce motion:** when `MediaQuery.disableAnimationsOf(context)` is true,
-/// both the burst and the glint are switched off entirely and the stars
-/// render in their settled, static resting pose — non-negotiable, since a
-/// perpetual twinkle is a vestibular trigger for users who have asked for
-/// reduced motion.
+/// both the burst and the glow pulse are switched off entirely: the stars
+/// render in their settled, static resting pose and the container keeps a
+/// fixed, non-animating shadow — non-negotiable, since a perpetual twinkle
+/// and a pulsing glow are both vestibular triggers for users who have asked
+/// for reduced motion.
 ///
 /// For overlaying this marker on the corner of another widget (a chat bubble,
 /// a card) without affecting that widget's layout, see [LayrzAiMarker.wrap]
@@ -155,9 +157,10 @@ class _LayrzAiMarkerDimensions {
 class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProviderStateMixin {
   static const LayrzAiMarkerBurst _burst = LayrzAiMarkerBurst();
 
-  /// Drives both the staggered burst and the shine glint from one ticker —
-  /// the two effects are visually independent but share a single continuous
-  /// cycle so they loop in the same cadence rather than drifting apart.
+  /// Drives both the staggered burst and the pulsing glow shadow from one
+  /// ticker — the two effects are visually independent but share a single
+  /// continuous cycle so they loop in the same cadence rather than drifting
+  /// apart.
   AnimationController? _controller;
 
   @override
@@ -201,10 +204,64 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
   static _LayrzAiMarkerDimensions _dimensionsFor(LayrzAiMarkerSize size) {
     switch (size) {
       case LayrzAiMarkerSize.small:
-        return const _LayrzAiMarkerDimensions(container: 22.0, bigStar: 15.0, smallStar: 9.5, inset: 1.5);
+        return const _LayrzAiMarkerDimensions(container: 25.0, bigStar: 18.0, smallStar: 16.0, inset: -2);
       case LayrzAiMarkerSize.big:
-        return const _LayrzAiMarkerDimensions(container: 44.0, bigStar: 29.0, smallStar: 18.0, inset: 3.0);
+        return const _LayrzAiMarkerDimensions(container: 35.0, bigStar: 29.0, smallStar: 23.0, inset: -2);
     }
+  }
+
+  /// The blur radius, in logical pixels, the glow shadow settles at when the
+  /// pulse is at its calmest point in the cycle.
+  static const double _glowMinBlur = 2.0;
+
+  /// The blur radius, in logical pixels, the glow shadow reaches at the peak
+  /// of the pulse.
+  static const double _glowMaxBlur = 8.0;
+
+  /// The spread radius, in logical pixels, the glow shadow settles at when
+  /// the pulse is at its calmest point in the cycle.
+  static const double _glowMinSpread = 0.0;
+
+  /// The spread radius, in logical pixels, the glow shadow reaches at the
+  /// peak of the pulse.
+  static const double _glowMaxSpread = 2.0;
+
+  /// The shadow's alpha at the calmest point in the cycle.
+  static const double _glowMinAlpha = 0.15;
+
+  /// The shadow's alpha at the peak of the pulse.
+  static const double _glowMaxAlpha = 0.55;
+
+  /// Computes the "breathing" glow's [BoxShadow] at driving animation [value]
+  /// in `[0.0, 1.0]`.
+  ///
+  /// Shares the same `[0.0, 1.0]` controller value that drives
+  /// [LayrzAiMarkerBurst], so the shadow's breathing cycle and the star burst
+  /// stay in lockstep. A full sine wave (rather than [_controller]'s own
+  /// repeat boundary) is used so the glow grows out and fades back smoothly
+  /// across the loop seam, instead of snapping at `value == 0.0`/`1.0`.
+  static BoxShadow _glowFor(Color aiAccent, double value) {
+    // 0.5 + 0.5*sin(...) maps into [0.0, 1.0] and starts (at value == 0) at
+    // the same point it ends, so consecutive repeats of the controller never
+    // produce a visible jump in the shadow.
+    final phase = 0.5 + 0.5 * math.sin(2 * math.pi * value - math.pi / 2);
+    final eased = Curves.easeInOut.transform(phase);
+    return BoxShadow(
+      color: aiAccent.withValues(alpha: _glowMinAlpha + (_glowMaxAlpha - _glowMinAlpha) * eased),
+      blurRadius: _glowMinBlur + (_glowMaxBlur - _glowMinBlur) * eased,
+      spreadRadius: _glowMinSpread + (_glowMaxSpread - _glowMinSpread) * eased,
+    );
+  }
+
+  /// The fixed, non-animating glow rendered under reduce motion — a subtle
+  /// resting shadow rather than no shadow at all, so the marker still reads
+  /// as elevated when the pulse is switched off.
+  static BoxShadow _settledGlow(Color aiAccent) {
+    return BoxShadow(
+      color: aiAccent.withValues(alpha: _glowMinAlpha),
+      blurRadius: _glowMinBlur,
+      spreadRadius: _glowMinSpread,
+    );
   }
 
   @override
@@ -232,46 +289,40 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             },
           );
 
-    // The glint only ever wraps this bare, content-free fill -- never the
-    // stars -- because BlendMode.srcATop replaces a masked child's *color*
-    // wherever it is opaque, keeping only its alpha. Masking the stars along
-    // with the pill would recolor them to the gradient's own color, erasing
-    // them outside the moving highlight band (see the class doc).
-    final Widget fill = DecoratedBox(
-      decoration: BoxDecoration(
-        color: tokens.colors.aiAccent,
-        borderRadius: BorderRadius.circular(tokens.radius.r1),
-      ),
-    );
-
-    final Widget shinedFill = controller == null
-        ? fill
+    // The pulsing glow is painted as this DecoratedBox's own BoxShadow --
+    // never a wrapper around the stars -- so it can only ever affect the
+    // pill's own painted extent, exactly like the fill color it replaces.
+    final Widget glowingFill = controller == null
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: tokens.colors.aiAccent,
+              borderRadius: BorderRadius.circular(tokens.radius.r1),
+              boxShadow: [_settledGlow(tokens.colors.aiAccent)],
+            ),
+          )
         : AnimatedBuilder(
             animation: controller,
-            builder: (context, child) {
-              return ShaderMask(
-                blendMode: BlendMode.srcATop,
-                shaderCallback: (rect) => LayrzShimmerGradient.forAnimationValue(
-                  value: controller.value,
-                  baseColor: tokens.colors.aiAccent,
-                  highlightColor: const Color(0xFFFFFFFF),
-                  shaderRect: rect,
-                  bandWidth: 0.5,
-                ).createShader(),
-                child: child,
+            builder: (context, _) {
+              return DecoratedBox(
+                decoration: BoxDecoration(
+                  color: tokens.colors.aiAccent,
+                  borderRadius: BorderRadius.circular(tokens.radius.r1),
+                  boxShadow: [_glowFor(tokens.colors.aiAccent, controller.value)],
+                ),
               );
             },
-            child: fill,
           );
 
-    // The stars are painted as a sibling stacked on top of the (possibly
-    // shaded) fill, entirely outside the ShaderMask subtree, so they are
-    // always rendered at their own true color regardless of where the glint
-    // band currently sits.
+    // The stars are painted as a sibling stacked on top of the fill, so they
+    // are always rendered at their own true color regardless of the glow's
+    // current phase. `clipBehavior: Clip.none` keeps the pulsing shadow from
+    // being clipped away at the Stack's own bounds -- a shadow clipped to the
+    // container's own rect would never be visible around it.
     final Widget container = Stack(
       alignment: Alignment.center,
+      clipBehavior: Clip.none,
       children: [
-        Positioned.fill(child: shinedFill),
+        Positioned.fill(child: glowingFill),
         stars,
       ],
     );
