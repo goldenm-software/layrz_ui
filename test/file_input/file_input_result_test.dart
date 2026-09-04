@@ -81,5 +81,26 @@ void main() {
       expect(str, contains('image/png'));
       expect(str, contains('4 bytes'));
     });
+
+    test('toBytes returns the exact Uint8List content', () {
+      final result = LayrzFileInputResult(name: 'a.png', mimeType: 'image/png', bytes: bytes);
+      expect(result.toBytes(), isA<Uint8List>());
+      expect(result.toBytes(), equals(bytes));
+    });
+
+    test('toDataUri returns the exact data:<mime>;base64,<payload> string', () {
+      final result = LayrzFileInputResult(
+        name: 'a.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      );
+      expect(result.toDataUri(), 'data:image/png;base64,AQID');
+    });
+
+    test('toDataUri matches dataUri for a different mimeType and empty bytes', () {
+      final result = LayrzFileInputResult(name: 'a.txt', mimeType: 'text/plain', bytes: Uint8List(0));
+      expect(result.toDataUri(), 'data:text/plain;base64,');
+      expect(result.toDataUri(), result.dataUri);
+    });
   });
 }

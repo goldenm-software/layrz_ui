@@ -109,6 +109,22 @@ class LayrzFileInputResult {
     required this.bytes,
   }) : dataUri = 'data:$mimeType;base64,${base64Encode(bytes)}';
 
+  /// Returns this file's raw, decoded content as a [Uint8List].
+  ///
+  /// A typed accessor equivalent to reading [bytes] directly -- provided so
+  /// callers converting a [LayrzFileInputResult] (e.g. for a direct upload)
+  /// have an explicit, discoverable conversion method alongside [toDataUri]
+  /// rather than reaching for the field by name.
+  Uint8List toBytes() => bytes;
+
+  /// Returns this file encoded as a `data:<mimeType>;base64,<payload>` URI.
+  ///
+  /// Equivalent to reading [dataUri] directly -- provided as an explicit
+  /// conversion method alongside [toBytes]. The value is already computed
+  /// eagerly at construction time (see [dataUri]'s own doc), so this performs
+  /// no extra encoding work.
+  String toDataUri() => dataUri;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
