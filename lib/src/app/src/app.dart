@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
+import 'package:layrz_ui/src/snackbar/snackbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 import 'package:layrz_ui/src/transitions/transitions.dart';
 
@@ -322,7 +323,10 @@ class _LayrzAppState extends State<LayrzApp> {
         style: themeData.textStyle,
         child: IconTheme(
           data: themeData.iconTheme,
-          child: ColoredBox(color: themeData.backgroundColor, child: userChild),
+          child: ColoredBox(
+            color: themeData.backgroundColor,
+            child: LayrzSnackbarMessenger(child: userChild),
+          ),
         ),
       ),
     );
