@@ -55,7 +55,7 @@ void main() {
       expect(decoration.color, theme.tokens.colors.aiAccent);
     });
 
-    testWidgets('the container is fully rounded via the radius tokens', (tester) async {
+    testWidgets('the container uses the r1 rounded-corner radius token', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -67,7 +67,7 @@ void main() {
         find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(DecoratedBox)).first,
       );
       final decoration = container.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.full));
+      expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.r1));
     });
 
     testWidgets('the small size renders a square footprint smaller than the big default', (tester) async {
