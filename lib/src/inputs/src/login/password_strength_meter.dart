@@ -1,193 +1,242 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'password_strength.dart';
 
-/// A segment-count and fill-color pairing used internally to describe how
-/// [LayrzPasswordStrengthMeter] paints a given [LayrzPasswordStrength].
+/// Fixed number of segments the strength bar is divided into.
 ///
-/// Kept private and immutable: it exists purely to let [LayrzPasswordStrengthMeter]
-/// resolve "how many of the track's segments are filled, and in which color" as a
-/// single value instead of duplicating a switch statement across the build method.
+/// One per level `1`–`4`; level `0` renders as zero filled segments. Matches
+/// `layrz_theme`'s four requirements/levels exactly — see `password_strength.dart`'s
+/// module doc comment for the full rule set this mirrors.
+const int _segmentCount = 4;
+
+/// A single password requirement the checklist renders one row for.
+///
+/// Pairs the requirement's localized description with whether the current password
+/// meets it, so [_LayrzPasswordChecklist] can render each row uniformly instead of
+/// repeating the same `Row`/`Icon`/`Text` structure four times inline.
 @immutable
-class _MeterVisual {
-  /// How many of the track's fixed segments should render as filled.
-  ///
-  /// Ranges from 0 (nothing filled, [LayrzPasswordStrength.empty]) to
-  /// [LayrzPasswordStrengthMeter.segmentCount] (all filled,
-  /// [LayrzPasswordStrength.strong]).
-  final int filledSegments;
+class _ChecklistItem {
+  /// The localized requirement description, e.g. "At least one lowercase letter".
+  final String label;
 
-  /// The fill color applied to the filled segments.
-  final Color color;
+  /// Whether the current password satisfies this requirement.
+  final bool met;
 
-  /// Creates a new [_MeterVisual] pairing a segment count with its fill color.
-  const _MeterVisual({required this.filledSegments, required this.color});
+  /// Creates a new [_ChecklistItem].
+  const _ChecklistItem({required this.label, required this.met});
 }
 
-/// A stateless, informational meter that visualizes a [LayrzPasswordStrength] reading
-/// as a row of colored segments with an optional text label.
+/// A persistent, informational password-strength indicator: a full-width, 4-segment
+/// fill bar followed by a checklist of the four character-class requirements.
 ///
-/// **Why "informational" is a hard requirement, not a style preference:** this meter
-/// is designed to be shown next to [LayrzPasswordInput] (see `password_input.dart`),
-/// including on a *login* field where the user is authenticating with a password they
-/// already chose and cannot edit from that screen. On a login field, a weak reading
-/// cannot be acted on — there is nothing the user can do about it right there — so
-/// painting it in the design system's danger/error color reads as an unactionable
-/// alarm about a password the user is not in the process of creating. For that reason
-/// this widget **never** uses [LayrzColorTokens.danger] for any strength level,
-/// including [LayrzPasswordStrength.weak]. It instead uses the neutral/informational
-/// ramp: [LayrzColorTokens.fg4] (empty/track), [LayrzColorTokens.info] (weak/medium)
-/// and [LayrzColorTokens.success] (strong) — a gradient of "how far along" rather than
-/// "how wrong". See the login-inputs context dossier §12A for the full rationale.
+/// **Replaces `layrz_theme`'s tooltip presentation.** `layrz_theme`'s
+/// `ThemedPasswordInput` surfaces the same requirements/level rules behind a hover
+/// tooltip on a trailing icon — real usage found that undiscoverable (nothing on
+/// screen signals there is more information to hover for) and unusable on touch
+/// devices (no hover at all). This widget instead renders BOTH elements directly in
+/// the layout, always visible whenever the meter itself is shown — no hover, no
+/// tooltip, nothing hidden behind an affordance the user has to find first.
 ///
-/// The meter accepts either a pre-computed [strength] or a raw [password] string (in
-/// which case it derives the strength itself via [evaluatePasswordStrength]). Exactly
-/// one of the two must be supplied.
+/// **The scoring rules are `layrz_theme`'s, unchanged.** See
+/// [LayrzPasswordRequirements] (`password_strength.dart`) for the exact requirement
+/// regexes, the allowed-character whole-string check, and the length→level table.
+/// Level 0 legitimately renders in [LayrzColorTokens.danger] — unlike an earlier
+/// design of this widget, "never danger-red" is NOT a rule here: a password that
+/// fails validity or is very short really is the worst bucket, and hiding that behind
+/// a softer color would misrepresent the actual rule `layrz_theme` encodes.
+///
+/// The meter accepts either a pre-computed [requirements] snapshot or a raw
+/// [password] string (in which case it derives the snapshot itself via
+/// [LayrzPasswordRequirements.evaluate]). Exactly one of the two must be supplied.
 class LayrzPasswordStrengthMeter extends StatelessWidget {
-  /// The number of discrete segments the track is divided into.
+  /// A pre-computed requirements/level snapshot to render.
   ///
-  /// Fixed at 3, one per non-empty [LayrzPasswordStrength] bucket (weak, medium,
-  /// strong). Kept as a named constant rather than a literal so the fill-count mapping
-  /// in [_visualFor] stays self-documenting.
-  static const int segmentCount = 3;
-
-  /// A pre-computed strength reading to render.
-  ///
-  /// Exactly one of [strength] or [password] must be non-null; supplying both or
-  /// neither is a programming error caught by an assertion in [LayrzPasswordStrengthMeter.new].
-  /// Prefer this parameter when the caller already has a [LayrzPasswordStrength] (e.g.
-  /// computed once and reused elsewhere), and prefer [password] when the caller only
-  /// has the raw text and wants the meter to score it.
-  final LayrzPasswordStrength? strength;
+  /// Exactly one of [requirements] or [password] must be non-null; supplying both or
+  /// neither is a programming error caught by an assertion in
+  /// [LayrzPasswordStrengthMeter.new]. Prefer this parameter when the caller already
+  /// has a [LayrzPasswordRequirements] (e.g. computed once and reused elsewhere), and
+  /// prefer [password] when the caller only has the raw text and wants the meter to
+  /// score it.
+  final LayrzPasswordRequirements? requirements;
 
   /// A raw password string to score and render.
   ///
-  /// When supplied, the meter derives its [LayrzPasswordStrength] internally via
-  /// [evaluatePasswordStrength] on every build, so passing the live controller text
-  /// keeps the meter in sync as the user types. Exactly one of [strength] or
-  /// [password] must be non-null.
+  /// When supplied, the meter derives its [LayrzPasswordRequirements] internally via
+  /// [LayrzPasswordRequirements.evaluate] on every build, so passing the live
+  /// controller text keeps the meter in sync as the user types. Exactly one of
+  /// [requirements] or [password] must be non-null.
   final String? password;
 
-  /// Whether to render the textual strength label below the segment track.
+  /// Creates a new [LayrzPasswordStrengthMeter] from a pre-computed [requirements]
+  /// snapshot.
   ///
-  /// When true (default), a label resolved from
-  /// `LayrzUiL10n.of(context).passwordStrengthLevel` combined with the current
-  /// bucket's name is shown below the track. When false, only the segment track is
-  /// rendered.
-  final bool showLabel;
-
-  /// Creates a new [LayrzPasswordStrengthMeter] from a pre-computed [strength].
-  ///
-  /// Use this constructor when the caller already has a [LayrzPasswordStrength] value
-  /// (for example, computed once by a parent and shared with other widgets). [showLabel]
-  /// controls whether the textual label is rendered below the segment track.
-  const LayrzPasswordStrengthMeter({super.key, required LayrzPasswordStrength this.strength, this.showLabel = true})
-    : password = null;
+  /// Use this constructor when the caller already has a [LayrzPasswordRequirements]
+  /// value (for example, computed once by a parent and shared with other widgets).
+  const LayrzPasswordStrengthMeter({super.key, required LayrzPasswordRequirements this.requirements}) : password = null;
 
   /// Creates a new [LayrzPasswordStrengthMeter] that scores a raw [password] string.
   ///
   /// Use this constructor when the caller only has the raw password text; the meter
-  /// calls [evaluatePasswordStrength] internally on every build, so passing the live
-  /// controller text keeps the meter in sync as the user types. [showLabel] controls
-  /// whether the textual label is rendered below the segment track.
-  const LayrzPasswordStrengthMeter.fromPassword({super.key, required String this.password, this.showLabel = true})
-    : strength = null;
+  /// calls [LayrzPasswordRequirements.evaluate] internally on every build, so passing
+  /// the live controller text keeps the meter in sync as the user types.
+  const LayrzPasswordStrengthMeter.fromPassword({super.key, required String this.password}) : requirements = null;
 
-  /// Resolves the effective [LayrzPasswordStrength] for this build: the pre-computed
-  /// [strength] if supplied, otherwise the result of scoring [password].
-  LayrzPasswordStrength _resolveStrength() {
-    final fixedStrength = strength;
-    if (fixedStrength != null) {
-      return fixedStrength;
+  /// Resolves the effective [LayrzPasswordRequirements] for this build: the
+  /// pre-computed [requirements] if supplied, otherwise the result of scoring
+  /// [password].
+  LayrzPasswordRequirements _resolveRequirements() {
+    final fixed = requirements;
+    if (fixed != null) {
+      return fixed;
     }
-    return evaluatePasswordStrength(password!);
+    return LayrzPasswordRequirements.evaluate(password!);
   }
 
-  /// Maps a [LayrzPasswordStrength] to how many segments are filled and in which
-  /// color, using only the neutral/informational tokens named on the class doc — never
-  /// [LayrzColorTokens.danger].
-  _MeterVisual _visualFor(LayrzPasswordStrength value, LayrzColorTokens colors) {
-    switch (value) {
-      case LayrzPasswordStrength.empty:
-        return _MeterVisual(filledSegments: 0, color: colors.fg4);
-      case LayrzPasswordStrength.weak:
-        return _MeterVisual(filledSegments: 1, color: colors.info.shade500);
-      case LayrzPasswordStrength.medium:
-        return _MeterVisual(filledSegments: 2, color: colors.info.shade700);
-      case LayrzPasswordStrength.strong:
-        return _MeterVisual(filledSegments: 3, color: colors.success.shade500);
-    }
-  }
-
-  /// Resolves the textual label for [value] from the active [LayrzUiL10n], e.g.
-  /// "Password Length: Strong".
-  String _labelFor(LayrzPasswordStrength value, BuildContext context) {
-    final l10n = LayrzUiL10n.of(context);
-    final level = switch (value) {
-      LayrzPasswordStrength.empty => '',
-      LayrzPasswordStrength.weak => 'Weak',
-      LayrzPasswordStrength.medium => 'Medium',
-      LayrzPasswordStrength.strong => 'Strong',
-    };
-    if (level.isEmpty) {
-      return l10n.passwordStrengthLevel;
-    }
-    return '${l10n.passwordStrengthLevel}: $level';
+  /// Builds the four [_ChecklistItem] rows from [result] and the active [l10n],
+  /// in the fixed order: lowercase, uppercase, digit, special character.
+  List<_ChecklistItem> _checklistItems(LayrzPasswordRequirements result, LayrzUiL10n l10n) {
+    return [
+      _ChecklistItem(label: l10n.passwordRequirementsLowercaseLetter, met: result.hasLowercase),
+      _ChecklistItem(label: l10n.passwordRequirementsUppercaseLetter, met: result.hasUppercase),
+      _ChecklistItem(label: l10n.passwordRequirementsDigit, met: result.hasDigit),
+      _ChecklistItem(label: l10n.passwordRequirementsSpecialCharacter, met: result.hasSpecial),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
     assert(
-      (strength == null) != (password == null),
-      'LayrzPasswordStrengthMeter requires exactly one of `strength` or `password`.',
+      (requirements == null) != (password == null),
+      'LayrzPasswordStrengthMeter requires exactly one of `requirements` or `password`.',
     );
 
     final tokens = context.tokens;
     final colors = tokens.colors;
-    final value = _resolveStrength();
-    final visual = _visualFor(value, colors);
-    final label = _labelFor(value, context);
+    final l10n = LayrzUiL10n.of(context);
+    final result = _resolveRequirements();
+    final level = result.level;
+    final color = result.colorFor(colors);
+    final items = _checklistItems(result, l10n);
 
     return Semantics(
       container: true,
-      label: label,
+      label: '${l10n.passwordStrengthLevel}: $level/$_segmentCount',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(segmentCount, (index) {
-              final isFilled = index < visual.filledSegments;
-              return Padding(
-                padding: EdgeInsets.only(right: index == segmentCount - 1 ? 0 : tokens.spacing.sp1),
-                child: AnimatedContainer(
-                  duration: tokens.motion.dTransition,
-                  curve: tokens.motion.easing,
-                  width: 32,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isFilled ? visual.color : colors.fg4,
-                    borderRadius: tokens.radius.br1,
-                  ),
-                ),
-              );
-            }),
+          ExcludeSemantics(
+            child: _LayrzPasswordStrengthBar(level: level, color: color, tokens: tokens),
           ),
-          if (showLabel) ...[
-            SizedBox(height: tokens.spacing.sp1),
-            ExcludeSemantics(
-              child: Text(
-                label,
-                style: tokens.typography.label.copyWith(color: colors.fg3),
-              ),
-            ),
-          ],
+          SizedBox(height: tokens.spacing.sp2),
+          _LayrzPasswordChecklist(items: items, tokens: tokens),
         ],
       ),
+    );
+  }
+}
+
+/// The full-width, 4-segment fill bar showing how many of [_segmentCount] segments
+/// [level] fills.
+///
+/// Segments are laid out with [Expanded] rather than a fixed width, so the bar always
+/// spans the FULL width of its parent (the field above it) rather than a fixed pixel
+/// track — matching the placement brief this widget was built against ("a 4-segment
+/// bar spread across the full width of the input").
+class _LayrzPasswordStrengthBar extends StatelessWidget {
+  /// The 0–4 strength level, from [LayrzPasswordRequirements.level].
+  final int level;
+
+  /// The fill color for filled segments, from [LayrzPasswordRequirements.colorFor].
+  final Color color;
+
+  /// The active design tokens, for spacing/radius/motion.
+  final LayrzTokens tokens;
+
+  /// Creates a new [_LayrzPasswordStrengthBar].
+  const _LayrzPasswordStrengthBar({required this.level, required this.color, required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(_segmentCount, (index) {
+        final isFilled = index < level;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: index == _segmentCount - 1 ? 0 : tokens.spacing.sp1),
+            child: AnimatedContainer(
+              duration: tokens.motion.dTransition,
+              curve: tokens.motion.easing,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isFilled ? color : tokens.colors.fg4,
+                borderRadius: tokens.radius.br1,
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+/// The checklist of the four password requirements, one row per requirement, each
+/// with a met/unmet icon and its localized description.
+///
+/// A met requirement shows a filled check in [LayrzColorTokens.success]; an unmet one
+/// shows a close mark in [LayrzColorTokens.fg4] (neutral, not [LayrzColorTokens.danger]
+/// — an unmet requirement while the user is still typing is normal and expected, not
+/// an error condition to alarm about; the strength BAR above already carries the
+/// danger-red signal for a genuinely weak/invalid password).
+class _LayrzPasswordChecklist extends StatelessWidget {
+  /// The four requirement rows to render, in display order.
+  final List<_ChecklistItem> items;
+
+  /// The active design tokens, for spacing/typography/color.
+  final LayrzTokens tokens;
+
+  /// Creates a new [_LayrzPasswordChecklist].
+  const _LayrzPasswordChecklist({required this.items, required this.tokens});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = tokens.colors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final item in items)
+          Padding(
+            padding: EdgeInsets.only(top: tokens.spacing.sp1),
+            child: Semantics(
+              label: '${item.label}: ${item.met}',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ExcludeSemantics(
+                    child: Icon(
+                      item.met ? MdiIcons.checkCircleOutline : MdiIcons.closeCircleOutline,
+                      size: 14.0 + tokens.spacing.sp1,
+                      color: item.met ? colors.success.shade500 : colors.fg4,
+                    ),
+                  ),
+                  SizedBox(width: tokens.spacing.sp1),
+                  ExcludeSemantics(
+                    child: Text(
+                      item.label,
+                      style: tokens.typography.label.copyWith(color: colors.fg3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
