@@ -8,7 +8,6 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 import 'ai_marker_burst.dart';
 import 'ai_marker_position.dart';
-import 'ai_marker_size.dart';
 import 'ai_marker_wrapper.dart';
 
 /// An icon-only marker disclosing that nearby content was generated or
@@ -57,11 +56,11 @@ import 'ai_marker_wrapper.dart';
 ///   loading indicator — there is no rotation anywhere in this widget.
 /// - **Glow** — a soft [BoxShadow] in `tokens.colors.aiAccent` pulses on the
 ///   container, growing its blur/spread and fading its opacity out, then back
-///   in, on a continuous loop (see [_glowFor]). This replaced an earlier
-///   moving-gradient glint swept across the pill via [ShaderMask] +
-///   `LayrzShimmerGradient` (the same helper `LayrzSkeleton` still uses for
-///   its own shimmer); the glint read as a highlight crossing a static
-///   surface, whereas the pulsing shadow reads as the marker itself
+///   in, on a continuous loop (see [_LayrzAiMarkerState._glowFor]). This
+///   replaced an earlier moving-gradient glint swept across the pill via
+///   [ShaderMask] + `LayrzShimmerGradient` (the same helper `LayrzSkeleton`
+///   still uses for its own shimmer); the glint read as a highlight crossing
+///   a static surface, whereas the pulsing shadow reads as the marker itself
 ///   "breathing" — a better match for a living, AI-generated disclosure
 ///   (Kenny, 2026-09-04).
 ///
@@ -80,13 +79,21 @@ import 'ai_marker_wrapper.dart';
 /// and a pulsing glow are both vestibular triggers for users who have asked
 /// for reduced motion.
 ///
+/// **Single fixed footprint.** [LayrzAiMarker] used to offer a
+/// `LayrzAiMarkerSize` (`small`/`big`) choice; that enum is gone and there is
+/// no `size` parameter of any kind. The container renders at one hand-tuned
+/// size ([_kContainerSize]) everywhere. Each star's own placement (top, left,
+/// bottom, right) is still hand-tunable, but only as internal constants — see
+/// the `_kBigStar*`/`_kSmallStar*` knobs at the top of
+/// [_LayrzAiMarkerState] — never as a constructor parameter.
+///
 /// For overlaying this marker on the corner of another widget (a chat bubble,
 /// a card) without affecting that widget's layout, see [LayrzAiMarker.wrap]
 /// (`ai_marker_wrapper.dart`).
 @immutable
 class LayrzAiMarker extends StatefulWidget {
   /// Creates a standalone, icon-only AI-disclosure marker.
-  const LayrzAiMarker({super.key, this.size = LayrzAiMarkerSize.big});
+  const LayrzAiMarker({super.key});
 
   /// Overlays a [LayrzAiMarker] on a corner of [child] without affecting
   /// [child]'s layout footprint.
@@ -104,58 +111,106 @@ class LayrzAiMarker extends StatefulWidget {
     Key? key,
     required Widget child,
     LayrzAiMarkerPosition position = LayrzAiMarkerPosition.topRight,
-    LayrzAiMarkerSize size = LayrzAiMarkerSize.big,
     bool isVisible = true,
   }) {
-    return LayrzAiMarkerWrapper(key: key, position: position, size: size, isVisible: isVisible, child: child);
+    return LayrzAiMarkerWrapper(key: key, position: position, isVisible: isVisible, child: child);
   }
-
-  /// The hand-tuned footprint the marker renders at.
-  ///
-  /// Each [LayrzAiMarkerSize] value maps to its own container dimension and
-  /// star sizes via [_LayrzAiMarkerState._dimensionsFor] — not a shared
-  /// scale factor — so the small variant's accent star stays legible instead
-  /// of shrinking into a blur. Defaults to [LayrzAiMarkerSize.big].
-  final LayrzAiMarkerSize size;
 
   @override
   State<LayrzAiMarker> createState() => _LayrzAiMarkerState();
 }
 
-/// Hand-tuned geometry for one [LayrzAiMarkerSize] value.
-///
-/// Bundled as one immutable value so [_LayrzAiMarkerState._dimensionsFor]
-/// returns container, star, and inset sizing together — the three numbers
-/// are tuned as a set per size and must never be mixed across sizes.
-@immutable
-class _LayrzAiMarkerDimensions {
-  /// The side length, in logical pixels, of the square marker container.
-  final double container;
-
-  /// The side length, in logical pixels, of the bigger, top-left-anchored
-  /// star glyph.
-  final double bigStar;
-
-  /// The side length, in logical pixels, of the smaller, bottom-right-anchored
-  /// accent star glyph.
-  final double smallStar;
-
-  /// The inward inset, in logical pixels, applied to both stars from their
-  /// respective anchor corner — kept minimal so the stars occupy most of the
-  /// container rather than floating in unused padding.
-  final double inset;
-
-  /// Creates a bundle of hand-tuned dimensions for one marker size.
-  const _LayrzAiMarkerDimensions({
-    required this.container,
-    required this.bigStar,
-    required this.smallStar,
-    required this.inset,
-  });
-}
-
 class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProviderStateMixin {
   static const LayrzAiMarkerBurst _burst = LayrzAiMarkerBurst();
+
+  /// The side length, in logical pixels, of the square marker container.
+  ///
+  /// [LayrzAiMarker] used to offer a `small`/`big` size enum; that choice is
+  /// gone and this is now the only footprint the marker ever renders at.
+  /// Carried over from the former "big" variant's hand-tuned dimension.
+  static const double _kContainerSize = 30.0;
+
+  /// **Tuning knob, not a public parameter.** The big star's inward offset,
+  /// in logical pixels, from the container's top edge. `null` leaves that
+  /// edge unconstrained (standard [Positioned] semantics) — set it to move
+  /// the star vertically; leave `null` to let [_kBigStarBottom] (if set)
+  /// govern instead.
+  // ignore: unnecessary_nullable_for_final_variable_declarations
+  static const double? _kBigStarTop = -8.5;
+
+  /// **Tuning knob, not a public parameter.** The big star's inward offset,
+  /// in logical pixels, from the container's left edge. See [_kBigStarTop].
+  // ignore: unnecessary_nullable_for_final_variable_declarations
+  static const double? _kBigStarLeft = -8.5;
+
+  /// **Tuning knob, not a public parameter.** The big star's offset from the
+  /// container's bottom edge. `null` by default — the big star is anchored
+  /// from the top-left, per [_kBigStarTop]/[_kBigStarLeft]. See
+  /// [_kBigStarTop].
+  static const double? _kBigStarBottom = null;
+
+  /// **Tuning knob, not a public parameter.** The big star's offset from the
+  /// container's right edge. `null` by default — see [_kBigStarBottom].
+  static const double? _kBigStarRight = null;
+
+  /// **Tuning knob, not a public parameter.** The side length, in logical
+  /// pixels, of the bigger, top-left-anchored star glyph.
+  static const double _kBigStarSize = 40.0;
+
+  /// **Tuning knob, not a public parameter.** The small star's offset from
+  /// the container's top edge. `null` by default — the small star is
+  /// anchored from the bottom-right, per [_kSmallStarBottom]/
+  /// [_kSmallStarRight]. See [_kBigStarTop] for the general shape of these
+  /// per-star slots.
+  static const double? _kSmallStarTop = null;
+
+  /// **Tuning knob, not a public parameter.** The small star's offset from
+  /// the container's left edge. `null` by default — see [_kSmallStarTop].
+  static const double? _kSmallStarLeft = null;
+
+  /// **Tuning knob, not a public parameter.** The small star's inward offset,
+  /// in logical pixels, from the container's bottom edge.
+  // ignore: unnecessary_nullable_for_final_variable_declarations
+  static const double? _kSmallStarBottom = -5.0;
+
+  /// **Tuning knob, not a public parameter.** The small star's inward offset,
+  /// in logical pixels, from the container's right edge.
+  // ignore: unnecessary_nullable_for_final_variable_declarations
+  static const double? _kSmallStarRight = -5.0;
+
+  /// **Tuning knob, not a public parameter.** The side length, in logical
+  /// pixels, of the smaller, bottom-right-anchored accent star glyph.
+  static const double _kSmallStarSize = 30.0;
+
+  /// The big star's resolved placement, built from the [_kBigStarTop] /
+  /// [_kBigStarLeft] / [_kBigStarBottom] / [_kBigStarRight] /
+  /// [_kBigStarSize] knobs above.
+  ///
+  /// **This is the one place to look to move the big star.** Edit the four
+  /// `_kBigStar*` edge constants above — any of top/left/bottom/right,
+  /// independently, `null` for "unconstrained" — and this slot picks them up
+  /// automatically; nothing else in the widget needs to change.
+  static const _LayrzAiMarkerStarSlot _bigStarSlot = _LayrzAiMarkerStarSlot(
+    top: _kBigStarTop,
+    left: _kBigStarLeft,
+    bottom: _kBigStarBottom,
+    right: _kBigStarRight,
+    size: _kBigStarSize,
+  );
+
+  /// The small star's resolved placement, built from the [_kSmallStarTop] /
+  /// [_kSmallStarLeft] / [_kSmallStarBottom] / [_kSmallStarRight] /
+  /// [_kSmallStarSize] knobs above.
+  ///
+  /// **This is the one place to look to move the small star** — same shape
+  /// as [_bigStarSlot], see that field's doc.
+  static const _LayrzAiMarkerStarSlot _smallStarSlot = _LayrzAiMarkerStarSlot(
+    top: _kSmallStarTop,
+    left: _kSmallStarLeft,
+    bottom: _kSmallStarBottom,
+    right: _kSmallStarRight,
+    size: _kSmallStarSize,
+  );
 
   /// Drives both the staggered burst and the pulsing glow shadow from one
   /// ticker — the two effects are visually independent but share a single
@@ -192,22 +247,6 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
   void dispose() {
     _controller?.dispose();
     super.dispose();
-  }
-
-  /// Resolves the hand-tuned dimension bundle for the given [size].
-  ///
-  /// These numbers are tuned as a set, not derived from one another: the
-  /// small variant does not scale the big variant down, because a naive
-  /// linear scale made the small accent star shrink into near-invisibility.
-  /// Padding is kept minimal in both so the stars occupy most of the
-  /// container rather than floating in unused space.
-  static _LayrzAiMarkerDimensions _dimensionsFor(LayrzAiMarkerSize size) {
-    switch (size) {
-      case LayrzAiMarkerSize.small:
-        return const _LayrzAiMarkerDimensions(container: 25.0, bigStar: 18.0, smallStar: 16.0, inset: -2);
-      case LayrzAiMarkerSize.big:
-        return const _LayrzAiMarkerDimensions(container: 35.0, bigStar: 29.0, smallStar: 23.0, inset: -2);
-    }
   }
 
   /// The blur radius, in logical pixels, the glow shadow settles at when the
@@ -268,12 +307,12 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final controller = _controller;
-    final dimensions = _dimensionsFor(widget.size);
 
     final Widget stars = controller == null
-        ? _StarPair(
-            dimensions: dimensions,
-            color: const Color(0xFFFFFFFF),
+        ? const _StarPair(
+            bigSlot: _bigStarSlot,
+            smallSlot: _smallStarSlot,
+            color: Color(0xFFFFFFFF),
             big: kLayrzAiMarkerSettledFrame,
             small: kLayrzAiMarkerSettledFrame,
           )
@@ -281,7 +320,8 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             animation: controller,
             builder: (context, _) {
               return _StarPair(
-                dimensions: dimensions,
+                bigSlot: _bigStarSlot,
+                smallSlot: _smallStarSlot,
                 color: const Color(0xFFFFFFFF),
                 big: _burst.bigStarAt(controller.value),
                 small: _burst.smallStarAt(controller.value),
@@ -323,7 +363,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
       clipBehavior: Clip.none,
       children: [
         Positioned.fill(child: glowingFill),
-        stars,
+        Positioned.fill(child: stars),
       ],
     );
 
@@ -335,72 +375,116 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
         label: l10n.aiGeneratedLabel,
         image: true,
         child: ExcludeSemantics(
-          child: SizedBox(width: dimensions.container, height: dimensions.container, child: container),
+          child: SizedBox(width: _kContainerSize, height: _kContainerSize, child: container),
         ),
       ),
     );
   }
 }
 
+/// One star glyph's hand-tuned placement within the marker container,
+/// expressed as standard [Positioned] edge offsets.
+///
+/// **This is the internal tuning knob for moving a star.** Each of [top],
+/// [left], [bottom], [right] can be set or left `null` independently, with
+/// the same "unconstrained edge" semantics [Positioned] itself uses — so a
+/// star can be anchored from any corner, or even stretched between two
+/// opposite edges, by editing the `_kBigStar*`/`_kSmallStar*` constants in
+/// [_LayrzAiMarkerState] that build these slots. There is no constructor
+/// parameter on [LayrzAiMarker] for this — it is deliberately not public API,
+/// only an easy-to-find internal constant for Kenny (or a future maintainer)
+/// to hand-tune.
+@immutable
+class _LayrzAiMarkerStarSlot {
+  /// The star's offset from the container's top edge, in logical pixels.
+  /// `null` leaves this edge unconstrained.
+  final double? top;
+
+  /// The star's offset from the container's left edge, in logical pixels.
+  /// `null` leaves this edge unconstrained.
+  final double? left;
+
+  /// The star's offset from the container's bottom edge, in logical pixels.
+  /// `null` leaves this edge unconstrained.
+  final double? bottom;
+
+  /// The star's offset from the container's right edge, in logical pixels.
+  /// `null` leaves this edge unconstrained.
+  final double? right;
+
+  /// The side length, in logical pixels, of this star's glyph.
+  final double size;
+
+  /// Creates a star placement slot from up to four independent edge offsets
+  /// plus the glyph's own size.
+  const _LayrzAiMarkerStarSlot({this.top, this.left, this.bottom, this.right, required this.size});
+}
+
 /// The bare pair of diagonally-arranged star glyphs, positioned and scaled
 /// per the current [LayrzAiMarkerBurstFrame] of each.
 ///
 /// Split out from [_LayrzAiMarkerState.build] purely for readability — it
-/// carries no state and no animation of its own, only geometry for a given
-/// [dimensions] bundle and pair of frames. The bigger star is inset from the
-/// top-left corner of the container and the smaller accent star from the
-/// bottom-right, filling the container diagonally rather than overlapping
-/// concentrically — the classic AI-sparkle motif Kenny asked for
-/// (2026-09-04): a prominent sparkle anchored up-left with a smaller accent
-/// sparkle trailing down-right.
+/// carries no state and no animation of its own, only geometry for the given
+/// [bigSlot]/[smallSlot] placements and pair of burst frames. Each star's
+/// [_LayrzAiMarkerStarSlot] independently supplies its own top/left/bottom/
+/// right offsets to the [Positioned] that anchors it, so the two stars need
+/// not share a single inset the way earlier revisions did.
 class _StarPair extends StatelessWidget {
-  const _StarPair({required this.dimensions, required this.color, required this.big, required this.small});
+  const _StarPair({
+    required this.bigSlot,
+    required this.smallSlot,
+    required this.color,
+    required this.big,
+    required this.small,
+  });
 
-  /// The hand-tuned container, star, and inset sizes for the marker's
-  /// current [LayrzAiMarkerSize].
-  final _LayrzAiMarkerDimensions dimensions;
+  /// The bigger, top-left-anchored star's placement and size.
+  final _LayrzAiMarkerStarSlot bigSlot;
+
+  /// The smaller, bottom-right-anchored accent star's placement and size.
+  final _LayrzAiMarkerStarSlot smallSlot;
 
   /// The fill color applied to both star glyphs.
   final Color color;
 
-  /// The current burst frame (scale/opacity) for the top-left star.
+  /// The current burst frame (scale/opacity) for the big star.
   final LayrzAiMarkerBurstFrame big;
 
-  /// The current burst frame (scale/opacity) for the bottom-right star.
+  /// The current burst frame (scale/opacity) for the small star.
   final LayrzAiMarkerBurstFrame small;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: dimensions.container,
-      height: dimensions.container,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            left: dimensions.inset,
-            top: dimensions.inset,
-            child: Opacity(
-              opacity: big.opacity,
-              child: Transform.scale(
-                scale: big.scale,
-                child: Icon(MdiIcons.starFourPointsSmall, size: dimensions.bigStar, color: color),
-              ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          top: bigSlot.top,
+          left: bigSlot.left,
+          bottom: bigSlot.bottom,
+          right: bigSlot.right,
+          child: Opacity(
+            opacity: big.opacity,
+            child: Transform.scale(
+              scale: big.scale,
+              child: Icon(MdiIcons.starFourPointsSmall, size: bigSlot.size, color: color),
             ),
           ),
-          Positioned(
-            right: dimensions.inset,
-            bottom: dimensions.inset,
-            child: Opacity(
-              opacity: small.opacity,
-              child: Transform.scale(
-                scale: small.scale,
-                child: Icon(MdiIcons.starFourPointsSmall, size: dimensions.smallStar, color: color),
-              ),
+        ),
+        Positioned(
+          top: smallSlot.top,
+          left: smallSlot.left,
+          bottom: smallSlot.bottom,
+          right: smallSlot.right,
+          child: Opacity(
+            opacity: small.opacity,
+            child: Transform.scale(
+              scale: small.scale,
+              child: Icon(MdiIcons.starFourPointsSmall, size: smallSlot.size, color: color),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

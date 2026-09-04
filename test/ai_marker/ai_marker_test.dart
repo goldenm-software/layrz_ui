@@ -70,80 +70,82 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.r1));
     });
 
-    testWidgets('the small size renders a square footprint smaller than the big default', (tester) async {
+    testWidgets('renders a single fixed square footprint (the size enum was removed)', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, const LayrzAiMarker(size: LayrzAiMarkerSize.small));
-      final smallSize = tester.getSize(find.byType(LayrzAiMarker));
-
-      expect(smallSize.width, smallSize.height);
-      // Compared against the hand-tuned big dimension directly rather than
-      // pumping a second LayrzAiMarker into the same tester -- pumpThemed's
-      // Overlay is reused across pumpWidget calls in one test, which was
-      // observed to preserve the first marker's resolved element size on the
-      // second pump. A fresh tester per testWidgets avoids that entirely.
-      expect(smallSize.width, lessThan(44.0));
-    });
-
-    testWidgets('the default (big) size renders a larger square footprint than small', (tester) async {
-      tester.view.physicalSize = const Size(800, 600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
+      // LayrzAiMarker used to offer a small/big LayrzAiMarkerSize choice;
+      // that enum and the `size` parameter are both gone, so there is only
+      // one footprint to assert against -- a bare square of some positive,
+      // stable size.
       await pumpThemed(tester, const LayrzAiMarker());
-      final bigSize = tester.getSize(find.byType(LayrzAiMarker));
+      final size = tester.getSize(find.byType(LayrzAiMarker));
 
-      expect(bigSize.width, bigSize.height);
-      expect(bigSize.width, greaterThan(22.0));
+      expect(size.width, size.height);
+      expect(size.width, greaterThan(0.0));
     });
 
-    testWidgets('both sizes render two visible white stars in a diagonal arrangement', (tester) async {
+    testWidgets('renders two visible white stars in a diagonal arrangement (big top-left, small bottom-right)', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      for (final size in LayrzAiMarkerSize.values) {
-        await pumpThemed(tester, LayrzAiMarker(size: size));
+      // Each star now carries its own independent top/left/bottom/right
+      // placement (see the `_kBigStar*`/`_kSmallStar*` internal knobs in
+      // ai_marker.dart) rather than sharing a single inset -- this asserts
+      // the real, current geometry those knobs produce: the big star is
+      // anchored from the top-left corner (top and left set, bottom and
+      // right unconstrained) and the small star from the bottom-right corner
+      // (bottom and right set, top and left unconstrained).
+      await pumpThemed(tester, const LayrzAiMarker());
 
-        final positioned = tester
-            .widgetList<Positioned>(
-              find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(Positioned)),
-            )
-            .toList();
-        // The fill is also wrapped in a Positioned.fill, which sets all four
-        // of left/top/right/bottom -- filter it out by keeping only anchors
-        // that set exactly one horizontal and one vertical edge (the two
-        // star anchors: top-left-only, or bottom-right-only).
-        final starAnchors = positioned
-            .where((p) => (p.left != null) != (p.right != null) && (p.top != null) != (p.bottom != null))
-            .toList();
-        expect(starAnchors.length, 2);
+      final positioned = tester
+          .widgetList<Positioned>(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(Positioned)))
+          .toList();
+      // The fill is also wrapped in a Positioned.fill, which sets all four
+      // of left/top/right/bottom -- filter it out by keeping only anchors
+      // that set exactly one horizontal and one vertical edge (the two star
+      // anchors: top-left-only, or bottom-right-only).
+      final starAnchors = positioned
+          .where((p) => (p.left != null) != (p.right != null) && (p.top != null) != (p.bottom != null))
+          .toList();
+      expect(starAnchors.length, 2);
 
-        final topLeft = starAnchors.firstWhere((p) => p.left != null && p.top != null);
-        final bottomRight = starAnchors.firstWhere((p) => p.right != null && p.bottom != null);
-        // The current hand-tuned inset (see _dimensionsFor) is slightly
-        // negative for both sizes, letting the stars bleed a touch past the
-        // container's own edge -- intentional, not a regression, so this only
-        // asserts the four anchor offsets agree with each other (both stars
-        // share one inset value per size), not that the inset is
-        // non-negative.
-        expect(topLeft.left, topLeft.top);
-        expect(bottomRight.right, bottomRight.bottom);
-        expect(topLeft.left, bottomRight.right);
+      final topLeft = starAnchors.firstWhere((p) => p.left != null && p.top != null);
+      final bottomRight = starAnchors.firstWhere((p) => p.right != null && p.bottom != null);
+      // Real geometry assertions against the current knob *shape*, not their
+      // exact magic-number values -- those are hand-tuned, actively-adjusted
+      // constants (see the `_kBigStar*`/`_kSmallStar*` knobs in
+      // ai_marker.dart) that change independently of this test's job, which
+      // is to prove the two stars are genuinely diagonal, not both anchored
+      // to the same corner or overlapping concentrically: the top-left
+      // anchor leaves bottom/right unconstrained, the bottom-right anchor
+      // leaves top/left unconstrained, and both inward offsets stay
+      // non-positive (an inset of 0 or a small negative bleed past the
+      // container's own edge is fine; a large positive inset floating the
+      // stars deep inside empty padding would not be).
+      expect(topLeft.left, lessThanOrEqualTo(0.0));
+      expect(topLeft.top, lessThanOrEqualTo(0.0));
+      expect(bottomRight.right, lessThanOrEqualTo(0.0));
+      expect(bottomRight.bottom, lessThanOrEqualTo(0.0));
+      expect(topLeft.bottom, isNull);
+      expect(topLeft.right, isNull);
+      expect(bottomRight.top, isNull);
+      expect(bottomRight.left, isNull);
 
-        final stars = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
-        expect(stars, findsNWidgets(2));
-        final icons = tester.widgetList<Icon>(stars).toList();
-        for (final icon in icons) {
-          expect(icon.color, const Color(0xFFFFFFFF));
-          expect(icon.size, greaterThan(0.0));
-        }
-        // The bigger, top-left star must be larger than the smaller,
-        // bottom-right accent star -- never equal, never inverted.
-        expect(icons[0].size, isNot(equals(icons[1].size)));
+      final stars = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
+      expect(stars, findsNWidgets(2));
+      final icons = tester.widgetList<Icon>(stars).toList();
+      for (final icon in icons) {
+        expect(icon.color, const Color(0xFFFFFFFF));
+        expect(icon.size, greaterThan(0.0));
       }
+      // The bigger, top-left star must be larger than the smaller,
+      // bottom-right accent star -- never equal, never inverted.
+      expect(icons[0].size, isNot(equals(icons[1].size)));
     });
 
     testWidgets('a tooltip is present wrapping the marker', (tester) async {
