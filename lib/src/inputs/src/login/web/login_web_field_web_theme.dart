@@ -54,14 +54,19 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
   /// (`disabled > readOnly > error > pressed > hover/focused > default`) rather than a
   /// second, hand-maintained state machine that could drift from it.
   ///
-  /// Colors not modeled by [LayrzInputStyleSpec] (the icon/placeholder tints) are read
+  /// Colors not modeled by [LayrzInputStyleSpec] (the placeholder tint) are read
   /// directly from [LayrzTokens.colors]: `fg2` (or `danger` while in the error state)
   /// for the in-box placeholder — note this placeholder is a DIFFERENT element from the
   /// static label row `login_web_field_web.dart`'s `build()` renders above the box
   /// (which always stays `fg2`, matching [LayrzInputChrome]'s own label `TextSpan`
-  /// exactly); `fg3` for icons (matching the chrome's hint-text/lock-icon secondary
-  /// tone); and `colors.primary` for the caret/selection accent (matching the focus
+  /// exactly); and `colors.primary` for the caret/selection accent (matching the focus
   /// border color the spec resolves to).
+  ///
+  /// The prefix/suffix icon tint follows the SAME error > focused > default precedence
+  /// as [LayrzInputStyleSpec.resolve]'s own border/text color (`danger` / `primary` /
+  /// the neutral resting `fg3`) — mirroring [LayrzInputChrome]'s own icon-slot color,
+  /// which is literally `spec.textColor` (`input_chrome.dart:623-627`'s
+  /// `_buildSlotContent`), not a separate rule invented for this DOM path.
   _LoginFieldColors _resolveThemeColors() {
     final tokens = widget.tokens;
     final hasErrors = this.hasErrors;
@@ -74,7 +79,20 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
 
     return _LoginFieldColors(
       fillColor: _toCssColor(spec.backgroundColor),
-      iconColor: hasErrors ? _toCssColor(tokens.colors.danger) : _toCssColor(tokens.colors.fg3),
+      // Mirrors [LayrzInputChrome]'s own prefix/suffix icon color
+      // (`_buildSlotContent`'s `Icon(..., color: spec.textColor)`, `input_chrome.dart:623-627`):
+      // `spec.textColor` itself already follows the SAME state precedence as the border
+      // (`LayrzInputStyleSpec.resolve`: error → danger, focused → primary, default → fg1)
+      // — so this is not a bespoke rule invented for the web path, it is the native
+      // chrome's actual icon-color behavior, just re-derived here from `fg3` (a neutral
+      // resting tint one shade lighter than `spec.textColor`'s own `fg1` rest value,
+      // matching this field's pre-existing rest tint) rather than duplicating
+      // `spec.textColor` outright.
+      iconColor: hasErrors
+          ? _toCssColor(tokens.colors.danger)
+          : states.contains(WidgetState.focused)
+          ? _toCssColor(tokens.colors.primary)
+          : _toCssColor(tokens.colors.fg3),
       labelColor: hasErrors ? _toCssColor(tokens.colors.danger) : _toCssColor(tokens.colors.fg2),
       textColor: _toCssColor(spec.textColor),
       borderColor: _toCssColor(spec.borderColor),
@@ -176,8 +194,10 @@ class _LoginFieldColors {
   /// The DOM chrome's background fill, from [LayrzInputStyleSpec.backgroundColor].
   final String fillColor;
 
-  /// The prefix/suffix icon tint — `danger` when [_LayrzLoginWebFieldState.widget]
-  /// carries validation errors, otherwise `fg3`.
+  /// The prefix/suffix icon tint, following the same state precedence as the border
+  /// (error > focused > default): `danger` when [_LayrzLoginWebFieldState.hasErrors] is
+  /// true, else `primary` while [_LayrzLoginWebFieldState._isFocused] is true, else the
+  /// neutral resting `fg3` tint.
   final String iconColor;
 
   /// The in-box placeholder's text color — `danger` when in the error state, otherwise
