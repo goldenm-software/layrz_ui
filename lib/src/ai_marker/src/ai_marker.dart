@@ -52,11 +52,23 @@ import 'ai_marker_wrapper.dart';
 ///   phase-offset behind the big star's (see [LayrzAiMarkerBurst]), settling
 ///   between repeats. This must read as an AI *twinkle*, never as a spinning
 ///   loading indicator — there is no rotation anywhere in this widget.
-/// - **Shine** — a moving-gradient glint sweeps across the whole container
-///   (background pill and glyphs alike) via [LayrzShimmerGradient]
-///   (`lib/src/skeleton/src/shimmer_painter.dart`), the same internal helper
-///   `LayrzSkeleton` uses for its shimmer. Sharing one implementation avoids
-///   two divergent "moving highlight" effects in the library.
+/// - **Shine** — a moving-gradient glint sweeps across the background pill
+///   only via [LayrzShimmerGradient] (`lib/src/skeleton/src/shimmer_painter.dart`),
+///   the same internal helper `LayrzSkeleton` uses for its shimmer. Sharing
+///   one implementation avoids two divergent "moving highlight" effects in
+///   the library.
+///
+///   **The glint's [ShaderMask] wraps only the [DecoratedBox] fill, never the
+///   star glyphs.** `BlendMode.srcATop` keeps the masked child's *alpha* but
+///   replaces its *color* with the shader's color at every opaque pixel — so
+///   an earlier revision that wrapped the whole container (pill *and* stars)
+///   in one `ShaderMask` silently repainted the white stars to the gradient's
+///   `aiAccent` color everywhere outside the moving highlight band, making
+///   them functionally invisible except for an instant as the band crossed
+///   them (Kenny, live showroom screenshot, 2026-09-04). The stars are now
+///   painted as a sibling on top of the shaded fill, entirely outside the
+///   `ShaderMask` subtree, so the glint can only ever affect the pill's own
+///   color and can never touch the glyphs.
 ///
 /// **Reduce motion:** when `MediaQuery.disableAnimationsOf(context)` is true,
 /// both the burst and the glint are switched off entirely and the stars
@@ -175,16 +187,20 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             },
           );
 
-    final Widget container = DecoratedBox(
+    // The glint only ever wraps this bare, content-free fill -- never the
+    // stars -- because BlendMode.srcATop replaces a masked child's *color*
+    // wherever it is opaque, keeping only its alpha. Masking the stars along
+    // with the pill would recolor them to the gradient's own color, erasing
+    // them outside the moving highlight band (see the class doc).
+    final Widget fill = DecoratedBox(
       decoration: BoxDecoration(
         color: tokens.colors.aiAccent,
         borderRadius: BorderRadius.circular(tokens.radius.full),
       ),
-      child: Center(child: stars),
     );
 
-    final Widget shined = controller == null
-        ? container
+    final Widget shinedFill = controller == null
+        ? fill
         : AnimatedBuilder(
             animation: controller,
             builder: (context, child) {
@@ -200,8 +216,20 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
                 child: child,
               );
             },
-            child: container,
+            child: fill,
           );
+
+    // The stars are painted as a sibling stacked on top of the (possibly
+    // shaded) fill, entirely outside the ShaderMask subtree, so they are
+    // always rendered at their own true color regardless of where the glint
+    // band currently sits.
+    final Widget container = Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned.fill(child: shinedFill),
+        stars,
+      ],
+    );
 
     final l10n = context.l10n;
 
@@ -211,7 +239,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
         label: l10n.aiGeneratedLabel,
         image: true,
         child: ExcludeSemantics(
-          child: SizedBox(width: widget.size, height: widget.size, child: shined),
+          child: SizedBox(width: widget.size, height: widget.size, child: container),
         ),
       ),
     );

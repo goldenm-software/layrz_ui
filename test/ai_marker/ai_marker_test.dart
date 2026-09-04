@@ -175,6 +175,54 @@ void main() {
       expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(ShaderMask)), findsOneWidget);
     });
 
+    testWidgets('the glint ShaderMask does not wrap the star glyphs, at any point in the sweep', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Regression test for a real rendering bug (commit d61f9a3): the glint
+      // was originally implemented as a single ShaderMask wrapping the whole
+      // container -- pill *and* stars. BlendMode.srcATop replaces a masked
+      // child's color wherever it is opaque, keeping only its alpha, so that
+      // structure silently repainted the white stars to the gradient's own
+      // (aiAccent-based) color outside the moving highlight band, making them
+      // invisible almost the entire cycle. A widget-tree check that merely
+      // asserts "a ShaderMask exists somewhere" and "an Icon has color white"
+      // -- as the previous test suite did -- passes against that broken
+      // structure just as easily as against a fixed one, because both
+      // structures contain a ShaderMask and both contain white Icons. The
+      // only way to actually catch this is to assert the *containment*
+      // relationship itself: the Icons must NOT be descendants of the
+      // ShaderMask, in either direction of the animation.
+      await pumpThemed(tester, const LayrzAiMarker());
+
+      for (final millis in [0, 150, 300, 450, 600, 750, 900]) {
+        await tester.pump(Duration(milliseconds: millis));
+
+        final shaderMask = find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(ShaderMask));
+        expect(shaderMask, findsOneWidget);
+
+        final starsUnderShader = find.descendant(
+          of: shaderMask,
+          matching: find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall),
+        );
+        expect(
+          starsUnderShader,
+          findsNothing,
+          reason:
+              'the star Icons must never be painted inside the glint ShaderMask subtree, '
+              'or BlendMode.srcATop erases their white color outside the highlight band',
+        );
+
+        final starsInTree = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
+        expect(starsInTree, findsNWidgets(2));
+        for (final icon in tester.widgetList<Icon>(starsInTree)) {
+          expect(icon.color, const Color(0xFFFFFFFF));
+          expect(icon.size, greaterThan(0.0));
+        }
+      }
+    });
+
     testWidgets('the two stars are not rendered at identical scale mid-cycle (staggered burst is live)', (
       tester,
     ) async {
