@@ -156,6 +156,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/tooltips'),
       ),
       LayrzNavigatorPage(
+        id: '/snackbar',
+        labelText: 'Snackbar',
+        icon: MdiIcons.messageAlert,
+        isSelected: currentRoute == '/snackbar',
+        onTap: () => _navigateTo(context, '/snackbar'),
+      ),
+      LayrzNavigatorPage(
         id: '/images',
         labelText: 'Images',
         icon: MdiIcons.imageOutline,

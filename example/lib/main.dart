@@ -27,6 +27,7 @@ import 'src/sections/radius_section.dart';
 import 'src/sections/refresh_section.dart';
 import 'src/sections/responsive_modal_section.dart';
 import 'src/sections/sheets_section.dart';
+import 'src/sections/snackbar_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
 import 'src/sections/text_section.dart';
@@ -212,6 +213,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/refresh',
           pageBuilder: (context, state) => NoTransitionPage(child: RefreshSection()),
+        ),
+        GoRoute(
+          path: '/snackbar',
+          pageBuilder: (context, state) => NoTransitionPage(child: SnackbarSection()),
         ),
       ],
     ),
