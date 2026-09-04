@@ -1,3 +1,2 @@
-export 'src/fira_sans.dart';
+export 'src/doppio_one.dart';
 export 'src/open_sans.dart';
-export 'src/noto_sans.dart';
