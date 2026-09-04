@@ -185,23 +185,17 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
 
     final spec = LayrzAccordionStyleSpec.resolve(states: _states, tokens: tokens);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.all(color: spec.borderColor, width: spec.borderWidth),
-        borderRadius: tokens.radius.br2,
-      ),
-      child: ClipRRect(
-        borderRadius: tokens.radius.br2,
-        child: Expansible(
-          controller: _controller,
-          maintainState: false,
-          animationStyle: AnimationStyle(
-            duration: tokens.motion.dTransition,
-            curve: tokens.motion.easingEmphasized,
-          ),
-          headerBuilder: (context, animation) => _buildHeader(context, tokens, spec, animation),
-          bodyBuilder: (context, animation) => _buildBody(spec),
+    return ClipRRect(
+      borderRadius: tokens.radius.br2,
+      child: Expansible(
+        controller: _controller,
+        maintainState: false,
+        animationStyle: AnimationStyle(
+          duration: tokens.motion.dTransition,
+          curve: tokens.motion.easingEmphasized,
         ),
+        headerBuilder: (context, animation) => _buildHeader(context, tokens, spec, animation),
+        bodyBuilder: (context, animation) => _buildBody(spec, tokens),
       ),
     );
   }
@@ -215,10 +209,24 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// the header makes the two read as one continuous panel surface with no
   /// seam, which is only ever visible while expanded since the collapsed body
   /// is absent from the tree (`maintainState: false`).
-  Widget _buildBody(LayrzAccordionStyleSpec spec) {
+  Widget _buildBody(LayrzAccordionStyleSpec spec, LayrzTokens tokens) {
     return DecoratedBox(
-      decoration: BoxDecoration(color: spec.headerBackgroundColor),
-      child: widget.body,
+      decoration: BoxDecoration(
+        color: spec.headerBackgroundColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(tokens.radius.r2),
+          bottomRight: Radius.circular(tokens.radius.r2),
+        ),
+        border: Border(
+          left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+          right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+          bottom: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+        ),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: widget.body,
+      ),
     );
   }
 
@@ -271,8 +279,27 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
             child: AnimatedContainer(
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
-              color: spec.headerBackgroundColor,
               padding: tokens.spacing.pd3,
+              decoration: BoxDecoration(
+                color: spec.headerBackgroundColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(tokens.radius.r2),
+                  topRight: Radius.circular(tokens.radius.r2),
+                  bottomLeft: widget.expanded ? Radius.zero : Radius.circular(tokens.radius.r2),
+                  bottomRight: widget.expanded ? Radius.zero : Radius.circular(tokens.radius.r2),
+                ),
+                border: Border(
+                  top: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+                  left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+                  right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
+                  bottom: widget.expanded
+                      ? BorderSide.none
+                      : BorderSide(
+                          color: spec.borderColor,
+                          width: spec.borderWidth,
+                        ),
+                ),
+              ),
               child: Row(
                 children: [
                   if (widget.leadingIcon != null) ...[
