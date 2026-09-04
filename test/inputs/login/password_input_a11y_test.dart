@@ -288,7 +288,7 @@ void main() {
           LayrzPasswordInput(controller: controller, showStrengthMeter: true),
         );
 
-        expect(find.bySemanticsLabel(RegExp('Password Length')), findsOneWidget);
+        expect(find.bySemanticsLabel(RegExp(r'Password Length: \d/4')), findsOneWidget);
       } finally {
         handle.dispose();
       }

@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 
 import '../text/text_input.dart';
+import 'password_strength.dart';
 import 'password_strength_meter.dart';
 import 'web/login_web_field.dart';
 import 'web/login_web_group.dart';
@@ -46,9 +47,12 @@ const List<String> kLayrzPasswordInputDefaultAutofillHints = [AutofillHints.pass
 /// **Strength meter is opt-in, not default.** [showStrengthMeter] defaults to `false`:
 /// a login field authenticates against a password the user already chose and cannot
 /// edit from that screen, so a strength reading there is noise, not guidance. Pass
-/// `showStrengthMeter: true` on a registration/password-creation flow, where the meter's
-/// informational styling (never danger-red — see [LayrzPasswordStrengthMeter]) helps the
-/// user pick a stronger password as they type.
+/// `showStrengthMeter: true` on a registration/password-creation flow, where the
+/// meter's 4-segment bar plus requirement checklist (see [LayrzPasswordStrengthMeter])
+/// helps the user pick a stronger password as they type. The rules and colors —
+/// including a legitimate danger-red reading for an invalid or very short password —
+/// match `layrz_theme`'s `ThemedPasswordInput` exactly; see [LayrzPasswordRequirements]
+/// for the precise thresholds.
 ///
 /// **Grouping with the username field:** on native, wrap both login fields in a Flutter
 /// `AutofillGroup` (the caller's responsibility — this widget does not invent its own
@@ -123,9 +127,10 @@ class LayrzPasswordInput extends StatefulWidget {
   /// Defaults to `false` — a plain login field with no meter. Set to `true` on a
   /// registration or password-creation flow, where scoring the in-progress value as the
   /// user types is actionable guidance rather than noise. When enabled, the meter reads
-  /// the live [controller] text and re-scores on every change; it never renders in the
-  /// design system's danger/error color, on a login field or otherwise — see
-  /// [LayrzPasswordStrengthMeter] for the rationale.
+  /// the live [controller] text and re-scores on every change, rendering a full-width
+  /// 4-segment strength bar followed by a checklist of the four character-class
+  /// requirements — see [LayrzPasswordStrengthMeter] and [LayrzPasswordRequirements]
+  /// for the exact rules (matching `layrz_theme`'s `ThemedPasswordInput`).
   final bool showStrengthMeter;
 
   /// Creates a [LayrzPasswordInput].

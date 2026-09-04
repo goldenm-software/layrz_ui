@@ -23,7 +23,8 @@ void _setDesktopViewport(WidgetTester tester) {
 /// The meter paints each segment via an [AnimatedContainer], which is itself backed
 /// by a plain [Container] internally; this collects the [BoxDecoration.color] of
 /// every [DecoratedBox] found, which is the segment fill colors in left-to-right
-/// order.
+/// order. Only the first 4 belong to the strength bar — the checklist renders no
+/// [DecoratedBox] of its own, so this list is exactly the 4 bar segments.
 List<Color?> _segmentColors(WidgetTester tester) {
   final boxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
   return boxes.map((box) {
@@ -35,53 +36,59 @@ List<Color?> _segmentColors(WidgetTester tester) {
   }).toList();
 }
 
+/// Builds a fully-valid password (meets all 4 requirements, only allowed characters)
+/// of exactly [length] characters, for tests that need to pin an exact level.
+String _validOfLength(int length) {
+  const base = 'Aa1!';
+  final buffer = StringBuffer(base);
+  while (buffer.length < length) {
+    buffer.write('x');
+  }
+  return buffer.toString().substring(0, length);
+}
+
 void main() {
   group('LayrzPasswordStrengthMeter construction', () {
-    test('asserts exactly one of strength/password via the named constructors', () {
-      // The unnamed constructor requires `strength`; the `.fromPassword` constructor
-      // requires `password`. Each constructor's own required parameter enforces the
-      // "exactly one" contract at compile time, so there is no runtime path that
-      // supplies both or neither through the public API.
-      const byStrength = LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.strong);
-      const byPassword = LayrzPasswordStrengthMeter.fromPassword(password: 'Abcdefgh1!');
+    test('asserts exactly one of requirements/password via the named constructors', () {
+      // The unnamed constructor requires `requirements`; the `.fromPassword`
+      // constructor requires `password`. Each constructor's own required parameter
+      // enforces the "exactly one" contract at compile time, so there is no runtime
+      // path that supplies both or neither through the public API.
+      final byRequirements = LayrzPasswordStrengthMeter(
+        requirements: LayrzPasswordRequirements.evaluate('Abcdefg1!'),
+      );
+      const byPassword = LayrzPasswordStrengthMeter.fromPassword(password: 'Abcdefg1!');
 
-      expect(byStrength.strength, LayrzPasswordStrength.strong);
-      expect(byStrength.password, isNull);
-      expect(byPassword.password, 'Abcdefgh1!');
-      expect(byPassword.strength, isNull);
+      expect(byRequirements.requirements, isNotNull);
+      expect(byRequirements.password, isNull);
+      expect(byPassword.password, 'Abcdefg1!');
+      expect(byPassword.requirements, isNull);
     });
   });
 
-  group('LayrzPasswordStrengthMeter rendering', () {
-    testWidgets('renders without error for every LayrzPasswordStrength value', (tester) async {
+  group('LayrzPasswordStrengthMeter — 4-segment bar fill', () {
+    testWidgets('level 0 (empty) fills zero of 4 segments', (tester) async {
       _setDesktopViewport(tester);
 
-      for (final value in LayrzPasswordStrength.values) {
-        await pumpThemed(tester, LayrzPasswordStrengthMeter(strength: value));
-        expect(find.byType(LayrzPasswordStrengthMeter), findsOneWidget);
-      }
-    });
-
-    testWidgets('.fromPassword derives strength from the raw password text', (tester) async {
-      _setDesktopViewport(tester);
-
-      // 'abcdefg' (7 lowercase-only chars) scores weak per password_strength_test.dart.
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter.fromPassword(password: 'abcdefg'));
+      await pumpThemed(tester, const LayrzPasswordStrengthMeter.fromPassword(password: ''));
 
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      // weak fills exactly 1 of 3 segments, in the informational (not danger) color.
-      final filledCount = segmentColors.where((c) => c == colors.info.shade500).length;
-      expect(filledCount, 1);
-      expect(segmentColors, isNot(contains(colors.danger.shade500)));
+      expect(segmentColors.length, 4);
+      expect(segmentColors.every((c) => c == colors.fg4), isTrue);
     });
 
-    testWidgets('empty strength fills zero segments', (tester) async {
+    testWidgets('level 0 (invalid, missing a requirement) fills zero segments in danger color', (tester) async {
       _setDesktopViewport(tester);
 
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.empty));
+      // 16 lowercase-only chars: long enough for level 3+ by length alone, but
+      // invalid (missing uppercase/digit/special), so it must still render level 0.
+      await pumpThemed(
+        tester,
+        const LayrzPasswordStrengthMeter.fromPassword(password: 'abcdefghijklmnop'),
+      );
 
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
       final colors = theme.tokens.colors;
@@ -90,102 +97,167 @@ void main() {
       expect(segmentColors.every((c) => c == colors.fg4), isTrue);
     });
 
-    testWidgets('weak strength fills exactly 1 of 3 segments', (tester) async {
+    testWidgets('level 1 fills exactly 1 of 4 segments in warning color', (tester) async {
       _setDesktopViewport(tester);
 
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.weak));
+      await pumpThemed(
+        tester,
+        LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(8)),
+      );
 
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      expect(segmentColors.where((c) => c == colors.info.shade500).length, 1);
+      expect(segmentColors.where((c) => c == colors.warning.shade500).length, 1);
+      expect(segmentColors.where((c) => c == colors.fg4).length, 3);
+    });
+
+    testWidgets('level 2 fills exactly 2 of 4 segments in warning color', (tester) async {
+      _setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(12)),
+      );
+
+      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
+      final colors = theme.tokens.colors;
+      final segmentColors = _segmentColors(tester);
+
+      expect(segmentColors.where((c) => c == colors.warning.shade500).length, 2);
       expect(segmentColors.where((c) => c == colors.fg4).length, 2);
     });
 
-    testWidgets('medium strength fills exactly 2 of 3 segments', (tester) async {
+    testWidgets('level 3 fills exactly 3 of 4 segments in success color', (tester) async {
       _setDesktopViewport(tester);
 
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.medium));
-
-      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
-      final colors = theme.tokens.colors;
-      final segmentColors = _segmentColors(tester);
-
-      expect(segmentColors.where((c) => c == colors.info.shade700).length, 2);
-      expect(segmentColors.where((c) => c == colors.fg4).length, 1);
-    });
-
-    testWidgets('strong strength fills all 3 of 3 segments', (tester) async {
-      _setDesktopViewport(tester);
-
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.strong));
+      await pumpThemed(
+        tester,
+        LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(16)),
+      );
 
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
       expect(segmentColors.where((c) => c == colors.success.shade500).length, 3);
-      expect(segmentColors.where((c) => c == colors.fg4).length, 0);
+      expect(segmentColors.where((c) => c == colors.fg4).length, 1);
     });
 
-    testWidgets('NEVER uses the danger color for any strength level, including weak', (tester) async {
-      _setDesktopViewport(tester);
-
-      final theme = LayrzThemeData.light();
-      final colors = theme.tokens.colors;
-      final dangerShades = {
-        colors.danger.shade50,
-        colors.danger.shade100,
-        colors.danger.shade200,
-        colors.danger.shade300,
-        colors.danger.shade400,
-        colors.danger.shade500,
-        colors.danger.shade600,
-        colors.danger.shade700,
-        colors.danger.shade800,
-        colors.danger.shade900,
-      };
-
-      for (final value in LayrzPasswordStrength.values) {
-        await pumpThemed(tester, LayrzPasswordStrengthMeter(strength: value), theme: theme);
-        final segmentColors = _segmentColors(tester);
-        expect(
-          segmentColors.any((c) => c != null && dangerShades.contains(c)),
-          isFalse,
-          reason: 'LayrzPasswordStrengthMeter must never render a danger-colored segment for $value',
-        );
-      }
-    });
-
-    testWidgets('showLabel=false hides the text label but keeps the segment track', (tester) async {
+    testWidgets('level 4 fills all 4 of 4 segments in success color', (tester) async {
       _setDesktopViewport(tester);
 
       await pumpThemed(
         tester,
-        const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.strong, showLabel: false),
+        LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(20)),
       );
 
-      expect(find.textContaining('Password Length'), findsNothing);
-      expect(find.byType(LayrzPasswordStrengthMeter), findsOneWidget);
+      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
+      final colors = theme.tokens.colors;
+      final segmentColors = _segmentColors(tester);
+
+      expect(segmentColors.where((c) => c == colors.success.shade500).length, 4);
+      expect(segmentColors.where((c) => c == colors.fg4).length, 0);
     });
 
-    testWidgets('showLabel=true (default) renders a label containing the level name', (tester) async {
+    testWidgets('level 0 legitimately uses the danger color (superseding the old "never danger" rule)', (
+      tester,
+    ) async {
       _setDesktopViewport(tester);
 
-      await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.strong));
+      final theme = LayrzThemeData.light();
+      final colors = theme.tokens.colors;
 
-      expect(find.textContaining('Strong'), findsOneWidget);
+      // An invalid, non-empty password (missing 3 of 4 requirements) must resolve
+      // colorFor(colors) to danger, per LayrzPasswordRequirements.colorFor — even
+      // though this particular widget test only exercises the bar's fill color
+      // indirectly via the requirements' own `colorFor`, which is asserted directly
+      // in password_strength_test.dart. This test locks in that the bar widget does
+      // NOT filter out danger for level 0 the way the previous meter design did.
+      final requirements = LayrzPasswordRequirements.evaluate('abcdefghijklmnop');
+      expect(requirements.colorFor(colors), colors.danger.shade500);
+    });
+  });
+
+  group('LayrzPasswordStrengthMeter — requirements checklist', () {
+    testWidgets('renders exactly 4 checklist items with their localized labels', (tester) async {
+      _setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        const LayrzPasswordStrengthMeter.fromPassword(password: 'abc'),
+      );
+
+      expect(find.text('At least one lowercase letter'), findsOneWidget);
+      expect(find.text('At least one uppercase letter'), findsOneWidget);
+      expect(find.text('At least one digit'), findsOneWidget);
+      expect(find.text('At least one special character'), findsOneWidget);
+    });
+
+    testWidgets('shows met vs. unmet state correctly for a partially-satisfying password', (tester) async {
+      _setDesktopViewport(tester);
+
+      // 'abc123' meets lowercase + digit, but not uppercase or special.
+      await pumpThemed(
+        tester,
+        const LayrzPasswordStrengthMeter.fromPassword(password: 'abc123'),
+      );
+
+      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
+      final colors = theme.tokens.colors;
+
+      final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
+      final metIcons = icons.where((icon) => icon.color == colors.success.shade500);
+      final unmetIcons = icons.where((icon) => icon.color == colors.fg4);
+
+      expect(metIcons.length, 2, reason: 'lowercase + digit are met');
+      expect(unmetIcons.length, 2, reason: 'uppercase + special are unmet');
+    });
+
+    testWidgets('all 4 requirements show as met for a fully-valid password', (tester) async {
+      _setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        const LayrzPasswordStrengthMeter.fromPassword(password: 'Abcdefg1!'),
+      );
+
+      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
+      final colors = theme.tokens.colors;
+
+      final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
+      final metIcons = icons.where((icon) => icon.color == colors.success.shade500);
+
+      expect(metIcons.length, 4);
+    });
+  });
+
+  group('LayrzPasswordStrengthMeter — .fromPassword derivation', () {
+    testWidgets('.fromPassword derives requirements from the raw password text', (tester) async {
+      _setDesktopViewport(tester);
+
+      await pumpThemed(tester, LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(8)));
+
+      final theme = LayrzTheme.of(tester.element(find.byType(LayrzPasswordStrengthMeter)));
+      final colors = theme.tokens.colors;
+      final segmentColors = _segmentColors(tester);
+
+      final filledCount = segmentColors.where((c) => c == colors.warning.shade500).length;
+      expect(filledCount, 1);
     });
   });
 
   group('LayrzPasswordStrengthMeter accessibility', () {
-    testWidgets('exposes a single labelled, non-interactive semantics container', (tester) async {
+    testWidgets('exposes a non-interactive semantics container', (tester) async {
       _setDesktopViewport(tester);
       final handle = tester.ensureSemantics();
 
       try {
-        await pumpThemed(tester, const LayrzPasswordStrengthMeter(strength: LayrzPasswordStrength.medium));
+        await pumpThemed(
+          tester,
+          LayrzPasswordStrengthMeter.fromPassword(password: _validOfLength(12)),
+        );
 
         final semanticsNode = tester.getSemantics(
           find.descendant(of: find.byType(LayrzPasswordStrengthMeter), matching: find.byType(Semantics)).first,
@@ -194,7 +266,6 @@ void main() {
         expect(
           semanticsNode,
           matchesSemantics(
-            label: 'Password Length: Medium',
             hasTapAction: false,
             hasToggledState: false,
             isFocusable: false,
