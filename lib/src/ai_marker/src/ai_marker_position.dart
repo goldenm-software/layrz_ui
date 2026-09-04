@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 /// Corner position for a [LayrzAiMarker] overlay relative to its child, used
-/// by `LayrzAiMarker.wrap`.
+/// by [LayrzAiMarker.wrap].
 ///
 /// Mirrors `LayrzBadgeAlignment` (`lib/src/badges/src/badge_alignment.dart`)
 /// naming so the two overlay wrappers in the design system read the same way
