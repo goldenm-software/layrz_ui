@@ -86,6 +86,22 @@ void main() {
 
       expect(find.byType(ShaderMask), findsNothing);
       expect(tester.binding.hasScheduledFrame, isFalse);
+
+      // Regression: the static frame must recolor the shape itself in place
+      // (ColorFiltered) rather than painting baseColor into a separate,
+      // rectangular DecoratedBox behind it -- a box painted behind a rounded
+      // shape has square corners peeking out past the shape's own rounded
+      // corners, which read as a stray border/outline around the shape.
+      final colorFilter = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
+      expect(colorFilter.colorFilter, const ColorFilter.mode(Color(0xFFF0F0F0), BlendMode.srcIn));
+
+      // Only one DecoratedBox exists in the static path -- the shape's own,
+      // still filled with the opaque mask color -- not a second one behind
+      // it carrying baseColor with mismatched (square) geometry.
+      expect(find.byType(DecoratedBox), findsOneWidget);
+      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration.color, const Color(0xFF000000));
     });
 
     guardedTestWidgets('reads the shared shimmer from an ancestor LayrzSkeleton instead of a fallback', (

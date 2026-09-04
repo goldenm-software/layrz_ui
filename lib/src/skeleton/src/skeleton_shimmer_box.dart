@@ -83,9 +83,15 @@ class _LayrzSkeletonShimmerBoxState extends State<LayrzSkeletonShimmerBox> with 
 
     if (animation == null) {
       // Reduced motion with no shared scope: paint a static, unshimmered
-      // frame at the base color.
-      return DecoratedBox(
-        decoration: BoxDecoration(color: baseColor),
+      // frame at the base color. `widget.shape` is always filled with opaque
+      // black so it can double as an alpha mask (see the ShaderMask branch
+      // below); recolor it in place with ColorFiltered rather than painting
+      // baseColor into a separate DecoratedBox behind it — a box painted
+      // behind the shape has rectangular bounds, while the shape itself may
+      // be a circle or a rounded rect, so its straight corners showed
+      // through as a stray border/outline around the actual shape.
+      return ColorFiltered(
+        colorFilter: ColorFilter.mode(baseColor, BlendMode.srcIn),
         child: widget.shape,
       );
     }
