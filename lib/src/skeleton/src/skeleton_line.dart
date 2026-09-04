@@ -85,7 +85,7 @@ class LayrzSkeletonLine extends StatelessWidget {
     final style = matchTextStyle;
     if (style?.fontSize != null) {
       final lineHeightMultiplier = style!.height ?? 1.2;
-      return style.fontSize! * lineHeightMultiplier;
+      return style.fontSize! * lineHeightMultiplier + .5;
     }
 
     return kDefaultLayrzSkeletonLineHeight;
