@@ -64,9 +64,12 @@ abstract class LayrzFont {
   /// use a custom font must call `await font.registerOnWeb();` themselves, typically
   /// right alongside `await font.load();` in `main()`.
   ///
-  /// **Bundled assets are not supported yet.** A font declared under `pubspec.yaml`'s
-  /// `flutter: fonts:` section has no network URL to register a `@font-face` against;
-  /// registering bundled-asset fonts with the DOM is a documented non-goal for now.
+  /// **Bundled assets are supported too.** A font declared under `pubspec.yaml`'s
+  /// `flutter: fonts:` section has no network URL to register a `@font-face` against,
+  /// but its bytes are available via `rootBundle.load(assetPath)`. Implementations
+  /// backed by a bundled asset should override this method to call
+  /// `registerWebFontFromBytes` from `register_web_font.dart` with those bytes,
+  /// registering a `@font-face` from a `BufferSource` instead of a `url(...)` string.
   ///
   /// The default implementation is a no-op: platform-provided fonts (like
   /// [LayrzRobotoFont]) and fonts only ever painted by the Flutter engine need nothing
