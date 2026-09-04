@@ -280,14 +280,14 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with TickerProviderStateM
   ///
   /// Held steady (no pulse) now that the shadow's movement comes from its
   /// orbiting [BoxShadow.offset] instead — see [_glowFor].
-  static const double _glowBlur = 5.0;
+  static const double _glowBlur = 3.0;
 
   /// The spread radius, in logical pixels, the glow shadow renders at. Held
   /// steady alongside [_glowBlur]; see that field's doc.
   static const double _glowSpread = 1.0;
 
   /// The shadow's alpha, held steady alongside [_glowBlur]/[_glowSpread].
-  static const double _glowAlpha = 0.35;
+  static const double _glowAlpha = 0.45;
 
   /// The radius, in logical pixels, of the circle the glow's [BoxShadow]
   /// offset travels around the container.
@@ -295,7 +295,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with TickerProviderStateM
   /// Small on purpose — Kenny asked for the glow to sit just off-center and
   /// travel around the edge, reading as a soft light source slowly circling
   /// the marker rather than a shadow flung out to one side (2026-09-04).
-  static const double _orbitRadius = 3.5;
+  static const double _orbitRadius = 2;
 
   /// Computes the orbiting glow's [BoxShadow] at orbit-cycle position [theta]
   /// (an angle in radians, sweeping `0` to `2*pi` over one loop of
