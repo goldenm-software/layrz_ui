@@ -54,30 +54,36 @@ import 'ai_marker_wrapper.dart';
 ///   phase-offset behind the big star's (see [LayrzAiMarkerBurst]), settling
 ///   between repeats. This must read as an AI *twinkle*, never as a spinning
 ///   loading indicator — there is no rotation anywhere in this widget.
-/// - **Glow** — a soft [BoxShadow] in `tokens.colors.aiAccent` pulses on the
-///   container, growing its blur/spread and fading its opacity out, then back
-///   in, on a continuous loop (see [_LayrzAiMarkerState._glowFor]). This
-///   replaced an earlier moving-gradient glint swept across the pill via
-///   [ShaderMask] + `LayrzShimmerGradient` (the same helper `LayrzSkeleton`
-///   still uses for its own shimmer); the glint read as a highlight crossing
-///   a static surface, whereas the pulsing shadow reads as the marker itself
-///   "breathing" — a better match for a living, AI-generated disclosure
-///   (Kenny, 2026-09-04).
+/// - **Glow** — a soft [BoxShadow] in `tokens.colors.aiAccent` slowly orbits
+///   the container: its [BoxShadow.offset] sweeps around the container's edge
+///   on a continuous loop, as if a light source were circling the marker (see
+///   [_LayrzAiMarkerState._glowFor]). This replaced an earlier
+///   grow-and-fade-in-place pulse (fixed at `Offset.zero`, animating only
+///   blur/spread/alpha), which itself had replaced a moving-gradient glint
+///   swept across the pill via [ShaderMask] + `LayrzShimmerGradient` (the same
+///   helper `LayrzSkeleton` still uses for its own shimmer). The orbiting
+///   offset reads as a calm light drifting around the marker rather than the
+///   marker itself flashing — a better match for a living, AI-generated
+///   disclosure (Kenny, 2026-09-04).
 ///
-///   **Both the burst and the glow are driven by the same
-///   [AnimationController]**, so the star pop and the shadow's breathing
-///   cycle stay in the same cadence rather than drifting apart over repeats.
-///   The shadow is painted on the container's own [BoxDecoration] — sibling
-///   to, not wrapping, the star glyphs — so it can never affect their color,
-///   and the containing [Stack] uses `clipBehavior: Clip.none` so the glow is
-///   never clipped away at the container's own bounds.
+///   **The orbit runs on its own, dedicated [AnimationController]**
+///   ([_orbitController]), separate from the one driving the star burst
+///   ([_controller]) — the orbit is deliberately slow (a full loop takes
+///   [_kOrbitDuration]) while the burst plays at its own, faster cadence,
+///   so the two effects must not share a ticker or the orbit would either
+///   drag the burst down to its pace or get dragged up to the burst's. The
+///   shadow is painted on the container's own [BoxDecoration] — sibling to,
+///   not wrapping, the star glyphs — so it can never affect their color, and
+///   the containing [Stack] uses `clipBehavior: Clip.none` so the glow is
+///   never clipped away at the container's own bounds even as it swings
+///   outside them.
 ///
 /// **Reduce motion:** when `MediaQuery.disableAnimationsOf(context)` is true,
-/// both the burst and the glow pulse are switched off entirely: the stars
+/// both the burst and the glow orbit are switched off entirely: the stars
 /// render in their settled, static resting pose and the container keeps a
-/// fixed, non-animating shadow — non-negotiable, since a perpetual twinkle
-/// and a pulsing glow are both vestibular triggers for users who have asked
-/// for reduced motion.
+/// fixed, non-orbiting shadow at `Offset.zero` — non-negotiable, since a
+/// perpetual twinkle and an orbiting glow are both vestibular triggers for
+/// users who have asked for reduced motion.
 ///
 /// **Single fixed footprint.** [LayrzAiMarker] used to offer a
 /// `LayrzAiMarkerSize` (`small`/`big`) choice; that enum is gone and there is
@@ -120,7 +126,7 @@ class LayrzAiMarker extends StatefulWidget {
   State<LayrzAiMarker> createState() => _LayrzAiMarkerState();
 }
 
-class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProviderStateMixin {
+class _LayrzAiMarkerState extends State<LayrzAiMarker> with TickerProviderStateMixin {
   static const LayrzAiMarkerBurst _burst = LayrzAiMarkerBurst();
 
   /// The side length, in logical pixels, of the square marker container.
@@ -212,11 +218,27 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     size: _kSmallStarSize,
   );
 
-  /// Drives both the staggered burst and the pulsing glow shadow from one
-  /// ticker — the two effects are visually independent but share a single
-  /// continuous cycle so they loop in the same cadence rather than drifting
-  /// apart.
+  /// Drives the staggered star burst — see [LayrzAiMarkerBurst].
+  ///
+  /// Deliberately **not** shared with [_orbitController]: the burst plays at
+  /// its own, comparatively fast cadence (`tokens.motion.dIndeterminate * 2`),
+  /// while the glow's orbit must stay slow and calm ([_kOrbitDuration]). A
+  /// single shared ticker would force one effect to adopt the other's pace.
   AnimationController? _controller;
+
+  /// Drives the glow shadow's slow orbit around the container — see
+  /// [_glowFor]. Kept on its own ticker, separate from [_controller], purely
+  /// so its period ([_kOrbitDuration]) can be tuned independently of the
+  /// burst's.
+  AnimationController? _orbitController;
+
+  /// The wall-clock duration of one full orbit of the glow around the
+  /// container.
+  ///
+  /// Deliberately slow and independent of [LayrzAiMarkerBurst]'s own cadence
+  /// — Kenny asked for the orbit to read as calm and subtle, not tied to the
+  /// star burst's pace (2026-09-04).
+  static const Duration _kOrbitDuration = Duration(seconds: 4);
 
   @override
   void didChangeDependencies() {
@@ -224,11 +246,11 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     _syncAnimation();
   }
 
-  /// Starts or tears down [_controller] to match the current reduce-motion
-  /// setting.
+  /// Starts or tears down [_controller] and [_orbitController] to match the
+  /// current reduce-motion setting.
   ///
   /// Mirrors `LayrzProgressBar._startSweep`/`_stopSweep`
-  /// (`lib/src/progress/src/progress_bar.dart`): the controller is created
+  /// (`lib/src/progress/src/progress_bar.dart`): both controllers are created
   /// lazily and only while motion is enabled, so no ticker keeps running once
   /// reduce-motion switches on.
   void _syncAnimation() {
@@ -236,70 +258,73 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     if (reduceMotion) {
       _controller?.dispose();
       _controller = null;
+      _orbitController?.dispose();
+      _orbitController = null;
       return;
     }
-    if (_controller != null) return;
-    final tokens = context.tokens;
-    _controller = AnimationController(vsync: this, duration: tokens.motion.dIndeterminate * 2)..repeat();
+    if (_controller == null) {
+      final tokens = context.tokens;
+      _controller = AnimationController(vsync: this, duration: tokens.motion.dIndeterminate * 2)..repeat();
+    }
+    _orbitController ??= AnimationController(vsync: this, duration: _kOrbitDuration)..repeat();
   }
 
   @override
   void dispose() {
     _controller?.dispose();
+    _orbitController?.dispose();
     super.dispose();
   }
 
-  /// The blur radius, in logical pixels, the glow shadow settles at when the
-  /// pulse is at its calmest point in the cycle.
-  static const double _glowMinBlur = 2.0;
-
-  /// The blur radius, in logical pixels, the glow shadow reaches at the peak
-  /// of the pulse.
-  static const double _glowMaxBlur = 8.0;
-
-  /// The spread radius, in logical pixels, the glow shadow settles at when
-  /// the pulse is at its calmest point in the cycle.
-  static const double _glowMinSpread = 0.0;
-
-  /// The spread radius, in logical pixels, the glow shadow reaches at the
-  /// peak of the pulse.
-  static const double _glowMaxSpread = 2.0;
-
-  /// The shadow's alpha at the calmest point in the cycle.
-  static const double _glowMinAlpha = 0.15;
-
-  /// The shadow's alpha at the peak of the pulse.
-  static const double _glowMaxAlpha = 0.55;
-
-  /// Computes the "breathing" glow's [BoxShadow] at driving animation [value]
-  /// in `[0.0, 1.0]`.
+  /// The blur radius, in logical pixels, the glow shadow renders at.
   ///
-  /// Shares the same `[0.0, 1.0]` controller value that drives
-  /// [LayrzAiMarkerBurst], so the shadow's breathing cycle and the star burst
-  /// stay in lockstep. A full sine wave (rather than [_controller]'s own
-  /// repeat boundary) is used so the glow grows out and fades back smoothly
-  /// across the loop seam, instead of snapping at `value == 0.0`/`1.0`.
-  static BoxShadow _glowFor(Color aiAccent, double value) {
-    // 0.5 + 0.5*sin(...) maps into [0.0, 1.0] and starts (at value == 0) at
-    // the same point it ends, so consecutive repeats of the controller never
-    // produce a visible jump in the shadow.
-    final phase = 0.5 + 0.5 * math.sin(2 * math.pi * value - math.pi / 2);
-    final eased = Curves.easeInOut.transform(phase);
+  /// Held steady (no pulse) now that the shadow's movement comes from its
+  /// orbiting [BoxShadow.offset] instead — see [_glowFor].
+  static const double _glowBlur = 5.0;
+
+  /// The spread radius, in logical pixels, the glow shadow renders at. Held
+  /// steady alongside [_glowBlur]; see that field's doc.
+  static const double _glowSpread = 1.0;
+
+  /// The shadow's alpha, held steady alongside [_glowBlur]/[_glowSpread].
+  static const double _glowAlpha = 0.35;
+
+  /// The radius, in logical pixels, of the circle the glow's [BoxShadow]
+  /// offset travels around the container.
+  ///
+  /// Small on purpose — Kenny asked for the glow to sit just off-center and
+  /// travel around the edge, reading as a soft light source slowly circling
+  /// the marker rather than a shadow flung out to one side (2026-09-04).
+  static const double _orbitRadius = 3.5;
+
+  /// Computes the orbiting glow's [BoxShadow] at orbit-cycle position [theta]
+  /// (an angle in radians, sweeping `0` to `2*pi` over one loop of
+  /// [_orbitController]).
+  ///
+  /// The shadow's own blur/spread/alpha stay fixed at [_glowBlur]/
+  /// [_glowSpread]/[_glowAlpha] — only [BoxShadow.offset] moves, tracing a
+  /// small circle of radius [_orbitRadius] around the container so the light
+  /// appears to sweep top → right → bottom → left → loop.
+  static BoxShadow _glowFor(Color aiAccent, double theta) {
+    final offset = Offset(math.cos(theta), math.sin(theta)) * _orbitRadius;
     return BoxShadow(
-      color: aiAccent.withValues(alpha: _glowMinAlpha + (_glowMaxAlpha - _glowMinAlpha) * eased),
-      blurRadius: _glowMinBlur + (_glowMaxBlur - _glowMinBlur) * eased,
-      spreadRadius: _glowMinSpread + (_glowMaxSpread - _glowMinSpread) * eased,
+      color: aiAccent.withValues(alpha: _glowAlpha),
+      blurRadius: _glowBlur,
+      spreadRadius: _glowSpread,
+      offset: offset,
     );
   }
 
-  /// The fixed, non-animating glow rendered under reduce motion — a subtle
+  /// The fixed, non-orbiting glow rendered under reduce motion — a subtle
   /// resting shadow rather than no shadow at all, so the marker still reads
-  /// as elevated when the pulse is switched off.
+  /// as elevated when the orbit is switched off. The offset stays at
+  /// [Offset.zero], the calm/centered position the orbit would otherwise pass
+  /// through.
   static BoxShadow _settledGlow(Color aiAccent) {
     return BoxShadow(
-      color: aiAccent.withValues(alpha: _glowMinAlpha),
-      blurRadius: _glowMinBlur,
-      spreadRadius: _glowMinSpread,
+      color: aiAccent.withValues(alpha: _glowAlpha),
+      blurRadius: _glowBlur,
+      spreadRadius: _glowSpread,
     );
   }
 
@@ -307,6 +332,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final controller = _controller;
+    final orbitController = _orbitController;
 
     final Widget stars = controller == null
         ? const _StarPair(
@@ -329,10 +355,10 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             },
           );
 
-    // The pulsing glow is painted as this DecoratedBox's own BoxShadow --
+    // The orbiting glow is painted as this DecoratedBox's own BoxShadow --
     // never a wrapper around the stars -- so it can only ever affect the
     // pill's own painted extent, exactly like the fill color it replaces.
-    final Widget glowingFill = controller == null
+    final Widget glowingFill = orbitController == null
         ? DecoratedBox(
             decoration: BoxDecoration(
               color: tokens.colors.aiAccent,
@@ -341,13 +367,14 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             ),
           )
         : AnimatedBuilder(
-            animation: controller,
+            animation: orbitController,
             builder: (context, _) {
+              final theta = 2 * math.pi * orbitController.value;
               return DecoratedBox(
                 decoration: BoxDecoration(
                   color: tokens.colors.aiAccent,
                   borderRadius: BorderRadius.circular(tokens.radius.r1),
-                  boxShadow: [_glowFor(tokens.colors.aiAccent, controller.value)],
+                  boxShadow: [_glowFor(tokens.colors.aiAccent, theta)],
                 ),
               );
             },
@@ -355,7 +382,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
 
     // The stars are painted as a sibling stacked on top of the fill, so they
     // are always rendered at their own true color regardless of the glow's
-    // current phase. `clipBehavior: Clip.none` keeps the pulsing shadow from
+    // current phase. `clipBehavior: Clip.none` keeps the orbiting shadow from
     // being clipped away at the Stack's own bounds -- a shadow clipped to the
     // container's own rect would never be visible around it.
     final Widget container = Stack(

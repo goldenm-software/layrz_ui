@@ -232,9 +232,14 @@ void main() {
       expect(shadow, isNotNull);
       expect(shadow, isNotEmpty);
 
-      // Pumping several frames must not throw and must not change the shadow
-      // -- there is no ticking controller left to advance.
+      // The orbit is off under reduce motion -- the shadow sits at a fixed,
+      // non-orbiting position (Offset.zero), not somewhere mid-loop.
       final before = shadow!.first;
+      expect(before.offset, Offset.zero);
+
+      // Pumping several frames must not throw and must not change the shadow
+      // -- there is no ticking controller left to advance, so blur, spread,
+      // and (the orbit-specific assertion) the offset all stay put.
       await tester.pump(const Duration(milliseconds: 500));
       final decoratedBoxesAfter = tester
           .widgetList<DecoratedBox>(
@@ -245,10 +250,12 @@ void main() {
       final shadowAfter = (fillAfter.decoration as BoxDecoration).boxShadow!.first;
       expect(shadowAfter.blurRadius, before.blurRadius);
       expect(shadowAfter.spreadRadius, before.spreadRadius);
+      expect(shadowAfter.offset, before.offset);
+      expect(shadowAfter.offset, Offset.zero);
       expect(find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall), findsNWidgets(2));
     });
 
-    testWidgets('motion enabled: an AnimatedBuilder drives the burst and the glow pulse', (tester) async {
+    testWidgets('motion enabled: an AnimatedBuilder drives the burst and the glow orbit', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -258,20 +265,28 @@ void main() {
       expect(find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(AnimatedBuilder)), findsWidgets);
     });
 
-    testWidgets('the glow shadow pulses (blur/spread/opacity vary across the animation loop)', (tester) async {
+    testWidgets('the glow shadow orbits (its offset traces a moving, non-zero path across the animation loop)', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      // Replaces the old glint-containment regression test now that the
-      // ShaderMask sweep has been removed entirely in favor of a pulsing
-      // BoxShadow on the same DecoratedBox fill. This asserts the shadow
-      // actually animates -- distinct blur/spread/alpha values at different
-      // points in the loop -- rather than merely existing once.
+      // Replaces the old pulse-only regression test now that the glow's
+      // primary animated property is its BoxShadow.offset (an orbit around
+      // the container) rather than blur/spread/alpha growing in place. This
+      // asserts the shadow's offset actually moves -- distinct, non-zero
+      // Offset values at different points in the loop, tracing a path with
+      // more than one direction -- rather than merely existing once, static,
+      // at Offset.zero.
       await pumpThemed(tester, const LayrzAiMarker());
 
       final samples = <BoxShadow>[];
-      for (final millis in [0, 150, 300, 450, 600, 750, 900]) {
+      // Sampled across a single 4-second orbit loop (see _kOrbitDuration in
+      // ai_marker.dart) -- explicit pump() durations, not pumpAndSettle,
+      // since the orbit controller repeats indefinitely and would never
+      // settle.
+      for (final millis in [0, 500, 1000, 1500, 2000, 2500, 3000, 3500]) {
         await tester.pump(Duration(milliseconds: millis));
 
         final decoratedBoxes = tester
@@ -296,10 +311,22 @@ void main() {
         }
       }
 
-      final blurValues = samples.map((s) => s.blurRadius).toSet();
-      final spreadValues = samples.map((s) => s.spreadRadius).toSet();
-      expect(blurValues.length, greaterThan(1), reason: 'the glow blur radius must change across the loop');
-      expect(spreadValues.length, greaterThan(1), reason: 'the glow spread radius must change across the loop');
+      final offsets = samples.map((s) => s.offset).toSet();
+      expect(offsets.length, greaterThan(1), reason: 'the glow offset must change across the loop -- it must move');
+      expect(
+        offsets.any((o) => o != Offset.zero),
+        isTrue,
+        reason: 'the glow must travel away from Offset.zero at some point in the orbit',
+      );
+
+      // A real orbit -- not just back-and-forth motion along one axis --
+      // visits both positive and negative dx (or dy) across the loop.
+      final dxValues = samples.map((s) => s.offset.dx).toSet();
+      final dyValues = samples.map((s) => s.offset.dy).toSet();
+      expect(dxValues.any((v) => v > 0), isTrue, reason: 'the orbit must swing to the right at some point');
+      expect(dxValues.any((v) => v < 0), isTrue, reason: 'the orbit must swing to the left at some point');
+      expect(dyValues.any((v) => v > 0), isTrue, reason: 'the orbit must swing downward at some point');
+      expect(dyValues.any((v) => v < 0), isTrue, reason: 'the orbit must swing upward at some point');
     });
 
     testWidgets('the two stars are not rendered at identical scale mid-cycle (staggered burst is live)', (
