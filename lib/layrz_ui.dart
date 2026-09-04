@@ -30,6 +30,7 @@ export 'src/scaffold/scaffold.dart';
 export 'src/scrollbar/scrollbar.dart';
 export 'src/selection/selection.dart';
 export 'src/sheets/sheets.dart';
+export 'src/skeleton/skeleton.dart';
 export 'src/snackbar/snackbar.dart';
 export 'src/state/state.dart';
 export 'src/steppers/steppers.dart';
