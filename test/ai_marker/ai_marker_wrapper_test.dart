@@ -113,11 +113,11 @@ void main() {
 
       await pumpThemed(
         tester,
-        const LayrzAiMarkerWrapper(size: 32, child: SizedBox(width: 100, height: 60)),
+        const LayrzAiMarkerWrapper(size: LayrzAiMarkerSize.small, child: SizedBox(width: 100, height: 60)),
       );
 
       final marker = tester.widget<LayrzAiMarker>(find.byType(LayrzAiMarker));
-      expect(marker.size, 32);
+      expect(marker.size, LayrzAiMarkerSize.small);
     });
   });
 
@@ -148,19 +148,19 @@ void main() {
         tester,
         LayrzAiMarker.wrap(
           position: LayrzAiMarkerPosition.bottomLeft,
-          size: 32,
+          size: LayrzAiMarkerSize.small,
           child: const SizedBox(key: childKey, width: 100, height: 60),
         ),
       );
 
       final wrapper = tester.widget<LayrzAiMarkerWrapper>(find.byType(LayrzAiMarkerWrapper));
       expect(wrapper.position, LayrzAiMarkerPosition.bottomLeft);
-      expect(wrapper.size, 32);
+      expect(wrapper.size, LayrzAiMarkerSize.small);
       expect(wrapper.isVisible, isTrue);
       expect(find.byKey(childKey), findsOneWidget);
 
       final marker = tester.widget<LayrzAiMarker>(find.byType(LayrzAiMarker));
-      expect(marker.size, 32);
+      expect(marker.size, LayrzAiMarkerSize.small);
     });
 
     testWidgets('isVisible false renders only the child, no marker', (tester) async {

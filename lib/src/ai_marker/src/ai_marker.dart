@@ -7,13 +7,15 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 import 'ai_marker_burst.dart';
 import 'ai_marker_position.dart';
+import 'ai_marker_size.dart';
 import 'ai_marker_wrapper.dart';
 
 /// An icon-only marker disclosing that nearby content was generated or
 /// assisted by AI.
 ///
 /// [LayrzAiMarker] renders two overlapping `MdiIcons.starFourPointsSmall`
-/// glyphs — a larger sparkle behind a smaller one in front, the conventional
+/// glyphs — a bigger sparkle inset toward the top-left, a smaller accent
+/// sparkle inset toward the bottom-right, the conventional diagonal
 /// "AI sparkle" motif — in white, on top of a fully-rounded container filled
 /// with `tokens.colors.aiAccent`. The orange-on-orange contrast of an earlier
 /// revision (bare orange stars directly on the page background) was too weak
@@ -82,7 +84,7 @@ import 'ai_marker_wrapper.dart';
 @immutable
 class LayrzAiMarker extends StatefulWidget {
   /// Creates a standalone, icon-only AI-disclosure marker.
-  const LayrzAiMarker({super.key, this.size = 24.0});
+  const LayrzAiMarker({super.key, this.size = LayrzAiMarkerSize.big});
 
   /// Overlays a [LayrzAiMarker] on a corner of [child] without affecting
   /// [child]'s layout footprint.
@@ -100,22 +102,54 @@ class LayrzAiMarker extends StatefulWidget {
     Key? key,
     required Widget child,
     LayrzAiMarkerPosition position = LayrzAiMarkerPosition.topRight,
-    double size = 24.0,
+    LayrzAiMarkerSize size = LayrzAiMarkerSize.big,
     bool isVisible = true,
   }) {
     return LayrzAiMarkerWrapper(key: key, position: position, size: size, isVisible: isVisible, child: child);
   }
 
-  /// The overall footprint of the marker, in logical pixels.
+  /// The hand-tuned footprint the marker renders at.
   ///
-  /// This is the diameter of the rounded `tokens.colors.aiAccent` container;
-  /// the star pair is rendered inside it, inset on every side so the glyphs
-  /// don't touch the container's edge. Defaults to `24.0`, matching the
-  /// design system's common inline-icon size.
-  final double size;
+  /// Each [LayrzAiMarkerSize] value maps to its own container dimension and
+  /// star sizes via [_LayrzAiMarkerState._dimensionsFor] — not a shared
+  /// scale factor — so the small variant's accent star stays legible instead
+  /// of shrinking into a blur. Defaults to [LayrzAiMarkerSize.big].
+  final LayrzAiMarkerSize size;
 
   @override
   State<LayrzAiMarker> createState() => _LayrzAiMarkerState();
+}
+
+/// Hand-tuned geometry for one [LayrzAiMarkerSize] value.
+///
+/// Bundled as one immutable value so [_LayrzAiMarkerState._dimensionsFor]
+/// returns container, star, and inset sizing together — the three numbers
+/// are tuned as a set per size and must never be mixed across sizes.
+@immutable
+class _LayrzAiMarkerDimensions {
+  /// The side length, in logical pixels, of the square marker container.
+  final double container;
+
+  /// The side length, in logical pixels, of the bigger, top-left-anchored
+  /// star glyph.
+  final double bigStar;
+
+  /// The side length, in logical pixels, of the smaller, bottom-right-anchored
+  /// accent star glyph.
+  final double smallStar;
+
+  /// The inward inset, in logical pixels, applied to both stars from their
+  /// respective anchor corner — kept minimal so the stars occupy most of the
+  /// container rather than floating in unused padding.
+  final double inset;
+
+  /// Creates a bundle of hand-tuned dimensions for one marker size.
+  const _LayrzAiMarkerDimensions({
+    required this.container,
+    required this.bigStar,
+    required this.smallStar,
+    required this.inset,
+  });
 }
 
 class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProviderStateMixin {
@@ -157,20 +191,31 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     super.dispose();
   }
 
+  /// Resolves the hand-tuned dimension bundle for the given [size].
+  ///
+  /// These numbers are tuned as a set, not derived from one another: the
+  /// small variant does not scale the big variant down, because a naive
+  /// linear scale made the small accent star shrink into near-invisibility.
+  /// Padding is kept minimal in both so the stars occupy most of the
+  /// container rather than floating in unused space.
+  static _LayrzAiMarkerDimensions _dimensionsFor(LayrzAiMarkerSize size) {
+    switch (size) {
+      case LayrzAiMarkerSize.small:
+        return const _LayrzAiMarkerDimensions(container: 22.0, bigStar: 15.0, smallStar: 9.5, inset: 1.5);
+      case LayrzAiMarkerSize.big:
+        return const _LayrzAiMarkerDimensions(container: 44.0, bigStar: 29.0, smallStar: 18.0, inset: 3.0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final controller = _controller;
-
-    // The stars sit inside the accent pill with breathing room on every
-    // side rather than touching its edge -- inset by 18% of the marker's
-    // own size on each side (64% of size left for the pair), which at the
-    // default 24.0 size leaves a comfortable ~4.3px margin.
-    final innerSize = widget.size * 0.64;
+    final dimensions = _dimensionsFor(widget.size);
 
     final Widget stars = controller == null
         ? _StarPair(
-            size: innerSize,
+            dimensions: dimensions,
             color: const Color(0xFFFFFFFF),
             big: kLayrzAiMarkerSettledFrame,
             small: kLayrzAiMarkerSettledFrame,
@@ -179,7 +224,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
             animation: controller,
             builder: (context, _) {
               return _StarPair(
-                size: innerSize,
+                dimensions: dimensions,
                 color: const Color(0xFFFFFFFF),
                 big: _burst.bigStarAt(controller.value),
                 small: _burst.smallStarAt(controller.value),
@@ -195,7 +240,7 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
     final Widget fill = DecoratedBox(
       decoration: BoxDecoration(
         color: tokens.colors.aiAccent,
-        borderRadius: BorderRadius.circular(tokens.radius.full),
+        borderRadius: BorderRadius.circular(tokens.radius.r1),
       ),
     );
 
@@ -239,58 +284,67 @@ class _LayrzAiMarkerState extends State<LayrzAiMarker> with SingleTickerProvider
         label: l10n.aiGeneratedLabel,
         image: true,
         child: ExcludeSemantics(
-          child: SizedBox(width: widget.size, height: widget.size, child: container),
+          child: SizedBox(width: dimensions.container, height: dimensions.container, child: container),
         ),
       ),
     );
   }
 }
 
-/// The bare pair of overlapping star glyphs, positioned and scaled per the
-/// current [LayrzAiMarkerBurstFrame] of each.
+/// The bare pair of diagonally-arranged star glyphs, positioned and scaled
+/// per the current [LayrzAiMarkerBurstFrame] of each.
 ///
 /// Split out from [_LayrzAiMarkerState.build] purely for readability — it
 /// carries no state and no animation of its own, only geometry for a given
-/// pair of frames.
+/// [dimensions] bundle and pair of frames. The bigger star is inset from the
+/// top-left corner of the container and the smaller accent star from the
+/// bottom-right, filling the container diagonally rather than overlapping
+/// concentrically — the classic AI-sparkle motif Kenny asked for
+/// (2026-09-04): a prominent sparkle anchored up-left with a smaller accent
+/// sparkle trailing down-right.
 class _StarPair extends StatelessWidget {
-  const _StarPair({required this.size, required this.color, required this.big, required this.small});
+  const _StarPair({required this.dimensions, required this.color, required this.big, required this.small});
 
-  final double size;
+  /// The hand-tuned container, star, and inset sizes for the marker's
+  /// current [LayrzAiMarkerSize].
+  final _LayrzAiMarkerDimensions dimensions;
+
+  /// The fill color applied to both star glyphs.
   final Color color;
+
+  /// The current burst frame (scale/opacity) for the top-left star.
   final LayrzAiMarkerBurstFrame big;
+
+  /// The current burst frame (scale/opacity) for the bottom-right star.
   final LayrzAiMarkerBurstFrame small;
 
   @override
   Widget build(BuildContext context) {
-    // The smaller, front-facing star is offset toward the bottom-right of
-    // the larger back star and scaled down from it -- the reference motif is
-    // two sparkles of different sizes overlapping, not concentric.
-    final smallSize = size * 0.55;
     return SizedBox(
-      width: size,
-      height: size,
+      width: dimensions.container,
+      height: dimensions.container,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           Positioned(
-            left: 0,
-            top: 0,
+            left: dimensions.inset,
+            top: dimensions.inset,
             child: Opacity(
               opacity: big.opacity,
               child: Transform.scale(
                 scale: big.scale,
-                child: Icon(MdiIcons.starFourPointsSmall, size: size, color: color),
+                child: Icon(MdiIcons.starFourPointsSmall, size: dimensions.bigStar, color: color),
               ),
             ),
           ),
           Positioned(
-            right: -smallSize * 0.15,
-            bottom: -smallSize * 0.15,
+            right: dimensions.inset,
+            bottom: dimensions.inset,
             child: Opacity(
               opacity: small.opacity,
               child: Transform.scale(
                 scale: small.scale,
-                child: Icon(MdiIcons.starFourPointsSmall, size: smallSize, color: color),
+                child: Icon(MdiIcons.starFourPointsSmall, size: dimensions.smallStar, color: color),
               ),
             ),
           ),

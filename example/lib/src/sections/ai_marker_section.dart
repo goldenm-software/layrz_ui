@@ -34,11 +34,9 @@ class AiMarkerSection extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const LayrzAiMarker(size: 16),
+              const LayrzAiMarker(size: LayrzAiMarkerSize.small),
               SizedBox(width: tokens.spacing.sp5),
               const LayrzAiMarker(),
-              SizedBox(width: tokens.spacing.sp5),
-              const LayrzAiMarker(size: 40),
             ],
           ),
           SizedBox(height: tokens.spacing.sp4),

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'ai_marker.dart';
 import 'ai_marker_position.dart';
+import 'ai_marker_size.dart';
 
 /// Overlays a [LayrzAiMarker] on a corner of [child] without affecting
 /// [child]'s layout footprint.
@@ -38,7 +39,7 @@ class LayrzAiMarkerWrapper extends StatelessWidget {
     super.key,
     required this.child,
     this.position = LayrzAiMarkerPosition.topRight,
-    this.size = 24.0,
+    this.size = LayrzAiMarkerSize.big,
     this.isVisible = true,
   });
 
@@ -53,9 +54,9 @@ class LayrzAiMarkerWrapper extends StatelessWidget {
   /// Defaults to [LayrzAiMarkerPosition.topRight].
   final LayrzAiMarkerPosition position;
 
-  /// The overall footprint of the overlaid marker, in logical pixels. See
+  /// The hand-tuned footprint of the overlaid marker. See
   /// [LayrzAiMarker.size].
-  final double size;
+  final LayrzAiMarkerSize size;
 
   /// Whether the marker is shown at all.
   ///

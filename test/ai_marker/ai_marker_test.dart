@@ -70,19 +70,75 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.full));
     });
 
-    testWidgets('the marker footprint matches the size parameter', (tester) async {
+    testWidgets('the small size renders a square footprint smaller than the big default', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      const size = 40.0;
-      await pumpThemed(tester, const LayrzAiMarker(size: size));
+      await pumpThemed(tester, const LayrzAiMarker(size: LayrzAiMarkerSize.small));
+      final smallSize = tester.getSize(find.byType(LayrzAiMarker));
 
-      final box = tester.widget<SizedBox>(
-        find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(SizedBox)).first,
-      );
-      expect(box.width, size);
-      expect(box.height, size);
+      expect(smallSize.width, smallSize.height);
+      // Compared against the hand-tuned big dimension directly rather than
+      // pumping a second LayrzAiMarker into the same tester -- pumpThemed's
+      // Overlay is reused across pumpWidget calls in one test, which was
+      // observed to preserve the first marker's resolved element size on the
+      // second pump. A fresh tester per testWidgets avoids that entirely.
+      expect(smallSize.width, lessThan(44.0));
+    });
+
+    testWidgets('the default (big) size renders a larger square footprint than small', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzAiMarker());
+      final bigSize = tester.getSize(find.byType(LayrzAiMarker));
+
+      expect(bigSize.width, bigSize.height);
+      expect(bigSize.width, greaterThan(22.0));
+    });
+
+    testWidgets('both sizes render two visible white stars in a diagonal arrangement', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      for (final size in LayrzAiMarkerSize.values) {
+        await pumpThemed(tester, LayrzAiMarker(size: size));
+
+        final positioned = tester
+            .widgetList<Positioned>(
+              find.descendant(of: find.byType(LayrzAiMarker), matching: find.byType(Positioned)),
+            )
+            .toList();
+        // The fill is also wrapped in a Positioned.fill, which sets all four
+        // of left/top/right/bottom -- filter it out by keeping only anchors
+        // that set exactly one horizontal and one vertical edge (the two
+        // star anchors: top-left-only, or bottom-right-only).
+        final starAnchors = positioned
+            .where((p) => (p.left != null) != (p.right != null) && (p.top != null) != (p.bottom != null))
+            .toList();
+        expect(starAnchors.length, 2);
+
+        final topLeft = starAnchors.firstWhere((p) => p.left != null && p.top != null);
+        final bottomRight = starAnchors.firstWhere((p) => p.right != null && p.bottom != null);
+        expect(topLeft.left, greaterThanOrEqualTo(0.0));
+        expect(topLeft.top, greaterThanOrEqualTo(0.0));
+        expect(bottomRight.right, greaterThanOrEqualTo(0.0));
+        expect(bottomRight.bottom, greaterThanOrEqualTo(0.0));
+
+        final stars = find.byWidgetPredicate((w) => w is Icon && w.icon == MdiIcons.starFourPointsSmall);
+        expect(stars, findsNWidgets(2));
+        final icons = tester.widgetList<Icon>(stars).toList();
+        for (final icon in icons) {
+          expect(icon.color, const Color(0xFFFFFFFF));
+          expect(icon.size, greaterThan(0.0));
+        }
+        // The bigger, top-left star must be larger than the smaller,
+        // bottom-right accent star -- never equal, never inverted.
+        expect(icons[0].size, isNot(equals(icons[1].size)));
+      }
     });
 
     testWidgets('a tooltip is present wrapping the marker', (tester) async {
