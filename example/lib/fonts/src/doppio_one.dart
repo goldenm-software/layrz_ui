@@ -1,7 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:http/http.dart' as http;
 
 class DoppioOneFont extends LayrzFont {
   const DoppioOneFont() : super(name: 'Doppio One');

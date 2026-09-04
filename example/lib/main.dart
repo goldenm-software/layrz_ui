@@ -55,8 +55,8 @@ import 'src/sections/typography_section.dart';
 /// `@font-face`.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // final font = const OpenSansFont();
-  final font = const DoppioOneFont();
+  final font = const OpenSansFont();
+  // final font = const DoppioOneFont();
   await font.load();
   runApp(ShowroomApp(font: font));
 }
