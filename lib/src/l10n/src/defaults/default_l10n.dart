@@ -3,7 +3,7 @@ import '../l10n.dart';
 /// Concrete, English-only implementation of [LayrzUiL10n].
 ///
 /// Installed automatically by [LayrzApp] when no localizations delegate is
-/// provided, so the package works with zero configuration. All 151 keys use
+/// provided, so the package works with zero configuration. All 153 keys use
 /// their English defaults from the namespace mixins.
 ///
 /// **Usage in LayrzApp** (implicit):
