@@ -234,16 +234,22 @@ class _InputsSectionState extends State<InputsSection> {
           borderRadius: tokens.radius.r2,
           elevation: 0,
         ),
-        Column(
-          crossAxisAlignment: .start,
-          mainAxisAlignment: .start,
-          children: [
-            Text(demo.name, style: tokens.typography.body.copyWith(fontWeight: .bold)),
-            LayrzChip(
-              labelText: demo.category,
-              // style: tokens.typography.label,
-            ),
-          ],
+        Flexible(
+          child: Column(
+            crossAxisAlignment: .start,
+            mainAxisAlignment: .start,
+            children: [
+              Text(
+                demo.name,
+                style: tokens.typography.body.copyWith(fontWeight: .bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+              LayrzChip(
+                labelText: demo.category,
+                // style: tokens.typography.label,
+              ),
+            ],
+          ),
         ),
       ],
     );

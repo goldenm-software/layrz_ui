@@ -34,8 +34,8 @@ migrate_working_dir/
 .venv/
 
 # Claude Code agent worktrees and configuration (must never be committed)
-.claude/
-.claude/settings.local.json
+.claude/*
+!.claude/.gitignore
 
 # Machine-local Claude Code instructions (CLAUDE.md holds the shared conventions)
 CLAUDE.local.md
@@ -48,3 +48,5 @@ MSG.md
 
 # FVM Version Cache
 .fvm/
+
+.vscode/settings.json

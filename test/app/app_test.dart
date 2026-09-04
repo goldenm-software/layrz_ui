@@ -14,7 +14,14 @@ void main() {
         ),
       );
 
-      expect(find.byType(SizedBox), findsOneWidget);
+      // LayrzApp auto-installs a LayrzSnackbarMessenger in `_wrapWithTheme`,
+      // which renders its own `SizedBox.shrink()` for the (empty) toast
+      // overlay alongside the app's content. A bare type-finder would match
+      // both, so this looks for the specific 100x100 box `home` declares.
+      expect(
+        find.byWidgetPredicate((widget) => widget is SizedBox && widget.width == 100 && widget.height == 100),
+        findsOneWidget,
+      );
     });
 
     testWidgets('router constructor pumps without error', (tester) async {
@@ -116,6 +123,25 @@ void main() {
       expect(resolvedIconTheme.size, equals(theme.iconTheme.size));
     });
 
+    testWidgets('auto-installs a LayrzSnackbarMessenger reachable from home', (tester) async {
+      late LayrzSnackbarMessengerState resolvedState;
+
+      await tester.pumpWidget(
+        LayrzApp(
+          title: 'Test App',
+          home: Builder(
+            builder: (context) {
+              resolvedState = LayrzSnackbarMessenger.of(context);
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolvedState, isNotNull);
+      expect(find.byType(LayrzSnackbarMessenger), findsOneWidget);
+    });
+
     testWidgets('ColoredBox carries theme.backgroundColor', (tester) async {
       final theme = LayrzThemeData.light();
 
@@ -166,9 +192,16 @@ void main() {
         ),
       );
 
+      // LayrzApp auto-installs a LayrzSnackbarMessenger in `_wrapWithTheme`,
+      // which renders its own `SizedBox.shrink()` for the (empty) toast
+      // overlay alongside the builder's content. A bare type-finder would
+      // match both, so this looks for the specific 50x50 box `home` declares.
       expect(builderCalled, isTrue);
       expect(find.byType(Container), findsOneWidget);
-      expect(find.byType(SizedBox), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((widget) => widget is SizedBox && widget.width == 50 && widget.height == 50),
+        findsOneWidget,
+      );
     });
 
     testWidgets('color defaults to theme.primaryColor', (tester) async {

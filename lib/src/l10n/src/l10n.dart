@@ -22,6 +22,7 @@ import 'namespaces/scaffold.dart';
 import 'namespaces/select.dart';
 import 'namespaces/selection.dart';
 import 'namespaces/sheets.dart';
+import 'namespaces/snackbar.dart';
 import 'namespaces/steppers.dart';
 import 'namespaces/table.dart';
 import 'namespaces/taskbar.dart';
@@ -29,7 +30,7 @@ import 'namespaces/weekdays.dart';
 
 /// Abstract contract for all localized strings used throughout layrz_ui.
 ///
-/// All 148 localization keys are declared as getters across 19 namespace mixins,
+/// All 151 localization keys are declared as getters across 20 namespace mixins,
 /// each providing an English default value. Components read localization via
 /// [LayrzUiL10n.of] or the convenience extension [BuildContext.l10n]. When the
 /// user changes locale, Flutter's `Localizations` system automatically rebuilds
@@ -118,6 +119,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nSelectMixin,
         LayrzUiL10nSelectionMixin,
         LayrzUiL10nSheetsMixin,
+        LayrzUiL10nSnackbarMixin,
         LayrzUiL10nSteppersMixin,
         LayrzUiL10nTableMixin,
         LayrzUiL10nTaskbarMixin,
