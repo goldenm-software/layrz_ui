@@ -24,6 +24,9 @@ Made below).
 | 3 | DESIGN-89: LayrzTimeline (one-sided / two-sided dated event spine) | Merged · Review required |
 | 4 | DESIGN-93: LayrzTreeView / LayrzSliverTreeView (expand/collapse, dual selection modes, keyboard nav) | Merged · Review required |
 | 5 | DESIGN-90: LayrzBadge / LayrzBadgeVisual (notification indicator, 99+ overflow) | Merged · Review required |
+| 6 | DESIGN-92: LayrzAccordion (single controlled disclosure panel over SDK `Expansible`) | Merged · Review required |
+| 7 | DESIGN-69: LayrzAiMarker (icon-only AI-disclosure marker with animated accent glint) | Merged · Review required |
+| 8 | DESIGN-91: LayrzSkeleton (loading placeholder built from caller-composed shape primitives) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M6 work items, kept in step with the code in
 the same commit. All five rows are implemented, tested, and merged to `development`; none has yet
