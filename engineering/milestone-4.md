@@ -27,7 +27,7 @@ milestone and beyond builds on.
 | 52 | LayrzMonthInput (single month, commit on tap) | Review required |
 | 53 | LayrzMonthRangeInput (contiguous or arbitrary month selection, in-panel Save) | Review required |
 | 54 | LayrzColorInput (wheel + palette color picker) | TO DO · blocked, see note |
-| 55 | LayrzFileInput (file upload picker) | TO DO |
+| 55 | LayrzFileInput (file upload picker) | Merged · Review required |
 | 56 | LayrzIconInput (Solar icon set picker) | TO DO |
 | 57 | LayrzEmojiInput (Unicode emoji picker) | TO DO |
 | 58 | LayrzAvatarInput (image avatar picker) | TO DO |
@@ -52,10 +52,11 @@ deliverable, and `wiki/Widgets/LayrzTimeRangeInput.md` already existed as a spec
 
 ## M4 is NOT complete when this batch ships
 
-Eight rows remain, all `TO DO`: `LayrzMultiSelectInput` (41), `LayrzDualListInput` (43),
-`LayrzColorInput` (54), `LayrzFileInput` (55), `LayrzIconInput` (56), `LayrzEmojiInput` (57),
-`LayrzAvatarInput` (58), `LayrzDynamicAvatarInput` (59) — Emoji, Icon, File, Avatar, Dynamic Avatar,
-and Color inputs, plus MultiSelect and DualList carried over from M3 (D61). `LayrzColorInput`
+Seven rows remain `TO DO`: `LayrzMultiSelectInput` (41), `LayrzDualListInput` (43),
+`LayrzColorInput` (54), `LayrzIconInput` (56), `LayrzEmojiInput` (57), `LayrzAvatarInput` (58),
+`LayrzDynamicAvatarInput` (59) — Emoji, Icon, Avatar, Dynamic Avatar, and Color inputs, plus
+MultiSelect and DualList carried over from M3 (D61). `LayrzFileInput` (55) shipped in this release
+and is now `Merged · Review required`. `LayrzColorInput`
 additionally carries a real blocker (`flex_color_picker` 3.8.0 is Material-built — 23 Material
 imports, 2 Cupertino — so its wheel and palette must be written from scratch rather than wrapping
 that package), and `LayrzDynamicAvatarInput` is blocked until `LayrzAvatarInput`, `LayrzIconInput`,
@@ -64,8 +65,9 @@ and `LayrzEmojiInput` ship, since it composes all three.
 ## Definition of Done
 
 - All 18 M4 Pickers-domain Notion rows above resolved (`Done` or, for DESIGN-51, correctly recorded
-  as covered by DESIGN-49 rather than a separate deliverable) — 10 resolved as of this batch
-  (DESIGN-45–53 in `Review required`, DESIGN-51 covered), 8 remaining `TO DO`
+  as covered by DESIGN-49 rather than a separate deliverable) — 11 resolved as of this release
+  (DESIGN-45–53 in `Review required`, DESIGN-51 covered, DESIGN-55 in `Review required`), 7
+  remaining `TO DO`
 - `flutter analyze` reports zero issues
 - `flutter test` reports 100% pass on all M4 tests
 - Coverage floor (90%) not breached

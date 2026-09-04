@@ -97,5 +97,36 @@ void main() {
       final tokens2 = LayrzColorTokens.light(primary: const Color(0xFF888888));
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
+
+    test('aiAccent defaults to the raw Layrz accent orange', () {
+      final tokens = LayrzColorTokens.light();
+      expect(tokens.aiAccent, equals(const Color(0xFFFF9800)));
+    });
+
+    test('aiAccent survives copyWith for other fields', () {
+      final original = LayrzColorTokens.light();
+      final modified = original.copyWith(primary: const Color(0xFF123456));
+      expect(modified.aiAccent, equals(original.aiAccent));
+    });
+
+    test('copyWith replaces aiAccent independently', () {
+      final original = LayrzColorTokens.light();
+      final modified = original.copyWith(aiAccent: const Color(0xFF00FF00));
+
+      expect(modified.aiAccent, equals(const Color(0xFF00FF00)));
+      expect(original.aiAccent, equals(const Color(0xFFFF9800))); // original unchanged
+    });
+
+    test('equality accounts for aiAccent', () {
+      final tokens1 = LayrzColorTokens.light();
+      final tokens2 = LayrzColorTokens.light().copyWith(aiAccent: const Color(0xFF00FF00));
+      expect(tokens1, isNot(equals(tokens2)));
+    });
+
+    test('hashCode differs when aiAccent differs', () {
+      final tokens1 = LayrzColorTokens.light();
+      final tokens2 = LayrzColorTokens.light().copyWith(aiAccent: const Color(0xFF00FF00));
+      expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
+    });
   });
 }

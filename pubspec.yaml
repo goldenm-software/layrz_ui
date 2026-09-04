@@ -1,6 +1,6 @@
 name: layrz_ui
 description: "A Material-free and Cupertino-free Flutter design system built on package:flutter/widgets.dart. The successor to layrz_theme."
-version: 0.0.19
+version: 0.0.20
 homepage: https://github.com/goldenm-software/layrz_ui
 repository: https://github.com/goldenm-software/layrz_ui
 issue_tracker: https://github.com/goldenm-software/layrz_ui/issues
@@ -31,6 +31,8 @@ dependencies:
   timezone: ^0.10.1
   web: ^1.0.0
   pointer_interceptor: ^0.10.1
+  file_picker: ^10.3.10
+  desktop_drop: ^0.8.4
 
 dev_dependencies:
   flutter_test: { sdk: flutter }

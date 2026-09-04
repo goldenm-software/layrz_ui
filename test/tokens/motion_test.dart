@@ -141,5 +141,37 @@ void main() {
       expect(modified.dDialog, equals(original.dDialog));
       expect(original.dIndeterminate, equals(const Duration(milliseconds: 1500))); // original unchanged
     });
+
+    test('default easingEmphasized is easeInOutCirc', () {
+      const tokens = LayrzMotionTokens();
+      expect(tokens.easingEmphasized, equals(Curves.easeInOutCirc));
+    });
+
+    test('easing is unchanged by the introduction of easingEmphasized', () {
+      const tokens = LayrzMotionTokens();
+      expect(tokens.easing, equals(Curves.easeInOut));
+      expect(tokens.easing, isNot(equals(tokens.easingEmphasized)));
+    });
+
+    test('copyWith replaces easingEmphasized independently', () {
+      const original = LayrzMotionTokens();
+      final modified = original.copyWith(easingEmphasized: Curves.linear);
+
+      expect(modified.easingEmphasized, equals(Curves.linear));
+      expect(modified.easing, equals(original.easing)); // easing untouched
+      expect(original.easingEmphasized, equals(Curves.easeInOutCirc)); // original unchanged
+    });
+
+    test('equality accounts for easingEmphasized', () {
+      const tokens1 = LayrzMotionTokens();
+      final tokens2 = LayrzMotionTokens(easingEmphasized: Curves.linear);
+      expect(tokens1, isNot(equals(tokens2)));
+    });
+
+    test('hashCode differs when easingEmphasized differs', () {
+      const tokens1 = LayrzMotionTokens();
+      final tokens2 = LayrzMotionTokens(easingEmphasized: Curves.linear);
+      expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
+    });
   });
 }

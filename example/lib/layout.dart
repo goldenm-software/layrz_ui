@@ -281,6 +281,41 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/refresh',
         onTap: () => _navigateTo(context, '/refresh'),
       ),
+      LayrzNavigatorPage(
+        id: '/accordion',
+        labelText: 'Accordion',
+        icon: MdiIcons.unfoldMoreHorizontal,
+        isSelected: currentRoute == '/accordion',
+        onTap: () => _navigateTo(context, '/accordion'),
+      ),
+      LayrzNavigatorPage(
+        id: '/ai-marker',
+        labelText: 'AI Marker',
+        icon: MdiIcons.creationOutline,
+        isSelected: currentRoute == '/ai-marker',
+        onTap: () => _navigateTo(context, '/ai-marker'),
+      ),
+      LayrzNavigatorPage(
+        id: '/skeleton',
+        labelText: 'Skeleton',
+        icon: MdiIcons.viewGridOutline,
+        isSelected: currentRoute == '/skeleton',
+        onTap: () => _navigateTo(context, '/skeleton'),
+      ),
+      LayrzNavigatorPage(
+        id: '/form',
+        labelText: 'Form',
+        icon: MdiIcons.formTextbox,
+        isSelected: currentRoute == '/form',
+        onTap: () => _navigateTo(context, '/form'),
+      ),
+      LayrzNavigatorPage(
+        id: '/file-input',
+        labelText: 'File Input',
+        icon: MdiIcons.fileUploadOutline,
+        isSelected: currentRoute == '/file-input',
+        onTap: () => _navigateTo(context, '/file-input'),
+      ),
     ];
   }
 

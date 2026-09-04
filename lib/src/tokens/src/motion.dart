@@ -65,6 +65,16 @@ class LayrzMotionTokens {
   /// a natural exit effect.
   final Curve easingExit;
 
+  /// Easing curve for emphasized reveal animations.
+  ///
+  /// Defaults to [Curves.easeInOutCirc], a more pronounced acceleration and
+  /// deceleration than [easing]. Used by disclosure components — e.g.
+  /// `LayrzAccordion`'s expand/collapse reveal — where the standard [easing]
+  /// curve reads as too subtle for a large content-height change. This is a
+  /// distinct field from [easing], not a replacement for it: nothing else in
+  /// the design system reads this curve by default.
+  final Curve easingEmphasized;
+
   /// Creates a new [LayrzMotionTokens].
   const LayrzMotionTokens({
     this.dHover = kHoverDuration,
@@ -76,6 +86,7 @@ class LayrzMotionTokens {
     this.easing = Curves.easeInOut,
     this.easingEnter = Curves.easeOut,
     this.easingExit = Curves.easeIn,
+    this.easingEmphasized = Curves.easeInOutCirc,
   });
 
   /// Returns a copy of this motion tokens object with the given fields replaced.
@@ -89,6 +100,7 @@ class LayrzMotionTokens {
     Curve? easing,
     Curve? easingEnter,
     Curve? easingExit,
+    Curve? easingEmphasized,
   }) {
     return LayrzMotionTokens(
       dHover: dHover ?? this.dHover,
@@ -100,6 +112,7 @@ class LayrzMotionTokens {
       easing: easing ?? this.easing,
       easingEnter: easingEnter ?? this.easingEnter,
       easingExit: easingExit ?? this.easingExit,
+      easingEmphasized: easingEmphasized ?? this.easingEmphasized,
     );
   }
 
@@ -116,7 +129,8 @@ class LayrzMotionTokens {
           dIndeterminate == other.dIndeterminate &&
           easing == other.easing &&
           easingEnter == other.easingEnter &&
-          easingExit == other.easingExit;
+          easingExit == other.easingExit &&
+          easingEmphasized == other.easingEmphasized;
 
   @override
   int get hashCode => Object.hash(
@@ -129,5 +143,6 @@ class LayrzMotionTokens {
     easing,
     easingEnter,
     easingExit,
+    easingEmphasized,
   );
 }

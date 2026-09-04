@@ -73,6 +73,16 @@ class LayrzColorTokens {
   /// Alpha value applied to tonal fills to create visual distinction.
   final double tonalOpacity;
 
+  /// Accent color for AI-generated or AI-assisted content markers.
+  ///
+  /// This is a standalone named handle — deliberately NOT a reuse of
+  /// [LayrzColors.orange] or any other palette entry — so it can evolve
+  /// independently of the semantic [warning] color, which was itself moved
+  /// off Material orange (`#FF9800`) for contrast reasons (see the comment
+  /// on [LayrzColorTokens.light]). AI-disclosure surfaces are icon-only, so
+  /// that contrast concern does not apply here.
+  final Color aiAccent;
+
   /// Creates a new [LayrzColorTokens].
   const LayrzColorTokens({
     required this.primary,
@@ -92,6 +102,7 @@ class LayrzColorTokens {
     required this.divider,
     required this.overlay,
     required this.tonalOpacity,
+    required this.aiAccent,
   });
 
   /// Light theme color tokens using Layrz brand defaults.
@@ -127,6 +138,7 @@ class LayrzColorTokens {
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
+      aiAccent: const Color(0xFFFF9800),
     );
   }
 
@@ -149,6 +161,7 @@ class LayrzColorTokens {
     Color? divider,
     Color? overlay,
     double? tonalOpacity,
+    Color? aiAccent,
   }) {
     return LayrzColorTokens(
       primary: primary == null
@@ -180,6 +193,7 @@ class LayrzColorTokens {
       divider: divider ?? this.divider,
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,
+      aiAccent: aiAccent ?? this.aiAccent,
     );
   }
 
@@ -204,7 +218,8 @@ class LayrzColorTokens {
           contextual == other.contextual &&
           divider == other.divider &&
           overlay == other.overlay &&
-          tonalOpacity == other.tonalOpacity;
+          tonalOpacity == other.tonalOpacity &&
+          aiAccent == other.aiAccent;
 
   @override
   int get hashCode => Object.hash(
@@ -225,5 +240,6 @@ class LayrzColorTokens {
     divider,
     overlay,
     tonalOpacity,
+    aiAccent,
   );
 }

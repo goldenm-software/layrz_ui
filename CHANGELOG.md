@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.20
+
+**Five new components land in this release — `LayrzAccordion`, `LayrzAiMarker`, `LayrzSkeleton`, `LayrzForm`, and `LayrzFileInput`** — plus new theme tokens and localization to support them.
+
+`LayrzAccordion` (`lib/src/accordion/`) is a single controlled disclosure panel built on the SDK's `Expansible`. It takes `titleText`, `body`, `expanded`, `onExpansionChanged`, and an optional `leadingIcon`, with the whole header as one hit target. The collapsed body is genuinely absent from the tree (`maintainState: false`), and header geometry is synced to the body reveal via the new `easingEmphasized` motion token, so there is no expand/collapse blink.
+
+`LayrzAiMarker` (`lib/src/ai_marker/`) is an icon-only marker disclosing AI-generated content. It takes no `size` and no text parameters — the disclosure label and tooltip come from `LayrzUiL10n` (`aiGeneratedLabel` / `aiGeneratedTooltip`) so the text reads identically everywhere, a legal-disclosure requirement. It renders a white `MdiIcons.starFourPointsSmall` on a rounded `aiAccent` orange container, with a staggered star-burst and an orbiting shadow glow, both of which respect reduce-motion. `LayrzAiMarker.wrap(...)`, `LayrzAiMarkerWrapper`, and `LayrzAiMarkerPosition` overlay the marker on another widget's corner.
+
+`LayrzSkeleton` (`lib/src/skeleton/`) is a loading placeholder driven by a caller-composed tree of shape primitives — `LayrzSkeletonBox`, `LayrzSkeletonCircle`, `LayrzSkeletonLine` — under one shared shimmer (`LayrzSkeletonScope`). `LayrzSkeletonLine.matchTextStyle` derives placeholder height from a `TextStyle`'s line metrics. The layout never reflows once content arrives; reduce-motion renders a static block; the whole subtree is excluded from semantics behind a single "Loading" announcement.
+
+`LayrzForm` (`lib/src/inputs/src/login/`) is a behavioural password-manager autofill wrapper with no layout or chrome of its own. `onSubmit` is a `Future<bool> Function()`; calling `form.submit()` runs it and fires `TextInput.finishAutofillContext(shouldSave: ...)` — saving on success, discarding on failure or throw. It wraps fields in `AutofillGroup` on native and an HTML-form-backed group on web.
+
+`LayrzFileInput` (`lib/src/file_input/`) is a drag-and-drop and click-to-browse file drop-zone. It is multi-file by default (`List<LayrzFileInputResult>`), with `maxFiles`, `allowedExtensions`, `maxFileSizeBytes`, a persistent (non-toast) rejection message, an image thumbnail preview, and keyboard-reachable clear/replace. `LayrzFileInputResult` now exposes `toBytes()` (`Uint8List`) and `toDataUri()` (`data:<mime>;base64,...`). Adds the `file_picker` and `desktop_drop` dependencies.
+
+- Added a new `aiAccent` color token and an `easingEmphasized` motion token (`Curves.easeInOutCirc`).
+- Added a new AI-disclosure namespace to `LayrzUiL10n` (`aiGeneratedLabel`, `aiGeneratedTooltip`).
+
 ## 0.0.19
 
 **Two new login credential components land: `LayrzUsernameInput` and `LayrzPasswordInput`** (`lib/src/inputs/src/login/`) — specialised, reduced-surface fields for building login forms, replacing a raw `LayrzTextInput` for the credential pair. `LayrzUsernameInput` carries a `MdiIcons.shieldAccountOutline` prefix, an email keyboard (`TextInputType.emailAddress`) so `@` is reachable, `autocorrect: false`, and `autofillHints: [AutofillHints.username, AutofillHints.email]`. `LayrzPasswordInput` carries a `MdiIcons.shieldKeyOutline` prefix, an eye/eye-off suffix that toggles `obscureText` (swapping `MdiIcons.eyeOutline` / `eyeOffOutline`), `autofillHints: [AutofillHints.password]`, and an opt-in `showStrengthMeter` (default `false`). Both are platform-branched: on native they delegate to `LayrzTextInput` (pixel-identical, it *is* the real chrome); on web they render a real DOM `<input>` (see below). Field kind is modelled by the two distinct widget types plus `AutofillGroup` (native) / an HTML `<form>` (web) and typed `AutofillHints` — there is no bespoke key type; `key` stays plain element identity. The eye toggle carries an accessible label and announces its shown/hidden state.
