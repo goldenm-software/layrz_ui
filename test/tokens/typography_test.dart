@@ -144,6 +144,36 @@ void main() {
       expect(theme.headline.color, equals(testColor));
       expect(theme.headline.fontSize, equals(24));
     });
+
+    test('defaults factory triggers registerOnWeb on the provided font', () {
+      final font = _SpyFont();
+      LayrzTextTheme.defaults(textColor: const Color(0xFF000000), font: font);
+
+      expect(font.registerOnWebCalled, isTrue);
+    });
+
+    test('defaults factory does not await registerOnWeb (fire-and-forget)', () {
+      final font = _SlowSpyFont();
+
+      // If this were awaited, the factory call itself would need to be inside an
+      // async zone; since LayrzTextTheme.defaults is a synchronous factory, calling
+      // it here at all proves registerOnWeb's Future is not awaited by the factory.
+      final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000), font: font);
+
+      expect(theme, isA<LayrzTextTheme>());
+      expect(font.registerOnWebCalled, isTrue);
+      expect(font.registerOnWebCompleted, isFalse);
+    });
+
+    test('LayrzRobotoFont (the null-font default) exposes a synchronous no-op registerOnWeb', () {
+      // The null-font branch resolves to LayrzRobotoFont, whose inherited
+      // registerOnWeb is the base no-op — calling defaults() with no font must not
+      // throw or hang despite firing registerOnWeb unawaited.
+      expect(
+        () => LayrzTextTheme.defaults(textColor: const Color(0xFF000000)),
+        returnsNormally,
+      );
+    });
   });
 
   group('Text wrapping and truncation', () {
@@ -259,4 +289,80 @@ void main() {
       expect(textWidget.overflow, equals(TextOverflow.ellipsis));
     });
   });
+}
+
+/// A minimal [LayrzFont] that records whether [registerOnWeb] was invoked.
+///
+/// Used to prove [LayrzTextTheme.defaults] calls [LayrzFont.registerOnWeb] on the
+/// font it is given, without depending on `package:web` or an actual browser DOM.
+class _SpyFont extends LayrzFont {
+  _SpyFont() : super(name: 'Spy');
+
+  /// Whether [registerOnWeb] has been invoked on this instance.
+  bool registerOnWebCalled = false;
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> registerOnWeb() async {
+    registerOnWebCalled = true;
+  }
+
+  @override
+  TextStyle get display => const TextStyle(fontFamily: 'Spy');
+
+  @override
+  TextStyle get headline => const TextStyle(fontFamily: 'Spy');
+
+  @override
+  TextStyle get title => const TextStyle(fontFamily: 'Spy');
+
+  @override
+  TextStyle get body => const TextStyle(fontFamily: 'Spy');
+
+  @override
+  TextStyle get label => const TextStyle(fontFamily: 'Spy');
+}
+
+/// A [LayrzFont] whose [registerOnWeb] starts running synchronously (recording that
+/// it was called) but only completes on a later microtask.
+///
+/// Used to prove [LayrzTextTheme.defaults] does not await [LayrzFont.registerOnWeb]:
+/// immediately after the factory returns, [registerOnWebCalled] is already true
+/// (the call was made) while [registerOnWebCompleted] is still false (the factory
+/// did not wait for it to finish).
+class _SlowSpyFont extends LayrzFont {
+  _SlowSpyFont() : super(name: 'SlowSpy');
+
+  /// Whether [registerOnWeb] has been invoked on this instance.
+  bool registerOnWebCalled = false;
+
+  /// Whether the [Future] returned by [registerOnWeb] has completed.
+  bool registerOnWebCompleted = false;
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> registerOnWeb() async {
+    registerOnWebCalled = true;
+    await Future<void>.delayed(Duration.zero);
+    registerOnWebCompleted = true;
+  }
+
+  @override
+  TextStyle get display => const TextStyle(fontFamily: 'SlowSpy');
+
+  @override
+  TextStyle get headline => const TextStyle(fontFamily: 'SlowSpy');
+
+  @override
+  TextStyle get title => const TextStyle(fontFamily: 'SlowSpy');
+
+  @override
+  TextStyle get body => const TextStyle(fontFamily: 'SlowSpy');
+
+  @override
+  TextStyle get label => const TextStyle(fontFamily: 'SlowSpy');
 }

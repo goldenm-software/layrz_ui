@@ -44,11 +44,19 @@ import 'src/sections/typography_section.dart';
 /// requires loading (e.g., from a network source). In this case, the font
 /// is bundled in assets and loaded immediately by the engine, so [load]
 /// completes without I/O.
+///
+/// Note there is no `font.registerOnWeb()` call here: the theme constructor
+/// ([LayrzThemeData.light], via [LayrzTokens.light] and [LayrzTextTheme.defaults])
+/// calls it automatically once [font] reaches `ShowroomApp`'s `LayrzThemeData.light`
+/// below, so DOM-rendered content (e.g. layrz_ui's web login fields) picks up the
+/// font with no extra step from consumer code. `OpenSansFont` and `FiraSansFont` are
+/// bundled assets, so their `registerOnWeb` is the inherited no-op; swap in
+/// `NotoSansFont` (URL-based) below to see it actually register a browser
+/// `@font-face`.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final font = const OpenSansFont();
-  // final font = const FiraSansFont();
-  // final font = const NotoSansFont();
+  // final font = const DoppioOneFont();
   await font.load();
   runApp(ShowroomApp(font: font));
 }

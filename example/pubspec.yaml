@@ -30,11 +30,6 @@ flutter:
     - family: Open Sans
       fonts:
         - asset: fonts/Open-Sans.ttf
-    - family: Fira Sans
+    - family: Doppio One
       fonts:
-        - asset: fonts/FiraSans-Regular.ttf
-          weight: 400
-        - asset: fonts/FiraSans-Light.ttf
-          weight: 300
-        - asset: fonts/FiraSans-Bold.ttf
-          weight: 700
+        - asset: fonts/DoppioOne-Regular.ttf
