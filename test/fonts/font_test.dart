@@ -75,5 +75,82 @@ void main() {
       const font = LayrzRobotoFont();
       await expectLater(font.load(), throwsUnsupportedError);
     });
+
+    test('registerOnWeb is a no-op that completes without error', () async {
+      const font = LayrzRobotoFont();
+      await expectLater(font.registerOnWeb(), completes);
+    });
   });
+
+  group('LayrzFont.registerOnWeb default', () {
+    test('any implementation that does not override it gets a no-op', () async {
+      final font = _NoOverrideFont();
+      await expectLater(font.registerOnWeb(), completes);
+    });
+
+    test('an overriding implementation runs its own registration logic', () async {
+      final font = _OverridingFont();
+      await font.registerOnWeb();
+      expect(font.registerOnWebCalled, isTrue);
+    });
+  });
+}
+
+/// A minimal [LayrzFont] that relies entirely on the inherited [registerOnWeb]
+/// default, used to prove the base contract's no-op applies to any implementation
+/// that doesn't override it — not just [LayrzRobotoFont].
+class _NoOverrideFont extends LayrzFont {
+  _NoOverrideFont() : super(name: 'NoOverride');
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  TextStyle get display => const TextStyle(fontFamily: 'NoOverride');
+
+  @override
+  TextStyle get headline => const TextStyle(fontFamily: 'NoOverride');
+
+  @override
+  TextStyle get title => const TextStyle(fontFamily: 'NoOverride');
+
+  @override
+  TextStyle get body => const TextStyle(fontFamily: 'NoOverride');
+
+  @override
+  TextStyle get label => const TextStyle(fontFamily: 'NoOverride');
+}
+
+/// A minimal [LayrzFont] that overrides [registerOnWeb], used to prove the hook is
+/// actually called and dispatches to the overriding implementation rather than the
+/// inherited no-op. This mirrors the shape `NotoSansFont` (in `example/`) uses to call
+/// `registerWebFont`, without depending on `package:web` from a VM test target.
+class _OverridingFont extends LayrzFont {
+  _OverridingFont() : super(name: 'Overriding');
+
+  /// Whether [registerOnWeb] has been invoked on this instance.
+  bool registerOnWebCalled = false;
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<void> registerOnWeb() async {
+    registerOnWebCalled = true;
+  }
+
+  @override
+  TextStyle get display => const TextStyle(fontFamily: 'Overriding');
+
+  @override
+  TextStyle get headline => const TextStyle(fontFamily: 'Overriding');
+
+  @override
+  TextStyle get title => const TextStyle(fontFamily: 'Overriding');
+
+  @override
+  TextStyle get body => const TextStyle(fontFamily: 'Overriding');
+
+  @override
+  TextStyle get label => const TextStyle(fontFamily: 'Overriding');
 }
