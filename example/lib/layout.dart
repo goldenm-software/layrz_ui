@@ -226,6 +226,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/inputs'),
       ),
       LayrzNavigatorPage(
+        id: '/pickers',
+        labelText: 'Pickers',
+        icon: MdiIcons.paletteOutline,
+        isSelected: currentRoute == '/pickers',
+        onTap: () => _navigateTo(context, '/pickers'),
+      ),
+      LayrzNavigatorPage(
         id: '/grid',
         labelText: 'Grid',
         icon: MdiIcons.arrowRightBox,
@@ -315,13 +322,6 @@ class ShowroomLayout extends StatelessWidget {
         icon: MdiIcons.fileUploadOutline,
         isSelected: currentRoute == '/file-input',
         onTap: () => _navigateTo(context, '/file-input'),
-      ),
-      LayrzNavigatorPage(
-        id: '/pickers',
-        labelText: 'Pickers',
-        icon: MdiIcons.paletteOutline,
-        isSelected: currentRoute == '/pickers',
-        onTap: () => _navigateTo(context, '/pickers'),
       ),
     ];
   }
