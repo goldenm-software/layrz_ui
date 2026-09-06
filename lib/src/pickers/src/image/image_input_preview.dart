@@ -32,11 +32,39 @@ class LayrzImageInputPreview extends StatelessWidget {
   /// thumbnail alongside a file name.
   final double size;
 
+  /// The border radius of the enclosing tile this preview fills.
+  ///
+  /// Defaults to [LayrzRadiusTokens.br1] for a standalone preview. When this
+  /// widget is composed inside [LayrzImageInput]'s tile, the caller passes the
+  /// tile's own radius (`tokens.radius.br3`) here so the preview's clip curves
+  /// **exactly match** the tile's outer border curve -- a mismatch between the
+  /// two (previously this widget hardcoded [LayrzRadiusTokens.br1] regardless
+  /// of the tile's radius) is what produced the "broken border" bug: the
+  /// image's corners were clipped tighter than the border's corners, leaving
+  /// a visible wedge of background between the two curves.
+  final BorderRadius borderRadius;
+
+  /// The width of the tile's border, in logical pixels, this preview must be
+  /// inset by so its fill never paints over the border stroke.
+  ///
+  /// Defaults to 0 (no inset) for a standalone preview. When composed inside
+  /// the tile, the caller passes the resolved `LayrzFileInputStyleSpec`'s
+  /// `borderWidth` so the image is clipped strictly inside the border ring
+  /// rather than edge-to-edge with it.
+  final double borderWidth;
+
   /// Creates a new [LayrzImageInputPreview] for [source].
+  ///
+  /// [borderRadius] defaults to a 6-pixel radius on all corners, matching
+  /// [LayrzRadiusTokens.br1]'s value -- this widget cannot reach `context`
+  /// (and therefore the live token instance) before [build], so the default
+  /// is the token's known constant value rather than a call to `tokens.radius.br1`.
   const LayrzImageInputPreview({
     super.key,
     required this.source,
     this.size = 96,
+    this.borderRadius = const BorderRadius.all(Radius.circular(6)),
+    this.borderWidth = 0,
   });
 
   @override
@@ -44,14 +72,27 @@ class LayrzImageInputPreview extends StatelessWidget {
     final tokens = context.tokens;
     final l10n = context.l10n;
 
-    return ClipRRect(
-      borderRadius: tokens.radius.br1,
-      child: LayrzImage(
-        source: source,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        fallback: _LoadErrorFallback(size: size, tokens: tokens, message: l10n.imageInputLoadError),
+    final innerRadius = tokens.radius.innerRadius(
+      outerRadius: borderRadius.topLeft.x,
+      spacer: borderWidth,
+    );
+
+    return Padding(
+      padding: EdgeInsets.all(borderWidth),
+      child: ClipRRect(
+        borderRadius: innerRadius,
+        child: LayrzImage(
+          source: source,
+          width: size - (borderWidth * 2),
+          height: size - (borderWidth * 2),
+          fit: BoxFit.cover,
+          fallback: _LoadErrorFallback(
+            size: size - (borderWidth * 2),
+            tokens: tokens,
+            borderRadius: innerRadius,
+            message: l10n.imageInputLoadError,
+          ),
+        ),
       ),
     );
   }
@@ -70,6 +111,12 @@ class _LoadErrorFallback extends StatelessWidget {
   /// Design tokens, threaded from the parent build.
   final LayrzTokens tokens;
 
+  /// The border radius to clip this fallback's fill to, matching the same
+  /// inset radius the healthy-preview [ClipRRect] in [LayrzImageInputPreview]
+  /// uses -- so the fallback's rounded corners never diverge from the
+  /// tile's border curve either, the same bug this whole fix addresses.
+  final BorderRadius borderRadius;
+
   /// The localized "couldn't load image" message to display.
   final String message;
 
@@ -77,6 +124,7 @@ class _LoadErrorFallback extends StatelessWidget {
   const _LoadErrorFallback({
     required this.size,
     required this.tokens,
+    required this.borderRadius,
     required this.message,
   });
 
@@ -88,7 +136,7 @@ class _LoadErrorFallback extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: tokens.colors.sf2,
-        borderRadius: tokens.radius.br1,
+        borderRadius: borderRadius,
       ),
       padding: EdgeInsets.all(tokens.spacing.sp2),
       child: Column(

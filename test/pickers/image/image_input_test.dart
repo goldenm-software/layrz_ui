@@ -147,6 +147,33 @@ void main() {
       expect(preview.source, 'https://example.com/photo.png');
     });
 
+    testWidgets(
+      'the preview receives the SAME border radius and border width the tile itself paints with '
+      '(regression: a mismatch here is what made the border look broken)',
+      (tester) async {
+        await pumpWide(tester, const LayrzImageInput(value: 'https://example.com/photo.png'));
+
+        final preview = tester.widget<LayrzImageInputPreview>(find.byType(LayrzImageInputPreview));
+        final tokens = LayrzThemeData.light().tokens;
+
+        expect(
+          preview.borderRadius,
+          tokens.radius.br3,
+          reason:
+              'the tile\'s outer ClipRRect/border decoration use tokens.radius.br3 -- the preview must clip to '
+              'that exact same radius, never an independent hardcoded value',
+        );
+        expect(
+          preview.borderWidth,
+          tokens.border.stroke2,
+          reason:
+              'a populated, error-free, non-hover/drag tile resolves LayrzFileInputStyleSpec.borderWidth to '
+              'tokens.border.stroke2 -- the preview must be inset by that exact width so its fill never paints '
+              'over the border stroke',
+        );
+      },
+    );
+
     testWidgets('updating value externally (still untouched by the user) still does not call onChanged', (
       tester,
     ) async {

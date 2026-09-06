@@ -458,12 +458,18 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
         curve: tokens.motion.easing,
         width: widget.size,
         height: widget.size,
+        // Belt-and-suspenders alongside the outer `ClipRRect`: without an
+        // explicit `clipBehavior`, `Container`/`AnimatedContainer` does NOT
+        // clip its child by default, so the populated preview's `Positioned.fill`
+        // could still paint past the decoration's rounded corners during the
+        // size-change animation between empty and populated states.
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: spec.backgroundColor,
           borderRadius: tokens.radius.br3,
           border: Border.all(color: spec.borderColor, width: spec.borderWidth),
         ),
-        child: isEmpty ? _buildEmptyContent(tokens, spec) : _buildPopulatedContent(tokens, l10n),
+        child: isEmpty ? _buildEmptyContent(tokens, spec) : _buildPopulatedContent(tokens, l10n, spec),
       ),
     );
 
@@ -528,7 +534,14 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
   /// bottom-right corner -- a visual "this is editable" affordance only; it
   /// carries no semantics or gesture of its own, since the whole tile is
   /// already the tap target that opens the picker.
-  Widget _buildPopulatedContent(LayrzTokens tokens, LayrzUiL10n l10n) {
+  ///
+  /// [spec] is threaded through so the preview's own clip radius and inset
+  /// can match the tile's outer border **exactly** -- [tokens.radius.br3] and
+  /// [spec.borderWidth], the same values the tile's own `ClipRRect`/`Border`
+  /// use in [_buildTile]. Passing anything else here is what previously
+  /// produced the "broken border" bug: the preview clipped to a different,
+  /// hardcoded radius than the tile's border curve.
+  Widget _buildPopulatedContent(LayrzTokens tokens, LayrzUiL10n l10n, LayrzFileInputStyleSpec spec) {
     return Stack(
       children: [
         // Excluded from semantics: the enclosing tile's own `Semantics` node
@@ -538,7 +551,12 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
         // announced role.
         Positioned.fill(
           child: ExcludeSemantics(
-            child: LayrzImageInputPreview(source: _displayedValue!, size: widget.size),
+            child: LayrzImageInputPreview(
+              source: _displayedValue!,
+              size: widget.size,
+              borderRadius: tokens.radius.br3,
+              borderWidth: spec.borderWidth,
+            ),
           ),
         ),
         Positioned(
