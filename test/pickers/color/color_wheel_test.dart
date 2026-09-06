@@ -19,7 +19,14 @@ void main() {
       );
 
       expect(find.byType(LayrzColorWheel), findsOneWidget);
-      expect(find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelDiscPainter),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter),
+        findsOneWidget,
+      );
     });
 
     guardedTestWidgets('honours a caller-supplied size', (tester) async {
@@ -51,7 +58,7 @@ void main() {
       expect(find.byType(LayrzColorWheel), findsOneWidget);
     });
 
-    guardedTestWidgets('the painter reflects the current color HSV components', (tester) async {
+    guardedTestWidgets('the marker painter reflects the current color hue/saturation/marker color', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -64,14 +71,83 @@ void main() {
       );
 
       final customPaint = tester.widget<CustomPaint>(
-        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter),
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter),
       );
-      final painter = customPaint.painter as LayrzColorWheelPainter;
+      final painter = customPaint.painter as LayrzColorWheelMarkerPainter;
 
       expect(painter.hue, closeTo(120.0, 0.5));
       expect(painter.saturation, closeTo(0.5, 0.01));
-      expect(painter.value, closeTo(0.75, 0.01));
       expect(painter.markerColor, color);
+    });
+
+    guardedTestWidgets('the disc painter reflects the current value/brightness component', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final color = HSVColor.fromAHSV(1.0, 120.0, 0.5, 0.75).toColor();
+
+      await pumpThemed(
+        tester,
+        LayrzColorWheel(value: color, onChanged: (_) {}),
+      );
+
+      final customPaint = tester.widget<CustomPaint>(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelDiscPainter),
+      );
+      final painter = customPaint.painter as LayrzColorWheelDiscPainter;
+
+      expect(painter.value, closeTo(0.75, 0.01));
+    });
+
+    guardedTestWidgets('the disc layer is wrapped in its own RepaintBoundary, isolated from the marker', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzColorWheel(value: const Color(0xFF0000FF), onChanged: (_) {}),
+      );
+
+      final discPaint = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelDiscPainter);
+      final boundaryAncestor = find.ancestor(of: discPaint, matching: find.byType(RepaintBoundary));
+
+      expect(boundaryAncestor, findsWidgets);
+    });
+
+    guardedTestWidgets('dragging the marker does not repaint the disc layer (perf fix)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const wheelSize = 220.0;
+
+      await pumpThemed(
+        tester,
+        LayrzColorWheel(value: const Color(0xFF0000FF), onChanged: (_) {}, size: wheelSize),
+      );
+
+      CustomPaint discPaintWidget() => tester.widget<CustomPaint>(
+        find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelDiscPainter),
+      );
+      final discPainterBefore = discPaintWidget().painter as LayrzColorWheelDiscPainter;
+
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
+      final topLeft = tester.getTopLeft(wheelFinder);
+
+      await tester.tapAt(topLeft + const Offset(wheelSize / 2 + 20, wheelSize / 2));
+      await tester.pump();
+
+      final discPainterAfter = discPaintWidget().painter as LayrzColorWheelDiscPainter;
+
+      // shouldRepaint compares old vs new delegate -- a drag that only moved
+      // the marker must produce a disc painter whose own shouldRepaint
+      // returns false against the pre-drag one, proving the disc's inputs
+      // (only `value`) were untouched by the marker-only change.
+      expect(discPainterAfter.shouldRepaint(discPainterBefore), isFalse);
     });
   });
 
@@ -93,7 +169,7 @@ void main() {
         ),
       );
 
-      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter);
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
       final topLeft = tester.getTopLeft(wheelFinder);
       final center = topLeft + const Offset(wheelSize / 2, wheelSize / 2);
 
@@ -123,7 +199,7 @@ void main() {
         ),
       );
 
-      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter);
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
       final topLeft = tester.getTopLeft(wheelFinder);
       // Just inside the outer edge, along the positive x-axis from center --
       // hue 0 per the painter's own angle convention (color_wheel_painter.dart).
@@ -155,7 +231,7 @@ void main() {
         ),
       );
 
-      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter);
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
       final topLeft = tester.getTopLeft(wheelFinder);
       // Straight down from center -- positive y in Flutter's coordinate
       // space, hue 90 per atan2(dy, dx) with dy > 0, dx == 0.
@@ -188,7 +264,7 @@ void main() {
         ),
       );
 
-      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter);
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
       final topLeft = tester.getTopLeft(wheelFinder);
 
       // Drag starting inside the disc (required so the gesture arena
@@ -226,7 +302,7 @@ void main() {
         ),
       );
 
-      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelPainter);
+      final wheelFinder = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is LayrzColorWheelMarkerPainter);
       final topLeft = tester.getTopLeft(wheelFinder);
       final center = topLeft + const Offset(wheelSize / 2, wheelSize / 2);
 

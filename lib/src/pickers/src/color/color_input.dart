@@ -253,7 +253,7 @@ class _LayrzColorInputState extends State<LayrzColorInput> {
         DecoratedBox(
           decoration: BoxDecoration(
             color: widget.value,
-            shape: BoxShape.circle,
+            borderRadius: tokens.radius.br1,
             border: Border.all(color: tokens.colors.divider),
           ),
           child: SizedBox(width: tokens.spacing.sp4, height: tokens.spacing.sp4),

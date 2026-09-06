@@ -212,6 +212,13 @@ void main() {
       }
     });
 
+    // The Paste button is a LayrzButton (Decision, user-testing follow-up):
+    // its own semantics contract wraps `excludeSemantics: true` around an
+    // inner GestureDetector, so -- exactly like every other LayrzButton in
+    // this suite (test/buttons/button_a11y_test.dart) -- it never exposes a
+    // bare `hasTapAction` flag on its outer Semantics node; label presence
+    // plus an actual tap are verified instead, matching that suite's own
+    // pattern.
     guardedTestWidgets('the Paste button exposes a visible, labeled button semantics node', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -229,7 +236,7 @@ void main() {
         );
         expect(
           tester.getSemantics(pasteFinder.first),
-          matchesSemantics(label: 'Paste', isButton: true, hasTapAction: true),
+          matchesSemantics(label: 'Paste', isButton: true, hasEnabledState: true, isEnabled: true),
         );
       } finally {
         handle.dispose();

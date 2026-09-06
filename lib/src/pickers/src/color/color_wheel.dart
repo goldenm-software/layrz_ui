@@ -13,10 +13,14 @@ import 'color_wheel_painter.dart';
 /// **Decision D-wheel**: the verbatim requirement (DESIGN-54) asks for "a
 /// full HSV color wheel disc" — this widget is that disc, not the
 /// alternative HSV-square-plus-hue-slider shape some color pickers use.
-/// [LayrzColorWheelPainter] (`color_wheel_painter.dart`) owns the actual
-/// paint routine; this widget owns the public contract, the value/
-/// brightness slider, and all gesture hit-testing (hue = angle from
-/// center, saturation = normalized radius).
+/// `color_wheel_painter.dart` owns the actual paint routines, split across
+/// two [CustomPainter]s stacked here — [LayrzColorWheelDiscPainter] (the
+/// static hue/saturation disc, wrapped in its own `RepaintBoundary`) and
+/// [LayrzColorWheelMarkerPainter] (the small selection marker, repainted
+/// on every drag frame) — purely for drag performance; see
+/// [LayrzColorWheelDiscPainter]'s doc for the full rationale. This widget
+/// owns the public contract, the value/brightness slider, and all gesture
+/// hit-testing (hue = angle from center, saturation = normalized radius).
 ///
 /// **Uncontrolled from the outside beyond [value]/[onChanged].** This
 /// widget keeps no draft state of its own distinct from what it reports —
@@ -120,13 +124,27 @@ class _LayrzColorWheelState extends State<LayrzColorWheel> {
             child: SizedBox(
               width: widget.size,
               height: widget.size,
-              child: CustomPaint(
-                painter: LayrzColorWheelPainter(
-                  hue: hsv.hue,
-                  saturation: hsv.saturation,
-                  value: hsv.value,
-                  markerColor: widget.value,
-                ),
+              // Two stacked layers, not one CustomPaint (perf fix -- see
+              // LayrzColorWheelDiscPainter's doc): the disc only depends on
+              // `value` and is wrapped in its own RepaintBoundary so it is
+              // isolated from the marker layer, which alone repaints on
+              // every drag frame as hue/saturation change.
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  RepaintBoundary(
+                    child: CustomPaint(
+                      painter: LayrzColorWheelDiscPainter(value: hsv.value),
+                    ),
+                  ),
+                  CustomPaint(
+                    painter: LayrzColorWheelMarkerPainter(
+                      hue: hsv.hue,
+                      saturation: hsv.saturation,
+                      markerColor: widget.value,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -1,8 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/pickers/src/color/color_surface.dart';
 
+import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
@@ -98,7 +100,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Paste'), findsOneWidget);
+      expect(findButtonLabel('Paste'), findsOneWidget);
     });
 
     guardedTestWidgets('renders without overflow at a narrow (compact) viewport', (tester) async {
@@ -116,6 +118,96 @@ void main() {
       );
 
       expect(find.byType(LayrzColorSurface), findsOneWidget);
+    });
+
+    // User-testing feedback: the Palette tab's swatches must be rounded
+    // squares, not circles -- BoxShape.circle would read as a different
+    // shape family from the closed-field preview swatch (also fixed to a
+    // rounded square, see color_input_test.dart).
+    guardedTestWidgets('palette swatches are rounded squares, not circles', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const red = Color(0xFFFF0000);
+
+      await pumpThemed(
+        tester,
+        LayrzColorSurface(
+          value: const Color(0xFF0000FF),
+          palette: {red},
+          onColorSelected: (_) {},
+        ),
+      );
+
+      final swatch = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).color == red,
+        ),
+      );
+      final decoration = swatch.decoration as BoxDecoration;
+
+      expect(decoration.shape, BoxShape.rectangle, reason: 'a rounded square is BoxShape.rectangle + borderRadius');
+      expect(decoration.borderRadius, isNotNull);
+    });
+
+    // The hex-readout preview swatch is the same "current color preview"
+    // concept as the closed-field swatch -- it must match its rounded-square
+    // shape rather than staying circular.
+    guardedTestWidgets('the hex readout preview swatch is a rounded square, not a circle', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const seeded = Color(0xFF0000FF);
+
+      await pumpThemed(
+        tester,
+        LayrzColorSurface(
+          value: seeded,
+          palette: const {},
+          onColorSelected: (_) {},
+        ),
+      );
+
+      // Disambiguate from the wheel marker (also painted with `seeded`) by
+      // scoping to the Row that also contains the hex label text.
+      final hexRow = find.ancestor(of: find.text('#0000FF'), matching: find.byType(Row)).first;
+      final swatch = tester.widget<DecoratedBox>(
+        find.descendant(
+          of: hexRow,
+          matching: find.byWidgetPredicate(
+            (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).color == seeded,
+          ),
+        ),
+      );
+      final decoration = swatch.decoration as BoxDecoration;
+
+      expect(decoration.shape, BoxShape.rectangle);
+      expect(decoration.borderRadius, isNotNull);
+    });
+
+    // The Paste button (Decision, user-testing follow-up) must be a real
+    // LayrzButton, not a hand-rolled LayrzTappable-based button.
+    guardedTestWidgets('the Paste button is built with LayrzButton', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzColorSurface(
+          value: const Color(0xFF0000FF),
+          palette: const {},
+          onColorSelected: (_) {},
+        ),
+      );
+
+      final pasteButtonAncestor = find.ancestor(
+        of: findButtonLabel('Paste'),
+        matching: find.byType(LayrzButton),
+      );
+      expect(pasteButtonAncestor, findsOneWidget);
     });
   });
 
@@ -352,7 +444,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Paste'));
+      await tester.tap(findButtonLabel('Paste'));
       await tester.pumpAndSettle();
 
       expect(find.text('#00FF00'), findsOneWidget);
@@ -418,7 +510,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Paste'));
+      await tester.tap(findButtonLabel('Paste'));
       await tester.pumpAndSettle();
 
       expect(find.text('#0000FF'), findsOneWidget);
@@ -461,7 +553,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Paste'));
+      await tester.tap(findButtonLabel('Paste'));
       await tester.pumpAndSettle();
 
       expect(find.text('#0000FF'), findsOneWidget);
@@ -500,7 +592,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('Paste'));
+      await tester.tap(findButtonLabel('Paste'));
       await tester.pumpAndSettle();
 
       expect(find.text('#AABBCC'), findsOneWidget);

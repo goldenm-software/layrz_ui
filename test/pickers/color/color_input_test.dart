@@ -64,6 +64,28 @@ void main() {
       expect(find.byIcon(MdiIcons.paletteOutline), findsOneWidget);
     });
 
+    // User-testing feedback: the closed-field preview swatch must be a
+    // rounded square, not a circle.
+    guardedTestWidgets('the closed-field preview swatch is a rounded square, not a circle', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const seeded = Color(0xFF0000FF);
+
+      await pumpThemedApp(tester, LayrzColorInput(value: seeded, labelText: 'Color'));
+
+      final swatch = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).color == seeded,
+        ),
+      );
+      final decoration = swatch.decoration as BoxDecoration;
+
+      expect(decoration.shape, BoxShape.rectangle, reason: 'a rounded square is BoxShape.rectangle + borderRadius');
+      expect(decoration.borderRadius, isNotNull);
+    });
+
     guardedTestWidgets('renders a Cancel/Save footer inside the drawer', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;

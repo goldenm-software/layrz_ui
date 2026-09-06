@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/tappable/tappable.dart';
 
 import '../shared/glyph_grid.dart';
 import '../shared/picker_tab_switcher.dart';
@@ -196,7 +199,7 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
         return DecoratedBox(
           decoration: BoxDecoration(
             color: color,
-            shape: BoxShape.circle,
+            borderRadius: tokens.radius.br1,
             border: Border.all(
               color: isSelected ? tokens.colors.fg1 : tokens.colors.divider,
               width: isSelected ? 3.0 : 1.0,
@@ -222,7 +225,7 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
             DecoratedBox(
               decoration: BoxDecoration(
                 color: _draft,
-                shape: BoxShape.circle,
+                borderRadius: tokens.radius.br1,
                 border: Border.all(color: tokens.colors.divider),
               ),
               child: SizedBox(width: tokens.spacing.sp5, height: tokens.spacing.sp5),
@@ -239,7 +242,12 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
               ),
             ),
             SizedBox(width: tokens.spacing.sp2),
-            _PasteButton(onTap: _handlePaste, label: l10n.colorPickerPasteButton),
+            LayrzButton(
+              labelText: l10n.colorPickerPasteButton,
+              icon: MdiIcons.contentPaste,
+              style: LayrzButtonStyle.outlined,
+              onTap: () => unawaited(_handlePaste()),
+            ),
           ],
         ),
       ],
@@ -275,50 +283,6 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
           SizedBox(height: tokens.spacing.sp3),
           _buildHexReadout(context),
         ],
-      ),
-    );
-  }
-}
-
-/// The visible, labeled paste-from-clipboard button beside the hex readout.
-///
-/// **Deliberately not an icon-only affordance** (Decision D-paste): a bare
-/// icon button reading the clipboard is exactly the low-discoverability
-/// shape liliana's usability finding warned against — this button always
-/// carries its own text [label], not just an icon, so its purpose is
-/// legible without a tooltip.
-class _PasteButton extends StatelessWidget {
-  /// Called when the button is tapped.
-  final VoidCallback onTap;
-
-  /// The visible label text, e.g. "Paste".
-  final String label;
-
-  /// Creates a new [_PasteButton].
-  const _PasteButton({required this.onTap, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-
-    return Semantics(
-      button: true,
-      label: label,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: LayrzTappable(
-        onTap: onTap,
-        borderRadius: tokens.radius.br2,
-        color: tokens.colors.sf2,
-        hoverColor: tokens.colors.sf3,
-        pressedColor: tokens.colors.sf4,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp2),
-          child: Text(
-            label,
-            style: tokens.typography.label.copyWith(color: tokens.colors.fg1, fontWeight: FontWeight.w600),
-          ),
-        ),
       ),
     );
   }

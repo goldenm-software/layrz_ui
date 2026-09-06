@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/pickers/src/shared/picker_tab_switcher.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
@@ -120,6 +122,88 @@ void main() {
       final sizeAfter = tester.getSize(find.byType(LayrzPickerTabSwitcher));
 
       expect(sizeAfter, sizeBefore);
+    });
+  });
+
+  group('LayrzPickerTabSwitcher — user-testing tab restyle (primary/background, never transparent)', () {
+    guardedTestWidgets('the selected tab paints the full theme primary color', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+
+      await pumpThemed(
+        tester,
+        LayrzPickerTabSwitcher(tabs: const ['Palette', 'Wheel'], selectedIndex: 0, onTabSelected: (_) {}),
+      );
+
+      final tappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text('Palette'), matching: find.byType(LayrzTappable)).first,
+      );
+
+      expect(tappable.color, tokens.colors.primary.shade500);
+    });
+
+    guardedTestWidgets('an unselected tab paints the background surface token, never transparent', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+
+      await pumpThemed(
+        tester,
+        LayrzPickerTabSwitcher(tabs: const ['Palette', 'Wheel'], selectedIndex: 0, onTabSelected: (_) {}),
+      );
+
+      final tappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text('Wheel'), matching: find.byType(LayrzTappable)).first,
+      );
+
+      expect(tappable.color, tokens.colors.sf1);
+      expect(tappable.color!.a, 1.0, reason: 'an unselected tab must paint a solid color, never transparent');
+    });
+
+    guardedTestWidgets('switching selection swaps which tab paints primary vs background', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+
+      await pumpThemed(
+        tester,
+        LayrzPickerTabSwitcher(tabs: const ['Palette', 'Wheel'], selectedIndex: 1, onTabSelected: (_) {}),
+      );
+
+      final paletteTappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text('Palette'), matching: find.byType(LayrzTappable)).first,
+      );
+      final wheelTappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text('Wheel'), matching: find.byType(LayrzTappable)).first,
+      );
+
+      expect(paletteTappable.color, tokens.colors.sf1);
+      expect(wheelTappable.color, tokens.colors.primary.shade500);
+    });
+
+    guardedTestWidgets('the selected tab has rounded corners', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzPickerTabSwitcher(tabs: const ['Palette', 'Wheel'], selectedIndex: 0, onTabSelected: (_) {}),
+      );
+
+      final tappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text('Palette'), matching: find.byType(LayrzTappable)).first,
+      );
+
+      expect(tappable.borderRadius, isNotNull);
+      expect(tappable.borderRadius, isNot(BorderRadius.zero));
     });
   });
 
