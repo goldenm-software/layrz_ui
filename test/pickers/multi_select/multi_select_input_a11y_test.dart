@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
-import 'package:layrz_ui/src/pickers/src/multi_select/multi_select_input.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed_app.dart';

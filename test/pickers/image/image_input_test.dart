@@ -5,7 +5,6 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_ui/src/pickers/src/image/image_input.dart';
 import 'package:layrz_ui/src/pickers/src/image/image_input_preview.dart';
 
 import '../../helpers/pump_themed.dart';

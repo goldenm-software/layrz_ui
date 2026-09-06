@@ -4,7 +4,6 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
-import 'package:layrz_ui/src/pickers/src/multi_select/multi_select_input.dart';
 import 'package:layrz_ui/src/pickers/src/multi_select/multi_select_surface.dart';
 
 import '../../helpers/find_button_label.dart';
