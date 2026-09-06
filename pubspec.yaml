@@ -33,6 +33,7 @@ dependencies:
   pointer_interceptor: ^0.10.1
   file_picker: ^10.3.10
   desktop_drop: ^0.8.4
+  emojis: ^3.2.0
 
 dev_dependencies:
   flutter_test: { sdk: flutter }
