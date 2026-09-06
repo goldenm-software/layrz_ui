@@ -26,7 +26,6 @@ import 'src/sections/images_section.dart';
 import 'src/sections/inputs_section.dart';
 import 'src/sections/menus_section.dart';
 import 'src/sections/motion_section.dart';
-import 'src/sections/pickers_demo_section.dart';
 import 'src/sections/progress_section.dart';
 import 'src/sections/radius_section.dart';
 import 'src/sections/refresh_section.dart';
@@ -251,10 +250,6 @@ final _router = GoRouter(
         GoRoute(
           path: '/file-input',
           pageBuilder: (context, state) => NoTransitionPage(child: FileInputSection()),
-        ),
-        GoRoute(
-          path: '/pickers',
-          pageBuilder: (context, state) => NoTransitionPage(child: PickersDemoSection()),
         ),
       ],
     ),

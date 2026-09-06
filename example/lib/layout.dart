@@ -226,13 +226,6 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/inputs'),
       ),
       LayrzNavigatorPage(
-        id: '/pickers',
-        labelText: 'Pickers',
-        icon: MdiIcons.paletteOutline,
-        isSelected: currentRoute == '/pickers',
-        onTap: () => _navigateTo(context, '/pickers'),
-      ),
-      LayrzNavigatorPage(
         id: '/grid',
         labelText: 'Grid',
         icon: MdiIcons.arrowRightBox,

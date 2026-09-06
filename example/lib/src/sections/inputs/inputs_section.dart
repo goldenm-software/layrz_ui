@@ -23,6 +23,10 @@ import 'demos/datetime_input_demo.dart';
 import 'demos/datetime_range_input_demo.dart';
 import 'demos/month_input_demo.dart';
 import 'demos/month_range_input_demo.dart';
+import 'demos/color_input_demo.dart';
+import 'demos/multi_select_input_demo.dart';
+import 'demos/emoji_input_demo.dart';
+import 'demos/image_input_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
 ///
@@ -195,6 +199,36 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Date & Time',
       details: MonthRangeInputDemo(),
       icon: MdiIcons.calendarMultiselectOutline,
+    ),
+
+    // Pickers category
+    InputDemo(
+      id: 'color-input',
+      name: 'Color Input',
+      category: 'Pickers',
+      details: ColorInputDemo(),
+      icon: MdiIcons.paletteOutline,
+    ),
+    InputDemo(
+      id: 'multi-select-input',
+      name: 'Multi-Select Input',
+      category: 'Pickers',
+      details: MultiSelectInputDemo(),
+      icon: MdiIcons.checkboxMultipleMarkedOutline,
+    ),
+    InputDemo(
+      id: 'emoji-input',
+      name: 'Emoji Input',
+      category: 'Pickers',
+      details: EmojiInputDemo(),
+      icon: MdiIcons.emoticonOutline,
+    ),
+    InputDemo(
+      id: 'image-input',
+      name: 'Image Input',
+      category: 'Pickers',
+      details: ImageInputDemo(),
+      icon: MdiIcons.imageOutline,
     ),
   ];
 
