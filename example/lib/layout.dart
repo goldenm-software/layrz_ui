@@ -316,6 +316,13 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/file-input',
         onTap: () => _navigateTo(context, '/file-input'),
       ),
+      LayrzNavigatorPage(
+        id: '/pickers',
+        labelText: 'Pickers',
+        icon: MdiIcons.paletteOutline,
+        isSelected: currentRoute == '/pickers',
+        onTap: () => _navigateTo(context, '/pickers'),
+      ),
     ];
   }
 
