@@ -8,6 +8,21 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
+/// Pumps [surface] inside a fixed-height [SizedBox], matching how
+/// [LayrzEmojiSurface] is actually hosted in production: both
+/// `LayrzBottomSheet.show` and `LayrzEndDrawer.show` (see `emoji_input.dart`'s
+/// open methods) place the surface's builder content inside their own
+/// bounded `Expanded` region — never in `pumpThemed`'s unbounded `Center`
+/// alone. The surface's own grid section now relies on that bound (it
+/// wraps `LayrzGlyphGrid` in `Expanded` with `shrinkWrap: false`, so it can
+/// fill and lazily scroll through the full emoji list -- see
+/// `emoji_surface.dart`'s class doc), so every standalone test needs this
+/// same bounded ancestor to reflect a real host rather than asserting
+/// against a layout no real caller produces.
+Future<void> _pumpBoundedSurface(WidgetTester tester, LayrzEmojiSurface surface) {
+  return pumpThemed(tester, SizedBox(height: 600.0, child: surface));
+}
+
 /// Scrolls the group-filter chip row (a horizontal `ListView.separated`)
 /// left by a fixed, generous offset so the trailing chips ("Flags",
 /// "Component") are laid out and reachable by [find.text].
@@ -32,7 +47,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       expect(find.byType(LayrzEmojiSurface), findsOneWidget);
       expect(find.text('All emoji'), findsOneWidget);
@@ -44,7 +59,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       expect(find.byType(LayrzEmojiSurface), findsOneWidget);
     });
@@ -54,7 +69,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       final firstChar = Emoji.all().first.char;
       expect(find.text(firstChar), findsWidgets);
@@ -67,7 +82,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       // An emoji that exists only in the Flags group must be absent while
       // "All emoji" (or any other group) is selected, and present once the
@@ -93,7 +108,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       // "All emoji" is selected by default -- tapping it again must not
       // throw and must leave the set unchanged (still shows the first
@@ -112,7 +127,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       final target = Emoji.byShortName('grinning')!;
       // Something that does NOT match "grinning" by shortName or keyword, to
@@ -136,7 +151,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       final target = Emoji.byShortName('grinning')!;
 
@@ -151,7 +166,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       // Pick an emoji whose shortName does NOT contain one of its own
       // keywords, then search by that keyword -- proving the keyword branch
@@ -171,7 +186,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       await tester.enterText(find.byType(EditableText).first, 'zzzznonexistentquery');
       await tester.pump();
@@ -184,7 +199,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       await _scrollGroupFilterRow(tester);
       await tester.tap(find.text('Flags'));
@@ -218,7 +233,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       // "All emoji" is selected by default.
       final chipFinder = find.ancestor(
@@ -239,7 +254,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
       // "Smileys & Emotion" is not selected by default (only "All emoji" is).
       final chipFinder = find.ancestor(
@@ -264,7 +279,7 @@ void main() {
       addTearDown(tester.view.reset);
 
       String? selected;
-      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (char) => selected = char));
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (char) => selected = char));
 
       final target = Emoji.byShortName('grinning')!;
       await tester.enterText(find.byType(EditableText).first, 'grinning');

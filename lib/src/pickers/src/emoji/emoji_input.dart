@@ -158,12 +158,23 @@ class _LayrzEmojiInputState extends State<LayrzEmojiInput> {
   }
 
   /// Opens [LayrzEmojiSurface] in [LayrzBottomSheet] on a compact viewport.
+  ///
+  /// **`scrollable: false`.** [LayrzEmojiSurface] now scrolls its own emoji
+  /// grid internally (a lazy, non-shrink-wrapped [LayrzGlyphGrid] filling an
+  /// `Expanded` section of the surface's `Column` — see that class's own
+  /// doc), so it must not additionally be wrapped in
+  /// [LayrzBottomSheet.show]'s default `SingleChildScrollView`: that would
+  /// hand the surface's `Column` unbounded height, which its `Expanded`
+  /// grid section cannot resolve against (a `RenderFlex` "unbounded height"
+  /// layout error). This mirrors [LayrzBottomSheet.show]'s own documented
+  /// guidance for a caller whose `builder` supplies its own scrollable.
   Future<void> _openMobileSurface() async {
     if (widget.disabled) return;
 
     await LayrzBottomSheet.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
+      scrollable: false,
       builder: (context) => LayrzEmojiSurface(
         onEmojiSelected: (char) {
           _handleSelected(char);
@@ -177,6 +188,13 @@ class _LayrzEmojiInputState extends State<LayrzEmojiInput> {
   }
 
   /// Opens [LayrzEmojiSurface] in [LayrzEndDrawer] on a wide viewport.
+  ///
+  /// **`scrollable: false`**, for the same reason as
+  /// [_openMobileSurface]'s own: [LayrzEmojiSurface] scrolls its own emoji
+  /// grid internally via an `Expanded`, non-shrink-wrapped [LayrzGlyphGrid],
+  /// so it must not additionally be wrapped in [LayrzEndDrawer.show]'s
+  /// default `SingleChildScrollView` — that would hand the surface's
+  /// `Column` unbounded height.
   Future<void> _openDesktopDrawer() async {
     if (widget.disabled) return;
 
@@ -188,6 +206,7 @@ class _LayrzEmojiInputState extends State<LayrzEmojiInput> {
       // `canDismiss` infers `true` from `LayrzEndDrawer.show`'s own default —
       // barrier tap, Escape, and the back gesture all close this drawer with
       // no value, exactly like backing out of the pick.
+      scrollable: false,
       builder: (context) => LayrzEmojiSurface(
         onEmojiSelected: (char) {
           _handleSelected(char);

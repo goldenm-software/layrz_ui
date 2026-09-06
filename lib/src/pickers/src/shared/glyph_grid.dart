@@ -32,17 +32,23 @@ typedef LayrzGlyphGridSemanticLabelBuilder<T> = String Function(T item, int inde
 /// supplies 100% of each cell's visible content and any selected/disabled
 /// styling the caller wants.
 ///
-/// **Built for large item counts.** [items] backing an emoji or icon picker
-/// can run into the thousands, so this widget renders through
-/// [GridView.builder] (viewport-based, lazy) rather than eagerly building
-/// every cell up front — only cells within (and slightly beyond, per
-/// [GridView]'s own `cacheExtent`) the visible viewport are ever built or
-/// given a [FocusNode]. [FocusNode]s are allocated lazily per index (a
-/// `Map<int, FocusNode>`, mirroring `day_grid.dart`'s own `_focusNodeFor`
-/// pattern) and disposed together with the widget, not per-scroll — an
-/// index scrolled out of view keeps its node allocated (cheap: a bare
-/// [FocusNode] costs little) so focus is not lost merely by scrolling past
-/// the focused cell and back.
+/// **Built for large item counts — when [shrinkWrap] is `false`.** [items]
+/// backing an emoji or icon picker can run into the thousands, so this
+/// widget renders through [GridView.builder] rather than eagerly building
+/// every cell up front. With [shrinkWrap] `false` (a bounded parent, e.g.
+/// `Expanded`), that builder is genuinely viewport-based and lazy: only
+/// cells within (and slightly beyond, per [GridView]'s own `cacheExtent`)
+/// the visible viewport are ever built or given a [FocusNode]. **With the
+/// default [shrinkWrap] `true`**, [GridView.builder] must still lay out
+/// every child sequentially to compute its own shrink-wrapped content
+/// size, so that laziness does not hold — that mode is appropriate only
+/// for a short, boundedly-sized item list. See [shrinkWrap]'s own doc for
+/// which mode a given caller needs. [FocusNode]s are allocated lazily per
+/// index (a `Map<int, FocusNode>`, mirroring `day_grid.dart`'s own
+/// `_focusNodeFor` pattern) and disposed together with the widget, not
+/// per-scroll — an index scrolled out of view keeps its node allocated
+/// (cheap: a bare [FocusNode] costs little) so focus is not lost merely by
+/// scrolling past the focused cell and back.
 ///
 /// **Keyboard navigation** is delegated through [keyboardHandler] — see
 /// [LayrzGlyphGridKeyboardHandler] — exactly mirroring how
@@ -112,6 +118,38 @@ class LayrzGlyphGrid<T> extends StatefulWidget {
   /// [Semantics] node (avoiding doubled/merged semantics).
   final LayrzGlyphGridSemanticLabelBuilder<T>? semanticLabelBuilder;
 
+  /// Whether the underlying [GridView.builder] shrink-wraps to its own
+  /// content size along the scroll axis, rather than filling whatever
+  /// height its parent offers.
+  ///
+  /// Defaults to `true`, preserving this widget's original contract: the
+  /// grid sizes itself to content, so a caller must give it an explicit
+  /// bound (a fixed-height `SizedBox`, for instance) or host it somewhere
+  /// already bounded, and every cell is laid out eagerly to compute that
+  /// content size — acceptable for a short, known-bounded item list, but
+  /// expensive for a long one (thousands of cells).
+  ///
+  /// Set to `false` when this grid is hosted inside a genuinely bounded
+  /// parent (e.g. wrapped in `Expanded` or `Flexible` within a `Column`
+  /// that itself has a bounded height, such as a `LayrzBottomSheet` or
+  /// `LayrzEndDrawer` body) and the item list is large: the grid then
+  /// fills all of the parent's offered height and scrolls through it using
+  /// Flutter's default (lazy) viewport — only cells within, and slightly
+  /// beyond, the visible viewport are ever built, exactly like any other
+  /// `GridView.builder` used the normal way. This is the mode a
+  /// thousands-of-items list (the emoji picker's ~1900 entries, or the
+  /// icon picker's 7000+) needs: `shrinkWrap: true`'s eager, sequential
+  /// layout pass touches far more of the list than what's on screen, which
+  /// reads as both a truncated grid (content-sized instead of
+  /// parent-filling) and scroll lag (every layout pass walks far more
+  /// children than the visible rows).
+  ///
+  /// This widget never forces `NeverScrollableScrollPhysics` in either
+  /// mode — scrolling always uses [GridView.builder]'s own default
+  /// physics, so setting this to `false` does not additionally require any
+  /// physics override from the caller.
+  final bool shrinkWrap;
+
   /// Creates a new [LayrzGlyphGrid].
   const LayrzGlyphGrid({
     super.key,
@@ -124,6 +162,7 @@ class LayrzGlyphGrid<T> extends StatefulWidget {
     this.cellExtent = 40.0,
     this.cellSpacing = 4.0,
     this.semanticLabelBuilder,
+    this.shrinkWrap = true,
   }) : assert(columns >= 1, 'columns must be at least 1, got $columns.');
 
   @override
@@ -206,7 +245,7 @@ class _LayrzGlyphGridState<T> extends State<LayrzGlyphGrid<T>> {
     return FocusTraversalGroup(
       child: GridView.builder(
         controller: _scrollController,
-        shrinkWrap: true,
+        shrinkWrap: widget.shrinkWrap,
         padding: EdgeInsets.zero,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: widget.columns,

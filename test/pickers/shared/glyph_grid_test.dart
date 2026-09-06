@@ -99,6 +99,75 @@ void main() {
         expect(find.byKey(const ValueKey('cell-0')), findsOneWidget);
       },
     );
+
+    guardedTestWidgets(
+      'shrinkWrap: false fills the bounded parent height instead of content-sizing',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        // A small item count -- one row's worth -- so a shrink-wrapped grid
+        // (the default) would size itself to roughly one cell's height.
+        // With shrinkWrap: false the grid must instead fill the full 500
+        // logical pixels the parent SizedBox offers, proving the parent's
+        // bound (not the content) now determines the grid's height.
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 400,
+            height: 500,
+            child: LayrzGlyphGrid<int>(
+              items: List.generate(5, (i) => i),
+              columns: 5,
+              itemBuilder: _cellBuilder,
+              onItemActivated: (_) {},
+              shrinkWrap: false,
+            ),
+          ),
+        );
+
+        final gridSize = tester.getSize(find.byType(GridView));
+        expect(gridSize.height, 500.0);
+      },
+    );
+
+    guardedTestWidgets(
+      'shrinkWrap: false is still lazy: a very large item count does not build every cell',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 400,
+            height: 400,
+            child: LayrzGlyphGrid<int>(
+              items: List.generate(7000, (i) => i),
+              columns: 5,
+              itemBuilder: _cellBuilder,
+              onItemActivated: (_) {},
+              shrinkWrap: false,
+            ),
+          ),
+        );
+
+        // Same proxy-for-laziness as the shrinkWrap:true case above: the
+        // 7000th cell is nowhere near this small, bounded viewport. Finding
+        // it absent (with the grid still filling its bounded parent, and no
+        // overflow/exception) proves shrinkWrap: false keeps the lazy,
+        // viewport-based behavior GridView.builder gives by default -- it is
+        // not merely trading the height problem for a return of eager
+        // building.
+        expect(find.byKey(const ValueKey('cell-6999')), findsNothing);
+        expect(find.byKey(const ValueKey('cell-0')), findsOneWidget);
+
+        final gridSize = tester.getSize(find.byType(GridView));
+        expect(gridSize.height, 400.0);
+      },
+    );
   });
 
   group('LayrzGlyphGrid — activation', () {

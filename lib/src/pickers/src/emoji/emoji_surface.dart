@@ -132,12 +132,37 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
   /// because [EmojiGroup] values are already distinct and comparable.
   EmojiGroup? _selectedGroup;
 
+  /// The memoized result of [_computeFilteredEmoji], recomputed only when
+  /// [_selectedGroup] or the search text actually changes (see
+  /// [_recomputeFilteredEmoji]) rather than on every `build()`.
+  ///
+  /// Without this cache, [build] re-ran `Emoji.all()` (or
+  /// `Emoji.byGroup(...)`) plus a `.where().toList()` filter over
+  /// ~1900 entries on every rebuild — including every focus change on the
+  /// search field and every keystroke's `setState` — which is the second
+  /// half of the scroll-lag report: a fresh ~1900-item list was being
+  /// allocated on frames that never even touched the grid.
+  late List<Emoji> _filteredEmojiCache;
+
+  /// The search query the current [_filteredEmojiCache] was computed
+  /// against, so [_recomputeFilteredEmoji] can tell whether the text
+  /// actually changed (vs. a `setState` triggered by an unrelated field,
+  /// e.g. search-focus tracking) before redoing the filter work.
+  String _cachedQuery = '';
+
+  /// The group the current [_filteredEmojiCache] was computed against —
+  /// paired with [_cachedQuery], see that field's doc.
+  EmojiGroup? _cachedGroup;
+
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     _searchFocusNode = FocusNode();
     _searchFocusNode.addListener(_handleSearchFocusChanged);
+    _filteredEmojiCache = _computeFilteredEmoji();
+    _cachedQuery = _searchController.text;
+    _cachedGroup = _selectedGroup;
   }
 
   @override
@@ -174,13 +199,30 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
     return emoji.keywords.any((keyword) => keyword.toLowerCase().contains(lowerQuery));
   }
 
-  /// The emoji list for the currently selected group (or all emoji, when no
-  /// group is selected) filtered by the current search text.
-  List<Emoji> get _filteredEmoji {
+  /// Computes the emoji list for the currently selected group (or all
+  /// emoji, when no group is selected) filtered by the current search text.
+  ///
+  /// This is the actual filter work — called only from
+  /// [_recomputeFilteredEmoji] (and once from [initState]), never directly
+  /// from `build()`. Use [_filteredEmojiCache] to read the current result.
+  List<Emoji> _computeFilteredEmoji() {
     final base = _selectedGroup == null ? Emoji.all() : Emoji.byGroup(_selectedGroup!).toList();
     final query = _searchController.text;
     if (query.isEmpty) return base;
     return base.where((emoji) => _matchesQuery(emoji, query)).toList();
+  }
+
+  /// Refreshes [_filteredEmojiCache] only if [_selectedGroup] or the search
+  /// text has actually changed since it was last computed — called from
+  /// `build()` so a rebuild triggered by something unrelated (e.g. the
+  /// search field's own focus-state `setState`) reuses the existing list
+  /// instead of reallocating a ~1900-entry filter result.
+  void _recomputeFilteredEmoji() {
+    final query = _searchController.text;
+    if (query == _cachedQuery && _selectedGroup == _cachedGroup) return;
+    _filteredEmojiCache = _computeFilteredEmoji();
+    _cachedQuery = query;
+    _cachedGroup = _selectedGroup;
   }
 
   /// Applies a tapped group filter, re-running the search against the newly
@@ -295,7 +337,8 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final tokens = context.tokens;
-    final filteredEmoji = _filteredEmoji;
+    _recomputeFilteredEmoji();
+    final filteredEmoji = _filteredEmojiCache;
 
     // Whole-surface padding (user testing feedback: "add padding man" — the
     // surface read as cramped with its sections flush against the hosting
@@ -303,10 +346,17 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
     // `date_surface.dart`'s own outer-edge inset for the sibling pickers'
     // surfaces, one level up from the `sp2` inter-section gaps below so the
     // outer edge reads more generous than the internal rhythm.
+    //
+    // The outer `Column` is no longer `mainAxisSize: MainAxisSize.min` —
+    // this surface is always hosted inside a `LayrzBottomSheet`/
+    // `LayrzEndDrawer` that gives it a bounded height, and the grid section
+    // below needs `Expanded` to claim all of that height rather than the
+    // fixed 320.0 px box it used to render into (which is why the grid
+    // used to stop after ~7 rows with a large blank area beneath it — the
+    // box was hardcoded, not filling the surface).
     return Padding(
       padding: tokens.spacing.pd3,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildGroupFilterRow(context, l10n),
@@ -319,15 +369,24 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
               child: Text(l10n.emojiPickerEmpty, style: tokens.typography.label),
             )
           else
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
-              child: SizedBox(
-                height: 320.0,
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
                 child: LayrzGlyphGrid<Emoji>(
                   items: filteredEmoji,
                   columns: _kEmojiGridColumns,
                   cellExtent: _kEmojiCellExtent,
                   itemBuilder: _buildEmojiCell,
+                  // This surface is always hosted inside a bounded
+                  // `LayrzBottomSheet`/`LayrzEndDrawer` body (the `Expanded`
+                  // above claims that bound), and the emoji list can run
+                  // into the thousands — so this grid needs the lazy,
+                  // parent-filling viewport mode rather than the shared
+                  // widget's shrink-to-content default. See
+                  // `LayrzGlyphGrid.shrinkWrap`'s doc for why the default
+                  // `true` would both truncate this grid's height and make
+                  // it lay out every cell eagerly on scroll.
+                  shrinkWrap: false,
                   onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
                   keyboardHandler: buildGlyphGridKeyboardHandler(
                     columns: _kEmojiGridColumns,
