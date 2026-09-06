@@ -404,10 +404,17 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
   }
 }
 
-/// A single chip within the emoji group-filter row — a rounded, tappable
-/// label that visually distinguishes the currently selected group from every
-/// other entry via fill color alone (per D15: no geometry change between
-/// selected and unselected).
+/// A single chip within the emoji group-filter row — a rounded-rectangle,
+/// tappable label that visually distinguishes the currently selected group
+/// from every other entry via fill color alone (per D15: no geometry change
+/// between selected and unselected).
+///
+/// **Corner radius matches the color picker's tabs.** This chip uses the same
+/// [LayrzRadiusTokens.br2] rounded-rectangle radius as
+/// [LayrzPickerTabSwitcher]'s tab pills, not a fully-rounded/stadium shape —
+/// the two pickers' tab-shaped affordances are meant to read as one
+/// consistent system, and a pill-shaped chip next to a rounded-rectangle tab
+/// broke that consistency (user report).
 ///
 /// **Restyle (user testing feedback):** the selected chip now paints the
 /// full [LayrzColorTokens.primary] fill (matching the equivalent restyle
@@ -440,7 +447,7 @@ class _EmojiGroupChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final radius = tokens.radius.full;
+    final borderRadius = tokens.radius.br2;
 
     final backgroundColor = isSelected ? tokens.colors.primary.shade500 : tokens.colors.sf1;
     final textColor = isSelected ? tokens.colors.sf1 : tokens.colors.fg2;
@@ -456,7 +463,7 @@ class _EmojiGroupChip extends StatelessWidget {
         color: backgroundColor,
         hoverColor: isSelected ? backgroundColor : tokens.colors.sf3,
         pressedColor: isSelected ? backgroundColor : tokens.colors.sf4,
-        borderRadius: BorderRadius.circular(radius),
+        borderRadius: borderRadius,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp1),
           child: Center(

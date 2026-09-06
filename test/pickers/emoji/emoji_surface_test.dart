@@ -270,6 +270,29 @@ void main() {
       expect(decoration.color, tokens.colors.sf1);
       expect(decoration.color!.a, 1.0, reason: 'the unselected chip must paint a fully opaque fill, not transparent');
     });
+
+    guardedTestWidgets('the group chip corner radius matches the color picker tabs (br2)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await _pumpBoundedSurface(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+
+      final chipFinder = find.ancestor(
+        of: find.text('All emoji'),
+        matching: find.byType(LayrzTappable),
+      );
+      final tappable = tester.widget<LayrzTappable>(chipFinder);
+
+      final tokens = LayrzTokens.light();
+      expect(
+        tappable.borderRadius,
+        tokens.radius.br2,
+        reason:
+            'the emoji group chip must use the same rounded-rectangle radius as '
+            "LayrzPickerTabSwitcher's tabs, not a fully-rounded/stadium shape",
+      );
+    });
   });
 
   group('LayrzEmojiSurface — commit on tap', () {
