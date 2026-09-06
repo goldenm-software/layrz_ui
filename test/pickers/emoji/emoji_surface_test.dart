@@ -2,9 +2,28 @@ import 'package:emojis/emoji.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/pickers/src/emoji/emoji_surface.dart';
+import 'package:layrz_ui/src/tappable/tappable.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
+
+/// Scrolls the group-filter chip row (a horizontal `ListView.separated`)
+/// left by a fixed, generous offset so the trailing chips ("Flags",
+/// "Component") are laid out and reachable by [find.text].
+///
+/// Not [WidgetController.ensureVisible]: that helper requires the target
+/// [Element] to already exist in the tree, but the chip row's combined
+/// content width (~2050px, measured) exceeds a 1600px-wide test viewport --
+/// the last few chips are genuinely never built until a real scroll gesture
+/// moves them into the `ListView`'s viewport + cache extent. A manual
+/// [WidgetController.drag] reproduces that real scroll; [ensureVisible]
+/// cannot bootstrap it because it can't find an [Element] that isn't built
+/// yet.
+Future<void> _scrollGroupFilterRow(WidgetTester tester) async {
+  await tester.drag(find.byType(ListView), const Offset(-1000, 0));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('LayrzEmojiSurface — rendering', () {
@@ -62,8 +81,7 @@ void main() {
       // "Flags" is the last entry in the eleven-item group-filter row, so it
       // sits off-screen in the horizontally scrollable `ListView` until
       // scrolled into view.
-      await tester.ensureVisible(find.text('Flags'));
-      await tester.pumpAndSettle();
+      await _scrollGroupFilterRow(tester);
       await tester.tap(find.text('Flags'));
       await tester.pump();
 
@@ -168,8 +186,7 @@ void main() {
 
       await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
 
-      await tester.ensureVisible(find.text('Flags'));
-      await tester.pumpAndSettle();
+      await _scrollGroupFilterRow(tester);
       await tester.tap(find.text('Flags'));
       await tester.pump();
 
@@ -183,6 +200,60 @@ void main() {
       // search alone deciding the result.
       expect(find.text(nonFlag.char), findsNothing);
       expect(find.text('No emoji found'), findsOneWidget);
+    });
+  });
+
+  group('LayrzEmojiSurface — group chip restyle', () {
+    // User testing feedback: the selected chip must paint the full primary
+    // fill (matching the color picker's restyled tabs), and the unselected
+    // chip must paint the background/canvas token (`sf1`) as a solid fill,
+    // not transparent -- a transparent unselected chip produced a visible
+    // transition artifact per the user's own report. The selected chip has
+    // no `onTap` wired (it is already selected), so `LayrzTappable` takes
+    // its inert `DecoratedBox` path; the unselected chip is interactive, so
+    // it takes the `AnimatedContainer` path -- both are asserted via their
+    // own actual rendered `decoration`, not merely "some chip looks right".
+    guardedTestWidgets('the selected chip paints the full primary color', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+
+      // "All emoji" is selected by default.
+      final chipFinder = find.ancestor(
+        of: find.text('All emoji'),
+        matching: find.byType(LayrzTappable),
+      );
+      final decoratedBox = tester.widget<DecoratedBox>(
+        find.descendant(of: chipFinder, matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = decoratedBox.decoration as BoxDecoration;
+
+      final tokens = LayrzTokens.light();
+      expect(decoration.color, tokens.colors.primary.shade500);
+    });
+
+    guardedTestWidgets('an unselected chip paints a solid background color, not transparent', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, LayrzEmojiSurface(onEmojiSelected: (_) {}));
+
+      // "Smileys & Emotion" is not selected by default (only "All emoji" is).
+      final chipFinder = find.ancestor(
+        of: find.text('Smileys & Emotion'),
+        matching: find.byType(LayrzTappable),
+      );
+      final animatedContainer = tester.widget<AnimatedContainer>(
+        find.descendant(of: chipFinder, matching: find.byType(AnimatedContainer)),
+      );
+      final decoration = animatedContainer.decoration as BoxDecoration;
+
+      final tokens = LayrzTokens.light();
+      expect(decoration.color, tokens.colors.sf1);
+      expect(decoration.color!.a, 1.0, reason: 'the unselected chip must paint a fully opaque fill, not transparent');
     });
   });
 

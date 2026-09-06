@@ -297,38 +297,50 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
     final tokens = context.tokens;
     final filteredEmoji = _filteredEmoji;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildGroupFilterRow(context, l10n),
-        SizedBox(height: tokens.spacing.sp2),
-        _buildSearchField(context, l10n),
-        SizedBox(height: tokens.spacing.sp2),
-        if (filteredEmoji.isEmpty)
-          Padding(
-            padding: tokens.spacing.pd3,
-            child: Text(l10n.emojiPickerEmpty, style: tokens.typography.label),
-          )
-        else
-          SizedBox(
-            height: 320.0,
-            child: LayrzGlyphGrid<Emoji>(
-              items: filteredEmoji,
-              columns: _kEmojiGridColumns,
-              cellExtent: _kEmojiCellExtent,
-              itemBuilder: _buildEmojiCell,
-              onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
-              keyboardHandler: buildGlyphGridKeyboardHandler(
-                columns: _kEmojiGridColumns,
-                itemCount: filteredEmoji.length,
-                isDisabled: (_) => false,
-                onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
+    // Whole-surface padding (user testing feedback: "add padding man" — the
+    // surface read as cramped with its sections flush against the hosting
+    // `LayrzBottomSheet`/`LayrzEndDrawer` edges). `sp3` mirrors
+    // `date_surface.dart`'s own outer-edge inset for the sibling pickers'
+    // surfaces, one level up from the `sp2` inter-section gaps below so the
+    // outer edge reads more generous than the internal rhythm.
+    return Padding(
+      padding: tokens.spacing.pd3,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildGroupFilterRow(context, l10n),
+          SizedBox(height: tokens.spacing.sp3),
+          _buildSearchField(context, l10n),
+          SizedBox(height: tokens.spacing.sp3),
+          if (filteredEmoji.isEmpty)
+            Padding(
+              padding: tokens.spacing.pd3,
+              child: Text(l10n.emojiPickerEmpty, style: tokens.typography.label),
+            )
+          else
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
+              child: SizedBox(
+                height: 320.0,
+                child: LayrzGlyphGrid<Emoji>(
+                  items: filteredEmoji,
+                  columns: _kEmojiGridColumns,
+                  cellExtent: _kEmojiCellExtent,
+                  itemBuilder: _buildEmojiCell,
+                  onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
+                  keyboardHandler: buildGlyphGridKeyboardHandler(
+                    columns: _kEmojiGridColumns,
+                    itemCount: filteredEmoji.length,
+                    isDisabled: (_) => false,
+                    onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
+                  ),
+                  semanticLabelBuilder: (emoji, index) => emoji.shortName,
+                ),
               ),
-              semanticLabelBuilder: (emoji, index) => emoji.shortName,
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -337,6 +349,21 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
 /// label that visually distinguishes the currently selected group from every
 /// other entry via fill color alone (per D15: no geometry change between
 /// selected and unselected).
+///
+/// **Restyle (user testing feedback):** the selected chip now paints the
+/// full [LayrzColorTokens.primary] fill (matching the equivalent restyle
+/// applied to the color picker's [LayrzPickerTabSwitcher] tabs, so the two
+/// pickers' tab-shaped affordances read as one consistent system), and the
+/// unselected chip paints [LayrzColorTokens.sf1] — the page-canvas/background
+/// token — as a solid fill rather than a transparent one, per the user's
+/// explicit note that a transparent idle chip produced a visible artifact
+/// during the fill-color transition (see [LayrzTappable]'s own "black blink"
+/// caveat for the mechanism: animating a literal transparent-black idle
+/// color toward an opaque, differently-hued target ramps the wrong channels
+/// mid-tween). Both colors are still resolved purely through
+/// [LayrzTappable]'s `color`/`hoverColor`/`pressedColor`, so the fill
+/// transition itself remains D15-compliant (color/opacity only, no geometry
+/// change).
 class _EmojiGroupChip extends StatelessWidget {
   /// This chip's visible label.
   final String label;
@@ -356,7 +383,7 @@ class _EmojiGroupChip extends StatelessWidget {
     final tokens = context.tokens;
     final radius = tokens.radius.full;
 
-    final backgroundColor = isSelected ? tokens.colors.primary.shade500 : tokens.colors.sf2;
+    final backgroundColor = isSelected ? tokens.colors.primary.shade500 : tokens.colors.sf1;
     final textColor = isSelected ? tokens.colors.sf1 : tokens.colors.fg2;
 
     return Semantics(
