@@ -170,6 +170,29 @@ class LayrzEndDrawer {
   ///   inside its `builder` content (small, centered, muted) to stand in for
   ///   a title should switch to this slot instead of stacking both: passing
   ///   both usually reads as a duplicate title, not a title plus a caption.
+  /// - [scrollable]: whether the drawer wraps [builder]'s content in its own
+  ///   [SingleChildScrollView]. Defaults to `true`, which preserves this
+  ///   method's original behaviour exactly: the content is wrapped, so a
+  ///   non-scrolling builder (e.g. a `Column`) needs no changes to work.
+  ///   Set to `false` when [builder] returns its own scrollable (e.g. a
+  ///   `ListView` or `GridView`, or a `Column` with an `Expanded` lazy list
+  ///   section of its own) — the drawer then hands that content the bounded
+  ///   height of its own `Expanded` region directly, instead of wrapping it.
+  ///   This mirrors [LayrzBottomSheet.show]'s identical `scrollable`
+  ///   parameter exactly, for the same reason: a same-axis scrollable (or a
+  ///   `Column` containing its own `Expanded` child) nested inside this
+  ///   drawer's `SingleChildScrollView` is given unbounded height by that
+  ///   wrapper and asserts (`Vertical viewport was given unbounded height`,
+  ///   or a `RenderFlex` "unbounded height" error for an `Expanded` case) --
+  ///   `scrollable: false` is the escape hatch, symmetric with the bottom
+  ///   sheet's own.
+  ///
+  ///   **Unlike [LayrzBottomSheet.show]**, this drawer has no drag-resize
+  ///   [ScrollController] to hand down via [PrimaryScrollController] -- the
+  ///   drawer is fixed-width and never drag-resizable (see this class's own
+  ///   doc), so `scrollable: false` here simply omits the
+  ///   [SingleChildScrollView] wrapper; [builder] gets no scroll-offset
+  ///   handoff to opt into because there is none to give it.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
@@ -177,6 +200,7 @@ class LayrzEndDrawer {
     bool? canDismiss,
     String? semanticLabel,
     Widget? title,
+    bool scrollable = true,
   }) {
     final navigator = Navigator.of(context, rootNavigator: true);
 
@@ -197,6 +221,7 @@ class LayrzEndDrawer {
         canDismiss: effectiveCanDismiss,
         semanticLabel: semanticLabel,
         title: title,
+        scrollable: scrollable,
       ),
     );
   }
@@ -216,6 +241,7 @@ class _EndDrawerRoute<T> extends LayrzModalRoute<T> {
     required bool canDismiss,
     required this.semanticLabel,
     required Widget? title,
+    required bool scrollable,
   }) : super(
          pageBuilder: (context, animation, secondaryAnimation) {
            return _EndDrawerContent(
@@ -224,6 +250,7 @@ class _EndDrawerRoute<T> extends LayrzModalRoute<T> {
              canDismiss: canDismiss,
              semanticLabel: semanticLabel,
              title: title,
+             scrollable: scrollable,
            );
          },
          barrierDismissible: canDismiss,
@@ -297,6 +324,10 @@ class _EndDrawerContent extends StatefulWidget {
   /// See [LayrzEndDrawer.show]'s `title` doc for the full contract.
   final Widget? title;
 
+  /// Whether [builder]'s content is wrapped in a [SingleChildScrollView].
+  /// See [LayrzEndDrawer.show]'s `scrollable` doc for the full contract.
+  final bool scrollable;
+
   /// Creates a new drawer content widget.
   const _EndDrawerContent({
     required this.builder,
@@ -304,6 +335,7 @@ class _EndDrawerContent extends StatefulWidget {
     required this.canDismiss,
     required this.semanticLabel,
     required this.title,
+    required this.scrollable,
   });
 
   @override
@@ -395,9 +427,20 @@ class _EndDrawerContentState extends State<_EndDrawerContent> {
                     ),
                   ),
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: widget.builder(context),
-                  ),
+                  child: widget.scrollable
+                      ? SingleChildScrollView(
+                          child: widget.builder(context),
+                        )
+                      // scrollable: false hands builder(context) the Expanded
+                      // region's own bounded height directly, instead of
+                      // wrapping it in a SingleChildScrollView -- mirrors
+                      // LayrzBottomSheet's identical `scrollable: false`
+                      // branch (bottom_sheet.dart), minus the
+                      // PrimaryScrollController handoff that exists there
+                      // only because that sheet is drag-resizable; this
+                      // drawer is fixed-width and has no scroll controller of
+                      // its own to hand down (see `scrollable`'s own doc).
+                      : widget.builder(context),
                 ),
                 // Actions -- a SECOND, non-expanded Column child, sibling to
                 // the Expanded scroll view above rather than nested inside

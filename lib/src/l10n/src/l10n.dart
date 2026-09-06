@@ -4,17 +4,22 @@ import 'namespaces/actions.dart';
 import 'namespaces/about.dart';
 import 'namespaces/ai.dart';
 import 'namespaces/calendar.dart';
+import 'namespaces/color_picker.dart';
 import 'namespaces/combobox.dart';
 import 'namespaces/date_time_pickers.dart';
 import 'namespaces/dialogs.dart';
 import 'namespaces/dual_list.dart';
 import 'namespaces/dynamic_avatar.dart';
 import 'namespaces/editor.dart';
+import 'namespaces/emoji_picker.dart';
 import 'namespaces/files.dart';
 import 'namespaces/helpers.dart';
+import 'namespaces/icon_picker.dart';
+import 'namespaces/image_input.dart';
 import 'namespaces/inputs.dart';
 import 'namespaces/map.dart';
 import 'namespaces/months.dart';
+import 'namespaces/multi_select.dart';
 import 'namespaces/notifications.dart';
 import 'namespaces/password.dart';
 import 'namespaces/pickers.dart';
@@ -31,7 +36,7 @@ import 'namespaces/weekdays.dart';
 
 /// Abstract contract for all localized strings used throughout layrz_ui.
 ///
-/// All 153 localization keys are declared as getters across 21 namespace mixins,
+/// All localization keys are declared as getters across 26 namespace mixins,
 /// each providing an English default value. Components read localization via
 /// [LayrzUiL10n.of] or the convenience extension [BuildContext.l10n]. When the
 /// user changes locale, Flutter's `Localizations` system automatically rebuilds
@@ -102,17 +107,22 @@ abstract class LayrzUiL10n
         LayrzUiL10nAboutMixin,
         LayrzUiL10nAiMixin,
         LayrzUiL10nCalendarMixin,
+        LayrzUiL10nColorPickerMixin,
         LayrzUiL10nComboboxMixin,
         LayrzUiL10nDateTimePickersMixin,
         LayrzUiL10nDialogsMixin,
         LayrzUiL10nDualListMixin,
         LayrzUiL10nDynamicAvatarMixin,
         LayrzUiL10nEditorMixin,
+        LayrzUiL10nEmojiPickerMixin,
         LayrzUiL10nFilesMixin,
         LayrzUiL10nHelpersMixin,
+        LayrzUiL10nIconPickerMixin,
+        LayrzUiL10nImageInputMixin,
         LayrzUiL10nInputsMixin,
         LayrzUiL10nMapMixin,
         LayrzUiL10nMonthsMixin,
+        LayrzUiL10nMultiSelectMixin,
         LayrzUiL10nNotificationsMixin,
         LayrzUiL10nPasswordMixin,
         LayrzUiL10nPickersMixin,

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.21
+
+**Four new picker components land in this release — `LayrzColorInput`, `LayrzMultiSelectInput<T>`, `LayrzEmojiInput`, and `LayrzImageInput`** (`lib/src/pickers/`) — plus the shared surface infrastructure behind them.
+
+`LayrzColorInput` is a two-tab color picker: a palette tab built from a caller-supplied `Set<Color>` and an HSV wheel tab, both surfaced in the same panel with a live hex readout and a paste-from-clipboard button (`LayrzButton`) for pulling a hex value straight off the system clipboard. Like the date/time picker family, it commits on an in-panel `Save` rather than on every tap.
+
+`LayrzMultiSelectInput<T>` mirrors `LayrzSelectInput`'s search-and-list panel but allows multiple values, rendering the closed field as a comma-joined list of the selected labels. It also commits via `Save` rather than per-tap selection — a deliberate divergence from `layrz_theme`'s `ThemedMultiSelectInput`, which commits each tap immediately; treat this as a behavioral difference to account for when migrating a caller.
+
+`LayrzEmojiInput` is a searchable emoji picker built on `package:emojis`, with a group filter to narrow the grid to one emoji category. Unlike the other three pickers, it commits on tap rather than staging behind a `Save` button.
+
+`LayrzImageInput` is a rounded-square, avatar-style image tile accepting a URL, a data URI, or a raw base64 string as input, always emitting base64 out. It is single-image only, with a broken-image fallback glyph when the source fails to decode.
+
+**New shared infrastructure:** `LayrzGlyphGrid` (`lib/src/pickers/src/shared/`), the generic grid primitive behind the emoji and (future) icon pickers, gains a `shrinkWrap` parameter (default `true`) — set it `false` to let the grid lay out lazily inside a bounded parent for large item counts (thousands of glyphs) instead of building every cell eagerly. `LayrzEndDrawer.show` gains a `scrollable` parameter (default `true`), symmetric with `LayrzBottomSheet.show`'s identical parameter — set it `false` when the drawer's `builder` returns its own scrollable content, so the drawer doesn't nest two same-axis scrollables.
+
+- Added the `emojis: ^3.2.0` dependency for `LayrzEmojiInput`.
+- Added color/multi-select/emoji/icon/image picker localization namespaces to `LayrzUiL10n`.
+
 ## 0.0.20
 
 **Five new components land in this release — `LayrzAccordion`, `LayrzAiMarker`, `LayrzSkeleton`, `LayrzForm`, and `LayrzFileInput`** — plus new theme tokens and localization to support them.

@@ -638,4 +638,116 @@ void main() {
       expect(find.text('Country'), findsNothing);
     });
   });
+
+  // `scrollable`, symmetric with LayrzBottomSheet's own identical parameter
+  // (see test/sheets/bottom_sheet_test.dart's "scrollable: false lets the
+  // caller provide its own scrolling ListView") -- added so a builder that
+  // already manages its own vertical scrolling (a ListView/GridView, or a
+  // Column with its own Expanded lazy-list section) is not additionally
+  // wrapped in this drawer's SingleChildScrollView, which would otherwise
+  // hand it unbounded height and crash.
+  group('LayrzEndDrawer -- scrollable', () {
+    guardedTestWidgets('the default (scrollable: true) wraps builder content in a SingleChildScrollView', (
+      tester,
+    ) async {
+      setWideViewport(tester);
+
+      await tester.pumpWidget(
+        LayrzApp(
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzEndDrawer.show<void>(
+                    context,
+                    semanticLabel: 'Drawer',
+                    builder: (context) => const SizedBox(height: 40, child: Text('Body')),
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Body'), findsOneWidget);
+      expect(
+        find.ancestor(of: find.text('Body'), matching: find.byType(SingleChildScrollView)),
+        findsOneWidget,
+        reason: 'scrollable defaults to true, preserving the original SingleChildScrollView wrap',
+      );
+    });
+
+    guardedTestWidgets(
+      'scrollable: false lets the caller provide its own scrolling ListView, with no unbounded-height crash',
+      (tester) async {
+        setWideViewport(tester);
+
+        await tester.pumpWidget(
+          LayrzApp(
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzEndDrawer.show<void>(
+                      context,
+                      semanticLabel: 'Drawer',
+                      scrollable: false,
+                      builder: (context) => ListView.builder(
+                        itemCount: 50,
+                        itemBuilder: (context, index) => SizedBox(height: 40, child: Text('Item $index')),
+                      ),
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        // The frame must complete with no unbounded-height assertion -- the
+        // defect this flag exists to prevent is a ListView/GridView (or an
+        // Expanded lazy-list section) nested inside this drawer's own
+        // SingleChildScrollView, which throws "Vertical viewport was given
+        // unbounded height" (or a RenderFlex unbounded-height error for the
+        // Expanded case).
+        expect(tester.takeException(), isNull);
+        expect(find.text('Item 0'), findsOneWidget);
+        expect(find.text('Item 49'), findsNothing);
+        expect(
+          find.ancestor(of: find.byType(ListView), matching: find.byType(SingleChildScrollView)),
+          findsNothing,
+          reason: 'scrollable: false must not wrap the caller\'s own scrollable in a SingleChildScrollView',
+        );
+
+        // And the list actually scrolls, proving builder(context) genuinely
+        // received the Expanded region's bounded height rather than an
+        // unbounded one that merely failed to assert in this harness.
+        await tester.drag(find.byType(ListView), const Offset(0, -1600));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Item 0'), findsNothing);
+        expect(
+          find.text('Item 49'),
+          findsOneWidget,
+          reason: 'scrollable: false must produce a working, scrolling frame',
+        );
+      },
+    );
+  });
 }
