@@ -233,31 +233,39 @@ void main() {
   });
 
   group('LayrzImageInput accessibility — populated state', () {
-    // Unlike the empty box's outer Semantics, `_RowTextButton` wraps its
-    // label in `excludeSemantics: true` (matching `LayrzFileInput`'s
-    // `_AddMoreRow`/`_ClearAllRow` identical pattern) so the visible `Text`
-    // underneath does not merge a second copy of the label into this node --
-    // but the same `excludeSemantics` also stops the inner `GestureDetector`'s
-    // own tap-action annotation from bubbling up, so this node carries no
-    // `tap` action of its own even though the row IS tappable (verified via
-    // `tester.tap` in `image_input_test.dart`'s functional tests). This is
-    // the exact shape `file_input_test.dart` accepts for its own equivalent
-    // rows -- asserted here rather than assumed.
-    testWidgets('Replace and Clear are independent, real semantics nodes, not merged', (tester) async {
+    // The tile itself keeps the "open picker" semantics node it has in the
+    // empty state (now doubling as "replace"), and the clear badge overlaid
+    // on its corner is a second, independent node -- `excludeSemantics: true`
+    // on the badge's own `Semantics` wrapper (matching `LayrzFileInput`'s
+    // `_AddMoreRow`/`_ClearAllRow` identical pattern) stops its visible icon
+    // and inner `GestureDetector`'s own tap-action annotation from merging
+    // into or bubbling out of this node, so it carries no `tap` action of its
+    // own even though it IS tappable (verified via `tester.tap` in
+    // `image_input_test.dart`'s functional tests). This is the exact shape
+    // `file_input_test.dart` accepts for its own equivalent badges -- asserted
+    // here rather than assumed.
+    testWidgets('the tile and the Clear badge are independent, real semantics nodes, not merged', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         fakePicker.nextResult = FilePickerResult([
           _platformImageFile('a.png', _validPngBytes),
         ]);
 
-        await pumpWide(tester, const LayrzImageInput());
+        await pumpWide(tester, const LayrzImageInput(labelText: 'Avatar'));
 
         await tester.tap(find.byType(LayrzImageInput));
         await tester.pumpAndSettle();
 
         expect(
-          tester.getSemantics(find.bySemanticsLabel('Replace')),
-          matchesSemantics(label: 'Replace', isButton: true, isEnabled: true, hasEnabledState: true),
+          tester.getSemantics(find.bySemanticsLabel(RegExp('^Avatar'))),
+          matchesSemantics(
+            isButton: true,
+            isEnabled: true,
+            hasEnabledState: true,
+            hasTapAction: true,
+            isFocusable: true,
+            hasFocusAction: true,
+          ),
         );
         expect(
           tester.getSemantics(find.bySemanticsLabel('Clear')),
@@ -268,7 +276,7 @@ void main() {
       }
     });
 
-    testWidgets('disabled Replace/Clear are announced as disabled with no tap action', (tester) async {
+    testWidgets('disabled tile and Clear badge are announced as disabled with no tap action', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         fakePicker.nextResult = FilePickerResult([
@@ -284,6 +292,7 @@ void main() {
             builder: (context, setState) {
               return LayrzImageInput(
                 value: current,
+                labelText: 'Avatar',
                 disabled: current != null,
                 onChanged: (v) => setState(() => current = v),
               );
@@ -295,8 +304,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          tester.getSemantics(find.bySemanticsLabel('Replace')),
-          matchesSemantics(label: 'Replace', isButton: true, hasEnabledState: true, isEnabled: false),
+          tester.getSemantics(find.bySemanticsLabel(RegExp('^Avatar'))),
+          matchesSemantics(isButton: true, hasEnabledState: true, isEnabled: false),
         );
         expect(
           tester.getSemantics(find.bySemanticsLabel('Clear')),

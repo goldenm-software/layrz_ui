@@ -213,10 +213,14 @@ void main() {
       // A distinct byte payload (need not be a decodable image -- this test
       // exercises the onChanged plumbing, not the preview) so the two emitted
       // `dataUri`s are provably different rather than accidentally identical.
+      // Unlike the previous drop-box's separate "Replace" text row, the
+      // avatar-style tile itself is the tap target in both the empty and
+      // populated states -- tapping the tile again is how a populated image
+      // gets replaced.
       fakePicker.nextResult = FilePickerResult([
         _platformImageFile('second.png', [9, 9, 9, 9]),
       ]);
-      await tester.tap(find.text('Replace'));
+      await tester.tap(find.byType(LayrzImageInput));
       await tester.pumpAndSettle();
 
       expect(emitted.length, 2);
@@ -312,7 +316,11 @@ void main() {
       fakePicker.nextResult = FilePickerResult([
         _platformImageFile('small.png', [1, 2, 3]),
       ]);
-      await tester.tap(find.byType(LayrzImageInput));
+      // Tap the tile itself (`AnimatedContainer`) rather than the whole
+      // `LayrzImageInput` -- with the rejection message now rendered below a
+      // compact tile, the widget's overall centroid can fall in the gap
+      // between the tile and the error text rather than on the tile itself.
+      await tester.tap(find.byType(AnimatedContainer).first);
       await tester.pumpAndSettle();
 
       expect(find.textContaining('too large'), findsNothing);
@@ -354,39 +362,61 @@ void main() {
   });
 
   group('LayrzImageInput clear affordance', () {
+    // The clear affordance is now an icon-only circular badge overlaid on the
+    // tile's top-right corner (avatar-picker style), announced via a
+    // `Semantics(label: 'Clear')` node rather than a visible "Clear" text
+    // button. `tester.tap` on a semantics finder taps the center of that
+    // node's render object, which hit-tests through to the badge's own
+    // `GestureDetector` beneath it -- no separate ancestor/descendant lookup
+    // needed, since the icon itself carries no findable text.
+    Finder clearBadgeFinder() => find.bySemanticsLabel('Clear');
+
     testWidgets('clear emits null via onChanged', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
-        _platformImageFile('a.png', _validPngBytes),
-      ]);
-      final emitted = <String?>[];
+      // `bySemanticsLabel` needs an active `SemanticsHandle` to locate the
+      // clear badge's tap target -- disposed via try/finally, never
+      // `addTearDown` (project CLAUDE.md rule #2 trap 2).
+      final handle = tester.ensureSemantics();
+      try {
+        fakePicker.nextResult = FilePickerResult([
+          _platformImageFile('a.png', _validPngBytes),
+        ]);
+        final emitted = <String?>[];
 
-      await pumpWide(tester, LayrzImageInput(onChanged: (value) => emitted.add(value)));
+        await pumpWide(tester, LayrzImageInput(onChanged: (value) => emitted.add(value)));
 
-      await tester.tap(find.byType(LayrzImageInput));
-      await tester.pumpAndSettle();
-      expect(emitted.length, 1);
+        await tester.tap(find.byType(LayrzImageInput));
+        await tester.pumpAndSettle();
+        expect(emitted.length, 1);
 
-      await tester.tap(find.text('Clear'));
-      await tester.pumpAndSettle();
+        await tester.tap(clearBadgeFinder());
+        await tester.pumpAndSettle();
 
-      expect(emitted.last, isNull);
+        expect(emitted.last, isNull);
+      } finally {
+        handle.dispose();
+      }
     });
 
-    testWidgets('after clear, the box returns to its empty-state hint', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
-        _platformImageFile('a.png', _validPngBytes),
-      ]);
+    testWidgets('after clear, the tile returns to its empty state (no clear badge)', (tester) async {
+      final handle = tester.ensureSemantics();
+      try {
+        fakePicker.nextResult = FilePickerResult([
+          _platformImageFile('a.png', _validPngBytes),
+        ]);
 
-      await pumpWide(tester, const LayrzImageInput(hintText: 'Drop your image here'));
+        await pumpWide(tester, const LayrzImageInput(hintText: 'Drop your image here'));
 
-      await tester.tap(find.byType(LayrzImageInput));
-      await tester.pumpAndSettle();
-      expect(find.text('Drop your image here'), findsNothing);
+        await tester.tap(find.byType(LayrzImageInput));
+        await tester.pumpAndSettle();
+        expect(find.bySemanticsLabel('Clear'), findsOneWidget);
 
-      await tester.tap(find.text('Clear'));
-      await tester.pumpAndSettle();
+        await tester.tap(clearBadgeFinder());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Drop your image here'), findsOneWidget);
+        expect(find.bySemanticsLabel('Clear'), findsNothing);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 
@@ -422,16 +452,26 @@ void main() {
   });
 
   group('LayrzImageInput renders correctly at both compact and wide viewports', () {
-    testWidgets('wide viewport: the empty hint renders', (tester) async {
-      await pumpWide(tester, const LayrzImageInput(hintText: 'Click or drop an image here'));
+    // The compact rounded-square tile shows only an icon in its empty state
+    // (a full hint sentence does not fit a ~100px avatar-style tile) -- the
+    // hint text is instead used for the tile's semantics announcement, see
+    // the "LayrzImageInput semantics" group below. This asserts the tile
+    // renders identically at both viewport widths, since it is not
+    // width-adaptive (D15 -- geometry never changes with breakpoint here).
+    testWidgets('wide viewport: the tile renders at its configured size', (tester) async {
+      await pumpWide(tester, const LayrzImageInput(hintText: 'Click or drop an image here', size: 120));
 
-      expect(find.text('Click or drop an image here'), findsOneWidget);
+      final tileSize = tester.getSize(find.byType(AnimatedContainer).first);
+      expect(tileSize, const Size(120, 120));
     });
 
-    testWidgets('compact viewport: the empty hint still renders (box is not width-adaptive)', (tester) async {
-      await pumpCompact(tester, const LayrzImageInput(hintText: 'Click or drop an image here'));
+    testWidgets('compact viewport: the tile still renders at the same size (tile is not width-adaptive)', (
+      tester,
+    ) async {
+      await pumpCompact(tester, const LayrzImageInput(hintText: 'Click or drop an image here', size: 120));
 
-      expect(find.text('Click or drop an image here'), findsOneWidget);
+      final tileSize = tester.getSize(find.byType(AnimatedContainer).first);
+      expect(tileSize, const Size(120, 120));
     });
   });
 
@@ -466,20 +506,23 @@ void main() {
       }
     });
 
-    testWidgets('a populated box exposes independent Replace and Clear semantics nodes', (tester) async {
+    testWidgets('a populated tile exposes an independent Clear semantics node alongside the tile', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         fakePicker.nextResult = FilePickerResult([
           _platformImageFile('a.png', _validPngBytes),
         ]);
 
-        await pumpWide(tester, const LayrzImageInput());
+        await pumpWide(tester, const LayrzImageInput(labelText: 'Avatar'));
 
         await tester.tap(find.byType(LayrzImageInput));
         await tester.pumpAndSettle();
 
+        // The tile itself keeps its "open picker" (now "replace") semantics
+        // node under its labelText/hintText announcement, and the clear
+        // badge is a second, independent node -- not merged into the tile's.
         final labels = dumpSemanticsLabels(tester);
-        expect(labels, contains('Replace'));
+        expect(labels.any((l) => l.contains('Avatar')), isTrue);
         expect(labels, contains('Clear'));
       } finally {
         handle.dispose();

@@ -24,15 +24,20 @@ import 'image_input_preview.dart';
 /// display would defeat the "preview" half of this widget's whole purpose.
 const List<String> kDefaultImageInputExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'];
 
-/// A Material-free, single-image drop-zone with a live preview, in the
-/// layrz_ui design system.
+/// A Material-free, single-image avatar-style picker with a live preview, in
+/// the layrz_ui design system.
 ///
-/// [LayrzImageInput] is `LayrzFileInput` shaped -- a box-shaped click/drop
-/// target, not built on `LayrzInputChrome` -- restricted to exactly one image
-/// (`maxFiles: 1` semantics) and augmented with a [LayrzImageInputPreview] of
-/// the current value. Per the dossier (§2, §8b OQ-10), this is a genuinely
-/// different component from the plural [LayrzFileInput]: singular value,
-/// singular preview, no gallery.
+/// [LayrzImageInput] presents a compact, tappable **rounded-square tile**
+/// (avatar-picker ergonomics, per the user-testing feedback that led to this
+/// redesign -- the previous [LayrzFileInput]-shaped wide drop-box read as an
+/// unrelated file uploader, not an image field) restricted to exactly one
+/// image (`maxFiles: 1` semantics) showing a [LayrzImageInputPreview] of the
+/// current value. Tapping the tile at any time -- empty or populated --
+/// opens the system picker; a populated tile additionally carries a small
+/// camera-icon edit badge (a visual "this is editable" affordance, not an
+/// independent tap target -- the whole tile is) and an independently
+/// tappable circular clear (X) badge, matching the avatar-picker's own
+/// clear-badge convention.
 ///
 /// **Value in, value out is asymmetric by design (dossier §0 DESIGN-58,
 /// §8b OQ-9):**
@@ -56,7 +61,7 @@ const List<String> kDefaultImageInputExtensions = ['png', 'jpg', 'jpeg', 'gif', 
 /// this widget, not incidental:
 /// - A [value] that fails to load or decode (a broken URL, a malformed
 ///   `data:` URI, unparseable base64) renders [LayrzImageInputPreview]'s
-///   visible "couldn't load image" fallback -- never a blank box, which reads
+///   visible "couldn't load image" fallback -- never a blank tile, which reads
 ///   as "did my upload even register?" and invites a needless re-upload.
 /// - A picked or dropped file exceeding [maxFileSizeBytes] is rejected
 ///   **before** the encode/wait, with a plain-language, persistent message
@@ -67,15 +72,18 @@ const List<String> kDefaultImageInputExtensions = ['png', 'jpg', 'jpeg', 'gif', 
 /// **Reuses, does not reimplement:** click-to-browse via `file_picker`,
 /// drag-and-drop via [LayrzFileInputDropTarget] (`desktop_drop`), and base64
 /// encoding via [LayrzFileInputResult.dataUri] are the exact same machinery
-/// [LayrzFileInput] already has -- this widget is a thin box+preview
+/// [LayrzFileInput] already has -- this widget is a thin tile+preview
 /// specialization of that pattern, not a parallel implementation of it.
+/// Drag-and-drop onto the tile composes cleanly alongside the tap affordance,
+/// so it is kept, but tap-to-pick is the primary, avatar-picker-like
+/// ergonomics this widget is built around.
 class LayrzImageInput extends StatefulWidget {
   /// The current image value: an http(s) URL, a `data:` URI, or bare base64
   /// -- anything `LayrzImage.source` accepts.
   ///
   /// A caller-supplied change reconciles this field's internal display, the
   /// same self-display convention `LayrzSelectInput`/[LayrzFileInput]
-  /// document -- picking or dropping a new image updates the box's own
+  /// document -- picking or dropping a new image updates the tile's own
   /// preview immediately via [onChanged], whether or not the caller feeds
   /// this back on the next build. Passed straight through to
   /// [LayrzImageInputPreview] with no transformation -- a URL stays a URL
@@ -129,14 +137,19 @@ class LayrzImageInput extends StatefulWidget {
   /// generic extension-mismatch message when null.
   final String? rejectionMessage;
 
-  /// The label text displayed above the drop-zone box.
+  /// The label text displayed above the tile.
   final String? labelText;
 
-  /// Text shown inside the empty-state box, inviting the user to click or
-  /// drop an image.
+  /// Text announced for the empty tile's semantics label and used as its
+  /// accessible hint, inviting the user to tap or drop an image.
   ///
   /// Defaults to the localized `LayrzUiL10nImageInputMixin.imageInputHint`
-  /// when null.
+  /// when null. Unlike the previous drop-box presentation, this text is not
+  /// painted inside the tile itself -- the tile is compact, avatar-picker
+  /// sized, and shows only an icon in its empty state -- but it is still
+  /// used for the semantics label and, when [labelText] is absent, the
+  /// visible label row above the tile falls back to showing this text so
+  /// sighted users retain the same instruction.
   final String? hintText;
 
   /// Whether the field is marked as required.
@@ -144,28 +157,28 @@ class LayrzImageInput extends StatefulWidget {
 
   /// Whether the field is disabled.
   ///
-  /// A disabled box does not open the picker on tap, does not accept drops,
-  /// and its clear/replace affordances are not focusable.
+  /// A disabled tile does not open the picker on tap, does not accept drops,
+  /// and its clear affordance is not focusable.
   final bool disabled;
 
-  /// The list of error messages to display below the box.
+  /// The list of error messages to display below the tile.
   final List<String> errors;
 
   /// Whether to hide the error message block.
   final bool hideDetails;
 
-  /// The focus node for the drop-zone box itself.
+  /// The focus node for the tile itself.
   ///
   /// If null, a focus node is created and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// The fixed height of the drop-zone box, in logical pixels.
+  /// The width and height of the square tile, in logical pixels.
   ///
-  /// Defaults to 200 -- taller than [LayrzFileInput]'s 160 default, since the
-  /// populated state here shows a larger square preview rather than a row of
-  /// small file chips. The box always occupies this height regardless of
-  /// state, per decision D15.
-  final double height;
+  /// Defaults to 100 -- matching the avatar-picker convention (`references`:
+  /// `themed-avatar-picker` skill) this redesign follows, rather than the
+  /// previous wide drop-box's 200px height. The tile always occupies this
+  /// footprint regardless of state (empty, populated, error), per D15.
+  final double size;
 
   /// Creates a new [LayrzImageInput] with the given properties.
   const LayrzImageInput({
@@ -183,7 +196,7 @@ class LayrzImageInput extends StatefulWidget {
     this.errors = const [],
     this.hideDetails = false,
     this.focusNode,
-    this.height = 200,
+    this.size = 100,
   });
 
   @override
@@ -199,10 +212,10 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
   /// convention (see the class doc).
   String? _displayedValue;
 
-  /// Whether an OS/browser drag-and-drop operation is currently over the box.
+  /// Whether an OS/browser drag-and-drop operation is currently over the tile.
   bool _isDragging = false;
 
-  /// Whether the pointer is hovering the box (desktop/mouse only).
+  /// Whether the pointer is hovering the tile (desktop/mouse only).
   bool _isHovered = false;
 
   /// The persistent rejection message currently shown, or null when nothing
@@ -328,7 +341,7 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
     return name.substring(dotIndex + 1).toLowerCase();
   }
 
-  /// Handles a drag-and-drop of one or more files onto the box, keeping only
+  /// Handles a drag-and-drop of one or more files onto the tile, keeping only
   /// the first one -- this field is single-image, so a multi-file drop
   /// commits just its first entry rather than rejecting the whole drop.
   void _handleFilesDropped(List<LayrzFileInputResult> files) {
@@ -346,7 +359,7 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
     widget.onChanged?.call(null);
   }
 
-  /// Resolves the box's current [LayrzFileInputState], in state precedence
+  /// Resolves the tile's current [LayrzFileInputState], in state precedence
   /// order: dragging > hover > populated > empty -- identical to
   /// [LayrzFileInput]'s own resolution.
   LayrzFileInputState _resolveState() {
@@ -374,7 +387,7 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.labelText != null) _buildLabel(tokens),
-        _buildBox(context, tokens, l10n, spec),
+        _buildTile(context, tokens, l10n, spec),
         if (_rejection != null)
           Padding(
             padding: EdgeInsets.only(top: tokens.spacing.sp2),
@@ -394,7 +407,7 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
     );
   }
 
-  /// Builds the label row above the box, mirroring [LayrzFileInput]'s label
+  /// Builds the label row above the tile, mirroring [LayrzFileInput]'s label
   /// composition exactly.
   Widget _buildLabel(LayrzTokens tokens) {
     return Padding(
@@ -419,17 +432,19 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
     );
   }
 
-  /// Builds the drop-zone box itself: [LayrzFileInputDropTarget] wrapping a
-  /// focusable, fixed-height container that shows either the empty hint or
-  /// the populated preview + replace/clear affordances.
+  /// Builds the tappable rounded-square tile: [LayrzFileInputDropTarget]
+  /// wrapping a focusable, fixed-size square that shows either an empty-state
+  /// icon or the populated preview, with overlay badges for the edit and
+  /// clear affordances.
   ///
-  /// Follows [LayrzFileInput]'s exact same semantics split: the empty state
-  /// is one big tap/keyboard "open picker" target with its own [Semantics]
-  /// button; the populated state carries no box-level [Semantics] or tap
-  /// handler, since it hosts independently-actionable rows (replace, clear)
-  /// that would otherwise have their labels merged into one node.
-  Widget _buildBox(BuildContext context, LayrzTokens tokens, LayrzUiL10n l10n, LayrzFileInputStyleSpec spec) {
+  /// The tile is tappable in **both** states -- unlike the previous drop-box
+  /// presentation (whose populated state hosted separate "Replace"/"Clear"
+  /// text rows below the box), an avatar-picker-style tile always opens the
+  /// picker on tap, whether empty or populated; only the clear badge is a
+  /// second, independently focusable tap target layered on top.
+  Widget _buildTile(BuildContext context, LayrzTokens tokens, LayrzUiL10n l10n, LayrzFileInputStyleSpec spec) {
     final isEmpty = _displayedValue == null || _displayedValue!.isEmpty;
+    final announcedLabel = widget.labelText ?? widget.hintText ?? l10n.imageInputHint;
 
     // See `LayrzFileInput._buildBox`'s identical comment: the rounded clip is
     // kept as its own non-decorated `ClipRRect` layer, separate from the
@@ -437,18 +452,18 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
     // Impeller artifact where a clipped, animated `BoxDecoration` fill paints
     // solid black mid-transition on Linux/Vulkan.
     final content = ClipRRect(
-      borderRadius: tokens.radius.br2,
+      borderRadius: tokens.radius.br3,
       child: AnimatedContainer(
         duration: tokens.motion.dHover,
         curve: tokens.motion.easing,
-        height: widget.height,
+        width: widget.size,
+        height: widget.size,
         decoration: BoxDecoration(
           color: spec.backgroundColor,
-          borderRadius: tokens.radius.br2,
+          borderRadius: tokens.radius.br3,
           border: Border.all(color: spec.borderColor, width: spec.borderWidth),
         ),
-        padding: EdgeInsets.all(tokens.spacing.sp3),
-        child: isEmpty ? _buildEmptyContent(tokens, spec, l10n) : _buildPopulatedContent(context, tokens, spec, l10n),
+        child: isEmpty ? _buildEmptyContent(tokens, spec) : _buildPopulatedContent(tokens, l10n),
       ),
     );
 
@@ -460,30 +475,34 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(
           onInvoke: (_) {
-            if (isEmpty) _openPicker();
+            _openPicker();
             return null;
           },
         ),
       },
       child: MouseRegion(
-        cursor: (widget.disabled || !isEmpty) ? SystemMouseCursors.basic : SystemMouseCursors.click,
+        cursor: widget.disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
         child: GestureDetector(
-          onTap: (widget.disabled || !isEmpty) ? null : _openPicker,
+          onTap: widget.disabled ? null : _openPicker,
           behavior: HitTestBehavior.opaque,
           child: content,
         ),
       ),
     );
 
-    final withSemantics = isEmpty
-        ? Semantics(
-            label: widget.labelText ?? widget.hintText ?? l10n.imageInputHint,
-            button: true,
-            enabled: !widget.disabled,
-            hint: 'Opens the image picker',
-            child: focusable,
-          )
-        : focusable;
+    final tileWithBadge = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Semantics(
+          label: announcedLabel,
+          button: true,
+          enabled: !widget.disabled,
+          hint: isEmpty ? 'Opens the image picker' : 'Opens the image picker to replace the current image',
+          child: focusable,
+        ),
+        if (!isEmpty) _buildClearBadge(tokens, l10n),
+      ],
+    );
 
     return LayrzFileInputDropTarget(
       enabled: !widget.disabled,
@@ -493,135 +512,93 @@ class _LayrzImageInputState extends State<LayrzImageInput> {
         setState(() => _isDragging = false);
         _handleFilesDropped(files);
       },
-      child: withSemantics,
+      child: tileWithBadge,
     );
   }
 
-  /// Builds the empty-state content: an image icon and hint text, centered.
-  Widget _buildEmptyContent(LayrzTokens tokens, LayrzFileInputStyleSpec spec, LayrzUiL10n l10n) {
+  /// Builds the empty-state content: a centered image icon, sized to the tile.
+  Widget _buildEmptyContent(LayrzTokens tokens, LayrzFileInputStyleSpec spec) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(MdiIcons.imagePlusOutline, size: 32, color: spec.contentColor),
-          SizedBox(height: tokens.spacing.sp2),
-          Text(
-            widget.hintText ?? l10n.imageInputHint,
-            textAlign: TextAlign.center,
-            style: tokens.typography.body.copyWith(color: spec.contentColor),
-          ),
-        ],
-      ),
+      child: Icon(MdiIcons.imagePlusOutline, size: widget.size * 0.36, color: spec.contentColor),
     );
   }
 
   /// Builds the populated-state content: the live [LayrzImageInputPreview]
-  /// plus keyboard-reachable "Replace" and "Clear" affordances.
-  Widget _buildPopulatedContent(
-    BuildContext context,
-    LayrzTokens tokens,
-    LayrzFileInputStyleSpec spec,
-    LayrzUiL10n l10n,
-  ) {
-    // `explicitChildNodes: true` mirrors `LayrzFileInput`'s `_FilePreviewRow`
-    // -- without it, the replace/clear buttons' own `Semantics` nodes merge
-    // upward into a single announced string.
-    return Semantics(
-      container: true,
-      explicitChildNodes: true,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LayrzImageInputPreview(source: _displayedValue!, size: widget.height - tokens.spacing.sp3 * 2 - 40),
-            SizedBox(height: tokens.spacing.sp2),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _RowTextButton(
-                  label: l10n.imageInputReplace,
-                  color: tokens.colors.primary,
-                  disabled: widget.disabled,
-                  onTap: _openPicker,
-                  tokens: tokens,
-                ),
-                SizedBox(width: tokens.spacing.sp3),
-                _RowTextButton(
-                  label: l10n.imageInputClear,
-                  color: tokens.colors.danger,
-                  disabled: widget.disabled,
-                  onTap: _clear,
-                  tokens: tokens,
-                ),
-              ],
-            ),
-          ],
+  /// filling the tile, plus a small camera-icon edit badge overlaid in the
+  /// bottom-right corner -- a visual "this is editable" affordance only; it
+  /// carries no semantics or gesture of its own, since the whole tile is
+  /// already the tap target that opens the picker.
+  Widget _buildPopulatedContent(LayrzTokens tokens, LayrzUiL10n l10n) {
+    return Stack(
+      children: [
+        // Excluded from semantics: the enclosing tile's own `Semantics` node
+        // (built in `_buildTile`) already carries the announced label/hint
+        // for "open picker to replace" -- without this, `LayrzImage`'s own
+        // `isImage` flag merges upward into that same node, muddying its
+        // announced role.
+        Positioned.fill(
+          child: ExcludeSemantics(
+            child: LayrzImageInputPreview(source: _displayedValue!, size: widget.size),
+          ),
         ),
-      ),
+        Positioned(
+          right: tokens.spacing.sp1,
+          bottom: tokens.spacing.sp1,
+          child: ExcludeSemantics(
+            child: Container(
+              padding: EdgeInsets.all(tokens.spacing.sp1),
+              decoration: BoxDecoration(
+                color: tokens.colors.sf1.withValues(alpha: 0.92),
+                shape: BoxShape.circle,
+                boxShadow: tokens.shadow.compact1,
+              ),
+              child: Icon(MdiIcons.cameraOutline, size: widget.size * 0.16, color: tokens.colors.primary),
+            ),
+          ),
+        ),
+      ],
     );
   }
-}
 
-/// A small, focusable text-label button used for the populated state's
-/// "Replace" and "Clear" affordances.
-///
-/// Follows the same [ActivateIntent]/[FocusableActionDetector] pattern
-/// [LayrzFileInput]'s row controls use, so Tab reaches it and Enter/Space
-/// activates it independently of the preview column's own layout.
-class _RowTextButton extends StatelessWidget {
-  /// The button's visible and announced label.
-  final String label;
-
-  /// The label/text color when enabled.
-  final Color color;
-
-  /// Whether the button is disabled.
-  final bool disabled;
-
-  /// Called when the button is activated (tap, Enter, or Space).
-  final VoidCallback onTap;
-
-  /// Design tokens, threaded from the parent build.
-  final LayrzTokens tokens;
-
-  /// Creates a new [_RowTextButton].
-  const _RowTextButton({
-    required this.label,
-    required this.color,
-    required this.disabled,
-    required this.onTap,
-    required this.tokens,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final effectiveColor = disabled ? tokens.colors.fg4 : color;
-
-    return Semantics(
-      button: true,
-      enabled: !disabled,
-      label: label,
-      excludeSemantics: true,
-      child: FocusableActionDetector(
-        enabled: !disabled,
-        actions: <Type, Action<Intent>>{
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              onTap();
-              return null;
-            },
-          ),
-        },
-        child: MouseRegion(
-          cursor: disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: disabled ? null : onTap,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-              child: Text(
-                label,
-                style: tokens.typography.label.copyWith(color: effectiveColor, fontWeight: FontWeight.w700),
+  /// Builds the independently tappable circular clear (X) badge overlaid at
+  /// the tile's top-right corner, matching the avatar-picker's own
+  /// clear-badge convention.
+  ///
+  /// Kept as a sibling of the tile in the enclosing [Stack] (rather than
+  /// nested inside the tile's own tap target) so it carries its own focus
+  /// stop and gesture, independent of the tile's "open picker" tap.
+  Widget _buildClearBadge(LayrzTokens tokens, LayrzUiL10n l10n) {
+    return Positioned(
+      right: -tokens.spacing.sp1,
+      top: -tokens.spacing.sp1,
+      child: Semantics(
+        button: true,
+        enabled: !widget.disabled,
+        label: l10n.imageInputClear,
+        excludeSemantics: true,
+        child: FocusableActionDetector(
+          enabled: !widget.disabled,
+          actions: <Type, Action<Intent>>{
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                _clear();
+                return null;
+              },
+            ),
+          },
+          child: MouseRegion(
+            cursor: widget.disabled ? SystemMouseCursors.basic : SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: widget.disabled ? null : _clear,
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding: EdgeInsets.all(tokens.spacing.sp1),
+                decoration: BoxDecoration(
+                  color: widget.disabled ? tokens.colors.fg4 : tokens.colors.danger,
+                  shape: BoxShape.circle,
+                  boxShadow: tokens.shadow.compact1,
+                ),
+                child: Icon(MdiIcons.close, size: widget.size * 0.14, color: tokens.colors.sf1),
               ),
             ),
           ),
