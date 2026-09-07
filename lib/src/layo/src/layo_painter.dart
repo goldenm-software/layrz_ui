@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'glyphs/layo_glyphs_404.dart';
 import 'glyphs/layo_glyphs_alert.dart';
 import 'glyphs/layo_glyphs_angry.dart';
+import 'glyphs/layo_glyphs_comandante.dart';
 import 'glyphs/layo_glyphs_dead.dart';
 import 'glyphs/layo_glyphs_idea.dart';
 import 'glyphs/layo_glyphs_love.dart';
@@ -43,23 +44,73 @@ import 'layo_emotion.dart';
 /// dispatches to the current [emotion]'s own glyph-paint functions (see
 /// [_paintEmotionGlyphs]) for whatever varies:
 ///
-/// * The **bow-tie** is worn by every [LayoEmotion] — "Layo is a gentleman,
-///   he keeps his tie whatever his mood" — drawn between the shared shadow
-///   and the shared screen, matching the original [LayoEmotion.mrLayo]-only
-///   painter's draw order, since the source artwork's tie sits on top of the
-///   shadow and behind the screen/head-shell. It is part of the shared base
-///   ([paint] calls it unconditionally), not an emotion-gated glyph. Its base
-///   color is [_antennaTipColor] — the same per-emotion accent as the
-///   antenna dot, not the raw [accentColor] field — so a grey-antenna
-///   emotion also wears a grey tie, with [paintMrLayoTie]'s own
-///   [tieFoldColor] deriving the crease-fold shade from whichever accent
-///   that resolves to.
+/// * The **bow-tie** is worn by every [LayoEmotion] **except**
+///   [LayoEmotion.comandante] — "Layo is a gentleman, he keeps his tie
+///   whatever his mood" (the Comandante is the one exception: he does not
+///   stand on ceremony) — drawn between the shared shadow and the shared
+///   screen, matching the original [LayoEmotion.mrLayo]-only painter's draw
+///   order, since the source artwork's tie sits on top of the shadow and
+///   behind the screen/head-shell. [paint] gates it on [_wearsTie] rather
+///   than calling it unconditionally, so it is *almost* part of the shared
+///   base rather than an ordinary emotion-gated glyph. Its base color is
+///   [_antennaTipColor] — the same per-emotion accent as the antenna dot,
+///   not the raw [accentColor] field — so a grey-antenna emotion also wears
+///   a grey tie, with [paintMrLayoTie]'s own [tieFoldColor] deriving the
+///   crease-fold shade from whichever accent that resolves to.
 /// * The **screen glyph(s)** (mouth and/or eyes, or their emotion-specific
 ///   stand-ins) are drawn after the shared head shell, on top of the dark
 ///   screen window it exposes.
-/// * The **antenna-tip color** is blue for [LayoEmotion.mrLayo] and
-///   [LayoEmotion.question]; [LayoEmotion.sleep] and [LayoEmotion.dead] use
-///   the shared grey glyph color instead (see [_antennaTipColor]).
+/// * The **antenna** (stalk and tip) is drawn for every [LayoEmotion] except
+///   [LayoEmotion.comandante] — its beret overlay sits exactly where the
+///   antenna would, so this emotion omits the antenna entirely rather than
+///   drawing it underneath or around the beret (see [_hasAntenna]). Where an
+///   antenna is drawn, its **tip color** is blue for [LayoEmotion.mrLayo]
+///   and [LayoEmotion.question]; [LayoEmotion.sleep] and [LayoEmotion.dead]
+///   use the shared grey glyph color instead (see [_antennaTipColor]).
+///
+/// # Overlays
+///
+/// A **screen glyph** is confined to the dark screen window (drawn on top of
+/// it, clipped to it for anything whose glow could otherwise spill, e.g.
+/// [LayoEmotion.idea]'s bulb). An **overlay**, by contrast, is a glyph layer
+/// that sits on top of the head itself — outside the screen window, and
+/// potentially overlapping the head shell's own edge — introduced for
+/// [LayoEmotion.comandante]'s red beret, the first emotion to need one.
+///
+/// [paint] calls [_paintEmotionOverlay] once, immediately after
+/// [_paintHeadShell] and *before* [_paintEmotionGlyphs], so an overlay always
+/// renders on top of the head shell but underneath the screen glyphs (which
+/// matters least in practice, since an overlay like the beret occupies the
+/// head's top edge, well outside the screen glyphs' own bounds, but keeps
+/// the ordering predictable for whatever overlay comes next). Dispatch
+/// mirrors [_paintEmotionGlyphs] exactly: a `switch` over [emotion], with
+/// every branch but [LayoEmotion.comandante] doing nothing (`case _: return;`
+/// is not used — every non-overlay emotion is listed explicitly, the same
+/// convention [_paintEmotionGlyphs] follows for its own switch).
+///
+/// A future overlay (sunglasses, a Santa hat, a party hat) plugs into this
+/// same mechanism: add a case to [_paintEmotionOverlay]'s switch calling a
+/// new glyph-file function of its own — no change to [paint]'s draw order,
+/// [_paintHeadShell], or any other emotion's glyphs is ever required. An
+/// overlay glyph file follows the same convention as a screen-glyph file
+/// (see `layo_glyphs_comandante.dart`): a free function taking `Canvas`, `k`,
+/// whatever colors it needs, and the shared [paintSmoothed] helper — nothing
+/// overlay-specific is required of it beyond being called from the right
+/// switch.
+///
+/// One further wrinkle an overlay covering the head's top can hit: the
+/// antenna (stalk and tip) would otherwise sit in exactly the same central
+/// top region a crown-shaped overlay occupies. Earlier passes on
+/// [LayoEmotion.comandante]'s beret tried keeping the antenna visible one
+/// way or another (behind the beret with the tip peeking above, then the
+/// stalk re-painted on top of the beret) — the maintainer's actual call was
+/// simpler: this emotion has **no antenna at all**. [_hasAntenna] gates both
+/// [_paintAntennaStalk] and [_paintAntennaTip] off entirely for
+/// [LayoEmotion.comandante], and, correspondingly, [_pulses] is `false` for
+/// it too (there is no tip left to pulse). A future overlay that does *not*
+/// need to remove the antenna is free to leave [_hasAntenna] untouched
+/// (defaulting to `true`) and let the antenna paint normally underneath it,
+/// exactly as every non-[LayoEmotion.comandante] emotion already does.
 ///
 /// Two other elements are deliberately drawn *after* the face shadow so they
 /// occlude it, rather than the other way around:
@@ -144,6 +195,11 @@ import 'layo_emotion.dart';
 ///   breath plus an occasional stronger "insight" flash applied to the bulb
 ///   and, in sync, the antenna dot (see [paintIdeaGlyphs] and
 ///   [_paintAntennaTip]).
+/// * [winkT] — [LayoEmotion.comandante] only: an occasional, brief wink of
+///   the **right eye alone** (the left eye stays open throughout), on the
+///   same kind of jittered per-instance schedule as [LayoEmotion.mrLayo]'s
+///   own [blinkT], but closing only one eye rather than both (see
+///   [paintComandanteEyes]).
 ///
 /// Every animation parameter defaults so a default-constructed painter is
 /// unchanged, and [shouldRepaint] ignores each parameter's diff for the
@@ -174,6 +230,7 @@ class LayoPainter extends CustomPainter {
     this.glitchOffset = 0.0,
     this.glowT = 0.0,
     this.flashT = 0.0,
+    this.winkT = 0.0,
   });
 
   /// Which face this painter draws: the shared base (including the bow-tie,
@@ -200,13 +257,17 @@ class LayoPainter extends CustomPainter {
   ///
   /// Optional: when left `null` (the default), [_resolvedAccentColor]
   /// derives the correct accent from [emotion] itself — blue
-  /// (`0xFF60ABDE`) for [LayoEmotion.mrLayo] and [LayoEmotion.question], red
+  /// (`0xFF60ABDE`) for [LayoEmotion.mrLayo], [LayoEmotion.question], and
+  /// [LayoEmotion.comandante] (its face is the standard blue face), red
   /// (`0xFFCC2222`) for [LayoEmotion.love], crimson (`0xFFC62828`) for
   /// [LayoEmotion.angry], orange (`0xFFFF9800`) for [LayoEmotion.alert], and
   /// yellow (`0xFFF5CC24`) for [LayoEmotion.idea] — so every caller gets each
   /// emotion's correct accent without needing to know its exact value.
   /// Passing an explicit color here overrides that per-emotion default
-  /// uniformly, for every one of those emotions at once.
+  /// uniformly, for every one of those emotions at once. The beret overlay
+  /// [LayoEmotion.comandante] wears is not affected by this field at all —
+  /// its maroon/red/highlight fills are fixed, ported verbatim from the
+  /// source artwork, exactly like every other emotion's non-accent shapes.
   ///
   /// [LayoEmotion.sleep] and [LayoEmotion.dead] use [glyphColor] instead for
   /// their own glyphs and antenna tip, and, correspondingly, for the
@@ -226,6 +287,7 @@ class LayoPainter extends CustomPainter {
     switch (emotion) {
       case LayoEmotion.mrLayo:
       case LayoEmotion.question:
+      case LayoEmotion.comandante:
         return const Color(0xFF60ABDE);
       case LayoEmotion.love:
         return const Color(0xFFCC2222);
@@ -413,6 +475,20 @@ class LayoPainter extends CustomPainter {
   /// to `0.0` (no flash in progress).
   final double flashT;
 
+  /// [LayoEmotion.comandante]'s right-eye wink phase, in `0..1`, `0` fully
+  /// open and `1` fully closed.
+  ///
+  /// [paintComandanteEyes] squashes the **right** eye alone toward a thin
+  /// ellipse and back as this value sweeps `0 -> 1 -> 0`, the same
+  /// squash-toward-ellipse technique [LayoEmotion.mrLayo]'s own [blinkT]
+  /// uses, but aimed at one eye rather than both — the left eye is never
+  /// touched by this value and always renders as the full open circle, at
+  /// every value of [winkT]. Ignored by every other [emotion]. Defaults to
+  /// `0.0` (open), so a default-constructed [LayoPainter] with
+  /// `emotion: LayoEmotion.comandante` renders both eyes open, matching the
+  /// rest state between winks.
+  final double winkT;
+
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
   double _kOf(double width) => width / 396.15;
@@ -420,17 +496,31 @@ class LayoPainter extends CustomPainter {
   /// Whether [emotion]'s eyes are "blinkable" — i.e. drawn as open/closed
   /// shapes that make sense to animate through [blinkT].
   ///
-  /// `true` for [LayoEmotion.mrLayo] alone (circular eyes). `false` for every
-  /// other [emotion]: [LayoEmotion.question] (its question-mark glyphs
-  /// animate via [wiggleT] instead — an eye-blink does not make sense for a
-  /// glyph shaped like a "?"), [LayoEmotion.sleep] (already-closed lines —
-  /// blinking closed eyes reads as wrong), [LayoEmotion.dead]
-  /// (already-crossed "X" marks, same reasoning), and [LayoEmotion.love],
-  /// [LayoEmotion.angry], [LayoEmotion.alert], [LayoEmotion.layo404], and
-  /// [LayoEmotion.idea] (none of whose "eyes" are open/closed shapes at all —
-  /// hearts, brows, "!!", digits, and a bulb respectively — each plays its
-  /// own listed idle animation instead of a blink).
+  /// `true` for [LayoEmotion.mrLayo] alone (circular eyes). `false` for
+  /// every other [emotion]: [LayoEmotion.question] (its question-mark
+  /// glyphs animate via [wiggleT] instead — an eye-blink does not make
+  /// sense for a glyph shaped like a "?"), [LayoEmotion.sleep]
+  /// (already-closed lines — blinking closed eyes reads as wrong),
+  /// [LayoEmotion.dead] (already-crossed "X" marks, same reasoning),
+  /// [LayoEmotion.love], [LayoEmotion.angry], [LayoEmotion.alert],
+  /// [LayoEmotion.layo404], and [LayoEmotion.idea] (none of whose "eyes" are
+  /// open/closed shapes at all — hearts, brows, "!!", digits, and a bulb
+  /// respectively — each plays its own listed idle animation instead of a
+  /// blink), and [LayoEmotion.comandante] (its own signature wink is a
+  /// **separate** animation, [winkT], aimed at the right eye alone rather
+  /// than [blinkT]'s shared two-eye close — see [paintComandanteEyes] — so
+  /// [blinkT] itself is ignored here just like for every other
+  /// non-[LayoEmotion.mrLayo] emotion above).
   bool get _isBlinkable => emotion == LayoEmotion.mrLayo;
+
+  /// Whether [emotion] plays [LayoEmotion.comandante]'s own one-eye wink
+  /// animation ([winkT]) — `true` for [LayoEmotion.comandante] alone. Kept
+  /// as its own getter (rather than folding straight into
+  /// [_paintEmotionGlyphs] or [shouldRepaint]) so every other place that
+  /// needs to know "does this emotion wink" — currently just
+  /// [shouldRepaint] — reads the same single source of truth `Layo`'s own
+  /// state mirrors as `_isWinkable`.
+  bool get _isWinkable => emotion == LayoEmotion.comandante;
 
   /// Whether [emotion] plays the looping idle antenna pulse ([pulseT]).
   ///
@@ -440,10 +530,13 @@ class LayoPainter extends CustomPainter {
   /// reads as "still sending a signal", which contradicts the emotion, so it
   /// renders its resting drooped antenna via [droopT] instead — see
   /// [_paintAntennaTip]), [LayoEmotion.love] (its dot follows the heartbeat,
-  /// [beatT], instead), and [LayoEmotion.idea] (its dot follows the bulb
-  /// flash, [flashT], instead) — each of those three drives the antenna dot
-  /// from its own emotion-specific animation rather than the generic pulse.
-  bool get _pulses => emotion != LayoEmotion.dead && emotion != LayoEmotion.love && emotion != LayoEmotion.idea;
+  /// [beatT], instead), [LayoEmotion.idea] (its dot follows the bulb flash,
+  /// [flashT], instead) — each of those three drives the antenna dot from
+  /// its own emotion-specific animation rather than the generic pulse — and
+  /// [LayoEmotion.comandante] ([_hasAntenna] is `false` for this emotion, so
+  /// there is no antenna tip at all to pulse).
+  bool get _pulses =>
+      _hasAntenna && emotion != LayoEmotion.dead && emotion != LayoEmotion.love && emotion != LayoEmotion.idea;
 
   /// The antenna-tip dot's fill color for the current [emotion], before any
   /// [droopT] dimming is applied: [_resolvedAccentColor] for
@@ -452,7 +545,9 @@ class LayoPainter extends CustomPainter {
   /// of these carries its own colored accent — blue, blue, red, crimson,
   /// orange, and yellow respectively); [glyphColor] (grey) for
   /// [LayoEmotion.sleep], [LayoEmotion.dead], and [LayoEmotion.layo404] —
-  /// verified directly against the per-emotion source SVGs.
+  /// verified directly against the per-emotion source SVGs. Meaningless (and
+  /// never read) for [LayoEmotion.comandante], which has no antenna tip at
+  /// all to color — see [_hasAntenna].
   ///
   /// [_resolvedAccentColor] already falls back to [glyphColor] for the grey
   /// emotions, so this getter simply delegates to it.
@@ -506,25 +601,129 @@ class LayoPainter extends CustomPainter {
     final k = _kOf(size.width);
 
     _paintBody(canvas, k);
+    _paintEmotionChestInsignia(canvas, k);
     _paintFaceShadow(canvas, k);
-    paintMrLayoTie(canvas, k, outlineColor: screenColor, accentColor: _antennaTipColor, paintSmoothed: _paintSmoothed);
+    if (_wearsTie) {
+      paintMrLayoTie(
+        canvas,
+        k,
+        outlineColor: screenColor,
+        accentColor: _antennaTipColor,
+        paintSmoothed: _paintSmoothed,
+      );
+    }
     _paintScreen(canvas, k);
-    _paintAntennaStalk(canvas, k);
+    if (_hasAntenna) {
+      _paintAntennaStalk(canvas, k);
+    }
     _paintEars(canvas, k);
     _paintHeadShell(canvas, k);
+    _paintEmotionOverlay(canvas, k);
     _paintEmotionGlyphs(canvas, k);
-    _paintAntennaTip(canvas, k);
+    if (_hasAntenna) {
+      _paintAntennaTip(canvas, k);
+    }
+  }
+
+  /// Whether [emotion] draws an antenna (stalk and tip) at all.
+  ///
+  /// `true` for every [LayoEmotion] except [LayoEmotion.comandante] — the
+  /// beret overlay sits exactly where the antenna would, and rather than
+  /// working around that (an earlier pass tried keeping the antenna
+  /// visible behind/above the beret), the maintainer asked for the antenna
+  /// to be omitted entirely for this emotion: no stalk, no tip, and — since
+  /// there is no tip to drive — no antenna pulse either ([_pulses] already
+  /// returns `false` for [LayoEmotion.comandante] once this getter gates
+  /// both antenna paint calls off; see [_pulses]'s own doc comment). Every
+  /// other emotion is unaffected.
+  bool get _hasAntenna => emotion != LayoEmotion.comandante;
+
+  /// Whether [emotion] wears the bow-tie.
+  ///
+  /// `true` for every [LayoEmotion] except [LayoEmotion.comandante] — the
+  /// Comandante is the sole emotion drawn with no tie at all, so [paint]
+  /// gates its call to [paintMrLayoTie] on this getter instead of calling it
+  /// unconditionally.
+  bool get _wearsTie => emotion != LayoEmotion.comandante;
+
+  /// Dispatches to the current [emotion]'s **overlay** glyph-paint function,
+  /// if it has one — a glyph layer drawn on top of the head shell rather
+  /// than confined to the dark screen window (see the class doc comment's
+  /// "Overlays" section). Called from [paint] once, right after
+  /// [_paintHeadShell] and before [_paintEmotionGlyphs].
+  ///
+  /// Every [emotion] but [LayoEmotion.comandante] has no overlay and is
+  /// listed explicitly with an empty branch, mirroring how
+  /// [_paintEmotionGlyphs] lists every emotion rather than falling through a
+  /// wildcard — so adding a future overlay emotion (sunglasses, a Santa hat,
+  /// a party hat) is a one-line case addition here, calling that emotion's
+  /// own glyph-file function, with no change required anywhere else in this
+  /// file.
+  void _paintEmotionOverlay(Canvas canvas, double k) {
+    switch (emotion) {
+      case LayoEmotion.mrLayo:
+      case LayoEmotion.question:
+      case LayoEmotion.sleep:
+      case LayoEmotion.dead:
+      case LayoEmotion.love:
+      case LayoEmotion.angry:
+      case LayoEmotion.alert:
+      case LayoEmotion.layo404:
+      case LayoEmotion.idea:
+        return;
+      case LayoEmotion.comandante:
+        paintComandanteBeret(canvas, k, paintSmoothed: _paintSmoothed);
+    }
+  }
+
+  /// Dispatches to the current [emotion]'s **chest insignia** glyph-paint
+  /// function, if it has one — a glyph layer drawn directly on top of the
+  /// body, well below the head, standing in for the bow-tie every other
+  /// [LayoEmotion] wears. Called from [paint] once, right after [_paintBody]
+  /// and before [_paintFaceShadow] — the earliest point after the body
+  /// exists, so nothing later (the face shadow, the tie for emotions that
+  /// wear one, the head itself) can ever occlude it.
+  ///
+  /// Every [emotion] but [LayoEmotion.comandante] has no chest insignia and
+  /// is listed explicitly with an empty branch, mirroring how
+  /// [_paintEmotionOverlay] and [_paintEmotionGlyphs] both list every
+  /// emotion rather than falling through a wildcard.
+  void _paintEmotionChestInsignia(Canvas canvas, double k) {
+    switch (emotion) {
+      case LayoEmotion.mrLayo:
+      case LayoEmotion.question:
+      case LayoEmotion.sleep:
+      case LayoEmotion.dead:
+      case LayoEmotion.love:
+      case LayoEmotion.angry:
+      case LayoEmotion.alert:
+      case LayoEmotion.layo404:
+      case LayoEmotion.idea:
+        return;
+      case LayoEmotion.comandante:
+        paintComandanteChestInsignia(canvas, k, paintSmoothed: _paintSmoothed);
+    }
   }
 
   /// Dispatches to the current [emotion]'s screen glyph-paint functions
   /// (mouth and/or eyes, or their emotion-specific stand-ins), applying
   /// [blinkT] only where [_isBlinkable] allows it, [wiggleT] for
-  /// [LayoEmotion.question], and [zzzPhase] for [LayoEmotion.sleep]'s "zzz".
+  /// [LayoEmotion.question], [zzzPhase] for [LayoEmotion.sleep]'s "zzz", and
+  /// [winkT] for [LayoEmotion.comandante]'s own one-eye wink.
+  /// [LayoEmotion.comandante] shares [LayoEmotion.mrLayo]'s exact blue smile
+  /// ([paintMrLayoMouth]) and, at rest, its exact two open eyes too — only
+  /// [winkT] (via [paintComandanteEyes]) ever closes one of them, and only
+  /// the right one, unlike [blinkT] which closes both of [LayoEmotion.mrLayo]'s
+  /// eyes together; its red beret is a separate **overlay**, painted by
+  /// [_paintEmotionOverlay] instead, not a screen glyph.
   void _paintEmotionGlyphs(Canvas canvas, double k) {
     switch (emotion) {
       case LayoEmotion.mrLayo:
         paintMrLayoMouth(canvas, k, accentColor: _resolvedAccentColor, paintSmoothed: _paintSmoothed);
         paintMrLayoEyes(canvas, k, accentColor: _resolvedAccentColor, blinkT: blinkT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.comandante:
+        paintMrLayoMouth(canvas, k, accentColor: _resolvedAccentColor, paintSmoothed: _paintSmoothed);
+        paintComandanteEyes(canvas, k, accentColor: _resolvedAccentColor, winkT: winkT, paintSmoothed: _paintSmoothed);
       case LayoEmotion.question:
         paintQuestionEyes(
           canvas,
@@ -863,7 +1062,8 @@ class LayoPainter extends CustomPainter {
         (glitchOpacity != oldDelegate.glitchOpacity && emotion == LayoEmotion.layo404) ||
         (glitchOffset != oldDelegate.glitchOffset && emotion == LayoEmotion.layo404) ||
         (glowT != oldDelegate.glowT && emotion == LayoEmotion.idea) ||
-        (flashT != oldDelegate.flashT && emotion == LayoEmotion.idea);
+        (flashT != oldDelegate.flashT && emotion == LayoEmotion.idea) ||
+        (winkT != oldDelegate.winkT && _isWinkable);
   }
 }
 

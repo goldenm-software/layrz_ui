@@ -2,23 +2,32 @@
 /// render.
 ///
 /// Every value shares the same base artwork — body, face shadow, screen,
-/// antenna stalk, ears, and head shell, all drawn identically regardless of
-/// [LayoEmotion] — and differs only in the antenna-tip dot color and the
-/// glyph(s) drawn on the screen (and, for [mrLayo] alone, the bow-tie). See
-/// `LayoPainter` for how each value is dispatched to its own glyph-paint
-/// method.
+/// ears, and head shell — and differs in the antenna-tip dot color and the
+/// glyph(s) drawn on the screen, plus the bow-tie (worn by every emotion
+/// except [comandante]). [comandante] is also the sole emotion with no
+/// antenna at all, and the only one with an **overlay** glyph layer (its
+/// beret) and a chest glyph layer (its ribbon rack) on top of the body,
+/// rather than only a screen glyph. See `LayoPainter` for how each value is
+/// dispatched to its own glyph-paint methods.
 ///
-/// Nine emotions are implemented so far: [mrLayo], [question], [sleep],
-/// [dead], [love], [angry], [alert], [layo404], and [idea]. The full set this
-/// mascot is eventually meant to support — "bolivariano" and a few others —
-/// will be added as further [LayoEmotion] values in a later pass; do not
-/// treat this enum as exhaustive of the mascot's intended range.
+/// Ten emotions are implemented so far: [mrLayo], [question], [sleep],
+/// [dead], [love], [angry], [alert], [layo404], [idea], and [comandante].
+/// The full set this mascot is eventually meant to support — sunglasses,
+/// a Santa hat, a party hat, and a few others — will be added as further
+/// [LayoEmotion] values in a later pass; do not treat this enum as
+/// exhaustive of the mascot's intended range.
+///
+/// [comandante] is also the first emotion to wear an **overlay**: a glyph
+/// layer drawn after the shared head shell, on top of the face, rather than
+/// inside the dark screen window like every other emotion's glyphs. See
+/// `LayoPainter`'s "Overlays" section for the reusable mechanism this
+/// introduced.
 enum LayoEmotion {
   /// The original, default "MrLayo" face: a bow-tie, blue circular eyes, a
   /// blue smile, and a blue antenna-tip dot.
   ///
-  /// This is the only emotion wearing the bow-tie, and the only one whose
-  /// glyphs blink is paired with a smiling mouth.
+  /// This is the only emotion whose eye-blink is paired with a smiling
+  /// mouth. Every [LayoEmotion] wears the bow-tie except [comandante].
   ///
   /// This emotion was based on this song: https://www.youtube.com/watch?v=ozXIAg7zp9I
   /// (High — Rawayana)
@@ -98,4 +107,37 @@ enum LayoEmotion {
   /// This emotion was based on this song: https://www.youtube.com/watch?v=KNexS61fjus
   /// (SMART — LE SSERAFIM)
   idea,
+
+  /// "Comandante" — the standard blue face (two open circular eyes, a blue
+  /// smile) plus a tall, full red beret worn as an **overlay**, tilted over
+  /// the top-left of the head shell and capping the head's full width. This
+  /// is the first emotion to use the overlay mechanism (see `LayoPainter`'s
+  /// "Overlays" section) rather than a screen glyph, since the beret sits on
+  /// top of the head itself, not inside the dark screen window.
+  ///
+  /// [comandante] has **no antenna at all** — no stalk, no tip, and
+  /// therefore no antenna pulse either — the only [LayoEmotion] this is true
+  /// for; the beret's own crown sits exactly where the antenna would, and
+  /// the maintainer asked for it omitted entirely rather than drawn around
+  /// or through the beret (see `LayoPainter._hasAntenna`).
+  ///
+  /// It also wears a chest ribbon rack — two stacked rows of small,
+  /// multi-color-striped service-ribbon bars painted directly on the body,
+  /// well below the head — as this emotion's replacement for the bow-tie
+  /// every other [LayoEmotion] wears.
+  ///
+  /// At rest both eyes are open, exactly like [mrLayo]. Idle motion is a
+  /// periodic, brief wink of the **right eye alone** — a Chávez-style
+  /// signature wink — on the same kind of jittered per-instance schedule as
+  /// [mrLayo]'s own two-eye blink, but closing only one eye and leaving the
+  /// left one open throughout (`LayoPainter.winkT`, distinct from [mrLayo]'s
+  /// own `blinkT`).
+  ///
+  /// Unlike every other [LayoEmotion], [comandante] wears **no bow-tie** —
+  /// "the Comandante does not stand on ceremony" — see [_wearsTie] on
+  /// `LayoPainter`.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=_pbIkeZR24s
+  /// (Chávez Corazón del Pueblo)
+  comandante,
 }

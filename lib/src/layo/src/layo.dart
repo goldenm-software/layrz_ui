@@ -22,7 +22,9 @@ import 'layo_painter.dart';
 ///
 /// * A gentle antenna-tip pulse/glow, for [LayoEmotion.mrLayo],
 ///   [LayoEmotion.question], [LayoEmotion.sleep], [LayoEmotion.angry], and
-///   [LayoEmotion.layo404].
+///   [LayoEmotion.layo404]. [LayoEmotion.comandante] has no antenna at all
+///   (its beret overlay sits exactly where one would be) and so plays no
+///   antenna pulse either.
 /// * A periodic eye blink, for [LayoEmotion.mrLayo] alone.
 /// * A gentle "?" wiggle, for [LayoEmotion.question] alone (replacing the
 ///   blink, since its "eyes" are the question marks themselves).
@@ -48,6 +50,10 @@ import 'layo_painter.dart';
 ///   jittered per-instance schedule.
 /// * A soft continuous glow-pulse on the bulb, plus an occasional stronger
 ///   "insight" flash the antenna dot syncs to, for [LayoEmotion.idea] alone.
+/// * A periodic, brief wink of the **right eye alone** (the left eye stays
+///   open throughout) — a Chávez-style signature wink — for
+///   [LayoEmotion.comandante] alone, on the same kind of jittered
+///   per-instance schedule as [LayoEmotion.mrLayo]'s own two-eye blink.
 ///
 /// Nothing else moves; the silhouette is identical to the static artwork at
 /// every frame outside of these specific animated parts, which matters
@@ -226,6 +232,21 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// peak brightness) and back, derived from [_flashController].
   late final Animation<double> _flashAnimation;
 
+  /// Short, non-looping controller driving a single wink's close+open, for
+  /// [LayoEmotion.comandante]. Idle (not animating) between winks —
+  /// [_scheduleNextWink] is what fires it — exactly mirroring how
+  /// [_blinkController] behaves for [LayoEmotion.mrLayo]'s blink, so it
+  /// costs nothing at 60fps outside the brief window a wink is actually
+  /// playing.
+  late final AnimationController _winkController;
+
+  /// The wink's own eased value, `0` (open) to `1` (fully closed), derived
+  /// from [_winkController] so the close/reopen each feel like a snap
+  /// rather than a linear wipe — the same shape [_blinkAnimation] uses for
+  /// [LayoEmotion.mrLayo]'s blink, applied here to [LayoEmotion.comandante]'s
+  /// right eye alone (see [LayoPainter.winkT]).
+  late final Animation<double> _winkAnimation;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
@@ -262,6 +283,11 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// [_blinkTimer] exactly, for [LayoEmotion.idea].
   Timer? _flashTimer;
 
+  /// Self-scheduling timer for the next wink; mirrors [_blinkTimer] exactly,
+  /// for [LayoEmotion.comandante]'s right-eye wink instead of
+  /// [LayoEmotion.mrLayo]'s two-eye blink.
+  Timer? _winkTimer;
+
   /// Whether this instance currently considers itself "animating" — the
   /// combination of [Layo.animate], [TickerMode.valuesOf], and the platform's
   /// reduced-motion preference. Tracked so [didChangeDependencies] and
@@ -276,16 +302,28 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// non-blinkable emotion (currently every emotion but [LayoEmotion.mrLayo])
   /// no blink timer is ever armed and [_blinkAnimation]'s value stays
   /// structurally at `0`, rather than merely being ignored downstream.
+  /// [LayoEmotion.comandante] plays its own separate one-eye [_isWinkable]
+  /// animation instead of this shared two-eye blink.
   bool get _isBlinkable => widget.emotion == LayoEmotion.mrLayo;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.comandante] — gates the wink
+  /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
+  /// for [LayoEmotion.mrLayo].
+  bool get _isWinkable => widget.emotion == LayoEmotion.comandante;
 
   /// Whether [Layo.emotion] plays the looping antenna pulse — mirrors
   /// [LayoPainter._pulses]. `false` for [LayoEmotion.dead] (rests
   /// permanently drooped and twitches instead, see [_isDead]),
   /// [LayoEmotion.love] (its dot follows the heartbeat instead, see
-  /// [_isLove]), and [LayoEmotion.idea] (its dot follows the bulb flash
-  /// instead, see [_isIdea]).
+  /// [_isLove]), [LayoEmotion.idea] (its dot follows the bulb flash instead,
+  /// see [_isIdea]), and [LayoEmotion.comandante] (this emotion has no
+  /// antenna at all — its beret overlay sits exactly where one would be —
+  /// so there is no tip left to pulse; see `LayoPainter._hasAntenna`).
   bool get _pulses =>
-      widget.emotion != LayoEmotion.dead && widget.emotion != LayoEmotion.love && widget.emotion != LayoEmotion.idea;
+      widget.emotion != LayoEmotion.dead &&
+      widget.emotion != LayoEmotion.love &&
+      widget.emotion != LayoEmotion.idea &&
+      widget.emotion != LayoEmotion.comandante;
 
   /// Whether [Layo.emotion] is [LayoEmotion.dead] — gates the twitch
   /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
@@ -332,6 +370,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
     _flashController = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
     _flashAnimation = CurvedAnimation(parent: _flashController, curve: Curves.easeOut);
+    _winkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+    _winkAnimation = CurvedAnimation(parent: _winkController, curve: Curves.easeInOut);
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
@@ -344,6 +384,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _glitchController,
       _glowController,
       _flashAnimation,
+      _winkAnimation,
     ]);
   }
 
@@ -386,6 +427,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     final wasGlitching = _glitchTimer != null;
     final shouldFlash = shouldAnimate && _isIdea;
     final wasFlashing = _flashTimer != null;
+    final shouldWink = shouldAnimate && _isWinkable;
+    final wasWinking = _winkTimer != null;
 
     if (shouldAnimate != _isAnimating) {
       _isAnimating = shouldAnimate;
@@ -471,6 +514,15 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _flashTimer?.cancel();
       _flashTimer = null;
     }
+
+    if (shouldWink && !wasWinking) {
+      _scheduleNextWink();
+    } else if (!shouldWink && wasWinking) {
+      _winkController.stop();
+      _winkController.value = 0;
+      _winkTimer?.cancel();
+      _winkTimer = null;
+    }
   }
 
   /// Arms a one-shot timer for the next blink, at a randomized 3-6 second
@@ -506,6 +558,43 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       return;
     }
     _scheduleNextBlink();
+  }
+
+  /// Arms a one-shot timer for the next wink, at a randomized 3-6 second
+  /// interval so this instance's winks are jittered against every other
+  /// [Layo] on screen instead of firing in unison — the same schedule shape
+  /// as [_scheduleNextBlink], for [LayoEmotion.comandante]'s right-eye wink
+  /// instead of [LayoEmotion.mrLayo]'s two-eye blink.
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and
+  /// [_isWinkable] before acting, so a timer or an in-flight wink left over
+  /// from just before animation was paused (or the emotion switched away
+  /// from [LayoEmotion.comandante], or the widget was disposed) cannot fire
+  /// a wink, leave [_winkController] running, or re-arm the next timer.
+  void _scheduleNextWink() {
+    _winkTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _winkTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playWink()));
+  }
+
+  /// Plays one full wink (close then reopen) on [_winkController] and, if
+  /// still animating and winkable afterward, arms the next
+  /// [_scheduleNextWink].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isWinkable] after each await so a
+  /// wink in flight when animation is paused (or the emotion switched away
+  /// from [LayoEmotion.comandante], or the widget disposed) neither leaves
+  /// [_winkController] mid-close nor re-arms a further wink.
+  Future<void> _playWink() async {
+    await _winkController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isWinkable) {
+      return;
+    }
+    await _winkController.reverse();
+    if (!mounted || !_isAnimating || !_isWinkable) {
+      return;
+    }
+    _scheduleNextWink();
   }
 
   /// Arms a one-shot timer for the next antenna twitch, at a randomized 3-6
@@ -696,6 +785,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _burstTimer?.cancel();
     _glitchTimer?.cancel();
     _flashTimer?.cancel();
+    _winkTimer?.cancel();
     _pulseController.dispose();
     _blinkController.dispose();
     _wiggleController.dispose();
@@ -707,6 +797,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _glitchController.dispose();
     _glowController.dispose();
     _flashController.dispose();
+    _winkController.dispose();
     super.dispose();
   }
 
@@ -732,6 +823,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               glitchOffset: _glitchOffset,
               glowT: _glowController.value,
               flashT: _flashAnimation.value,
+              winkT: _winkAnimation.value,
             ),
             size: Size.infinite,
           );
