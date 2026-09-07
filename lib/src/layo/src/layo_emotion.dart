@@ -10,14 +10,11 @@
 /// rather than only a screen glyph. See `LayoPainter` for how each value is
 /// dispatched to its own glyph-paint methods.
 ///
-/// Twenty-three emotions are implemented so far: [mrLayo], [question],
+/// Twenty-four emotions are implemented so far: [mrLayo], [question],
 /// [sleep], [dead], [love], [angry], [alert], [layo404], [idea],
 /// [comandante], [money], [thinking], [listening], [sad], [success],
 /// [excited], [searching], [working], [wink], [mindBlown], [smug], [cool],
-/// and [christmas]. The full set this mascot is eventually meant to
-/// support — a party hat and a few others — will be added as further
-/// [LayoEmotion] values in a later pass; do not treat this enum as
-/// exhaustive of the mascot's intended range.
+/// [christmas], and [party] — completing the originally-planned set.
 ///
 /// [comandante] is also the first emotion to wear an **overlay**: a glyph
 /// layer drawn after the shared head shell, on top of the face, rather than
@@ -357,4 +354,32 @@ enum LayoEmotion {
   /// [mrLayo]'s own blink (which [christmas] still plays, unmodified, on the
   /// same jittered per-instance schedule).
   christmas,
+
+  /// Layo dressed for a party: a plain pink-and-yellow-striped cone party
+  /// hat **overlay** — deliberately much simpler than [christmas]'s own
+  /// folded Santa hat — plus a looping multicolor confetti **background
+  /// layer** falling behind the whole figure, like [christmas]'s own
+  /// snowfall.
+  ///
+  /// This is the standard warm face (blue eyes, blue smile, like [mrLayo]),
+  /// with the party hat capping the head exactly where [comandante]'s beret,
+  /// [cool]'s sunglasses, and [christmas]'s Santa hat sit. [party] has **no
+  /// antenna at all** — the same reasoning [comandante]'s beret and
+  /// [christmas]'s Santa hat both use (see `LayoPainter._hasAntenna`): the
+  /// cone's own base sits low enough on the head that the antenna stalk
+  /// would otherwise poke out through it. Unlike [comandante] and
+  /// [christmas], though, [party] has no body overlay of its own dressing
+  /// the body, so it **keeps the ordinary bow-tie** — colored, like every
+  /// [LayoEmotion]'s tie, in whichever accent the antenna dot would use if
+  /// this emotion had one: this emotion's own festive pink ([kPartyPink]).
+  ///
+  /// Idle motion is the looping confetti drifting and tumbling down behind
+  /// the figure, plus a gentle vertical bob on the hat's own pom-pom tip,
+  /// both independent of [mrLayo]'s own blink (which [party] still plays,
+  /// unmodified, on the same jittered per-instance schedule).
+  ///
+  /// This emotion was based on these songs:
+  /// - https://www.youtube.com/watch?v=gQxJO_TXKVA (No Celestial — LE SSERAFIM)
+  /// - https://www.youtube.com/watch?v=KQ6zr6kCPj8 (Party Rock Anthem — LMFAO)
+  party,
 }

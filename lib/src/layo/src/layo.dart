@@ -93,6 +93,11 @@ import 'layo_painter.dart';
 ///   [LayoEmotion.christmas] alone — which also plays the ordinary two-eye
 ///   blink above, unmodified, since its eyes are [LayoEmotion.mrLayo]'s own
 ///   circles, never covered by the hat.
+/// * A looping multicolor "confetti" background layer behind the whole
+///   mascot figure, plus a gentle vertical bob on the party hat's own
+///   pom-pom tip, for [LayoEmotion.party] alone — which also plays the
+///   ordinary two-eye blink above, unmodified, since its eyes are
+///   [LayoEmotion.mrLayo]'s own circles, never covered by the hat.
 ///
 /// Nothing else moves; the silhouette is identical to the static artwork at
 /// every frame outside of these specific animated parts, which matters
@@ -411,6 +416,19 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// [LayoEmotion.christmas].
   late final AnimationController _pomPomSwayController;
 
+  /// Looping controller driving [LayoEmotion.party]'s "confetti" background
+  /// layer. Runs a fixed ~6-second cycle via [AnimationController.repeat],
+  /// mirroring [_snowController]'s own role for [LayoEmotion.christmas], for
+  /// as long as this instance is animating and its emotion is
+  /// [LayoEmotion.party].
+  late final AnimationController _confettiController;
+
+  /// Looping controller driving [LayoEmotion.party]'s party-hat pom-pom bob.
+  /// Runs a fixed ~2-second cycle via [AnimationController.repeat] for as
+  /// long as this instance is animating and its emotion is
+  /// [LayoEmotion.party].
+  late final AnimationController _pomPomBobController;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
@@ -492,11 +510,15 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// [LayoPainter._isBlinkable]. Gates the blink scheduler entirely: for a
   /// non-blinkable emotion no blink timer is ever armed and
   /// [_blinkAnimation]'s value stays structurally at `0`, rather than merely
-  /// being ignored downstream. `true` for [LayoEmotion.mrLayo] and
-  /// [LayoEmotion.christmas] (both share the same unmodified circular eyes).
-  /// [LayoEmotion.comandante] plays its own separate one-eye [_isWinkable]
-  /// animation instead of this shared two-eye blink.
-  bool get _isBlinkable => widget.emotion == LayoEmotion.mrLayo || widget.emotion == LayoEmotion.christmas;
+  /// being ignored downstream. `true` for [LayoEmotion.mrLayo],
+  /// [LayoEmotion.christmas], and [LayoEmotion.party] (all three share the
+  /// same unmodified circular eyes). [LayoEmotion.comandante] plays its own
+  /// separate one-eye [_isWinkable] animation instead of this shared
+  /// two-eye blink.
+  bool get _isBlinkable =>
+      widget.emotion == LayoEmotion.mrLayo ||
+      widget.emotion == LayoEmotion.christmas ||
+      widget.emotion == LayoEmotion.party;
 
   /// Whether [Layo.emotion] is [LayoEmotion.comandante] — gates the wink
   /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
@@ -603,6 +625,14 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// own unmodified circles, never covered by the Santa hat overlay).
   bool get _isChristmas => widget.emotion == LayoEmotion.christmas;
 
+  /// Whether [Layo.emotion] is [LayoEmotion.party] — gates the looping
+  /// confetti and pom-pom-bob controllers, exactly as [_isChristmas] gates
+  /// its own pair of looping controllers. This emotion also plays the
+  /// ordinary two-eye [_isBlinkable] blink (its eyes are
+  /// [LayoEmotion.mrLayo]'s own unmodified circles, never covered by the
+  /// party hat overlay).
+  bool get _isParty => widget.emotion == LayoEmotion.party;
+
   @override
   void initState() {
     super.initState();
@@ -654,6 +684,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _gleamAnimation = CurvedAnimation(parent: _gleamController, curve: Curves.easeInOut);
     _snowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 7000));
     _pomPomSwayController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
+    _confettiController = AnimationController(vsync: this, duration: const Duration(milliseconds: 6000));
+    _pomPomBobController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
@@ -685,6 +717,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _gleamAnimation,
       _snowController,
       _pomPomSwayController,
+      _confettiController,
+      _pomPomBobController,
     ]);
   }
 
@@ -833,6 +867,14 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       } else {
         _snowController.stop();
         _pomPomSwayController.stop();
+      }
+
+      if (shouldAnimate && _isParty) {
+        _confettiController.repeat();
+        _pomPomBobController.repeat();
+      } else {
+        _confettiController.stop();
+        _pomPomBobController.stop();
       }
     }
 
@@ -1475,6 +1517,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _gleamController.dispose();
     _snowController.dispose();
     _pomPomSwayController.dispose();
+    _confettiController.dispose();
+    _pomPomBobController.dispose();
     super.dispose();
   }
 
@@ -1519,6 +1563,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               gleamT: _gleamAnimation.value,
               snowT: _snowController.value,
               pomPomSwayT: _pomPomSwayController.value,
+              confettiT: _confettiController.value,
+              pomPomBobT: _pomPomBobController.value,
             ),
             size: Size.infinite,
           );

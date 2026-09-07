@@ -16,6 +16,7 @@ import 'glyphs/layo_glyphs_love.dart';
 import 'glyphs/layo_glyphs_mindblown.dart';
 import 'glyphs/layo_glyphs_money.dart';
 import 'glyphs/layo_glyphs_mr_layo.dart';
+import 'glyphs/layo_glyphs_party.dart';
 import 'glyphs/layo_glyphs_question.dart';
 import 'glyphs/layo_glyphs_sad.dart';
 import 'glyphs/layo_glyphs_searching.dart';
@@ -243,6 +244,13 @@ import 'layo_emotion.dart';
 ///   applied to the Santa hat's own pom-pom (see [paintChristmasHat]).
 ///   [LayoEmotion.christmas] also plays the ordinary two-eye [blinkT], since
 ///   its eyes are [LayoEmotion.mrLayo]'s own unmodified circles.
+/// * [confettiT] — [LayoEmotion.party] only: drives the looping "confetti"
+///   background layer, independent of every other party animation (see
+///   [paintPartyConfetti] and [_paintEmotionBackdrop]).
+/// * [pomPomBobT] — [LayoEmotion.party] only: a looping gentle vertical bob
+///   applied to the party hat's own pom-pom tip (see [paintPartyHat]).
+///   [LayoEmotion.party] also plays the ordinary two-eye [blinkT], since its
+///   eyes are [LayoEmotion.mrLayo]'s own unmodified circles.
 ///
 /// Every animation parameter defaults so a default-constructed painter is
 /// unchanged, and [shouldRepaint] ignores each parameter's diff for the
@@ -292,6 +300,8 @@ class LayoPainter extends CustomPainter {
     this.gleamT = 0.0,
     this.snowT = 0.0,
     this.pomPomSwayT = 0.0,
+    this.confettiT = 0.0,
+    this.pomPomBobT = 0.0,
   });
 
   /// Which face this painter draws: the shared base (including the bow-tie,
@@ -330,9 +340,11 @@ class LayoPainter extends CustomPainter {
   /// [LayoEmotion.searching]; amber
   /// (`0xFFB8860B`, a distinctly different shade from [LayoEmotion.alert]'s
   /// own orange) for [LayoEmotion.working]; magenta (`0xFFD500F9`) for
-  /// [LayoEmotion.mindBlown]; and festive Christmas red (`0xFFC62828`,
-  /// [kChristmasRed]) for [LayoEmotion.christmas] — so every caller gets each
-  /// emotion's correct accent without needing to know its exact value.
+  /// [LayoEmotion.mindBlown]; festive Christmas red (`0xFFC62828`,
+  /// [kChristmasRed]) for [LayoEmotion.christmas]; and festive party pink
+  /// (`0xFFE91E8C`, [kPartyPink]) for [LayoEmotion.party] — so every caller
+  /// gets each emotion's correct accent without needing to know its exact
+  /// value.
   /// Passing an explicit color here overrides that per-emotion default
   /// uniformly, for every one
   /// of those emotions at once. The beret overlay [LayoEmotion.comandante]
@@ -399,6 +411,8 @@ class LayoPainter extends CustomPainter {
         return const Color(0xFFD500F9);
       case LayoEmotion.christmas:
         return kChristmasRed;
+      case LayoEmotion.party:
+        return kPartyPink;
     }
   }
 
@@ -432,6 +446,19 @@ class LayoPainter extends CustomPainter {
   /// [paintMrLayoMouth]/[paintMrLayoEyes]'s `accentColor` parameter the way
   /// every other emotion's dispatch in [_paintEmotionGlyphs] does.
   static const Color _christmasFaceColor = Color(0xFF5FACDF);
+
+  /// The fill color for [LayoEmotion.party]'s own screen glyph (the mouth
+  /// and eyes) — [LayoEmotion.mrLayo]'s original blue, unlike this emotion's
+  /// [_resolvedAccentColor] (festive party pink, used for the hat, the
+  /// confetti, and where a tie/antenna-tip color would apply).
+  ///
+  /// Mirrors [_christmasFaceColor]'s own decoupling exactly: a festive party
+  /// face still reads as the mascot's familiar blue-eyed face underneath the
+  /// hat, rather than an all-pink face, kept as its own getter here instead
+  /// of reusing [_resolvedAccentColor] for [paintMrLayoMouth]/[paintMrLayoEyes]'s
+  /// `accentColor` parameter the way every other emotion's dispatch in
+  /// [_paintEmotionGlyphs] does.
+  static const Color _partyFaceColor = Color(0xFF5FACDF);
 
   /// Fill color for every screen glyph (and the antenna tip) on
   /// [LayoEmotion.sleep] and [LayoEmotion.dead] — the mascot's neutral grey,
@@ -813,6 +840,31 @@ class LayoPainter extends CustomPainter {
   /// LayoEmotion.christmas` renders the pom-pom at its own resting position.
   final double pomPomSwayT;
 
+  /// [LayoEmotion.party]'s idle "confetti" background-layer phase, in `0..1`,
+  /// looping.
+  ///
+  /// [paintPartyConfetti] derives each falling confetti piece's own vertical
+  /// position, drift, and spin from this phase (offset per-piece so they do
+  /// not fall in lockstep), exactly mirroring how [LayoEmotion.christmas]'s
+  /// own [snowT] drives its snowfall. Ignored by every other [emotion].
+  /// Defaults to `0.0`; like [snowT], there is no meaningful "at rest,
+  /// invisible" pose for a continuous confetti fall, so even a
+  /// default-constructed [LayoEmotion.party] painter still renders every
+  /// piece at its own phase-`0` position rather than an empty backdrop.
+  final double confettiT;
+
+  /// [LayoEmotion.party]'s idle party-hat pom-pom bob phase, in `0..1`,
+  /// looping.
+  ///
+  /// [paintPartyHat] derives a small vertical bob of the pom-pom's own center
+  /// from this phase, so it reads as gently bobbing rather than perfectly
+  /// rigid -- a simpler vertical bob than [LayoEmotion.christmas]'s own
+  /// circular pom-pom sway, matching this emotion's own simpler cone shape.
+  /// Ignored by every other [emotion]. Defaults to `0.0`, so a
+  /// default-constructed [LayoPainter] with `emotion: LayoEmotion.party`
+  /// renders the pom-pom at its own resting position.
+  final double pomPomBobT;
+
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
   double _kOf(double width) => width / 396.15;
@@ -820,24 +872,26 @@ class LayoPainter extends CustomPainter {
   /// Whether [emotion]'s eyes are "blinkable" — i.e. drawn as open/closed
   /// shapes that make sense to animate through [blinkT].
   ///
-  /// `true` for [LayoEmotion.mrLayo] and [LayoEmotion.christmas] (both share
-  /// the exact same circular eyes — [LayoEmotion.christmas]'s Santa hat
-  /// overlay sits above them, never covering them, so the ordinary two-eye
-  /// blink still reads correctly underneath it). `false` for every other
-  /// [emotion]: [LayoEmotion.question] (its question-mark glyphs animate via
-  /// [wiggleT] instead — an eye-blink does not make sense for a glyph shaped
-  /// like a "?"), [LayoEmotion.sleep] (already-closed lines — blinking
-  /// closed eyes reads as wrong), [LayoEmotion.dead] (already-crossed "X"
-  /// marks, same reasoning), [LayoEmotion.love], [LayoEmotion.angry],
-  /// [LayoEmotion.alert], [LayoEmotion.layo404], and [LayoEmotion.idea]
-  /// (none of whose "eyes" are open/closed shapes at all — hearts, brows,
-  /// "!!", digits, and a bulb respectively — each plays its own listed idle
-  /// animation instead of a blink), and [LayoEmotion.comandante] (its own
-  /// signature wink is a **separate** animation, [winkT], aimed at the right
-  /// eye alone rather than [blinkT]'s shared two-eye close — see
-  /// [paintComandanteEyes] — so [blinkT] itself is ignored here just like
-  /// for every other non-blinkable emotion above).
-  bool get _isBlinkable => emotion == LayoEmotion.mrLayo || emotion == LayoEmotion.christmas;
+  /// `true` for [LayoEmotion.mrLayo], [LayoEmotion.christmas], and
+  /// [LayoEmotion.party] (all three share the exact same circular eyes —
+  /// [LayoEmotion.christmas]'s Santa hat and [LayoEmotion.party]'s cone
+  /// overlay both sit above them, never covering them, so the ordinary
+  /// two-eye blink still reads correctly underneath either). `false` for
+  /// every other [emotion]: [LayoEmotion.question] (its question-mark glyphs
+  /// animate via [wiggleT] instead — an eye-blink does not make sense for a
+  /// glyph shaped like a "?"), [LayoEmotion.sleep] (already-closed lines —
+  /// blinking closed eyes reads as wrong), [LayoEmotion.dead]
+  /// (already-crossed "X" marks, same reasoning), [LayoEmotion.love],
+  /// [LayoEmotion.angry], [LayoEmotion.alert], [LayoEmotion.layo404], and
+  /// [LayoEmotion.idea] (none of whose "eyes" are open/closed shapes at all —
+  /// hearts, brows, "!!", digits, and a bulb respectively — each plays its
+  /// own listed idle animation instead of a blink), and
+  /// [LayoEmotion.comandante] (its own signature wink is a **separate**
+  /// animation, [winkT], aimed at the right eye alone rather than [blinkT]'s
+  /// shared two-eye close — see [paintComandanteEyes] — so [blinkT] itself
+  /// is ignored here just like for every other non-blinkable emotion above).
+  bool get _isBlinkable =>
+      emotion == LayoEmotion.mrLayo || emotion == LayoEmotion.christmas || emotion == LayoEmotion.party;
 
   /// Whether [emotion] plays [LayoEmotion.comandante]'s own one-eye wink
   /// animation ([winkT]) — `true` for [LayoEmotion.comandante] alone. Kept
@@ -955,17 +1009,22 @@ class LayoPainter extends CustomPainter {
 
   /// Whether [emotion] draws an antenna (stalk and tip) at all.
   ///
-  /// `true` for every [LayoEmotion] except [LayoEmotion.comandante] and
-  /// [LayoEmotion.christmas] — each one's own head overlay (the beret, the
-  /// Santa hat) sits exactly where the antenna would, and rather than
-  /// working around that (an earlier pass tried keeping the antenna
-  /// visible behind/above the beret), the maintainer asked for the antenna
-  /// to be omitted entirely for these emotions: no stalk, no tip, and —
-  /// since there is no tip to drive — no antenna pulse either ([_pulses]
-  /// already returns `false` for both once this getter gates both antenna
+  /// `true` for every [LayoEmotion] except [LayoEmotion.comandante],
+  /// [LayoEmotion.christmas], and [LayoEmotion.party] — each one's own head
+  /// overlay (the beret, the Santa hat, the party cone) sits exactly where
+  /// the antenna would once lowered onto the head (see
+  /// `layo_glyphs_party.dart`'s own `_kHatBaseY`), and rather than working
+  /// around that (an earlier pass tried keeping the antenna visible
+  /// behind/above the beret), the maintainer asked for the antenna to be
+  /// omitted entirely for these emotions: no stalk, no tip, and — since
+  /// there is no tip to drive — no antenna pulse either ([_pulses] already
+  /// returns `false` for all three once this getter gates their antenna
   /// paint calls off; see [_pulses]'s own doc comment). Every other emotion
-  /// is unaffected.
-  bool get _hasAntenna => emotion != LayoEmotion.comandante && emotion != LayoEmotion.christmas;
+  /// is unaffected. Unlike [LayoEmotion.comandante] and
+  /// [LayoEmotion.christmas], [LayoEmotion.party] still wears the ordinary
+  /// bow-tie (see [_wearsTie]) — only the antenna is removed.
+  bool get _hasAntenna =>
+      emotion != LayoEmotion.comandante && emotion != LayoEmotion.christmas && emotion != LayoEmotion.party;
 
   /// Whether [emotion] wears the bow-tie.
   ///
@@ -973,7 +1032,9 @@ class LayoPainter extends CustomPainter {
   /// [LayoEmotion.christmas] — the Comandante is drawn with no tie at all,
   /// and [LayoEmotion.christmas]'s sweater body overlay already dresses the
   /// body, so [paint] gates its call to [paintMrLayoTie] on this getter
-  /// instead of calling it unconditionally.
+  /// instead of calling it unconditionally. [LayoEmotion.party] has no body
+  /// overlay of its own, so — unlike [LayoEmotion.christmas] — it keeps the
+  /// ordinary tie despite also losing its antenna (see [_hasAntenna]).
   bool get _wearsTie => emotion != LayoEmotion.comandante && emotion != LayoEmotion.christmas;
 
   /// Dispatches to the current [emotion]'s **overlay** glyph-paint function,
@@ -983,17 +1044,19 @@ class LayoPainter extends CustomPainter {
   /// [_paintHeadShell] and before [_paintEmotionGlyphs].
   ///
   /// [LayoEmotion.cool] is the second emotion to use this same overlay
-  /// mechanism, for its sunglasses, and [LayoEmotion.christmas] the third,
-  /// for its Santa hat (which also tucks in a poinsettia and holly sprig —
-  /// see `paintChristmasHat`).
+  /// mechanism, for its sunglasses; [LayoEmotion.christmas] the third, for
+  /// its Santa hat (which also tucks in a poinsettia and holly sprig — see
+  /// `paintChristmasHat`); and [LayoEmotion.party] the fourth, for its own
+  /// much simpler striped cone party hat (see `paintPartyHat`) — completing
+  /// this design system's originally-planned overlay set.
   ///
-  /// Every [emotion] but [LayoEmotion.comandante], [LayoEmotion.cool], and
-  /// [LayoEmotion.christmas] has no overlay and is listed explicitly with an
-  /// empty branch, mirroring how [_paintEmotionGlyphs] lists every emotion
-  /// rather than falling through a wildcard — so adding a future overlay
-  /// emotion (a party hat, and others) is a one-line case addition here,
-  /// calling that emotion's own glyph-file function, with no change required
-  /// anywhere else in this file.
+  /// Every [emotion] but [LayoEmotion.comandante], [LayoEmotion.cool],
+  /// [LayoEmotion.christmas], and [LayoEmotion.party] has no overlay and is
+  /// listed explicitly with an empty branch, mirroring how
+  /// [_paintEmotionGlyphs] lists every emotion rather than falling through a
+  /// wildcard — so adding a future overlay emotion is a one-line case
+  /// addition here, calling that emotion's own glyph-file function, with no
+  /// change required anywhere else in this file.
   void _paintEmotionOverlay(Canvas canvas, double k) {
     switch (emotion) {
       case LayoEmotion.mrLayo:
@@ -1029,6 +1092,8 @@ class LayoPainter extends CustomPainter {
         );
       case LayoEmotion.christmas:
         paintChristmasHat(canvas, k, pomPomSwayT: pomPomSwayT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.party:
+        paintPartyHat(canvas, k, pomPomBobT: pomPomBobT, paintSmoothed: _paintSmoothed);
     }
   }
 
@@ -1068,6 +1133,7 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.smug:
       case LayoEmotion.cool:
       case LayoEmotion.christmas:
+      case LayoEmotion.party:
         return;
       case LayoEmotion.comandante:
         paintComandanteChestInsignia(canvas, k, paintSmoothed: _paintSmoothed);
@@ -1122,6 +1188,7 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.mindBlown:
       case LayoEmotion.smug:
       case LayoEmotion.cool:
+      case LayoEmotion.party:
         return;
       case LayoEmotion.christmas:
         paintChristmasSweater(canvas, k, paintSmoothed: _paintSmoothed);
@@ -1146,15 +1213,17 @@ class LayoPainter extends CustomPainter {
   /// canvas available for it to spill onto.
   ///
   /// [LayoEmotion.christmas] is the second emotion to use this mechanism,
-  /// for its looping snowfall.
+  /// for its looping snowfall, and [LayoEmotion.party] the third, for its
+  /// looping multicolor confetti.
   ///
-  /// Every [emotion] but [LayoEmotion.money] and [LayoEmotion.christmas] has
-  /// no background layer and is listed explicitly with an empty branch,
-  /// mirroring how [_paintEmotionOverlay] and [_paintEmotionChestInsignia]
-  /// both list every emotion rather than falling through a wildcard — so a
-  /// future background layer plugs into this same mechanism with a one-line
-  /// case addition here, calling that emotion's own glyph-file function,
-  /// with no change required anywhere else in this file.
+  /// Every [emotion] but [LayoEmotion.money], [LayoEmotion.christmas], and
+  /// [LayoEmotion.party] has no background layer and is listed explicitly
+  /// with an empty branch, mirroring how [_paintEmotionOverlay] and
+  /// [_paintEmotionChestInsignia] both list every emotion rather than
+  /// falling through a wildcard — so a future background layer plugs into
+  /// this same mechanism with a one-line case addition here, calling that
+  /// emotion's own glyph-file function, with no change required anywhere
+  /// else in this file.
   void _paintEmotionBackdrop(Canvas canvas, Size size) {
     switch (emotion) {
       case LayoEmotion.mrLayo:
@@ -1194,6 +1263,11 @@ class LayoPainter extends CustomPainter {
         canvas.save();
         canvas.clipRect(Offset.zero & size);
         paintChristmasSnowfall(canvas, size, snowT: snowT);
+        canvas.restore();
+      case LayoEmotion.party:
+        canvas.save();
+        canvas.clipRect(Offset.zero & size);
+        paintPartyConfetti(canvas, size, confettiT: confettiT);
         canvas.restore();
     }
   }
@@ -1346,6 +1420,16 @@ class LayoPainter extends CustomPainter {
         // instead) -- see _christmasFaceColor's own doc comment.
         paintMrLayoMouth(canvas, k, accentColor: _christmasFaceColor, paintSmoothed: _paintSmoothed);
         paintMrLayoEyes(canvas, k, accentColor: _christmasFaceColor, blinkT: blinkT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.party:
+        // Like LayoEmotion.christmas, the party hat overlay (paintPartyHat,
+        // dispatched from _paintEmotionOverlay) sits only on top of the head
+        // shell -- it never covers the eyes -- so this emotion's own screen
+        // glyph is the full mrLayo face (mouth plus blinkable eyes),
+        // deliberately colored via _partyFaceColor (mrLayo's own blue), not
+        // _resolvedAccentColor (this emotion's own festive pink, used for the
+        // hat/confetti instead) -- see _partyFaceColor's own doc comment.
+        paintMrLayoMouth(canvas, k, accentColor: _partyFaceColor, paintSmoothed: _paintSmoothed);
+        paintMrLayoEyes(canvas, k, accentColor: _partyFaceColor, blinkT: blinkT, paintSmoothed: _paintSmoothed);
     }
   }
 
@@ -1645,7 +1729,9 @@ class LayoPainter extends CustomPainter {
         (smugT != oldDelegate.smugT && emotion == LayoEmotion.smug) ||
         (gleamT != oldDelegate.gleamT && emotion == LayoEmotion.cool) ||
         (snowT != oldDelegate.snowT && emotion == LayoEmotion.christmas) ||
-        (pomPomSwayT != oldDelegate.pomPomSwayT && emotion == LayoEmotion.christmas);
+        (pomPomSwayT != oldDelegate.pomPomSwayT && emotion == LayoEmotion.christmas) ||
+        (confettiT != oldDelegate.confettiT && emotion == LayoEmotion.party) ||
+        (pomPomBobT != oldDelegate.pomPomBobT && emotion == LayoEmotion.party);
   }
 }
 
