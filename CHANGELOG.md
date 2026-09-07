@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.0.22
+
+**The `Layo` brand mascot lands, drawn entirely in code.** `Layo` (`lib/src/layo/`) is a Material-free `CustomPainter` mascot — no bundled image or SVG — that fills the width its parent provides and derives its height from a fixed 500:833 aspect ratio (or takes an explicit `width`). Named `Layo` (no `Layrz` prefix) per decision D11, as a brand asset rather than a design-system component. It carries subtle idle animation by default (antenna pulse, eye blink, and per-emotion motion) that pauses off-screen via `TickerMode`, honors reduced motion, and can be turned off with `animate: false`.
+
+**Twenty-four emotions** via the `LayoEmotion` enum: `mrLayo`, `question`, `sleep`, `dead`, `love`, `angry`, `alert`, `layo404`, `idea`, `comandante`, `money`, `thinking`, `listening`, `sad`, `success`, `excited`, `searching`, `working`, `wink`, `mindBlown`, `smug`, `cool`, `christmas`, and `party`. Each varies the antenna-dot color, the screen glyph, and (where it applies) a head overlay, chest insignia, body outfit, or falling backdrop, and each has its own idle animation (a heartbeat, a tear, a `zzz` fade, a glitch flicker, a bulb flash, confetti, snow, and so on).
+
+**`AvatarLayo`** frames `Layo` as a head-and-shoulders portrait avatar — a `circle` or `roundedBox` (`LayoAvatarShape`) — with a fixed per-emotion background color and a ring that is a darker shade of it. The background is intentionally not settable from outside; it is part of each emotion's identity.
+
+**`TransitionedLayo` + `LayoController`** crossfade between emotions: the controller exposes a single `to(emotion)` method (no queue; a call mid-transition re-bases to the new target), and the widget crossfades two complete `Layo` renders. **`TransitionedAvatarLayo`** is the avatar-framed version, lerping the per-emotion background and ring colors in lockstep with the face fade. Both animate by default and hard-cut under reduced motion.
+
+On Linux desktop, the example forces the Skia renderer: Flutter 3.47's default Impeller renderer aliases curve-heavy `CustomPainter` output, an engine-level limitation documented in decision D77 (`engineering/decisions.md`); Skia, web, and mobile are unaffected.
+
 ## 0.0.21
 
 **Four new picker components land in this release — `LayrzColorInput`, `LayrzMultiSelectInput<T>`, `LayrzEmojiInput`, and `LayrzImageInput`** (`lib/src/pickers/`) — plus the shared surface infrastructure behind them.

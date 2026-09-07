@@ -4969,6 +4969,70 @@ Recorded here as evidence that the frozen-chrome constraint (see `CLAUDE.md`'s r
 
 ---
 
+## D77: Impeller-on-Linux Aliases Curve Fills (Flutter 3.47) — Example App Forces Skia
+
+**Date**: 2026-09-07
+**Status**: Decided
+**Category**: Tooling / Rendering / Example App
+
+### Context
+
+Flutter 3.47 made Impeller the default renderer on Linux desktop. Impeller's general path SDF
+renderer is unfinished, so filled Bézier curves fall back to 4x-MSAA tessellation and render with
+visibly stair-stepped/aliased edges on Linux desktop — most noticeable on curve-heavy
+`CustomPainter` output: the new `Layo` mascot, and the existing progress bar. Skia renders the same
+paths smooth. Web (CanvasKit) and mobile are unaffected.
+
+**Evidence**: our own Impeller-vs-Skia side-by-side render of `Layo` and the progress bar;
+[flutter/flutter#183959](https://github.com/flutter/flutter/issues/183959) (general path SDF
+renderer, open, no ETA); [flutter/flutter#138682](https://github.com/flutter/flutter/issues/138682)
+(jagged Impeller paths, an earlier report of the same class of defect); official docs
+[docs.flutter.dev/perf/impeller](https://docs.flutter.dev/perf/impeller) and
+[/perf/antialiasing](https://docs.flutter.dev/perf/antialiasing) — desktop targets get 4x MSAA plus
+SDF rendering "when possible," with the docs stating outright that "not all drawn paths are
+guaranteed to result in SDF rendering," and no public knob to raise the MSAA sample count.
+
+### Decisions
+
+The layrz_ui **example app** forces the Skia renderer on Linux —
+`fl_dart_project_set_enable_impeller(project, FALSE)` added to `fl_application_activate` in
+`example/linux/runner/my_application.cc`, immediately before `fl_view_new(project)` — so the
+showroom renders curve-heavy widgets correctly during development and demos.
+
+**This is a bridge, not a permanent stance.** Flutter has stated the Impeller opt-out will be
+removed in a future release, so this call must be re-tested against later 3.4x/3.5x releases as
+the SDF path renderer lands, and reverted once Impeller renders filled paths correctly on Linux.
+
+**Scope note: layrz_ui is a library and does not control consumer render settings.** This decision
+covers only the example/showroom app; it changes nothing under `lib/`. A consumer app on Linux
+desktop that sees aliased curves from layrz_ui's `CustomPainter`-based widgets should force Skia
+the same way in their own runner (`fl_dart_project_set_enable_impeller(project, FALSE)`), or pass
+`--no-enable-impeller` in dev. `Layo`'s and the progress bar's painted geometry are correct as
+written; nothing in `lib/` is at fault, and no workaround was made there.
+
+**Mitigations considered and rejected**, none of which address filled-path edge antialiasing:
+`isAntiAlias` (already the default on the `Paint` objects involved), `filterQuality` (governs image
+sampling, not vector path fills), `saveLayer` (no antialiasing gain for this case, and carries its
+own compositing costs and bugs). A thin same-color edge stroke around the fill was evaluated
+separately as a code-side softener at the painter level — kept only where it demonstrably helped,
+per the corresponding painter's own history, not adopted as a blanket rule here.
+
+### Consequences
+
+- `example/linux/runner/my_application.cc` now calls `fl_dart_project_set_enable_impeller(project,
+  FALSE)`; no other file under `example/` changed.
+- `README.md`'s "Running the example" section gained a note pointing consumers at the same fix for
+  their own Linux runners.
+- A future reader re-testing Impeller on a later Flutter release should update this entry's
+  Decisions section (not open a new one) once the SDF path renderer is confirmed fixed, and only
+  then remove the `example/linux/runner/my_application.cc` call.
+
+### Related Decisions
+
+- None — this is the first decision covering renderer selection in the example app.
+
+---
+
 ## D76: Amendment to D75 — DESIGN-98 Promotes `LayrzEndDrawer`, Retires the Commit-on-Tap Split,
 Restores Midnight/Zero as Valid Values
 

@@ -95,6 +95,17 @@ make run-windows
 make run-macos
 ```
 
+> **Note — Linux desktop renderer:** Flutter 3.47 defaults to the Impeller renderer on Linux
+> desktop, whose general path antialiasing is unfinished ([flutter/flutter#183959](https://github.com/flutter/flutter/issues/183959)).
+> Curve-heavy `CustomPainter` output — the `Layo` mascot, the progress bar — renders with aliased /
+> stair-stepped edges as a result. The example app already forces the Skia renderer on Linux to
+> avoid this. If you run into aliased curves in your own Linux desktop app, force Skia too:
+> `flutter run --no-enable-impeller` in dev, or `fl_dart_project_set_enable_impeller(project, FALSE);`
+> in `linux/runner/my_application.cc` for release builds. Web (CanvasKit) and mobile are
+> unaffected; whether other Impeller desktop targets (macOS, Windows) show the same aliasing is not
+> yet verified. The shapes themselves are correct — this is an engine-level rendering limitation,
+> not a geometry bug. See `engineering/decisions.md` (D77) for details.
+
 ---
 
 ## FAQ
