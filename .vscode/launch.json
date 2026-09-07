@@ -23,6 +23,13 @@
       "cwd": "example",
       "program": "lib/main.dart",
       "args": ["-d", "web-server", "--web-port", "8080"]
-    }
+    },
+    {
+      "name": "Run example w/ Test Driver (debug)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "example",
+      "program": "test_driver/app.dart"
+    },
   ]
 }
