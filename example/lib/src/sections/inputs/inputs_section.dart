@@ -248,13 +248,56 @@ class _InputsSectionState extends State<InputsSection> {
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
       title: Text('Inputs Showcase', style: context.tokens.typography.title),
-      itemExtent: 47.0,
+      // 45.0 (LayrzButton FAB height) + 2 * 10.0 (LayrzRow's pd2 vertical padding
+      // around the row content) = 65.0 is the minimum extent that fits the two
+      // revealed edit/delete FABs without vertical overflow; 68.0 leaves a small
+      // margin of breathing room.
+      itemExtent: 41.0,
       items: _allDemos.map((demo) {
         return LayrzScaffoldItem<InputDemo>(
           key: ValueKey(demo.id),
           item: demo,
           tile: _buildTile(demo),
           searchableStrings: {demo.name, demo.category},
+          actions: [
+            LayrzButton.edit(
+              labelText: 'Edit ${demo.name}',
+              isFab: true,
+              style: .text,
+              onTap: () {
+                LayrzResponsiveModal.show(
+                  context,
+                  semanticLabel: 'Action fired',
+                  builder: (modalContext) {
+                    final tokens = modalContext.tokens;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: tokens.spacing.sp2,
+                      children: [
+                        Text(
+                          'Action fired',
+                          style: tokens.typography.title.copyWith(fontWeight: .bold),
+                        ),
+                        Text(
+                          'This is a placeholder for the edit action of the ${demo.name} input component.',
+                          style: tokens.typography.body,
+                        ),
+                      ],
+                    );
+                  },
+                  actions: [
+                    Builder(
+                      builder: (modalContext) => LayrzButton.cancel(
+                        labelText: 'Close',
+                        onTap: () => Navigator.of(modalContext, rootNavigator: true).pop(),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
         );
       }).toList(),
       controller: _controller,
