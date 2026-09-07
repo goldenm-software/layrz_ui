@@ -112,6 +112,12 @@ class LayoSection extends StatelessWidget {
               );
             }).toList(),
           ),
+
+          SizedBox(height: tokens.spacing.sp4),
+
+          Text('TransitionedLayo — LayoController.to(...)', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp3),
+          const _TransitionDemo(),
         ],
       ),
     );
@@ -188,6 +194,90 @@ class _AvatarTile extends StatelessWidget {
         Text(label, style: tokens.typography.body),
         SizedBox(height: tokens.spacing.sp2),
         AvatarLayo(shape: shape, emotion: emotion, width: 120),
+      ],
+    );
+  }
+}
+
+/// Demonstrates [TransitionedLayo] driven by a [LayoController]: a mascot
+/// that cross-fades between emotions as the maintainer taps each chip below
+/// it, rather than jumping straight to the new face the way a plain [Layo]
+/// with a changing [Layo.emotion] would.
+///
+/// Owns the [LayoController] itself (constructed once in [initState] and
+/// disposed in [dispose], matching this design system's usual
+/// caller-owns-the-controller convention) so every chip's [LayoController.to]
+/// call targets the same controller instance the [TransitionedLayo] above it
+/// is listening to.
+class _TransitionDemo extends StatefulWidget {
+  /// Creates a new [_TransitionDemo].
+  const _TransitionDemo();
+
+  @override
+  State<_TransitionDemo> createState() => _TransitionDemoState();
+}
+
+/// State for [_TransitionDemo]: owns the [LayoController] every chip and the
+/// [TransitionedLayo] itself share.
+class _TransitionDemoState extends State<_TransitionDemo> {
+  /// Drives which [LayoEmotion] transition is currently playing. Constructed
+  /// once and disposed with this widget; every chip's `onTap` calls
+  /// [LayoController.to] on this same instance.
+  late final LayoController _controller;
+
+  /// A representative sample of [LayoEmotion] values shown as tappable chips
+  /// below the mascot — not every emotion, so the demo's own row of buttons
+  /// stays legible rather than repeating the full 24-value grid already
+  /// shown above in this section.
+  static const _sampleEmotions = [
+    LayoEmotion.mrLayo,
+    LayoEmotion.excited,
+    LayoEmotion.sad,
+    LayoEmotion.angry,
+    LayoEmotion.comandante,
+    LayoEmotion.christmas,
+    LayoEmotion.party,
+    LayoEmotion.mindBlown,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = LayoController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: TransitionedLayo(controller: _controller),
+        ),
+        SizedBox(height: tokens.spacing.sp3),
+        LayrzRow(
+          spacing: tokens.spacing.sp2,
+          children: _sampleEmotions.map((emotion) {
+            return LayrzCol(
+              xs: 6,
+              sm: 3,
+              md: 2,
+              child: LayrzButton(
+                labelText: emotion.name,
+                onTap: () => _controller.to(emotion),
+              ),
+            );
+          }).toList(),
+        ),
       ],
     );
   }
