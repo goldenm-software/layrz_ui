@@ -313,66 +313,91 @@ class _CircularShowcase extends StatelessWidget {
       spacing: tokens.spacing.sp2,
       children: [
         Text('Circular Mode', style: tokens.typography.title),
-        Row(
+        LayrzRow(
           spacing: tokens.spacing.sp4,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              spacing: tokens.spacing.sp2,
-              children: [
-                LayrzProgressBar(
-                  value: value,
-                  format: LayrzProgressFormat.circular,
-                  semanticLabel: 'Demo circular progress',
-                ),
-                Text('Determinate', style: tokens.typography.label),
-              ],
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: Column(
+                spacing: tokens.spacing.sp2,
+                children: [
+                  LayrzProgressBar(
+                    value: value,
+                    format: LayrzProgressFormat.circular,
+                    semanticLabel: 'Demo circular progress',
+                  ),
+                  Text('Determinate', style: tokens.typography.label),
+                ],
+              ),
             ),
-            Column(
-              spacing: tokens.spacing.sp2,
-              children: [
-                const LayrzProgressBar(format: LayrzProgressFormat.circular),
-                Text('Indeterminate', style: tokens.typography.label),
-              ],
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: Column(
+                spacing: tokens.spacing.sp2,
+                children: [
+                  const LayrzProgressBar(format: LayrzProgressFormat.circular),
+                  Text('Indeterminate', style: tokens.typography.label),
+                ],
+              ),
             ),
-            Column(
-              spacing: tokens.spacing.sp2,
-              children: [
-                LayrzProgressBar(
-                  value: 0.7,
-                  format: LayrzProgressFormat.circular,
-                  type: LayrzProgressType.success,
-                  semanticLabel: 'Success circular progress',
-                ),
-                Text('Success', style: tokens.typography.label),
-              ],
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: Column(
+                spacing: tokens.spacing.sp2,
+                children: [
+                  LayrzProgressBar(
+                    value: 0.7,
+                    format: LayrzProgressFormat.circular,
+                    type: LayrzProgressType.success,
+                    semanticLabel: 'Success circular progress',
+                  ),
+                  Text('Success', style: tokens.typography.label),
+                ],
+              ),
             ),
-            Column(
-              spacing: tokens.spacing.sp2,
-              children: [
-                LayrzProgressBar(
-                  value: 0.4,
-                  format: LayrzProgressFormat.circular,
-                  type: LayrzProgressType.danger,
-                  semanticLabel: 'Danger circular progress',
-                ),
-                Text('Danger', style: tokens.typography.label),
-              ],
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: Column(
+                spacing: tokens.spacing.sp2,
+                children: [
+                  LayrzProgressBar(
+                    value: 0.4,
+                    format: LayrzProgressFormat.circular,
+                    type: LayrzProgressType.danger,
+                    semanticLabel: 'Danger circular progress',
+                  ),
+                  Text('Danger', style: tokens.typography.label),
+                ],
+              ),
             ),
-            Column(
-              spacing: tokens.spacing.sp2,
-              children: [
-                LayrzProgressBar(
-                  value: 0.6,
-                  format: LayrzProgressFormat.circular,
-                  size: 90.0,
-                  strokeWidth: 10.0,
-                  type: LayrzProgressType.custom,
-                  color: tokens.colors.primary.shade700,
-                  semanticLabel: 'Custom size circular progress',
-                ),
-                Text('Size 90 / stroke 10', style: tokens.typography.label),
-              ],
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: Column(
+                spacing: tokens.spacing.sp2,
+                children: [
+                  LayrzProgressBar(
+                    value: 0.6,
+                    format: LayrzProgressFormat.circular,
+                    size: 90.0,
+                    strokeWidth: 10.0,
+                    type: LayrzProgressType.custom,
+                    color: tokens.colors.primary.shade700,
+                    semanticLabel: 'Custom size circular progress',
+                  ),
+                  Text('Size 90 / stroke 10', style: tokens.typography.label),
+                ],
+              ),
             ),
           ],
         ),
