@@ -58,6 +58,13 @@ static void my_application_activate(GApplication* application) {
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
 
+  // Force the Skia renderer on Linux desktop. Impeller became the default in
+  // Flutter 3.47 but its general path SDF renderer is unfinished
+  // (flutter/flutter#183959), so filled Bezier curves in CustomPainter
+  // (e.g. Layo, the progress bar) render with aliased edges on desktop.
+  // Skia antialiases them correctly. Revisit when the SDF path renderer lands.
+  fl_dart_project_set_enable_impeller(project, FALSE);
+
   FlView* view = fl_view_new(project);
   GdkRGBA background_color;
   // Background defaults to black, override it here if necessary, e.g. #00000000
