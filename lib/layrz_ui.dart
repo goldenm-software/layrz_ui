@@ -18,6 +18,7 @@ export 'src/images/images.dart';
 export 'src/inputs/inputs.dart';
 export 'src/keyboard/keyboard.dart';
 export 'src/l10n/l10n.dart';
+export 'src/layo/layo.dart';
 export 'src/layout/layout.dart';
 export 'src/menus/menus.dart';
 export 'src/overlays/overlays.dart';
