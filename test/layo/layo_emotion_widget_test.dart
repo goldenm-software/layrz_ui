@@ -141,7 +141,16 @@ void main() {
       expect(sawNonZeroBlink, isTrue, reason: 'mrLayo must blink at some point while animating');
     });
 
-    for (final emotion in [LayoEmotion.question, LayoEmotion.sleep, LayoEmotion.dead]) {
+    for (final emotion in [
+      LayoEmotion.question,
+      LayoEmotion.sleep,
+      LayoEmotion.dead,
+      LayoEmotion.love,
+      LayoEmotion.angry,
+      LayoEmotion.alert,
+      LayoEmotion.layo404,
+      LayoEmotion.idea,
+    ]) {
       guardedTestWidgets('$emotion is not blinkable: blinkT stays 0 for the whole animation window', (
         tester,
       ) async {
@@ -195,7 +204,16 @@ void main() {
       );
     });
 
-    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.sleep, LayoEmotion.dead]) {
+    for (final emotion in [
+      LayoEmotion.mrLayo,
+      LayoEmotion.sleep,
+      LayoEmotion.dead,
+      LayoEmotion.love,
+      LayoEmotion.angry,
+      LayoEmotion.alert,
+      LayoEmotion.layo404,
+      LayoEmotion.idea,
+    ]) {
       guardedTestWidgets('$emotion never wiggles: wiggleT stays 0 while animating', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -237,7 +255,16 @@ void main() {
       );
     });
 
-    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.question, LayoEmotion.dead]) {
+    for (final emotion in [
+      LayoEmotion.mrLayo,
+      LayoEmotion.question,
+      LayoEmotion.dead,
+      LayoEmotion.love,
+      LayoEmotion.angry,
+      LayoEmotion.alert,
+      LayoEmotion.layo404,
+      LayoEmotion.idea,
+    ]) {
       guardedTestWidgets('$emotion never fades a zzz: zzzPhase stays 0 while animating', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -256,7 +283,13 @@ void main() {
       });
     }
 
-    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.question, LayoEmotion.sleep]) {
+    for (final emotion in [
+      LayoEmotion.mrLayo,
+      LayoEmotion.question,
+      LayoEmotion.sleep,
+      LayoEmotion.angry,
+      LayoEmotion.layo404,
+    ]) {
       guardedTestWidgets('$emotion still pulses the antenna while animating', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -303,6 +336,31 @@ void main() {
             'still sending a signal; it rests drooped and twitches instead',
       );
     });
+
+    for (final emotion in [LayoEmotion.love, LayoEmotion.idea]) {
+      guardedTestWidgets('$emotion never plays the generic looping pulse: pulseT stays 0 while animating', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(seconds: 3));
+
+        expect(
+          painterIn(tester).pulseT,
+          0.0,
+          reason: '$emotion drives its own antenna dot animation instead of the generic pulse',
+        );
+      });
+    }
 
     guardedTestWidgets('dead rests fully drooped (droopT: 1.0) immediately, with no twitch in progress', (
       tester,
@@ -371,7 +429,16 @@ void main() {
       expect(painterIn(tester).droopT, 1.0, reason: 'the twitch must fall back to exactly the resting droop');
     });
 
-    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.question, LayoEmotion.sleep]) {
+    for (final emotion in [
+      LayoEmotion.mrLayo,
+      LayoEmotion.question,
+      LayoEmotion.sleep,
+      LayoEmotion.love,
+      LayoEmotion.angry,
+      LayoEmotion.alert,
+      LayoEmotion.layo404,
+      LayoEmotion.idea,
+    ]) {
       guardedTestWidgets('$emotion never droops or twitches: droopT stays at 1.0 (ignored by its painter)', (
         tester,
       ) async {
@@ -449,5 +516,300 @@ void main() {
         reason: 'reduced motion must show the static resting droop and never twitch',
       );
     });
+
+    guardedTestWidgets('love beats: beatT moves away from 0 while animating', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.love)),
+        ),
+      );
+
+      expect(painterIn(tester).beatT, 0.0);
+
+      var sawNonZeroBeat = false;
+      for (var i = 0; i < 15 && !sawNonZeroBeat; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (painterIn(tester).beatT > 0.0) {
+          sawNonZeroBeat = true;
+        }
+      }
+
+      expect(sawNonZeroBeat, isTrue, reason: 'love must play the heartbeat at some point while animating');
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.angry, LayoEmotion.idea]) {
+      guardedTestWidgets('$emotion never beats: beatT stays 0 while animating', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 1500));
+
+        expect(painterIn(tester).beatT, 0.0, reason: '$emotion must never beat');
+      });
+    }
+
+    guardedTestWidgets('angry bursts periodically: burstT briefly rises above 0, then falls back to 0', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.angry)),
+        ),
+      );
+
+      expect(painterIn(tester).burstT, 0.0);
+
+      var sawBurst = false;
+      for (var i = 0; i < 62 && !sawBurst; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (painterIn(tester).burstT > 0.0) {
+          sawBurst = true;
+        }
+      }
+
+      expect(sawBurst, isTrue, reason: 'angry must burst (burstT rises above 0) at some point');
+
+      // The burst controller's own forward+reverse cycle is ~550ms each way
+      // (~1.1s round trip); pump comfortably past that, well short of the
+      // next jittered burst's minimum 3s interval.
+      for (var i = 0; i < 13; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(painterIn(tester).burstT, 0.0, reason: 'the burst must fall back to exactly 0 (relaxed)');
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.love, LayoEmotion.alert]) {
+      guardedTestWidgets('$emotion never bursts: burstT stays 0, even after time passes', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(seconds: 8));
+
+        expect(painterIn(tester).burstT, 0.0, reason: '$emotion must never burst');
+      });
+    }
+
+    guardedTestWidgets('alert pulses: alertPulseT moves away from 0 while animating', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.alert)),
+        ),
+      );
+
+      expect(painterIn(tester).alertPulseT, 0.0);
+
+      await tester.pump(const Duration(milliseconds: 450));
+
+      expect(
+        painterIn(tester).alertPulseT,
+        closeTo(0.5, 0.05),
+        reason: 'alert must play the squash-stretch pulse at the half-cycle point of its ~900ms loop',
+      );
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.angry, LayoEmotion.layo404]) {
+      guardedTestWidgets('$emotion never plays the alert pulse: alertPulseT stays 0 while animating', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 1500));
+
+        expect(painterIn(tester).alertPulseT, 0.0, reason: '$emotion must never play the alert pulse');
+      });
+    }
+
+    guardedTestWidgets('layo404 glitches periodically: glitchOpacity dips below 1.0, then settles back', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.layo404)),
+        ),
+      );
+
+      expect(painterIn(tester).glitchOpacity, 1.0);
+
+      var sawGlitch = false;
+      for (var i = 0; i < 62 && !sawGlitch; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (painterIn(tester).glitchOpacity < 1.0) {
+          sawGlitch = true;
+        }
+      }
+
+      expect(sawGlitch, isTrue, reason: 'layo404 must glitch (glitchOpacity dips below 1.0) at some point');
+
+      // The glitch controller's own forward+reverse cycle is ~320ms each way
+      // (~640ms round trip); pump comfortably past that, well short of the
+      // next jittered glitch's minimum 3s interval.
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(
+        painterIn(tester).glitchOpacity,
+        1.0,
+        reason: 'the glitch must settle back to exactly 1.0 (fully opaque) between bursts',
+      );
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.dead, LayoEmotion.idea]) {
+      guardedTestWidgets('$emotion never glitches: glitchOpacity stays 1.0, even after time passes', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(seconds: 8));
+
+        expect(painterIn(tester).glitchOpacity, 1.0, reason: '$emotion must never glitch');
+      });
+    }
+
+    guardedTestWidgets('idea glows continuously: glowT moves away from 0 while animating', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.idea)),
+        ),
+      );
+
+      expect(painterIn(tester).glowT, 0.0);
+
+      await tester.pump(const Duration(milliseconds: 1200));
+
+      expect(
+        painterIn(tester).glowT,
+        closeTo(0.5, 0.05),
+        reason: 'idea must play the glow breath at the half-cycle point of its ~2.4s loop',
+      );
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.love, LayoEmotion.layo404]) {
+      guardedTestWidgets('$emotion never glows: glowT stays 0 while animating', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(milliseconds: 1500));
+
+        expect(painterIn(tester).glowT, 0.0, reason: '$emotion must never glow');
+      });
+    }
+
+    guardedTestWidgets('idea flashes periodically: flashT briefly rises above 0, then falls back to 0', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.ltr,
+          child: Center(child: Layo(width: 120, emotion: LayoEmotion.idea)),
+        ),
+      );
+
+      expect(painterIn(tester).flashT, 0.0);
+
+      var sawFlash = false;
+      for (var i = 0; i < 62 && !sawFlash; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (painterIn(tester).flashT > 0.0) {
+          sawFlash = true;
+        }
+      }
+
+      expect(sawFlash, isTrue, reason: 'idea must flash (flashT rises above 0) at some point');
+
+      for (var i = 0; i < 9; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(painterIn(tester).flashT, 0.0, reason: 'the flash must fall back to exactly 0');
+    });
+
+    for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.love, LayoEmotion.layo404]) {
+      guardedTestWidgets('$emotion never flashes: flashT stays 0, even after time passes', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(child: Layo(width: 120, emotion: emotion)),
+          ),
+        );
+
+        await tester.pump(const Duration(seconds: 8));
+
+        expect(painterIn(tester).flashT, 0.0, reason: '$emotion must never flash');
+      });
+    }
   });
 }

@@ -3,12 +3,17 @@ import 'package:layrz_ui/layrz_ui.dart';
 
 void main() {
   group('LayoEmotion', () {
-    test('has exactly the four currently-implemented values, in the documented order', () {
+    test('has exactly the nine currently-implemented values, in the documented order', () {
       expect(LayoEmotion.values, [
         LayoEmotion.mrLayo,
         LayoEmotion.question,
         LayoEmotion.sleep,
         LayoEmotion.dead,
+        LayoEmotion.love,
+        LayoEmotion.angry,
+        LayoEmotion.alert,
+        LayoEmotion.layo404,
+        LayoEmotion.idea,
       ]);
     });
 
