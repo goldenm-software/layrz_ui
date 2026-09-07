@@ -71,6 +71,23 @@ import 'layo_painter.dart';
 /// * A continuous twinkle (scale-pulse plus rotation) on both star eyes,
 ///   paired with a small looping energetic bounce of the whole glyph group,
 ///   for [LayoEmotion.excited] alone.
+/// * A looping side-to-side (and slight up-down) scan of the magnifier
+///   glyph, for [LayoEmotion.searching] alone.
+/// * A looping rotation of both gears (the smaller one counter-rotating
+///   against the larger one), for [LayoEmotion.working] alone.
+/// * A periodic, brief wink of the **right eye alone** (the left eye and the
+///   smile stay static throughout), on a jittered per-instance schedule
+///   identical in shape to [LayoEmotion.mrLayo]'s own blink and
+///   [LayoEmotion.comandante]'s own wink, for [LayoEmotion.wink] alone.
+/// * A continuous spin of both spiral eyes, plus a jittered "pop" burst (a
+///   quick scale/shake on the whole glyph group) on a per-instance schedule,
+///   for [LayoEmotion.mindBlown] alone.
+/// * A subtle, understated jittered lid/smirk raise, for [LayoEmotion.smug]
+///   alone, on the same kind of per-instance schedule as the blink above,
+///   but a small pulse rather than any large motion.
+/// * A subtle, jittered gleam sweeping across one sunglasses lens, for
+///   [LayoEmotion.cool] alone, on a per-instance schedule noticeably more
+///   frequent than the blink above (a 1.5-3s interval rather than 3-6s).
 ///
 /// Nothing else moves; the silhouette is identical to the static artwork at
 /// every frame outside of these specific animated parts, which matters
@@ -317,6 +334,65 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// together in [_syncAnimating]).
   late final AnimationController _excitedBounceController;
 
+  /// Looping controller driving [LayoEmotion.searching]'s magnifier scan.
+  /// Runs a fixed ~2.6-second cycle via [AnimationController.repeat] for as
+  /// long as this instance is animating and its emotion is
+  /// [LayoEmotion.searching].
+  late final AnimationController _scanController;
+
+  /// Looping controller driving [LayoEmotion.working]'s gear rotation. Runs
+  /// a fixed ~3-second cycle via [AnimationController.repeat] for as long as
+  /// this instance is animating and its emotion is [LayoEmotion.working].
+  late final AnimationController _gearController;
+
+  /// Short, non-looping controller driving a single wink's close+open, for
+  /// [LayoEmotion.wink]. Idle (not animating) between winks —
+  /// [_scheduleNextWearWink] is what fires it — exactly mirroring how
+  /// [_winkController] behaves for [LayoEmotion.comandante], but kept as its
+  /// own controller so the two emotions' winks are fully independent.
+  late final AnimationController _wearWinkController;
+
+  /// The wear-wink's own eased value, `0` (open) to `1` (fully closed),
+  /// derived from [_wearWinkController] the same way [_winkAnimation] derives
+  /// from [_winkController].
+  late final Animation<double> _wearWinkAnimation;
+
+  /// Looping controller driving [LayoEmotion.mindBlown]'s spiral-eye spin.
+  /// Runs a fixed ~2-second cycle via [AnimationController.repeat] for as
+  /// long as this instance is animating and its emotion is
+  /// [LayoEmotion.mindBlown].
+  late final AnimationController _spinController;
+
+  /// Short, non-looping controller driving a single "pop" burst (rise then
+  /// fall), for [LayoEmotion.mindBlown]. Idle (not animating) between bursts
+  /// — [_scheduleNextPop] is what fires it — mirroring how [_burstController]
+  /// behaves for [LayoEmotion.angry].
+  late final AnimationController _popController;
+
+  /// The pop's own eased progress, `0` (rest) to `1` (the burst's peak) and
+  /// back, derived from [_popController].
+  late final Animation<double> _popAnimation;
+
+  /// Short, non-looping controller driving a single subtle lid/smirk-raise
+  /// pulse (rise then fall), for [LayoEmotion.smug]. Idle (not animating)
+  /// between pulses — [_scheduleNextSmugPulse] is what fires it — mirroring
+  /// how [_burstController] behaves for [LayoEmotion.angry], but understated.
+  late final AnimationController _smugController;
+
+  /// The smug pulse's own eased progress, `0` (rest) to `1` (the pulse's
+  /// peak) and back, derived from [_smugController].
+  late final Animation<double> _smugAnimation;
+
+  /// Short, non-looping controller driving a single gleam sweep (rise then
+  /// fall), for [LayoEmotion.cool]. Idle (not animating) between sweeps —
+  /// [_scheduleNextGleam] is what fires it — mirroring how [_flashController]
+  /// behaves for [LayoEmotion.idea].
+  late final AnimationController _gleamController;
+
+  /// The gleam's own eased progress, `0` (no gleam) to `1` (the sweep's peak)
+  /// and back, derived from [_gleamController].
+  late final Animation<double> _gleamAnimation;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
@@ -367,6 +443,23 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// very first draw-in (which plays immediately on animation start, see
   /// [_syncAnimating]) — only for every replay after that.
   Timer? _checkReplayTimer;
+
+  /// Self-scheduling timer for the next [LayoEmotion.wink] wear-wink; mirrors
+  /// [_winkTimer] exactly, for [LayoEmotion.wink] instead of
+  /// [LayoEmotion.comandante].
+  Timer? _wearWinkTimer;
+
+  /// Self-scheduling timer for the next [LayoEmotion.mindBlown] "pop" burst;
+  /// mirrors [_burstTimer] exactly, for [LayoEmotion.mindBlown].
+  Timer? _popTimer;
+
+  /// Self-scheduling timer for the next [LayoEmotion.smug] lid/smirk pulse;
+  /// mirrors [_burstTimer] exactly, for [LayoEmotion.smug].
+  Timer? _smugTimer;
+
+  /// Self-scheduling timer for the next [LayoEmotion.cool] gleam sweep;
+  /// mirrors [_flashTimer] exactly, for [LayoEmotion.cool].
+  Timer? _gleamTimer;
 
   /// Whether this instance currently considers itself "animating" — the
   /// combination of [Layo.animate], [TickerMode.valuesOf], and the platform's
@@ -458,6 +551,33 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// star-twinkle and energetic-bounce controllers.
   bool get _isExcited => widget.emotion == LayoEmotion.excited;
 
+  /// Whether [Layo.emotion] is [LayoEmotion.searching] — gates the looping
+  /// magnifier-scan controller.
+  bool get _isSearching => widget.emotion == LayoEmotion.searching;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.working] — gates the looping
+  /// gear-rotation controller.
+  bool get _isWorking => widget.emotion == LayoEmotion.working;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.wink] — gates the wear-wink
+  /// scheduler entirely, exactly as [_isWinkable] gates the wink scheduler
+  /// for [LayoEmotion.comandante].
+  bool get _isWearWinkable => widget.emotion == LayoEmotion.wink;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.mindBlown] — gates the looping
+  /// spiral-spin controller and the "pop" burst scheduler.
+  bool get _isMindBlown => widget.emotion == LayoEmotion.mindBlown;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.smug] — gates the lid/smirk
+  /// pulse scheduler entirely, exactly as [_isBlinkable] gates the blink
+  /// scheduler for [LayoEmotion.mrLayo].
+  bool get _isSmug => widget.emotion == LayoEmotion.smug;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.cool] — gates the gleam-sweep
+  /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
+  /// for [LayoEmotion.mrLayo].
+  bool get _isCool => widget.emotion == LayoEmotion.cool;
+
   @override
   void initState() {
     super.initState();
@@ -496,6 +616,17 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _checkPopController = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
     _sparkleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
     _excitedBounceController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _scanController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
+    _gearController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
+    _wearWinkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
+    _wearWinkAnimation = CurvedAnimation(parent: _wearWinkController, curve: Curves.easeInOut);
+    _spinController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
+    _popController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _popAnimation = CurvedAnimation(parent: _popController, curve: Curves.easeInOut);
+    _smugController = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _smugAnimation = CurvedAnimation(parent: _smugController, curve: Curves.easeInOut);
+    _gleamController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _gleamAnimation = CurvedAnimation(parent: _gleamController, curve: Curves.easeInOut);
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
@@ -518,6 +649,13 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _checkPopController,
       _sparkleController,
       _excitedBounceController,
+      _scanController,
+      _gearController,
+      _wearWinkAnimation,
+      _spinController,
+      _popAnimation,
+      _smugAnimation,
+      _gleamAnimation,
     ]);
   }
 
@@ -566,6 +704,14 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     final wasTearing = _tearTimer != null;
     final shouldCheck = shouldAnimate && _isSuccess;
     final wasChecking = _checkReplayTimer != null || _checkDrawController.isAnimating;
+    final shouldWearWink = shouldAnimate && _isWearWinkable;
+    final wasWearWinking = _wearWinkTimer != null;
+    final shouldPop = shouldAnimate && _isMindBlown;
+    final wasPopping = _popTimer != null;
+    final shouldSmugPulse = shouldAnimate && _isSmug;
+    final wasSmugPulsing = _smugTimer != null;
+    final shouldGleam = shouldAnimate && _isCool;
+    final wasGleaming = _gleamTimer != null;
 
     if (shouldAnimate != _isAnimating) {
       _isAnimating = shouldAnimate;
@@ -632,6 +778,24 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       } else {
         _sparkleController.stop();
         _excitedBounceController.stop();
+      }
+
+      if (shouldAnimate && _isSearching) {
+        _scanController.repeat();
+      } else {
+        _scanController.stop();
+      }
+
+      if (shouldAnimate && _isWorking) {
+        _gearController.repeat();
+      } else {
+        _gearController.stop();
+      }
+
+      if (shouldAnimate && _isMindBlown) {
+        _spinController.repeat();
+      } else {
+        _spinController.stop();
       }
     }
 
@@ -708,6 +872,42 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _checkReplayTimer?.cancel();
       _checkReplayTimer = null;
     }
+
+    if (shouldWearWink && !wasWearWinking) {
+      _scheduleNextWearWink();
+    } else if (!shouldWearWink && wasWearWinking) {
+      _wearWinkController.stop();
+      _wearWinkController.value = 0;
+      _wearWinkTimer?.cancel();
+      _wearWinkTimer = null;
+    }
+
+    if (shouldPop && !wasPopping) {
+      _scheduleNextPop();
+    } else if (!shouldPop && wasPopping) {
+      _popController.stop();
+      _popController.value = 0;
+      _popTimer?.cancel();
+      _popTimer = null;
+    }
+
+    if (shouldSmugPulse && !wasSmugPulsing) {
+      _scheduleNextSmugPulse();
+    } else if (!shouldSmugPulse && wasSmugPulsing) {
+      _smugController.stop();
+      _smugController.value = 0;
+      _smugTimer?.cancel();
+      _smugTimer = null;
+    }
+
+    if (shouldGleam && !wasGleaming) {
+      _scheduleNextGleam();
+    } else if (!shouldGleam && wasGleaming) {
+      _gleamController.stop();
+      _gleamController.value = 0;
+      _gleamTimer?.cancel();
+      _gleamTimer = null;
+    }
   }
 
   /// Arms a one-shot timer for the next blink, at a randomized 3-6 second
@@ -780,6 +980,43 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       return;
     }
     _scheduleNextWink();
+  }
+
+  /// Arms a one-shot timer for the next [LayoEmotion.wink] wear-wink, at a
+  /// randomized 3-6 second interval so this instance's winks are jittered
+  /// against every other [Layo] on screen instead of firing in unison — the
+  /// same schedule shape as [_scheduleNextWink], for [LayoEmotion.wink]
+  /// instead of [LayoEmotion.comandante].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and
+  /// [_isWearWinkable] before acting, so a timer or an in-flight wink left
+  /// over from just before animation was paused (or the emotion switched
+  /// away from [LayoEmotion.wink], or the widget was disposed) cannot fire a
+  /// wink, leave [_wearWinkController] running, or re-arm the next timer.
+  void _scheduleNextWearWink() {
+    _wearWinkTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _wearWinkTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playWearWink()));
+  }
+
+  /// Plays one full wink (close then reopen) on [_wearWinkController] and, if
+  /// still animating and wear-winkable afterward, arms the next
+  /// [_scheduleNextWearWink].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isWearWinkable] after each await so
+  /// a wink in flight when animation is paused (or the emotion switched away
+  /// from [LayoEmotion.wink], or the widget disposed) neither leaves
+  /// [_wearWinkController] mid-close nor re-arms a further wink.
+  Future<void> _playWearWink() async {
+    await _wearWinkController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isWearWinkable) {
+      return;
+    }
+    await _wearWinkController.reverse();
+    if (!mounted || !_isAnimating || !_isWearWinkable) {
+      return;
+    }
+    _scheduleNextWearWink();
   }
 
   /// Arms a one-shot timer for the next tear-drip, at a randomized 1.5-2.5
@@ -936,6 +1173,81 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _scheduleNextBurst();
   }
 
+  /// Arms a one-shot timer for the next [LayoEmotion.mindBlown] "pop" burst,
+  /// at a randomized 3-6 second interval so this instance's bursts are
+  /// jittered against every other [Layo] on screen instead of firing in
+  /// unison — the same schedule shape as [_scheduleNextBurst], for
+  /// [LayoEmotion.mindBlown] instead of [LayoEmotion.angry].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and
+  /// [_isMindBlown] before acting, so a timer or an in-flight burst left over
+  /// from just before animation was paused (or the emotion switched away
+  /// from [LayoEmotion.mindBlown], or the widget was disposed) cannot fire a
+  /// burst, leave [_popController] running, or re-arm the next timer.
+  void _scheduleNextPop() {
+    _popTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _popTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playPop()));
+  }
+
+  /// Plays one full "pop" burst (rise then fall) on [_popController] and, if
+  /// still animating and [_isMindBlown] afterward, arms the next
+  /// [_scheduleNextPop].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isMindBlown] after each await so a
+  /// pop in flight when animation is paused (or the emotion switched away, or
+  /// the widget disposed) neither leaves [_popController] mid-rise nor
+  /// re-arms a further pop.
+  Future<void> _playPop() async {
+    await _popController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isMindBlown) {
+      return;
+    }
+    await _popController.reverse();
+    if (!mounted || !_isAnimating || !_isMindBlown) {
+      return;
+    }
+    _scheduleNextPop();
+  }
+
+  /// Arms a one-shot timer for the next [LayoEmotion.smug] lid/smirk pulse,
+  /// at a randomized 3-6 second interval so this instance's pulses are
+  /// jittered against every other [Layo] on screen instead of firing in
+  /// unison — the same schedule shape as [_scheduleNextBurst], for
+  /// [LayoEmotion.smug] instead of [LayoEmotion.angry] (though this pulse
+  /// itself is deliberately understated, unlike the angry burst).
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_isSmug]
+  /// before acting, so a timer or an in-flight pulse left over from just
+  /// before animation was paused (or the emotion switched away from
+  /// [LayoEmotion.smug], or the widget was disposed) cannot fire a pulse,
+  /// leave [_smugController] running, or re-arm the next timer.
+  void _scheduleNextSmugPulse() {
+    _smugTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _smugTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playSmugPulse()));
+  }
+
+  /// Plays one full lid/smirk pulse (rise then fall) on [_smugController]
+  /// and, if still animating and [_isSmug] afterward, arms the next
+  /// [_scheduleNextSmugPulse].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isSmug] after each await so a pulse
+  /// in flight when animation is paused (or the emotion switched away, or the
+  /// widget disposed) neither leaves [_smugController] mid-rise nor re-arms a
+  /// further pulse.
+  Future<void> _playSmugPulse() async {
+    await _smugController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isSmug) {
+      return;
+    }
+    await _smugController.reverse();
+    if (!mounted || !_isAnimating || !_isSmug) {
+      return;
+    }
+    _scheduleNextSmugPulse();
+  }
+
   /// Arms a one-shot timer for the next glitch/flicker burst, at a
   /// randomized 3-6 second interval so this instance's glitches are
   /// jittered against every other [Layo] on screen instead of firing in
@@ -1010,6 +1322,45 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _scheduleNextFlash();
   }
 
+  /// Arms a one-shot timer for the next [LayoEmotion.cool] gleam sweep, at a
+  /// randomized 1.5-3 second interval — noticeably shorter than the shared
+  /// 3-6 second interval every other one-shot scheduler on this widget uses
+  /// (see [_scheduleNextBlink]), per the maintainer's tuning request so the
+  /// gleam reads as a more frequent little shine rather than a rare event —
+  /// while still jittering this instance's gleams against every other [Layo]
+  /// on screen instead of firing in unison.
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_isCool]
+  /// before acting, so a timer or an in-flight gleam left over from just
+  /// before animation was paused (or the emotion switched away from
+  /// [LayoEmotion.cool], or the widget was disposed) cannot fire a gleam,
+  /// leave [_gleamController] running, or re-arm the next timer.
+  void _scheduleNextGleam() {
+    _gleamTimer?.cancel();
+    final seconds = 1.5 + _random.nextDouble() * 1.5;
+    _gleamTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playGleam()));
+  }
+
+  /// Plays one full gleam sweep (rise then fall) on [_gleamController] and,
+  /// if still animating and [_isCool] afterward, arms the next
+  /// [_scheduleNextGleam].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isCool] after each await so a gleam
+  /// in flight when animation is paused (or the emotion switched away from
+  /// [LayoEmotion.cool], or the widget disposed) neither leaves
+  /// [_gleamController] mid-sweep nor re-arms a further gleam.
+  Future<void> _playGleam() async {
+    await _gleamController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isCool) {
+      return;
+    }
+    await _gleamController.reverse();
+    if (!mounted || !_isAnimating || !_isCool) {
+      return;
+    }
+    _scheduleNextGleam();
+  }
+
   /// Maps [_twitchAnimation]'s `0..1` rise progress to
   /// [LayoPainter.droopT]'s `0..1` tilt scale: `1.0` at rest (the twitch
   /// idle, fully drooped) easing down toward (not to) [_kTwitchLiftFraction]
@@ -1053,6 +1404,10 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _winkTimer?.cancel();
     _tearTimer?.cancel();
     _checkReplayTimer?.cancel();
+    _wearWinkTimer?.cancel();
+    _popTimer?.cancel();
+    _smugTimer?.cancel();
+    _gleamTimer?.cancel();
     _pulseController.dispose();
     _blinkController.dispose();
     _wiggleController.dispose();
@@ -1074,6 +1429,13 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _checkPopController.dispose();
     _sparkleController.dispose();
     _excitedBounceController.dispose();
+    _scanController.dispose();
+    _gearController.dispose();
+    _wearWinkController.dispose();
+    _spinController.dispose();
+    _popController.dispose();
+    _smugController.dispose();
+    _gleamController.dispose();
     super.dispose();
   }
 
@@ -1109,6 +1471,13 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               checkPopT: _checkPopController.value,
               sparkleT: _sparkleController.value,
               excitedBounceT: _excitedBounceController.value,
+              scanT: _scanController.value,
+              gearT: _gearController.value,
+              wearWinkT: _wearWinkAnimation.value,
+              spinT: _spinController.value,
+              popT: _popAnimation.value,
+              smugT: _smugAnimation.value,
+              gleamT: _gleamAnimation.value,
             ),
             size: Size.infinite,
           );

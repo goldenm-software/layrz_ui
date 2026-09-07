@@ -6,18 +6,24 @@ import 'glyphs/layo_glyphs_404.dart';
 import 'glyphs/layo_glyphs_alert.dart';
 import 'glyphs/layo_glyphs_angry.dart';
 import 'glyphs/layo_glyphs_comandante.dart';
+import 'glyphs/layo_glyphs_cool.dart';
 import 'glyphs/layo_glyphs_dead.dart';
 import 'glyphs/layo_glyphs_excited.dart';
 import 'glyphs/layo_glyphs_idea.dart';
 import 'glyphs/layo_glyphs_listening.dart';
 import 'glyphs/layo_glyphs_love.dart';
+import 'glyphs/layo_glyphs_mindblown.dart';
 import 'glyphs/layo_glyphs_money.dart';
 import 'glyphs/layo_glyphs_mr_layo.dart';
 import 'glyphs/layo_glyphs_question.dart';
 import 'glyphs/layo_glyphs_sad.dart';
+import 'glyphs/layo_glyphs_searching.dart';
 import 'glyphs/layo_glyphs_sleep.dart';
+import 'glyphs/layo_glyphs_smug.dart';
 import 'glyphs/layo_glyphs_success.dart';
 import 'glyphs/layo_glyphs_thinking.dart';
+import 'glyphs/layo_glyphs_wink.dart';
+import 'glyphs/layo_glyphs_working.dart';
 import 'layo_emotion.dart';
 
 /// Paints the Layo brand mascot's face onto a canvas of an arbitrary [Size],
@@ -269,6 +275,13 @@ class LayoPainter extends CustomPainter {
     this.checkPopT = 0.0,
     this.sparkleT = 0.0,
     this.excitedBounceT = 0.0,
+    this.scanT = 0.0,
+    this.gearT = 0.0,
+    this.wearWinkT = 0.0,
+    this.spinT = 0.0,
+    this.popT = 0.0,
+    this.smugT = 0.0,
+    this.gleamT = 0.0,
   });
 
   /// Which face this painter draws: the shared base (including the bow-tie,
@@ -296,13 +309,18 @@ class LayoPainter extends CustomPainter {
   /// Optional: when left `null` (the default), [_resolvedAccentColor]
   /// derives the correct accent from [emotion] itself — blue
   /// (`0xFF60ABDE`) for [LayoEmotion.mrLayo], [LayoEmotion.question],
-  /// [LayoEmotion.comandante] (its face is the standard blue face), and
-  /// [LayoEmotion.thinking]; red (`0xFFCC2222`) for [LayoEmotion.love];
-  /// crimson (`0xFFC62828`) for [LayoEmotion.angry]; orange (`0xFFFF9800`)
-  /// for [LayoEmotion.alert]; yellow (`0xFFF5CC24`) for [LayoEmotion.idea]
-  /// and [LayoEmotion.excited]; green (`0xFF2E7D32`) for [LayoEmotion.money]
-  /// and [LayoEmotion.success]; and teal (`0xFF16A6A0`) for
-  /// [LayoEmotion.listening] — so every caller gets each emotion's correct
+  /// [LayoEmotion.comandante] (its face is the standard blue face),
+  /// [LayoEmotion.thinking], [LayoEmotion.wink], [LayoEmotion.smug], and
+  /// [LayoEmotion.cool]; red (`0xFFCC2222`) for [LayoEmotion.love]; crimson
+  /// (`0xFFC62828`) for [LayoEmotion.angry]; orange (`0xFFFF9800`) for
+  /// [LayoEmotion.alert]; yellow (`0xFFF5CC24`) for [LayoEmotion.idea] and
+  /// [LayoEmotion.excited]; green (`0xFF2E7D32`) for [LayoEmotion.money] and
+  /// [LayoEmotion.success]; teal (`0xFF16A6A0`) for [LayoEmotion.listening];
+  /// blue (`0xFF60ABDE`, matching [LayoEmotion.mrLayo]) for
+  /// [LayoEmotion.searching]; amber
+  /// (`0xFFB8860B`, a distinctly different shade from [LayoEmotion.alert]'s
+  /// own orange) for [LayoEmotion.working]; and magenta (`0xFFD500F9`) for
+  /// [LayoEmotion.mindBlown] — so every caller gets each emotion's correct
   /// accent without needing to know its exact value. Passing an explicit
   /// color here overrides that per-emotion default uniformly, for every one
   /// of those emotions at once. The beret overlay [LayoEmotion.comandante]
@@ -337,6 +355,10 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.mrLayo:
       case LayoEmotion.question:
       case LayoEmotion.comandante:
+      case LayoEmotion.wink:
+      case LayoEmotion.smug:
+      case LayoEmotion.cool:
+      case LayoEmotion.searching:
         return const Color(0xFF60ABDE);
       case LayoEmotion.love:
         return const Color(0xFFCC2222);
@@ -359,6 +381,10 @@ class LayoPainter extends CustomPainter {
         return const Color(0xFF60ABDE);
       case LayoEmotion.listening:
         return const Color(0xFF16A6A0);
+      case LayoEmotion.working:
+        return const Color(0xFFB8860B);
+      case LayoEmotion.mindBlown:
+        return const Color(0xFFD500F9);
     }
   }
 
@@ -665,6 +691,77 @@ class LayoPainter extends CustomPainter {
   /// vertical position exactly.
   final double excitedBounceT;
 
+  /// [LayoEmotion.searching]'s idle magnifier-scan phase, in `0..1`, looping.
+  ///
+  /// [paintSearchingGlyph] derives a side-to-side (and slight up-down) sweep
+  /// of the whole magnifying-glass glyph from this phase. Ignored by every
+  /// other [emotion]. Defaults to `0.0`, so a default-constructed
+  /// [LayoPainter] reproduces [LayoEmotion.searching]'s glyph centered on the
+  /// screen, at its exact resting position.
+  final double scanT;
+
+  /// [LayoEmotion.working]'s idle gear-rotation phase, in `0..1`, looping.
+  ///
+  /// [paintWorkingGlyphs] derives a continuous rotation of the larger gear
+  /// from this phase directly, and the smaller gear's own counter-rotation
+  /// (scaled by the gears' relative radii, so the teeth read as meshing) from
+  /// the same phase. Ignored by every other [emotion]. Defaults to `0.0`, so
+  /// a default-constructed [LayoPainter] reproduces
+  /// [LayoEmotion.working]'s two gears at their exact resting rotation.
+  final double gearT;
+
+  /// [LayoEmotion.wink]'s right-eye wink phase, in `0..1`, `0` fully open and
+  /// `1` fully closed.
+  ///
+  /// [paintWinkEyes] squashes the **right** eye alone toward a thin ellipse
+  /// and back as this value sweeps `0 -> 1 -> 0`, the same squash-toward-
+  /// ellipse technique [LayoEmotion.mrLayo]'s own [blinkT] and
+  /// [LayoEmotion.comandante]'s own [winkT] use, but aimed at
+  /// [LayoEmotion.wink]'s own eyes -- kept as its own field (rather than
+  /// reusing [winkT]) since [LayoEmotion.comandante] and [LayoEmotion.wink]
+  /// are two independent emotions that could in principle animate at once
+  /// (e.g. two different [Layo] instances on screen). Ignored by every other
+  /// [emotion]. Defaults to `0.0` (open), so a default-constructed
+  /// [LayoPainter] with `emotion: LayoEmotion.wink` renders both eyes open,
+  /// matching the rest state between winks.
+  final double wearWinkT;
+
+  /// [LayoEmotion.mindBlown]'s idle spiral-spin phase, in `0..1`, looping.
+  ///
+  /// [paintMindBlownGlyphs] derives a continuous rotation of both spiral eyes
+  /// from this phase (spinning in opposite directions from each other).
+  /// Ignored by every other [emotion]. Defaults to `0.0`, so a
+  /// default-constructed [LayoPainter] reproduces
+  /// [LayoEmotion.mindBlown]'s spirals at their exact resting rotation.
+  final double spinT;
+
+  /// [LayoEmotion.mindBlown]'s jittered "pop" burst phase, in `0..1`, `0` at
+  /// rest between bursts.
+  ///
+  /// [paintMindBlownGlyphs] derives a quick scale-plus-shake envelope from
+  /// this phase, applied to the whole spiral-eyes-plus-mouth glyph group.
+  /// Ignored by every other [emotion]. Defaults to `0.0` (no pop in
+  /// progress).
+  final double popT;
+
+  /// [LayoEmotion.smug]'s subtle idle lid/smirk-raise phase, in `0..1`, `0`
+  /// at rest between pulses.
+  ///
+  /// [paintSmugGlyphs] derives a small, understated raise of both half-lids
+  /// and the smirk's own raised corner from this phase. Ignored by every
+  /// other [emotion]. Defaults to `0.0` (resting half-lids and smirk shape).
+  final double smugT;
+
+  /// [LayoEmotion.cool]'s subtle idle gleam-sweep phase, in `0..1`, `0`
+  /// meaning no gleam in progress.
+  ///
+  /// [paintCoolSunglasses] sweeps a soft highlight across the right lens
+  /// from this phase's own `0..1` sweep. Ignored by every other [emotion].
+  /// Defaults to `0.0` (no gleam visible), so a default-constructed
+  /// [LayoPainter] with `emotion: LayoEmotion.cool` shows no gleam between
+  /// sweeps.
+  final double gleamT;
+
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
   double _kOf(double width) => width / 396.15;
@@ -853,9 +950,22 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.sad:
       case LayoEmotion.success:
       case LayoEmotion.excited:
+      case LayoEmotion.searching:
+      case LayoEmotion.working:
+      case LayoEmotion.wink:
+      case LayoEmotion.mindBlown:
+      case LayoEmotion.smug:
         return;
       case LayoEmotion.comandante:
         paintComandanteBeret(canvas, k, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.cool:
+        paintCoolSunglasses(
+          canvas,
+          k,
+          accentColor: _resolvedAccentColor,
+          gleamT: gleamT,
+          paintSmoothed: _paintSmoothed,
+        );
     }
   }
 
@@ -888,6 +998,12 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.sad:
       case LayoEmotion.success:
       case LayoEmotion.excited:
+      case LayoEmotion.searching:
+      case LayoEmotion.working:
+      case LayoEmotion.wink:
+      case LayoEmotion.mindBlown:
+      case LayoEmotion.smug:
+      case LayoEmotion.cool:
         return;
       case LayoEmotion.comandante:
         paintComandanteChestInsignia(canvas, k, paintSmoothed: _paintSmoothed);
@@ -935,6 +1051,12 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.sad:
       case LayoEmotion.success:
       case LayoEmotion.excited:
+      case LayoEmotion.searching:
+      case LayoEmotion.working:
+      case LayoEmotion.wink:
+      case LayoEmotion.mindBlown:
+      case LayoEmotion.smug:
+      case LayoEmotion.cool:
         return;
       case LayoEmotion.money:
         canvas.save();
@@ -961,6 +1083,14 @@ class LayoPainter extends CustomPainter {
   /// the right one, unlike [blinkT] which closes both of [LayoEmotion.mrLayo]'s
   /// eyes together; its red beret is a separate **overlay**, painted by
   /// [_paintEmotionOverlay] instead, not a screen glyph.
+  ///
+  /// [LayoEmotion.wink] shares this same mouth-plus-one-eye-wink shape as
+  /// [LayoEmotion.comandante], but through its own [wearWinkT] field (rather
+  /// than reusing [winkT]) and while still wearing the ordinary tie and
+  /// antenna. [LayoEmotion.cool] likewise reuses [paintMrLayoMouth] for the
+  /// mouth alone here — its sunglasses are a separate **overlay**, painted
+  /// by [_paintEmotionOverlay] instead, exactly mirroring how
+  /// [LayoEmotion.comandante]'s beret is handled.
   void _paintEmotionGlyphs(Canvas canvas, double k) {
     switch (emotion) {
       case LayoEmotion.mrLayo:
@@ -1053,6 +1183,31 @@ class LayoPainter extends CustomPainter {
           bounceT: excitedBounceT,
           paintSmoothed: _paintSmoothed,
         );
+      case LayoEmotion.searching:
+        paintSearchingGlyph(canvas, k, accentColor: _resolvedAccentColor, scanT: scanT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.working:
+        paintWorkingGlyphs(canvas, k, accentColor: _resolvedAccentColor, gearT: gearT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.wink:
+        paintMrLayoMouth(canvas, k, accentColor: _resolvedAccentColor, paintSmoothed: _paintSmoothed);
+        paintWinkEyes(canvas, k, accentColor: _resolvedAccentColor, winkT: wearWinkT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.mindBlown:
+        paintMindBlownGlyphs(
+          canvas,
+          k,
+          accentColor: _resolvedAccentColor,
+          spinT: spinT,
+          popT: popT,
+          paintSmoothed: _paintSmoothed,
+        );
+      case LayoEmotion.smug:
+        paintSmugGlyphs(canvas, k, accentColor: _resolvedAccentColor, smugT: smugT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.cool:
+        // The sunglasses overlay (paintCoolSunglasses) is dispatched from
+        // _paintEmotionOverlay, drawn on top of the head shell; this screen
+        // glyph is only the mouth underneath -- reusing mrLayo's own smile
+        // unmodified, exactly like LayoEmotion.comandante does for its own
+        // beret overlay.
+        paintMrLayoMouth(canvas, k, accentColor: _resolvedAccentColor, paintSmoothed: _paintSmoothed);
     }
   }
 
@@ -1343,7 +1498,14 @@ class LayoPainter extends CustomPainter {
         (checkDrawT != oldDelegate.checkDrawT && emotion == LayoEmotion.success) ||
         (checkPopT != oldDelegate.checkPopT && emotion == LayoEmotion.success) ||
         (sparkleT != oldDelegate.sparkleT && emotion == LayoEmotion.excited) ||
-        (excitedBounceT != oldDelegate.excitedBounceT && emotion == LayoEmotion.excited);
+        (excitedBounceT != oldDelegate.excitedBounceT && emotion == LayoEmotion.excited) ||
+        (scanT != oldDelegate.scanT && emotion == LayoEmotion.searching) ||
+        (gearT != oldDelegate.gearT && emotion == LayoEmotion.working) ||
+        (wearWinkT != oldDelegate.wearWinkT && emotion == LayoEmotion.wink) ||
+        (spinT != oldDelegate.spinT && emotion == LayoEmotion.mindBlown) ||
+        (popT != oldDelegate.popT && emotion == LayoEmotion.mindBlown) ||
+        (smugT != oldDelegate.smugT && emotion == LayoEmotion.smug) ||
+        (gleamT != oldDelegate.gleamT && emotion == LayoEmotion.cool);
   }
 }
 

@@ -10,19 +10,21 @@
 /// rather than only a screen glyph. See `LayoPainter` for how each value is
 /// dispatched to its own glyph-paint methods.
 ///
-/// Sixteen emotions are implemented so far: [mrLayo], [question], [sleep],
+/// Twenty-two emotions are implemented so far: [mrLayo], [question], [sleep],
 /// [dead], [love], [angry], [alert], [layo404], [idea], [comandante],
-/// [money], [thinking], [listening], [sad], [success], and [excited]. The
-/// full set this mascot is eventually meant to support — sunglasses, a
-/// Santa hat, a party hat, and a few others — will be added as further
-/// [LayoEmotion] values in a later pass; do not treat this enum as
-/// exhaustive of the mascot's intended range.
+/// [money], [thinking], [listening], [sad], [success], [excited],
+/// [searching], [working], [wink], [mindBlown], [smug], and [cool]. The full
+/// set this mascot is eventually meant to support — a Santa hat, a party hat,
+/// and a few others — will be added as further [LayoEmotion] values in a
+/// later pass; do not treat this enum as exhaustive of the mascot's intended
+/// range.
 ///
 /// [comandante] is also the first emotion to wear an **overlay**: a glyph
 /// layer drawn after the shared head shell, on top of the face, rather than
 /// inside the dark screen window like every other emotion's glyphs. See
 /// `LayoPainter`'s "Overlays" section for the reusable mechanism this
-/// introduced.
+/// introduced. [cool] is the second emotion to use this same overlay
+/// mechanism, for its sunglasses.
 enum LayoEmotion {
   /// The original, default "MrLayo" face: a bow-tie, blue circular eyes, a
   /// blue smile, and a blue antenna-tip dot.
@@ -232,4 +234,91 @@ enum LayoEmotion {
   /// This emotion was based on this song: https://www.youtube.com/watch?v=pyf8cbqyfPs
   /// (ANTIFRAGILE — LE SSERAFIM)
   excited,
+
+  /// An "actively looking" face: a single blue magnifying-glass glyph (a
+  /// ringed lens plus a short angled handle) stands in for this emotion's
+  /// whole face, no mouth drawn. The antenna-tip dot stays blue, matching
+  /// [mrLayo].
+  ///
+  /// Idle motion is a continuous side-to-side (and slight up-down) scan of
+  /// the magnifier across the screen, looping, reading as actively searching
+  /// rather than merely displayed.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=jOTfBlKSQYY
+  /// (ETA — NewJeans)
+  searching,
+
+  /// A "hard at it" face: two amber gears (a larger one and a smaller one
+  /// meshed beside it) stand in for this emotion's whole face, no mouth
+  /// drawn. The antenna-tip dot is amber rather than blue — a distinctly
+  /// different shade from [alert]'s own orange.
+  ///
+  /// Idle motion is a continuous rotation of both gears, looping, with the
+  /// smaller gear counter-rotating against the larger one like real meshed
+  /// teeth.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=VGnOpZhsPk4
+  /// (WORK — ATEEZ)
+  working,
+
+  /// A one-eyed-wink face: the same blue eyes and blue smile as [mrLayo], but
+  /// the **right** eye periodically winks shut while the left stays open —
+  /// unlike [comandante] (whose wink is paired with a beret overlay and no
+  /// tie at all), this emotion wears the ordinary tie and antenna like
+  /// [mrLayo]. Since it has a mouth, it keeps [mrLayo]'s own canonical eye
+  /// spacing. The antenna-tip dot stays blue.
+  ///
+  /// Idle motion is a periodic, brief wink of the right eye alone, on a
+  /// jittered per-instance schedule identical in shape to [mrLayo]'s own
+  /// two-eye blink and [comandante]'s own wink, while the left eye and the
+  /// smile stay static throughout.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=JYRO4Abh6NI
+  /// (La Vecina — Los Amigos Invisibles)
+  wink,
+
+  /// A "whoa" face: two magenta spiral eyes plus an open "O" mouth, standing
+  /// in for shock/astonishment. Because it has a mouth, it keeps [mrLayo]'s
+  /// own canonical eye spacing. The antenna-tip dot is magenta rather than
+  /// blue.
+  ///
+  /// Idle motion is a continuous spin of both spirals, plus a periodic
+  /// jittered "pop" burst (a quick scale/shake) on the whole glyph group,
+  /// reading as a recurring mind-blown jolt.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=3GWscde8rM8
+  /// (O.O — NMIXX)
+  mindBlown,
+
+  /// A self-satisfied face: two blue half-lidded eyes (a lid line across the
+  /// top of each) plus an asymmetric smirk (one corner raised higher than the
+  /// other), reading as smug/confident. Because it has a mouth, it keeps
+  /// [mrLayo]'s own canonical eye spacing. The antenna-tip dot stays blue,
+  /// matching the [mrLayo] family this emotion belongs to.
+  ///
+  /// Idle motion is a subtle, understated periodic lid/smirk raise — a small
+  /// jittered pulse rather than any large motion — keeping the expression
+  /// composed throughout.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=mjKBjRevfq0
+  /// (Rubia Sol, Morena Luna — Caramelos de Cianuro)
+  smug,
+
+  /// "Cool" — the standard blue face (mouth and eyes, like [mrLayo]) with a
+  /// blue sunglasses bar drawn as an **overlay** across the eyes — two
+  /// lenses joined by a bridge, filled in this emotion's own blue accent so
+  /// they read clearly against the dark screen behind them, on top of the
+  /// head shell exactly like [comandante]'s beret (see `LayoPainter`'s
+  /// "Overlays" section) — hiding the eyes underneath entirely. The
+  /// antenna-tip dot and tie stay blue too.
+  ///
+  /// Idle motion is a subtle periodic gleam sweeping across one lens, on a
+  /// jittered per-instance schedule noticeably more frequent than
+  /// [mrLayo]'s own blink (a 1.5-3s interval rather than 3-6s), rather than
+  /// any large motion — this emotion keeps its overlay understated but its
+  /// shine frequent.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=11cta61wi0g
+  /// (Hype Boy — NewJeans)
+  cool,
 }
