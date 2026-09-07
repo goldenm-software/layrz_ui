@@ -150,6 +150,7 @@ void main() {
       LayoEmotion.alert,
       LayoEmotion.layo404,
       LayoEmotion.idea,
+      LayoEmotion.comandante,
     ]) {
       guardedTestWidgets('$emotion is not blinkable: blinkT stays 0 for the whole animation window', (
         tester,
@@ -213,6 +214,7 @@ void main() {
       LayoEmotion.alert,
       LayoEmotion.layo404,
       LayoEmotion.idea,
+      LayoEmotion.comandante,
     ]) {
       guardedTestWidgets('$emotion never wiggles: wiggleT stays 0 while animating', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
@@ -264,6 +266,7 @@ void main() {
       LayoEmotion.alert,
       LayoEmotion.layo404,
       LayoEmotion.idea,
+      LayoEmotion.comandante,
     ]) {
       guardedTestWidgets('$emotion never fades a zzz: zzzPhase stays 0 while animating', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
@@ -337,7 +340,7 @@ void main() {
       );
     });
 
-    for (final emotion in [LayoEmotion.love, LayoEmotion.idea]) {
+    for (final emotion in [LayoEmotion.love, LayoEmotion.idea, LayoEmotion.comandante]) {
       guardedTestWidgets('$emotion never plays the generic looping pulse: pulseT stays 0 while animating', (
         tester,
       ) async {
@@ -357,7 +360,9 @@ void main() {
         expect(
           painterIn(tester).pulseT,
           0.0,
-          reason: '$emotion drives its own antenna dot animation instead of the generic pulse',
+          reason:
+              '$emotion must never play the generic looping pulse -- either it drives its own antenna dot '
+              'animation instead (love, idea), or it has no antenna at all to pulse (comandante)',
         );
       });
     }
@@ -438,6 +443,7 @@ void main() {
       LayoEmotion.alert,
       LayoEmotion.layo404,
       LayoEmotion.idea,
+      LayoEmotion.comandante,
     ]) {
       guardedTestWidgets('$emotion never droops or twitches: droopT stays at 1.0 (ignored by its painter)', (
         tester,

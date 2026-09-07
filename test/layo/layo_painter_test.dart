@@ -111,6 +111,24 @@ void main() {
       expect(color, const Color(0xFFF5CC24));
     });
 
+    test('comandante paints NO antenna at all -- neither stalk nor tip', () async {
+      // comandante is the sole emotion with no antenna whatsoever (its
+      // beret overlay sits exactly where one would be); (197.66, 17.30) is
+      // every other emotion's antenna-tip center, and (197.66, 60) sits on
+      // the antenna stalk's own path for every other emotion -- both must
+      // sample plain background/beret color here, never an antenna-tip
+      // accent or the antenna stalk's own bodyInnerColor.
+      const painter = LayoPainter(emotion: LayoEmotion.comandante);
+      const bodyInnerColor = Color(0xFFD4D2D3);
+      final tipPoint = await pixelAt(painter, size, const Offset(197.66, 17.30));
+      expect(tipPoint, isNot(const Color(0xFF60ABDE)), reason: 'comandante must not paint an antenna tip');
+      expect(
+        tipPoint,
+        isNot(bodyInnerColor),
+        reason: 'comandante must not paint the antenna stalk\'s own color at the tip\'s usual location either',
+      );
+    });
+
     test('an explicit accentColor overrides every colored-accent emotion\'s default', () async {
       const explicit = Color(0xFF123456);
       for (final emotion in [
@@ -125,6 +143,17 @@ void main() {
         final color = await pixelAt(painter, size, const Offset(197.66, 17.30));
         expect(color, explicit, reason: '$emotion must respect an explicit accentColor override');
       }
+    });
+
+    test('an explicit accentColor overrides comandante\'s default too, sampled at its own open eye', () async {
+      // comandante has no antenna tip to sample (see the dedicated
+      // no-antenna test above), so its own accentColor override is verified
+      // at its left eye instead -- always the plain open circle, unaffected
+      // by winkT, so this sample is stable regardless of the wink phase.
+      const explicit = Color(0xFF123456);
+      const painter = LayoPainter(emotion: LayoEmotion.comandante, accentColor: explicit);
+      final color = await pixelAt(painter, size, const Offset(134.67, 195.73));
+      expect(color, explicit, reason: 'comandante\'s eyes must respect an explicit accentColor override');
     });
 
     test('mrLayo paints two blue circular eyes when blinkT is 0 (open)', () {
@@ -390,9 +419,27 @@ void main() {
           expect(painterA.shouldRepaint(painterB), isFalse);
         });
       }
+
+      test('is true when winkT differs for comandante', () {
+        const painterA = LayoPainter(emotion: LayoEmotion.comandante);
+        const painterB = LayoPainter(emotion: LayoEmotion.comandante, winkT: 0.5);
+        expect(painterA.shouldRepaint(painterB), isTrue);
+      });
+
+      for (final emotion in [LayoEmotion.mrLayo, LayoEmotion.love, LayoEmotion.idea]) {
+        test('is false-for-wink when winkT alone differs for $emotion', () {
+          final painterA = LayoPainter(emotion: emotion);
+          final painterB = LayoPainter(emotion: emotion, winkT: 0.5);
+          expect(
+            painterA.shouldRepaint(painterB),
+            isFalse,
+            reason: '$emotion does not wink, so a winkT-only change must not repaint',
+          );
+        });
+      }
     });
 
-    group('bow-tie on every emotion, colored by that emotion\'s own accent', () {
+    group('bow-tie on every emotion except comandante, colored by that emotion\'s own accent', () {
       // (197, 355) sits inside the tie's own body fill, well below the
       // screen window (bottom 308.8) and every emotion's screen glyphs, so
       // no other accent/glyph-colored shape can be mistaken for the tie here
@@ -428,6 +475,21 @@ void main() {
           expect(color, entry.value, reason: '${entry.key}\'s tie must follow its own accent');
         });
       }
+
+      test('comandante paints NO tie at all -- the sole exception', () async {
+        // comandante wears a chest ribbon rack instead of the tie every
+        // other emotion wears (LayoPainter._wearsTie excludes it alone), so
+        // its own accent (blue) must never appear at the shared tie
+        // location -- unlike every emotion above, none of which ever left
+        // this point at plain body color.
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        final color = await pixelAt(painter, size, tieCenter);
+        expect(
+          color,
+          isNot(const Color(0xFF60ABDE)),
+          reason: 'comandante must not paint a tie -- it wears a chest ribbon rack instead',
+        );
+      });
     });
 
     test('tieFoldColor darkens its input toward black by the tuned fraction', () {
@@ -437,6 +499,150 @@ void main() {
       expect(fold.r, lessThan(accent.r));
       expect(fold.g, lessThan(accent.g));
       expect(fold.b, lessThan(accent.b));
+    });
+
+    group('comandante: beret overlay, chest ribbon rack, and right-eye wink', () {
+      test('winkT defaults to 0.0 (both eyes open, no wink in progress)', () {
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        expect(painter.winkT, 0.0);
+      });
+
+      test('the beret overlay paints its red body color near the top of the head', () async {
+        // (197.66, 60) sits inside the beret body's own fill at rest --
+        // comfortably below its crown top and comfortably above the head
+        // shell's own top edge (98.89) -- so it samples the beret rather
+        // than background or the head shell.
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        final color = await pixelAt(painter, size, const Offset(197.66, 60));
+        expect(color, const Color(0xFF90191C), reason: 'the beret\'s main body must paint its exact red fill');
+      });
+
+      test('the beret overlay is drawn on top of the head shell, not underneath it', () async {
+        // The head shell's own light body color would show at this point if
+        // the beret were painted before it (or not at all); sampling red
+        // instead confirms the overlay draws after LayoPainter._paintHeadShell.
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        const bodyOuterColor = Color(0xFFEAE9EA);
+        final color = await pixelAt(painter, size, const Offset(197.66, 60));
+        expect(
+          color,
+          isNot(bodyOuterColor),
+          reason: 'the beret overlay must occlude the head shell beneath it, not the other way around',
+        );
+      });
+
+      test('every other emotion never paints the beret\'s red at the same sample point', () async {
+        for (final emotion in LayoEmotion.values.where((e) => e != LayoEmotion.comandante)) {
+          final painter = LayoPainter(emotion: emotion);
+          final color = await pixelAt(painter, size, const Offset(197.66, 60));
+          expect(color, isNot(const Color(0xFF90191C)), reason: '$emotion must not paint a beret');
+        }
+      });
+
+      test('comandante paints no antenna, unlike every emotion whose beret-region sample would show one', () async {
+        // (197.66, 5) sits well within where an antenna tip's own glow/fill
+        // could plausibly reach for a pulsing emotion; for comandante (no
+        // antenna at all) this must read as the beret's own red, not any
+        // antenna-related color.
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        final color = await pixelAt(painter, size, const Offset(197.66, 5));
+        expect(
+          color,
+          const Color(0xFF90191C),
+          reason: 'with no antenna to draw, the beret\'s own crown must be the only thing visible here',
+        );
+      });
+
+      test('the first ribbon row paints its own varied stripe colors on the upper-right chest', () async {
+        // The rack is deliberately offset right of the shared artwork's own
+        // center (x 197.66) and sits high on the chest, just below the neck
+        // seam -- row 1's first bar spans roughly x 200.66-232.66 at y
+        // 350-359; its own three vertical stripes are red/gold/red (see
+        // _kRibbonBarStripes' first entry) -- sampling the left and middle
+        // stripes distinguishes "a real striped bar" from "one flat block".
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        final leftStripe = await pixelAt(painter, size, const Offset(204, 354));
+        final middleStripe = await pixelAt(painter, size, const Offset(216, 354));
+        expect(leftStripe, const Color(0xFFB71C1C), reason: 'the first bar\'s left stripe must be its exact red');
+        expect(
+          middleStripe,
+          const Color(0xFFFFD600),
+          reason: 'the first bar\'s middle stripe must be its exact gold, distinct from its own left stripe',
+        );
+      });
+
+      test('the second ribbon row sits below the first, with its own distinct stripe colors', () async {
+        // Row 2's first bar (white/navy/white, per _kRibbonBarStripes'
+        // fourth entry) sits at y 363-372, directly below row 1's y 350-359.
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        final color = await pixelAt(painter, size, const Offset(204, 367));
+        expect(color, const Color(0xFFFFFFFF), reason: 'the second row\'s first bar must paint its own exact white');
+      });
+
+      test('every other emotion never paints any ribbon-rack stripe color at the same chest locations', () async {
+        const ribbonSampleColors = [Color(0xFFB71C1C), Color(0xFFFFD600)];
+        for (final emotion in LayoEmotion.values.where((e) => e != LayoEmotion.comandante)) {
+          final painter = LayoPainter(emotion: emotion);
+          for (final point in [Offset(204, 354), Offset(216, 354)]) {
+            final color = await pixelAt(painter, size, point);
+            expect(
+              ribbonSampleColors,
+              isNot(contains(color)),
+              reason: '$emotion must not paint any chest ribbon-rack stripe at $point',
+            );
+          }
+        }
+      });
+
+      test('at rest (winkT: 0.0) both eyes render as full open blue circles', () {
+        const painter = LayoPainter(emotion: LayoEmotion.comandante);
+        const accent = Color(0xFF60ABDE);
+        expect(
+          (Canvas canvas) => painter.paint(canvas, size),
+          paints
+            ..circle(x: 134.67, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.fill)
+            ..circle(x: 134.67, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.stroke)
+            ..circle(x: 261.17, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.fill)
+            ..circle(x: 261.17, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.stroke),
+        );
+      });
+
+      test('mid-wink (winkT: 1.0) the left eye stays a full open circle', () {
+        const painter = LayoPainter(emotion: LayoEmotion.comandante, winkT: 1.0);
+        const accent = Color(0xFF60ABDE);
+        expect(
+          (Canvas canvas) => painter.paint(canvas, size),
+          paints
+            ..circle(x: 134.67, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.fill)
+            ..circle(x: 134.67, y: 195.73, radius: 15.57, color: accent, style: PaintingStyle.stroke),
+        );
+      });
+
+      test('mid-wink (winkT: 1.0) the right eye is squashed away from its open-circle rest sample', () async {
+        const atRest = LayoPainter(emotion: LayoEmotion.comandante);
+        const midWink = LayoPainter(emotion: LayoEmotion.comandante, winkT: 1.0);
+
+        // Sample a point on the right eye's own rest-circle rim, well off
+        // its horizontal center line, so a full-height squash (winkT: 1.0
+        // scales toward a thin ellipse) uncovers it while the open-circle
+        // painter still covers it.
+        const rimPoint = Offset(261.17, 195.73 - 12);
+        final restColor = await pixelAt(atRest, size, rimPoint);
+        final winkColor = await pixelAt(midWink, size, rimPoint);
+        expect(restColor, const Color(0xFF60ABDE), reason: 'sanity: the open right eye must cover this rim point');
+        expect(
+          winkColor,
+          isNot(const Color(0xFF60ABDE)),
+          reason: 'a full wink must squash the right eye away from its open-circle rim',
+        );
+      });
+
+      test('paints without throwing across winkT\'s full 0..1 sweep', () {
+        for (final winkT in [0.0, 0.25, 0.5, 0.75, 1.0]) {
+          final painter = LayoPainter(emotion: LayoEmotion.comandante, winkT: winkT);
+          expect(() => painter.paint(Canvas(PictureRecorder()), size), returnsNormally);
+        }
+      });
     });
 
     group('dead antenna: resting droop, no looping pulse, no opacity change', () {
