@@ -27,7 +27,7 @@ class LayoSection extends StatelessWidget {
       description:
           'The "MrLayo" brand mascot, drawn entirely with CustomPainter — no bundled image or '
           'SVG. Size-automatic: fills the width its parent provides and derives height from '
-          'the fixed 500:833 aspect ratio, or pass an explicit width. Renders one of four '
+          'the fixed 500:833 aspect ratio, or pass an explicit width. Renders one of nine '
           'emotions via LayoEmotion.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,6 +60,36 @@ class LayoSection extends StatelessWidget {
                 sm: 6,
                 md: 3,
                 child: _EmotionTile(label: 'dead', emotion: LayoEmotion.dead),
+              ),
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                md: 3,
+                child: _EmotionTile(label: 'love', emotion: LayoEmotion.love),
+              ),
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                md: 3,
+                child: _EmotionTile(label: 'angry', emotion: LayoEmotion.angry),
+              ),
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                md: 3,
+                child: _EmotionTile(label: 'alert', emotion: LayoEmotion.alert),
+              ),
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                md: 3,
+                child: _EmotionTile(label: 'layo404', emotion: LayoEmotion.layo404),
+              ),
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                md: 3,
+                child: _EmotionTile(label: 'idea', emotion: LayoEmotion.idea),
               ),
             ],
           ),
