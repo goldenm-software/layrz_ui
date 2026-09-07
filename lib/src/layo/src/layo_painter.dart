@@ -7,11 +7,17 @@ import 'glyphs/layo_glyphs_alert.dart';
 import 'glyphs/layo_glyphs_angry.dart';
 import 'glyphs/layo_glyphs_comandante.dart';
 import 'glyphs/layo_glyphs_dead.dart';
+import 'glyphs/layo_glyphs_excited.dart';
 import 'glyphs/layo_glyphs_idea.dart';
+import 'glyphs/layo_glyphs_listening.dart';
 import 'glyphs/layo_glyphs_love.dart';
+import 'glyphs/layo_glyphs_money.dart';
 import 'glyphs/layo_glyphs_mr_layo.dart';
 import 'glyphs/layo_glyphs_question.dart';
+import 'glyphs/layo_glyphs_sad.dart';
 import 'glyphs/layo_glyphs_sleep.dart';
+import 'glyphs/layo_glyphs_success.dart';
+import 'glyphs/layo_glyphs_thinking.dart';
 import 'layo_emotion.dart';
 
 /// Paints the Layo brand mascot's face onto a canvas of an arbitrary [Size],
@@ -200,6 +206,29 @@ import 'layo_emotion.dart';
 ///   same kind of jittered per-instance schedule as [LayoEmotion.mrLayo]'s
 ///   own [blinkT], but closing only one eye rather than both (see
 ///   [paintComandanteEyes]).
+/// * [moneyT] — [LayoEmotion.money] only: a looping scale-pulse "shimmer" on
+///   both `$` eyes (see [paintMoneyEyes]).
+/// * [billRainT] — [LayoEmotion.money] only: drives the looping "rain of
+///   bills" background layer, independent of [moneyT] (see
+///   [paintMoneyBackdrop] and [_paintEmotionBackdrop]).
+/// * [thoughtT] — [LayoEmotion.thinking] only: a looping sequence phase
+///   driving the thought-bubble's trailing connector circles alone (the
+///   cloud itself is static) (see [paintThinkingGlyph]).
+/// * [eqT] — [LayoEmotion.listening] only: a looping phase driving each
+///   equalizer bar's own independent height bounce (see
+///   [paintListeningGlyph]).
+/// * [tearT] — [LayoEmotion.sad] only: a jittered one-shot tear-drip phase,
+///   `0` between drips, sliding a single tear down from the left eye (see
+///   [paintSadTear]).
+/// * [checkDrawT] and [checkPopT] — [LayoEmotion.success] only:
+///   [checkDrawT] (defaulting to `1.0`, this emotion's **resting** fully-
+///   drawn pose) drives the check mark's own stroke draw-in, and [checkPopT]
+///   (defaulting to `0.0`) drives its quick pop/bounce settle once fully
+///   drawn (see [paintSuccessGlyph]).
+/// * [sparkleT] and [excitedBounceT] — [LayoEmotion.excited] only: a looping
+///   twinkle (scale-pulse plus rotation) on both star eyes, paired with a
+///   small looping energetic bounce of the whole glyph group (see
+///   [paintExcitedGlyphs]).
 ///
 /// Every animation parameter defaults so a default-constructed painter is
 /// unchanged, and [shouldRepaint] ignores each parameter's diff for the
@@ -231,6 +260,15 @@ class LayoPainter extends CustomPainter {
     this.glowT = 0.0,
     this.flashT = 0.0,
     this.winkT = 0.0,
+    this.moneyT = 0.0,
+    this.billRainT = 0.0,
+    this.thoughtT = 0.0,
+    this.eqT = 0.0,
+    this.tearT = 0.0,
+    this.checkDrawT = 1.0,
+    this.checkPopT = 0.0,
+    this.sparkleT = 0.0,
+    this.excitedBounceT = 0.0,
   });
 
   /// Which face this painter draws: the shared base (including the bow-tie,
@@ -257,24 +295,35 @@ class LayoPainter extends CustomPainter {
   ///
   /// Optional: when left `null` (the default), [_resolvedAccentColor]
   /// derives the correct accent from [emotion] itself — blue
-  /// (`0xFF60ABDE`) for [LayoEmotion.mrLayo], [LayoEmotion.question], and
-  /// [LayoEmotion.comandante] (its face is the standard blue face), red
-  /// (`0xFFCC2222`) for [LayoEmotion.love], crimson (`0xFFC62828`) for
-  /// [LayoEmotion.angry], orange (`0xFFFF9800`) for [LayoEmotion.alert], and
-  /// yellow (`0xFFF5CC24`) for [LayoEmotion.idea] — so every caller gets each
-  /// emotion's correct accent without needing to know its exact value.
-  /// Passing an explicit color here overrides that per-emotion default
-  /// uniformly, for every one of those emotions at once. The beret overlay
-  /// [LayoEmotion.comandante] wears is not affected by this field at all —
-  /// its maroon/red/highlight fills are fixed, ported verbatim from the
-  /// source artwork, exactly like every other emotion's non-accent shapes.
+  /// (`0xFF60ABDE`) for [LayoEmotion.mrLayo], [LayoEmotion.question],
+  /// [LayoEmotion.comandante] (its face is the standard blue face), and
+  /// [LayoEmotion.thinking]; red (`0xFFCC2222`) for [LayoEmotion.love];
+  /// crimson (`0xFFC62828`) for [LayoEmotion.angry]; orange (`0xFFFF9800`)
+  /// for [LayoEmotion.alert]; yellow (`0xFFF5CC24`) for [LayoEmotion.idea]
+  /// and [LayoEmotion.excited]; green (`0xFF2E7D32`) for [LayoEmotion.money]
+  /// and [LayoEmotion.success]; and teal (`0xFF16A6A0`) for
+  /// [LayoEmotion.listening] — so every caller gets each emotion's correct
+  /// accent without needing to know its exact value. Passing an explicit
+  /// color here overrides that per-emotion default uniformly, for every one
+  /// of those emotions at once. The beret overlay [LayoEmotion.comandante]
+  /// wears is not affected by this field at all — its maroon/red/highlight
+  /// fills are fixed, ported verbatim from the source artwork, exactly like
+  /// every other emotion's non-accent shapes.
   ///
-  /// [LayoEmotion.sleep] and [LayoEmotion.dead] use [glyphColor] instead for
-  /// their own glyphs and antenna tip, and, correspondingly, for the
-  /// bow-tie's own base color too: the tie (worn by every [emotion]) is
-  /// colored from [_antennaTipColor], not from this field directly, so it
-  /// always matches whichever accent the current emotion's antenna dot is
-  /// using.
+  /// [LayoEmotion.sleep], [LayoEmotion.dead], and [LayoEmotion.sad] use
+  /// [glyphColor] instead for their own glyphs and antenna tip, and,
+  /// correspondingly, for the bow-tie's own base color too: the tie (worn by
+  /// every [emotion]) is colored from [_antennaTipColor], not from this
+  /// field directly, so it always matches whichever accent the current
+  /// emotion's antenna dot is using.
+  ///
+  /// [LayoEmotion.thinking] is the sole exception in the other direction:
+  /// this field (blue, at its default) still governs its antenna tip and tie
+  /// via [_antennaTipColor] exactly as documented above, but its own screen
+  /// glyph (the thought-bubble cloud and connectors) is deliberately *not*
+  /// derived from it — [_paintEmotionGlyphs] passes [_thinkingGlyphColor]
+  /// (white) to `paintThinkingGlyph` instead, so a white glyph never leaves
+  /// this field's blue meaning ambiguous for the tie/dot it still controls.
   final Color? accentColor;
 
   /// Resolves [accentColor] to a concrete color: the explicit value when the
@@ -296,13 +345,39 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.alert:
         return const Color(0xFFFF9800);
       case LayoEmotion.idea:
+      case LayoEmotion.excited:
         return const Color(0xFFF5CC24);
       case LayoEmotion.sleep:
       case LayoEmotion.dead:
       case LayoEmotion.layo404:
+      case LayoEmotion.sad:
         return glyphColor;
+      case LayoEmotion.money:
+      case LayoEmotion.success:
+        return const Color(0xFF2E7D32);
+      case LayoEmotion.thinking:
+        return const Color(0xFF60ABDE);
+      case LayoEmotion.listening:
+        return const Color(0xFF16A6A0);
     }
   }
+
+  /// The fill color for [LayoEmotion.thinking]'s own screen glyph (the
+  /// thought-bubble cloud and its trailing connector circles) — white, unlike
+  /// every other part of this emotion's face.
+  ///
+  /// [LayoEmotion.thinking] is the one emotion whose antenna-tip dot (and
+  /// tie, via [_antennaTipColor]) must stay this mascot's original blue —
+  /// otherwise a white dot would vanish against the light head shell — while
+  /// its screen glyph itself reads better as white against the dark screen
+  /// window behind it. [_resolvedAccentColor] cannot serve both needs at
+  /// once (it is a single color per emotion, shared by the tie/dot and the
+  /// screen glyph for every other emotion), so this getter exists as
+  /// [LayoEmotion.thinking]'s own decoupled glyph-fill color instead of
+  /// reusing [_resolvedAccentColor] for [paintThinkingGlyph]'s `accentColor`
+  /// parameter the way every other emotion's dispatch in
+  /// [_paintEmotionGlyphs] does.
+  static const Color _thinkingGlyphColor = Color(0xFFFFFFFF);
 
   /// Fill color for every screen glyph (and the antenna tip) on
   /// [LayoEmotion.sleep] and [LayoEmotion.dead] — the mascot's neutral grey,
@@ -489,6 +564,107 @@ class LayoPainter extends CustomPainter {
   /// rest state between winks.
   final double winkT;
 
+  /// [LayoEmotion.money]'s idle `$`-eye shimmer phase, in `0..1`, looping.
+  ///
+  /// [paintMoneyEyes] derives a sine-eased scale-pulse from this phase,
+  /// applied to each `$` glyph independently around its own center. Ignored
+  /// by every other [emotion]. Defaults to `0.0` (no pulse), so a
+  /// default-constructed [LayoPainter] reproduces [LayoEmotion.money]'s
+  /// original static `$` eyes exactly.
+  final double moneyT;
+
+  /// [LayoEmotion.money]'s idle "rain of bills" background-layer phase, in
+  /// `0..1`, looping.
+  ///
+  /// [paintMoneyBackdrop] derives each falling bill's own vertical position
+  /// from this phase (offset per-bill so they do not fall in lockstep) --
+  /// see that function's own doc comment. Ignored by every other [emotion].
+  /// Defaults to `0.0`; unlike this painter's other looping phases there is
+  /// no meaningful "at rest, invisible" pose for a continuous rain, so even
+  /// a default-constructed [LayoEmotion.money] painter still renders every
+  /// bill at its own phase-`0` position rather than an empty backdrop.
+  final double billRainT;
+
+  /// [LayoEmotion.thinking]'s idle connector-circle sequence phase, in
+  /// `0..1`, looping.
+  ///
+  /// [paintThinkingGlyph] derives each of the three trailing connector
+  /// circles' own pulse/appear bump from this shared phase, offset so they
+  /// fire in ascending sequence (smallest, closest to the head, first) --
+  /// the cloud itself is static regardless of this value. Ignored by every
+  /// other [emotion]. Defaults to `0.0`, so a default-constructed
+  /// [LayoPainter] reproduces [LayoEmotion.thinking]'s connectors at their
+  /// own resting (dim, non-bumped) scale/alpha.
+  final double thoughtT;
+
+  /// [LayoEmotion.listening]'s idle equalizer-bounce phase, in `0..1`,
+  /// looping.
+  ///
+  /// [paintListeningGlyph] derives each EQ bar's own independent height
+  /// oscillation from this shared phase (each bar carrying its own phase
+  /// offset and speed). Ignored by every other [emotion]. Defaults to
+  /// `0.0`; every bar still renders at its own phase-`0` height rather than
+  /// a flat, motionless row, since a continuous bounce (like [billRainT])
+  /// has no meaningful "at rest" pose either.
+  final double eqT;
+
+  /// [LayoEmotion.sad]'s idle tear-drip phase, in `0..1`, `0` (and below)
+  /// meaning no tear is in progress.
+  ///
+  /// [paintSadTear] interpolates the tear's own vertical position from just
+  /// under the left eye down to well below the mouth as this value sweeps
+  /// `0..1`, fading it in and back out at each end of the drip. Ignored by
+  /// every other [emotion]. Defaults to `0.0` (no tear visible), so a
+  /// default-constructed [LayoEmotion.sad] painter shows no tear between
+  /// drips, matching every other one-shot burst field on this painter
+  /// (e.g. [burstT], [flashT]).
+  final double tearT;
+
+  /// [LayoEmotion.success]'s check-mark stroke draw-in progress, in `0..1`,
+  /// where `1.0` is this emotion's **resting** pose -- fully drawn.
+  ///
+  /// Unlike most animated fields on this painter, [checkDrawT] defaults to
+  /// its fully-*drawn* extreme (`1.0`), not `0.0`: a static "success" face is
+  /// a complete check mark, the same way [LayoEmotion.dead]'s [droopT]
+  /// defaults to its resting drooped extreme rather than upright. [Layo]
+  /// only ever animates this value from `0.0` up to `1.0` once, on
+  /// appearance and periodically thereafter (a jittered replay), never
+  /// looping. [paintSuccessGlyph] interprets it as how far along the
+  /// check's own two-segment path (short leg then long leg) the stroke has
+  /// been drawn. Ignored by every other [emotion].
+  final double checkDrawT;
+
+  /// [LayoEmotion.success]'s settle-bounce phase, in `0..1`, `0` meaning no
+  /// bounce in progress (the check at its exact base scale).
+  ///
+  /// [paintSuccessGlyph] derives a quick overshoot-then-settle scale
+  /// envelope from this phase, applied to the *complete* check mark once
+  /// [checkDrawT] reaches `1.0` -- the two animations are sequenced by
+  /// [Layo], never overlapping, so this painter itself does not need to
+  /// gate one on the other. Ignored by every other [emotion]. Defaults to
+  /// `0.0` (no bounce in progress).
+  final double checkPopT;
+
+  /// [LayoEmotion.excited]'s idle star-eye twinkle phase, in `0..1`,
+  /// looping.
+  ///
+  /// [paintExcitedGlyphs] derives a scale-pulse-plus-rotation sparkle from
+  /// this phase, applied to each star independently (offset out of phase
+  /// with each other). Ignored by every other [emotion]. Defaults to `0.0`
+  /// (no twinkle), so a default-constructed [LayoPainter] reproduces
+  /// [LayoEmotion.excited]'s original static stars exactly.
+  final double sparkleT;
+
+  /// [LayoEmotion.excited]'s idle energetic-bounce phase, in `0..1`,
+  /// looping, in sync with [sparkleT]'s own cycle.
+  ///
+  /// [paintExcitedGlyphs] derives a small vertical lift for the whole
+  /// star-eyes-plus-smile glyph group from this phase. Ignored by every
+  /// other [emotion]. Defaults to `0.0` (no lift), so a default-constructed
+  /// [LayoPainter] reproduces [LayoEmotion.excited]'s original static
+  /// vertical position exactly.
+  final double excitedBounceT;
+
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
   double _kOf(double width) => width / 396.15;
@@ -600,6 +776,7 @@ class LayoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final k = _kOf(size.width);
 
+    _paintEmotionBackdrop(canvas, size);
     _paintBody(canvas, k);
     _paintEmotionChestInsignia(canvas, k);
     _paintFaceShadow(canvas, k);
@@ -670,6 +847,12 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.alert:
       case LayoEmotion.layo404:
       case LayoEmotion.idea:
+      case LayoEmotion.money:
+      case LayoEmotion.thinking:
+      case LayoEmotion.listening:
+      case LayoEmotion.sad:
+      case LayoEmotion.success:
+      case LayoEmotion.excited:
         return;
       case LayoEmotion.comandante:
         paintComandanteBeret(canvas, k, paintSmoothed: _paintSmoothed);
@@ -699,9 +882,71 @@ class LayoPainter extends CustomPainter {
       case LayoEmotion.alert:
       case LayoEmotion.layo404:
       case LayoEmotion.idea:
+      case LayoEmotion.money:
+      case LayoEmotion.thinking:
+      case LayoEmotion.listening:
+      case LayoEmotion.sad:
+      case LayoEmotion.success:
+      case LayoEmotion.excited:
         return;
       case LayoEmotion.comandante:
         paintComandanteChestInsignia(canvas, k, paintSmoothed: _paintSmoothed);
+    }
+  }
+
+  /// Dispatches to the current [emotion]'s **background layer** glyph-paint
+  /// function, if it has one — a glyph layer drawn *before* everything else
+  /// in [paint] (even [_paintBody]), so it renders behind the whole mascot
+  /// figure rather than confined to the dark screen window or drawn on top
+  /// of the body/head like an overlay or chest insignia. Introduced for
+  /// [LayoEmotion.money]'s "rain of bills" backdrop, the first emotion to
+  /// need one.
+  ///
+  /// Unlike a screen glyph or an overlay, a background layer is not scaled
+  /// by the shared artwork's own `k` factor — it fills [size] directly, so
+  /// it always spans this widget's full painted box regardless of the
+  /// mascot artwork's own aspect ratio within it. [paint] clips every
+  /// background-layer call to its own [size] first, so a background layer
+  /// can never paint outside this painter's own bounds even though
+  /// conceptually it sits "behind the whole figure" -- there is no larger
+  /// canvas available for it to spill onto.
+  ///
+  /// Every [emotion] but [LayoEmotion.money] has no background layer and is
+  /// listed explicitly with an empty branch, mirroring how
+  /// [_paintEmotionOverlay] and [_paintEmotionChestInsignia] both list every
+  /// emotion rather than falling through a wildcard — so a future background
+  /// layer plugs into this same mechanism with a one-line case addition
+  /// here, calling that emotion's own glyph-file function, with no change
+  /// required anywhere else in this file.
+  void _paintEmotionBackdrop(Canvas canvas, Size size) {
+    switch (emotion) {
+      case LayoEmotion.mrLayo:
+      case LayoEmotion.question:
+      case LayoEmotion.sleep:
+      case LayoEmotion.dead:
+      case LayoEmotion.love:
+      case LayoEmotion.angry:
+      case LayoEmotion.alert:
+      case LayoEmotion.layo404:
+      case LayoEmotion.idea:
+      case LayoEmotion.comandante:
+      case LayoEmotion.thinking:
+      case LayoEmotion.listening:
+      case LayoEmotion.sad:
+      case LayoEmotion.success:
+      case LayoEmotion.excited:
+        return;
+      case LayoEmotion.money:
+        canvas.save();
+        canvas.clipRect(Offset.zero & size);
+        paintMoneyBackdrop(
+          canvas,
+          size,
+          billColor: _resolvedAccentColor,
+          markColor: const Color(0xFFFFF8E1),
+          billRainT: billRainT,
+        );
+        canvas.restore();
     }
   }
 
@@ -782,6 +1027,32 @@ class LayoPainter extends CustomPainter {
           paintSmoothed: _paintSmoothed,
         );
         canvas.restore();
+      case LayoEmotion.money:
+        paintMoneyEyes(canvas, k, accentColor: _resolvedAccentColor, moneyT: moneyT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.thinking:
+        paintThinkingGlyph(
+          canvas,
+          k,
+          accentColor: _thinkingGlyphColor,
+          thoughtT: thoughtT,
+          paintSmoothed: _paintSmoothed,
+        );
+      case LayoEmotion.listening:
+        paintListeningGlyph(canvas, k, accentColor: _resolvedAccentColor, eqT: eqT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.sad:
+        paintSadEyes(canvas, k, glyphColor: glyphColor, paintSmoothed: _paintSmoothed);
+        paintSadTear(canvas, k, accentColor: glyphColor, tearT: tearT, paintSmoothed: _paintSmoothed);
+      case LayoEmotion.success:
+        paintSuccessGlyph(canvas, k, accentColor: _resolvedAccentColor, drawT: checkDrawT, popT: checkPopT);
+      case LayoEmotion.excited:
+        paintExcitedGlyphs(
+          canvas,
+          k,
+          accentColor: _resolvedAccentColor,
+          sparkleT: sparkleT,
+          bounceT: excitedBounceT,
+          paintSmoothed: _paintSmoothed,
+        );
     }
   }
 
@@ -1063,7 +1334,16 @@ class LayoPainter extends CustomPainter {
         (glitchOffset != oldDelegate.glitchOffset && emotion == LayoEmotion.layo404) ||
         (glowT != oldDelegate.glowT && emotion == LayoEmotion.idea) ||
         (flashT != oldDelegate.flashT && emotion == LayoEmotion.idea) ||
-        (winkT != oldDelegate.winkT && _isWinkable);
+        (winkT != oldDelegate.winkT && _isWinkable) ||
+        (moneyT != oldDelegate.moneyT && emotion == LayoEmotion.money) ||
+        (billRainT != oldDelegate.billRainT && emotion == LayoEmotion.money) ||
+        (thoughtT != oldDelegate.thoughtT && emotion == LayoEmotion.thinking) ||
+        (eqT != oldDelegate.eqT && emotion == LayoEmotion.listening) ||
+        (tearT != oldDelegate.tearT && emotion == LayoEmotion.sad) ||
+        (checkDrawT != oldDelegate.checkDrawT && emotion == LayoEmotion.success) ||
+        (checkPopT != oldDelegate.checkPopT && emotion == LayoEmotion.success) ||
+        (sparkleT != oldDelegate.sparkleT && emotion == LayoEmotion.excited) ||
+        (excitedBounceT != oldDelegate.excitedBounceT && emotion == LayoEmotion.excited);
   }
 }
 

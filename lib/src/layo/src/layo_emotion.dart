@@ -10,10 +10,11 @@
 /// rather than only a screen glyph. See `LayoPainter` for how each value is
 /// dispatched to its own glyph-paint methods.
 ///
-/// Ten emotions are implemented so far: [mrLayo], [question], [sleep],
-/// [dead], [love], [angry], [alert], [layo404], [idea], and [comandante].
-/// The full set this mascot is eventually meant to support — sunglasses,
-/// a Santa hat, a party hat, and a few others — will be added as further
+/// Sixteen emotions are implemented so far: [mrLayo], [question], [sleep],
+/// [dead], [love], [angry], [alert], [layo404], [idea], [comandante],
+/// [money], [thinking], [listening], [sad], [success], and [excited]. The
+/// full set this mascot is eventually meant to support — sunglasses, a
+/// Santa hat, a party hat, and a few others — will be added as further
 /// [LayoEmotion] values in a later pass; do not treat this enum as
 /// exhaustive of the mascot's intended range.
 ///
@@ -140,4 +141,95 @@ enum LayoEmotion {
   /// This emotion was based on this song: https://www.youtube.com/watch?v=_pbIkeZR24s
   /// (Chávez Corazón del Pueblo)
   comandante,
+
+  /// A "big win" face: two green `$` glyphs stand in for the eyes. The
+  /// antenna-tip dot is green rather than blue.
+  ///
+  /// Idle motion has two parts: the `$` eyes themselves play a subtle
+  /// scale-pulse/shimmer, and — separately — a looping "rain of bills"
+  /// plays as a **background layer**, behind the whole mascot figure (body,
+  /// head, everything): small green banknote rectangles (each carrying a
+  /// tiny `$` mark) fall and loop, clipped to this painter's own paint
+  /// bounds. See `LayoPainter`'s "Background layers" section for the
+  /// reusable mechanism this introduced, and `paintMoneyBackdrop` for the
+  /// bill-rain glyph itself.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=dNCWe_6HAM8
+  /// (MONEY — LISA)
+  money,
+
+  /// A pensive face: a white thought-bubble cloud (with its small trailing
+  /// white connector circles) drawn inside the screen, standing in for this
+  /// emotion's whole face. The antenna-tip dot — and the bow-tie every
+  /// emotion wears — stay blue, matching [mrLayo]'s own accent, decoupled
+  /// from the cloud's own white fill (a white dot would vanish against the
+  /// light head shell, but white reads cleanly for the cloud against the
+  /// dark screen behind it).
+  ///
+  /// Idle motion is on the **connector circles** alone — the cloud itself
+  /// stays static — which pulse/appear in ascending sequence (smallest,
+  /// closest to the head, first) on a loop, reading as a thought
+  /// continuously forming.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=KMq5p5t-Yi0
+  /// (Tick-Tack — ILLIT)
+  thinking,
+
+  /// An "actively listening" face: a small vertical-bar audio equalizer
+  /// glyph inside the screen, standing in for this emotion's whole face.
+  /// The antenna-tip dot is teal rather than blue.
+  ///
+  /// Idle motion is a classic EQ bounce: each bar's height oscillates
+  /// independently and continuously, out of phase with its neighbors, like
+  /// a live audio level meter.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=vo2p352SOaM
+  /// (Super Yuppers! — WJSN Chocome)
+  listening,
+
+  /// A downcast face: two plain open eyes (the same circular shape and
+  /// vertical position as [mrLayo]'s own eyes, but spaced closer together
+  /// since this emotion draws no mouth to visually anchor [mrLayo]'s own
+  /// wider gap) and no mouth at all — this emotion's sadness reads entirely
+  /// through the tear rather than through a downturned eye or frown shape.
+  /// The antenna-tip dot is grey, matching [sleep], [dead], and [layo404].
+  ///
+  /// Idle motion is a single tear that periodically wells up in one eye and
+  /// slides down the face, on the same kind of jittered per-instance
+  /// schedule as [mrLayo]'s own blink — a subtle, one-shot drip rather than
+  /// a continuous stream.
+  ///
+  /// This emotion was based on these songs:
+  /// - https://www.youtube.com/watch?v=ADKDX-H8SJg (FEARNOT (Between You, Me and the Lamppost) — LE SSERAFIM)
+  /// - https://www.youtube.com/watch?v=aDCcLQto5BM (Me Rehúso — Danny Ocean)
+  sad,
+
+  /// A "done!" face: a bold green double check mark (✓✓, a messaging-style
+  /// "read receipt" — two overlapping strokes, the second offset to the
+  /// right) inside the screen, standing in for this emotion's whole face.
+  /// The antenna-tip dot is green, matching [money].
+  ///
+  /// Idle motion is both checks drawing themselves on together (each stroke
+  /// animates in from its own short leg to its own long one, in lockstep)
+  /// with a quick pop/bounce settle at the end, both on appearance and
+  /// periodically thereafter, on the same kind of jittered per-instance
+  /// schedule as [mrLayo]'s own blink.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=6ZUIwj3FgUY
+  /// (I AM — IVE)
+  success,
+
+  /// An overjoyed face: two star-shaped eyes alone, spaced closer together
+  /// than [mrLayo]'s own eyes since this emotion draws no mouth to visually
+  /// anchor that wider gap, and no mouth at all. The antenna-tip dot is
+  /// yellow, matching [idea].
+  ///
+  /// Idle motion is a continuous twinkle/sparkle on both star eyes
+  /// (scale-pulse plus a slight rotation, offset out of phase with each
+  /// other) paired with a small energetic bounce of the whole glyph group,
+  /// looping.
+  ///
+  /// This emotion was based on this song: https://www.youtube.com/watch?v=pyf8cbqyfPs
+  /// (ANTIFRAGILE — LE SSERAFIM)
+  excited,
 }

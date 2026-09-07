@@ -54,6 +54,23 @@ import 'layo_painter.dart';
 ///   open throughout) — a Chávez-style signature wink — for
 ///   [LayoEmotion.comandante] alone, on the same kind of jittered
 ///   per-instance schedule as [LayoEmotion.mrLayo]'s own two-eye blink.
+/// * A subtle scale-pulse "shimmer" on both `$` eyes, plus a separate,
+///   independently-looping "rain of bills" background layer behind the
+///   whole mascot figure, for [LayoEmotion.money] alone.
+/// * A looping sequence of pulsing/appearing connector circles (the cloud
+///   itself stays static), for [LayoEmotion.thinking] alone.
+/// * A looping, independently-bouncing equalizer bar chart, for
+///   [LayoEmotion.listening] alone.
+/// * A single tear welling up and sliding down from one eye, on a jittered
+///   per-instance schedule shaped like [LayoEmotion.mrLayo]'s own blink but
+///   noticeably more frequent (a 1.5-2.5s interval rather than 3-6s), for
+///   [LayoEmotion.sad] alone.
+/// * A check mark drawing its own stroke on, then settling with a quick
+///   pop/bounce, on appearance and on the same kind of jittered per-instance
+///   replay schedule, for [LayoEmotion.success] alone.
+/// * A continuous twinkle (scale-pulse plus rotation) on both star eyes,
+///   paired with a small looping energetic bounce of the whole glyph group,
+///   for [LayoEmotion.excited] alone.
 ///
 /// Nothing else moves; the silhouette is identical to the static artwork at
 /// every frame outside of these specific animated parts, which matters
@@ -247,6 +264,59 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// right eye alone (see [LayoPainter.winkT]).
   late final Animation<double> _winkAnimation;
 
+  /// Looping controller driving [LayoEmotion.money]'s `$`-eye shimmer. Runs a
+  /// fixed ~1.6-second cycle via [AnimationController.repeat] for as long as
+  /// this instance is animating and its emotion is [LayoEmotion.money].
+  late final AnimationController _moneyShimmerController;
+
+  /// Looping controller driving [LayoEmotion.money]'s "rain of bills"
+  /// background layer. Runs a fixed ~6-second cycle via
+  /// [AnimationController.repeat], independent of [_moneyShimmerController]'s
+  /// own (much shorter) cycle, for as long as this instance is animating and
+  /// its emotion is [LayoEmotion.money].
+  late final AnimationController _billRainController;
+
+  /// Looping controller driving [LayoEmotion.thinking]'s trailing-connector
+  /// sequence. Runs a fixed ~2.2-second cycle via
+  /// [AnimationController.repeat] for as long as this instance is animating
+  /// and its emotion is [LayoEmotion.thinking].
+  late final AnimationController _thoughtController;
+
+  /// Looping controller driving [LayoEmotion.listening]'s equalizer bounce.
+  /// Runs a fixed ~1.4-second cycle via [AnimationController.repeat] for as
+  /// long as this instance is animating and its emotion is
+  /// [LayoEmotion.listening].
+  late final AnimationController _eqController;
+
+  /// Short, non-looping controller driving a single tear-drip's rise and
+  /// fall, for [LayoEmotion.sad]. Idle (not animating) between drips —
+  /// [_scheduleNextTear] is what fires it — exactly mirroring how
+  /// [_blinkController] behaves for [LayoEmotion.mrLayo]'s blink.
+  late final AnimationController _tearController;
+
+  /// Short, non-looping controller driving [LayoEmotion.success]'s check-mark
+  /// stroke draw-in, from `0.0` (nothing drawn) to `1.0` (fully drawn). Fires
+  /// once on appearance and again on each periodic replay —
+  /// [_scheduleNextCheckReplay] is what arms each replay — then hands off to
+  /// [_checkPopController] for the settle bounce.
+  late final AnimationController _checkDrawController;
+
+  /// Short, non-looping controller driving [LayoEmotion.success]'s
+  /// pop/bounce settle, played immediately after [_checkDrawController]
+  /// finishes drawing.
+  late final AnimationController _checkPopController;
+
+  /// Looping controller driving [LayoEmotion.excited]'s star-eye twinkle.
+  /// Runs a fixed ~1.5-second cycle via [AnimationController.repeat] for as
+  /// long as this instance is animating and its emotion is
+  /// [LayoEmotion.excited].
+  late final AnimationController _sparkleController;
+
+  /// Looping controller driving [LayoEmotion.excited]'s energetic bounce, in
+  /// sync with [_sparkleController]'s own cycle (same duration, restarted
+  /// together in [_syncAnimating]).
+  late final AnimationController _excitedBounceController;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
@@ -287,6 +357,16 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// for [LayoEmotion.comandante]'s right-eye wink instead of
   /// [LayoEmotion.mrLayo]'s two-eye blink.
   Timer? _winkTimer;
+
+  /// Self-scheduling timer for the next tear-drip; mirrors [_blinkTimer]
+  /// exactly, for [LayoEmotion.sad].
+  Timer? _tearTimer;
+
+  /// Self-scheduling timer for the next check-mark draw-in replay; mirrors
+  /// [_blinkTimer] exactly, for [LayoEmotion.success]. Not armed for the
+  /// very first draw-in (which plays immediately on animation start, see
+  /// [_syncAnimating]) — only for every replay after that.
+  Timer? _checkReplayTimer;
 
   /// Whether this instance currently considers itself "animating" — the
   /// combination of [Layo.animate], [TickerMode.valuesOf], and the platform's
@@ -352,6 +432,32 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// controller and the "insight" flash burst scheduler.
   bool get _isIdea => widget.emotion == LayoEmotion.idea;
 
+  /// Whether [Layo.emotion] is [LayoEmotion.money] — gates the looping
+  /// `$`-eye shimmer and "rain of bills" controllers.
+  bool get _isMoney => widget.emotion == LayoEmotion.money;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.thinking] — gates the looping
+  /// thought-connector-sequence controller.
+  bool get _isThinking => widget.emotion == LayoEmotion.thinking;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.listening] — gates the looping
+  /// equalizer-bounce controller.
+  bool get _isListening => widget.emotion == LayoEmotion.listening;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.sad] — gates the tear-drip burst
+  /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
+  /// for [LayoEmotion.mrLayo].
+  bool get _isSad => widget.emotion == LayoEmotion.sad;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.success] — gates the check-mark
+  /// draw-in/pop scheduler entirely, exactly as [_isBlinkable] gates the
+  /// blink scheduler for [LayoEmotion.mrLayo].
+  bool get _isSuccess => widget.emotion == LayoEmotion.success;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.excited] — gates the looping
+  /// star-twinkle and energetic-bounce controllers.
+  bool get _isExcited => widget.emotion == LayoEmotion.excited;
+
   @override
   void initState() {
     super.initState();
@@ -372,6 +478,24 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _flashAnimation = CurvedAnimation(parent: _flashController, curve: Curves.easeOut);
     _winkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 180));
     _winkAnimation = CurvedAnimation(parent: _winkController, curve: Curves.easeInOut);
+    _moneyShimmerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+    _billRainController = AnimationController(vsync: this, duration: const Duration(milliseconds: 6000));
+    _thoughtController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+    _eqController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400));
+    _tearController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+    // Starts at 1.0 (fully drawn), not the AnimationController default lower
+    // bound of 0.0 -- LayoEmotion.success's resting pose is a complete check
+    // mark (see LayoPainter.checkDrawT's own doc comment), so a static
+    // (animate: false) instance must render fully drawn from the very first
+    // frame, with no draw-in ever needing to play to reach it.
+    _checkDrawController = AnimationController(
+      vsync: this,
+      value: 1.0,
+      duration: const Duration(milliseconds: 600),
+    );
+    _checkPopController = AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _sparkleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _excitedBounceController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
@@ -385,6 +509,15 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _glowController,
       _flashAnimation,
       _winkAnimation,
+      _moneyShimmerController,
+      _billRainController,
+      _thoughtController,
+      _eqController,
+      _tearController,
+      _checkDrawController,
+      _checkPopController,
+      _sparkleController,
+      _excitedBounceController,
     ]);
   }
 
@@ -429,6 +562,10 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     final wasFlashing = _flashTimer != null;
     final shouldWink = shouldAnimate && _isWinkable;
     final wasWinking = _winkTimer != null;
+    final shouldTear = shouldAnimate && _isSad;
+    final wasTearing = _tearTimer != null;
+    final shouldCheck = shouldAnimate && _isSuccess;
+    final wasChecking = _checkReplayTimer != null || _checkDrawController.isAnimating;
 
     if (shouldAnimate != _isAnimating) {
       _isAnimating = shouldAnimate;
@@ -467,6 +604,34 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
         _glowController.repeat();
       } else {
         _glowController.stop();
+      }
+
+      if (shouldAnimate && _isMoney) {
+        _moneyShimmerController.repeat();
+        _billRainController.repeat();
+      } else {
+        _moneyShimmerController.stop();
+        _billRainController.stop();
+      }
+
+      if (shouldAnimate && _isThinking) {
+        _thoughtController.repeat();
+      } else {
+        _thoughtController.stop();
+      }
+
+      if (shouldAnimate && _isListening) {
+        _eqController.repeat();
+      } else {
+        _eqController.stop();
+      }
+
+      if (shouldAnimate && _isExcited) {
+        _sparkleController.repeat();
+        _excitedBounceController.repeat();
+      } else {
+        _sparkleController.stop();
+        _excitedBounceController.stop();
       }
     }
 
@@ -522,6 +687,26 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _winkController.value = 0;
       _winkTimer?.cancel();
       _winkTimer = null;
+    }
+
+    if (shouldTear && !wasTearing) {
+      _scheduleNextTear();
+    } else if (!shouldTear && wasTearing) {
+      _tearController.stop();
+      _tearController.value = 0;
+      _tearTimer?.cancel();
+      _tearTimer = null;
+    }
+
+    if (shouldCheck && !wasChecking) {
+      unawaited(_playCheck());
+    } else if (!shouldCheck && wasChecking) {
+      _checkDrawController.stop();
+      _checkDrawController.value = 1.0;
+      _checkPopController.stop();
+      _checkPopController.value = 0;
+      _checkReplayTimer?.cancel();
+      _checkReplayTimer = null;
     }
   }
 
@@ -595,6 +780,86 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       return;
     }
     _scheduleNextWink();
+  }
+
+  /// Arms a one-shot timer for the next tear-drip, at a randomized 1.5-2.5
+  /// second interval — noticeably shorter than every other one-shot
+  /// scheduler on this widget (each a 3-6 second interval, see
+  /// [_scheduleNextBlink]) — so [LayoEmotion.sad] drips visibly more often,
+  /// per the maintainer's tuning request, while still jittering this
+  /// instance's drips against every other [Layo] on screen instead of firing
+  /// in unison.
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_isSad]
+  /// before acting, so a timer or an in-flight drip left over from just
+  /// before animation was paused (or the emotion switched away from sad, or
+  /// the widget was disposed) cannot fire a drip, leave [_tearController]
+  /// running, or re-arm the next timer.
+  void _scheduleNextTear() {
+    _tearTimer?.cancel();
+    final seconds = 1.5 + _random.nextDouble() * 1.0;
+    _tearTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playTear()));
+  }
+
+  /// Plays one full tear-drip (rise to `1.0`, then reset to `0.0`) on
+  /// [_tearController] and, if still animating and sad afterward, arms the
+  /// next [_scheduleNextTear].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isSad] after the await so a drip in
+  /// flight when animation is paused (or the emotion switched away from sad,
+  /// or the widget disposed) neither leaves [_tearController] mid-drip nor
+  /// re-arms a further drip.
+  Future<void> _playTear() async {
+    await _tearController.forward(from: 0);
+    _tearController.value = 0;
+    if (!mounted || !_isAnimating || !_isSad) {
+      return;
+    }
+    _scheduleNextTear();
+  }
+
+  /// Arms a one-shot timer for the next check-mark draw-in replay, at a
+  /// randomized 3-6 second interval so this instance's replays are jittered
+  /// against every other [Layo] on screen instead of firing in unison — the
+  /// same schedule shape as [_scheduleNextBlink], for [LayoEmotion.success]
+  /// instead of [LayoEmotion.mrLayo].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and
+  /// [_isSuccess] before acting, so a timer or an in-flight replay left over
+  /// from just before animation was paused (or the emotion switched away
+  /// from success, or the widget was disposed) cannot fire a replay, leave
+  /// either controller running, or re-arm the next timer.
+  void _scheduleNextCheckReplay() {
+    _checkReplayTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _checkReplayTimer = Timer(
+      Duration(milliseconds: (seconds * 1000).round()),
+      () => unawaited(_playCheck()),
+    );
+  }
+
+  /// Plays one full check-mark sequence: [_checkDrawController] draws the
+  /// stroke on (`0.0` to `1.0`), then [_checkPopController] plays the
+  /// pop/bounce settle (`0.0` to `1.0` and back to `0.0`); if still animating
+  /// and [_isSuccess] afterward, arms the next [_scheduleNextCheckReplay].
+  ///
+  /// Called both on animation start (the initial draw-in, with no prior
+  /// replay timer) and by each [_scheduleNextCheckReplay] firing. Re-checks
+  /// `mounted`/[_isAnimating]/[_isSuccess] after each await so a sequence in
+  /// flight when animation is paused (or the emotion switched away from
+  /// success, or the widget disposed) neither leaves either controller
+  /// mid-flight nor re-arms a further replay.
+  Future<void> _playCheck() async {
+    await _checkDrawController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isSuccess) {
+      return;
+    }
+    await _checkPopController.forward(from: 0);
+    _checkPopController.value = 0;
+    if (!mounted || !_isAnimating || !_isSuccess) {
+      return;
+    }
+    _scheduleNextCheckReplay();
   }
 
   /// Arms a one-shot timer for the next antenna twitch, at a randomized 3-6
@@ -786,6 +1051,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _glitchTimer?.cancel();
     _flashTimer?.cancel();
     _winkTimer?.cancel();
+    _tearTimer?.cancel();
+    _checkReplayTimer?.cancel();
     _pulseController.dispose();
     _blinkController.dispose();
     _wiggleController.dispose();
@@ -798,6 +1065,15 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _glowController.dispose();
     _flashController.dispose();
     _winkController.dispose();
+    _moneyShimmerController.dispose();
+    _billRainController.dispose();
+    _thoughtController.dispose();
+    _eqController.dispose();
+    _tearController.dispose();
+    _checkDrawController.dispose();
+    _checkPopController.dispose();
+    _sparkleController.dispose();
+    _excitedBounceController.dispose();
     super.dispose();
   }
 
@@ -824,6 +1100,15 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               glowT: _glowController.value,
               flashT: _flashAnimation.value,
               winkT: _winkAnimation.value,
+              moneyT: _moneyShimmerController.value,
+              billRainT: _billRainController.value,
+              thoughtT: _thoughtController.value,
+              eqT: _eqController.value,
+              tearT: _tearController.value,
+              checkDrawT: _checkDrawController.value,
+              checkPopT: _checkPopController.value,
+              sparkleT: _sparkleController.value,
+              excitedBounceT: _excitedBounceController.value,
             ),
             size: Size.infinite,
           );
