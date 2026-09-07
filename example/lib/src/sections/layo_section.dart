@@ -27,7 +27,7 @@ class LayoSection extends StatelessWidget {
       description:
           'The "MrLayo" brand mascot, drawn entirely with CustomPainter — no bundled image or '
           'SVG. Size-automatic: fills the width its parent provides and derives height from '
-          'the fixed 500:833 aspect ratio, or pass an explicit width. Renders one of nine '
+          'the fixed 500:833 aspect ratio, or pass an explicit width. Renders one of ten '
           'emotions via LayoEmotion.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,62 +36,19 @@ class LayoSection extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp3),
           LayrzRow(
             spacing: tokens.spacing.sp4,
-            children: const [
-              LayrzCol(
+            children: LayoEmotion.values.map((emotion) {
+              return LayrzCol(
                 xs: 12,
                 sm: 6,
                 md: 3,
-                child: _EmotionTile(label: 'mrLayo', emotion: LayoEmotion.mrLayo),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'question', emotion: LayoEmotion.question),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'sleep', emotion: LayoEmotion.sleep),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'dead', emotion: LayoEmotion.dead),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'love', emotion: LayoEmotion.love),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'angry', emotion: LayoEmotion.angry),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'alert', emotion: LayoEmotion.alert),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'layo404', emotion: LayoEmotion.layo404),
-              ),
-              LayrzCol(
-                xs: 12,
-                sm: 6,
-                md: 3,
-                child: _EmotionTile(label: 'idea', emotion: LayoEmotion.idea),
-              ),
-            ],
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: 180),
+                    child: _EmotionTile(label: emotion.name, emotion: emotion),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
 
           SizedBox(height: tokens.spacing.sp4),
@@ -105,21 +62,6 @@ class LayoSection extends StatelessWidget {
           Text('Explicit width — Layo(width: 240)', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
           const Layo(width: 240),
-
-          SizedBox(height: tokens.spacing.sp4),
-
-          Text(
-            'Default (no width) — fills a bounded parent, here two LayrzCol cells',
-            style: tokens.typography.title,
-          ),
-          SizedBox(height: tokens.spacing.sp3),
-          LayrzRow(
-            spacing: tokens.spacing.sp4,
-            children: const [
-              LayrzCol(xs: 12, sm: 6, child: Layo()),
-              LayrzCol(xs: 12, sm: 6, child: Layo()),
-            ],
-          ),
         ],
       ),
     );
