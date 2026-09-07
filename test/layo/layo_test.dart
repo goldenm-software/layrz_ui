@@ -223,55 +223,11 @@ void main() {
       expect(after.pulseT, 0.0, reason: 'TickerMode(enabled: false) must fully pause the idle pulse');
     });
 
-    guardedTestWidgets('shouldRepaint is false for an identically-configured LayoPainter', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      const painterA = LayoPainter();
-      const painterB = LayoPainter();
-      expect(painterA.shouldRepaint(painterB), isFalse);
-    });
-
-    guardedTestWidgets('shouldRepaint is true when a color differs', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      const painterA = LayoPainter();
-      const painterB = LayoPainter(accentColor: Color(0xFFFF0000));
-      expect(painterA.shouldRepaint(painterB), isTrue);
-    });
-
-    guardedTestWidgets('shouldRepaint is true when faceShadowColor differs', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      const painterA = LayoPainter();
-      const painterB = LayoPainter(faceShadowColor: Color(0xFFFF0000));
-      expect(painterA.shouldRepaint(painterB), isTrue);
-    });
-
-    guardedTestWidgets('shouldRepaint is true when pulseT differs', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      const painterA = LayoPainter();
-      const painterB = LayoPainter(pulseT: 0.5);
-      expect(painterA.shouldRepaint(painterB), isTrue);
-    });
-
-    guardedTestWidgets('shouldRepaint is true when blinkT differs', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      const painterA = LayoPainter();
-      const painterB = LayoPainter(blinkT: 1.0);
-      expect(painterA.shouldRepaint(painterB), isTrue);
-    });
+    // `LayoPainter.shouldRepaint` behavior (including emotion-gated blink
+    // repaint suppression) is covered in `layo_painter_test.dart`, alongside
+    // this module's other pure-painter tests. Widget-level `Layo.emotion`
+    // wiring, per-emotion regression/blink-gating/pulse behavior, and the
+    // mrLayo unchanged-regression check live in `layo_emotion_widget_test.dart`.
 
     guardedTestWidgets('default LayoPainter is at rest: pulseT and blinkT both zero', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
