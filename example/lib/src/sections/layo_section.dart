@@ -4,7 +4,8 @@ import 'package:layrz_ui/layrz_ui.dart';
 import '../common/showroom_section.dart';
 
 /// Showcases [Layo], the "MrLayo" brand mascot, across every implemented
-/// [LayoEmotion].
+/// [LayoEmotion], plus [AvatarLayo], the cropped head/shoulders framing of
+/// the same mascot.
 ///
 /// Demonstrates the widget's size-automatic layout contract: an explicit
 /// [Layo.width] pinned inside a fixed-size box, and the default (null width)
@@ -14,6 +15,10 @@ import '../common/showroom_section.dart';
 /// responsive 12-column grid) rather than [Wrap] or a plain [Row], so each
 /// [Layo] always sits in a bounded-width column and reflows cleanly at any
 /// viewport size instead of overflowing on narrow ones.
+///
+/// The [AvatarLayo] demos further down follow the same grid discipline and
+/// cover both [LayoAvatarShape] values and every [LayoEmotion] rendered as an
+/// avatar, each showing its own fixed per-emotion background color.
 class LayoSection extends StatelessWidget {
   /// Creates a new [LayoSection].
   const LayoSection({super.key});
@@ -28,7 +33,8 @@ class LayoSection extends StatelessWidget {
           'The "MrLayo" brand mascot, drawn entirely with CustomPainter — no bundled image or '
           'SVG. Size-automatic: fills the width its parent provides and derives height from '
           'the fixed 500:833 aspect ratio, or pass an explicit width. Renders one of ten '
-          'emotions via LayoEmotion.',
+          'emotions via LayoEmotion. AvatarLayo crops the same mascot into a square '
+          'head/shoulders portrait, in either a circle or rounded-box frame.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -62,6 +68,50 @@ class LayoSection extends StatelessWidget {
           Text('Explicit width — Layo(width: 240)', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
           const Layo(width: 240),
+
+          SizedBox(height: tokens.spacing.sp4),
+
+          Text('AvatarLayo — shapes', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp3),
+          LayrzRow(
+            spacing: tokens.spacing.sp4,
+            children: [
+              LayrzCol(
+                xs: 6,
+                sm: 4,
+                md: 2,
+                child: Center(
+                  child: _AvatarTile(label: 'circle', shape: LayoAvatarShape.circle),
+                ),
+              ),
+              LayrzCol(
+                xs: 6,
+                sm: 4,
+                md: 2,
+                child: Center(
+                  child: _AvatarTile(label: 'roundedBox', shape: LayoAvatarShape.roundedBox),
+                ),
+              ),
+            ],
+          ),
+
+          SizedBox(height: tokens.spacing.sp4),
+
+          Text('AvatarLayo — all emotions', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp3),
+          LayrzRow(
+            spacing: tokens.spacing.sp4,
+            children: LayoEmotion.values.map((emotion) {
+              return LayrzCol(
+                xs: 6,
+                sm: 4,
+                md: 2,
+                child: Center(
+                  child: _AvatarTile(label: emotion.name, emotion: emotion),
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -97,6 +147,47 @@ class _EmotionTile extends StatelessWidget {
         Text(label, style: tokens.typography.body),
         SizedBox(height: tokens.spacing.sp2),
         Layo(emotion: emotion),
+      ],
+    );
+  }
+}
+
+/// A single labeled [AvatarLayo] tile, used by [LayoSection] to lay out
+/// several avatars side by side for visual comparison inside a
+/// [LayrzRow]/[LayrzCol] grid.
+///
+/// Gives its [AvatarLayo] an explicit [width] of 120 logical pixels so the
+/// square frame renders at a consistent, legible size regardless of how wide
+/// the enclosing [LayrzCol] happens to be.
+class _AvatarTile extends StatelessWidget {
+  /// Creates a new [_AvatarTile].
+  const _AvatarTile({
+    required this.label,
+    this.shape = LayoAvatarShape.circle,
+    this.emotion = LayoEmotion.mrLayo,
+  });
+
+  /// The plain-text caption shown above the avatar, naming the property
+  /// being demonstrated (a shape or an emotion).
+  final String label;
+
+  /// Which [LayoAvatarShape] this tile's [AvatarLayo] clips itself to.
+  final LayoAvatarShape shape;
+
+  /// Which [LayoEmotion] this tile's [AvatarLayo] renders.
+  final LayoEmotion emotion;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: tokens.typography.body),
+        SizedBox(height: tokens.spacing.sp2),
+        AvatarLayo(shape: shape, emotion: emotion, width: 120),
       ],
     );
   }
