@@ -10,14 +10,14 @@
 /// rather than only a screen glyph. See `LayoPainter` for how each value is
 /// dispatched to its own glyph-paint methods.
 ///
-/// Twenty-two emotions are implemented so far: [mrLayo], [question], [sleep],
-/// [dead], [love], [angry], [alert], [layo404], [idea], [comandante],
-/// [money], [thinking], [listening], [sad], [success], [excited],
-/// [searching], [working], [wink], [mindBlown], [smug], and [cool]. The full
-/// set this mascot is eventually meant to support — a Santa hat, a party hat,
-/// and a few others — will be added as further [LayoEmotion] values in a
-/// later pass; do not treat this enum as exhaustive of the mascot's intended
-/// range.
+/// Twenty-three emotions are implemented so far: [mrLayo], [question],
+/// [sleep], [dead], [love], [angry], [alert], [layo404], [idea],
+/// [comandante], [money], [thinking], [listening], [sad], [success],
+/// [excited], [searching], [working], [wink], [mindBlown], [smug], [cool],
+/// and [christmas]. The full set this mascot is eventually meant to
+/// support — a party hat and a few others — will be added as further
+/// [LayoEmotion] values in a later pass; do not treat this enum as
+/// exhaustive of the mascot's intended range.
 ///
 /// [comandante] is also the first emotion to wear an **overlay**: a glyph
 /// layer drawn after the shared head shell, on top of the face, rather than
@@ -321,4 +321,40 @@ enum LayoEmotion {
   /// This emotion was based on this song: https://www.youtube.com/watch?v=11cta61wi0g
   /// (Hype Boy — NewJeans)
   cool,
+
+  /// Layo dressed for a Venezuelan Christmas — Santa hat, poinsettia
+  /// (Flor de Navidad), holly, a festive sweater, and falling snow.
+  ///
+  /// This emotion was based on these songs:
+  /// - https://www.youtube.com/watch?v=2YwhHdG46kg (Mi Ranchito — Cardenales del Éxito)
+  /// - https://www.youtube.com/watch?v=nYppH4KQAI8 (Son Mis Deseos — Cardenales del Éxito)
+  /// - https://www.youtube.com/watch?v=il3yi9E-9dk (Gaita Onomatopéyica — Gran Coquivacoa)
+  /// - https://www.youtube.com/watch?v=tE0DaYX5ikI (La Grey Zuliana — Ricardo Aguirre)
+  /// - https://www.youtube.com/watch?v=YosAhwV5QyE (La Elegida — Los Chinquinquireños)
+  ///
+  /// La emoción de Navidad está hecha de gaita, el sonido de la Venezuela
+  /// que llevamos con nosotros. Dedicada con amor a mi madre, gaitera de
+  /// corazón. Estas canciones son suyas, y por eso siempre estarán aquí.
+  ///
+  /// De tu hijo Kenny, siempre estarás en mis recuerdos.
+  ///
+  /// This is the standard warm face (blue eyes, blue smile, like [mrLayo]),
+  /// dressed head to toe for the season: a red Santa hat **overlay** (its
+  /// brim carrying a small poinsettia and a holly sprig) capping the head
+  /// exactly where [comandante]'s beret and [cool]'s sunglasses sit, a red
+  /// and white **body overlay** sweater drawn over the body dome — the first
+  /// emotion to dress the body itself rather than only the head or chest —
+  /// and a looping snowfall **background layer** behind the whole figure,
+  /// like [money]'s own bill rain. The antenna-tip dot is festive red, but
+  /// [christmas] has **no antenna at all** — the hat's own crown sits
+  /// exactly where the antenna would, the same reasoning [comandante]'s own
+  /// beret uses (see `LayoPainter._hasAntenna`) — and, like [comandante],
+  /// wears no bow-tie either, since the sweater already dresses the body
+  /// (see `LayoPainter._wearsTie`).
+  ///
+  /// Idle motion is the looping snowfall drifting down behind the figure,
+  /// plus a gentle sway on the hat's own pom-pom, both independent of
+  /// [mrLayo]'s own blink (which [christmas] still plays, unmodified, on the
+  /// same jittered per-instance schedule).
+  christmas,
 }
