@@ -1,6 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
-/// Paints the static, awake "MrLayo" brand mascot face onto a canvas of an
+/// Paints the "MrLayo" brand mascot face onto a canvas of an
 /// arbitrary [Size].
 ///
 /// Every shape is a verbatim port of the artist's own vector paths, recovered
@@ -53,9 +55,13 @@ import 'package:flutter/widgets.dart';
 /// can both occlude it — not a shape hand-fitted to whatever gap they
 /// happen to leave.
 ///
-/// This is intentionally a Phase 1, static-only painter: no animation, no
-/// emotion variants, no dormant-body silhouette. It always draws the single
-/// awake face this vector source describes.
+/// This started as a Phase 1, static-only painter and still draws the single
+/// awake face this vector source describes with every shape geometrically
+/// identical to that phase — no emotion variants, no dormant-body
+/// silhouette. The only animated behavior is a subtle idle antenna pulse
+/// ([pulseT]) and eye blink ([blinkT]), both driven externally by [Layo]'s
+/// state and defaulting to their at-rest values so a default-constructed
+/// painter still reproduces the original static look exactly.
 class LayoPainter extends CustomPainter {
   /// Creates a new [LayoPainter].
   ///
@@ -68,6 +74,8 @@ class LayoPainter extends CustomPainter {
     this.screenColor = const Color(0xFF302F44),
     this.accentColor = const Color(0xFF60ABDE),
     this.faceShadowColor = const Color(0x54000000),
+    this.pulseT = 0.0,
+    this.blinkT = 0.0,
   });
 
   /// Fill color for the outer body shell and the light head shell (the
@@ -99,6 +107,25 @@ class LayoPainter extends CustomPainter {
   /// body color of `rgb(236, 235, 238)`, and `0x54` is the alpha that
   /// reproduces that composite.
   final Color faceShadowColor;
+
+  /// The idle antenna-pulse phase, in `0..1`, looping.
+  ///
+  /// Interpreted as a sine-eased "breath": `0` and `1` are both the tip at
+  /// rest, with the peak of the pulse at `0.5`. [_paintAntennaTip] uses it to
+  /// modulate the tip's radius by a few percent and to draw a soft, low-alpha
+  /// glow ring behind it whose size and opacity track the same phase.
+  /// Defaults to `0.0` (at rest), so a default-constructed [LayoPainter]
+  /// reproduces the original static tip exactly — no glow, no radius change.
+  final double pulseT;
+
+  /// The eye-blink phase, in `0..1`, where `0` is fully open and `1` is fully
+  /// closed.
+  ///
+  /// [_paintEyes] uses it to squash the eye circles vertically toward a thin
+  /// ellipse and back, rather than switching between two discrete shapes.
+  /// Defaults to `0.0` (open), so a default-constructed [LayoPainter]
+  /// reproduces the original static circular eyes exactly.
+  final double blinkT;
 
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
@@ -414,20 +441,69 @@ class LayoPainter extends CustomPainter {
     _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawPath(path, paint));
   }
 
-  /// Paints the two blue circular eyes, at their exact source radius and
-  /// centers.
+  /// Paints the two blue eyes, at their exact source radius and centers,
+  /// vertically squashed by [blinkT].
+  ///
+  /// At rest (`blinkT == 0`) each eye is drawn as the original circle via
+  /// [Canvas.drawCircle]. Mid-blink, the eye becomes a vertically-scaled
+  /// ellipse — `scaleY` runs from `1.0` (open) down toward `0.1` (all but
+  /// closed) and back as [blinkT] sweeps `0 -> 1 -> 0` over the blink's
+  /// short lifetime — drawn by scaling the canvas around the eye's own
+  /// center rather than by constructing a new shape, so the same
+  /// [_paintSmoothed] fill+stroke smoothing still applies unchanged.
   void _paintEyes(Canvas canvas, double k) {
     final leftCenter = Offset(134.67 * k, 195.73 * k);
     final rightCenter = Offset(261.17 * k, 195.73 * k);
     const radiusFraction = 15.57;
-    _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(leftCenter, radiusFraction * k, paint));
-    _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(rightCenter, radiusFraction * k, paint));
+
+    if (blinkT <= 0.0) {
+      _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(leftCenter, radiusFraction * k, paint));
+      _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(rightCenter, radiusFraction * k, paint));
+      return;
+    }
+
+    const minScaleY = 0.1;
+    final scaleY = 1.0 - (1.0 - minScaleY) * blinkT.clamp(0.0, 1.0);
+
+    for (final center in [leftCenter, rightCenter]) {
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.scale(1.0, scaleY);
+      canvas.translate(-center.dx, -center.dy);
+      _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(center, radiusFraction * k, paint));
+      canvas.restore();
+    }
   }
 
-  /// Paints the blue antenna tip dot.
+  /// Paints the blue antenna tip dot, breathing gently with [pulseT].
+  ///
+  /// A soft, low-alpha glow ring is drawn first, behind the tip: its radius
+  /// and opacity both track a sine easing of [pulseT] (peaking at
+  /// `pulseT == 0.5`) so it swells and fades with the same breath. The tip
+  /// itself is then drawn on top at its base radius scaled by a small ±5%,
+  /// following the same sine curve. At `pulseT == 0` both terms are at rest
+  /// — zero-radius (invisible) glow and exactly the original base radius —
+  /// so a default-constructed painter reproduces the original static dot.
   void _paintAntennaTip(Canvas canvas, double k) {
     final center = Offset(197.66 * k, 17.30 * k);
-    _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(center, 16.71 * k, paint));
+    const baseRadius = 16.71;
+
+    final breath = math.sin(pulseT.clamp(0.0, 1.0) * math.pi);
+
+    final glowRadius = baseRadius * (1.0 + 0.9 * breath) * k;
+    if (glowRadius > baseRadius * k) {
+      canvas.drawCircle(
+        center,
+        glowRadius,
+        Paint()
+          ..color = accentColor.withValues(alpha: 0.28 * breath)
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true,
+      );
+    }
+
+    final tipRadius = baseRadius * (1.0 + 0.05 * breath) * k;
+    _paintSmoothed(canvas, accentColor, k, (paint) => canvas.drawCircle(center, tipRadius, paint));
   }
 
   @override
@@ -436,6 +512,8 @@ class LayoPainter extends CustomPainter {
         bodyInnerColor != oldDelegate.bodyInnerColor ||
         screenColor != oldDelegate.screenColor ||
         accentColor != oldDelegate.accentColor ||
-        faceShadowColor != oldDelegate.faceShadowColor;
+        faceShadowColor != oldDelegate.faceShadowColor ||
+        pulseT != oldDelegate.pulseT ||
+        blinkT != oldDelegate.blinkT;
   }
 }
