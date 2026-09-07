@@ -20,8 +20,9 @@ import 'layo_painter.dart';
 /// depends on [emotion] (see [LayoPainter] for the full per-emotion
 /// breakdown):
 ///
-/// * A gentle antenna-tip pulse/glow, for every [emotion] except
-///   [LayoEmotion.dead].
+/// * A gentle antenna-tip pulse/glow, for [LayoEmotion.mrLayo],
+///   [LayoEmotion.question], [LayoEmotion.sleep], [LayoEmotion.angry], and
+///   [LayoEmotion.layo404].
 /// * A periodic eye blink, for [LayoEmotion.mrLayo] alone.
 /// * A gentle "?" wiggle, for [LayoEmotion.question] alone (replacing the
 ///   blink, since its "eyes" are the question marks themselves).
@@ -34,6 +35,19 @@ import 'layo_painter.dart';
 ///   upright and falls back, as if trying and failing to power back on. No
 ///   opacity change accompanies this; the antenna stays its normal color
 ///   throughout.
+/// * A double-thump "heartbeat" scale pulse on both heart eyes and the
+///   antenna dot in sync, for [LayoEmotion.love] alone, looping.
+/// * A jittered "furrow + tremble" burst — the brows lower and the whole
+///   face briefly shakes, then relaxes — for [LayoEmotion.angry] alone, on
+///   the same kind of per-instance schedule as the blink.
+/// * A snappy top-widening attention pulse on both "!" stems (each briefly
+///   funnels into an inverted-triangle silhouette, wide at the top), for
+///   [LayoEmotion.alert] alone, looping.
+/// * An occasional glitch/flicker (opacity drop plus a tiny horizontal
+///   jitter) on the "404" glyph group, for [LayoEmotion.layo404] alone, on a
+///   jittered per-instance schedule.
+/// * A soft continuous glow-pulse on the bulb, plus an occasional stronger
+///   "insight" flash the antenna dot syncs to, for [LayoEmotion.idea] alone.
 ///
 /// Nothing else moves; the silhouette is identical to the static artwork at
 /// every frame outside of these specific animated parts, which matters
@@ -128,7 +142,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// ~2-second cycle for as long as animation is active via
   /// [AnimationController.repeat]; never restarted or seeked mid-cycle.
   /// Started only for emotions where [_pulses] is true (every emotion but
-  /// [LayoEmotion.dead]) — see [_syncAnimating].
+  /// [LayoEmotion.dead], [LayoEmotion.love], and [LayoEmotion.idea]) — see
+  /// [_syncAnimating].
   late final AnimationController _pulseController;
 
   /// Short, non-looping controller driving a single blink's close+open. It
@@ -165,15 +180,62 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// linear wipe. [_droopTFor] maps this progress to [LayoPainter.droopT].
   late final Animation<double> _twitchAnimation;
 
+  /// Looping controller driving [LayoEmotion.love]'s "heartbeat" scale
+  /// pulse. Runs a fixed ~1.2-second cycle via [AnimationController.repeat]
+  /// for as long as this instance is animating and its emotion is
+  /// [LayoEmotion.love].
+  late final AnimationController _beatController;
+
+  /// Short, non-looping controller driving a single "furrow + tremble"
+  /// burst, for [LayoEmotion.angry]. Idle (not animating) between bursts —
+  /// [_scheduleNextBurst] is what fires it — mirroring how [_blinkController]
+  /// behaves for the blink.
+  late final AnimationController _burstController;
+
+  /// The burst's own eased progress, `0` (relaxed, at rest) to `1` (the
+  /// burst's peak furrow/tremble) and back, derived from [_burstController].
+  late final Animation<double> _burstAnimation;
+
+  /// Looping controller driving [LayoEmotion.alert]'s top-widening
+  /// attention pulse. Runs a fixed ~900ms cycle via
+  /// [AnimationController.repeat] for as long as this instance is animating
+  /// and its emotion is [LayoEmotion.alert]; [LayoPainter]'s own
+  /// `paintAlertGlyphs` derives the sharp easeOutBack-style envelope from
+  /// this controller's raw linear value.
+  late final AnimationController _alertPulseController;
+
+  /// Short, non-looping controller driving a single glitch/flicker burst,
+  /// for [LayoEmotion.layo404]. Idle (not animating) between flickers —
+  /// [_scheduleNextGlitch] is what fires it — mirroring how
+  /// [_blinkController] behaves for the blink.
+  late final AnimationController _glitchController;
+
+  /// Looping controller driving [LayoEmotion.idea]'s continuous glow-pulse
+  /// breath. Runs a fixed ~2.4-second cycle via
+  /// [AnimationController.repeat] for as long as this instance is animating
+  /// and its emotion is [LayoEmotion.idea].
+  late final AnimationController _glowController;
+
+  /// Short, non-looping controller driving a single "insight" flash burst,
+  /// for [LayoEmotion.idea]. Idle (not animating) between flashes —
+  /// [_scheduleNextFlash] is what fires it — mirroring how
+  /// [_blinkController] behaves for the blink.
+  late final AnimationController _flashController;
+
+  /// The flash's own eased progress, `0` (no flash) to `1` (the flash's
+  /// peak brightness) and back, derived from [_flashController].
+  late final Animation<double> _flashAnimation;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
   /// current [Layo.emotion].
   late final Listenable _repaint;
 
-  /// Source of the per-blink and per-twitch randomized interval (3-6s), so
-  /// this instance's blinks/twitches jitter against every other [Layo] on
-  /// screen instead of firing in unison.
+  /// Source of every per-instance randomized interval (3-6s, for the blink,
+  /// twitch, angry burst, 404 glitch, and idea flash schedulers alike), so
+  /// this instance's bursts jitter against every other [Layo] on screen
+  /// instead of firing in unison.
   final math.Random _random = math.Random();
 
   /// Self-scheduling timer for the next blink; recreated after every blink
@@ -187,6 +249,18 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// Mirrors [_blinkTimer] exactly, for [LayoEmotion.dead] instead of
   /// [LayoEmotion.mrLayo].
   Timer? _twitchTimer;
+
+  /// Self-scheduling timer for the next "furrow + tremble" burst; mirrors
+  /// [_blinkTimer] exactly, for [LayoEmotion.angry].
+  Timer? _burstTimer;
+
+  /// Self-scheduling timer for the next glitch/flicker burst; mirrors
+  /// [_blinkTimer] exactly, for [LayoEmotion.layo404].
+  Timer? _glitchTimer;
+
+  /// Self-scheduling timer for the next "insight" flash burst; mirrors
+  /// [_blinkTimer] exactly, for [LayoEmotion.idea].
+  Timer? _flashTimer;
 
   /// Whether this instance currently considers itself "animating" — the
   /// combination of [Layo.animate], [TickerMode.valuesOf], and the platform's
@@ -205,14 +279,40 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   bool get _isBlinkable => widget.emotion == LayoEmotion.mrLayo;
 
   /// Whether [Layo.emotion] plays the looping antenna pulse — mirrors
-  /// [LayoPainter._pulses]. `false` only for [LayoEmotion.dead], which rests
-  /// permanently drooped and twitches instead (see [_isDead]).
-  bool get _pulses => widget.emotion != LayoEmotion.dead;
+  /// [LayoPainter._pulses]. `false` for [LayoEmotion.dead] (rests
+  /// permanently drooped and twitches instead, see [_isDead]),
+  /// [LayoEmotion.love] (its dot follows the heartbeat instead, see
+  /// [_isLove]), and [LayoEmotion.idea] (its dot follows the bulb flash
+  /// instead, see [_isIdea]).
+  bool get _pulses =>
+      widget.emotion != LayoEmotion.dead && widget.emotion != LayoEmotion.love && widget.emotion != LayoEmotion.idea;
 
   /// Whether [Layo.emotion] is [LayoEmotion.dead] — gates the twitch
   /// scheduler entirely, exactly as [_isBlinkable] gates the blink scheduler
   /// for [LayoEmotion.mrLayo].
   bool get _isDead => widget.emotion == LayoEmotion.dead;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.love] — gates the looping
+  /// heartbeat controller.
+  bool get _isLove => widget.emotion == LayoEmotion.love;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.angry] — gates the "furrow +
+  /// tremble" burst scheduler entirely, exactly as [_isBlinkable] gates the
+  /// blink scheduler for [LayoEmotion.mrLayo].
+  bool get _isAngry => widget.emotion == LayoEmotion.angry;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.alert] — gates the looping
+  /// top-widening pulse controller.
+  bool get _isAlert => widget.emotion == LayoEmotion.alert;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.layo404] — gates the
+  /// glitch/flicker burst scheduler entirely, exactly as [_isBlinkable]
+  /// gates the blink scheduler for [LayoEmotion.mrLayo].
+  bool get _is404 => widget.emotion == LayoEmotion.layo404;
+
+  /// Whether [Layo.emotion] is [LayoEmotion.idea] — gates the looping glow
+  /// controller and the "insight" flash burst scheduler.
+  bool get _isIdea => widget.emotion == LayoEmotion.idea;
 
   @override
   void initState() {
@@ -224,12 +324,26 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _zzzController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2800));
     _twitchController = AnimationController(vsync: this, duration: const Duration(milliseconds: 260));
     _twitchAnimation = CurvedAnimation(parent: _twitchController, curve: Curves.easeOut);
+    _beatController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
+    _burstController = AnimationController(vsync: this, duration: const Duration(milliseconds: 550));
+    _burstAnimation = CurvedAnimation(parent: _burstController, curve: Curves.easeInOut);
+    _alertPulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+    _glitchController = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+    _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+    _flashController = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+    _flashAnimation = CurvedAnimation(parent: _flashController, curve: Curves.easeOut);
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
       _wiggleController,
       _zzzController,
       _twitchAnimation,
+      _beatController,
+      _burstAnimation,
+      _alertPulseController,
+      _glitchController,
+      _glowController,
+      _flashAnimation,
     ]);
   }
 
@@ -266,6 +380,12 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     final wasBlinking = _blinkTimer != null;
     final shouldTwitch = shouldAnimate && _isDead;
     final wasTwitching = _twitchTimer != null;
+    final shouldBurst = shouldAnimate && _isAngry;
+    final wasBursting = _burstTimer != null;
+    final shouldGlitch = shouldAnimate && _is404;
+    final wasGlitching = _glitchTimer != null;
+    final shouldFlash = shouldAnimate && _isIdea;
+    final wasFlashing = _flashTimer != null;
 
     if (shouldAnimate != _isAnimating) {
       _isAnimating = shouldAnimate;
@@ -287,6 +407,24 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       } else {
         _zzzController.stop();
       }
+
+      if (shouldAnimate && _isLove) {
+        _beatController.repeat();
+      } else {
+        _beatController.stop();
+      }
+
+      if (shouldAnimate && _isAlert) {
+        _alertPulseController.repeat();
+      } else {
+        _alertPulseController.stop();
+      }
+
+      if (shouldAnimate && _isIdea) {
+        _glowController.repeat();
+      } else {
+        _glowController.stop();
+      }
     }
 
     if (shouldBlink && !wasBlinking) {
@@ -305,6 +443,33 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _twitchController.value = 0;
       _twitchTimer?.cancel();
       _twitchTimer = null;
+    }
+
+    if (shouldBurst && !wasBursting) {
+      _scheduleNextBurst();
+    } else if (!shouldBurst && wasBursting) {
+      _burstController.stop();
+      _burstController.value = 0;
+      _burstTimer?.cancel();
+      _burstTimer = null;
+    }
+
+    if (shouldGlitch && !wasGlitching) {
+      _scheduleNextGlitch();
+    } else if (!shouldGlitch && wasGlitching) {
+      _glitchController.stop();
+      _glitchController.value = 0;
+      _glitchTimer?.cancel();
+      _glitchTimer = null;
+    }
+
+    if (shouldFlash && !wasFlashing) {
+      _scheduleNextFlash();
+    } else if (!shouldFlash && wasFlashing) {
+      _flashController.stop();
+      _flashController.value = 0;
+      _flashTimer?.cancel();
+      _flashTimer = null;
     }
   }
 
@@ -380,6 +545,117 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _scheduleNextTwitch();
   }
 
+  /// Arms a one-shot timer for the next "furrow + tremble" burst, at a
+  /// randomized 3-6 second interval so this instance's bursts are jittered
+  /// against every other [Layo] on screen instead of firing in unison — the
+  /// same schedule shape as [_scheduleNextBlink], for [LayoEmotion.angry]
+  /// instead of [LayoEmotion.mrLayo].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_isAngry]
+  /// before acting, so a timer or an in-flight burst left over from just
+  /// before animation was paused (or the emotion switched away from angry,
+  /// or the widget was disposed) cannot fire a burst, leave
+  /// [_burstController] running, or re-arm the next timer.
+  void _scheduleNextBurst() {
+    _burstTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _burstTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playBurst()));
+  }
+
+  /// Plays one full "furrow + tremble" burst (rise then fall) on
+  /// [_burstController] and, if still animating and angry afterward, arms
+  /// the next [_scheduleNextBurst].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isAngry] after each await so a
+  /// burst in flight when animation is paused (or the emotion switched away
+  /// from angry, or the widget disposed) neither leaves [_burstController]
+  /// mid-rise nor re-arms a further burst.
+  Future<void> _playBurst() async {
+    await _burstController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isAngry) {
+      return;
+    }
+    await _burstController.reverse();
+    if (!mounted || !_isAnimating || !_isAngry) {
+      return;
+    }
+    _scheduleNextBurst();
+  }
+
+  /// Arms a one-shot timer for the next glitch/flicker burst, at a
+  /// randomized 3-6 second interval so this instance's glitches are
+  /// jittered against every other [Layo] on screen instead of firing in
+  /// unison — the same schedule shape as [_scheduleNextBlink], for
+  /// [LayoEmotion.layo404] instead of [LayoEmotion.mrLayo].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_is404]
+  /// before acting, so a timer or an in-flight glitch left over from just
+  /// before animation was paused (or the emotion switched away from
+  /// [LayoEmotion.layo404], or the widget was disposed) cannot fire a
+  /// glitch, leave [_glitchController] running, or re-arm the next timer.
+  void _scheduleNextGlitch() {
+    _glitchTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _glitchTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playGlitch()));
+  }
+
+  /// Plays one full glitch/flicker burst on [_glitchController] and, if
+  /// still animating and [_is404] afterward, arms the next
+  /// [_scheduleNextGlitch].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_is404] after each await so a
+  /// glitch in flight when animation is paused (or the emotion switched
+  /// away, or the widget disposed) neither leaves [_glitchController]
+  /// mid-flicker nor re-arms a further glitch.
+  Future<void> _playGlitch() async {
+    await _glitchController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_is404) {
+      return;
+    }
+    await _glitchController.reverse();
+    if (!mounted || !_isAnimating || !_is404) {
+      return;
+    }
+    _scheduleNextGlitch();
+  }
+
+  /// Arms a one-shot timer for the next "insight" flash burst, at a
+  /// randomized 3-6 second interval so this instance's flashes are jittered
+  /// against every other [Layo] on screen instead of firing in unison — the
+  /// same schedule shape as [_scheduleNextBlink], for [LayoEmotion.idea]
+  /// instead of [LayoEmotion.mrLayo].
+  ///
+  /// Every continuation re-checks `mounted`, [_isAnimating], and [_isIdea]
+  /// before acting, so a timer or an in-flight flash left over from just
+  /// before animation was paused (or the emotion switched away from idea,
+  /// or the widget was disposed) cannot fire a flash, leave
+  /// [_flashController] running, or re-arm the next timer.
+  void _scheduleNextFlash() {
+    _flashTimer?.cancel();
+    final seconds = 3.0 + _random.nextDouble() * 3.0;
+    _flashTimer = Timer(Duration(milliseconds: (seconds * 1000).round()), () => unawaited(_playFlash()));
+  }
+
+  /// Plays one full "insight" flash (rise then fall) on [_flashController]
+  /// and, if still animating and [_isIdea] afterward, arms the next
+  /// [_scheduleNextFlash].
+  ///
+  /// Re-checks `mounted`/[_isAnimating]/[_isIdea] after each await so a
+  /// flash in flight when animation is paused (or the emotion switched away
+  /// from idea, or the widget disposed) neither leaves [_flashController]
+  /// mid-rise nor re-arms a further flash.
+  Future<void> _playFlash() async {
+    await _flashController.forward(from: 0);
+    if (!mounted || !_isAnimating || !_isIdea) {
+      return;
+    }
+    await _flashController.reverse();
+    if (!mounted || !_isAnimating || !_isIdea) {
+      return;
+    }
+    _scheduleNextFlash();
+  }
+
   /// Maps [_twitchAnimation]'s `0..1` rise progress to
   /// [LayoPainter.droopT]'s `0..1` tilt scale: `1.0` at rest (the twitch
   /// idle, fully drooped) easing down toward (not to) [_kTwitchLiftFraction]
@@ -390,15 +666,47 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// regardless.
   double get _droopT => 1.0 - _kTwitchLiftFraction * _twitchAnimation.value;
 
+  /// Maps [_glitchController]'s `0..1` forward-then-reverse progress to
+  /// [LayoPainter.glitchOpacity]'s `0..1` alpha: `1.0` at rest (fully
+  /// opaque) and a rapid multi-flicker dip during the burst, derived by
+  /// running a fast sine over the controller's own raw linear value so the
+  /// digits appear to flicker two or three times within one burst rather
+  /// than dip smoothly once.
+  double get _glitchOpacity {
+    final t = _glitchController.value;
+    if (t <= 0.0) return 1.0;
+    final flicker = (math.sin(t * math.pi * _kGlitchFlickerCount) + 1.0) / 2.0;
+    return 1.0 - _kGlitchMaxDim * flicker * math.sin(t * math.pi);
+  }
+
+  /// Maps [_glitchController]'s `0..1` progress to
+  /// [LayoPainter.glitchOffset]'s small horizontal jitter (in source units),
+  /// in sync with [_glitchOpacity]'s own flicker rhythm, so the digits shift
+  /// sideways exactly when they dim.
+  double get _glitchOffset {
+    final t = _glitchController.value;
+    if (t <= 0.0) return 0.0;
+    return _kGlitchMaxOffset * math.sin(t * math.pi * _kGlitchFlickerCount) * math.sin(t * math.pi);
+  }
+
   @override
   void dispose() {
     _blinkTimer?.cancel();
     _twitchTimer?.cancel();
+    _burstTimer?.cancel();
+    _glitchTimer?.cancel();
+    _flashTimer?.cancel();
     _pulseController.dispose();
     _blinkController.dispose();
     _wiggleController.dispose();
     _zzzController.dispose();
     _twitchController.dispose();
+    _beatController.dispose();
+    _burstController.dispose();
+    _alertPulseController.dispose();
+    _glitchController.dispose();
+    _glowController.dispose();
+    _flashController.dispose();
     super.dispose();
   }
 
@@ -417,6 +725,13 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               wiggleT: _wiggleController.value,
               zzzPhase: _zzzController.value,
               droopT: _droopT,
+              beatT: _beatController.value,
+              burstT: _burstAnimation.value,
+              alertPulseT: _alertPulseController.value,
+              glitchOpacity: _glitchOpacity,
+              glitchOffset: _glitchOffset,
+              glowT: _glowController.value,
+              flashT: _flashAnimation.value,
             ),
             size: Size.infinite,
           );
@@ -439,3 +754,21 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
 /// (too little movement) or a full recovery to upright (which would look
 /// like the antenna un-drooping rather than trying and failing).
 const double _kTwitchLiftFraction = 0.35;
+
+/// How many quick flicker cycles [_LayoState._glitchOpacity] and
+/// [_LayoState._glitchOffset] complete within one glitch burst -- tuned so
+/// the "404" glyph group reads as flickering two-to-three times per burst
+/// (a broken/no-signal display), rather than dipping smoothly once.
+const double _kGlitchFlickerCount = 2.5;
+
+/// How far [_LayoState._glitchOpacity] dims at a flicker's darkest point, as
+/// a fraction of full opacity -- e.g. `0.7` dims down to roughly `0.3` alpha
+/// at the deepest flicker, matching the "brief opacity drop to ~0.3" the
+/// glitch animation was specified against.
+const double _kGlitchMaxDim = 0.7;
+
+/// The peak horizontal jitter [_LayoState._glitchOffset] applies during a
+/// glitch burst, in source units (pre-`k` scale) -- a couple of source
+/// units, small enough to read as a jitter rather than the glyph group
+/// visibly relocating.
+const double _kGlitchMaxOffset = 1.6;
