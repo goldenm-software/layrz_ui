@@ -7,8 +7,8 @@ import 'layo_emotion.dart';
 /// How much darker the ring is than its own avatar's background color,
 /// expressed as the `t` fed to [Color.lerp] toward black.
 ///
-/// Applied by [_resolveAvatarRing] to whatever [_resolveAvatarBackground]
-/// returns for the current [LayoEmotion], so every avatar's ring reads as a
+/// Applied by [avatarRingFor] to whatever [avatarBackgroundFor] returns for
+/// the current [LayoEmotion], so every avatar's ring reads as a
 /// deeper tone of its OWN background rather than a fixed color that clashes
 /// against the non-blue backgrounds. `0.35` was picked so the blue family's
 /// derived ring reproduces the original hand-picked navy ring
@@ -43,7 +43,14 @@ const double _kAvatarRingDarkenFactor = 0.35;
 /// The `switch` is intentionally exhaustive with no `default`/wildcard arm,
 /// so adding a new [LayoEmotion] value forces a compile error here until a
 /// background color is deliberately assigned to it.
-Color _resolveAvatarBackground(LayoEmotion emotion) {
+///
+/// Public (rather than kept `avatar_layo.dart`-private) so
+/// `TransitionedAvatarLayo` can read the same single source of truth to
+/// [Color.lerp] between a transition's `from` and `target` backgrounds,
+/// instead of duplicating this palette in a second place. [AvatarLayo]
+/// itself calls this exact function too — there is only ever one mapping
+/// from [LayoEmotion] to avatar background color.
+Color avatarBackgroundFor(LayoEmotion emotion) {
   switch (emotion) {
     case LayoEmotion.mrLayo:
     case LayoEmotion.question:
@@ -85,12 +92,16 @@ Color _resolveAvatarBackground(LayoEmotion emotion) {
 }
 
 /// Resolves the fixed avatar ring color for a given [LayoEmotion]: a
-/// darkened shade of that same emotion's own [_resolveAvatarBackground],
-/// by [_kAvatarRingDarkenFactor], so every avatar reads as "[background]
-/// with a deeper-tone-of-the-same-color ring" rather than a ring color that
-/// clashes against a differently-hued background.
-Color _resolveAvatarRing(LayoEmotion emotion) {
-  final background = _resolveAvatarBackground(emotion);
+/// darkened shade of that same emotion's own [avatarBackgroundFor], by
+/// [_kAvatarRingDarkenFactor], so every avatar reads as "[background] with a
+/// deeper-tone-of-the-same-color ring" rather than a ring color that clashes
+/// against a differently-hued background.
+///
+/// Public for the same reason [avatarBackgroundFor] is: `TransitionedAvatarLayo`
+/// needs this exact mapping (not a re-derivation of it) to lerp a
+/// transition's ring color alongside its background.
+Color avatarRingFor(LayoEmotion emotion) {
+  final background = avatarBackgroundFor(emotion);
   return Color.lerp(background, const Color(0xFF000000), _kAvatarRingDarkenFactor)!;
 }
 
@@ -125,7 +136,7 @@ Color _resolveAvatarRing(LayoEmotion emotion) {
 ///
 /// **The border is fixed**, not a parameter: every [AvatarLayo] is ringed
 /// with a color derived from its own [emotion] — a darker shade of that
-/// same emotion's background (see [_resolveAvatarRing]), so the ring always
+/// same emotion's background (see [avatarRingFor]), so the ring always
 /// reads as a deeper tone of the avatar's own color rather than a fixed tone
 /// that clashes against a differently-hued background. Its width scales
 /// proportionally with the avatar's rendered size rather than being a fixed
@@ -135,9 +146,9 @@ Color _resolveAvatarRing(LayoEmotion emotion) {
 ///
 /// **The background is fixed per [emotion]**, not a parameter: there is no
 /// way to override it from outside — it is fully determined by which
-/// [LayoEmotion] is showing, via [_resolveAvatarBackground]. This is
-/// deliberate: the background is part of each emotion's identity, not an
-/// independent theming knob.
+/// [LayoEmotion] is showing, via [avatarBackgroundFor]. This is deliberate:
+/// the background is part of each emotion's identity, not an independent
+/// theming knob.
 ///
 /// See also:
 ///   - [Layo], the mascot widget this composes.
@@ -172,11 +183,11 @@ class AvatarLayo extends StatelessWidget {
   ///
   /// Passed straight through to [Layo.emotion]; defaults to
   /// [LayoEmotion.mrLayo], the original default face. Also determines the
-  /// avatar's fixed background fill color via [_resolveAvatarBackground],
-  /// and — derived from that same background — the fixed ring color via
-  /// [_resolveAvatarRing]. See [AvatarLayo]'s own class doc comment for the
-  /// full color mapping. See [Layo]'s own doc comment for the full
-  /// breakdown of what each [LayoEmotion] looks like.
+  /// avatar's fixed background fill color via [avatarBackgroundFor], and —
+  /// derived from that same background — the fixed ring color via
+  /// [avatarRingFor]. See [AvatarLayo]'s own class doc comment for the full
+  /// color mapping. See [Layo]'s own doc comment for the full breakdown of
+  /// what each [LayoEmotion] looks like.
   final LayoEmotion emotion;
 
   /// Optional explicit width (and, since [AvatarLayo] is always square,
@@ -221,7 +232,13 @@ class AvatarLayo extends StatelessWidget {
     final content = LayoutBuilder(
       builder: (context, constraints) {
         final side = constraints.maxWidth;
-        return _buildFrame(side, context);
+        return AvatarLayo.buildFrame(
+          side: side,
+          shape: shape,
+          fillColor: avatarBackgroundFor(emotion),
+          ringColor: avatarRingFor(emotion),
+          mascotBuilder: (layoWidth) => Layo(width: layoWidth, emotion: emotion, animate: animate),
+        );
       },
     );
 
@@ -239,29 +256,43 @@ class AvatarLayo extends StatelessWidget {
     );
   }
 
-  /// Builds the shaped, bordered, colored frame at the resolved [side]
-  /// length, showing a head-and-shoulders crop of the inner [Layo].
+  /// Builds the shaped, bordered, colored avatar frame at the resolved
+  /// [side] length, showing a head-and-shoulders crop of whatever mascot
+  /// widget [mascotBuilder] returns.
   ///
-  /// The oversized [Layo] (see [_kLayoWidthFraction]) is placed inside an
-  /// [OverflowBox] sized to its own full, unclipped bounding box and shifted
-  /// upward via [Transform.translate], so the excess spills both above and
-  /// below the visible frame; the surrounding [ClipRRect] then crops that
-  /// excess away, leaving only the head, antenna, and upper
-  /// shoulders/bow-tie visible. The [emotion]'s resolved fixed ring color
-  /// (see [_resolveAvatarRing], a darkened shade of the background) is
-  /// painted by the outer [Container]'s [BoxDecoration], and the [emotion]'s
-  /// resolved fixed background color (see [_resolveAvatarBackground]) fills
-  /// the inner [Container] the clip wraps, so the ring sits exactly on the
-  /// shape's outline with no gap or overlap against the clipped fill.
-  Widget _buildFrame(double side, BuildContext context) {
+  /// This is the single implementation of the avatar's crop/clip/ring
+  /// geometry — [AvatarLayo] itself calls it (from [build], passing a plain
+  /// [Layo]) and `TransitionedAvatarLayo` reuses it too (passing a
+  /// [TransitionedLayo] instead), so neither widget duplicates this frame
+  /// math in a second place. [mascotBuilder] receives the resolved mascot
+  /// width (see [_kLayoWidthFraction]) and must return a widget of exactly
+  /// that width — ordinarily a [Layo] or [TransitionedLayo] built with a
+  /// matching `width:` — which this method then places inside an
+  /// oversized-and-clipped [Stack] exactly as [AvatarLayo] always has: the
+  /// mascot is shifted down slightly from the content area's top edge (see
+  /// [_kLayoTopFraction]) inside a [Clip.hardEdge]-clipped [Stack], so its
+  /// body running off the bottom is cropped away instead of overflowing
+  /// visibly; the surrounding [ClipRRect] then clips that whole square to
+  /// [shape]. [fillColor] paints the clipped content's own background and
+  /// [ringColor] paints the outer frame directly around it (no inset gap),
+  /// exactly matching the per-[LayoEmotion] fixed colors [AvatarLayo] itself
+  /// resolves via [avatarBackgroundFor]/[avatarRingFor] — but this method
+  /// itself takes them as plain [Color] parameters so a caller (like
+  /// `TransitionedAvatarLayo`) can pass an in-flight [Color.lerp] between two
+  /// emotions' colors instead of only ever a single emotion's fixed pair.
+  static Widget buildFrame({
+    required double side,
+    required LayoAvatarShape shape,
+    required Color fillColor,
+    required Color ringColor,
+    required Widget Function(double layoWidth) mascotBuilder,
+  }) {
     final borderWidth = side * _kBorderWidthFraction;
-    final fillColor = _resolveAvatarBackground(emotion);
-    final ringColor = _resolveAvatarRing(emotion);
 
-    // The clipped portrait: fixed per-emotion background with Layo sized
-    // to 70% of the shape's side and its TOP placed 20% of that width down
-    // from the top of the content — this frames the head, with the body
-    // running off the bottom where the clip crops it.
+    // The clipped portrait: given background with the mascot sized to 70%
+    // of the shape's side and its TOP placed 20% of that width down from
+    // the top of the content — this frames the head, with the body running
+    // off the bottom where the clip crops it.
     final contentSide = side - borderWidth * 2;
     final layoWidth = contentSide * _kLayoWidthFraction;
     final layoTop = layoWidth * _kLayoTopFraction;
@@ -284,7 +315,7 @@ class AvatarLayo extends StatelessWidget {
               left: layoLeft,
               top: layoTop,
               width: layoWidth,
-              child: Layo(width: layoWidth, emotion: emotion, animate: animate),
+              child: mascotBuilder(layoWidth),
             ),
           ],
         ),
@@ -292,8 +323,8 @@ class AvatarLayo extends StatelessWidget {
     );
 
     // Ring directly around the clipped content (no white inset ring) --
-    // a darkened shade of this same emotion's own background, so it never
-    // clashes against a differently-hued fill.
+    // matching whichever color the caller resolved for this frame, so it
+    // never clashes against a differently-hued fill.
     return Container(
       width: side,
       height: side,
