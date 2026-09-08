@@ -26,6 +26,33 @@ class LayrzThemeData {
   /// Base icon theme applied via [IconTheme] at the root.
   final IconThemeData iconTheme;
 
+  /// The highlight color painted behind selected text app-wide.
+  ///
+  /// Drives the app-wide `DefaultSelectionStyle.selectionColor` installed by
+  /// [LayrzApp], which both `EditableText` (text fields) and `SelectableRegion`
+  /// (selectable, non-editable text) resolve their selection highlight from.
+  /// Without an ancestor `DefaultSelectionStyle`, both resolve to `null` and
+  /// paint fully transparent, making text selection present but invisible.
+  ///
+  /// This field is first-class themeable — a future dark theme can override it
+  /// with different values without touching [LayrzApp] itself.
+  ///
+  /// Intentionally semi-transparent (see [LayrzThemeData.light]'s default,
+  /// `tokens.colors.selectionColor.shade500` tinted by
+  /// `tokens.colors.tonalOpacity`) so the selected text stays legible
+  /// underneath the highlight rather than being fully obscured by an opaque
+  /// fill.
+  final Color selectionColor;
+
+  /// The caret (text cursor) color used app-wide.
+  ///
+  /// Drives the app-wide `DefaultSelectionStyle.cursorColor` installed by
+  /// [LayrzApp], which `EditableText` resolves its blinking caret color from.
+  ///
+  /// This field is first-class themeable — a future dark theme can override it
+  /// with different values without touching [LayrzApp] itself.
+  final Color cursorColor;
+
   /// Map of theme extensions, keyed by their runtime type.
   ///
   /// Extensions are registered when constructing a [LayrzThemeData] and retrieved
@@ -40,9 +67,17 @@ class LayrzThemeData {
   ///
   /// The [extensions] map is stored as-is; pass an empty map for no extensions.
   /// For convenience, use [LayrzThemeData.light()] with the [Iterable] overload instead.
+  ///
+  /// [selectionColor] and [cursorColor] have no [tokens]-derived default at this
+  /// level — since this constructor is `const`, it cannot compute one from
+  /// [tokens] — so callers using this constructor directly must supply both
+  /// explicitly. [LayrzThemeData.light()] computes sensible defaults from its
+  /// own [tokens] and should be preferred unless full manual control is needed.
   const LayrzThemeData({
     required this.tokens,
     required this.iconTheme,
+    required this.selectionColor,
+    required this.cursorColor,
     this.extensions = const {},
   });
 
@@ -170,11 +205,19 @@ class LayrzThemeData {
   /// [extensions] is an iterable of [LayrzThemeExtension] instances that define
   ///   component-specific theme data. They are normalized to a map keyed by runtime type
   ///   and stored unmodifiable in the resulting theme. Defaults to an empty list.
+  /// [selectionColor] overrides the app-wide text-selection highlight color (see
+  ///   [LayrzThemeData.selectionColor]). Defaults to `tokens.colors.selectionColor.shade500`
+  ///   tinted by `tokens.colors.tonalOpacity` — a semi-transparent light blue that keeps
+  ///   selected text legible underneath the highlight.
+  /// [cursorColor] overrides the app-wide caret color (see [LayrzThemeData.cursorColor]).
+  ///   Defaults to `tokens.colors.primary.shade500`.
   factory LayrzThemeData.light({
     Color primaryColor = kPrimaryColor,
     LayrzFont? font,
     LayrzBreakpointTokens? breakpointTokens,
     Iterable<LayrzThemeExtension<dynamic>> extensions = const [],
+    Color? selectionColor,
+    Color? cursorColor,
   }) {
     var tokens = LayrzTokens.light(
       primaryColor: primaryColor,
@@ -190,23 +233,36 @@ class LayrzThemeData {
     final extensionsMap = Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
       {for (final ext in extensions) ext.type: ext},
     );
-    return LayrzThemeData(tokens: tokens, iconTheme: iconTheme, extensions: extensionsMap);
+    return LayrzThemeData(
+      tokens: tokens,
+      iconTheme: iconTheme,
+      selectionColor:
+          selectionColor ?? tokens.colors.selectionColor.shade500.withValues(alpha: tokens.colors.tonalOpacity),
+      cursorColor: cursorColor ?? tokens.colors.primary.shade500,
+      extensions: extensionsMap,
+    );
   }
 
   /// Returns a copy of this theme data with the given fields replaced.
   ///
-  /// Replaces [tokens], [iconTheme], and [extensions]. If [extensions] is not
-  /// provided (or is null), the existing extensions are preserved. Otherwise,
-  /// the provided extensions replace them entirely (not a merge).
+  /// Replaces [tokens], [iconTheme], [selectionColor], [cursorColor], and
+  /// [extensions]. If [extensions] is not provided (or is null), the existing
+  /// extensions are preserved. Otherwise, the provided extensions replace them
+  /// entirely (not a merge).
   ///
   /// The delegating getters (e.g. [primaryColor], [textColor]) automatically
-  /// resolve from the new [tokens].
+  /// resolve from the new [tokens]. [selectionColor] and [cursorColor], however,
+  /// are NOT re-derived from a replaced [tokens] — they carry over unchanged
+  /// unless explicitly overridden here, since they are first-class fields
+  /// rather than tokens-delegating getters.
   ///
   /// Note: Passing an empty iterable will clear all extensions; pass nothing
   /// to preserve them.
   LayrzThemeData copyWith({
     LayrzTokens? tokens,
     IconThemeData? iconTheme,
+    Color? selectionColor,
+    Color? cursorColor,
     Iterable<LayrzThemeExtension<dynamic>>? extensions,
   }) {
     final newExtensions = extensions != null
@@ -218,6 +274,8 @@ class LayrzThemeData {
     return LayrzThemeData(
       tokens: tokens ?? this.tokens,
       iconTheme: iconTheme ?? this.iconTheme,
+      selectionColor: selectionColor ?? this.selectionColor,
+      cursorColor: cursorColor ?? this.cursorColor,
       extensions: newExtensions,
     );
   }
@@ -229,8 +287,17 @@ class LayrzThemeData {
           runtimeType == other.runtimeType &&
           tokens == other.tokens &&
           iconTheme == other.iconTheme &&
+          selectionColor == other.selectionColor &&
+          cursorColor == other.cursorColor &&
           mapEquals(extensions, other.extensions);
 
   @override
-  int get hashCode => Object.hash(runtimeType, tokens, iconTheme, Object.hashAllUnordered(extensions.values));
+  int get hashCode => Object.hash(
+    runtimeType,
+    tokens,
+    iconTheme,
+    selectionColor,
+    cursorColor,
+    Object.hashAllUnordered(extensions.values),
+  );
 }
