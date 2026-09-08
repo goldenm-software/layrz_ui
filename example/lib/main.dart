@@ -10,6 +10,7 @@ import 'src/sections/access_paths_section.dart';
 import 'src/sections/accordion_section.dart';
 import 'src/sections/ai_marker_section.dart';
 import 'src/sections/alerts_section.dart';
+import 'src/sections/app_banner_section.dart';
 import 'src/sections/badge_section.dart';
 import 'src/sections/borders_section.dart';
 import 'src/sections/button_group_section.dart';
@@ -265,6 +266,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/tab-view',
           pageBuilder: (context, state) => NoTransitionPage(child: TabViewSection()),
+        ),
+        GoRoute(
+          path: '/app-banner',
+          pageBuilder: (context, state) => NoTransitionPage(child: AppBannerSection()),
         ),
       ],
     ),
