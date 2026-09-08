@@ -12,7 +12,7 @@ const Color _kWhiteBackground = Color(0xFFFCFCFC);
 /// [LayrzAvatar] renders a user avatar in one of five forms:
 /// - **URL** ([LayrzAvatarUrl]): fetches and displays an image from a network URL
 /// - **Base64** ([LayrzAvatarBase64]): displays an image from a base64-encoded string
-/// - **Icon** ([LayrzAvatarIcon]): renders an icon from [IconData] at 70% of avatar size
+/// - **Icon** ([LayrzAvatarIcon]): renders an icon from a [MdiRemapIcon] at 70% of avatar size
 /// - **Emoji** ([LayrzAvatarEmoji]): displays a Unicode emoji glyph centered
 /// - **Null source** (no [source] provided): displays generated initials from [nameText]
 ///
@@ -320,7 +320,7 @@ class LayrzAvatar extends StatelessWidget {
           fit: BoxFit.cover,
         ),
       ),
-      LayrzAvatarIcon(:final icon) => _buildIconContent(context, icon),
+      LayrzAvatarIcon(:final icon) => _buildIconContent(context, icon.data),
       LayrzAvatarEmoji(:final emoji) => _buildContainer(
         context: context,
         backgroundColor: _kWhiteBackground,
