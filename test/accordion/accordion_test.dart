@@ -630,6 +630,50 @@ void main() {
       expect(border.bottom, isNot(equals(BorderSide.none)));
     });
 
+    testWidgets('the body reveal animates smoothly -- mid-flight height is strictly between 0 and full', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      bool expanded = false;
+
+      await pumpThemedApp(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) => LayrzAccordion(
+            titleText: 'Reveal timeline check',
+            expanded: expanded,
+            onExpansionChanged: (value) => setState(() => expanded = value),
+            body: const SizedBox(height: 200, child: _BodyMarker()),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Reveal timeline check'));
+      await tester.pump();
+      // Roughly the midpoint of the 200ms dTransition reveal.
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The body's own intrinsic size stays 200 throughout -- it is the
+      // enclosing ClipRect (sized by Align's heightFactor) that shrinks to
+      // the currently-revealed height, so that ancestor is what must be
+      // measured to observe the reveal in flight.
+      final clipRectFinder = find.ancestor(of: find.byType(_BodyMarker), matching: find.byType(ClipRect));
+      final midHeight = tester.getSize(clipRectFinder.first).height;
+      expect(
+        midHeight,
+        allOf(greaterThan(0.0), lessThan(200.0)),
+        reason: 'mid-reveal the body must be partially clipped, not fully collapsed or fully open',
+      );
+
+      await tester.pumpAndSettle();
+
+      final finalHeight = tester.getSize(clipRectFinder.first).height;
+      expect(finalHeight, closeTo(200.0, 0.5));
+    });
+
     testWidgets('rotates the chevron between collapsed and expanded', (tester) async {
       bool expanded = false;
 
