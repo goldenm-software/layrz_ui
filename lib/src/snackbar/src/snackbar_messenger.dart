@@ -58,6 +58,42 @@ const double _kRestPeekOpacity = 0.7;
 /// piece with the rest of the stack's motion language.
 const Duration _kFanDuration = _kEntryDuration;
 
+/// The release-velocity threshold (logical pixels/second) past which a
+/// horizontal swipe dismisses its card, a vertical swipe-down expands the
+/// deck, or a vertical swipe-up collapses it — shared by
+/// [LayrzSnackbarMessengerState._handleSwipe] and
+/// [LayrzSnackbarMessengerState._handlePanEnd].
+const double kSwipeVelocityThreshold = 200;
+
+/// The fraction of a card's own measured width past which an accumulated
+/// horizontal drag distance dismisses the card on release, independent of
+/// release velocity — a slow-but-far drag reads as an intentional swipe just
+/// as much as a fast flick does.
+const double kSwipeDistanceFraction = 0.35;
+
+/// Duration of the drag-follow settle animation — spring-back to center on
+/// an under-threshold release, or fling-off-screen on a past-threshold one.
+///
+/// Deliberately its own constant (not [_kEntryDuration]/[_kFanDuration]):
+/// this is the fastest motion in the file, matching a real swipe's snap
+/// rather than the more deliberate entry/fan timings.
+const Duration _kDragSettleDuration = Duration(milliseconds: 200);
+
+/// Easing curve for the spring-back leg of the drag settle — a gentle
+/// overshoot-free deceleration back to center.
+const Curve _kSpringBackCurve = Curves.easeOut;
+
+/// Easing curve for the fling-off-screen leg of the drag settle — starts
+/// fast (continuing the release velocity's implied motion) and eases out.
+const Curve _kFlingOutCurve = Curves.easeOut;
+
+/// The minimum opacity a card fades to as it is dragged away from center,
+/// reached once `|dragDx|` hits the dismiss distance threshold. Never fully
+/// `0` mid-drag (that is reserved for the fling-out animation past release)
+/// so the card stays faintly visible for as long as the finger is still on
+/// it.
+const double _kMinDragOpacity = 0.15;
+
 /// One entry in the messenger's live queue: the caller's [LayrzSnackbar]
 /// payload plus all of the messenger-owned timing/animation state needed to
 /// present it.
@@ -77,6 +113,7 @@ class _SnackbarEntry {
     required this.snackbar,
     required TickerProvider vsync,
   }) : entryController = AnimationController(vsync: vsync, duration: _kEntryDuration),
+       dragController = AnimationController(vsync: vsync, duration: _kDragSettleDuration),
        drainController = snackbar.duration != null
            ? AnimationController(vsync: vsync, duration: snackbar.duration)
            : null {
@@ -111,6 +148,46 @@ class _SnackbarEntry {
   /// `null` for persistent snackbars (`snackbar.duration == null`) — there is
   /// no timer to drive, so no controller is ever created for them.
   final AnimationController? drainController;
+
+  /// Drives the drag-follow settle animation — the spring-back-to-center or
+  /// fling-off-screen tween that plays after a horizontal drag is released.
+  /// Idle (and irrelevant) for the whole rest of this entry's lifetime; it
+  /// only ever runs immediately after [_handlePanEnd] decides which of the
+  /// two settle outcomes applies.
+  final AnimationController dragController;
+
+  /// The live horizontal drag offset, in logical pixels, applied as an
+  /// additional [Transform.translate] on top of this entry's existing
+  /// entry-transition transform. `0.0` at rest.
+  ///
+  /// Updated per-frame during an in-progress horizontal drag
+  /// ([LayrzSnackbarMessengerState._handlePanUpdate]), then animated by
+  /// [dragController] on release — either back to `0.0` (spring-back) or out
+  /// to a full off-screen value (fling-out, immediately followed by
+  /// dismissal).
+  double dragDx = 0.0;
+
+  /// The raw, un-axis-locked accumulated horizontal delta for the
+  /// **in-progress** gesture, tracked from [PanUpdateDetails] regardless of
+  /// which axis the gesture is eventually locked to.
+  ///
+  /// Reset to `0.0` at [PanStartDetails] of a new gesture. Only meaningful
+  /// while a gesture is live; irrelevant once locked to horizontal (from
+  /// then on [dragDx] itself is the tracked value) and unused for a
+  /// vertical-locked gesture.
+  double rawDragDx = 0.0;
+
+  /// The raw, un-axis-locked accumulated vertical delta for the
+  /// **in-progress** gesture — the counterpart to [rawDragDx], used only to
+  /// decide the axis lock.
+  double rawDragDy = 0.0;
+
+  /// Whether the axis for the in-progress gesture has been decided yet.
+  ///
+  /// `null` before enough delta has accumulated to tell; `true` once locked
+  /// to horizontal (drag-follow applies); `false` once locked to vertical
+  /// (gesture-only expand/collapse applies, no card-follow).
+  bool? isHorizontalDrag;
 
   /// Called when [drainController] reaches `0.0` unpaused — the auto-dismiss path.
   ///
@@ -165,6 +242,7 @@ class _SnackbarEntry {
       drain.dispose();
     }
     entryController.dispose();
+    dragController.dispose();
   }
 }
 
@@ -448,6 +526,21 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     return offset;
   }
 
+  /// The last-known rendered width of [entry]'s card, in logical pixels, or
+  /// [LayrzSnackbarMessenger.maxWidth] as a fallback when it has never been
+  /// laid out yet (e.g. the very first frame it appears, or a `dragDx`
+  /// computation running mid-build before layout has occurred this frame).
+  ///
+  /// Reads `entry.cardKey`'s `RenderBox` directly — the same mechanism
+  /// [_scheduleRemeasure] uses to measure card height — rather than
+  /// `BuildContext.size`, which asserts when called during `build` (as this
+  /// is, from [_buildToast]'s `AnimatedBuilder`).
+  double _measuredCardWidth(_SnackbarEntry entry) {
+    final renderBox = entry.cardKey.currentContext?.findRenderObject() as RenderBox?;
+    final width = renderBox?.hasSize == true ? renderBox!.size.width : null;
+    return (width != null && width > 0) ? width : widget.maxWidth;
+  }
+
   /// The subset of [_queue] currently painted in the list — the newest
   /// [widget.maxVisible] entries, newest first (topmost). Anything past this
   /// counts toward the "+N" overflow badge instead.
@@ -603,10 +696,24 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// only the outer entry-transform math is cheap enough to skip rebuilding,
   /// so it stays wired via the [AnimatedBuilder] itself rather than a `child`.
   ///
+  /// [entry.dragController] is included in the same merged [Listenable] so
+  /// the drag-follow translate/fade (below) also repaints every tick of the
+  /// post-release spring-back/fling-out settle animation, not just during
+  /// the live per-frame [_handlePanUpdate] drag itself (which drives its own
+  /// `setState` directly, independent of this [AnimatedBuilder]).
+  ///
   /// [entry.cardKey] is attached to the rendered card so
   /// [_scheduleRemeasure] can read back its real height after layout — the
   /// fan-out offsets depend on that measurement, so remeasuring is scheduled
   /// on every build of a visible card.
+  ///
+  /// Drag-follow feedback (DESIGN-60 revised gesture contract, drag-follow
+  /// addendum): an in-progress **horizontal** drag translates this card by
+  /// `entry.dragDx` — real-time, per-frame, tracking the pointer — and fades
+  /// it as `|dragDx|` grows, composed as an *additional* translate/opacity on
+  /// top of the existing entry slide+fade+scale transform (never replacing
+  /// it). A **vertical** drag never touches `dragDx` — see
+  /// [_handlePanUpdate] — so it stays gesture-only exactly as before.
   Widget _buildToast(_SnackbarEntry entry, {required int depth}) {
     final tokens = context.tokens;
     final style = LayrzSnackbarStyleSpec.resolve(
@@ -620,16 +727,19 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     _scheduleRemeasure();
 
     return AnimatedBuilder(
-      animation: Listenable.merge([entry.entryController, entry.drainController]),
+      animation: Listenable.merge([entry.entryController, entry.drainController, entry.dragController]),
       builder: (context, _) {
         final entryT = _kEntryCurve.transform(entry.entryController.value);
         final peekOpacity = depth == 0 ? 1.0 : (_isHovered ? 1.0 : _kRestPeekOpacity);
+        final cardWidth = _measuredCardWidth(entry);
+        final dismissDistance = cardWidth * kSwipeDistanceFraction;
+        final dragFade = (1 - (entry.dragDx.abs() / dismissDistance)).clamp(_kMinDragOpacity, 1.0);
         return AnimatedOpacity(
           duration: _kFanDuration,
           curve: _kEntryCurve,
-          opacity: entryT.clamp(0.0, 1.0) * peekOpacity,
+          opacity: entryT.clamp(0.0, 1.0) * peekOpacity * dragFade,
           child: Transform.translate(
-            offset: Offset(0, (1 - entryT) * -14),
+            offset: Offset(entry.dragDx, (1 - entryT) * -14),
             child: Transform.scale(
               scale: 0.97 + (0.03 * entryT),
               child: IgnorePointer(
@@ -637,7 +747,9 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
                 child: GestureDetector(
                   key: entry.cardKey,
                   behavior: HitTestBehavior.opaque,
-                  onPanEnd: (details) => _handleSwipe(entry, details.velocity.pixelsPerSecond),
+                  onPanStart: (details) => _handlePanStart(entry),
+                  onPanUpdate: (details) => _handlePanUpdate(entry, details),
+                  onPanEnd: (details) => _handlePanEnd(entry, details.velocity.pixelsPerSecond),
                   child: LayrzSnackbarView(
                     snackbar: entry.snackbar,
                     style: style,
@@ -662,10 +774,61 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     );
   }
 
-  /// Handles a pan-end gesture on [entry] (DESIGN-60, revised gesture
-  /// contract), deciding both the dominant axis and the direction from
-  /// [velocity] itself rather than relying on separate axis-specific
-  /// recognizers:
+  /// Handles the start of a pan gesture on [entry] — resets all of its
+  /// per-gesture drag-tracking fields so a brand-new gesture never inherits
+  /// stray state from a previous one (e.g. a spring-back that was still
+  /// mid-animation when a fresh drag began: this stops that settle animation
+  /// dead, in whatever position it had reached, rather than letting it fight
+  /// the new drag for control of [_SnackbarEntry.dragDx]).
+  void _handlePanStart(_SnackbarEntry entry) {
+    entry.dragController.stop();
+    entry.rawDragDx = 0.0;
+    entry.rawDragDy = 0.0;
+    entry.isHorizontalDrag = null;
+  }
+
+  /// Handles an in-progress pan update on [entry] (DESIGN-60, drag-follow
+  /// addendum) — the per-frame counterpart to [_handlePanEnd].
+  ///
+  /// The axis is locked once, the first time accumulated raw delta clears a
+  /// small slop (matching [kPanSlop]'s spirit, avoided by name since that
+  /// constant lives in gesture internals, not exported here): whichever of
+  /// `|rawDragDx|`/`|rawDragDy|` is larger at that moment decides it for the
+  /// rest of this gesture, so a diagonal-ish drag doesn't flicker between
+  /// treatments frame to frame. Once locked:
+  ///
+  /// * **Horizontal** — every subsequent frame's `delta.dx` accumulates into
+  ///   [_SnackbarEntry.dragDx] (with `setState` to rebuild [_buildToast], so
+  ///   the live translate/fade tracks the pointer in real time) and vertical
+  ///   delta is ignored for the rest of the gesture.
+  /// * **Vertical** — [_SnackbarEntry.dragDx] is never touched at all;
+  ///   per DESIGN-60's brief, vertical drag stays gesture-only (no
+  ///   card-follow), with the expand/collapse decision left entirely to
+  ///   [_handlePanEnd]'s release-velocity check, exactly as before this
+  ///   feature.
+  void _handlePanUpdate(_SnackbarEntry entry, DragUpdateDetails details) {
+    const double kAxisLockSlop = 6;
+    entry.rawDragDx += details.delta.dx;
+    entry.rawDragDy += details.delta.dy;
+
+    entry.isHorizontalDrag ??= (entry.rawDragDx.abs() > kAxisLockSlop || entry.rawDragDy.abs() > kAxisLockSlop)
+        ? entry.rawDragDx.abs() >= entry.rawDragDy.abs()
+        : null;
+
+    if (entry.isHorizontalDrag != true) return;
+    setState(() => entry.dragDx += details.delta.dx);
+  }
+
+  /// Handles the end of a pan gesture on [entry] (DESIGN-60, revised gesture
+  /// contract plus the drag-follow addendum), deciding both the dominant
+  /// axis and the direction from [velocity] itself rather than relying on
+  /// separate axis-specific recognizers — the axis decided here always
+  /// matches [_handlePanUpdate]'s lock (both read the same `dx`-vs-`dy`
+  /// magnitude comparison), it is simply re-derived from the release
+  /// velocity vector rather than carrying [_SnackbarEntry.isHorizontalDrag]
+  /// forward, since a tap-only gesture (never enough delta to lock an axis
+  /// at all) still needs a well-defined outcome here (none, in that case —
+  /// see the distance-threshold fallback below).
   ///
   /// * **Swipe-down** (dominant vertical axis, positive `dy` past the
   ///   threshold) expands the deck — it latches the exact same
@@ -678,15 +841,19 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   ///   threshold) collapses the deck back to its compact resting state — the
   ///   exact reverse of swipe-down — by calling [_handleStackExit] directly,
   ///   the same call the desktop hover-exit path uses.
-  /// * **Horizontal swipe**, either left or right (dominant horizontal axis,
-  ///   `dx` magnitude past the threshold in either direction), dismisses
-  ///   [entry] — horizontal drag is the mobile dismiss gesture,
-  ///   direction-agnostic.
+  /// * **Horizontal drag**, either left or right (dominant horizontal axis),
+  ///   settles via [_settleDrag]: past the dismiss threshold (release
+  ///   [velocity] **or** the accumulated [_SnackbarEntry.dragDx] distance —
+  ///   see [kSwipeDistanceFraction]) it flings the card off-screen sideways
+  ///   and dismisses [entry]; otherwise it springs the card back to center.
   ///
   /// The dominant axis is whichever of `dx`/`dy` has the larger magnitude,
   /// so a mostly-horizontal flick is never misread as vertical (or vice
-  /// versa). A swipe below [kSwipeVelocityThreshold] on the dominant axis is
-  /// ignored as an accidental drag rather than a deliberate gesture.
+  /// versa). A vertical swipe below [kSwipeVelocityThreshold] on the
+  /// dominant axis is ignored as an accidental drag rather than a deliberate
+  /// gesture; a horizontal one still settles (spring-back) even when under
+  /// threshold, since the card visibly moved under the finger and must
+  /// visibly return.
   ///
   /// Wired from a single [GestureDetector.onPanEnd] (see [_buildToast])
   /// rather than separate `onVerticalDragEnd`/`onHorizontalDragEnd`
@@ -701,15 +868,12 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// direction, so it reliably wins and reports the true velocity vector —
   /// the axis/direction split then happens here, in plain code, instead of
   /// being left to gesture-recognizer arbitration.
-  void _handleSwipe(_SnackbarEntry entry, Offset velocity) {
-    const double kSwipeVelocityThreshold = 200;
+  void _handlePanEnd(_SnackbarEntry entry, Offset velocity) {
     final dx = velocity.dx;
     final dy = velocity.dy;
 
     if (dx.abs() >= dy.abs()) {
-      if (dx.abs() > kSwipeVelocityThreshold) {
-        _dismiss(entry);
-      }
+      _settleDrag(entry, releaseVelocityDx: dx);
       return;
     }
 
@@ -718,6 +882,67 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     } else if (dy < -kSwipeVelocityThreshold) {
       _handleStackExit();
     }
+  }
+
+  /// Settles a released horizontal drag on [entry] — the sole decision point
+  /// between springing back to center and flinging off-screen to dismiss.
+  ///
+  /// Past the dismiss threshold on **either** signal — [releaseVelocityDx]'s
+  /// magnitude past [kSwipeVelocityThreshold], or the already-accumulated
+  /// [_SnackbarEntry.dragDx] past [kSwipeDistanceFraction] of the card's own
+  /// measured width — the card animates from its current `dragDx` out to a
+  /// full off-screen offset in the same direction it was already moving,
+  /// fading to `0` alongside, then calls [_dismiss]. Otherwise it animates
+  /// `dragDx` back to `0.0` (and opacity implicitly back to full, since
+  /// [_buildToast]'s fade is a pure function of `|dragDx|`).
+  ///
+  /// Both legs reuse the same [_SnackbarEntry.dragController] — a fresh
+  /// [Tween] is built for whichever leg applies and driven by
+  /// `dragController.forward(from: 0)`, with a listener re-deriving
+  /// `entry.dragDx` from the tween's current value every tick. The listener
+  /// is removed once the animation completes so it never leaks onto a later,
+  /// unrelated forward of the same controller.
+  void _settleDrag(_SnackbarEntry entry, {required double releaseVelocityDx}) {
+    final cardWidth = _measuredCardWidth(entry);
+    final dismissDistance = cardWidth * kSwipeDistanceFraction;
+    final pastVelocity = releaseVelocityDx.abs() > kSwipeVelocityThreshold;
+    final pastDistance = entry.dragDx.abs() > dismissDistance;
+
+    if (pastVelocity || pastDistance) {
+      final direction = releaseVelocityDx == 0
+          ? (entry.dragDx.isNegative ? -1.0 : 1.0)
+          : (releaseVelocityDx.isNegative ? -1.0 : 1.0);
+      final target = direction * (cardWidth + widget.maxWidth);
+      _animateDrag(entry, to: target, curve: _kFlingOutCurve, onDone: () => _dismiss(entry));
+    } else {
+      _animateDrag(entry, to: 0.0, curve: _kSpringBackCurve, onDone: () {});
+    }
+  }
+
+  /// Drives [entry]'s [_SnackbarEntry.dragController] from its current
+  /// [_SnackbarEntry.dragDx] to [to], calling [onDone] once the animation
+  /// completes. Shared plumbing for both [_settleDrag] outcomes (spring-back
+  /// and fling-out) — only the destination, easing curve, and completion
+  /// callback differ between them.
+  void _animateDrag(_SnackbarEntry entry, {required double to, required Curve curve, required VoidCallback onDone}) {
+    final tween = Tween<double>(begin: entry.dragDx, end: to);
+    final controller = entry.dragController;
+    late final AnimationStatusListener statusListener;
+    void tick() {
+      if (!mounted) return;
+      setState(() => entry.dragDx = tween.transform(curve.transform(controller.value)));
+    }
+
+    statusListener = (status) {
+      if (status != AnimationStatus.completed) return;
+      controller.removeListener(tick);
+      controller.removeStatusListener(statusListener);
+      onDone();
+    };
+
+    controller.addListener(tick);
+    controller.addStatusListener(statusListener);
+    controller.forward(from: 0);
   }
 
   /// Builds the "+N / Dismiss all" overflow affordance (DESIGN-60 §16.4).

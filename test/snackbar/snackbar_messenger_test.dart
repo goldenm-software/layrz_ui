@@ -1087,8 +1087,11 @@ void main() {
         LayrzSnackbarMessenger.of(context).show(savedSnackbar);
         await pumpPastEntry(tester);
 
+        // A past-threshold horizontal fling settles by flinging the card
+        // off-screen (the new drag-follow settle animation) before
+        // _dismiss() actually runs — pumpAndSettle drains that fling-out.
         await tester.fling(find.text('Saved'), const Offset(60, 0), 1000);
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(find.text('Saved'), findsNothing);
       });
@@ -1101,7 +1104,7 @@ void main() {
         await pumpPastEntry(tester);
 
         await tester.fling(find.text('Saved'), const Offset(-60, 0), 1000);
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(
           find.text('Saved'),
@@ -1171,6 +1174,170 @@ void main() {
         await tester.pump();
 
         expect(find.text('Saved'), findsOneWidget);
+      });
+    });
+
+    group('Drag-follow feedback (mid-gesture)', () {
+      /// Reads the live horizontal translate offset applied to the card
+      /// under [cardFinder] — the outer, drag-follow `Transform.translate`
+      /// that sits directly above the entry-transition `Transform.scale` in
+      /// [LayrzSnackbarMessengerState._buildToast]. Disambiguated from the
+      /// several other `Transform`s in the wider tree (LayrzSnackbarView's
+      /// own internals, LayrzApp scaffolding) by requiring a `Transform.scale`
+      /// descendant that in turn contains [cardFinder] — exactly the nesting
+      /// `_buildToast` builds.
+      Offset readDragTranslate(WidgetTester tester, Finder cardFinder) {
+        final translates = tester
+            .widgetList<Transform>(find.ancestor(of: cardFinder, matching: find.byType(Transform)))
+            .toList();
+        // _buildToast nests Transform.translate(drag+entry) > Transform.scale
+        // (entry) around the card — the outer (drag-follow) translate is
+        // whichever one wraps another Transform, since Transform.scale is
+        // itself built via a plain Transform with a non-null `transform`
+        // matrix from a scale, not a translation. Both are found by ancestry
+        // above the GestureDetector; the drag-follow one is identified as
+        // the last (outermost) Transform in the ancestor chain.
+        expect(translates, isNotEmpty, reason: 'the card must be wrapped in at least one Transform.translate');
+        final outer = translates.last;
+        final matrix = outer.transform;
+        return Offset(matrix.getTranslation().x, matrix.getTranslation().y);
+      }
+
+      /// Reads the live opacity applied via the drag-follow `AnimatedOpacity`
+      /// (the same widget the entry/fan-out opacity multiplies into) for the
+      /// card under [cardFinder].
+      double readOpacity(WidgetTester tester, Finder cardFinder) {
+        return tester
+            .widget<AnimatedOpacity>(find.ancestor(of: cardFinder, matching: find.byType(AnimatedOpacity)).first)
+            .opacity;
+      }
+
+      testWidgets('an in-progress horizontal drag translates the card and fades it', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        final cardFinder = find.text('Saved');
+        final restOffset = readDragTranslate(tester, cardFinder);
+        final restOpacity = readOpacity(tester, cardFinder);
+        expect(restOffset.dx, 0.0, reason: 'at rest, the card has no horizontal drag offset');
+        expect(restOpacity, 1.0, reason: 'at rest, the card is fully opaque');
+
+        // Start a horizontal drag and move it partway, WITHOUT releasing —
+        // this must be visible mid-gesture, not just on release.
+        final gesture = await tester.startGesture(tester.getCenter(cardFinder));
+        addTearDown(() async {
+          if (tester.binding.hasScheduledFrame) await gesture.up();
+        });
+        await gesture.moveBy(const Offset(80, 0));
+        await tester.pump();
+
+        final draggedOffset = readDragTranslate(tester, cardFinder);
+        final draggedOpacity = readOpacity(tester, cardFinder);
+
+        expect(draggedOffset.dx, greaterThan(0), reason: 'the card must follow the finger horizontally, live');
+        expect(
+          draggedOpacity,
+          lessThan(restOpacity),
+          reason: 'the card must fade as it is dragged away from center, live',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('an in-progress vertical drag does not apply horizontal drag-follow', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        final cardFinder = find.text('Saved');
+        final gesture = await tester.startGesture(tester.getCenter(cardFinder));
+        addTearDown(() async {
+          if (tester.binding.hasScheduledFrame) await gesture.up();
+        });
+        await gesture.moveBy(const Offset(0, 80));
+        await tester.pump();
+
+        final draggedOffset = readDragTranslate(tester, cardFinder);
+        expect(
+          draggedOffset.dx,
+          0.0,
+          reason: 'a vertical-locked drag must stay gesture-only — no horizontal card-follow',
+        );
+
+        await gesture.up();
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('releasing a small horizontal drag under both thresholds springs back to center', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        // Persistent (duration: null) so pumping past the settle animation
+        // below can never race the drain timer's own auto-dismiss — a
+        // pumpAndSettle against an auto-dismiss snackbar fast-forwards
+        // through its full drain duration too, which would dismiss the card
+        // for an unrelated reason and make this test meaningless.
+        const persistent = LayrzSnackbar(titleText: 'Saved', descriptionText: 'Persisted.', duration: null);
+        LayrzSnackbarMessenger.of(context).show(persistent);
+        await pumpPastEntry(tester);
+
+        final cardFinder = find.text('Saved');
+        // A small, slow drag: well under both the velocity threshold and the
+        // distance threshold (kSwipeDistanceFraction of the card's own
+        // width). Spread across several small, time-separated moves (rather
+        // than one moveBy) so the recognizer's release-velocity estimate is
+        // genuinely low, matching a real slow drag rather than a fast flick
+        // that happens to cover a short distance.
+        final gesture = await tester.startGesture(tester.getCenter(cardFinder));
+        for (var i = 0; i < 4; i++) {
+          await gesture.moveBy(const Offset(5, 0));
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+
+        final draggedOffset = readDragTranslate(tester, cardFinder);
+        expect(draggedOffset.dx, greaterThan(0), reason: 'the card must have followed the small drag');
+
+        await tester.pump(const Duration(milliseconds: 200));
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        // Still present, and back at (or extremely close to) zero offset —
+        // the spring-back settle animation, not a dismiss.
+        expect(find.text('Saved'), findsOneWidget, reason: 'an under-threshold release must not dismiss');
+        final settledOffset = readDragTranslate(tester, cardFinder);
+        expect(settledOffset.dx, closeTo(0.0, 0.5), reason: 'the card must spring back to center on release');
+      });
+
+      testWidgets('releasing a slow-but-far horizontal drag past the distance threshold dismisses', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        final cardFinder = find.text('Saved');
+        final cardWidth = tester.getSize(find.byType(LayrzSnackbarView)).width;
+
+        // Drag well past kSwipeDistanceFraction (0.35) of the card's width,
+        // via slow discrete moves (no fling velocity at all) — this must
+        // still dismiss on distance alone, independent of release velocity.
+        final gesture = await tester.startGesture(tester.getCenter(cardFinder));
+        await gesture.moveBy(Offset(cardWidth * 0.6, 0));
+        await tester.pump();
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Saved'),
+          findsNothing,
+          reason: 'a far-enough drag dismisses by distance alone, even released slowly',
+        );
       });
     });
 
