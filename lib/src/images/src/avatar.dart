@@ -253,14 +253,16 @@ class LayrzAvatar extends StatelessWidget {
       return _buildContainer(
         context: context,
         backgroundColor: _kWhiteBackground,
-        child: Text(
-          emoji,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: size * 0.6,
-            height: 1.0,
+        child: SelectionContainer.disabled(
+          child: Text(
+            emoji,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: size * 0.6,
+              height: 1.0,
+            ),
           ),
         ),
       );
@@ -277,15 +279,17 @@ class LayrzAvatar extends StatelessWidget {
     return _buildContainer(
       context: context,
       backgroundColor: defaultColor,
-      child: Text(
-        initials,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: size * 0.4,
-          fontWeight: FontWeight.w600,
-          color: _pickTextColor(defaultColor),
+      child: SelectionContainer.disabled(
+        child: Text(
+          initials,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.w600,
+            color: _pickTextColor(defaultColor),
+          ),
         ),
       ),
     );
@@ -320,14 +324,16 @@ class LayrzAvatar extends StatelessWidget {
       LayrzAvatarEmoji(:final emoji) => _buildContainer(
         context: context,
         backgroundColor: _kWhiteBackground,
-        child: Text(
-          emoji,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: size * 0.6,
-            height: 1.0,
+        child: SelectionContainer.disabled(
+          child: Text(
+            emoji,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: size * 0.6,
+              height: 1.0,
+            ),
           ),
         ),
       ),

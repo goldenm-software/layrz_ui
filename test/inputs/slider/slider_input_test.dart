@@ -276,8 +276,14 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox.shrink());
 
-      // If the widget had wrongly disposed the caller's node, using it here throws.
-      expect(() => focusNode.dispose(), returnsNormally);
+      // addListener() on a disposed ChangeNotifier throws (debug assertion), so it
+      // is the real liveness probe here -- unlike calling dispose() directly, which
+      // both consumes the only chance to check liveness and would throw a
+      // *different*, misleading error ("dispose() called twice") if the widget had
+      // already disposed the node, rather than the intended "used after being
+      // disposed" signal.
+      expect(() => focusNode.addListener(() {}), returnsNormally);
+      focusNode.dispose();
     });
 
     guardedTestWidgets('swaps focus node when a new one is supplied via didUpdateWidget', (tester) async {

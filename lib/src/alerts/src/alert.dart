@@ -261,11 +261,13 @@ class _LayrzAlertState extends State<LayrzAlert> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.title,
-                      style: tokens.typography.title.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: tokens.colors.fg1,
+                    SelectionContainer.disabled(
+                      child: Text(
+                        widget.title,
+                        style: tokens.typography.title.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: tokens.colors.fg1,
+                        ),
                       ),
                     ),
                     SizedBox(height: tokens.spacing.sp1),

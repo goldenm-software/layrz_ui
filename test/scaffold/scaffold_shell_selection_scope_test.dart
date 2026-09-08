@@ -228,6 +228,11 @@ void main() {
             isFalse,
             reason: 'the sheet\'s region must be a different instance from the page\'s region',
           );
+          // Genuine no-throw contract, mirroring the page-region check above:
+          // `contextMenuAnchors` throws when nothing is selected, so returning
+          // normally here IS the assertion that the sheet's region holds a live
+          // selection -- reinforced by reading the same value for the geometry
+          // check right below.
           expect(
             () => sheetRegionState!.contextMenuAnchors,
             returnsNormally,

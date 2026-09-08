@@ -75,9 +75,12 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         expect(tester.takeException(), isNull);
 
-        // If the widget had wrongly disposed this controller, calling a
-        // method on it now would throw.
-        expect(() => controller.state, returnsNormally);
+        // `.state` reads a plain field and never throws even on a disposed
+        // ChangeNotifier, so it cannot detect disposal. addListener() on a
+        // disposed ChangeNotifier does throw (debug assertion), so it is the
+        // real liveness probe for "the widget did not dispose the caller's
+        // controller".
+        expect(() => controller.addListener(() {}), returnsNormally);
         controller.dispose();
       });
 

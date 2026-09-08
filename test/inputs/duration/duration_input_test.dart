@@ -364,7 +364,14 @@ void main() {
       );
 
       await tester.pumpWidget(const SizedBox());
-      expect(() => controller.dispose(), returnsNormally);
+      // addListener() on a disposed ChangeNotifier throws (debug assertion), so it
+      // is the real liveness probe here -- unlike calling dispose() directly, which
+      // both consumes the only chance to check liveness and would throw a
+      // *different*, misleading error ("dispose() called twice") if the widget had
+      // already disposed the controller, rather than the intended "used after
+      // being disposed" signal.
+      expect(() => controller.addListener(() {}), returnsNormally);
+      controller.dispose();
     });
 
     guardedTestWidgets('does not dispose caller-provided focus node', (WidgetTester tester) async {
@@ -379,7 +386,14 @@ void main() {
       );
 
       await tester.pumpWidget(const SizedBox());
-      expect(() => focusNode.dispose(), returnsNormally);
+      // addListener() on a disposed ChangeNotifier throws (debug assertion), so it
+      // is the real liveness probe here -- unlike calling dispose() directly, which
+      // both consumes the only chance to check liveness and would throw a
+      // *different*, misleading error ("dispose() called twice") if the widget had
+      // already disposed the node, rather than the intended "used after being
+      // disposed" signal.
+      expect(() => focusNode.addListener(() {}), returnsNormally);
+      focusNode.dispose();
     });
 
     guardedTestWidgets('can be created without labelText or hintText', (WidgetTester tester) async {
@@ -1507,6 +1521,10 @@ void main() {
           reason: 'a second pop must never remove the hosting router\'s own root page',
         );
         expect(delegate.popped, isFalse, reason: 'the router\'s own root page must never be popped by this drawer');
+        // Genuine no-throw contract: a broken double-pop guard removes the
+        // router's root page, and `currentConfiguration` (which reads the now-empty
+        // `pages.last`) throws exactly there -- so "does not throw" IS the behaviour
+        // under test, not a weak stand-in for it.
         expect(
           () => delegate.currentConfiguration,
           returnsNormally,

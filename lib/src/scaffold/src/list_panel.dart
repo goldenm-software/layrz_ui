@@ -195,10 +195,12 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 10),
-        child: Text(
-          context.l10n.scaffoldEmpty,
-          textAlign: TextAlign.center,
-          style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+        child: SelectionContainer.disabled(
+          child: Text(
+            context.l10n.scaffoldEmpty,
+            textAlign: TextAlign.center,
+            style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
+          ),
         ),
       ),
     );

@@ -27,13 +27,23 @@ class FindMatch {
   /// a later frame than the one that produced this [FindMatch].
   final int nodeId;
 
-  /// The matched node's bounding box in the global (root) coordinate space.
+  /// The matched node's bounding box in the root semantics node's own
+  /// (logical, root-relative) coordinate space — the same logical-pixel space
+  /// the render chain (`RenderBox.localToGlobal`) and the root paint canvas
+  /// both use, at any device pixel ratio.
   ///
   /// Computed by accumulating every ancestor's [SemanticsNode.transform] down
   /// to this node and applying it to the node's own (parent-relative)
-  /// [SemanticsNode.rect] via `MatrixUtils.transformRect`. Suitable for
-  /// painting a highlight directly over the rendered widget, since it is
-  /// already in the same coordinate space the root [CustomPainter] paints in.
+  /// [SemanticsNode.rect] via `MatrixUtils.transformRect` — **excluding** the
+  /// root semantics node's own transform, which maps the root's coordinate
+  /// system to the physical device surface (a `devicePixelRatio` scale), not
+  /// to another node in this tree. Composing that transform in would leave
+  /// [globalRect] in physical pixels while everything it gets compared or
+  /// painted against stays logical — wrong by exactly a factor of
+  /// `devicePixelRatio` on every axis. See `walkSemantics`'s "### Algorithm"
+  /// doc for the full reasoning. Suitable for painting a highlight directly
+  /// over the rendered widget, since it is already in the same coordinate
+  /// space the root [CustomPainter] paints in.
   final Rect globalRect;
 
   /// The searched text this match was found in — the node's semantics

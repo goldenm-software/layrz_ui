@@ -389,6 +389,10 @@ void main() {
     test('asserts value is within [0.0, 1.0]', () {
       expect(() => LayrzProgressBar(value: 1.5), throwsAssertionError);
       expect(() => LayrzProgressBar(value: -0.5), throwsAssertionError);
+      // Genuine no-throw contract: paired with the two throwsAssertionError cases
+      // above, these confirm the range assert's boundary is inclusive (0.0 and 1.0
+      // are valid) and that the default value is in range -- a const-constructor
+      // smoke check, not a stand-in for a behavioural assertion.
       expect(() => const LayrzProgressBar(value: 0.0), returnsNormally);
       expect(() => const LayrzProgressBar(value: 1.0), returnsNormally);
       expect(() => const LayrzProgressBar(), returnsNormally);

@@ -84,6 +84,10 @@ void main() {
     test('paints without throwing across thoughtT\'s full 0..1 sweep', () {
       for (final t in [0.0, 0.1, 0.25, 0.4, 0.55, 0.7, 0.85, 1.0]) {
         final painter = LayoPainter(emotion: LayoEmotion.thinking, thoughtT: t);
+        // Genuine no-throw contract: this sweep exists to catch a crash from
+        // interpolation (lerpDouble/clamp misuse, negative radii, etc.) across the
+        // animation parameter's range -- specific values are covered by pixel-level
+        // assertions elsewhere in this file.
         expect(() => painter.paint(Canvas(PictureRecorder()), size), returnsNormally);
       }
     });

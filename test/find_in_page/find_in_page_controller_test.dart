@@ -97,6 +97,9 @@ void main() {
       final controller = LayrzFindInPageController();
       addTearDown(controller.dispose);
 
+      // Genuine no-throw contract (test name states it): closing an
+      // already-closed controller must be a safe idempotent no-op; `isOpen`
+      // below confirms the state itself is unaffected.
       expect(() => controller.close(), returnsNormally);
       expect(controller.isOpen, isFalse);
     });
@@ -258,6 +261,9 @@ void main() {
       addTearDown(controller.dispose);
       controller.open();
 
+      // Genuine no-throw contract (test name states it): navigating with no
+      // matches present must be a safe no-op, not a crash from an out-of-range
+      // index; `currentIndex` below confirms the state stays at -1.
       expect(() => controller.next(), returnsNormally);
       expect(() => controller.previous(), returnsNormally);
       expect(controller.currentIndex, -1);
@@ -312,6 +318,9 @@ void main() {
       const rect = Rect.fromLTWH(0, 0, 10, 10);
       controller.updateExcludeRect(rect);
       expect(controller.excludeRect, rect);
+      // Genuine no-throw contract (test name states it): setting the same rect
+      // again must be a safe idempotent no-op; `excludeRect` below confirms the
+      // value is unchanged.
       expect(() => controller.updateExcludeRect(rect), returnsNormally);
       expect(controller.excludeRect, rect);
     });

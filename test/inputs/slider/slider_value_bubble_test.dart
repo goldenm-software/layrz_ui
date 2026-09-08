@@ -163,6 +163,12 @@ void main() {
       final painter = buildPainter();
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract: `paint()`'s shape comes from the public
+      // `buildPath()` (already asserted geometrically above), but the per-shadow
+      // `canvas.drawPath(path.shift(shadow.offset), shadow.toPaint())` loop is not
+      // independently observable -- there is no canvas spy in this test tree, and
+      // adding one is out of scope for this tests-only sweep (DESIGN-155). This
+      // only proves painting a non-empty shadow list does not crash.
       expect(() => painter.paint(canvas, const Size(80, 24)), returnsNormally);
       recorder.endRecording();
     });
@@ -171,6 +177,9 @@ void main() {
       final painter = buildPainter(shadows: const []);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract: the empty-list edge case for the same shadow
+      // loop as above (a for-in over an empty list is a no-op, but this guards
+      // against a future change assuming at least one shadow, e.g. indexing [0]).
       expect(() => painter.paint(canvas, const Size(80, 24)), returnsNormally);
       recorder.endRecording();
     });

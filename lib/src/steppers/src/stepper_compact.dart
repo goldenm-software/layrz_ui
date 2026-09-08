@@ -103,9 +103,11 @@ class LayrzStepperCompactLayout extends StatelessWidget {
             // the descendant `Text` below, so without this flag the merged
             // announcement would repeat the counter text twice.
             excludeSemantics: true,
-            child: Text(
-              l10n.steppersStepCounterLabel(currentIndex + 1, stepCount),
-              style: tokens.typography.label,
+            child: SelectionContainer.disabled(
+              child: Text(
+                l10n.steppersStepCounterLabel(currentIndex + 1, stepCount),
+                style: tokens.typography.label,
+              ),
             ),
           ),
         ),
@@ -345,13 +347,15 @@ class _CompactStepHeaderState extends State<_CompactStepHeader> {
           ),
           SizedBox(width: tokens.spacing.sp3),
           Expanded(
-            child: Text(
-              widget.step.labelText,
-              style: tokens.typography.body.copyWith(
-                color: widget.state == LayrzStepperState.upcoming ? tokens.colors.fg2 : tokens.colors.fg1,
+            child: SelectionContainer.disabled(
+              child: Text(
+                widget.step.labelText,
+                style: tokens.typography.body.copyWith(
+                  color: widget.state == LayrzStepperState.upcoming ? tokens.colors.fg2 : tokens.colors.fg1,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           SizedBox(width: tokens.spacing.sp2),

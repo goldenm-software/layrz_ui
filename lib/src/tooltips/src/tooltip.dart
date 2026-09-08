@@ -328,13 +328,17 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
 
     // Build content widget
     final contentWidget = widget.contentText != null
-        ? Text(
-            widget.contentText!,
-            style: baseStyle,
+        ? SelectionContainer.disabled(
+            child: Text(
+              widget.contentText!,
+              style: baseStyle,
+            ),
           )
-        : Text.rich(
-            widget.contentRichText!,
-            style: baseStyle,
+        : SelectionContainer.disabled(
+            child: Text.rich(
+              widget.contentRichText!,
+              style: baseStyle,
+            ),
           );
 
     // Build the surface widget
@@ -352,9 +356,11 @@ class _LayrzTooltipState extends State<LayrzTooltip> with SingleTickerProviderSt
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.titleText!,
-                  style: titleStyle,
+                SelectionContainer.disabled(
+                  child: Text(
+                    widget.titleText!,
+                    style: titleStyle,
+                  ),
                 ),
                 SizedBox(height: tokens.spacing.sp1),
                 contentWidget,

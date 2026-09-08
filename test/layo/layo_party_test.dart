@@ -202,6 +202,10 @@ void main() {
     test('paints without throwing across blinkT\'s full 0..1 sweep', () {
       for (final t in [0.0, 0.25, 0.5, 0.75, 1.0]) {
         final painter = LayoPainter(emotion: LayoEmotion.party, blinkT: t);
+        // Genuine no-throw contract: this sweep exists to catch a crash from
+        // interpolation (lerpDouble/clamp misuse, negative radii, etc.) across the
+        // animation parameter's range -- specific values are covered by pixel-level
+        // assertions elsewhere in this file.
         expect(() => painter.paint(Canvas(PictureRecorder()), size), returnsNormally);
       }
     });
@@ -209,6 +213,10 @@ void main() {
     test('paints without throwing across pomPomBobT\'s full 0..1 sweep', () {
       for (final t in [0.0, 0.25, 0.5, 0.75, 1.0]) {
         final painter = LayoPainter(emotion: LayoEmotion.party, pomPomBobT: t);
+        // Genuine no-throw contract: this sweep exists to catch a crash from
+        // interpolation (lerpDouble/clamp misuse, negative radii, etc.) across the
+        // animation parameter's range -- specific values are covered by pixel-level
+        // assertions elsewhere in this file.
         expect(() => painter.paint(Canvas(PictureRecorder()), size), returnsNormally);
       }
     });
@@ -227,6 +235,10 @@ void main() {
       test('paints without throwing across confettiT\'s full 0..1 sweep', () {
         for (final t in [0.0, 0.25, 0.5, 0.75, 1.0]) {
           final painter = LayoPainter(emotion: LayoEmotion.party, confettiT: t);
+          // Genuine no-throw contract: this sweep exists to catch a crash from
+          // interpolation (lerpDouble/clamp misuse, negative radii, etc.) across the
+          // animation parameter's range -- specific values are covered by pixel-level
+          // assertions elsewhere in this file.
           expect(() => painter.paint(Canvas(PictureRecorder()), size), returnsNormally);
         }
       });

@@ -144,15 +144,17 @@ class _LayrzChipState extends State<LayrzChip> {
           // Label text
           Semantics(
             label: widget.labelText,
-            child: Text(
-              widget.labelText,
-              style: tokens.typography.label.copyWith(
-                color: spec.contentColor,
-                fontWeight: tokens.typography.title.fontWeight,
-                fontVariations: tokens.typography.title.fontVariations,
+            child: SelectionContainer.disabled(
+              child: Text(
+                widget.labelText,
+                style: tokens.typography.label.copyWith(
+                  color: spec.contentColor,
+                  fontWeight: tokens.typography.title.fontWeight,
+                  fontVariations: tokens.typography.title.fontVariations,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
 

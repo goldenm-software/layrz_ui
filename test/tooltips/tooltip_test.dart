@@ -31,12 +31,12 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: 'Tooltip text',
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-1'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      // Trigger long-press at the center of the default viewport (where the Center widget places the child).
-      await tester.longPressAt(const Offset(400, 300));
+      // Trigger long-press on the anchor.
+      await tester.longPress(find.byKey(const ValueKey('anchor-1')));
       await tester.pumpAndSettle();
 
       // Tooltip should appear.
@@ -49,11 +49,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: testMessage,
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-2'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-2')));
       await tester.pumpAndSettle();
 
       expect(find.text(testMessage), findsWidgets);
@@ -71,11 +71,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentRichText: richTextContent,
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-3'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-3')));
       await tester.pumpAndSettle();
 
       // Text should render via Text.rich.
@@ -89,13 +89,13 @@ void main() {
           builder: (context) {
             return LayrzTooltip(
               contentText: 'Tooltip',
-              child: SizedBox(width: 50, height: 50),
+              child: SizedBox(key: const ValueKey('anchor-4'), width: 50, height: 50, child: const Text('anchor')),
             );
           },
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-4')));
       await tester.pumpAndSettle();
 
       // The tooltip surface should render with the correct background colour.
@@ -108,11 +108,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: 'Tooltip',
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-5'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-5')));
       await tester.pumpAndSettle();
 
       // The tooltip surface should render with border radius.
@@ -143,17 +143,18 @@ void main() {
     });
 
     testWidgets('renders at all LayrzPreferredSide values', (tester) async {
+      const anchorKey = ValueKey('anchor-side-loop');
       for (final position in LayrzPreferredSide.values) {
         await pumpThemed(
           tester,
           LayrzTooltip(
             contentText: 'Tooltip',
             position: position,
-            child: SizedBox(width: 50, height: 50),
+            child: SizedBox(key: anchorKey, width: 50, height: 50, child: const Text('anchor')),
           ),
         );
 
-        await tester.longPressAt(const Offset(400, 300));
+        await tester.longPress(find.byKey(anchorKey));
         await tester.pumpAndSettle();
 
         // Tooltip should render regardless of position.
@@ -170,7 +171,7 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: testText,
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-6'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
@@ -179,7 +180,7 @@ void main() {
 
       // The RawTooltip sets semanticsTooltip, which should appear in semantics.
       // This is tested via tester.getSemantics after long-press.
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-6')));
       await tester.pumpAndSettle();
 
       // Verify the text is present in the tree.
@@ -193,13 +194,13 @@ void main() {
           builder: (context) {
             return LayrzTooltip(
               contentText: 'Tooltip',
-              child: SizedBox(width: 50, height: 50),
+              child: SizedBox(key: const ValueKey('anchor-7'), width: 50, height: 50, child: const Text('anchor')),
             );
           },
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-7')));
       await tester.pumpAndSettle();
 
       // The text should render with styling.
@@ -231,11 +232,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: 'Tooltip',
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-8'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-8')));
       await tester.pumpAndSettle();
 
       expect(find.text('Tooltip'), findsWidgets);
@@ -256,11 +257,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentRichText: richText,
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-9'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-9')));
       await tester.pumpAndSettle();
 
       // The rich text should render.
@@ -273,11 +274,11 @@ void main() {
         LayrzTooltip(
           titleText: 'Title',
           contentText: 'Content',
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-10'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-10')));
       await tester.pumpAndSettle();
 
       expect(find.text('Title'), findsWidgets);
@@ -289,11 +290,11 @@ void main() {
         tester,
         LayrzTooltip(
           contentText: 'Content only',
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-11'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-11')));
       await tester.pumpAndSettle();
 
       expect(find.text('Content only'), findsWidgets);
@@ -317,11 +318,11 @@ void main() {
         LayrzTooltip(
           titleText: 'Title',
           contentRichText: TextSpan(text: 'Rich content'),
-          child: SizedBox(width: 50, height: 50),
+          child: SizedBox(key: const ValueKey('anchor-12'), width: 50, height: 50, child: const Text('anchor')),
         ),
       );
 
-      await tester.longPressAt(const Offset(400, 300));
+      await tester.longPress(find.byKey(const ValueKey('anchor-12')));
       await tester.pumpAndSettle();
 
       expect(find.text('Title'), findsWidgets);

@@ -240,6 +240,7 @@ void main() {
 
       final controller = LayrzStepperController();
       controller.setStepCount(3);
+      controller.goTo(2);
 
       await pumpThemed(
         tester,
@@ -248,8 +249,13 @@ void main() {
 
       await tester.pumpWidget(const SizedBox.shrink());
 
-      // Controller should still be usable after widget is disposed.
-      expect(() => controller.goTo(0), returnsNormally);
+      // Controller should still be usable (not disposed) after the widget unmounts:
+      // goTo away from the pre-set step 2 and confirm the index actually moved,
+      // rather than merely not throwing (a disposed ChangeNotifier would throw on
+      // notifyListeners(), but goTo(0) starting from 0 would be a silent no-op and
+      // pass even against an inert/disposed controller).
+      controller.goTo(0);
+      expect(controller.currentStepIndex, equals(0));
     });
 
     testWidgets('internal controller is disposed', (WidgetTester tester) async {

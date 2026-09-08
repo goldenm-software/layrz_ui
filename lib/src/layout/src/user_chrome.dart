@@ -105,15 +105,17 @@ class LayrzLayoutUserChrome extends StatelessWidget {
               // Name
               Expanded(
                 child: userName != null && userName!.isNotEmpty
-                    ? Text(
-                        userName!,
-                        style: TextStyle(
-                          fontSize: fontSize,
-                          fontWeight: kLayrzLayoutUserNameFontWeight,
-                          color: tokens.colors.fg1,
+                    ? SelectionContainer.disabled(
+                        child: Text(
+                          userName!,
+                          style: TextStyle(
+                            fontSize: fontSize,
+                            fontWeight: kLayrzLayoutUserNameFontWeight,
+                            color: tokens.colors.fg1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       )
                     : const SizedBox.shrink(),
               ),

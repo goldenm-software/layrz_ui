@@ -65,6 +65,10 @@ void main() {
       final painter = buildPainter(fraction: 0.0);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -73,6 +77,10 @@ void main() {
       final painter = buildPainter(fraction: 1.0);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -81,6 +89,10 @@ void main() {
       final painter = buildPainter(fraction: 0.5);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -99,6 +111,10 @@ void main() {
       );
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -117,6 +133,10 @@ void main() {
       );
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -139,6 +159,10 @@ void main() {
       );
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract (test name states it): paint() has no exposed
+      // output via PictureRecorder alone, and the point of this test is that this
+      // specific geometry/config combination does not crash -- not a specific pixel
+      // outcome, which the geometric checks elsewhere in this file cover instead.
       expect(() => painter.paint(canvas, const Size(200, 20)), returnsNormally);
       recorder.endRecording();
     });
@@ -147,6 +171,10 @@ void main() {
       final painter = buildPainter(fraction: 0.5);
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
+      // Genuine no-throw contract: a degenerate zero-width Size is malformed input
+      // this painter must tolerate without crashing (e.g. from a division inside
+      // its geometry math) -- there is no meaningful pixel output to assert against
+      // a zero-size canvas.
       expect(() => painter.paint(canvas, Size.zero), returnsNormally);
       recorder.endRecording();
     });
@@ -267,6 +295,10 @@ void main() {
         );
         final recorder = ui.PictureRecorder();
         final canvas = Canvas(recorder);
+        // Genuine no-throw contract (test name states it): paint() has no exposed
+        // output via PictureRecorder alone, and the point of this test is that this
+        // specific geometry/config combination does not crash -- not a specific pixel
+        // outcome, which the geometric checks elsewhere in this file cover instead.
         expect(() => painter.paint(canvas, const Size(300, 36)), returnsNormally);
         recorder.endRecording();
       }
