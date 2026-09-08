@@ -4,8 +4,10 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
-// TEMPORARY: DESIGN-109 find-in-page spike route — remove before the DESIGN-109 PR.
-import 'package:layrz_ui/src/search/src/find_spike.dart';
+
+// TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
+// (/find-spike) but intentionally not listed in the showroom sidebar.
+import 'src/sections/find_in_page/find_spike.dart';
 
 import 'layout.dart';
 import 'src/sections/access_paths_section.dart';
@@ -273,7 +275,8 @@ final _router = GoRouter(
           path: '/app-banner',
           pageBuilder: (context, state) => NoTransitionPage(child: AppBannerSection()),
         ),
-        // TEMPORARY: DESIGN-109 find-in-page spike route — remove before the DESIGN-109 PR.
+        // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
+        // (/find-spike) but intentionally not listed in the showroom sidebar.
         GoRoute(
           path: '/find-spike',
           pageBuilder: (context, state) => NoTransitionPage(child: LayrzFindSpike()),
