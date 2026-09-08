@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:flutter_mdi_remap/flutter_mdi_remap.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/pump_themed.dart';
@@ -30,8 +31,8 @@ void main() {
         expect(find.byType(LayrzImage), findsOneWidget);
       });
 
-      testWidgets('renders icon from IconData', (tester) async {
-        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
+      testWidgets('renders icon from MdiRemapIcon', (tester) async {
+        final source = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
 
         await pumpThemed(
           tester,
@@ -84,7 +85,7 @@ void main() {
       });
 
       testWidgets('LayrzAvatarIcon renders icon', (tester) async {
-        final source = LayrzAvatarIcon(MdiIcons.checkCircleOutline);
+        final source = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
 
         await pumpThemed(
           tester,
@@ -550,6 +551,49 @@ void main() {
 
         final textWidget = tester.widget<Text>(find.byType(Text).first);
         expect(textWidget.style?.fontSize, equals(40.0)); // 100 * 0.4
+      });
+    });
+
+    group('LayrzAvatarIcon value semantics', () {
+      final checkCircle = findMdiRemapIconByName('mdi-check-circle-outline')!;
+      final accountIcon = findMdiRemapIconByName('mdi-account')!;
+
+      test('equal when icon names match', () {
+        final a = LayrzAvatarIcon(checkCircle);
+        final b = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
+
+        expect(a, equals(b));
+        expect(a.hashCode, equals(b.hashCode));
+      });
+
+      test('not equal when icon names differ', () {
+        final a = LayrzAvatarIcon(checkCircle);
+        final b = LayrzAvatarIcon(accountIcon);
+
+        expect(a, isNot(equals(b)));
+      });
+
+      test('not equal to a different LayrzAvatarSource subtype', () {
+        final icon = LayrzAvatarIcon(checkCircle);
+        const emoji = LayrzAvatarEmoji('🎉');
+
+        expect(icon, isNot(equals(emoji)));
+      });
+
+      test('copyWith replaces the icon when a new value is given', () {
+        final original = LayrzAvatarIcon(checkCircle);
+        final copy = original.copyWith(icon: accountIcon);
+
+        expect(copy.icon.name, equals('mdi-account'));
+        expect(copy, isNot(equals(original)));
+      });
+
+      test('copyWith with no arguments returns an equal value', () {
+        final original = LayrzAvatarIcon(checkCircle);
+        final copy = original.copyWith();
+
+        expect(copy, equals(original));
+        expect(copy.icon.name, equals(checkCircle.name));
       });
     });
 
