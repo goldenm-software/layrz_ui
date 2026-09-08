@@ -14,6 +14,7 @@ void main() {
         LayrzTooltip(
           contentText: tooltipText,
           child: Container(
+            key: const ValueKey('anchor-a11y-1'),
             width: 100,
             height: 100,
             color: const Color(0xFF0000FF),
@@ -24,8 +25,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip at the center where the Center widget places the container.
-        await tester.longPressAt(const Offset(400, 300));
+        // Trigger the tooltip on the anchor.
+        await tester.longPress(find.byKey(const ValueKey('anchor-a11y-1')));
         await tester.pumpAndSettle();
 
         // The tooltip's semantics should include the tooltip property.
@@ -50,6 +51,7 @@ void main() {
         LayrzTooltip(
           contentRichText: richContent,
           child: Container(
+            key: const ValueKey('anchor-a11y-2'),
             width: 100,
             height: 100,
             color: const Color(0xFF0000FF),
@@ -60,8 +62,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip at the center where the Center widget places the container.
-        await tester.longPressAt(const Offset(400, 300));
+        // Trigger the tooltip on the anchor.
+        await tester.longPress(find.byKey(const ValueKey('anchor-a11y-2')));
         await tester.pumpAndSettle();
 
         // The plain text should be extractable and present.
@@ -81,15 +83,17 @@ void main() {
           child: LayrzTooltip(
             contentText: 'Scaled tooltip',
             child: SizedBox(
+              key: const ValueKey('anchor-a11y-3'),
               width: 100,
               height: 100,
+              child: const Text('anchor'),
             ),
           ),
         ),
       );
 
-      // Trigger the tooltip at the center where the Center widget places the child.
-      await tester.longPressAt(const Offset(400, 300));
+      // Trigger the tooltip on the anchor.
+      await tester.longPress(find.byKey(const ValueKey('anchor-a11y-3')));
       await tester.pumpAndSettle();
 
       // The tooltip should render without throwing an exception.
@@ -105,8 +109,10 @@ void main() {
         LayrzTooltip(
           contentText: testText,
           child: SizedBox(
+            key: const ValueKey('anchor-a11y-4'),
             width: 100,
             height: 100,
+            child: const Text('anchor'),
           ),
         ),
       );
@@ -114,8 +120,8 @@ void main() {
       final semanticsHandle = tester.ensureSemantics();
 
       try {
-        // Trigger the tooltip at the center where the Center widget places the child.
-        await tester.longPressAt(const Offset(400, 300));
+        // Trigger the tooltip on the anchor.
+        await tester.longPress(find.byKey(const ValueKey('anchor-a11y-4')));
         await tester.pumpAndSettle();
 
         // The text should be accessible.
@@ -125,8 +131,8 @@ void main() {
         await tester.tap(find.byType(Directionality));
         await tester.pumpAndSettle();
 
-        // Trigger again at the same location.
-        await tester.longPressAt(const Offset(400, 300));
+        // Trigger again on the same anchor.
+        await tester.longPress(find.byKey(const ValueKey('anchor-a11y-4')));
         await tester.pumpAndSettle();
 
         // The text should still be accessible.
