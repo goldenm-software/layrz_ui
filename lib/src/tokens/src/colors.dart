@@ -86,6 +86,17 @@ class LayrzColorTokens {
   /// AI-accent hue.
   final Color aiAccent;
 
+  /// Default color for `LayrzApp`'s debug-only tiled diagonal watermark
+  /// (`LayrzAppBanner`).
+  ///
+  /// Deliberately a standalone, muted neutral gray — not a reuse of [danger]
+  /// or any other semantic status color. A staging/debug watermark is not an
+  /// error state, so it must not borrow the danger hue; sharing that color
+  /// would make a build marker read as an alert. Used only as the fallback
+  /// when the app-level banner config's own color override is `null`; a
+  /// caller-supplied color always takes precedence.
+  final Color watermark;
+
   /// Creates a new [LayrzColorTokens].
   const LayrzColorTokens({
     required this.primary,
@@ -106,6 +117,7 @@ class LayrzColorTokens {
     required this.overlay,
     required this.tonalOpacity,
     required this.aiAccent,
+    required this.watermark,
   });
 
   /// Light theme color tokens using Layrz brand defaults.
@@ -142,6 +154,7 @@ class LayrzColorTokens {
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
       aiAccent: const Color(0xFF03A9F4),
+      watermark: const Color(0xFF9E9E9E),
     );
   }
 
@@ -165,6 +178,7 @@ class LayrzColorTokens {
     Color? overlay,
     double? tonalOpacity,
     Color? aiAccent,
+    Color? watermark,
   }) {
     return LayrzColorTokens(
       primary: primary == null
@@ -197,6 +211,7 @@ class LayrzColorTokens {
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,
       aiAccent: aiAccent ?? this.aiAccent,
+      watermark: watermark ?? this.watermark,
     );
   }
 
@@ -222,7 +237,8 @@ class LayrzColorTokens {
           divider == other.divider &&
           overlay == other.overlay &&
           tonalOpacity == other.tonalOpacity &&
-          aiAccent == other.aiAccent;
+          aiAccent == other.aiAccent &&
+          watermark == other.watermark;
 
   @override
   int get hashCode => Object.hash(
@@ -244,5 +260,6 @@ class LayrzColorTokens {
     overlay,
     tonalOpacity,
     aiAccent,
+    watermark,
   );
 }

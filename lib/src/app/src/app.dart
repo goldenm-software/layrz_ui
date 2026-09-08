@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
@@ -5,6 +6,9 @@ import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/snackbar/snackbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 import 'package:layrz_ui/src/transitions/transitions.dart';
+
+import 'app_banner.dart';
+import 'app_banner_painter.dart';
 
 /// Root application widget for layrz_ui.
 ///
@@ -91,7 +95,24 @@ class LayrzApp extends StatefulWidget {
   final Color? color;
 
   /// Whether to show the debug banner in the top-right corner. Defaults to `true`.
+  ///
+  /// Forced to `false` internally whenever [banner] is non-null and the app
+  /// is running in debug mode — see [banner]'s doc comment.
   final bool debugShowCheckedModeBanner;
+
+  /// Configures a debug-only, tiled diagonal watermark rendered above the
+  /// app's content, replacing Flutter's red DEBUG corner banner.
+  ///
+  /// `null` (the default) renders no watermark at all — this behaves exactly
+  /// as before this parameter existed. When non-null **and** `kDebugMode` is
+  /// `true`, [_LayrzAppState._wrapWithTheme] paints a low-opacity,
+  /// pointer-transparent watermark repeating [LayrzAppBanner.labelText]
+  /// diagonally across the whole screen, and [debugShowCheckedModeBanner] is
+  /// treated as `false` for that build so the SDK's own checked-mode banner
+  /// never stacks on top of it. This value has no effect at all outside
+  /// debug mode — release and profile builds never render a watermark
+  /// regardless of what is passed here.
+  final LayrzAppBanner? banner;
 
   /// Whether to show the semantics debugger overlay. Defaults to `false`.
   final bool showSemanticsDebugger;
@@ -190,6 +211,7 @@ class LayrzApp extends StatefulWidget {
     this.debugShowCheckedModeBanner = true,
     this.showSemanticsDebugger = false,
     this.debugShowWidgetInspector = false,
+    this.banner,
     this.locale,
     this.localizationsDelegates,
     this.supportedLocales = const [Locale('en')],
@@ -222,6 +244,7 @@ class LayrzApp extends StatefulWidget {
     this.debugShowCheckedModeBanner = true,
     this.showSemanticsDebugger = false,
     this.debugShowWidgetInspector = false,
+    this.banner,
     this.locale,
     this.localizationsDelegates,
     this.supportedLocales = const [Locale('en')],
@@ -318,7 +341,7 @@ class _LayrzAppState extends State<LayrzApp> {
   }) {
     final userChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
 
-    final innerChild = LayrzTheme(
+    final themedChild = LayrzTheme(
       data: themeData,
       child: DefaultTextStyle(
         style: themeData.textStyle,
@@ -331,6 +354,27 @@ class _LayrzAppState extends State<LayrzApp> {
         ),
       ),
     );
+
+    final banner = widget.banner;
+    final innerChild = kDebugMode && banner != null
+        ? Stack(
+            children: [
+              themedChild,
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      painter: LayrzAppBannerPainter(
+                        labelText: banner.labelText,
+                        color: banner.color ?? themeData.tokens.colors.watermark,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          )
+        : themedChild;
 
     // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
     final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
@@ -358,7 +402,7 @@ class _LayrzAppState extends State<LayrzApp> {
         color: appColor,
         title: widget.title,
         onGenerateTitle: widget.onGenerateTitle,
-        debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
+        debugShowCheckedModeBanner: widget.banner != null ? false : widget.debugShowCheckedModeBanner,
         showSemanticsDebugger: widget.showSemanticsDebugger,
         debugShowWidgetInspector: widget.debugShowWidgetInspector,
         locale: widget.locale,
@@ -383,7 +427,7 @@ class _LayrzAppState extends State<LayrzApp> {
       color: appColor,
       title: widget.title,
       onGenerateTitle: widget.onGenerateTitle,
-      debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
+      debugShowCheckedModeBanner: widget.banner != null ? false : widget.debugShowCheckedModeBanner,
       showSemanticsDebugger: widget.showSemanticsDebugger,
       debugShowWidgetInspector: widget.debugShowWidgetInspector,
       locale: widget.locale,
