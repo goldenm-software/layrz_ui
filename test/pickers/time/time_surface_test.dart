@@ -1,15 +1,21 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/src/pickers/src/models/time_of_day.dart';
+import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/pickers/src/time/time_surface.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
-/// See `time_input_test.dart`'s own `_kSafeAnchorWidth` doc: 700px keeps
-/// every 2-slot (no seconds) configuration in this file clear of
-/// `LayrzPickersTimeField.kNarrowWidth`'s per-field narrow threshold.
+/// Every real caller hosts this panel inside a bounded-width ancestor -- see
+/// `time_fields_panel_test.dart`'s identical `_bounded` helper doc.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
+
+/// Locates the [LayrzButton] rendering [label] ("AM" or "PM") within the
+/// meridiem control -- [LayrzButton]'s label renders via [RichText] (a
+/// [TextSpan], not a plain [Text] widget), so `find.text` never matches it.
+Finder _meridiemButton(String label) {
+  return find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+}
 
 /// A minimal stateful host that owns [value] and can be driven via
 /// [_ReseedHarnessState.setValue] from a test, so re-pumping exercises a real
@@ -55,9 +61,10 @@ void main() {
         ),
       );
 
-      // Hour and minute, plus the seconds field -- always mounted (hidden,
-      // not removed) per D15's no-reflow rule even when showSeconds is false.
-      expect(find.byType(EditableText), findsNWidgets(3));
+      // Hour and minute groups only -- showSeconds defaults to false, and the
+      // new digital-clock panel genuinely omits the seconds group rather than
+      // mounting it hidden (unlike the retired field-row layout).
+      expect(find.byType(EditableText), findsNWidgets(2));
     });
   });
 
@@ -107,7 +114,7 @@ void main() {
 
       expect(
         tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-        '9',
+        '09',
       );
 
       tester
@@ -141,6 +148,15 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text, '22');
 
+        // Blur the field: _DigitField.didUpdateWidget only resyncs its
+        // displayed text from an external value change while NOT focused
+        // (see that class's own doc) -- resyncing while focused would stomp
+        // digits the user is still mid-way through typing. enterText leaves
+        // the field focused, so a real un-focus is required here before the
+        // re-seed below can be observed in the rendered text.
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+
         // The host re-seeds from a value distinct from both the original
         // seed (9:30) and the stale local draft (22:30) -- proving
         // didUpdateWidget's re-seed genuinely overwrites whatever the field
@@ -154,7 +170,7 @@ void main() {
 
         expect(
           tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-          '6',
+          '06',
           reason: 'the stale locally-typed draft must not survive a re-seed triggered by a new widget.value',
         );
       },
@@ -197,8 +213,8 @@ void main() {
         ),
       );
 
-      expect(find.text('AM'), findsOneWidget);
-      expect(find.text('PM'), findsOneWidget);
+      expect(_meridiemButton('AM'), findsOneWidget);
+      expect(_meridiemButton('PM'), findsOneWidget);
     });
   });
 
@@ -227,8 +243,8 @@ void main() {
       // library at all, so absence is asserted via the exhaustive field
       // count instead, mirroring `time_fields_panel_test.dart`.
       expect(find.byType(EditableText), findsNWidgets(3));
-      expect(find.text('AM'), findsOneWidget);
-      expect(find.text('PM'), findsOneWidget);
+      expect(_meridiemButton('AM'), findsOneWidget);
+      expect(_meridiemButton('PM'), findsOneWidget);
     });
   });
 }

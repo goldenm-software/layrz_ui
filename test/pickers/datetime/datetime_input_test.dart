@@ -106,24 +106,38 @@ void main() {
       expect(find.text('custom-2026'), findsOneWidget);
     });
 
-    guardedTestWidgets('opens in the drawer at wide viewport, showing the calendar and time fields together', (
+    guardedTestWidgets('opens in the drawer at wide viewport, showing the calendar by default (Date tab)', (
       tester,
     ) async {
       setWide(tester);
       await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
-      // The calendar's month header and the time fields are both visible at
-      // once -- DESIGN-49 removed the tab strip, so there is no separate
-      // "Time" tab to select.
+      // CHANGED (LayrzTabView migration): the calendar and time fields are
+      // now two separate LayrzTabView tabs ("Date"/"Time") -- see
+      // LayrzDateTimeSurface's own class doc ("Fix 2"). The Date tab is
+      // selected by default, so the calendar's month header is visible and
+      // the time fields are not (LayrzTabView only builds the active tab).
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
-      expect(find.byType(EditableText), findsWidgets);
+      expect(find.byType(EditableText), findsNothing);
       // Finding 5: the drawer now also renders `labelText` as its visible
       // title (see LayrzDateTimeInput._openDesktopDrawer), so "When" appears
       // twice while the drawer is open -- once on the anchor field behind
       // it, once as the drawer's own title. `findsWidgets` (not
       // `findsOneWidget`) reflects that intentionally.
       expect(findButtonLabel('When'), findsWidgets);
+    });
+
+    guardedTestWidgets('the time fields render after switching to the Time tab', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When'));
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsWidgets);
     });
   });
 
@@ -343,6 +357,9 @@ void main() {
 
       await tester.tap(find.text('10').first);
       await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
       expect(find.byType(EditableText), findsWidgets);
 
       await tester.enterText(find.byType(EditableText).first, '9');
@@ -354,10 +371,17 @@ void main() {
   });
 
   group('LayrzDateTimeInput — presentation is deprecated and ignored (DESIGN-49)', () {
-    guardedTestWidgets('tabbed and stepped render an identical calendar+time-fields surface', (tester) async {
+    // CHANGED (LayrzTabView migration): the retired `presentation` parameter
+    // ("tabbed"/"stepped") does still stay deprecated and ignored, but the
+    // date and time parts DO now live behind a real LayrzTabView ("Date"/
+    // "Time" tabs) -- an unrelated, later change (see LayrzDateTimeSurface's
+    // own class doc, "Fix 2"). This asserts the two deprecated presentation
+    // values render an identical LayrzTabView surface, not that no tabs
+    // exist at all.
+    guardedTestWidgets('tabbed and stepped render an identical Date/Time LayrzTabView surface', (tester) async {
       setWide(tester);
 
-      Future<void> exerciseAndAssertNoTabStrip({required LayrzDateTimeInputPresentation presentation}) async {
+      Future<void> exerciseAndAssertIdenticalTabView({required LayrzDateTimeInputPresentation presentation}) async {
         await pumpThemedApp(
           tester,
           LayrzDateTimeInput(labelText: 'When', presentation: presentation),
@@ -365,18 +389,23 @@ void main() {
         await tester.tap(find.byType(LayrzInputChrome).first);
         await tester.pumpAndSettle();
 
-        // No tab strip and no step-back affordance exist any longer -- both
-        // parts are always visible together.
-        expect(findButtonLabel('Time'), findsNothing);
+        // The Date tab is selected by default for both presentation values.
+        expect(find.byType(LayrzTabView), findsOneWidget);
+        expect(find.text('Date'), findsOneWidget);
+        expect(find.text('Time'), findsOneWidget);
         expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+        expect(find.byType(EditableText), findsNothing);
+
+        await tester.tap(find.text('Time'));
+        await tester.pumpAndSettle();
         expect(find.byType(EditableText), findsWidgets);
 
         await tester.tap(findButtonLabel('Cancel'));
         await tester.pumpAndSettle();
       }
 
-      await exerciseAndAssertNoTabStrip(presentation: LayrzDateTimeInputPresentation.tabbed);
-      await exerciseAndAssertNoTabStrip(presentation: LayrzDateTimeInputPresentation.stepped);
+      await exerciseAndAssertIdenticalTabView(presentation: LayrzDateTimeInputPresentation.tabbed);
+      await exerciseAndAssertIdenticalTabView(presentation: LayrzDateTimeInputPresentation.stepped);
     });
 
     guardedTestWidgets('onChanged fires at the identical commit moment (on Save) for both presentations', (
@@ -435,6 +464,9 @@ void main() {
       // Pick a different date and edit a time field, but never Save.
       await tester.tap(find.text('20').first);
       await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText).first, '5');
       await tester.pumpAndSettle();
 
@@ -447,15 +479,21 @@ void main() {
       expect(changed, isNull);
       expect(find.text('2026-09-01 08:00'), findsOneWidget);
 
-      // Reopen: the draft must be gone -- the hour field must read back the
+      // Reopen: a fresh drawer route means a fresh LayrzTabView State, so the
+      // Date tab is selected by default again -- the draft must be gone: the
+      // hour field, once the Time tab is reselected, must read back the
       // originally-seeded value (8), not the abandoned edit (5).
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
       expect(
         tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-        '8',
+        '08',
       );
     });
 

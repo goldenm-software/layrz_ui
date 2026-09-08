@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.0.23
+
+**Picker surfaces move from the end-drawer to an adaptive dialog.** All fourteen date, time,
+month, color, emoji, duration, select, multi-select and combobox inputs now open through
+`LayrzResponsiveModal` — a centered dialog on desktop and a bottom sheet on compact widths —
+each with a shared header carrying the field label and a single close affordance. **BREAKING:**
+`LayrzEndDrawer` has been removed; any code opening it directly must migrate to
+`LayrzResponsiveModal.show`.
+
+**New `LayrzTabView` and `LayrzTab`.** A Material-free tab strip and content switcher with
+button-scale pills, leading and trailing (suffix) slots, scrollable-by-default layout (with an
+opt-in expanded mode), and an optional `contentGap` between the strip and its content.
+`LayrzDateTimeInput`, `LayrzDateTimeRangeInput` and `LayrzEmojiInput` now organize their surfaces
+with it.
+
+**Redesigned time entry as a digital clock.** `LayrzTimeInput`, `LayrzTimeRangeInput` and the
+time tab of the date-time pickers now use large editable `HH:MM` (optionally `:SS`) digit fields
+with an AM/PM toggle in 12-hour mode, replacing the previous stepper field rows.
+
+**`LayrzScaffoldItem` gains row actions.** A new `actions` list is revealed on desktop hover and
+mobile swipe on the trailing edge of a list row; the selected row does not reveal its actions.
+
+**Color emoji and a bundled monospace font.** `Noto Color Emoji` now ships with the package and is
+registered as a fallback on every text style, so emoji render in color across platforms.
+`JetBrains Mono` is bundled and pre-registered for upcoming code-oriented UI. Both load
+automatically when a theme is built.
+
+**Fix:** the file-input drop zone no longer paints a near-black background while a file is dragged
+over it (`LayrzFileInput` and `LayrzImageInput`).
+
 ## 0.0.22
 
 **The `Layo` brand mascot lands, drawn entirely in code.** `Layo` (`lib/src/layo/`) is a Material-free `CustomPainter` mascot — no bundled image or SVG — that fills the width its parent provides and derives its height from a fixed 500:833 aspect ratio (or takes an explicit `width`). Named `Layo` (no `Layrz` prefix) per decision D11, as a brand asset rather than a design-system component. It carries subtle idle animation by default (antenna pulse, eye blink, and per-emotion motion) that pauses off-screen via `TickerMode`, honors reduced motion, and can be turned off with `animate: false`.

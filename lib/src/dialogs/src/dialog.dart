@@ -48,8 +48,15 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 /// is not dismissible (`actions` present and `canDismiss` not overridden to
 /// `true`), the icon is not rendered at all** — a decision-bearing dialog is
 /// answered through its own [actions], not escaped through an icon that would
-/// otherwise look like a free exit. There is no parameter to suppress it
-/// independently of the dialog's overall dismissibility.
+/// otherwise look like a free exit.
+///
+/// [show]'s [showCloseIcon] parameter is a separate, independent opt-out for this
+/// same icon: passing `false` suppresses only its render, on both the titled and
+/// untitled layouts, while leaving [canDismiss]'s barrier/Escape/back-gesture
+/// behaviour completely untouched. It exists for a dialog whose body already
+/// supplies its own close/cancel affordance in the same corner the icon would
+/// occupy — a redundant or colliding second X — while the dialog must still stay
+/// dismissible by every other route. See [showCloseIcon]'s own doc.
 ///
 /// **Example usage** (a confirm/cancel dialog):
 /// ```dart
@@ -140,6 +147,14 @@ class LayrzDialog {
   /// - [maxHeight]: the maximum height the dialog's panel may occupy, in logical pixels.
   ///   Defaults to `640`. Content taller than this scrolls internally rather than growing
   ///   the panel or overflowing.
+  /// - [showCloseIcon]: whether to render the floating close ("X") affordance. Defaults to
+  ///   `true`. When `false`, the X is not rendered, but this does NOT change dismissibility —
+  ///   barrier tap, Escape, and the back gesture still obey [canDismiss]/`dismissible`. Use it
+  ///   when the dialog body already provides its own cancel/close affordance (e.g. a picker
+  ///   with a pinned Cancel action) and a second X would be redundant or collide with the
+  ///   body's own top-right controls. Independent of [canDismiss]: passing `showCloseIcon:
+  ///   false` alongside `canDismiss: true` keeps every other dismissal route open while
+  ///   simply not drawing the icon.
   ///
   /// **Stacking**: opening a second [LayrzDialog] while one is already open is not
   /// supported in this version — an assertion fires rather than silently stacking two
@@ -155,6 +170,7 @@ class LayrzDialog {
     String? semanticLabel,
     double maxWidth = 480,
     double maxHeight = 640,
+    bool showCloseIcon = true,
   }) {
     assert(
       child == null || (title == null && content == null && actions == null),
@@ -199,6 +215,7 @@ class LayrzDialog {
         actions: actions,
         child: child,
         dismissible: effectiveCanDismiss,
+        showCloseIcon: showCloseIcon,
         barrierLabel: context.l10n.dialogsBarrierLabel,
         semanticLabel: semanticLabel,
         maxWidth: maxWidth,
@@ -241,6 +258,12 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
   /// every other route this class or [_DialogContent] gates.
   final bool dismissible;
 
+  /// Whether to render the floating close ("X") affordance when [dismissible] is
+  /// `true`. See [LayrzDialog.show]'s `showCloseIcon` doc for the full contract --
+  /// this is that same value, forwarded verbatim to [_DialogContent], independent
+  /// of [dismissible] itself.
+  final bool showCloseIcon;
+
   /// Optional semantic label for screen readers (caller-supplied).
   final String? semanticLabel;
 
@@ -257,6 +280,7 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
     required this.actions,
     required this.child,
     required this.dismissible,
+    required this.showCloseIcon,
     required super.barrierLabel,
     required this.semanticLabel,
     required this.maxWidth,
@@ -269,6 +293,7 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
              content: content,
              actions: actions,
              dismissible: dismissible,
+             showCloseIcon: showCloseIcon,
              semanticLabel: semanticLabel,
              maxWidth: maxWidth,
              maxHeight: maxHeight,
@@ -397,6 +422,12 @@ class _DialogContent extends StatefulWidget {
   /// used for the barrier.
   final bool dismissible;
 
+  /// Whether to render the floating close ("X") affordance when [dismissible] is
+  /// `true`. See [LayrzDialog.show]'s `showCloseIcon` doc for the full contract --
+  /// gates both the title-row close button and the floating top-right overlay in
+  /// `build`/`_buildSlots`, independent of [dismissible] itself.
+  final bool showCloseIcon;
+
   /// Optional semantic label for screen readers.
   final String? semanticLabel;
 
@@ -413,6 +444,7 @@ class _DialogContent extends StatefulWidget {
     required this.actions,
     required this.child,
     required this.dismissible,
+    required this.showCloseIcon,
     required this.semanticLabel,
     required this.maxWidth,
     required this.maxHeight,
@@ -544,14 +576,18 @@ class _DialogContentState extends State<_DialogContent> {
               // own, since this affordance necessarily sits on top of
               // whatever they placed there. When NOT dismissible, no icon is
               // rendered at all (see widget.dismissible's own doc), so the
-              // Stack collapses to just the body.
+              // Stack collapses to just the body. widget.showCloseIcon is a
+              // separate, independent opt-out for the same icon -- see
+              // LayrzDialog.show's `showCloseIcon` doc -- that suppresses
+              // only this render, leaving dismissible's barrier/Escape/back
+              // behaviour untouched.
               : Stack(
                   children: [
                     Padding(
                       padding: EdgeInsets.all(tokens.spacing.sp3),
                       child: widget.child ?? _buildSlots(context),
                     ),
-                    if (widget.dismissible)
+                    if (widget.dismissible && widget.showCloseIcon)
                       Positioned(
                         top: tokens.spacing.sp2,
                         right: tokens.spacing.sp2,
@@ -684,7 +720,11 @@ class _DialogContentState extends State<_DialogContent> {
               // dismissible -- a decision-bearing, non-dismissible dialog
               // must be answered through its own actions, not escaped
               // through an X that would otherwise sit right next to them.
-              if (widget.dismissible) ...[
+              // widget.showCloseIcon is a separate, independent opt-out for
+              // the same icon -- see LayrzDialog.show's `showCloseIcon` doc --
+              // that suppresses only this render, leaving dismissible's
+              // barrier/Escape/back behaviour untouched.
+              if (widget.dismissible && widget.showCloseIcon) ...[
                 SizedBox(width: tokens.spacing.sp2),
                 const _DialogCloseButton(),
               ],

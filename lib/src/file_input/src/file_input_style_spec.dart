@@ -99,7 +99,7 @@ class LayrzFileInputStyleSpec {
   /// |---|---|---|---|
   /// | disabled | `sf2` | transparent | `fg4` |
   /// | error | `danger.shade50` | `danger` | `danger` |
-  /// | dragging | `primary.shade50` | `primary` (thicker) | `primary` |
+  /// | dragging | `sf3` | `primary` (thicker) | `primary` |
   /// | hover | `sf3` | `primary` | `primary` |
   /// | populated | `sf1` | `divider` | `fg1` |
   /// | empty | `sf2` | `divider` (dashed intent) | `fg3` |
@@ -135,7 +135,7 @@ class LayrzFileInputStyleSpec {
     switch (state) {
       case LayrzFileInputState.dragging:
         return LayrzFileInputStyleSpec(
-          backgroundColor: tokens.colors.primary.shade50,
+          backgroundColor: tokens.colors.sf3,
           borderColor: tokens.colors.primary,
           borderWidth: tokens.border.stroke2 * 2,
           contentColor: tokens.colors.primary,

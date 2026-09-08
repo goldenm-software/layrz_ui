@@ -11,6 +11,7 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 import '../../../inputs/src/shared/editable_field.dart';
 import '../../../inputs/src/shared/input_chrome.dart';
 import '../../../inputs/src/shared/input_slot.dart';
+import '../shared/picker_dialog_header.dart';
 
 /// The selection surface content used by [LayrzMultiSelectInput].
 ///
@@ -23,9 +24,10 @@ import '../../../inputs/src/shared/input_slot.dart';
 /// **staged-with-Save (Decision, deliberate divergence from
 /// `ThemedMultiSelectInput`'s per-tap default):** tapping a row toggles that
 /// item in [_draft] only — it neither calls [onDraftCommitted] nor closes the
-/// surface. The caller ([LayrzMultiSelectInput]) hosts this surface inside a
-/// [LayrzEndDrawer]/[LayrzBottomSheet] with a Cancel/Select-All(Unselect-
-/// All)/Save actions row built from [draftSelection] (see
+/// surface. The caller ([LayrzMultiSelectInput]) hosts this surface via
+/// [LayrzResponsiveModal.show] (a dialog or a [LayrzBottomSheet]) with a
+/// Cancel/Select-All(Unselect-All)/Save actions row built from
+/// [draftSelection] (see
 /// [LayrzMultiSelectInput]'s own class doc for why this diverges from
 /// `layrz_theme`'s `ThemedMultiSelectInput`, which fires `onChanged` on every
 /// tap by default). Save reads the current [_draft] via [save] and calls
@@ -59,6 +61,11 @@ class LayrzMultiSelectInputSurface<T> extends StatefulWidget {
   /// Text shown when search finds no matching items.
   final String? emptyListText;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzMultiSelectInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called on every draft mutation (a row tap, Select All, or Unselect
   /// All), so [LayrzMultiSelectInput] can refresh the `actions` row it
   /// builds outside this surface. Never called with the committed value —
@@ -83,6 +90,7 @@ class LayrzMultiSelectInputSurface<T> extends StatefulWidget {
     required this.enableSearch,
     this.filter,
     this.emptyListText,
+    this.labelText,
     this.onDraftChanged,
     required this.onDraftCommitted,
     required this.itemExtent,
@@ -306,10 +314,13 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
     return KeyEventResult.ignored;
   }
 
-  /// Builds the internal search field row, shown above the list when
-  /// [LayrzMultiSelectInputSurface.enableSearch] is true. Deliberately
-  /// borderless — mirrors `LayrzSelectInputSurface._buildSearchField`
-  /// exactly, see that method's own doc for why.
+  /// Builds the internal search field, rendered inline in the header row
+  /// (title | dense search | X) when [LayrzMultiSelectInputSurface.enableSearch]
+  /// is true — see [build]'s own doc for the pinned-header layout this feeds.
+  /// Deliberately borderless and `dense: true` — mirrors
+  /// `LayrzSelectInputSurface._buildSearchField`'s borderless reasoning, plus
+  /// the dense density so the field is compact enough to sit inline between
+  /// the title and the close button.
   Widget _buildSearchField(BuildContext context) {
     final l10n = LayrzUiL10n.of(context);
 
@@ -363,10 +374,35 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
       controller: _searchController,
       showBorder: false,
       borderRadius: BorderRadius.zero,
+      dense: true,
       child: LayrzEditableField(config: fieldConfig),
     );
   }
 
+  /// Builds this surface's content.
+  ///
+  /// **Pinned header + search, scrolling list only (maintainer review).**
+  /// Restructured from a single `Column` that let its item list grow to its
+  /// own full, uncapped height (relying entirely on an outer host to cap and
+  /// scroll it — see the removed height-cap comment this replaced) into a
+  /// `Column` of exactly three parts: the header row (never scrolls), an
+  /// [Expanded] `ListView` (the only scrolling region), and nothing else —
+  /// this surface has no actions row of its own (see
+  /// [LayrzMultiSelectInput._openPicker], which pins its Cancel/Select-All/
+  /// Save row outside this widget entirely, via
+  /// [LayrzResponsiveModal.show]'s own `actions` parameter). This requires a
+  /// bounded incoming height (an [Expanded] only works inside one), which
+  /// [LayrzMultiSelectInput._openPicker] now supplies directly via a bigger
+  /// [LayrzDialogConfig] (dialog branch) and `scrollable: false` (sheet
+  /// branch) — see that method's own doc for why the previous
+  /// `ConstrainedBox(maxHeight: 300)` + `SingleChildScrollView` pairing is
+  /// gone.
+  ///
+  /// **Search moved into the header row itself (title | dense search | X),**
+  /// via [LayrzPickerDialogHeader.middleSlot] — see that parameter's own doc.
+  /// The search field is always visible while the list scrolls underneath it,
+  /// rather than scrolling away with the list the way a search row placed
+  /// above the list inside the same scrollable would.
   @override
   Widget build(BuildContext context) {
     final l10n = LayrzUiL10n.of(context);
@@ -382,30 +418,21 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
         ),
       );
     } else {
-      // No height cap here -- see `LayrzSelectInputSurface`'s identical
-      // class-level doc for why the 300px maximum is the caller's concern,
-      // and why the `ListView` still needs a definite `SizedBox` height and
-      // `NeverScrollableScrollPhysics` regardless of that cap living
-      // elsewhere.
-      listOrEmptyState = SizedBox(
-        height: _filteredItems.length * widget.itemExtent,
-        child: ListView.builder(
-          padding: EdgeInsets.zero,
-          physics: const NeverScrollableScrollPhysics(),
-          itemExtent: widget.itemExtent,
-          itemCount: _filteredItems.length,
-          itemBuilder: (context, index) {
-            final item = _filteredItems[index];
-            final isSelected = item.value != null && _draft.contains(item.value as T);
-            return _MultiSelectItemRow<T>(
-              key: ValueKey(item.value),
-              item: item,
-              isHighlighted: _highlightedIndex == index,
-              isSelected: isSelected,
-              onTap: item.value == null ? null : () => _toggle(item.value as T),
-            );
-          },
-        ),
+      listOrEmptyState = ListView.builder(
+        padding: EdgeInsets.zero,
+        itemExtent: widget.itemExtent,
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          final item = _filteredItems[index];
+          final isSelected = item.value != null && _draft.contains(item.value as T);
+          return _MultiSelectItemRow<T>(
+            key: ValueKey(item.value),
+            item: item,
+            isHighlighted: _highlightedIndex == index,
+            isSelected: isSelected,
+            onTap: item.value == null ? null : () => _toggle(item.value as T),
+          );
+        },
       );
     }
 
@@ -414,16 +441,17 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
       skipTraversal: true,
       onKeyEvent: _handleKeyEvent,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.enableSearch) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-              child: _buildSearchField(context),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+            child: LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+              middleSlot: widget.enableSearch ? _buildSearchField(context) : null,
             ),
-            Container(height: 1, color: tokens.colors.divider),
-          ],
-          listOrEmptyState,
+          ),
+          Container(height: 1, color: tokens.colors.divider),
+          Expanded(child: listOrEmptyState),
         ],
       ),
     );
@@ -432,10 +460,18 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
 
 /// A single item row in the multi-select surface.
 ///
-/// Displays the item's [LayrzSelectItem.child] alongside its own
-/// draft-selected/highlight state — mirrors `_SelectItemRow` from
-/// `select_input_surface.dart`, except [isSelected] here reflects the
-/// surface's own [Set]-backed draft rather than a single committed value.
+/// Displays the item's [LayrzSelectItem.child] alongside a real
+/// [LayrzCheckboxInput] reflecting its own draft-selected/highlight state —
+/// mirrors `_SelectItemRow` from `select_input_surface.dart`, except
+/// [isSelected] here reflects the surface's own [Set]-backed draft rather
+/// than a single committed value, and the selection indicator is an actual
+/// checkbox control (maintainer review), not a check/blank icon pair.
+///
+/// **Both the checkbox and the row tap toggle selection.** [onTap] already
+/// fires on any tap within the row (see [build]'s [LayrzTappable]); the
+/// checkbox's own `onChanged` is wired to the same callback rather than a
+/// second, independent toggle path, so tapping either the row or the
+/// checkbox itself always agrees on the resulting state.
 class _MultiSelectItemRow<T> extends StatelessWidget {
   /// The item this row renders.
   final LayrzSelectItem<T> item;
@@ -492,10 +528,19 @@ class _MultiSelectItemRow<T> extends StatelessWidget {
               ),
               Padding(
                 padding: EdgeInsets.only(left: tokens.spacing.sp2),
-                child: Icon(
-                  isSelected ? MdiIcons.checkboxMarkedOutline : MdiIcons.checkboxBlankOutline,
-                  size: 20,
-                  color: isSelected ? tokens.colors.primary : tokens.colors.fg3,
+                // `IgnorePointer`: the row's own `LayrzTappable.onTap` above
+                // already toggles selection for a tap anywhere in the row,
+                // checkbox included -- a second, independent tap target here
+                // would fight that gesture rather than compose with it (see
+                // this class's own doc). The checkbox's `onChanged` is not
+                // wired at all for the same reason; its `value` is purely a
+                // reflection of [isSelected], never itself a trigger.
+                child: IgnorePointer(
+                  child: LayrzCheckboxInput(
+                    value: isSelected,
+                    onChanged: (_) {},
+                    hideDetails: true,
+                  ),
                 ),
               ),
             ],

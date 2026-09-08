@@ -1,10 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../models/month.dart';
 import '../models/month_range.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/month_grid.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
@@ -13,10 +15,10 @@ import '../shared/range_policy.dart';
 /// plus, on the mobile bottom-sheet path, a Cancel/Clear/Save footer.
 ///
 /// **Container**: as of DESIGN-98, [LayrzMonthRangeInput] hosts this surface
-/// in [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below `isCompact`. That
+/// via a dialog (through [LayrzResponsiveModal.show]) on desktop, [LayrzBottomSheet] below `isCompact`. That
 /// container wiring lives in `month_range_input.dart`, not this file. On
 /// desktop, Cancel/Clear/Save are built by [LayrzMonthRangeInput] and passed
-/// to [LayrzEndDrawer.show]'s `actions` parameter — see
+/// to [LayrzResponsiveModal.show]'s `actions` parameter — see
 /// [LayrzMonthRangeSurfaceState]'s class doc. Order and styling of the
 /// footer follow `LayrzPickerDrawerFooter.build`'s own doc (DESIGN-46).
 ///
@@ -74,6 +76,11 @@ class LayrzMonthRangeSurface extends StatefulWidget {
   /// old layrz_theme behaviour.
   final Set<LayrzMonth> disabledMonths;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzMonthRangeInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the sorted selected months when the user presses Save in
   /// arbitrary mode.
   final ValueChanged<List<LayrzMonth>> onArbitrarySave;
@@ -97,8 +104,9 @@ class LayrzMonthRangeSurface extends StatefulWidget {
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
   /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
-  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
-  /// identical doc for the full rationale.
+  /// surface via [LayrzResponsiveModal.show]'s `actions` slot — see
+  /// [LayrzDateRangeSurface.showInlineFooter]'s identical doc for the full
+  /// rationale.
   final bool showInlineFooter;
 
   /// Creates a new [LayrzMonthRangeSurface].
@@ -110,6 +118,7 @@ class LayrzMonthRangeSurface extends StatefulWidget {
     this.minimum,
     this.maximum,
     this.disabledMonths = const {},
+    this.labelText,
     required this.onArbitrarySave,
     required this.onRangeSave,
     required this.onCancel,
@@ -253,6 +262,10 @@ class LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           LayrzPickersMonthGrid(
             displayedYear: _displayedYear,
             onYearChanged: _handleYearChanged,

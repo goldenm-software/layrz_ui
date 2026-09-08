@@ -8,76 +8,58 @@ import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 import '../../helpers/pump_themed_app.dart';
 
-/// This file has no corresponding `time_fields_keyboard_handler.dart` --
-/// see `grid_keyboard_handler.dart`'s sibling files for the grids' own
-/// handler, and the implementation plan's U10 write-up for why the time
-/// fields have none. `LayrzNumberInput`'s own ancestor `Focus.onKeyEvent`
-/// (`lib/src/inputs/src/number/number_input.dart`, `_handleKeyEvent`)
-/// already binds ArrowUp/ArrowDown to step the value and leaves ArrowLeft/
-/// ArrowRight for caret movement, positioned strictly closer to the focused
-/// `EditableText` leaf than anything a wrapper placed outside
-/// [LayrzPickersTimeFieldsPanel] could intercept -- confirmed against the
-/// pinned Flutter 3.47.2 SDK's key-event bubbling order (`FocusManager`
-/// walks from the primary-focused node outward, stopping at the first
-/// `handled`), so no override is reachable from outside `lib/src/inputs/`,
-/// which is frozen per CLAUDE.md rule #4 regardless.
-///
-/// What was an architectural accident for the input is exactly the
-/// behaviour the maintainer ruled for these fields: Up/Down steps the
-/// value within its clamp bounds, Left/Right keep caret movement, Tab moves
-/// between fields. This file turns that accident into a guaranteed
-/// contract -- if a future change to `LayrzNumberInput` ever drops this
-/// behaviour, these tests fail loudly rather than silently regressing a
-/// WCAG 2.1.1 Keyboard commitment.
-///
 /// Every real caller hosts this panel inside a bounded-width ancestor -- see
 /// `time_fields_panel_test.dart`'s identical `_bounded` helper doc for why
 /// `pumpThemed` alone is insufficient.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 
 void main() {
-  group('LayrzPickersTimeFieldsPanel — arrow keys step values, never caret', () {
-    guardedTestWidgets('ArrowUp on the hour field increments its value', (tester) async {
+  group('LayrzPickersTimeFieldsPanel — arrow keys move the caret, never step the value', () {
+    // Each digit group is a bare EditableText (`_DigitField`) with only a
+    // digits-only + length-limiting formatter -- unlike the retired
+    // LayrzNumberInput-hosted field, it wires no Focus.onKeyEvent of its own,
+    // so ArrowUp/ArrowDown fall through to EditableText's own default
+    // handling (caret/selection), never a value step. This is a deliberate
+    // behavioural change from the old field-row panel, not an oversight --
+    // see the class doc's "Tab order" section: only Tab/Shift+Tab traversal
+    // and typed-digit editing are this panel's contract.
+    guardedTestWidgets('ArrowUp on the hour field does not change its value', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      LayrzTimeOfDay? changed;
+      var changeCount = 0;
       await pumpThemed(
         tester,
         _bounded(
           LayrzPickersTimeFieldsPanel(
             value: const LayrzTimeOfDay(hour: 9, minute: 30),
-            onChanged: (v) => changed = v,
+            onChanged: (_) => changeCount++,
           ),
         ),
       );
 
-      // Field order is hour, minute, second (see the panel's own "Tab
-      // order" doc) -- the hour field is the first EditableText.
       await tester.tap(find.byType(EditableText).first);
       await tester.pump();
 
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pump();
 
-      expect(changed, isNotNull);
-      expect(changed!.hour, 10);
-      expect(changed!.minute, 30);
+      expect(changeCount, 0);
     });
 
-    guardedTestWidgets('ArrowDown on the hour field decrements its value', (tester) async {
+    guardedTestWidgets('ArrowDown on the hour field does not change its value', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      LayrzTimeOfDay? changed;
+      var changeCount = 0;
       await pumpThemed(
         tester,
         _bounded(
           LayrzPickersTimeFieldsPanel(
             value: const LayrzTimeOfDay(hour: 9, minute: 30),
-            onChanged: (v) => changed = v,
+            onChanged: (_) => changeCount++,
           ),
         ),
       );
@@ -88,22 +70,21 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
 
-      expect(changed, isNotNull);
-      expect(changed!.hour, 8);
+      expect(changeCount, 0);
     });
 
-    guardedTestWidgets('ArrowUp on the minute field increments only the minute', (tester) async {
+    guardedTestWidgets('ArrowUp on the minute field does not change any value either', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      LayrzTimeOfDay? changed;
+      var changeCount = 0;
       await pumpThemed(
         tester,
         _bounded(
           LayrzPickersTimeFieldsPanel(
             value: const LayrzTimeOfDay(hour: 9, minute: 30),
-            onChanged: (v) => changed = v,
+            onChanged: (_) => changeCount++,
           ),
         ),
       );
@@ -115,41 +96,7 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
       await tester.pump();
 
-      expect(changed, isNotNull);
-      expect(changed!.hour, 9);
-      expect(changed!.minute, 31);
-    });
-
-    guardedTestWidgets('ArrowUp at the hour field maximum (23) is refused, never wraps or overflows', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      LayrzTimeOfDay? changed;
-      await pumpThemed(
-        tester,
-        _bounded(
-          LayrzPickersTimeFieldsPanel(
-            value: const LayrzTimeOfDay(hour: 23, minute: 0),
-            onChanged: (v) => changed = v,
-          ),
-        ),
-      );
-
-      await tester.tap(find.byType(EditableText).first);
-      await tester.pump();
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
-      await tester.pump();
-
-      // The field's existing bounds (0-23 in 24h form, the default) refuse
-      // the step at the maximum -- LayrzNumberInput's own
-      // `_isIncrementDisabled` guard means `onChanged` never fires here at
-      // all, rather than firing with a wrapped-to-0 or overflowed-to-24
-      // value. Either "clamp and still report 23" or "refuse and report
-      // nothing" would satisfy "never silently change meaning"; asserting
-      // `changed` stays null matches this codebase's actual behaviour.
-      expect(changed, isNull);
+      expect(changeCount, 0);
     });
   });
 
@@ -235,36 +182,68 @@ void main() {
       expect(hourFocused.hasFocus, isFalse);
       expect(minuteFocused.hasFocus, isTrue);
     });
-  });
 
-  group('LayrzPickersTimeFieldsPanel — Enter never commits/closes anything', () {
-    guardedTestWidgets('Enter on a time field does not change the value or throw', (tester) async {
+    guardedTestWidgets('Tab from the minute field moves focus to the second field when showSeconds is true', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      var changeCount = 0;
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzPickersTimeFieldsPanel(
+            value: const LayrzTimeOfDay(hour: 9, minute: 30, second: 15),
+            showSeconds: true,
+            onChanged: (_) {},
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(EditableText).at(1));
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+
+      final secondFocused = tester.state<EditableTextState>(find.byType(EditableText).at(2)).widget.focusNode;
+      expect(secondFocused.hasFocus, isTrue);
+    });
+  });
+
+  group('LayrzPickersTimeFieldsPanel — commit key bindings', () {
+    guardedTestWidgets('Enter on a time field commits (clamps) the typed value but never throws', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      LayrzTimeOfDay? changed;
       await pumpThemed(
         tester,
         _bounded(
           LayrzPickersTimeFieldsPanel(
             value: const LayrzTimeOfDay(hour: 9, minute: 30),
-            onChanged: (_) => changeCount++,
+            onChanged: (v) => changed = v,
           ),
         ),
       );
 
       await tester.tap(find.byType(EditableText).first);
       await tester.pump();
-
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.enterText(find.byType(EditableText).first, '99');
       await tester.pump();
 
-      // This panel has no notion of "close" at all (see its own class doc's
-      // trap-4 discipline) -- Enter reaching a time field must not silently
-      // invoke onChanged either, since that would falsely look like an
-      // edit the user never made.
-      expect(changeCount, 0);
+      // Enter maps to TextInputAction.done -> onSubmitted -> _commit(), which
+      // clamps and reports -- this panel has no notion of "close" at all
+      // (see its own class doc's trap-4 discipline), so this must clamp the
+      // typed value without ever throwing or dismissing anything.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(changed, isNotNull);
+      expect(changed!.hour, 23);
+      expect(find.byType(LayrzPickersTimeFieldsPanel), findsOneWidget);
     });
   });
 }

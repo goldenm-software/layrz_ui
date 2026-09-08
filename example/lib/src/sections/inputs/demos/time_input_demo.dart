@@ -23,6 +23,7 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
 
   /// Whether the demo field's seconds component is shown.
   bool _showSeconds = false;
+  bool _isAmPm = false;
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +43,20 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),
-            LayrzButton(
-              labelText: _showSeconds ? 'showSeconds: true' : 'showSeconds: false (default)',
-              style: _showSeconds ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
-              onTap: () => setState(() => _showSeconds = !_showSeconds),
+            Row(
+              children: [
+                LayrzButton(
+                  labelText: _showSeconds ? 'showSeconds: true' : 'showSeconds: false (default)',
+                  style: _showSeconds ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
+                  onTap: () => setState(() => _showSeconds = !_showSeconds),
+                ),
+                SizedBox(width: tokens.spacing.sp2),
+                LayrzButton(
+                  labelText: _isAmPm ? 'AM/PM' : '24-hour',
+                  style: _isAmPm ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
+                  onTap: () => setState(() => _isAmPm = !_isAmPm),
+                ),
+              ],
             ),
             SizedBox(height: tokens.spacing.sp3),
             LayrzTimeInput(
@@ -54,6 +65,7 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
               labelText: 'Time',
               hintText: 'Pick a time',
               showSeconds: _showSeconds,
+              use24HourFormat: !_isAmPm,
             ),
 
             SizedBox(height: tokens.spacing.sp5),
@@ -64,6 +76,7 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
               onChanged: (_) {},
               labelText: 'Locked time',
               disabled: true,
+              use24HourFormat: !_isAmPm,
             ),
 
             SizedBox(height: tokens.spacing.sp5),
@@ -75,6 +88,7 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
               labelText: 'Time (required)',
               hintText: 'Pick a time',
               errors: const ['This field is required.'],
+              use24HourFormat: !_isAmPm,
             ),
           ],
         ),

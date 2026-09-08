@@ -9,11 +9,11 @@ import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
 
 /// Pumps [surface] inside a fixed-height [SizedBox], matching how
-/// [LayrzEmojiSurface] is actually hosted in production: both
-/// `LayrzBottomSheet.show` and `LayrzEndDrawer.show` (see `emoji_input.dart`'s
-/// open methods) place the surface's builder content inside their own
-/// bounded `Expanded` region — never in `pumpThemed`'s unbounded `Center`
-/// alone. The surface's own grid section now relies on that bound (it
+/// [LayrzEmojiSurface] is actually hosted in production: both branches of
+/// `LayrzResponsiveModal.show` (see `emoji_input.dart`'s `_openPicker`)
+/// place the surface's builder content inside their own bounded region —
+/// never in `pumpThemed`'s unbounded `Center` alone. The surface's own grid
+/// section now relies on that bound (it
 /// wraps `LayrzGlyphGrid` in `Expanded` with `shrinkWrap: false`, so it can
 /// fill and lazily scroll through the full emoji list -- see
 /// `emoji_surface.dart`'s class doc), so every standalone test needs this
@@ -23,20 +23,22 @@ Future<void> _pumpBoundedSurface(WidgetTester tester, LayrzEmojiSurface surface)
   return pumpThemed(tester, SizedBox(height: 600.0, child: surface));
 }
 
-/// Scrolls the group-filter chip row (a horizontal `ListView.separated`)
-/// left by a fixed, generous offset so the trailing chips ("Flags",
-/// "Component") are laid out and reachable by [find.text].
+/// Scrolls the group-filter tab strip (a [LayrzTabView] in its default
+/// `isScrollable: true` mode, i.e. a horizontal `SingleChildScrollView`) left
+/// by a fixed, generous offset so the trailing tabs ("Flags", "Component")
+/// are laid out and reachable by [find.text].
 ///
-/// Not [WidgetController.ensureVisible]: that helper requires the target
-/// [Element] to already exist in the tree, but the chip row's combined
-/// content width (~2050px, measured) exceeds a 1600px-wide test viewport --
-/// the last few chips are genuinely never built until a real scroll gesture
-/// moves them into the `ListView`'s viewport + cache extent. A manual
-/// [WidgetController.drag] reproduces that real scroll; [ensureVisible]
-/// cannot bootstrap it because it can't find an [Element] that isn't built
-/// yet.
+/// CHANGED (Fix 4, LayrzTabView migration): the group-filter row used to be
+/// a file-local `ListView.separated` chip row; it is now built from
+/// `LayrzTabView`, whose scrollable-strip layout uses a
+/// `SingleChildScrollView` (see `tab_view.dart`'s `_buildScrollableStrip`),
+/// not a `ListView` -- unlike a lazy `ListView`, every tab pill is always
+/// built regardless of scroll position (the strip's own `Row` lays out all
+/// children unconditionally), so a plain [WidgetController.drag] on the
+/// `SingleChildScrollView` is sufficient without needing to bootstrap
+/// not-yet-built elements the way the old `ListView` required.
 Future<void> _scrollGroupFilterRow(WidgetTester tester) async {
-  await tester.drag(find.byType(ListView), const Offset(-1000, 0));
+  await tester.drag(find.byType(SingleChildScrollView), const Offset(-1000, 0));
   await tester.pumpAndSettle();
 }
 

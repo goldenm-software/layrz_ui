@@ -2,6 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_dialog_header.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import '../number/decimal_separator.dart';
 import 'duration_unit.dart';
@@ -109,16 +112,20 @@ class LayrzDurationPickerPanel extends StatefulWidget {
   /// behavior existing callers rely on.
   final ValueChanged<Duration?>? onReset;
 
+  /// The title shown in this panel's own [LayrzPickerDialogHeader], normally
+  /// [LayrzDurationInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Whether this panel renders its own Reset button inline, as the last
   /// child of its fields column.
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
-  /// exactly as it behaved before DESIGN-98 -- that container is out of scope
-  /// for this change, so this panel still renders its own Reset button when
-  /// hosted there. Pass `false` when hosting this panel in [LayrzEndDrawer],
-  /// whose `actions` slot pins Reset to the drawer's own bottom edge instead
-  /// -- [LayrzDurationInput] reads this panel's state through a [GlobalKey]
-  /// in that case (see [LayrzDurationPickerPanelState.reset]), mirroring
+  /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
+  /// panel via [LayrzResponsiveModal.show]'s `actions` slot, which pins Reset
+  /// to the hosting surface's own bottom edge instead -- [LayrzDurationInput]
+  /// reads this panel's state through a [GlobalKey] in that case (see
+  /// [LayrzDurationPickerPanelState.reset]), mirroring
   /// `LayrzDateRangeSurface.showInlineFooter`'s identical pattern.
   final bool showInlineFooter;
 
@@ -129,6 +136,7 @@ class LayrzDurationPickerPanel extends StatefulWidget {
     required this.visibleUnits,
     required this.onChanged,
     this.onReset,
+    this.labelText,
     this.showInlineFooter = true,
   });
 
@@ -138,9 +146,9 @@ class LayrzDurationPickerPanel extends StatefulWidget {
 
 /// State for [LayrzDurationPickerPanel], exposed publicly so a caller hosting
 /// this panel with [LayrzDurationPickerPanel.showInlineFooter] `false` (i.e.
-/// in [LayrzEndDrawer]) can trigger [reset] externally via a [GlobalKey] --
-/// mirroring [LayrzDateRangeSurfaceState]'s identical pattern for the same
-/// reason.
+/// via [LayrzResponsiveModal.show]'s `actions` slot) can trigger [reset]
+/// externally via a [GlobalKey] -- mirroring [LayrzDateRangeSurfaceState]'s
+/// identical pattern for the same reason.
 class LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
   late int _day;
   late int _hour;
@@ -184,8 +192,9 @@ class LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
   /// Public so a caller hosting this panel with
   /// [LayrzDurationPickerPanel.showInlineFooter] `false` can trigger it
   /// externally -- via a [GlobalKey] on this state -- from a Reset action
-  /// rendered outside this panel's own widget tree (e.g. [LayrzEndDrawer]'s
-  /// `actions` slot). The panel's own inline Reset button (rendered when
+  /// rendered outside this panel's own widget tree (e.g.
+  /// [LayrzResponsiveModal.show]'s `actions` slot). The panel's own inline
+  /// Reset button (rendered when
   /// [LayrzDurationPickerPanel.showInlineFooter] is `true`) calls this same
   /// method.
   void reset() {
@@ -404,72 +413,91 @@ class LayrzDurationPickerPanelState extends State<LayrzDurationPickerPanel> {
       // system's own "standard density" input padding (input_chrome.dart)
       // rather than the roomier sp4 -- unchanged from before this pass.
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          // The panel's OWN measured width, not the viewport
-          // (MediaQuery.sizeOf) -- the panel now spans its anchor field's
-          // full width (matchAnchor), which has no fixed relationship to the
-          // viewport once it is no longer capped to a narrow contentSized
-          // range. See the class doc comment for why this replaced the old
-          // viewport-breakpoint-driven grid.
-          final availableWidth = constraints.maxWidth;
-
-          // sp1 (6px): reclaims a little more width for the field content
-          // than the row's old default sp2 (10px) gap, while still leaving a
-          // visible gap between fields rather than letting their borders
-          // touch -- unchanged from before this pass.
-          final spacing = tokens.spacing.sp1;
-
-          // How many fields fit on one row without any of them dropping
-          // below _kFieldMinWidth: solve n * _kFieldMinWidth + (n-1) *
-          // spacing <= availableWidth for the largest integer n, floored at
-          // 1 so a single field is never asked to be narrower than the
-          // panel itself allows (a panel narrower than _kFieldMinWidth still
-          // renders one field per row rather than throwing). The upper bound
-          // is never less than 1 either -- an empty visibleUnits set (no
-          // fields at all, just the reset button) would otherwise make
-          // `clamp(1, 0)` throw before _buildFields even runs.
-          final fieldsPerRow = ((availableWidth + spacing) / (_kFieldMinWidth + spacing)).floor().clamp(
-            1,
-            widget.visibleUnits.length.clamp(1, 4),
-          );
-
-          // The width each field in a full row actually receives once
-          // fieldsPerRow fields evenly share availableWidth. Used only to
-          // pick the long-form vs short-form label -- see _kNarrowFieldWidth.
-          final perFieldWidth = (availableWidth - spacing * (fieldsPerRow - 1)) / fieldsPerRow;
-          final isNarrow = perFieldWidth < _kNarrowFieldWidth;
-
-          final fields = _buildFields(l10n, isNarrow: isNarrow);
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _wrapFields(
-                fields: fields,
-                availableWidth: availableWidth,
-                fieldsPerRow: fieldsPerRow,
-                spacing: spacing,
-              ),
-              // Omitted when `showInlineFooter` is false: the caller (desktop
-              // LayrzEndDrawer hosting) renders Reset in the drawer's own
-              // `actions` slot instead, driving this panel's `reset()`
-              // through a GlobalKey -- see the class doc on `showInlineFooter`.
-              if (widget.showInlineFooter) ...[
-                SizedBox(height: tokens.spacing.sp4),
-                SizedBox(
-                  width: double.infinity,
-                  child: LayrzButton(
-                    labelText: l10n.durationReset,
-                    onTap: reset,
-                    type: LayrzButtonType.warning,
-                  ),
-                ),
-              ],
-            ],
-          );
-        },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
+          _buildFieldsAndFooter(context, l10n, tokens),
+        ],
       ),
+    );
+  }
+
+  /// Builds the width-driven field grid plus the optional inline Reset
+  /// footer — the panel's original `build` body, factored out so [build]
+  /// above can compose [LayrzPickerDialogHeader] above it without nesting
+  /// the `LayoutBuilder` inside an extra widget layer.
+  Widget _buildFieldsAndFooter(BuildContext context, LayrzUiL10n l10n, LayrzTokens tokens) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // The panel's OWN measured width, not the viewport
+        // (MediaQuery.sizeOf) -- the panel now spans its anchor field's
+        // full width (matchAnchor), which has no fixed relationship to the
+        // viewport once it is no longer capped to a narrow contentSized
+        // range. See the class doc comment for why this replaced the old
+        // viewport-breakpoint-driven grid.
+        final availableWidth = constraints.maxWidth;
+
+        // sp1 (6px): reclaims a little more width for the field content
+        // than the row's old default sp2 (10px) gap, while still leaving a
+        // visible gap between fields rather than letting their borders
+        // touch -- unchanged from before this pass.
+        final spacing = tokens.spacing.sp1;
+
+        // How many fields fit on one row without any of them dropping
+        // below _kFieldMinWidth: solve n * _kFieldMinWidth + (n-1) *
+        // spacing <= availableWidth for the largest integer n, floored at
+        // 1 so a single field is never asked to be narrower than the
+        // panel itself allows (a panel narrower than _kFieldMinWidth still
+        // renders one field per row rather than throwing). The upper bound
+        // is never less than 1 either -- an empty visibleUnits set (no
+        // fields at all, just the reset button) would otherwise make
+        // `clamp(1, 0)` throw before _buildFields even runs.
+        final fieldsPerRow = ((availableWidth + spacing) / (_kFieldMinWidth + spacing)).floor().clamp(
+          1,
+          widget.visibleUnits.length.clamp(1, 4),
+        );
+
+        // The width each field in a full row actually receives once
+        // fieldsPerRow fields evenly share availableWidth. Used only to
+        // pick the long-form vs short-form label -- see _kNarrowFieldWidth.
+        final perFieldWidth = (availableWidth - spacing * (fieldsPerRow - 1)) / fieldsPerRow;
+        final isNarrow = perFieldWidth < _kNarrowFieldWidth;
+
+        final fields = _buildFields(l10n, isNarrow: isNarrow);
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _wrapFields(
+              fields: fields,
+              availableWidth: availableWidth,
+              fieldsPerRow: fieldsPerRow,
+              spacing: spacing,
+            ),
+            // Omitted when `showInlineFooter` is false: the caller (desktop
+            // dialog hosting via LayrzResponsiveModal.show) renders Reset
+            // in the modal's own `actions` slot instead, driving this
+            // panel's `reset()` through a GlobalKey -- see the class doc on
+            // `showInlineFooter`.
+            if (widget.showInlineFooter) ...[
+              SizedBox(height: tokens.spacing.sp4),
+              SizedBox(
+                width: double.infinity,
+                child: LayrzButton(
+                  labelText: l10n.durationReset,
+                  onTap: reset,
+                  type: LayrzButtonType.warning,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }

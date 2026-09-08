@@ -8,16 +8,18 @@ import 'package:layrz_ui/src/inputs/src/shared/editable_field.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_slot.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
-import 'package:layrz_ui/src/tappable/tappable.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tabs/tabs.dart';
 
 import '../shared/glyph_grid.dart';
 import '../shared/glyph_grid_keyboard.dart';
+import '../shared/picker_dialog_header.dart';
 
 /// The number of grid columns rendered per row of emoji cells.
 ///
 /// A fixed column count (rather than one derived from the surface's own
-/// width) keeps cell size predictable across the [LayrzBottomSheet] and
-/// [LayrzEndDrawer] hosts, both of which already constrain this surface to a
+/// width) keeps cell size predictable across the [LayrzBottomSheet] and the
+/// dialog branch of `LayrzResponsiveModal.show`, both of which already constrain this surface to a
 /// known width band — mirroring how `LayrzPickersDayGrid` fixes its own
 /// 7-column count rather than deriving it.
 const int _kEmojiGridColumns = 8;
@@ -86,7 +88,7 @@ const String _kAllEmojiLabel = 'All emoji';
 /// **Commit-on-tap.** Unlike the Save-carrying date/month/time surfaces in
 /// this module, tapping an emoji cell both commits the pick (via
 /// [onEmojiSelected]) and is expected to close the hosting
-/// [LayrzBottomSheet]/[LayrzEndDrawer] immediately — this surface renders no
+/// [LayrzBottomSheet] or dialog surface immediately — this surface renders no
 /// Cancel/Save footer of its own and takes no [onDraftChanged] callback,
 /// because there is no in-progress draft to track: a tap is the entire
 /// interaction, mirroring how `layrz_theme`'s `ThemedEmojiPicker` and the
@@ -105,13 +107,18 @@ const String _kAllEmojiLabel = 'All emoji';
 /// `emojis` package, with no per-tone expansion. Out of scope for this batch
 /// (see the implementation plan's "skin-tone out" ruling).
 class LayrzEmojiSurface extends StatefulWidget {
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzEmojiInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the tapped emoji's raw character when the user picks one.
   /// The caller is expected to close the hosting surface immediately after
   /// this fires (see [LayrzEmojiInput]'s own open methods).
   final ValueChanged<String> onEmojiSelected;
 
   /// Creates a new [LayrzEmojiSurface].
-  const LayrzEmojiSurface({super.key, required this.onEmojiSelected});
+  const LayrzEmojiSurface({super.key, this.labelText, required this.onEmojiSelected});
 
   @override
   State<LayrzEmojiSurface> createState() => LayrzEmojiSurfaceState();
@@ -225,44 +232,17 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
     _cachedGroup = _selectedGroup;
   }
 
-  /// Applies a tapped group filter, re-running the search against the newly
-  /// selected group's own emoji list.
-  void _selectGroup(EmojiGroup? group) {
-    setState(() => _selectedGroup = group);
-  }
-
-  /// Builds the horizontally scrollable group-filter row.
+  /// Applies a newly selected [LayrzTabView] tab index, re-running the
+  /// search against the newly selected group's own emoji list.
   ///
-  /// **Not [LayrzPickerTabSwitcher] (U2's shared tab primitive).** That
-  /// widget renders every tab as an `Expanded` slice of one fixed-width
-  /// `Row`, which reads fine for two-to-three tabs (the color picker's
-  /// Palette/Wheel pair) but squeezes unreadably narrow across the eleven
-  /// entries here (ten [EmojiGroup] values plus "All emoji") — especially on
-  /// the [LayrzBottomSheet] mobile host's narrower width. A horizontally
-  /// scrollable chip row, sized to each label's own content, is this
-  /// surface's own file-local widget instead; it is not shared with any
-  /// other picker, so it does not belong under `shared/`.
-  Widget _buildGroupFilterRow(BuildContext context, LayrzUiL10n l10n) {
-    final tokens = context.tokens;
-    final filters = _buildGroupFilters(l10n);
-
-    return SizedBox(
-      height: 36.0,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: filters.length,
-        separatorBuilder: (context, index) => SizedBox(width: tokens.spacing.sp1),
-        itemBuilder: (context, index) {
-          final filter = filters[index];
-          final isSelected = filter.group == _selectedGroup;
-          return _EmojiGroupChip(
-            label: filter.label,
-            isSelected: isSelected,
-            onTap: isSelected ? null : () => _selectGroup(filter.group),
-          );
-        },
-      ),
-    );
+  /// [filters] is the same list [build] derives via [_buildGroupFilters] for
+  /// this build -- passed in rather than recomputed here so the index this
+  /// callback receives (from [LayrzTabView.onTabChanged]) is resolved
+  /// against the exact list that produced the tapped tab, not a
+  /// freshly-rebuilt one that could disagree if `l10n` ever changed between
+  /// builds.
+  void _handleGroupTabChanged(int index, List<_EmojiGroupFilter> filters) {
+    setState(() => _selectedGroup = filters[index].group);
   }
 
   /// Builds the borderless search field row, mirroring
@@ -333,24 +313,75 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
     );
   }
 
+  /// Builds the [LayrzGlyphGrid] (or the "no results" text) for the
+  /// currently active group, shared by every [LayrzTab.child] below —
+  /// [_filteredEmojiCache] is already filtered against both
+  /// [_selectedGroup] and the search text, so each tab's content is simply
+  /// this shared build wrapped in an [Expanded] to claim the tab view's own
+  /// remaining height (Fix 4).
+  Widget _buildGroupGridOrEmpty(BuildContext context, LayrzUiL10n l10n) {
+    final tokens = context.tokens;
+    final filteredEmoji = _filteredEmojiCache;
+
+    if (filteredEmoji.isEmpty) {
+      return Padding(
+        padding: tokens.spacing.pd3,
+        child: Text(l10n.emojiPickerEmpty, style: tokens.typography.label),
+      );
+    }
+
+    return Expanded(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
+        child: LayrzGlyphGrid<Emoji>(
+          items: filteredEmoji,
+          columns: _kEmojiGridColumns,
+          cellExtent: _kEmojiCellExtent,
+          itemBuilder: _buildEmojiCell,
+          // This surface is always hosted inside a bounded
+          // `LayrzBottomSheet`/dialog body (the `Expanded`
+          // above claims that bound), and the emoji list can run
+          // into the thousands — so this grid needs the lazy,
+          // parent-filling viewport mode rather than the shared
+          // widget's shrink-to-content default. See
+          // `LayrzGlyphGrid.shrinkWrap`'s doc for why the default
+          // `true` would both truncate this grid's height and make
+          // it lay out every cell eagerly on scroll.
+          shrinkWrap: false,
+          onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
+          keyboardHandler: buildGlyphGridKeyboardHandler(
+            columns: _kEmojiGridColumns,
+            itemCount: filteredEmoji.length,
+            isDisabled: (_) => false,
+            onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
+          ),
+          semanticLabelBuilder: (emoji, index) => emoji.shortName,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final tokens = context.tokens;
     _recomputeFilteredEmoji();
-    final filteredEmoji = _filteredEmojiCache;
+
+    final filters = _buildGroupFilters(l10n);
+    final rawSelectedIndex = filters.indexWhere((filter) => filter.group == _selectedGroup);
+    final selectedIndex = rawSelectedIndex < 0 ? 0 : rawSelectedIndex;
 
     // Whole-surface padding (user testing feedback: "add padding man" — the
     // surface read as cramped with its sections flush against the hosting
-    // `LayrzBottomSheet`/`LayrzEndDrawer` edges). `sp3` mirrors
+    // `LayrzBottomSheet`/dialog edges). `sp3` mirrors
     // `date_surface.dart`'s own outer-edge inset for the sibling pickers'
     // surfaces, one level up from the `sp2` inter-section gaps below so the
     // outer edge reads more generous than the internal rhythm.
     //
     // The outer `Column` is no longer `mainAxisSize: MainAxisSize.min` —
-    // this surface is always hosted inside a `LayrzBottomSheet`/
-    // `LayrzEndDrawer` that gives it a bounded height, and the grid section
-    // below needs `Expanded` to claim all of that height rather than the
+    // this surface is always hosted inside a `LayrzBottomSheet`/dialog
+    // surface that gives it a bounded height, and the tab view's grid
+    // section needs `Expanded` to claim all of that height rather than the
     // fixed 320.0 px box it used to render into (which is why the grid
     // used to stop after ~7 rows with a large blank area beneath it — the
     // box was hardcoded, not filling the surface).
@@ -359,123 +390,35 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildGroupFilterRow(context, l10n),
-          SizedBox(height: tokens.spacing.sp3),
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           _buildSearchField(context, l10n),
           SizedBox(height: tokens.spacing.sp3),
-          if (filteredEmoji.isEmpty)
-            Padding(
-              padding: tokens.spacing.pd3,
-              child: Text(l10n.emojiPickerEmpty, style: tokens.typography.label),
-            )
-          else
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
-                child: LayrzGlyphGrid<Emoji>(
-                  items: filteredEmoji,
-                  columns: _kEmojiGridColumns,
-                  cellExtent: _kEmojiCellExtent,
-                  itemBuilder: _buildEmojiCell,
-                  // This surface is always hosted inside a bounded
-                  // `LayrzBottomSheet`/`LayrzEndDrawer` body (the `Expanded`
-                  // above claims that bound), and the emoji list can run
-                  // into the thousands — so this grid needs the lazy,
-                  // parent-filling viewport mode rather than the shared
-                  // widget's shrink-to-content default. See
-                  // `LayrzGlyphGrid.shrinkWrap`'s doc for why the default
-                  // `true` would both truncate this grid's height and make
-                  // it lay out every cell eagerly on scroll.
-                  shrinkWrap: false,
-                  onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
-                  keyboardHandler: buildGlyphGridKeyboardHandler(
-                    columns: _kEmojiGridColumns,
-                    itemCount: filteredEmoji.length,
-                    isDisabled: (_) => false,
-                    onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
+          // Fix 4: the category strip is now a `LayrzTabView` (one
+          // `LayrzTab` per `EmojiGroup`, plus "All emoji") instead of the
+          // file-local chip row this surface used to build directly —
+          // `isScrollable: true` (the default) keeps the strip
+          // start-aligned and sized to each label's own content rather than
+          // squeezing all eleven entries into equal `Expanded` slices (see
+          // `LayrzTabView.isScrollable`'s own doc for that distinction),
+          // preserving the readability the former chip row was written to
+          // achieve.
+          Expanded(
+            child: LayrzTabView(
+              initialIndex: selectedIndex,
+              onTabChanged: (index) => _handleGroupTabChanged(index, filters),
+              tabs: [
+                for (final filter in filters)
+                  LayrzTab(
+                    labelText: filter.label,
+                    child: _buildGroupGridOrEmpty(context, l10n),
                   ),
-                  semanticLabelBuilder: (emoji, index) => emoji.shortName,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A single chip within the emoji group-filter row — a rounded-rectangle,
-/// tappable label that visually distinguishes the currently selected group
-/// from every other entry via fill color alone (per D15: no geometry change
-/// between selected and unselected).
-///
-/// **Corner radius matches the color picker's tabs.** This chip uses the same
-/// [LayrzRadiusTokens.br2] rounded-rectangle radius as
-/// [LayrzPickerTabSwitcher]'s tab pills, not a fully-rounded/stadium shape —
-/// the two pickers' tab-shaped affordances are meant to read as one
-/// consistent system, and a pill-shaped chip next to a rounded-rectangle tab
-/// broke that consistency (user report).
-///
-/// **Restyle (user testing feedback):** the selected chip now paints the
-/// full [LayrzColorTokens.primary] fill (matching the equivalent restyle
-/// applied to the color picker's [LayrzPickerTabSwitcher] tabs, so the two
-/// pickers' tab-shaped affordances read as one consistent system), and the
-/// unselected chip paints [LayrzColorTokens.sf1] — the page-canvas/background
-/// token — as a solid fill rather than a transparent one, per the user's
-/// explicit note that a transparent idle chip produced a visible artifact
-/// during the fill-color transition (see [LayrzTappable]'s own "black blink"
-/// caveat for the mechanism: animating a literal transparent-black idle
-/// color toward an opaque, differently-hued target ramps the wrong channels
-/// mid-tween). Both colors are still resolved purely through
-/// [LayrzTappable]'s `color`/`hoverColor`/`pressedColor`, so the fill
-/// transition itself remains D15-compliant (color/opacity only, no geometry
-/// change).
-class _EmojiGroupChip extends StatelessWidget {
-  /// This chip's visible label.
-  final String label;
-
-  /// Whether this chip is the currently active group filter.
-  final bool isSelected;
-
-  /// Called on tap. `null` when this chip is already selected (nothing to
-  /// activate), which also renders it non-interactive.
-  final VoidCallback? onTap;
-
-  /// Creates a new [_EmojiGroupChip].
-  const _EmojiGroupChip({required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.tokens;
-    final borderRadius = tokens.radius.br2;
-
-    final backgroundColor = isSelected ? tokens.colors.primary.shade500 : tokens.colors.sf1;
-    final textColor = isSelected ? tokens.colors.sf1 : tokens.colors.fg2;
-
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: label,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: LayrzTappable(
-        onTap: onTap,
-        color: backgroundColor,
-        hoverColor: isSelected ? backgroundColor : tokens.colors.sf3,
-        pressedColor: isSelected ? backgroundColor : tokens.colors.sf4,
-        borderRadius: borderRadius,
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp1),
-          child: Center(
-            child: Text(
-              label,
-              style: tokens.typography.label.copyWith(
-                color: textColor,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

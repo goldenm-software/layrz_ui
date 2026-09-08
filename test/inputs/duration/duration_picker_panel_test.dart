@@ -147,25 +147,24 @@ class _DistinctShortPluralL10nDelegate extends LocalizationsDelegate<LayrzUiL10n
 }
 
 /// Pumps the real [LayrzDurationInput] at a desktop viewport and opens its
-/// desktop [LayrzEndDrawer] (DESIGN-98), optionally overriding l10n via
-/// [delegate] and seeding the fields via [value].
+/// desktop dialog (via [LayrzResponsiveModal.show], DESIGN-98), optionally
+/// overriding l10n via [delegate] and seeding the fields via [value].
 ///
 /// Deliberately routes through the real [LayrzDurationInput] rather than
 /// pumping [LayrzDurationPickerPanel] bare, to reproduce the actual
 /// constraint the picker renders under in production. **Unlike the previous
-/// `LayrzAnchoredPanel`/`matchAnchor` hosting, the drawer's width is fixed**
-/// (`LayrzEndDrawer.width`, 420px) and independent of the anchor field's own
-/// width entirely -- there is no `anchorWidth` parameter here any more,
-/// because varying the anchor's own width has no effect on the panel's
-/// available width post-DESIGN-98. See `duration_input.dart`'s class doc for
-/// the worked-out consequence: the drawer's fixed width always yields exactly
-/// one field per row, comfortably above `_kNarrowFieldWidth`, so the picker
-/// always reads the long-form labels through this real flow now -- the
-/// narrow, short-form-selecting width this group used to reach via a narrow
-/// `anchorWidth` is reproduced instead by [_pumpNarrowPanel] below, which
-/// pumps the bare panel at an explicit width the real drawer no longer
-/// produces but the panel's own layout logic must still handle correctly
-/// (e.g. a caller embedding it directly, or a future narrower drawer).
+/// `LayrzAnchoredPanel`/`matchAnchor` hosting, the dialog's width is fixed**
+/// ([LayrzDialogConfig.maxWidth], 480px default) and independent of the
+/// anchor field's own width entirely -- there is no `anchorWidth` parameter
+/// here any more, because varying the anchor's own width has no effect on
+/// the panel's available width post-DESIGN-98. See `duration_input.dart`'s
+/// class doc for the worked-out consequence: the dialog's fixed width yields
+/// two fields per row at ~213px each -- below `_kNarrowFieldWidth` -- so the
+/// real desktop flow now reads the SHORT-form labels, not the long ones. The
+/// long-form-selecting width this group used to reach via the real drawer
+/// flow is reproduced instead by [_pumpNarrowPanel] below (at a wide enough
+/// `panelWidth`), which pumps the bare panel at an explicit width instead of
+/// through the real dialog.
 Future<void> _pumpDesktopDrawer(
   WidgetTester tester, {
   LocalizationsDelegate<LayrzUiL10n>? delegate,
@@ -192,12 +191,13 @@ Future<void> _pumpDesktopDrawer(
 }
 
 /// Pumps the bare [LayrzDurationPickerPanel] constrained to [panelWidth] via
-/// a [SizedBox], for the narrow-width capacity cases the real desktop
-/// [LayrzEndDrawer] no longer produces (see [_pumpDesktopDrawer]'s own doc for
-/// why: the drawer is now a fixed 420px, always well above
-/// `_kNarrowFieldWidth`). This proves the panel's own layout logic still
-/// behaves correctly at a width the drawer does not currently exercise --
-/// the widget's contract does not depend on which host renders it.
+/// a [SizedBox], for the wide/long-form capacity cases the real desktop
+/// dialog no longer produces (see [_pumpDesktopDrawer]'s own doc for why:
+/// the dialog is now a fixed ~432px of available panel width, which solves
+/// to two fields per row, each below `_kNarrowFieldWidth`). This proves the
+/// panel's own layout logic still behaves correctly at a width the dialog
+/// does not currently exercise -- the widget's contract does not depend on
+/// which host renders it.
 Future<void> _pumpNarrowPanel(
   WidgetTester tester, {
   required double panelWidth,
@@ -537,11 +537,12 @@ void main() {
     });
 
     group('showInlineFooter (DESIGN-98)', () {
-      // LayrzDurationInput's desktop LayrzEndDrawer hosting passes
-      // showInlineFooter: false and drives reset() externally via a
-      // GlobalKey instead -- see duration_input.dart's _openDesktopDrawer.
-      // The mobile LayrzBottomSheet path is untouched: it never passes this
-      // parameter, so it keeps the default (true) and its own inline button.
+      // LayrzDurationInput's desktop dialog hosting (via
+      // LayrzResponsiveModal.show) passes showInlineFooter: false and drives
+      // reset() externally via a GlobalKey instead -- see
+      // duration_input.dart's _openPicker. The mobile LayrzBottomSheet path
+      // is untouched: it also passes this parameter now, but keeps it at
+      // `true`, matching the pre-existing default and its own inline button.
       guardedTestWidgets('showInlineFooter: false omits the panel\'s own inline reset button', (tester) async {
         tester.view.physicalSize = _wideViewport;
         tester.view.devicePixelRatio = 1.0;
@@ -847,16 +848,20 @@ void main() {
     // of "seconds" are 8 characters in at least four major European languages.
     //
     // DESIGN-98 changed which width the REAL desktop flow actually produces:
-    // `LayrzDurationInput`'s desktop branch now opens a fixed 420px
-    // `LayrzEndDrawer` rather than a `matchAnchor` panel tracking the anchor
-    // field's own width. Per `duration_input.dart`'s class doc, that fixed
-    // width always yields exactly one field per row at ~372px per field --
-    // comfortably above `_kNarrowFieldWidth` (280.0) -- so the real desktop
-    // flow now ALWAYS reads the long-form keys, never the short ones. The
-    // short-form selection itself is not dead code (a caller could still
-    // embed `LayrzDurationPickerPanel` directly at a narrower width), so the
-    // narrow-width cases below move to `_pumpNarrowPanel`, which pumps the
-    // bare panel at an explicit width instead of through the drawer.
+    // `LayrzDurationInput`'s desktop branch now opens a dialog (via
+    // [LayrzResponsiveModal.show]) with a fixed ~432px of available panel
+    // width, rather than a `matchAnchor` panel tracking the anchor field's
+    // own width. Per `duration_input.dart`'s class doc, that fixed width
+    // solves to TWO fields per row at ~213px each -- below
+    // `_kNarrowFieldWidth` (280.0) -- so the real desktop flow now ALWAYS
+    // reads the SHORT-form keys, never the long ones (a reversal from the
+    // 420px end-drawer this replaced, which yielded one field per row well
+    // above the threshold). The long-form selection itself is not dead code
+    // (a caller could still embed `LayrzDurationPickerPanel` directly at a
+    // wider width), so the wide-width cases below move to
+    // `_pumpNarrowPanel` (despite its name -- see that helper's own doc),
+    // which pumps the bare panel at an explicit width instead of through the
+    // real dialog.
 
     /// A panel width narrow enough that `LayrzDurationPickerPanel` renders
     /// one field per row at well under `_kNarrowFieldWidth` (280.0) per field.
@@ -872,16 +877,16 @@ void main() {
     });
 
     guardedTestWidgets(
-      'the real desktop drawer flow ALWAYS renders the long-form label as suffixText (DESIGN-98: the '
-      'fixed 420px drawer never yields a field narrower than _kNarrowFieldWidth)',
+      'the real desktop dialog flow ALWAYS renders the short-form label as suffixText (DESIGN-98: the '
+      'dialog\'s ~432px of panel width solves to two fields per row, each below _kNarrowFieldWidth)',
       (tester) async {
         await _pumpDesktopDrawer(tester, value: const Duration(days: 2));
 
         final day = tester.widget<LayrzNumberInput>(_numberInputUnder(_dayKey));
         expect(
           day.suffixText,
-          'Days',
-          reason: 'the drawer\'s fixed 420px width leaves ~372px per field -- above _kNarrowFieldWidth',
+          'd',
+          reason: 'the dialog\'s ~432px of panel width solves to two ~213px fields per row -- below _kNarrowFieldWidth',
         );
       },
     );
@@ -974,13 +979,14 @@ void main() {
     // new width mechanism.
     //
     // RE-DERIVED A THIRD TIME (DESIGN-98): the real desktop `LayrzDurationInput`
-    // flow no longer produces this width at all -- its `LayrzEndDrawer` is a
-    // fixed 420px, always well above `_kNarrowFieldWidth` (see
-    // `duration_input.dart`'s class doc). The desktop cases below now pump
+    // flow no longer produces this exact width -- its dialog (via
+    // `LayrzResponsiveModal.show`) yields ~432px of panel width, which itself
+    // solves to two fields per row, each well below `_kNarrowFieldWidth` (see
+    // `duration_input.dart`'s class doc). The desktop cases below still pump
     // `LayrzDurationPickerPanel` bare via `_pumpNarrowPanel`, at the same
     // measured `narrowAnchorWidth`, to prove the panel's own layout capacity
     // ceiling still holds independent of which host renders it -- the widget's
-    // contract does not depend on the drawer being the only caller.
+    // contract does not depend on the dialog being the only caller.
     //
     // RE-DERIVED A SECOND TIME (2026-08-26) after `LayrzTextTheme.body.fontSize`
     // dropped 16 -> 14 and `_InputComfortableSpec` lost its `isCompact` branch

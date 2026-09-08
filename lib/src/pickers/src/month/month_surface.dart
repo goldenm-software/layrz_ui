@@ -1,9 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../models/month.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/month_grid.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 
 /// The surface content for [LayrzMonthInput]: a single
@@ -14,9 +16,9 @@ import '../shared/picker_inline_footer.dart';
 /// read as "the 3-rows-by-4-columns month grid" rather than "a dialog", and a
 /// tap fired [onMonthSelected] immediately (decision D75,
 /// `engineering/milestone-4.md`). The maintainer's DESIGN-98 instruction
-/// moves this widget onto [LayrzEndDrawer] **with actions**, which
-/// supersedes that: a tap now only updates this surface's own in-progress
-/// [_draft]; nothing is reported or closed until Save.
+/// moves this widget onto [LayrzResponsiveModal.show] **with actions**,
+/// which supersedes that: a tap now only updates this surface's own
+/// in-progress [_draft]; nothing is reported or closed until Save.
 class LayrzMonthSurface extends StatefulWidget {
   /// The currently selected month, or `null`.
   final LayrzMonth? value;
@@ -29,6 +31,11 @@ class LayrzMonthSurface extends StatefulWidget {
 
   /// Individually disabled months.
   final Set<LayrzMonth> disabledMonths;
+
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzMonthInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
 
   /// Called with the drafted month when the user presses Save. Never called
   /// for a disabled or unselected value.
@@ -59,6 +66,7 @@ class LayrzMonthSurface extends StatefulWidget {
     this.minimum,
     this.maximum,
     this.disabledMonths = const {},
+    this.labelText,
     required this.onMonthSelected,
     this.onCancel,
     this.onDraftChanged,
@@ -144,6 +152,10 @@ class LayrzMonthSurfaceState extends State<LayrzMonthSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           LayrzPickersMonthGrid(
             displayedYear: _displayedYear,
             onYearChanged: _handleYearChanged,

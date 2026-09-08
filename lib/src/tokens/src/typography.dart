@@ -101,12 +101,47 @@ class LayrzTextTheme {
     // safe to call on every theme construction.
     unawaited(fontResolved.registerOnWeb());
 
+    // These two are always-on bundled fonts, independent of the caller's [font]
+    // choice: Noto Color Emoji supplies the colour-emoji fallback appended to
+    // every style below, and JetBrains Mono is pre-registered for future
+    // monospace/code UI. Both are declared in `pubspec.yaml`'s `flutter: fonts:`
+    // section, so the engine already has them; this call only reaches the
+    // browser DOM registration on web, guarded by the same per-family
+    // idempotency check as the fire-and-forget call above.
+    unawaited(const LayrzNotoColorEmojiFont().registerOnWeb());
+    unawaited(const LayrzJetBrainsMonoFont().registerOnWeb());
+
     return LayrzTextTheme(
-      display: fontResolved.display.copyWith(fontSize: 30, color: textColor, decoration: TextDecoration.none),
-      headline: fontResolved.headline.copyWith(fontSize: 24, color: textColor, decoration: TextDecoration.none),
-      title: fontResolved.title.copyWith(fontSize: 18, color: textColor, decoration: TextDecoration.none),
-      body: fontResolved.body.copyWith(fontSize: 14, color: textColor, decoration: TextDecoration.none),
-      label: fontResolved.label.copyWith(fontSize: 12, color: textColor, decoration: TextDecoration.none),
+      display: fontResolved.display.copyWith(
+        fontSize: 30,
+        color: textColor,
+        decoration: TextDecoration.none,
+        fontFamilyFallback: const ['Noto Color Emoji'],
+      ),
+      headline: fontResolved.headline.copyWith(
+        fontSize: 24,
+        color: textColor,
+        decoration: TextDecoration.none,
+        fontFamilyFallback: const ['Noto Color Emoji'],
+      ),
+      title: fontResolved.title.copyWith(
+        fontSize: 18,
+        color: textColor,
+        decoration: TextDecoration.none,
+        fontFamilyFallback: const ['Noto Color Emoji'],
+      ),
+      body: fontResolved.body.copyWith(
+        fontSize: 14,
+        color: textColor,
+        decoration: TextDecoration.none,
+        fontFamilyFallback: const ['Noto Color Emoji'],
+      ),
+      label: fontResolved.label.copyWith(
+        fontSize: 12,
+        color: textColor,
+        decoration: TextDecoration.none,
+        fontFamilyFallback: const ['Noto Color Emoji'],
+      ),
     );
   }
 

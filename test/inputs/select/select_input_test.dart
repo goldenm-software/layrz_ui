@@ -527,7 +527,7 @@ void main() {
       expect(find.text('Option A'), findsOneWidget);
     });
 
-    testWidgets('desktop viewport opens the selection surface in LayrzEndDrawer (DESIGN-98)', (tester) async {
+    testWidgets('desktop viewport opens the selection surface in a dialog (DESIGN-98)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -546,17 +546,29 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome));
       await tester.pumpAndSettle();
 
-      // Desktop opens the selection surface via LayrzEndDrawer (DESIGN-98),
-      // replacing the previous LayrzAnchoredPanel hosting.
+      // Desktop opens the selection surface via LayrzResponsiveModal.show's
+      // dialog branch (DESIGN-98), replacing the previous LayrzAnchoredPanel
+      // hosting.
       expect(find.byType(LayrzSelectInputSurface<String>), findsOneWidget);
     });
 
-    // Finding 2 (maintainer review): "Select ... didn't display the
-    // labelText above on the Drawer" -- confirmed by grep: this widget's
-    // `_openDesktopDrawer` passed zero `title:` arguments to
-    // `LayrzEndDrawer.show`, unlike the eight date/time pickers. Mirrors
-    // `LayrzDateInput`'s identical fix and test.
-    testWidgets('the drawer renders labelText as a visible title (DESIGN-98 Finding 2)', (tester) async {
+    // Finding 2 (maintainer review), historical: "Select ... didn't display
+    // the labelText above on the Drawer" was fixed against the retired end
+    // drawer's own `title:` slot. [LayrzResponsiveModal.show] -- what
+    // replaced that drawer -- has no `title:` slot at all (unlike the eight
+    // date/time pickers' own migration, which folds `labelText` into
+    // `semanticLabel` only), and [LayrzSelectInputSurface] renders no inline
+    // caption of its own either (see `select_input.dart`'s `_openPicker`
+    // doc) -- so this widget now renders NO separate visible title on
+    // either branch, matching the mobile bottom sheet's own pre-existing
+    // contract exactly.
+    // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal.show`
+    // itself still has no `title:` slot, but [LayrzSelectInputSurface] now
+    // composes its own `LayrzPickerDialogHeader` inside the builder content
+    // instead, which DOES render `labelText` as a visible title `Text`.
+    testWidgets('the open surface renders exactly one visible title via LayrzPickerDialogHeader', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -574,11 +586,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // The closed field's own label renders via `LayrzInputChrome`'s
-      // RichText/TextSpan, not a plain Text -- so a bare `find.text` before
-      // this fix would already find nothing for the drawer's title. The
-      // drawer's own `title` slot renders a real `Text` widget, which is
-      // exactly what a caller before this fix never got.
-      expect(find.text('Choose one'), findsOneWidget, reason: 'the drawer must render a visible title Text');
+      // RichText/TextSpan, not a plain Text, so only the surface's own
+      // header title contributes a plain-Text match.
+      expect(find.text('Choose one'), findsOneWidget);
     });
 
     // A caller with no labelText but a hintText must not lose the drawer's
@@ -1193,33 +1203,31 @@ void main() {
     });
   });
 
-  // DESIGN-40: the desktop surface previously stacked two disagreeing height
-  // caps (a fixed `SizedBox(height: 300)` around a `LimitedBox(maxHeight:
-  // 300)`-capped list), which both pinned the panel to exactly 300px
-  // regardless of content AND overflowed by the search field's height once
-  // enough items were added. The rule is now: `height = min(content, 300)`,
-  // scroll past 300.
-  //
-  // DESIGN-98 moved the desktop cap's enforcement from `LayrzAnchoredPanel.maxHeight`
-  // to a `ConstrainedBox`+`SingleChildScrollView` pair `_openDesktopDrawer` wraps
-  // around `LayrzSelectInputSurface` (see that method's own doc comment) --
-  // `LayrzEndDrawer` offers no height-cap parameter of its own. That
-  // `SingleChildScrollView` now sits nested inside `LayrzEndDrawer`'s own
-  // outer one, so `find.byType(SingleChildScrollView)` below matches TWO
-  // widgets on desktop; [_panelScrollView] disambiguates to the inner one --
-  // the immediate ancestor of the surface -- which is the one this group's
-  // measurements are actually about.
+  // CHANGED (maintainer review: "Pinned header + search, scrolling list
+  // only", replacing the DESIGN-40 300px cap entirely). The DESIGN-40 rule
+  // ("height = min(content, 300), scroll past 300") enforced by an outer
+  // `ConstrainedBox`+`SingleChildScrollView` pair `_openPicker` used to wrap
+  // around `LayrzSelectInputSurface` is GONE -- see that method's own doc
+  // ("no longer needs a ConstrainedBox/SingleChildScrollView pairing").
+  // `LayrzSelectInputSurface`'s own root `Column` now pins its header
+  // (title, inline search, close) and lets only its own `Expanded`-wrapped
+  // `ListView` scroll, bounded by whatever height the host gives it: the
+  // dialog branch's enlarged `LayrzDialogConfig(maxWidth: 600, maxHeight:
+  // 760)`, or the sheet branch's `scrollable: false` fixed-size
+  // `LayrzBottomSheetConfig`. There is no separate outer scroll view to
+  // find any more -- `find.byType(ListView)` is the surface's own list
+  // directly.
   //
   // These assertions are measured geometry, not widget presence: presence
   // assertions are exactly what let the original overflow ship behind a
   // green suite (only 3-item fixtures existed before this).
-  group('LayrzSelectInput height rule (DESIGN-40)', () {
+  group('LayrzSelectInput height rule (post-DESIGN-40: pinned header, Expanded ListView)', () {
     List<LayrzSelectItem<String>> buildItems(int count) => List.generate(
       count,
       (i) => LayrzSelectItem(value: 'v$i', child: Text('Option $i'), searchableStrings: {'Option $i'}),
     );
 
-    testWidgets('desktop panel shrinks to content with 2 items', (tester) async {
+    testWidgets('the list is a real ListView (lazy, not a plain Column) inside an Expanded', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1234,14 +1242,19 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      // Before the fix this measured Size(1580.0, 300.0) -- a fixed height
-      // regardless of content. With 2 items the panel must shrink well
-      // below the 300px cap.
-      final panelSize = tester.getSize(_panelScrollView());
-      expect(panelSize.height, lessThan(300.0));
+      final listView = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(ListView),
+      );
+      expect(listView, findsOneWidget);
+      expect(
+        find.ancestor(of: listView, matching: find.byType(Expanded)),
+        findsOneWidget,
+        reason: 'the list must be the Expanded child that claims the surface\'s remaining bounded height',
+      );
     });
 
-    testWidgets('desktop panel caps at 300 and scrolls past it with 30 items', (tester) async {
+    testWidgets('the list scrolls within the dialog\'s own bounded height with 30 items', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -1256,18 +1269,23 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      final panelSize = tester.getSize(_panelScrollView());
-      expect(panelSize.height, equals(300.0));
+      final listView = find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(ListView),
+      );
+      // 30 items * itemExtent 40 = 1200px of content -- strictly taller than
+      // the dialog's own 760px maxHeight, so the list's own viewport must be
+      // shorter than that full content height. This is a lazy ListView, so
+      // "Option 29" is not necessarily built at all before scrolling.
+      final viewportHeight = tester.getSize(listView).height;
+      expect(viewportHeight, lessThan(1200.0));
 
-      // The cap must be scrollable, not merely clipped: all 30 items are
-      // built (this is a plain `Column`, not a lazy `ListView`), so presence
-      // alone proves nothing -- assert that dragging actually moves content,
-      // i.e. the viewport genuinely scrolls rather than being pinned.
-      final topBefore = tester.getTopLeft(find.text('Option 29')).dy;
-      await tester.drag(_panelScrollView(), const Offset(0, -3000));
+      // Dragging must actually move content -- proof the viewport genuinely
+      // scrolls rather than being pinned or clipped without a working
+      // scroll physics.
+      await tester.drag(listView, const Offset(0, -3000));
       await tester.pumpAndSettle();
-      final topAfter = tester.getTopLeft(find.text('Option 29')).dy;
-      expect(topAfter, lessThan(topBefore));
+      expect(find.text('Option 29'), findsOneWidget, reason: 'scrolling to the end must reveal the last item');
     });
 
     testWidgets('8 items renders with no overflow exception (below the old threshold)', (tester) async {
@@ -1309,14 +1327,18 @@ void main() {
     // `SingleChildScrollView` -- its own height is just the sum of its
     // children's -- but a lazy, non-shrinkWrap `ListView` cannot, and throws
     // (`Vertical viewport was given unbounded height`) the instant either host
-    // (the desktop panel or the mobile sheet) tries to lay it out, before the
-    // 300px cap this group is named for ever gets a chance to apply. Presence
+    // (the desktop panel or the mobile sheet) tries to lay it out. Presence
     // assertions (`findsOneWidget`, `tester.takeException() is null`) alone do
     // not catch this: an exception thrown mid-frame during `pumpAndSettle` can
     // leave enough of the tree built for a text finder to still succeed. These
     // assert measured geometry instead, on both hosts, so a regression here
     // fails on the numbers even if presence checks would not have caught it.
     testWidgets('desktop panel and mobile sheet both stay bounded and scrollable with 30 items', (tester) async {
+      Finder listViewFinder() => find.descendant(
+        of: find.byType(LayrzSelectInputSurface<String>),
+        matching: find.byType(ListView),
+      );
+
       // Desktop first.
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -1332,22 +1354,21 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      // The panel's own scroll viewport must be strictly shorter than the
-      // full, uncapped content height (30 * 40 = 1200) -- proof the panel is
-      // actually constraining the list, not merely failing to crash.
-      final desktopViewport = tester.getSize(_panelScrollView());
+      // The list's own viewport must be strictly shorter than the full,
+      // uncapped content height (30 * 40 = 1200) -- proof the dialog's
+      // bounded height is actually constraining the list, not merely
+      // failing to crash.
+      final desktopViewport = tester.getSize(listViewFinder());
       expect(desktopViewport.height, lessThan(1200.0));
 
-      final desktopTopBefore = tester.getTopLeft(find.text('Option 0')).dy;
-      await tester.drag(_panelScrollView(), const Offset(0, -3000));
+      expect(find.text('Option 29'), findsNothing, reason: 'the last item is off-screen before scrolling');
+      await tester.drag(listViewFinder(), const Offset(0, -3000));
       await tester.pumpAndSettle();
-      final desktopTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
-      expect(desktopTopAfter, lessThan(desktopTopBefore));
+      expect(find.text('Option 29'), findsOneWidget, reason: 'scrolling to the end reveals the last item');
 
       // Close the panel, then switch to the mobile viewport and repeat through
-      // the bottom sheet path -- a separate host with its own
-      // `SingleChildScrollView`, so the desktop assertions above prove nothing
-      // about it on their own.
+      // the bottom sheet path -- a separate host, so the desktop assertions
+      // above prove nothing about it on their own.
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
 
@@ -1359,34 +1380,40 @@ void main() {
 
       expect(tester.takeException(), isNull);
 
-      final mobileViewport = tester.getSize(find.byType(SingleChildScrollView));
+      final mobileViewport = tester.getSize(listViewFinder());
       expect(mobileViewport.height, lessThan(1200.0));
 
-      final mobileTopBefore = tester.getTopLeft(find.text('Option 0')).dy;
-      await tester.drag(find.byType(SingleChildScrollView), const Offset(0, -3000));
-      await tester.pumpAndSettle();
-      final mobileTopAfter = tester.getTopLeft(find.text('Option 0')).dy;
-      expect(mobileTopAfter, lessThan(mobileTopBefore));
+      expect(find.text('Option 29'), findsNothing);
+      // The bottom sheet's own DraggableScrollableSheet can compete for a
+      // single large vertical drag on this host -- several smaller drags
+      // reliably hand the gesture to the inner ListView's own scrollable,
+      // mirroring how a real swipe-to-scroll gesture is typically performed
+      // in short repeated strokes rather than one enormous throw.
+      for (var i = 0; i < 10 && find.text('Option 29').evaluate().isEmpty; i++) {
+        await tester.drag(listViewFinder(), const Offset(0, -400));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('Option 29'), findsOneWidget);
     });
 
     // Promoted from the context dossier's measured probe (context-dossier.md
     // §2.3): before the fix, `select_input.dart` drew its "elevated field"
     // border as a `ClipRRect`+`Container` passed as `LayrzAnchoredPanel.child`,
-    // which lands *inside* `SingleChildScrollView`. A `SingleChildScrollView`
-    // relaxes its child's height constraint to unbounded along the scroll
-    // axis, so that bordered box sized itself to the full, uncapped content
-    // height (measured: 1260px for 30 items @ itemExtent 40) instead of the
-    // panel's own 300px cap -- the border was painted ~960px past the visible
-    // panel edge. This must fail before the fix and pass after.
+    // which lands *inside* a scroll view that relaxes its child's height
+    // constraint to unbounded along the scroll axis. This regression guard
+    // is still meaningful under the current pinned-header/Expanded-ListView
+    // layout: a bordered decoration inside the list must never size itself
+    // to the list's full, uncapped content height instead of the `ListView`
+    // viewport's own bounded box.
     //
     // The invariant checked is scoped to *decorated boxes carrying a border*,
     // not to every descendant: the panel's actual scrollable content (the
-    // item list) is SUPPOSED to be taller than the 300px viewport -- that is
-    // what makes it scroll. What must never happen is a `Container`/
+    // item list) is SUPPOSED to be taller than the viewport -- that is what
+    // makes it scroll. What must never happen is a `Container`/
     // `DecoratedBox` painting a border sizing itself to that full content
-    // height instead of the panel's own capped box.
+    // height instead of the list's own capped viewport.
     testWidgets(
-      'no bordered decoration inside the panel scroll viewport exceeds the viewport height (border-scoping regression)',
+      'no bordered decoration inside the list viewport exceeds the viewport height (border-scoping regression)',
       (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -1400,7 +1427,10 @@ void main() {
         await tester.tap(find.byType(LayrzInputChrome));
         await tester.pumpAndSettle();
 
-        final scrollViewFinder = _panelScrollView();
+        final scrollViewFinder = find.descendant(
+          of: find.byType(LayrzSelectInputSurface<String>),
+          matching: find.byType(ListView),
+        );
         final viewportHeight = tester.getSize(scrollViewFinder).height;
         final viewportElement = tester.element(scrollViewFinder);
 
@@ -1718,11 +1748,16 @@ void main() {
     // DESIGN-98 retired the DESIGN-145 "elevated field" illusion this defect-1
     // regression used to pin: the maintainer reported that overlay "kinda
     // weird" after live usage, so the desktop selection surface no longer
-    // covers the field in place -- it opens in `LayrzEndDrawer`, a fixed-width
-    // right-edge drawer that does NOT overlap the field's own rect. This
-    // replaces the old overlap assertion with the new, intentionally
-    // non-overlapping one.
-    testWidgets("the desktop drawer's rect does not overlap the field's own rect (DESIGN-98 retires DESIGN-145)", (
+    // covers the field in place -- it opens via [LayrzResponsiveModal.show],
+    // which resolves to a centered dialog on a wide viewport. This replaces
+    // the old exact-rect-reuse assertion with the new one: the dialog is an
+    // independently-sized panel, not the field's own rect. It is NOT an
+    // overlap assertion -- a centered dialog over a centered field (as
+    // `pumpThemedApp` renders both) is expected to overlap the field's rect
+    // geometrically, which is simply what "centered dialog" means, not a
+    // regression of the old illusion -- see
+    // `combobox_input_test.dart`'s identical rewrite for the full reasoning.
+    testWidgets("the desktop dialog's rect is not the field's own rect (DESIGN-98 retires DESIGN-145)", (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -1742,9 +1777,9 @@ void main() {
       final surfaceRect = tester.getRect(find.byType(LayrzSelectInputSurface<String>));
 
       expect(
-        surfaceRect.overlaps(fieldRect),
-        isFalse,
-        reason: 'the drawer is a separate, fixed-width right-edge panel -- it must not cover the field in place',
+        surfaceRect,
+        isNot(equals(fieldRect)),
+        reason: 'the dialog is a separate, independently-sized panel -- it must not reuse the field\'s own rect',
       );
     });
 
@@ -1818,20 +1853,6 @@ void main() {
       expect(find.text('Option A'), findsNothing);
     });
   });
-}
-
-/// Locates the `SingleChildScrollView` [_LayrzSelectInputState._openDesktopDrawer]
-/// wraps directly around [LayrzSelectInputSurface] -- the one carrying the
-/// DESIGN-40 300px cap -- disambiguated from [LayrzEndDrawer]'s own outer
-/// `SingleChildScrollView` (its `builder(context)` content, one level further
-/// out) by walking up from the surface itself and taking the closest match.
-Finder _panelScrollView() {
-  return find
-      .ancestor(
-        of: find.byType(LayrzSelectInputSurface<String>),
-        matching: find.byType(SingleChildScrollView),
-      )
-      .first;
 }
 
 class _TestState {

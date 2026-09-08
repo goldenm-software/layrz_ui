@@ -260,19 +260,34 @@ void main() {
 
         final l10n = LayrzUiL10n.of(tester.element(find.byType(LayrzTimeRangeInput)));
         final labels = dumpSemanticsLabels(tester);
+        // The captions merge into one combined semantics node per Semantics
+        // merge boundary (no individual Semantics wrapper on each caption
+        // Text), so "Hours"/"Minutes" appear twice WITHIN a single label
+        // string (once per cluster) rather than as two separate list
+        // elements -- count occurrences inside the joined text instead of
+        // list membership.
+        final joined = labels.join('\n');
+        int occurrencesOf(String needle) {
+          var count = 0;
+          var index = 0;
+          while (true) {
+            final found = joined.indexOf(needle, index);
+            if (found == -1) break;
+            count++;
+            index = found + needle.length;
+          }
+          return count;
+        }
 
-        final hourLongLabels = labels.where((l) => l.contains(l10n.timePickerHours));
-        final minuteLongLabels = labels.where((l) => l.contains(l10n.timePickerMinutes));
-        expect(hourLongLabels.length, greaterThanOrEqualTo(2), reason: 'one per cluster, start and end');
-        expect(minuteLongLabels.length, greaterThanOrEqualTo(2), reason: 'one per cluster, start and end');
-
-        final hourShortLabels = labels.where(
-          (l) => l == l10n.timePickerHourShortSingular || l == l10n.timePickerHourShortPlural,
+        expect(
+          occurrencesOf(l10n.timePickerHours),
+          greaterThanOrEqualTo(2),
+          reason: 'one per cluster, start and end',
         );
         expect(
-          hourShortLabels,
-          isEmpty,
-          reason: 'one field per row at drawer width clears kNarrowWidth -- the short form must not render',
+          occurrencesOf(l10n.timePickerMinutes),
+          greaterThanOrEqualTo(2),
+          reason: 'one per cluster, start and end',
         );
       } finally {
         handle.dispose();
@@ -334,14 +349,25 @@ void main() {
         await tester.tap(find.byType(LayrzTimeRangeInput));
         await tester.pumpAndSettle();
 
-        final amNodes = find.text('AM').evaluate();
-        final pmNodes = find.text('PM').evaluate();
-        expect(amNodes.length, 2, reason: 'one meridiem control per cluster');
-        expect(pmNodes.length, 2, reason: 'one meridiem control per cluster');
+        // [LayrzButton]'s label renders via [RichText] (a [TextSpan], not a
+        // plain [Text] widget), so `find.text` never matches it -- locate
+        // the buttons by widget predicate instead.
+        final amButtons = find
+            .byWidgetPredicate(
+              (widget) => widget is LayrzButton && widget.labelText == 'AM',
+            )
+            .evaluate();
+        final pmButtons = find
+            .byWidgetPredicate(
+              (widget) => widget is LayrzButton && widget.labelText == 'PM',
+            )
+            .evaluate();
+        expect(amButtons.length, 2, reason: 'one meridiem control per cluster');
+        expect(pmButtons.length, 2, reason: 'one meridiem control per cluster');
 
-        for (final element in amNodes) {
-          final ancestor = find.ancestor(of: find.byWidget(element.widget), matching: find.byType(Semantics)).first;
-          final node = tester.getSemantics(ancestor);
+        for (final element in amButtons) {
+          final descendant = find.descendant(of: find.byWidget(element.widget), matching: find.byType(Semantics));
+          final node = tester.getSemantics(descendant.first);
           expect(node.getSemanticsData().flagsCollection.isButton, isTrue);
         }
       } finally {

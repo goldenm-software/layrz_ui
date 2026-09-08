@@ -143,10 +143,11 @@ void main() {
         await tester.pumpAndSettle();
 
         // "Flags" is the last entry in the eleven-item group-filter row, so
-        // it sits off-screen (and may not even be built yet, in the
-        // drawer's narrower 420px width) in the horizontally scrollable
-        // `ListView` until dragged into view.
-        await tester.drag(find.byType(ListView).first, const Offset(-2000, 0));
+        // it sits off-screen until dragged into view. CHANGED (Fix 4,
+        // LayrzTabView migration): the row is now a `LayrzTabView` in its
+        // scrollable-strip mode, which uses a `SingleChildScrollView` (see
+        // `tab_view.dart`'s `_buildScrollableStrip`), not a `ListView`.
+        await tester.drag(find.byType(SingleChildScrollView).first, const Offset(-2000, 0));
         await tester.pumpAndSettle();
 
         final finder = find.byWidgetPredicate(

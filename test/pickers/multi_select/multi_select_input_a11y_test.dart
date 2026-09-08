@@ -44,7 +44,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'));
+        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'));
 
         final finder = find.byWidgetPredicate(
           (widget) => widget is Semantics && (widget.properties.label?.contains('Fruits') ?? false),
@@ -75,7 +75,7 @@ void main() {
       try {
         await pumpThemedApp(
           tester,
-          LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', disabled: true),
+          LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', disabled: true),
         );
 
         final finder = find.byWidgetPredicate(
@@ -106,7 +106,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'));
+        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'));
 
         final labels = dumpSemanticsLabels(tester);
         expect(labels.where((l) => l == 'Fruits').length, 1);
@@ -124,7 +124,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'));
+        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'));
 
         await tester.tap(find.byType(LayrzInputChrome).first);
         await tester.pumpAndSettle();
@@ -154,7 +154,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'));
+        await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'));
 
         await tester.tap(find.byType(LayrzInputChrome).first);
         await tester.pumpAndSettle();
@@ -172,17 +172,24 @@ void main() {
       }
     });
 
-    guardedTestWidgets('the drawer renders labelText as a visible title', (tester) async {
+    // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal.show`
+    // itself still has no `title:` slot, but [LayrzMultiSelectInputSurface]
+    // now composes its own `LayrzPickerDialogHeader` inside the builder
+    // content instead, which DOES render `labelText` as a visible title
+    // `Text`.
+    guardedTestWidgets('the open surface renders exactly one visible title via LayrzPickerDialogHeader', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'));
+      await pumpThemedApp(tester, LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'));
 
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Fruits'), findsWidgets, reason: 'the drawer must render a visible title Text');
+      expect(find.text('Fruits'), findsOneWidget);
     });
 
     guardedTestWidgets('falls back to hintText for the drawer\'s semantic label when labelText is null', (
@@ -196,7 +203,7 @@ void main() {
       try {
         await pumpThemedApp(
           tester,
-          LayrzMultiSelectInput<String>(items: items, itemExtent: 40, hintText: 'Pick some fruit'),
+          LayrzMultiSelectInput<String>(items: items, itemExtent: 52, hintText: 'Pick some fruit'),
         );
 
         await tester.tap(find.byType(LayrzInputChrome).first);
@@ -218,7 +225,7 @@ void main() {
       try {
         await pumpThemedApp(
           tester,
-          LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', value: const ['apple']),
+          LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', value: const ['apple']),
         );
 
         final finder = find.byWidgetPredicate(

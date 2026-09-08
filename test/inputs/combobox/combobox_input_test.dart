@@ -69,7 +69,7 @@ void main() {
       // DESIGN-98 the closed field's own `EditableText` continued live into
       // the opened `LayrzAnchoredPanel` (Q3), so typing after the tap still
       // resolved to a single `EditableText` in the tree. DESIGN-98 replaced
-      // that panel with `LayrzEndDrawer` hosting a wholly independent
+      // that panel with a dialog (via `LayrzResponsiveModal.show`) hosting a wholly independent
       // `BottomSheetContent` surface (its own search field) -- once the
       // drawer is open there are genuinely TWO `EditableText`s in the tree
       // (the closed field's, still mounted underneath the drawer, and the
@@ -194,7 +194,7 @@ void main() {
     testWidgets('allows free-form entry when allowFreeForm is true', (tester) async {
       // DESIGN-98: types before ever opening the overlay -- see 'calls
       // onChanged when value changes' above for why (opening now mounts a
-      // second, independent EditableText via LayrzEndDrawer/BottomSheetContent,
+      // second, independent EditableText via the dialog/BottomSheetContent,
       // so `find.byType(EditableText)` after opening is no longer unique).
       final options = ['Option 1', 'Option 2'];
       String? lastSubmitted;
@@ -341,17 +341,30 @@ void main() {
     });
 
     testWidgets(
-      "the desktop drawer's rect does not overlap the field's own rect (DESIGN-98 retires coverAnchor)",
+      "the desktop dialog's rect is not the field's exact rect (DESIGN-98 retires coverAnchor)",
       (tester) async {
         // DESIGN-98 retired the Q3/Q9 `coverAnchor: true` illusion this test
         // used to pin: the maintainer's own instruction moved this widget's
-        // desktop overlay onto `LayrzEndDrawer`, a fixed-width right-edge
-        // drawer that does not anchor to (or cover) the field's rect at all --
-        // mirroring `LayrzSelectInput`'s own DESIGN-98 rewrite in
-        // `select_input_test.dart`. There is no more `LayrzComboBoxPanelContent`
-        // in the real desktop flow either (see `combobox_input.dart`'s class
-        // doc): the drawer hosts the same independent `BottomSheetContent`
-        // surface the mobile band already opened.
+        // desktop overlay onto an end drawer (since promoted to a dialog via
+        // [LayrzResponsiveModal.show]) that does not anchor to the field's
+        // rect at all -- mirroring `LayrzSelectInput`'s own DESIGN-98
+        // rewrite in `select_input_test.dart`. There is no more
+        // `LayrzComboBoxPanelContent` in the real desktop flow either (see
+        // `combobox_input.dart`'s class doc): the dialog hosts the same
+        // independent `BottomSheetContent` surface the mobile band already
+        // opened.
+        //
+        // **Not an overlap assertion.** The retired end drawer's fixed
+        // right-edge geometry made "never overlaps the field" the natural
+        // invariant to pin; a centered dialog over a centered field (as
+        // `pumpThemedApp` renders both) is now EXPECTED to overlap the
+        // field's rect geometrically -- that is simply what "centered
+        // dialog" means, not a regression of `coverAnchor`'s exact-rect
+        // illusion. What actually distinguishes this from `coverAnchor` is
+        // that the dialog's rect is a real, independently-sized panel (its
+        // own [LayrzDialogConfig.maxWidth]/[maxHeight]), not the field's own
+        // rect reused for the overlay -- so this test pins that the two
+        // rects differ, not that they never intersect.
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -369,12 +382,12 @@ void main() {
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
 
-        final drawer = tester.getRect(find.byType(BottomSheetContent));
+        final dialogSurface = tester.getRect(find.byType(BottomSheetContent));
 
         expect(
-          drawer.overlaps(field),
-          isFalse,
-          reason: 'the drawer is a separate, fixed-width right-edge panel -- it must not cover the field in place',
+          dialogSurface,
+          isNot(equals(field)),
+          reason: 'the dialog is a separate, independently-sized panel -- it must not reuse the field\'s own rect',
         );
       },
     );
@@ -542,7 +555,7 @@ void main() {
         // field's own `EditableText` continued live into the still-open
         // `LayrzAnchoredPanel` (Q3), so typing after the tap (in the still-open
         // overlay) reproduced the defect. DESIGN-98 replaced that panel with
-        // `LayrzEndDrawer` hosting an independent `BottomSheetContent` --
+        // a dialog hosting an independent `BottomSheetContent` --
         // opening it computes the filtered option pool once, at open time (see
         // `_openDesktopDrawer`'s own doc), so typing must now happen BEFORE the
         // tap that opens it, mirroring the compact variant of this test below,
@@ -656,7 +669,7 @@ void main() {
       // option's own `onTap` ever fired.
       //
       // DESIGN-98 makes that entire failure mode structurally impossible: the
-      // overlay is now `LayrzEndDrawer`, a [Navigator.push]ed route with its
+      // overlay is now a dialog (via `LayrzResponsiveModal.show`), a [Navigator.push]ed route with its
       // own modal barrier and its own [BottomSheetContent] subtree, wholly
       // separate from the closed field's. A tap on an option inside the
       // drawer is never in the same gesture arena as the closed field's own
@@ -757,9 +770,10 @@ void main() {
         await openOverlay(tester);
         expect(find.byType(BottomSheetContent), findsOneWidget, reason: 'drawer must be open before the tap');
 
-        // The drawer sits at the right edge (LayrzEndDrawer.width, 420px) --
-        // a point near the top-left of the 1600px-wide viewport always lands
-        // on the barrier, well clear of the drawer itself.
+        // The dialog is centered with a fixed max width
+        // (LayrzDialogConfig.maxWidth, 480px default) -- a point near the
+        // top-left of the 1600px-wide viewport always lands on the barrier,
+        // well clear of the centered panel itself.
         await tester.tapAt(const Offset(20, 20));
         await tester.pumpAndSettle();
 
@@ -777,7 +791,7 @@ void main() {
       //
       // DESIGN-98 retires that contract entirely, deliberately, on the
       // maintainer's own instruction: the desktop overlay is now
-      // `LayrzEndDrawer`, hosting a wholly independent `BottomSheetContent`
+      // a dialog (via `LayrzResponsiveModal.show`), hosting a wholly independent `BottomSheetContent`
       // surface -- the same one the mobile band already opened -- with its
       // OWN search controller and focus node (see `combobox_input.dart`'s
       // class doc). There is no more field to reparent, no more caret to
@@ -897,7 +911,7 @@ void main() {
 
           // BottomSheetContent's own search field passes `autofocus: false`
           // (combobox_surface.dart) -- it does not request focus for itself.
-          // LayrzEndDrawer instead autofocuses its own wrapper Focus node
+          // The dialog instead autofocuses its own wrapper Focus node
           // (see end_drawer.dart's `_EndDrawerContentState.initState`), so
           // opening the drawer leaves the wrapper -- not the search field --
           // focused, exactly like opening the mobile bottom sheet already
@@ -1012,7 +1026,7 @@ void main() {
     // `Text` already produces a Semantics node with that exact label. Mirrors
     // `LayrzDateInput`/`LayrzSelectInput`/`LayrzDurationInput`'s identical
     // fix and tests.
-    group('the drawer title and its semantic label (maintainer review)', () {
+    group('the dialog title and its semantic label (maintainer review)', () {
       void setDesktopSize(WidgetTester tester) {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -1033,7 +1047,14 @@ void main() {
         await tester.tap(find.byType(EditableText));
         await tester.pumpAndSettle();
 
-        expect(find.text('Choose a state'), findsOneWidget, reason: 'the drawer must render a visible title Text');
+        // [LayrzResponsiveModal.show] has no `title:` slot -- the visible
+        // title now comes from `BottomSheetContent.showInlineTitle`'s own
+        // default (`true`), rendered on both branches uniformly.
+        expect(
+          find.text('Choose a state'),
+          findsOneWidget,
+          reason: 'BottomSheetContent must render a visible title Text',
+        );
       });
 
       testWidgets('falls back to hintText for the semantic label when labelText is null', (tester) async {
@@ -1078,29 +1099,57 @@ void main() {
             await tester.pumpAndSettle();
 
             final labels = dumpSemanticsLabels(tester);
-            final matches = labels.where((l) => l == 'Choose a state').length;
-            // Two legitimate, DIFFERENT nodes both carry this exact text even
-            // after the fix: `title`'s own visible `Text` widget, and
-            // `BottomSheetContent`'s own `Semantics(container: true, label:
-            // labelText)` naming its content (unrelated to the drawer's
-            // title -- see that class's own doc). That second one is not the
-            // bug; it exists for every Save-carrying picker in this batch
-            // too, just without a second name to collide with, since none of
-            // them pass `labelText` into their own surface widget.
-            //
-            // The bug was a THIRD node: `LayrzEndDrawer.show`'s own
-            // `semanticLabel` parameter, before this fix, wrapped the whole
-            // route in `Semantics(scopesRoute: true, namesRoute: true, label:
-            // widget.labelText)` -- a route-level announcement stacked on
-            // top of the two content-level ones above. Reverting this fix
-            // locally and re-running confirms the count: 3 occurrences
-            // before the fix, 2 after.
+            // CHANGED (LayrzPickerDialogHeader migration): the header's own
+            // title Text is no longer ExcludeSemantics-wrapped the way the
+            // old BottomSheetContent-specific title was, so it now merges
+            // into `BottomSheetContent`'s own `Semantics(container: true,
+            // label: labelText)` ancestor node as ONE combined semantics
+            // string ("Choose a state\nChoose a state\nClose dialog") rather
+            // than remaining a separately-matchable exact-equal label --
+            // this is a Semantics MERGE, not a third distinct announcement.
+            // Count occurrences WITHIN the joined text instead of exact list
+            // membership (mirrors the identical fix applied to
+            // `datetime_range_input_a11y_test.dart`'s "unabridged label"
+            // test for the same underlying merge behaviour).
+            final joined = labels.join('\n');
+            int occurrencesOf(String needle) {
+              var count = 0;
+              var index = 0;
+              while (true) {
+                final found = joined.indexOf(needle, index);
+                if (found == -1) break;
+                count++;
+                index = found + needle.length;
+              }
+              return count;
+            }
+
+            // Three legitimate occurrences now (was two before the header
+            // migration): the closed field's own `Semantics(label:
+            // widget.labelText)` (it stays mounted, underneath the modal
+            // barrier, while the dialog is open), PLUS `BottomSheetContent`'s
+            // own `Semantics(container: true, label: labelText)` merging
+            // with the header's own title Text into one combined string that
+            // itself contains "Choose a state" twice (once from each of
+            // those two nodes' own label, concatenated by the merge). None
+            // of these three is a ROUTE-level announcement -- the bug this
+            // test originally guarded against, and the only thing that
+            // actually matters here: the retired end drawer's
+            // `semanticLabel` parameter, before that fix, wrapped the WHOLE
+            // ROUTE in `Semantics(scopesRoute: true, namesRoute: true,
+            // label: widget.labelText)`, stacked on top of the content-level
+            // occurrences above. `LayrzComboBoxInput._openPicker` passes
+            // `semanticLabel` only as a fallback for when `labelText` is
+            // null (see that method's own doc), so with `labelText` set
+            // here, a FOURTH occurrence (not a third) would be the signal
+            // that regressed.
             expect(
-              matches,
-              2,
+              occurrencesOf('Choose a state'),
+              3,
               reason:
-                  'expected exactly title\'s Text plus BottomSheetContent\'s own content name (2) -- a third '
-                  'occurrence means semanticLabel is re-adding the route-level announcement this fix removes',
+                  'expected exactly the closed field\'s name plus the two content-level nodes that merge '
+                  'into one combined string (3 total) -- a fourth occurrence would mean semanticLabel is '
+                  're-adding a route-level announcement',
             );
           } finally {
             handle.dispose();
@@ -1116,7 +1165,7 @@ void main() {
     // and committed rows in that in-place panel via `_handleKeyEvent` (bound
     // to a `Focus` wrapping the field's own subtree, which stayed live inside
     // the anchored panel). DESIGN-98 initially replaced that panel with
-    // `LayrzEndDrawer` hosting `BottomSheetContent` with no keyboard
+    // The dialog hosting `BottomSheetContent` with no keyboard
     // affordance at all, which was a real, reported UX loss. It has since
     // been rebuilt INSIDE `BottomSheetContent` itself (see that class's own
     // "Keyboard navigation" doc section) -- both bands now share this
@@ -1262,31 +1311,34 @@ void main() {
         },
       );
 
-      testWidgets('escape still closes the drawer via LayrzEndDrawer\'s own dismiss handling, without committing', (
-        tester,
-      ) async {
-        setDesktopSize(tester);
-        var changedCount = 0;
-
-        await pumpThemedApp(
+      testWidgets(
+        'escape still closes the dialog via LayrzResponsiveModal.show\'s own dismiss handling, without committing',
+        (
           tester,
-          LayrzComboBoxInput(
-            labelText: 'Choose',
-            options: const ['Alpha', 'Bravo'],
-            onChanged: (_) => changedCount++,
-          ),
-        );
+        ) async {
+          setDesktopSize(tester);
+          var changedCount = 0;
 
-        await tester.tap(find.byType(EditableText));
-        await tester.pumpAndSettle();
-        expect(find.byType(BottomSheetContent), findsOneWidget);
+          await pumpThemedApp(
+            tester,
+            LayrzComboBoxInput(
+              labelText: 'Choose',
+              options: const ['Alpha', 'Bravo'],
+              onChanged: (_) => changedCount++,
+            ),
+          );
 
-        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
-        await tester.pumpAndSettle();
+          await tester.tap(find.byType(EditableText));
+          await tester.pumpAndSettle();
+          expect(find.byType(BottomSheetContent), findsOneWidget);
 
-        expect(find.byType(BottomSheetContent), findsNothing, reason: 'Escape must close the drawer');
-        expect(changedCount, 0, reason: 'Escape must not commit anything');
-      });
+          await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+          await tester.pumpAndSettle();
+
+          expect(find.byType(BottomSheetContent), findsNothing, reason: 'Escape must close the drawer');
+          expect(changedCount, 0, reason: 'Escape must not commit anything');
+        },
+      );
     });
 
     group('allowFreeForm: false revert-on-blur', () {

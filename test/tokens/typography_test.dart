@@ -62,6 +62,44 @@ void main() {
       expect(theme.label.decoration, equals(TextDecoration.none));
     });
 
+    test('every style carries the Noto Color Emoji fallback, regardless of the chosen font', () {
+      final theme = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
+
+      expect(theme.display.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.headline.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.title.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.body.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.label.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+    });
+
+    test('the emoji fallback is present even with a custom font supplied', () {
+      final theme = LayrzTextTheme.defaults(
+        textColor: const Color(0xFF000000),
+        font: const LayrzJetBrainsMonoFont(),
+      );
+
+      expect(theme.display.fontFamily, 'JetBrains Mono');
+      expect(theme.display.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.body.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+    });
+
+    // The factory ALSO fires registerOnWeb unconditionally for the two
+    // always-on bundled fonts (Noto Color Emoji, JetBrains Mono), independent
+    // of the caller's own `font` choice -- see the factory's own doc. Both
+    // resolve to a real (if inert on the VM target) asset read via
+    // rootBundle.load, so this proves the call completes without throwing
+    // rather than merely existing in source.
+    test('does not throw when constructing the theme (bundled-font registerOnWeb calls complete)', () async {
+      expect(
+        () => LayrzTextTheme.defaults(textColor: const Color(0xFF000000)),
+        returnsNormally,
+      );
+      // The bundled-font registerOnWeb calls are fire-and-forget -- flush the
+      // microtask queue so a thrown exception inside them would have
+      // surfaced before this test completes.
+      await Future<void>.delayed(Duration.zero);
+    });
+
     test('copyWith creates new instance with replaced styles', () {
       final original = LayrzTextTheme.defaults(textColor: const Color(0xFF000000));
       final newBody = original.body.copyWith(fontSize: 20);

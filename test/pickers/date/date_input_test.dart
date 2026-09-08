@@ -160,12 +160,22 @@ void main() {
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    // DESIGN-98 Finding 5: "title should be the labelText of the input" --
-    // before this, labelText only ever reached the drawer as `semanticLabel`
-    // (screen-reader only, no visible rendering). This asserts the drawer
-    // genuinely paints a visible title now, not merely that some text
-    // matching the label happens to exist somewhere on screen.
-    guardedTestWidgets('the drawer shows labelText as a visible title (Finding 5)', (tester) async {
+    // Post-migration to LayrzResponsiveModal.show (which has no `title:`
+    // slot -- see LayrzDateInput's own class doc), labelText no longer
+    // reaches the dialog/sheet as a visible title at all: it is forwarded
+    // only as `semanticLabel` (screen-reader only). This asserts that
+    // contract precisely -- the label paints once, on the closed anchor's
+    // own chrome, and the open surface adds no second visible occurrence of
+    // it -- rather than the pre-migration LayrzEndDrawer behaviour this test
+    // used to cover.
+    // CHANGED (LayrzPickerDialogHeader migration): [LayrzDateSurface] now
+    // composes its own `LayrzPickerDialogHeader` inside the builder content
+    // (see that class's own doc), which DOES render `labelText` as a visible
+    // title `Text` -- a genuine addition versus the pre-migration behaviour
+    // this test used to cover.
+    guardedTestWidgets('labelText renders on the anchor AND once more as the open surface\'s own title', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -175,17 +185,14 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // The closed anchor's own label renders as a RichText (button-style
-      // chrome, matched by findButtonLabel), while the drawer's title is a
-      // plain Text -- find.text matches only the latter, so a single hit
-      // here confirms the title itself paints "Preferred date", not just
-      // that the string appears somewhere via the anchor.
+      // findButtonLabel matches ANY RichText containing the text -- and a
+      // plain Text widget (like the header's own title) also lowers to a
+      // RichText internally, so it now matches both the anchor's own
+      // button-style chrome AND the surface's plain-Text title (2 total).
+      // find.text matches only the latter specifically (1), which is the
+      // more precise signal that the header's own title genuinely rendered.
+      expect(findButtonLabel('Preferred date'), findsNWidgets(2));
       expect(find.text('Preferred date'), findsOneWidget);
-      // The drawer content (day grid) has no cell or heading spelling out
-      // the full label, so the only source of a *second* match for the bare
-      // "Preferred date" string is the anchor's own RichText -- confirming
-      // the title is additional, not a relocation.
-      expect(findButtonLabel('Preferred date'), findsWidgets);
     });
   });
 

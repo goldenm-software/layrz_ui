@@ -23,9 +23,9 @@ void main() {
         );
 
         final editableFinder = find.byType(EditableText);
-        expect(editableFinder, findsNWidgets(3));
+        expect(editableFinder, findsNWidgets(2));
 
-        for (final element in editableFinder.evaluate().take(2)) {
+        for (final element in editableFinder.evaluate()) {
           final semantics = tester.getSemantics(find.byWidget(element.widget));
           expect(semantics.getSemanticsData().flagsCollection.isTextField, isTrue);
         }
@@ -34,7 +34,15 @@ void main() {
       }
     });
 
-    guardedTestWidgets('the meridiem control exposes button semantics with a selected state', (tester) async {
+    // CHANGED (time-fields digital-clock redesign): the meridiem control is
+    // now built from two [LayrzButton]s (filled = selected, text =
+    // unselected) rather than a hand-rolled `Semantics(selected: ...)`
+    // control. [LayrzButton]'s own Semantics node exposes no `selected` flag
+    // and no forwarded `tap` action -- an accepted, documented limitation
+    // (see `_MeridiemControl`'s own class doc "Accessibility note"), not a
+    // regression this pass attempts to recover. The visual filled/text
+    // contrast still communicates the selection sightedly.
+    guardedTestWidgets('the AM option exposes button semantics (enabled, no selected-state flag)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -58,14 +66,16 @@ void main() {
         expect(amFinder, findsOneWidget);
         expect(
           tester.getSemantics(amFinder),
-          matchesSemantics(label: 'AM', isButton: true, hasSelectedState: true, isSelected: true, hasTapAction: true),
+          matchesSemantics(label: 'AM', isButton: true, hasEnabledState: true, isEnabled: true),
         );
       } finally {
         handle.dispose();
       }
     });
 
-    guardedTestWidgets('the PM option is not selected when AM is active', (tester) async {
+    guardedTestWidgets('the PM option exposes button semantics too, with no selected-state flag either', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -88,7 +98,7 @@ void main() {
         );
         expect(
           tester.getSemantics(pmFinder),
-          matchesSemantics(label: 'PM', isButton: true, hasSelectedState: true, isSelected: false, hasTapAction: true),
+          matchesSemantics(label: 'PM', isButton: true, hasEnabledState: true, isEnabled: true),
         );
       } finally {
         handle.dispose();

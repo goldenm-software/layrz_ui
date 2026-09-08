@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -12,14 +13,15 @@ import 'time_surface.dart';
 
 /// A Material-free single-time input field.
 ///
-/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzTimeSurface] in
-/// [LayrzEndDrawer] on desktop or [LayrzBottomSheet] below `isCompact`.
+/// Composes [LayrzInputChrome] directly (D63) and opens [LayrzTimeSurface]
+/// via [LayrzResponsiveModal.show], which resolves to a dialog on wide
+/// viewports or a [LayrzBottomSheet] below `isCompact`.
 ///
 /// **DESIGN-98: Cancel/Save, not live commit.** Before DESIGN-98, this
 /// widget's fields reported continuously via `onChanged` with no discrete
 /// commit gesture at all — every field edit fired [onChanged] live (decision
 /// D75, `engineering/milestone-4.md`). The maintainer's DESIGN-98 instruction
-/// moves this widget onto [LayrzEndDrawer] **with actions**, which
+/// moves this widget onto [LayrzResponsiveModal.show] **with actions**, which
 /// supersedes that: [onChanged] now fires only once, on Save, with whatever
 /// the fields currently hold; Cancel discards the edits back to [value]. See
 /// [LayrzTimeSurfaceState]'s class doc for why Save is always enabled here,
@@ -192,81 +194,58 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
     });
   }
 
-  Future<void> _openMobileSurface() async {
-    if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: true, hasSelection: false));
-    final surfaceKey = GlobalKey<LayrzTimeSurfaceState>();
-
-    await LayrzBottomSheet.show<void>(
-      context,
-      // Names the sheet's route for screen readers with this field's own
-      // label -- without it LayrzBottomSheet.show adds no route semantics at
-      // all (see its own doc comment), so a screen-reader user opening the
-      // sheet would hear no name for what they are picking. Falls back to
-      // hintText when labelText is null, matching this widget's own
-      // labelText-or-hintText constructor assertion.
-      semanticLabel: widget.labelText ?? widget.hintText,
-      builder: (context) => LayrzTimeSurface(
-        key: surfaceKey,
-        value: widget.value ?? _midnight,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onTimeChanged: (time) {
-          _handleSave(time);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      actions: [
-        LayrzPickerDrawerActions(
-          draftState: draftState,
-          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
-          onClear: (_) {},
-          onSave: (_) => surfaceKey.currentState?.save(),
-        ),
-      ],
-      initialSize: 0.4,
-      maxSize: 0.7,
-      snapSizes: const [0.4, 0.7],
-    );
-
-    draftState.dispose();
-  }
-
-  /// Opens [LayrzTimeSurface] in [LayrzEndDrawer] on desktop — see
-  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
-  /// rationale (DESIGN-98). `draftState` never changes after construction:
+  /// Opens [LayrzTimeSurface] via [LayrzResponsiveModal.show] — see
+  /// [LayrzDateRangeInput._openPicker]'s identical doc for the full
+  /// rationale. `draftState` never changes after construction:
   /// [LayrzTimeSurfaceState.canSave] is always `true` (see that class's own
   /// doc), so there is nothing for `onDraftChanged` to report here.
-  Future<void> _openDesktopDrawer() async {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: true, hasSelection: false));
     final surfaceKey = GlobalKey<LayrzTimeSurfaceState>();
 
-    await LayrzEndDrawer.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
-      // `title` below carries `labelText` visibly, so `semanticLabel` falls
-      // back to `hintText` only -- see LayrzDateInput's identical doc for
-      // why passing `labelText` to both would double the announcement.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
       // rule is about a DECISION being skipped; a picker's Cancel/Escape/
       // barrier tap are all equally safe "discard the draft" gestures, and
       // Escape=Cancel specifically is required by every picker test in
-      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // this batch). Explicitly overrides LayrzResponsiveModal.show's own
       // actions-present-infers-false default.
       canDismiss: true,
-      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
-      // should be the labelText of the input" -- see LayrzDateInput's
-      // identical doc for the full rationale.
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss: true above -- barrier tap, Escape, and
+      // the back gesture still cancel the draft.
+      showCloseIcon: false,
+      // Fix 5: `DraggableScrollableSheet` (what `LayrzBottomSheet` is built
+      // on) always sizes itself to `initialSize` as a FIXED FRACTION of the
+      // viewport height -- it has no shrink-to-content mode of its own, so
+      // this cannot be eliminated entirely, only minimized. The previous
+      // 0.4-0.7 override reserved nearly half to three-quarters of the
+      // screen for a surface whose actual content (one or two rows of
+      // number fields plus the header) is a few hundred logical pixels tall
+      // at most, leaving a large empty gap below the fields. 0.3/0.5 is a
+      // much closer approximation of that real content height while still
+      // leaving room to grow if a caller's locale/label wraps to more rows.
+      sheet: const LayrzBottomSheetConfig(
+        initialSize: 0.3,
+        maxSize: 0.5,
+        snapSizes: [0.3, 0.5],
+      ),
       builder: (context) => LayrzTimeSurface(
         key: surfaceKey,
         value: widget.value ?? _midnight,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        labelText: widget.labelText,
         onTimeChanged: (time) {
           _handleSave(time);
           LayrzModalRoute.popIfCurrent(context);
@@ -343,10 +322,6 @@ class _LayrzTimeInputState extends State<LayrzTimeInput> {
       _updateSummary();
     }
 
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

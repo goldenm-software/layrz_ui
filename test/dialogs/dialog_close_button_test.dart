@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -525,5 +526,181 @@ void main() {
 
       handle.dispose();
     });
+  });
+
+  // showCloseIcon is a separate, independent opt-out from canDismiss/dismissible
+  // -- see LayrzDialog.show's own doc. Introduced for the date/date-range/
+  // datetime/datetime-range/month/month-range pickers, whose surfaces render
+  // their own top-right next-month/year chevron that the floating X used to sit
+  // on top of and swallow the tap for. This group proves the two are genuinely
+  // independent: the X disappears, but every other dismissal route -- barrier
+  // tap and Escape -- still works exactly as if showCloseIcon had not been
+  // passed at all.
+  group('LayrzDialog showCloseIcon', () {
+    late _PopCountingObserver observer;
+
+    setUp(() {
+      observer = _PopCountingObserver();
+    });
+
+    guardedTestWidgets('showCloseIcon: false renders no X even though the dialog stays dismissible', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        LayrzApp(
+          navigatorObservers: [observer],
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzDialog.show<void>(
+                    context,
+                    content: const Text('No X here'),
+                    canDismiss: true,
+                    showCloseIcon: false,
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No X here'), findsOneWidget);
+      expect(
+        findDialogCloseButton(),
+        findsNothing,
+        reason: 'showCloseIcon: false must suppress the X render entirely, on the no-title floating layout',
+      );
+    });
+
+    guardedTestWidgets('showCloseIcon: false renders no X on the titled layout either', (tester) async {
+      await tester.pumpWidget(
+        LayrzApp(
+          navigatorObservers: [observer],
+          theme: LayrzThemeData.light(),
+          debugShowCheckedModeBanner: false,
+          home: Center(
+            child: Builder(
+              builder: (context) => GestureDetector(
+                onTap: () {
+                  LayrzDialog.show<void>(
+                    context,
+                    title: const Text('Titled, no X'),
+                    content: const Text('Body'),
+                    canDismiss: true,
+                    showCloseIcon: false,
+                  );
+                },
+                child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Titled, no X'), findsOneWidget);
+      expect(
+        findDialogCloseButton(),
+        findsNothing,
+        reason: 'showCloseIcon: false must suppress the X render entirely, on the titled title-row layout too',
+      );
+    });
+
+    guardedTestWidgets(
+      'showCloseIcon: false still dismisses via barrier tap -- canDismiss is untouched',
+      (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            navigatorObservers: [observer],
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzDialog.show<void>(
+                      context,
+                      content: const SizedBox(height: 100, width: 100, child: Text('Barrier dismiss me')),
+                      canDismiss: true,
+                      showCloseIcon: false,
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Barrier dismiss me'), findsOneWidget);
+        expect(findDialogCloseButton(), findsNothing, reason: 'the X must be absent for this test to be valid');
+
+        // A point outside the centered panel -- the barrier itself.
+        await tester.tapAt(const Offset(10, 10));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Barrier dismiss me'), findsNothing);
+        expect(find.text('Open'), findsOneWidget, reason: 'the page underneath must still be present');
+        expect(observer.pops, equals(1));
+      },
+    );
+
+    guardedTestWidgets(
+      'showCloseIcon: false still dismisses via Escape -- canDismiss is untouched',
+      (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            navigatorObservers: [observer],
+            theme: LayrzThemeData.light(),
+            debugShowCheckedModeBanner: false,
+            home: Center(
+              child: Builder(
+                builder: (context) => GestureDetector(
+                  onTap: () {
+                    LayrzDialog.show<void>(
+                      context,
+                      content: const Text('Escape dismiss me'),
+                      canDismiss: true,
+                      showCloseIcon: false,
+                    );
+                  },
+                  child: const SizedBox(width: 100, height: 100, child: Text('Open')),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Escape dismiss me'), findsOneWidget);
+        expect(findDialogCloseButton(), findsNothing, reason: 'the X must be absent for this test to be valid');
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Escape dismiss me'), findsNothing);
+        expect(find.text('Open'), findsOneWidget, reason: 'the page underneath must still be present');
+        expect(observer.pops, equals(1));
+      },
+    );
   });
 }

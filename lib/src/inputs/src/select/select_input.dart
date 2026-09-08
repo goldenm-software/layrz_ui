@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
@@ -20,24 +21,24 @@ import 'select_input_surface.dart';
 ///
 /// [LayrzSelectInput] displays a field for picking an item, with a
 /// dropdown chevron affordance rendered as an external sibling to the field (never inside
-/// a caller-suppliable slot). Tapping the field opens a selection surface that adapts to
-/// the viewport:
-/// - **Desktop / wide (≥ 960px)**: [LayrzEndDrawer], a fixed-width right-edge
-///   drawer (DESIGN-98) -- see [_LayrzSelectInputState._openDesktopDrawer] for
-///   why it carries no `actions` row.
+/// a caller-suppliable slot). Tapping the field opens a selection surface via
+/// [LayrzResponsiveModal.show], which resolves to:
+/// - **Desktop / wide (≥ 960px)**: a dialog -- see
+///   [_LayrzSelectInputState._openPicker] for why it carries no `actions` row.
 /// - **Below `md` breakpoint (< 960px)**: A bottom sheet covering the lower portion of the screen
 ///
-/// This follows decision D52 (adaptive surface) and avoids depending on the dialog system
-/// (DESIGN-96/99), keeping the component self-contained and lightweight.
+/// This follows decision D52 (adaptive surface) and keeps the component self-contained
+/// and lightweight.
 ///
 /// **DESIGN-98 superseded the previous "elevated field" illusion (DESIGN-145).**
 /// The selection surface no longer covers the field in place via
 /// `LayrzAnchoredPanel.coverAnchor` -- the maintainer reported that overlay
 /// "kinda weird" after live usage, and this field now opens the same
-/// [LayrzEndDrawer] the eight date/time pickers use. The field itself is
-/// unaffected by this: it is still always read-only and never the searcher
-/// (see the next point), it simply no longer needs a focus node forwarded to
-/// an anchored-panel `childFocusNode` the way the illusion required.
+/// [LayrzResponsiveModal.show] surface the eight date/time pickers use. The
+/// field itself is unaffected by this: it is still always read-only and
+/// never the searcher (see the next point), it simply no longer needs a
+/// focus node forwarded to an anchored-panel `childFocusNode` the way the
+/// illusion required.
 ///
 /// **Self-display (BREAKING, DESIGN-40/144):** The field renders from its own internal
 /// state, not directly from [value]. Picking an item updates the field's display
@@ -351,31 +352,6 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
     _commitSelection(null);
   }
 
-  /// Opens the selection surface on mobile via bottom sheet.
-  Future<void> _openMobileSurface() async {
-    final result = await LayrzBottomSheet.show<LayrzSelectItem<T>?>(
-      context,
-      builder: (context) => SizedBox(
-        child: LayrzSelectInputSurface(
-          items: widget.items,
-          selectedItem: _findSelectedItem(),
-          enableSearch: widget.enableSearch,
-          canUnselect: widget.canUnselect,
-          filter: widget.filter,
-          emptyListText: widget.emptyListText,
-          itemExtent: widget.itemExtent,
-          onItemSelected: (item) {
-            LayrzModalRoute.popIfCurrent(context, item);
-          },
-        ),
-      ),
-    );
-
-    if (result != null || widget.canUnselect) {
-      _commitSelection(result);
-    }
-  }
-
   /// Builds the field's content: the chrome (as an [Expanded] sibling with no border
   /// or radius of its own) plus the dropdown chevron as an external caret.
   ///
@@ -386,11 +362,12 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
   /// already exposes `showBorder`/`borderRadius` for exactly this composition, so
   /// this needs no change to the chrome itself.
   ///
-  /// [onOpen] opens the selection surface -- [_openDesktopDrawer] on desktop,
-  /// [_openMobileSurface] on mobile. [isExpanded] reports whether the surface is
-  /// currently open; both hosts are routes rather than a queryable controller,
-  /// so this is always `false` -- see [_openDesktopDrawer]'s own doc for why
-  /// `LayrzEndDrawer` needs no controller the way `LayrzAnchoredPanel` did.
+  /// [onOpen] opens the selection surface via [_openPicker] -- a dialog on
+  /// wide viewports, a bottom sheet below `isCompact`. [isExpanded] reports
+  /// whether the surface is currently open; both branches are routes rather
+  /// than a queryable controller, so this is always `false` -- see
+  /// [_openPicker]'s own doc for why no controller is needed the way
+  /// `LayrzAnchoredPanel` required one.
   Widget _buildField(
     BuildContext context, {
     required VoidCallback onOpen,
@@ -586,100 +563,75 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final isCompact = context.isCompact;
-
-    if (isCompact) {
-      // Mobile: build anchor that opens bottom sheet on tap
-      // Note: Mobile bottom sheet does not expose expanded state since it is not
-      // connected to a controller that can be queried. This is acceptable because
-      // the bottom sheet itself is its own modal navigation layer.
-      return _appendExtras(
-        _buildField(context, onOpen: _openMobileSurface, isExpanded: false),
-        context.tokens,
-      );
-    } else {
-      // Desktop: opens the selection surface in a LayrzEndDrawer (DESIGN-98),
-      // replacing the previous `LayrzAnchoredPanel` "elevated field" hosting
-      // (DESIGN-145). See [_openDesktopDrawer]'s own doc for why this carries
-      // no `actions` row.
-      return _appendExtras(
-        _buildField(
-          context,
-          onOpen: () => _openDesktopDrawer(context),
-          isExpanded: false,
-        ),
-        context.tokens,
-      );
-    }
+    return _appendExtras(
+      _buildField(context, onOpen: _openPicker, isExpanded: false),
+      context.tokens,
+    );
   }
 
-  /// Opens the selection surface in [LayrzEndDrawer] on desktop (DESIGN-98).
+  /// Opens the selection surface via [LayrzResponsiveModal.show], which
+  /// resolves to a dialog on wide viewports or a bottom sheet below
+  /// `isCompact`.
   ///
   /// **No `actions` row.** Unlike the eight date/time pickers, picking an item
   /// here is the decision -- there is no separate value to compose across
   /// multiple fields before committing, so a Save button below the list would
   /// be pure friction: the user would tap an option, then have to find and tap
   /// Save for a choice already made. `actions: null` also means
-  /// [LayrzEndDrawer.show]'s own `canDismiss` inference applies unchanged
-  /// (dismissable, since there is nothing pinned to lose) -- no override
-  /// needed, unlike every Cancel/Save-carrying picker.
+  /// [LayrzResponsiveModal.show]'s own `canDismiss` inference applies
+  /// unchanged (dismissable, since there is nothing pinned to lose) -- no
+  /// override needed, unlike every Cancel/Save-carrying picker.
   ///
   /// [LayrzSelectInputSurface] is passed no `panelController`: it has none to
-  /// give, since the drawer has no `MenuController` the way
+  /// give, since neither branch has a `MenuController` the way
   /// `LayrzAnchoredPanel` did. The surface's own Escape/Enter/tap handlers
   /// already fall back to a bare `Navigator.pop(context)` whenever
-  /// `panelController` is null -- the exact branch the mobile bottom sheet
-  /// path below already exercises -- so closing the drawer this way needed no
+  /// `panelController` is null, so closing either surface this way needed no
   /// change to that widget.
   ///
-  /// **The DESIGN-40 300px height cap is re-applied here, via [ConstrainedBox]
-  /// plus its own [SingleChildScrollView], because [LayrzEndDrawer] does not
-  /// offer either of its own for its `builder` content.** [LayrzAnchoredPanel]
-  /// used to be the single place both existed (`maxHeight` plus the scroll view
-  /// that let content past it keep scrolling -- see [LayrzSelectInputSurface]'s
-  /// own class doc, which is deliberately host-agnostic and uncapped).
-  /// [LayrzEndDrawer.show] wraps `builder(context)` in a bare
-  /// [SingleChildScrollView] with no height cap at all, so a [ConstrainedBox]
-  /// alone would clamp the available height but leave [LayrzSelectInputSurface]'s
-  /// own uncapped-height `Column` (search field plus its fixed-height item
-  /// list) with nowhere to put content past that cap -- it would overflow
-  /// rather than scroll, since the surface relies on its host to be the one
-  /// scrollable, not its own `Column`. The extra [SingleChildScrollView] here
-  /// is that scrollable, reproducing [LayrzAnchoredPanel]'s own
-  /// cap-then-scroll pairing exactly.
-  Future<void> _openDesktopDrawer(BuildContext context) async {
-    final result = await LayrzEndDrawer.show<LayrzSelectItem<T>?>(
+  /// **Bigger dialog + pinned header/search, scrolling list only (maintainer
+  /// review), replacing the DESIGN-40 300px cap.** [LayrzSelectInputSurface]
+  /// no longer needs a `ConstrainedBox`/`SingleChildScrollView` pairing
+  /// imposed by this caller: its own root `Column` now pins the header
+  /// (title, inline search, close) and lets only its `Expanded`-wrapped
+  /// `ListView` scroll — see that widget's own `build` doc. That `Expanded`
+  /// needs a genuinely bounded incoming height, which it gets here from
+  /// [LayrzDialogConfig]'s enlarged `maxWidth`/`maxHeight` (roomier than the
+  /// 480×640 default) on the dialog branch — this surface's `child` slot has
+  /// no `actions`, so [LayrzResponsiveModal.show] passes `builder`'s result
+  /// straight through to [LayrzDialog.show]'s own `child`, which is bounded
+  /// only by [LayrzDialogConfig.maxWidth]/`maxHeight` with no intermediate
+  /// scroll view imposed — and from `sheet: LayrzBottomSheetConfig(scrollable:
+  /// false)` on the sheet branch, mirroring `LayrzComboBoxInput._openPicker`'s
+  /// identical fix for the same shape of content.
+  Future<void> _openPicker() async {
+    final result = await LayrzResponsiveModal.show<LayrzSelectItem<T>?>(
       context,
-      // DESIGN-98 Finding 2 (maintainer review): before this, `labelText`
-      // reached the drawer only as `semanticLabel` (screen-reader only), so a
-      // sighted user saw no visible title at all. `title` below now carries
-      // `labelText` visibly whenever it is set, mirroring `LayrzDateInput`'s
-      // identical fix -- see that widget's own doc for the full rationale.
-      // `semanticLabel` falls back to `hintText` only: when `title` is
-      // non-null, its own rendered `Text` already produces a Semantics node
-      // with that exact label, so also passing it as `semanticLabel` would
-      // announce it a second time (see end_drawer.dart's own doc: "passing
-      // both usually reads as a duplicate title, not a title plus a
-      // caption"). `LayrzSelectInputSurface` renders no inline caption of its
-      // own, so there is no `showInlineTitle`-style flag to suppress here.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
-      builder: (context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 300.0),
-        child: SingleChildScrollView(
-          child: LayrzSelectInputSurface(
-            items: widget.items,
-            selectedItem: _findSelectedItem(),
-            enableSearch: widget.enableSearch,
-            canUnselect: widget.canUnselect,
-            filter: widget.filter,
-            emptyListText: widget.emptyListText,
-            itemExtent: widget.itemExtent,
-            onItemSelected: (item) {
-              LayrzModalRoute.popIfCurrent(context, item);
-            },
-          ),
-        ),
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss's own inference (still `true`, since no
+      // `actions` are passed) -- barrier tap, Escape, and the back gesture
+      // all still close the modal with no value.
+      showCloseIcon: false,
+      dialog: const LayrzDialogConfig(maxWidth: 600, maxHeight: 760),
+      sheet: const LayrzBottomSheetConfig(scrollable: false),
+      builder: (context) => LayrzSelectInputSurface(
+        items: widget.items,
+        selectedItem: _findSelectedItem(),
+        enableSearch: widget.enableSearch,
+        canUnselect: widget.canUnselect,
+        filter: widget.filter,
+        emptyListText: widget.emptyListText,
+        labelText: widget.labelText,
+        itemExtent: widget.itemExtent,
+        onItemSelected: (item) {
+          LayrzModalRoute.popIfCurrent(context, item);
+        },
       ),
     );
 

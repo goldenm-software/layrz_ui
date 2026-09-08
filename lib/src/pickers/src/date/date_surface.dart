@@ -3,22 +3,25 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 
 /// The desktop/mobile-shared surface content for [LayrzDateInput]: a month
 /// navigation header above a single [LayrzPickersDayGrid] page. Composed by
-/// [LayrzDateInput] inside [LayrzEndDrawer] (desktop) or [LayrzBottomSheet]
-/// (compact).
+/// [LayrzDateInput] via [LayrzResponsiveModal.show] (a dialog on desktop,
+/// [LayrzBottomSheet] on compact).
 ///
 /// **DESIGN-98: no longer commits on tap.** Before DESIGN-98, tapping a day
 /// fired [onDateSelected] immediately and [LayrzDateInput] closed the
 /// hosting surface on that same gesture. The maintainer's instruction moved
-/// every date-related input onto [LayrzEndDrawer] **with actions**,
-/// including this one — a tap now only updates this surface's own in-progress
+/// every date-related input onto an end drawer **with actions** (since
+/// promoted into the responsive dialog/sheet split above), including this
+/// one — a tap now only updates this surface's own in-progress
 /// [_draft]; nothing is reported or closed until Save. See
 /// [LayrzDateSurfaceState]'s class doc for the full Cancel/Save contract and
 /// [LayrzDateInput]'s own doc for why this reverses a previously-settled
@@ -54,6 +57,11 @@ class LayrzDateSurface extends StatefulWidget {
   /// Whether the ISO week-number gutter renders.
   final bool showWeekNumbers;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzDateInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the drafted date when the user presses Save. Never called
   /// with a disabled or unselected value.
   final ValueChanged<DateTime> onDateSelected;
@@ -75,8 +83,8 @@ class LayrzDateSurface extends StatefulWidget {
   ///
   /// Defaults to `false` — unlike the five range-shaped surfaces, this
   /// widget has no pre-DESIGN-98 mobile footer to preserve (it committed on
-  /// tap everywhere), so both the desktop [LayrzEndDrawer] and mobile
-  /// [LayrzBottomSheet] paths now render Cancel/Save the same way: via
+  /// tap everywhere), so both the dialog and [LayrzBottomSheet] branches of
+  /// [LayrzResponsiveModal.show] now render Cancel/Save the same way: via
   /// `actions`, built by [LayrzDateInput]. See
   /// [LayrzDateRangeSurface.showInlineFooter]'s doc for the general
   /// mechanism this reuses.
@@ -91,6 +99,7 @@ class LayrzDateSurface extends StatefulWidget {
     this.disabledDays = const {},
     this.firstDayOfWeek = DateTime.monday,
     this.showWeekNumbers = true,
+    this.labelText,
     required this.onDateSelected,
     this.onCancel,
     this.onDraftChanged,
@@ -230,6 +239,10 @@ class LayrzDateSurfaceState extends State<LayrzDateSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           _buildHeader(context),
           SizedBox(height: tokens.spacing.sp2),
           LayrzPickersDayGrid(

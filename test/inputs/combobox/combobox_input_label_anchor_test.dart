@@ -12,20 +12,20 @@ import '../../helpers/pump_themed_app.dart';
 ///
 /// **DESIGN-98 retired `coverAnchor` for this widget entirely.** The
 /// maintainer's instruction moved the desktop overlay from
-/// `LayrzAnchoredPanel` to [LayrzEndDrawer] -- a fixed-width right-edge
-/// drawer that does not anchor to the field's rect at all, so "does the
-/// panel land on the field or the label" is no longer a question this widget
-/// can even ask: the drawer's position is independent of both. The two
-/// anchor-rect tests this file used to carry are replaced with the DESIGN-98
-/// equivalent -- the drawer must not overlap the field, mirroring
-/// `LayrzSelectInput`'s identical DESIGN-98 rewrite in
+/// `LayrzAnchoredPanel` to an end drawer (since promoted to a dialog via
+/// [LayrzResponsiveModal.show]) that does not anchor to the field's rect at
+/// all, so "does the panel land on the field or the label" is no longer a
+/// question this widget can even ask: the dialog's position is independent
+/// of both. The two anchor-rect tests this file used to carry are replaced
+/// with the DESIGN-98 equivalent -- the dialog must not reuse the field's
+/// own rect, mirroring `LayrzSelectInput`'s identical DESIGN-98 rewrite in
 /// `select_input_test.dart`. `_appendExtras` itself is unchanged and still
 /// hoists the label/error footer outside the field's own chrome (see
 /// `combobox_input.dart`), which is what the third test below still covers.
 void main() {
   group('LayrzComboBoxInput label/error anchor parity', () {
     testWidgets(
-      "the desktop drawer's rect does not overlap the field's own bordered box (DESIGN-98 retires coverAnchor)",
+      "the desktop dialog's rect is not the field's own bordered box (DESIGN-98 retires coverAnchor)",
       (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -55,12 +55,19 @@ void main() {
         await tester.tap(find.byType(LayrzInputChrome).first);
         await tester.pumpAndSettle();
 
-        final drawerRect = tester.getRect(find.byType(BottomSheetContent));
+        final dialogRect = tester.getRect(find.byType(BottomSheetContent));
 
+        // Not an overlap assertion -- a centered dialog over a centered
+        // field (as `pumpThemedApp` renders both) is expected to overlap the
+        // field's rect geometrically; see `combobox_input_test.dart`'s
+        // identical test for the full reasoning. What still distinguishes
+        // this from `coverAnchor` is that the dialog is an independently-
+        // sized panel, not the field's own bordered box reused for the
+        // overlay.
         expect(
-          drawerRect.overlaps(fieldBoxRect),
-          isFalse,
-          reason: 'the drawer is a separate, fixed-width right-edge panel -- it must not cover the field in place',
+          dialogRect,
+          isNot(equals(fieldBoxRect)),
+          reason: 'the dialog is a separate, independently-sized panel -- it must not reuse the field\'s own rect',
         );
       },
     );

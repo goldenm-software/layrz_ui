@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -17,11 +18,10 @@ import 'time_range_surface.dart';
 /// the range rule despite being built from two single-time clusters rather
 /// than a grid.
 ///
-/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
-/// below `isCompact`.** This widget previously opened [LayrzTimeRangeSurface]
-/// in the picker-private `LayrzPickerDrawer`, composing Cancel/Save inline —
-/// see [LayrzDateRangeInput]'s identical doc for the full rationale, which
-/// applies here unchanged. The mobile branch is unchanged.
+/// **Opens via [LayrzResponsiveModal.show]**, which resolves to a dialog on
+/// wide viewports or a [LayrzBottomSheet] below `isCompact` — see
+/// [LayrzDateRangeInput]'s identical doc for the full rationale, which
+/// applies here unchanged.
 class LayrzTimeRangeInput extends StatefulWidget {
   /// The currently committed start time.
   final LayrzTimeOfDay? startValue;
@@ -182,35 +182,9 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
     setState(() {});
   }
 
-  Future<void> _openMobileSurface() async {
-    if (widget.disabled) return;
-    await LayrzBottomSheet.show<void>(
-      context,
-      // Names the sheet's route for screen readers with this field's own
-      // label -- without it LayrzBottomSheet.show adds no route semantics at
-      // all. Falls back to hintText when labelText is null, matching this
-      // widget's own labelText-or-hintText constructor assertion.
-      semanticLabel: widget.labelText ?? widget.hintText,
-      builder: (context) => LayrzTimeRangeSurface(
-        startValue: widget.startValue,
-        endValue: widget.endValue,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onSave: (start, end) {
-          _handleSave(start, end);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      initialSize: 0.7,
-      maxSize: 0.95,
-      snapSizes: const [0.7, 0.95],
-    );
-  }
-
-  /// Opens [LayrzTimeRangeSurface] in [LayrzEndDrawer] on desktop — see
-  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
-  /// rationale (DESIGN-98). This surface has no Clear affordance (see
+  /// Opens [LayrzTimeRangeSurface] via [LayrzResponsiveModal.show] — see
+  /// [LayrzDateRangeInput._openPicker]'s identical doc for the full
+  /// rationale. This surface has no Clear affordance (see
   /// [LayrzTimeRangeSurface]'s class doc), so `hasSelection` in the shared
   /// draft-state record is always `false` and [LayrzPickerDrawerActions]
   /// never renders a Clear button for it.
@@ -219,21 +193,21 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
   /// (00:00/00:00) selection look rejected (maintainer review, Findings 1
   /// and 3).** `draftState` used to seed `canSave` from a hardcoded `false`,
   /// relying entirely on [LayrzTimeRangeSurfaceState.initState]'s own
-  /// post-frame callback to correct it. [LayrzEndDrawer] hosts the surface
-  /// behind a 300ms routed slide transition, so that callback can fire
-  /// before [surfaceKey.currentState] is attached -- `syncDraftState` then
-  /// silently no-opped, and nothing else ever re-primed `draftState`: Save
-  /// rendered permanently disabled for the rest of that open regardless of
-  /// what the user picked, including a deliberate midnight value in both
-  /// clusters (midnight is a genuine, non-null [LayrzTimeOfDay] once actually
-  /// set -- [LayrzTimeRangeSurfaceState.canSave]'s own `_start != null &&
-  /// _end != null` predicate never treats it as unset; the disabled Save
-  /// button was purely this seeding race, not a separate zero-value defect).
-  /// Computing the seed from [widget.startValue]/[widget.endValue] directly
-  /// makes `draftState` correct from its very first frame, before any
-  /// callback runs at all -- `syncDraftState` below then only ever updates an
+  /// post-frame callback to correct it. The hosting surface can render
+  /// behind a routed transition, so that callback can fire before
+  /// [surfaceKey.currentState] is attached -- `syncDraftState` then silently
+  /// no-opped, and nothing else ever re-primed `draftState`: Save rendered
+  /// permanently disabled for the rest of that open regardless of what the
+  /// user picked, including a deliberate midnight value in both clusters
+  /// (midnight is a genuine, non-null [LayrzTimeOfDay] once actually set --
+  /// [LayrzTimeRangeSurfaceState.canSave]'s own `_start != null && _end !=
+  /// null` predicate never treats it as unset; the disabled Save button was
+  /// purely this seeding race, not a separate zero-value defect). Computing
+  /// the seed from [widget.startValue]/[widget.endValue] directly makes
+  /// `draftState` correct from its very first frame, before any callback
+  /// runs at all -- `syncDraftState` below then only ever updates an
   /// already-correct value.
-  Future<void> _openDesktopDrawer() async {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
       canSave: widget.startValue != null && widget.endValue != null,
@@ -249,31 +223,46 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
       draftState.value = (canSave: true, hasSelection: false);
     }
 
-    await LayrzEndDrawer.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
-      // `title` below carries `labelText` visibly, so `semanticLabel` falls
-      // back to `hintText` only -- see LayrzDateInput's identical doc for
-      // why passing `labelText` to both would double the announcement.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
       // rule is about a DECISION being skipped; a picker's Cancel/Escape/
       // barrier tap are all equally safe "discard the draft" gestures, and
       // Escape=Cancel specifically is required by every picker test in
-      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // this batch). Explicitly overrides LayrzResponsiveModal.show's own
       // actions-present-infers-false default.
       canDismiss: true,
-      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
-      // should be the labelText of the input" -- see LayrzDateInput's
-      // identical doc for the full rationale.
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss: true above -- barrier tap, Escape, and
+      // the back gesture still cancel the draft.
+      showCloseIcon: false,
+      // Fix 5: see `LayrzTimeInput._openPicker`'s identical comment for why
+      // `DraggableScrollableSheet` cannot shrink-wrap to content and this can
+      // only be minimized, not eliminated. Two time-field clusters (Start
+      // and End) still fit comfortably well under half the viewport height;
+      // the previous 0.7-0.95 override reserved nearly the whole screen for
+      // them, spreading the two clusters across a tall box with a large
+      // empty gap beneath.
+      sheet: const LayrzBottomSheetConfig(
+        initialSize: 0.45,
+        maxSize: 0.7,
+        snapSizes: [0.45, 0.7],
+      ),
       builder: (context) => LayrzTimeRangeSurface(
         key: surfaceKey,
         startValue: widget.startValue,
         endValue: widget.endValue,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        labelText: widget.labelText,
         showInlineFooter: false,
         onDraftChanged: syncDraftState,
         onSave: (start, end) {
@@ -353,10 +342,6 @@ class _LayrzTimeRangeInputState extends State<LayrzTimeRangeInput> {
       _updateSummary();
     }
 
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

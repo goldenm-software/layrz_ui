@@ -14,6 +14,13 @@ import '../../helpers/pump_themed.dart';
 /// two-cluster case.
 Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 
+/// Locates the [LayrzButton] rendering [label] ("AM" or "PM") within a
+/// meridiem control -- [LayrzButton]'s label renders via [RichText] (a
+/// [TextSpan], not a plain [Text] widget), so `find.text` never matches it.
+Finder _meridiemButton(String label) {
+  return find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+}
+
 /// A minimal stateful host that owns [startValue]/[endValue] and can be
 /// driven via [_ReseedHarnessState.setValues] from a test, so re-pumping
 /// exercises a real in-place `didUpdateWidget` on [LayrzTimeRangeSurface] --
@@ -64,8 +71,10 @@ void main() {
         ),
       );
 
-      // Two clusters of (hour, minute, hidden-seconds) = 6 EditableText.
-      expect(find.byType(EditableText), findsNWidgets(6));
+      // Two clusters of (hour, minute) = 4 EditableText -- showSeconds
+      // defaults to false and the digital-clock panel genuinely omits the
+      // seconds group rather than mounting it hidden.
+      expect(find.byType(EditableText), findsNWidgets(4));
       expect(findButtonLabel(const LayrzUiL10nDefault().actionCancel), findsOneWidget);
       expect(findButtonLabel(const LayrzUiL10nDefault().actionSave), findsOneWidget);
     });
@@ -136,7 +145,7 @@ void main() {
           ),
         );
 
-        // Start cluster: hour(0), minute(1), seconds(2, hidden).
+        // Start cluster: hour(0), minute(1) -- showSeconds is false.
         await tester.enterText(find.byType(EditableText).first, '11');
         await tester.pumpAndSettle();
 
@@ -190,8 +199,8 @@ void main() {
         ),
       );
 
-      // End cluster: hour(3), minute(4), seconds(5, hidden).
-      await tester.enterText(find.byType(EditableText).at(3), '18');
+      // End cluster: hour(2), minute(3) -- showSeconds is false.
+      await tester.enterText(find.byType(EditableText).at(2), '18');
       await tester.pumpAndSettle();
 
       final saveButton = tester.widget<LayrzButton>(
@@ -239,9 +248,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText).at(1), '15'); // start minute
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText).at(3), '18'); // end hour
+      await tester.enterText(find.byType(EditableText).at(2), '18'); // end hour
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText).at(4), '45'); // end minute
+      await tester.enterText(find.byType(EditableText).at(3), '45'); // end minute
       await tester.pumpAndSettle();
 
       final saveButton = tester.widget<LayrzButton>(
@@ -328,9 +337,9 @@ void main() {
         ),
       );
 
-      // Start cluster: hour(0), minute(1), seconds(2, hidden). End cluster
-      // starts at index 3: hour(3), minute(4).
-      await tester.enterText(find.byType(EditableText).at(4), '45');
+      // Start cluster: hour(0), minute(1). End cluster starts at index 2:
+      // hour(2), minute(3).
+      await tester.enterText(find.byType(EditableText).at(3), '45');
       await tester.pumpAndSettle();
 
       expect(find.byType(LayrzTimeRangeSurface), findsOneWidget);
@@ -444,7 +453,7 @@ void main() {
         ),
       );
 
-      expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text, '9');
+      expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text, '09');
 
       tester
           .state<_ReseedHarnessState>(find.byType(_ReseedHarness))
@@ -453,7 +462,7 @@ void main() {
 
       expect(
         tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-        '6',
+        '06',
         reason: 'didUpdateWidget must re-seed the draft from the new widget.startValue',
       );
     });
@@ -481,6 +490,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.widget<EditableText>(find.byType(EditableText).first).controller.text, '23');
 
+        // Blur the field: _DigitField.didUpdateWidget only resyncs its
+        // displayed text from an external value change while NOT focused
+        // (see that class's own doc) -- enterText leaves the field focused.
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+
         tester
             .state<_ReseedHarnessState>(find.byType(_ReseedHarness))
             .setValues(const LayrzTimeOfDay(hour: 6, minute: 0), const LayrzTimeOfDay(hour: 20, minute: 0));
@@ -488,7 +503,7 @@ void main() {
 
         expect(
           tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-          '6',
+          '06',
           reason: 'the stale locally-typed draft must not survive a re-seed triggered by a new widget.startValue',
         );
       },
@@ -536,8 +551,8 @@ void main() {
         ),
       );
 
-      expect(find.text('AM'), findsNWidgets(2));
-      expect(find.text('PM'), findsNWidgets(2));
+      expect(_meridiemButton('AM'), findsNWidgets(2));
+      expect(_meridiemButton('PM'), findsNWidgets(2));
     });
   });
 
@@ -564,8 +579,8 @@ void main() {
       );
 
       expect(find.byType(EditableText), findsNWidgets(6));
-      expect(find.text('AM'), findsNWidgets(2));
-      expect(find.text('PM'), findsNWidgets(2));
+      expect(_meridiemButton('AM'), findsNWidgets(2));
+      expect(_meridiemButton('PM'), findsNWidgets(2));
     });
   });
 }

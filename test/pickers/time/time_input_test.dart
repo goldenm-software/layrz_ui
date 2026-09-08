@@ -18,6 +18,13 @@ const double _kSafeAnchorWidth = 700.0;
 
 Widget _bounded(Widget child) => SizedBox(width: _kSafeAnchorWidth, child: child);
 
+/// Locates the [LayrzButton] rendering [label] ("AM" or "PM") within the
+/// meridiem control -- [LayrzButton]'s label renders via [RichText] (a
+/// [TextSpan], not a plain [Text] widget), so `find.text` never matches it.
+Finder _meridiemButton(String label) {
+  return find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+}
+
 void main() {
   group('LayrzTimeInput — construction and assertions', () {
     test('requires labelText or hintText', () {
@@ -66,9 +73,10 @@ void main() {
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
-      // Two visible fields (hour, minute) -- seconds stays mounted-but-hidden
-      // per D15, so it still counts as an EditableText.
-      expect(find.byType(EditableText), findsNWidgets(3));
+      // Two fields (hour, minute) -- showSeconds defaults to false, and the
+      // digital-clock panel genuinely omits the seconds group rather than
+      // mounting it hidden.
+      expect(find.byType(EditableText), findsNWidgets(2));
     });
   });
 
@@ -255,7 +263,7 @@ void main() {
         final hourText = tester.widget<EditableText>(find.byType(EditableText).first).controller.text;
         expect(
           hourText,
-          '9',
+          '09',
           reason: 'reopening after an involuntary close must re-seed from widget.value, not the discarded draft',
         );
       },
@@ -310,11 +318,12 @@ void main() {
       );
 
       // DESIGN-98 dropped LayrzAnchoredPanel from this widget's desktop
-      // branch (LayrzEndDrawer replaces it, and the drawer itself carries no
-      // border) -- so the border assertion moves to the anchor's own
-      // LayrzInputChrome, which is what actually paints border colour by
-      // error state (see LayrzInputStyleSpec.resolve's readOnly > error
-      // precedence, the trap this test guards against).
+      // branch (a dialog via LayrzResponsiveModal.show replaces it, and the
+      // dialog panel itself carries no border relevant to this field) -- so
+      // the border assertion moves to the anchor's own LayrzInputChrome,
+      // which is what actually paints border colour by error state (see
+      // LayrzInputStyleSpec.resolve's readOnly > error precedence, the trap
+      // this test guards against).
       final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome).first);
       final theme = LayrzTheme.of(tester.element(find.byType(LayrzTimeInput)));
 
@@ -455,8 +464,8 @@ void main() {
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
-      expect(find.text('AM'), findsOneWidget);
-      expect(find.text('PM'), findsOneWidget);
+      expect(_meridiemButton('AM'), findsOneWidget);
+      expect(_meridiemButton('PM'), findsOneWidget);
     });
 
     guardedTestWidgets('tapping PM in 12h mode reports an updated hour via onChanged', (tester) async {
@@ -481,7 +490,7 @@ void main() {
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('PM'));
+      await tester.tap(_meridiemButton('PM'));
       await tester.pumpAndSettle();
 
       expect(reported, isEmpty, reason: 'DESIGN-98: the meridiem toggle alone must not commit -- it only drafts');
@@ -540,6 +549,12 @@ void main() {
 
       await tester.enterText(find.byType(EditableText).first, '25');
       await tester.pumpAndSettle();
+      // The digital-clock field only clamps on blur/submit (see
+      // `_DigitField`'s own doc) -- an out-of-range value like 25 is never
+      // reported per-keystroke at all, so the field must commit before Save
+      // reads the draft, or the draft would still hold the original 9.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
 
@@ -569,6 +584,10 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(EditableText).at(1), '99');
+      await tester.pumpAndSettle();
+      // See the identical comment in the hour-field test above: an
+      // out-of-range value only clamps and reports on blur/submit.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
@@ -747,7 +766,7 @@ void main() {
       final fields = find.byType(EditableText).evaluate().toList();
       expect(fields.length, 3);
       final texts = fields.map((e) => (e.widget as EditableText).controller.text).toList();
-      expect(texts, ['9', '5', '20']);
+      expect(texts, ['09', '05', '20']);
     });
   });
 

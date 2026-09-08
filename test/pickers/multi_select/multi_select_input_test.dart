@@ -20,7 +20,7 @@ void main() {
   group('LayrzMultiSelectInput — construction', () {
     guardedTestWidgets('asserts at least one of labelText/hintText is provided', (tester) async {
       expect(
-        () => LayrzMultiSelectInput<String>(items: items, itemExtent: 40),
+        () => LayrzMultiSelectInput<String>(items: items, itemExtent: 52),
         throwsAssertionError,
       );
     });
@@ -32,7 +32,7 @@ void main() {
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, hintText: 'Pick some fruit'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, hintText: 'Pick some fruit'),
       );
 
       expect(find.byType(LayrzMultiSelectInput<String>), findsOneWidget);
@@ -41,7 +41,7 @@ void main() {
     guardedTestWidgets('renders without crashing with a label', (tester) async {
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'),
       );
 
       expect(find.byType(LayrzMultiSelectInput<String>), findsOneWidget);
@@ -54,7 +54,7 @@ void main() {
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', disabled: true),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', disabled: true),
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);
@@ -68,7 +68,7 @@ void main() {
     guardedTestWidgets('shows the hint when nothing is selected', (tester) async {
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', hintText: 'Choose fruits'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', hintText: 'Choose fruits'),
       );
 
       // `LayrzInputChrome` renders its own hint overlay whenever the anchor's
@@ -86,7 +86,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           value: const ['banana'],
         ),
@@ -100,7 +100,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           // Passed out of items-order deliberately -- the field must still
           // render in `items`' own order (apple, banana, cherry), matching
@@ -124,7 +124,7 @@ void main() {
           width: 220,
           child: LayrzMultiSelectInput<String>(
             items: manyItems,
-            itemExtent: 40,
+            itemExtent: 52,
             labelText: 'Options',
             value: List.generate(20, (i) => 'v$i'),
           ),
@@ -156,7 +156,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           onChanged: (values) => committed = values,
         ),
@@ -189,7 +189,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           onChanged: commits.add,
         ),
@@ -224,7 +224,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           value: const ['apple'],
           onChanged: (_) => called = true,
@@ -263,7 +263,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           onChanged: (_) => called = true,
         ),
@@ -289,7 +289,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           onChanged: (values) => committed = values,
         ),
@@ -320,7 +320,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           onChanged: (_) => called = true,
         ),
@@ -348,7 +348,7 @@ void main() {
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'),
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);
@@ -375,7 +375,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           value: const ['apple', 'banana'],
         ),
@@ -402,7 +402,7 @@ void main() {
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', enableSearch: true),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', enableSearch: true),
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);
@@ -427,7 +427,7 @@ void main() {
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', enableSearch: true),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', enableSearch: true),
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);
@@ -452,7 +452,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           enableSearch: true,
           emptyListText: 'Nothing matches',
@@ -481,7 +481,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           enableSearch: true,
           filter: (query, item) => item.searchableStrings.any((s) => s.toLowerCase().contains('a')),
@@ -509,7 +509,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           value: const ['apple'],
           onChanged: (_) => called = true,
@@ -537,7 +537,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           enableSearch: false,
           onChanged: (values) => committed = values,
@@ -569,7 +569,7 @@ void main() {
           builder: (context, setState) {
             return LayrzMultiSelectInput<String>(
               items: items,
-              itemExtent: 40,
+              itemExtent: 52,
               labelText: 'Fruits',
               value: state.selectedValues,
               onChanged: (values) => setState(() => state.selectedValues = values),
@@ -597,7 +597,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           errors: const ['Pick at least one', 'Too many selected'],
         ),
@@ -611,7 +611,7 @@ void main() {
         tester,
         LayrzMultiSelectInput<String>(
           items: items,
-          itemExtent: 40,
+          itemExtent: 52,
           labelText: 'Fruits',
           errors: const ['Required'],
           hideDetails: true,
@@ -624,21 +624,28 @@ void main() {
     guardedTestWidgets('dense parameter is applied to the chrome', (tester) async {
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits', dense: true),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits', dense: true),
       );
 
       final chrome = tester.widget<LayrzInputChrome>(find.byType(LayrzInputChrome));
       expect(chrome.dense, isTrue);
     });
 
-    guardedTestWidgets('desktop viewport opens the surface in LayrzEndDrawer with a visible title', (tester) async {
+    // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal.show`
+    // itself still has no `title:` slot, but [LayrzMultiSelectInputSurface]
+    // now composes its own `LayrzPickerDialogHeader` inside the builder
+    // content instead, which DOES render `labelText` as a visible title
+    // `Text`.
+    guardedTestWidgets('desktop viewport opens the surface in a dialog, with exactly one visible title', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'),
       );
 
       expect(find.byType(LayrzMultiSelectInputSurface<String>), findsNothing);
@@ -647,13 +654,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LayrzMultiSelectInputSurface<String>), findsOneWidget);
-      expect(find.text('Fruits'), findsWidgets);
+      // The closed field's own label renders via `LayrzInputChrome`'s
+      // RichText/TextSpan, not a plain Text, so only the surface's own
+      // LayrzPickerDialogHeader title contributes a plain-Text match.
+      expect(find.text('Fruits'), findsOneWidget);
     });
 
     guardedTestWidgets('affordance icon is rendered', (tester) async {
       await pumpThemedApp(
         tester,
-        LayrzMultiSelectInput<String>(items: items, itemExtent: 40, labelText: 'Fruits'),
+        LayrzMultiSelectInput<String>(items: items, itemExtent: 52, labelText: 'Fruits'),
       );
 
       expect(find.byIcon(MdiIcons.formatListCheckbox), findsOneWidget);

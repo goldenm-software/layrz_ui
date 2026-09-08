@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
@@ -11,10 +12,11 @@ import 'color_surface.dart';
 /// A Material-free color input field, resolving to a single [Color].
 ///
 /// Composes [LayrzInputChrome] directly (D63, via `picker_anchor.dart`) and
-/// opens [LayrzColorSurface] in [LayrzEndDrawer] on desktop (`>= 960px`) or
-/// [LayrzBottomSheet] below `isCompact` — the same adaptive-surface pattern
-/// every other `pickers/` input uses (see [LayrzDateInput] for the
-/// canonical reference this widget mirrors).
+/// opens [LayrzColorSurface] via [LayrzResponsiveModal.show], which resolves
+/// to a dialog on wide viewports (`>= 960px`) or a [LayrzBottomSheet] below
+/// `isCompact` — the same adaptive-surface pattern every other `pickers/`
+/// input uses (see [LayrzDateInput] for the canonical reference this widget
+/// mirrors).
 ///
 /// **Two tabs, no `enabledTypes`-style parameter (Decision, OQ-1).** The
 /// opened surface always offers exactly two ways to choose a color:
@@ -156,13 +158,18 @@ class _LayrzColorInputState extends State<LayrzColorInput> {
     setState(() {});
   }
 
-  Future<void> _openMobileSurface() async {
+  /// Opens [LayrzColorSurface] via [LayrzResponsiveModal.show] — see
+  /// [LayrzDateInput._openPicker]'s identical doc for the full rationale
+  /// (no visible title, `canDismiss: true` even with actions present, the
+  /// seeded-not-hardcoded draftState fix).
+  ///
+  /// `draftState` is seeded directly from `canSave`'s own predicate (draft
+  /// != widget.value) -- always `false` at open time since the draft is
+  /// seeded from the current value -- mirroring [LayrzDateInput._openPicker]'s
+  /// identical race-avoidance reasoning for why this is computed rather than
+  /// hardcoded blindly.
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
-    // Seeded directly from `canSave`'s own predicate (draft != widget.value)
-    // -- always `false` at open time since the draft is seeded from the
-    // current value -- mirroring LayrzDateInput._openMobileSurface's
-    // identical race-avoidance reasoning for why this is computed rather
-    // than hardcoded blindly.
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
     final surfaceKey = GlobalKey<LayrzColorSurfaceState>();
 
@@ -171,59 +178,29 @@ class _LayrzColorInputState extends State<LayrzColorInput> {
       draftState.value = (canSave: state!.canSave, hasSelection: false);
     }
 
-    await LayrzBottomSheet.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
       semanticLabel: widget.labelText ?? widget.hintText,
-      builder: (context) => LayrzColorSurface(
-        key: surfaceKey,
-        value: widget.value,
-        palette: widget.palette,
-        onDraftChanged: syncDraftState,
-        onColorSelected: (color) {
-          _handleSelected(color);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      actions: [
-        LayrzPickerDrawerActions(
-          draftState: draftState,
-          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
-          onClear: (_) {},
-          onSave: (_) => surfaceKey.currentState?.save(),
-        ),
-      ],
-      initialSize: 0.7,
-      maxSize: 0.95,
-      snapSizes: const [0.7, 0.95],
-    );
-
-    draftState.dispose();
-  }
-
-  /// Opens [LayrzColorSurface] in [LayrzEndDrawer] on desktop — see
-  /// [LayrzDateInput._openDesktopDrawer]'s identical doc for the full
-  /// rationale (title-from-labelText, canDismiss:true even with actions
-  /// present, the seeded-not-hardcoded draftState fix).
-  Future<void> _openDesktopDrawer() async {
-    if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((canSave: false, hasSelection: false));
-    final surfaceKey = GlobalKey<LayrzColorSurfaceState>();
-
-    void syncDraftState() {
-      final state = surfaceKey.currentState;
-      draftState.value = (canSave: state!.canSave, hasSelection: false);
-    }
-
-    await LayrzEndDrawer.show<void>(
-      context,
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
       canDismiss: true,
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss: true above -- barrier tap, Escape, and
+      // the back gesture still cancel the draft.
+      showCloseIcon: false,
+      sheet: const LayrzBottomSheetConfig(
+        initialSize: 0.7,
+        maxSize: 0.95,
+        snapSizes: [0.7, 0.95],
+      ),
       builder: (context) => LayrzColorSurface(
         key: surfaceKey,
         value: widget.value,
         palette: widget.palette,
+        labelText: widget.labelText,
         onDraftChanged: syncDraftState,
         onColorSelected: (color) {
           _handleSelected(color);
@@ -312,10 +289,6 @@ class _LayrzColorInputState extends State<LayrzColorInput> {
 
   @override
   Widget build(BuildContext context) {
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

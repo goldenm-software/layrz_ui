@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/select/select_input_surface.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed.dart';
 
@@ -193,7 +194,16 @@ void main() {
       expect(find.text('Apple'), findsNothing);
       expect(find.text('Cherry'), findsNothing);
 
-      await tester.tap(find.byIcon(MdiIcons.close));
+      // CHANGED (LayrzPickerDialogHeader.middleSlot migration): the header
+      // now also renders its own close ("X") icon next to the title, so
+      // `find.byIcon(MdiIcons.close)` alone is ambiguous between it and the
+      // search field's own clear suffix -- scope to the search field's
+      // EditableText ancestor to disambiguate.
+      final searchFieldClearIcon = find.descendant(
+        of: find.ancestor(of: find.byType(EditableText), matching: find.byType(LayrzInputChrome)).first,
+        matching: find.byIcon(MdiIcons.close),
+      );
+      await tester.tap(searchFieldClearIcon);
       await tester.pumpAndSettle();
 
       expect(find.text('Apple'), findsOneWidget);
