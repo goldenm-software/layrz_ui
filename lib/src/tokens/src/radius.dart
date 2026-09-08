@@ -23,10 +23,10 @@ class LayrzRadiusTokens {
   /// Border radius level 2 — 8 pixels.
   final double r2;
 
-  /// Border radius level 3 — 16 pixels.
+  /// Border radius level 3 — 14 pixels.
   final double r3;
 
-  /// Border radius level 4 — 24 pixels.
+  /// Border radius level 4 — 20 pixels.
   final double r4;
 
   /// Border radius level 5 — 32 pixels.

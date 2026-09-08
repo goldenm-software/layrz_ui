@@ -64,6 +64,23 @@ class LayrzColorTokens {
   /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
   final LayrzColorSwatch contextual;
 
+  /// The tint swatch behind app-wide text selection and the find-in-page
+  /// highlight.
+  ///
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50
+  /// (lightest) to 900 (darkest). Two shades are used directly by name:
+  /// [LayrzColorSwatch.shade500] is the primary selection tone — the
+  /// app-wide text-selection highlight (see `LayrzThemeData.selectionColor`)
+  /// and the find-spike's "current match" tint both derive from it — and
+  /// [LayrzColorSwatch.shade100] is the secondary tone used for the
+  /// find-spike's "other matches" tint. Keeping both on one swatch means text
+  /// selection and find-highlighting always read as the same visual language
+  /// rather than two independently-tuned colors.
+  ///
+  /// First-class themeable: a future dark theme overrides this single swatch
+  /// and both consumers pick up the new hue automatically.
+  final LayrzColorSwatch selectionColor;
+
   /// Color used for borders, dividers, and separator lines.
   final Color divider;
 
@@ -113,6 +130,7 @@ class LayrzColorTokens {
     required this.warning,
     required this.info,
     required this.contextual,
+    required this.selectionColor,
     required this.divider,
     required this.overlay,
     required this.tonalOpacity,
@@ -150,6 +168,7 @@ class LayrzColorTokens {
       warning: LayrzColors.warningOrange,
       info: LayrzColors.blue,
       contextual: LayrzColors.grey,
+      selectionColor: LayrzColors.lightBlue,
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
@@ -174,6 +193,7 @@ class LayrzColorTokens {
     Color? warning,
     Color? info,
     Color? contextual,
+    Color? selectionColor,
     Color? divider,
     Color? overlay,
     double? tonalOpacity,
@@ -207,6 +227,11 @@ class LayrzColorTokens {
       contextual: contextual == null
           ? this.contextual
           : (contextual is LayrzColorSwatch ? contextual : LayrzColorSwatch(contextual.toARGB32(), {50: contextual})),
+      selectionColor: selectionColor == null
+          ? this.selectionColor
+          : (selectionColor is LayrzColorSwatch
+                ? selectionColor
+                : LayrzColorSwatch(selectionColor.toARGB32(), {50: selectionColor})),
       divider: divider ?? this.divider,
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,
@@ -234,6 +259,7 @@ class LayrzColorTokens {
           warning == other.warning &&
           info == other.info &&
           contextual == other.contextual &&
+          selectionColor == other.selectionColor &&
           divider == other.divider &&
           overlay == other.overlay &&
           tonalOpacity == other.tonalOpacity &&
@@ -256,6 +282,7 @@ class LayrzColorTokens {
     warning,
     info,
     contextual,
+    selectionColor,
     divider,
     overlay,
     tonalOpacity,
