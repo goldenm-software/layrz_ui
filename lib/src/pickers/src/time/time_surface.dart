@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../models/time_of_day.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/time_fields_panel.dart';
 
@@ -13,11 +15,12 @@ import '../shared/time_fields_panel.dart';
 /// edit and the surface never closed on its own — see decision D75
 /// (`engineering/milestone-4.md`) for that original "the surface has no
 /// discrete commit gesture, so every edit is the commit" ruling. The
-/// maintainer's DESIGN-98 instruction moves this widget onto [LayrzEndDrawer]
-/// **with actions**, which supersedes that: field edits now only update this
-/// surface's own [_draft], and [LayrzTimeInput.onChanged] fires once, on
-/// Save. [onTimeChanged] is retained as the plumbing [LayrzTimeInput] reads
-/// draft mutations through (see [onDraftChanged]), not as a live-commit path.
+/// maintainer's DESIGN-98 instruction moves this widget onto
+/// [LayrzResponsiveModal.show] **with actions**, which supersedes that: field
+/// edits now only update this surface's own [_draft], and
+/// [LayrzTimeInput.onChanged] fires once, on Save. [onTimeChanged] is
+/// retained as the plumbing [LayrzTimeInput] reads draft mutations through
+/// (see [onDraftChanged]), not as a live-commit path.
 class LayrzTimeSurface extends StatefulWidget {
   /// The current time value.
   final LayrzTimeOfDay value;
@@ -27,6 +30,11 @@ class LayrzTimeSurface extends StatefulWidget {
 
   /// Whether the hour field uses 24-hour form.
   final bool use24HourFormat;
+
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzTimeInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
 
   /// Called with the drafted time when the user presses Save.
   final ValueChanged<LayrzTimeOfDay> onTimeChanged;
@@ -55,6 +63,7 @@ class LayrzTimeSurface extends StatefulWidget {
     required this.value,
     this.showSeconds = false,
     this.use24HourFormat = true,
+    this.labelText,
     required this.onTimeChanged,
     this.onCancel,
     this.onDraftChanged,
@@ -115,6 +124,10 @@ class LayrzTimeSurfaceState extends State<LayrzTimeSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           LayrzPickersTimeFieldsPanel(
             value: _draft,
             showSeconds: widget.showSeconds,

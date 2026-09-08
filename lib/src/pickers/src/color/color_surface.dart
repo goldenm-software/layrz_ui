@@ -6,33 +6,35 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tabs/tabs.dart';
 
 import '../shared/glyph_grid.dart';
-import '../shared/picker_tab_switcher.dart';
+import '../shared/picker_dialog_header.dart';
 import 'color_wheel.dart';
 
 /// The desktop/mobile-shared surface content for [LayrzColorInput]: a
 /// two-tab (Palette / Wheel) color picker, a HEX readout with a visible
-/// paste button beneath the tabs, hosted inside [LayrzEndDrawer] (desktop)
-/// or [LayrzBottomSheet] (compact) by [LayrzColorInput].
+/// paste button beneath the tabs, hosted by [LayrzColorInput] via
+/// [LayrzResponsiveModal.show] (a dialog on wide viewports, a
+/// [LayrzBottomSheet] below `isCompact`).
 ///
 /// **Staged-with-Save, mirroring [LayrzDateSurface]'s exact contract.**
 /// Every tap (a palette swatch, a wheel drag, a successful clipboard paste)
 /// only updates this surface's own [_draft] — nothing reaches
 /// [LayrzColorInput.onChanged] until [save] is invoked by the hosting
-/// drawer/sheet's Save action. [onDraftChanged] mirrors
+/// surface's Save action. [onDraftChanged] mirrors
 /// [LayrzDateSurface.onDraftChanged] exactly: called on every draft
 /// mutation so the caller's `ValueNotifier<({bool canSave, bool
 /// hasSelection})>` stays in sync.
 ///
-/// **Opens on the tab with content when the palette is empty (OQ-2).** A
+/// **Renders no tab strip at all when the palette is empty (OQ-2).** A
 /// caller-supplied empty [palette] means the Palette tab has nothing valid
-/// to render — this surface never shows a dead empty grid; it opens on the
-/// Wheel tab instead and hides the Palette tab from the switcher entirely
+/// to render — this surface never shows a dead empty grid; it renders the
+/// Wheel directly instead of wrapping it in a single-entry [LayrzTabView]
 /// (a single, always-available Wheel "tab" would otherwise read as if a
 /// developer forgot to supply a palette rather than a deliberate design
-/// choice, but showing an unreachable/empty Palette entry in the switcher
-/// is worse — see [_effectiveTabs]).
+/// choice) — see [build].
 class LayrzColorSurface extends StatefulWidget {
   /// The currently-selected color the surface seeds its draft from.
   final Color value;
@@ -41,6 +43,11 @@ class LayrzColorSurface extends StatefulWidget {
   /// empty set hides the Palette tab entirely and opens on Wheel — see this
   /// class's own doc.
   final Set<Color> palette;
+
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzColorInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
 
   /// Called with the drafted color when the user presses Save. Never
   /// called while [_draft] is `null` — mirrors [LayrzDateSurface.onDateSelected].
@@ -61,6 +68,7 @@ class LayrzColorSurface extends StatefulWidget {
     super.key,
     required this.value,
     required this.palette,
+    this.labelText,
     required this.onColorSelected,
     this.onCancel,
     this.onDraftChanged,
@@ -86,16 +94,10 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
   /// actually differs from the seeded value (see [canSave]'s own doc).
   late Color _draft;
 
-  /// The index into [_effectiveTabs] currently displayed. Seeded by
-  /// [_initialTabIndex] — see that method's doc for the empty-palette
-  /// opening rule (OQ-2).
-  late int _selectedTabIndex;
-
   @override
   void initState() {
     super.initState();
     _draft = widget.value;
-    _selectedTabIndex = _initialTabIndex();
     WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDraftChanged?.call());
   }
 
@@ -109,31 +111,6 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
       _draft = widget.value;
     }
   }
-
-  /// The tabs this surface actually renders, in display order — omits
-  /// "Palette" entirely when [LayrzColorSurface.palette] is empty (OQ-2).
-  /// Always at least one entry ("Wheel" always renders), so
-  /// [LayrzPickerTabSwitcher]'s own `tabs.length >= 2` assertion is only
-  /// exercised when both tabs are present; a single-tab (Wheel-only) surface
-  /// renders the wheel directly with no switcher at all — see [build].
-  List<String> _effectiveTabs(BuildContext context) {
-    final l10n = context.l10n;
-    return [
-      if (widget.palette.isNotEmpty) l10n.colorPickerPaletteTab,
-      l10n.colorPickerWheelTab,
-    ];
-  }
-
-  /// Seeds [_selectedTabIndex]: the Palette tab (index 0) when non-empty,
-  /// otherwise the Wheel tab — its index depends on whether Palette was
-  /// omitted from [_effectiveTabs], so with an empty palette "Wheel" is
-  /// index 0 (the only tab), not 1.
-  int _initialTabIndex() => 0;
-
-  /// Whichever tab index currently corresponds to "Wheel" in
-  /// [_effectiveTabs] — index 1 when Palette is present, index 0 when it
-  /// was omitted for an empty palette.
-  int _wheelTabIndex() => widget.palette.isNotEmpty ? 1 : 0;
 
   /// Whether a Save is currently reachable. A color field always carries
   /// *some* value, so this is gated on the draft actually differing from
@@ -156,10 +133,6 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
   void _handleDraftChanged(Color color) {
     setState(() => _draft = color);
     widget.onDraftChanged?.call();
-  }
-
-  void _handleTabSelected(int index) {
-    setState(() => _selectedTabIndex = index);
   }
 
   /// Reads the system clipboard, attempts to parse a `#RRGGBB`/`RRGGBB` hex
@@ -254,11 +227,39 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
     );
   }
 
+  /// Builds the wheel tab's content: a centered [LayrzColorWheel].
+  Widget _buildWheelTab(BuildContext context) {
+    return Center(
+      child: LayrzColorWheel(value: _draft, onChanged: _handleDraftChanged),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final tabs = _effectiveTabs(context);
-    final wheelIndex = _wheelTabIndex();
+    final l10n = context.l10n;
+
+    // A single-tab (Wheel-only) surface renders the wheel directly with no
+    // strip at all -- an always-available Wheel "tab" with nothing to
+    // switch between would read as a developer forgetting to supply a
+    // palette rather than a deliberate choice (OQ-2). LayrzTabView asserts
+    // `tabs.isNotEmpty`, not `>= 2`, so this branch is still required rather
+    // than merely an optimization.
+    final Widget tabbedOrWheel = widget.palette.isEmpty
+        ? _buildWheelTab(context)
+        : LayrzTabView(
+            isScrollable: false,
+            tabs: [
+              LayrzTab(
+                labelText: l10n.colorPickerPaletteTab,
+                child: SizedBox(height: 220.0, child: _buildPaletteTab(context)),
+              ),
+              LayrzTab(
+                labelText: l10n.colorPickerWheelTab,
+                child: _buildWheelTab(context),
+              ),
+            ],
+          );
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
@@ -266,20 +267,11 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (tabs.length > 1) ...[
-            LayrzPickerTabSwitcher(
-              tabs: tabs,
-              selectedIndex: _selectedTabIndex,
-              onTabSelected: _handleTabSelected,
-            ),
-            SizedBox(height: tokens.spacing.sp3),
-          ],
-          if (_selectedTabIndex == wheelIndex)
-            Center(
-              child: LayrzColorWheel(value: _draft, onChanged: _handleDraftChanged),
-            )
-          else
-            SizedBox(height: 220.0, child: _buildPaletteTab(context)),
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
+          tabbedOrWheel,
           SizedBox(height: tokens.spacing.sp3),
           _buildHexReadout(context),
         ],

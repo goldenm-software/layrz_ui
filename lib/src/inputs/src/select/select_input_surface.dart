@@ -5,6 +5,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_dialog_header.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 
@@ -54,6 +55,11 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
   /// Text shown when search finds no matching items.
   final String? emptyListText;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzSelectInput.labelText]. `null` renders an empty title slot rather
+  /// than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Callback when an item is selected or cleared.
   final void Function(LayrzSelectItem<T>?) onItemSelected;
 
@@ -75,6 +81,7 @@ class LayrzSelectInputSurface<T> extends StatefulWidget {
     required this.canUnselect,
     this.filter,
     this.emptyListText,
+    this.labelText,
     required this.onItemSelected,
     this.panelController,
     required this.itemExtent,
@@ -250,14 +257,15 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
     return KeyEventResult.ignored;
   }
 
-  /// Builds the internal search field row, shown above the list when
-  /// [LayrzSelectInputSurface.enableSearch] is true.
+  /// Builds the internal search field, rendered inline in the header row
+  /// (title | dense search | X) when [LayrzSelectInputSurface.enableSearch]
+  /// is true — see [build]'s own doc for the pinned-header layout this feeds.
   ///
-  /// Deliberately borderless ([LayrzInputChrome.showBorder] false): the border that
-  /// sells the "elevated field" illusion belongs to the floating card as a whole
-  /// (drawn by [LayrzSelectInput] around this entire surface), not to this row on
-  /// its own -- a second, inner border here would read as two competing fields
-  /// instead of one continuous surface.
+  /// Deliberately borderless ([LayrzInputChrome.showBorder] false) and
+  /// `dense: true`: borderless for the same reason as before this field moved
+  /// into the header row (a second, inner border would read as competing with
+  /// the surface's own chrome), and dense so the field is compact enough to
+  /// sit inline between the title and the close button.
   Widget _buildSearchField(BuildContext context) {
     final l10n = LayrzUiL10n.of(context);
 
@@ -311,10 +319,27 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
       controller: _searchController,
       showBorder: false,
       borderRadius: BorderRadius.zero,
+      dense: true,
       child: LayrzEditableField(config: fieldConfig),
     );
   }
 
+  /// Builds this surface's content.
+  ///
+  /// **Pinned header + search, scrolling list only (maintainer review).**
+  /// Restructured from a `Column` whose item list self-sized to its own full,
+  /// uncapped content height (see the removed height-cap comment this
+  /// replaced) into a `Column` of exactly: the header row (title, inline
+  /// search, close — never scrolls), a divider, and an [Expanded] `ListView`
+  /// that is the only scrolling region. This requires a genuinely bounded
+  /// incoming height, which [LayrzSelectInput._openPicker] now supplies
+  /// directly via a bigger [LayrzDialogConfig] rather than the previous
+  /// `ConstrainedBox(maxHeight: 300)` + `SingleChildScrollView` pairing — see
+  /// that method's own doc.
+  ///
+  /// **Search moved into the header row itself (title | dense search | X),**
+  /// via [LayrzPickerDialogHeader.middleSlot] — see that parameter's own doc.
+  /// The search field is always visible while the list scrolls underneath it.
   @override
   Widget build(BuildContext context) {
     final l10n = LayrzUiL10n.of(context);
@@ -330,79 +355,53 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
         ),
       );
     } else {
-      // No height CAP here: the 300px maximum is still applied exactly once, by
-      // the caller (`LayrzAnchoredPanel.maxHeight` on desktop, or the bottom
-      // sheet's own scrollable on mobile) -- a second, disagreeing cap here is
-      // DESIGN-40's original root cause, see `select_input.dart`.
+      // Bounded by the caller now (maintainer review): [LayrzSelectInput._openPicker]
+      // hands this surface a genuinely bounded incoming height via a bigger
+      // [LayrzDialogConfig] (dialog branch) or `scrollable: false` (sheet
+      // branch), and this `ListView` sits inside this widget's own `Expanded`
+      // (see [build]) rather than a caller-imposed `SingleChildScrollView` --
+      // so it is the ONE scrollable for this content, not a second same-axis
+      // scrollable competing with an outer one. `NeverScrollableScrollPhysics`
+      // and the fixed-height `SizedBox` wrapper this replaced are gone with
+      // that outer scrollable; this is now a lazy, self-scrolling `ListView`
+      // exactly as `ListView.builder` is meant to be used.
       //
-      // A definite height IS given here, though, and that is a different thing:
-      // both hosts place this surface inside their own `SingleChildScrollView`,
-      // which -- regardless of what height cap it itself receives from above --
-      // always relaxes its *child's* incoming height constraint to unbounded
-      // along the scroll axis, so the child can be taller than the viewport and
-      // still scroll. A `Column` (what this surface built before `ListView`
-      // replaced it) tolerates that fine, since its own height is simply the sum
-      // of its children's, computable with no bound at all. A `ListView` cannot:
-      // as a lazy, non-shrinkWrap viewport it must know its own extent to lay
-      // out, and an unbounded incoming height throws (`Vertical viewport was
-      // given unbounded height`) before the caller's cap ever gets a chance to
-      // clamp anything -- this was a real crash on both the desktop panel and
-      // the mobile sheet, not a test-only artifact. Wrapping it in a `SizedBox`
-      // sized to its own full, uncapped content height restores exactly the
-      // shape `Column` provided implicitly, so the caller's single external cap
-      // keeps clamping and scrolling it precisely as it did before.
-      // Sizing the `ListView` to its own full content height also makes its own
-      // scroll extent zero -- it never needs to scroll on its own, since it is
-      // never taller than its own viewport. Left with the default physics, that
-      // still leaves it a second same-axis `Scrollable` co-located with the
-      // caller's outer one, and a plain drag on that region resolves to whichever
-      // of the two wins the gesture arena rather than reliably reaching the
-      // caller's scrollable. `NeverScrollableScrollPhysics` removes it from that
-      // arena entirely, so the caller's `SingleChildScrollView` is unambiguously
-      // the one that scrolls -- exactly as when this was a non-scrollable `Column`.
-      listOrEmptyState = SizedBox(
-        height: _filteredItems.length * widget.itemExtent,
-        child: ListView.builder(
-          // Explicit zero padding, not the ListView/ScrollView default (`padding: null`):
-          // with no padding given, `ScrollView.buildSlivers` (scroll_view.dart, around
-          // lines 900-916 on the pinned 3.47 SDK) falls back to deriving the vertical
-          // scroll-axis padding from the ambient `MediaQuery.maybeOf(context).padding`
-          // (top + bottom) whenever `scrollDirection` is vertical -- which it is here by
-          // default. Both hosts of this surface already own and fully account for the
-          // device's top inset in their own chrome before this list ever mounts: the
-          // bottom sheet's `_BottomSheetContentState._topContentInset` computes an
-          // explicit `Padding` for exactly that inset (clear of the drag handle's own
-          // footprint) and wraps it in `SafeArea(top: false, ...)` -- which leaves
-          // `MediaQuery.paddingOf` unstripped for descendants, so this `ListView` would
-          // silently re-apply that same top inset a second time, entirely inside its own
-          // viewport, between the top of the list and its first row. The desktop anchored
-          // panel has no top-inset chrome to double-count against, but the same
-          // ambient-padding fallback would still apply there on any host with a nonzero
-          // `MediaQuery.padding.top` -- there is no case where this `ListView` deriving
-          // its own padding from the device inset is correct, since it is never the
-          // outermost scrollable in either presentation (see the class-level height
-          // comment above: both hosts already wrap this in their own outer
-          // `SingleChildScrollView`/sheet chrome). Confirmed on-device (iPhone 17 Pro Max,
-          // ~59px top inset with the keyboard open): a 97px total gap between the search
-          // field and the first row, 59px of which was inside this `ListView` itself,
-          // between its viewport top and the first `KeyedSubtree`.
-          padding: EdgeInsets.zero,
-          physics: const NeverScrollableScrollPhysics(),
-          itemExtent: widget.itemExtent,
-          itemCount: _filteredItems.length,
-          itemBuilder: (context, index) {
-            return _SelectItemRow(
-              key: ValueKey(_filteredItems[index].value),
-              item: _filteredItems[index],
-              isHighlighted: _highlightedIndex == index,
-              isSelected: _filteredItems[index] == widget.selectedItem,
-              onTap: () {
-                widget.onItemSelected(_filteredItems[index]);
-                widget.panelController?.close();
-              },
-            );
-          },
-        ),
+      // Explicit zero padding, not the ListView/ScrollView default (`padding: null`):
+      // with no padding given, `ScrollView.buildSlivers` (scroll_view.dart, around
+      // lines 900-916 on the pinned 3.47 SDK) falls back to deriving the vertical
+      // scroll-axis padding from the ambient `MediaQuery.maybeOf(context).padding`
+      // (top + bottom) whenever `scrollDirection` is vertical -- which it is here by
+      // default. Both hosts of this surface already own and fully account for the
+      // device's top inset in their own chrome before this list ever mounts: the
+      // bottom sheet's `_BottomSheetContentState._topContentInset` computes an
+      // explicit `Padding` for exactly that inset (clear of the drag handle's own
+      // footprint) and wraps it in `SafeArea(top: false, ...)` -- which leaves
+      // `MediaQuery.paddingOf` unstripped for descendants, so this `ListView` would
+      // silently re-apply that same top inset a second time, entirely inside its own
+      // viewport, between the top of the list and its first row. The desktop dialog
+      // has no top-inset chrome to double-count against, but the same
+      // ambient-padding fallback would still apply there on any host with a nonzero
+      // `MediaQuery.padding.top` -- there is no case where this `ListView` deriving
+      // its own padding from the device inset is correct. Confirmed on-device (iPhone
+      // 17 Pro Max, ~59px top inset with the keyboard open): a 97px total gap between
+      // the search field and the first row, 59px of which was inside this `ListView`
+      // itself, between its viewport top and the first `KeyedSubtree`.
+      listOrEmptyState = ListView.builder(
+        padding: EdgeInsets.zero,
+        itemExtent: widget.itemExtent,
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          return _SelectItemRow(
+            key: ValueKey(_filteredItems[index].value),
+            item: _filteredItems[index],
+            isHighlighted: _highlightedIndex == index,
+            isSelected: _filteredItems[index] == widget.selectedItem,
+            onTap: () {
+              widget.onItemSelected(_filteredItems[index]);
+              widget.panelController?.close();
+            },
+          );
+        },
       );
     }
 
@@ -421,16 +420,19 @@ class _LayrzSelectInputSurfaceState<T> extends State<LayrzSelectInputSurface<T>>
       skipTraversal: true,
       onKeyEvent: _handleKeyEvent,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.enableSearch) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-              child: _buildSearchField(context),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+            child: LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => widget.panelController != null
+                  ? widget.panelController!.close()
+                  : LayrzModalRoute.popIfCurrent(context),
+              middleSlot: widget.enableSearch ? _buildSearchField(context) : null,
             ),
-            Container(height: 1, color: tokens.colors.divider),
-          ],
-          listOrEmptyState,
+          ),
+          Container(height: 1, color: tokens.colors.divider),
+          Expanded(child: listOrEmptyState),
         ],
       ),
     );

@@ -132,7 +132,7 @@ class LayrzGlyphGrid<T> extends StatefulWidget {
   /// Set to `false` when this grid is hosted inside a genuinely bounded
   /// parent (e.g. wrapped in `Expanded` or `Flexible` within a `Column`
   /// that itself has a bounded height, such as a `LayrzBottomSheet` or
-  /// `LayrzEndDrawer` body) and the item list is large: the grid then
+  /// dialog body) and the item list is large: the grid then
   /// fills all of the parent's offered height and scrolls through it using
   /// Flutter's default (lazy) viewport — only cells within, and slightly
   /// beyond, the visible viewport are ever built, exactly like any other

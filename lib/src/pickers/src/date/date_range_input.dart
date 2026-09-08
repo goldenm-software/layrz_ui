@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -12,24 +13,20 @@ import 'date_range_surface.dart';
 
 /// A Material-free date-range input field.
 ///
-/// **Cancel/Save live inside the drawer/bottom sheet, visible from the first
+/// **Cancel/Save live inside the dialog/bottom sheet, visible from the first
 /// frame** — see [LayrzDateRangeSurface]'s class doc for the full range
 /// selection state machine this widget's surface implements.
 /// **Involuntary close discards the draft** — reopening always starts clean
 /// from [value].
 ///
-/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
-/// below `isCompact`.** This widget previously opened [LayrzDateRangeSurface]
-/// in the picker-private `LayrzPickerDrawer`, composing its Cancel/Clear/Save
-/// footer inline as a trailing child of the scrolling body — which is exactly
-/// why the maintainer's screenshot showed the footer stranded under short
-/// content instead of pinned to the drawer's bottom edge. [_openDesktopDrawer]
-/// now builds those actions via [LayrzPickerDrawerFooter.build] and passes
-/// them to [LayrzEndDrawer.show]'s `actions` parameter, reading the surface's
-/// live draft state through [_surfaceKey] (a [GlobalKey], the same tool
-/// [LayrzDateRangeSurfaceState]'s own class doc explains). The mobile branch
-/// is unchanged: [LayrzDateRangeSurface] still renders its own footer inline
-/// there via [LayrzDateRangeSurface.showInlineFooter]'s default.
+/// **Opens via [LayrzResponsiveModal.show]**, which resolves to a dialog on
+/// wide viewports or a [LayrzBottomSheet] below `isCompact`. [_openPicker]
+/// builds the Cancel/Clear/Save actions via [LayrzPickerDrawerFooter.build]
+/// and passes them to [LayrzResponsiveModal.show]'s `actions` parameter,
+/// reading the surface's live draft state through a [GlobalKey] (the same
+/// tool [LayrzDateRangeSurfaceState]'s own class doc explains). Both
+/// branches render the same surface with `showInlineFooter: false`, so a
+/// wide viewport and a narrow one now present identically.
 class LayrzDateRangeInput extends StatefulWidget {
   /// The currently committed range.
   final LayrzDateRange? value;
@@ -202,46 +199,18 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
     setState(() {});
   }
 
-  Future<void> _openMobileSurface() async {
-    if (widget.disabled) return;
-    await LayrzBottomSheet.show<void>(
-      context,
-      builder: (context) => LayrzDateRangeSurface(
-        value: widget.value,
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        onSave: (range) {
-          _handleSave(range);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      // Names the sheet for screen readers -- omitting this leaves it
-      // unannounced, a defect this batch's mobile branches shipped once
-      // already (see the implementation plan's known scaffold defects).
-      semanticLabel: widget.labelText ?? widget.hintText,
-      initialSize: 0.8,
-      maxSize: 0.95,
-      snapSizes: const [0.8, 0.95],
-    );
-  }
-
-  /// Opens [LayrzDateRangeSurface] in [LayrzEndDrawer] on desktop — DESIGN-98's
-  /// replacement for the previous picker-private `LayrzPickerDrawer`, now
-  /// with Cancel/Clear/Save pinned via [LayrzEndDrawer.show]'s `actions`
-  /// parameter instead of composed inline. See [LayrzEndDrawer]'s class doc
-  /// for why a fresh [LayrzEndDrawer.show] call needs no generation-key
-  /// trick: every open already reconstructs [LayrzDateRangeSurface]'s `State`
-  /// from scratch.
+  /// Opens [LayrzDateRangeSurface] via [LayrzResponsiveModal.show], which
+  /// resolves to a dialog on wide viewports or a [LayrzBottomSheet] below
+  /// `isCompact`, with Cancel/Clear/Save pinned via the modal's own
+  /// `actions` parameter on both branches instead of composed inline. Every
+  /// open reconstructs [LayrzDateRangeSurface]'s `State` from scratch, so no
+  /// generation-key trick is needed.
   ///
   /// **Why a [ValueNotifier], not a single top-level `setState`.**
-  /// [LayrzEndDrawer.show]'s `builder` and `actions` are two separate
+  /// [LayrzResponsiveModal.show]'s `builder` and `actions` are two separate
   /// parameters, each captured once when `show` is called — there is no
   /// single ancestor `StatefulBuilder` that could rebuild both together short
-  /// of restructuring the drawer itself. A [ValueNotifier] holding the
+  /// of restructuring the modal itself. A [ValueNotifier] holding the
   /// surface's live `(canSave, hasSelection)` sidesteps that: the surface
   /// writes to it on every draft mutation, and each of the three actions
   /// wraps itself in a [ValueListenableBuilder] listening to it, so Clear's
@@ -249,18 +218,18 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
   /// and of the body, with no shared rebuild boundary required.
   ///
   /// **Seeded from `widget.value`, not a hardcoded `false` (maintainer
-  /// review, Finding 1).** [LayrzEndDrawer] hosts this surface behind a
-  /// 300ms routed slide transition, so the surface's own post-frame
-  /// `onDraftChanged` priming call can land before [surfaceKey.currentState]
-  /// is attached -- when that happens, seeding `draftState` from a hardcoded
-  /// `false` leaves Save permanently disabled even though [widget.value] was
-  /// already a complete range, since nothing else ever re-primes it.
-  /// Computing the seed from [widget.value] directly (mirroring
+  /// review, Finding 1).** The hosting surface can render behind a routed
+  /// transition, so the surface's own post-frame `onDraftChanged` priming
+  /// call can land before [surfaceKey.currentState] is attached -- when
+  /// that happens, seeding `draftState` from a hardcoded `false` leaves
+  /// Save permanently disabled even though [widget.value] was already a
+  /// complete range, since nothing else ever re-primes it. Computing the
+  /// seed from [widget.value] directly (mirroring
   /// [LayrzDateRangeSurfaceState.canSave]/`.hasSelection`'s own predicates)
   /// makes `draftState` correct from its very first frame, before any
   /// callback runs at all -- `syncDraftState` below then only ever updates an
   /// already-correct value.
-  Future<void> _openDesktopDrawer() async {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
       canSave: widget.value != null,
@@ -277,25 +246,28 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
       draftState.value = (canSave: state!.canSave, hasSelection: state.hasSelection);
     }
 
-    await LayrzEndDrawer.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
-      // `title` below carries `labelText` visibly, so `semanticLabel` falls
-      // back to `hintText` only -- see LayrzDateInput's identical doc for
-      // why passing `labelText` to both would double the announcement.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
       // rule is about a DECISION being skipped; a picker's Cancel/Escape/
       // barrier tap are all equally safe "discard the draft" gestures, and
       // Escape=Cancel specifically is required by every picker test in
-      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // this batch). Explicitly overrides LayrzResponsiveModal.show's own
       // actions-present-infers-false default.
       canDismiss: true,
-      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
-      // should be the labelText of the input" -- see LayrzDateInput's
-      // identical doc for the full rationale.
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // The surface's own Cancel action already sits in `actions` below, so
+      // the dialog branch's floating X would be redundant -- and, worse, it
+      // would land directly on top of the calendar's own top-right
+      // next-month/year chevron, swallowing its tap. Suppressing only the
+      // icon's render here does not affect canDismiss: true above -- barrier
+      // tap, Escape, and the back gesture still cancel the draft.
+      showCloseIcon: false,
       builder: (context) => LayrzDateRangeSurface(
         key: surfaceKey,
         value: widget.value,
@@ -304,6 +276,7 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
         disabledDays: widget.disabledDays,
         firstDayOfWeek: widget.firstDayOfWeek,
         showWeekNumbers: widget.showWeekNumbers,
+        labelText: widget.labelText,
         showInlineFooter: false,
         onDraftChanged: syncDraftState,
         onSave: (range) {
@@ -382,10 +355,6 @@ class _LayrzDateRangeInputState extends State<LayrzDateRangeInput> {
       _updateSummary();
     }
 
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

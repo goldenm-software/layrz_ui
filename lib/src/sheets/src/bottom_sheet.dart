@@ -939,7 +939,17 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                                   children: [
                                     for (int i = 0; i < widget.actions!.length; i++) ...[
                                       if (i > 0) SizedBox(width: tokens.spacing.sp2),
-                                      widget.actions![i],
+                                      // Flexible (loose fit, not Expanded) mirrors
+                                      // LayrzResponsiveModal's identical dialog-branch actions row
+                                      // (responsive_modal.dart's _DialogBodyWithPinnedActions): a
+                                      // naturally-narrow entry still shrink-wraps to its own content,
+                                      // while an entry that renders more than it has room for (e.g.
+                                      // LayrzPickerDrawerActions's Cancel/Clear/Save row on a range
+                                      // picker) finally receives a bounded maxWidth from this Row
+                                      // instead of the unbounded width a bare Row child gets, letting
+                                      // its own internal Flexible-wrapped buttons actually shrink
+                                      // instead of overflowing the sheet.
+                                      Flexible(child: widget.actions![i]),
                                     ],
                                   ],
                                 ),

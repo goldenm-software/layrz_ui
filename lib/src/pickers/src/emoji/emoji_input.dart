@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
@@ -12,9 +13,10 @@ import 'emoji_surface.dart';
 /// package (`package:emojis/emoji.dart`).
 ///
 /// Composes [LayrzInputChrome] directly (D63, via `picker_anchor.dart`'s
-/// helpers) and opens [LayrzEmojiSurface] in [LayrzEndDrawer] on desktop
-/// (`>= 960px`) or [LayrzBottomSheet] below `isCompact` — the same adaptive
-/// host every other `pickers/` widget uses.
+/// helpers) and opens [LayrzEmojiSurface] via [LayrzResponsiveModal.show],
+/// which resolves to a dialog on wide viewports (`>= 960px`) or a
+/// [LayrzBottomSheet] below `isCompact` — the same adaptive host every other
+/// `pickers/` widget uses.
 ///
 /// **Value is `String?` — the raw emoji character** (e.g. `'😀'`), not a
 /// domain wrapper type. This is [Emoji.char] from the `emojis` package,
@@ -30,9 +32,9 @@ import 'emoji_surface.dart';
 /// [LayrzModalRoute.popIfCurrent]. This is the maintainer's explicit ruling
 /// (see the work-unit brief): picking IS the decision for a single emoji,
 /// exactly like [LayrzSelectInput]'s own "commit-on-tap" contract, so no
-/// [LayrzEndDrawer]/[LayrzBottomSheet] `actions` list is passed at all — the
+/// `actions` list is passed to [LayrzResponsiveModal.show] at all — the
 /// resulting `null` `actions` also makes `canDismiss` infer `true` on both
-/// hosts (barrier tap / Escape / back gesture all close with no value,
+/// branches (barrier tap / Escape / back gesture all close with no value,
 /// exactly like backing out without picking).
 ///
 /// **Self-display.** [_LayrzEmojiInputState] keeps no separate internal
@@ -157,57 +159,44 @@ class _LayrzEmojiInputState extends State<LayrzEmojiInput> {
     setState(() => _controller.text = char);
   }
 
-  /// Opens [LayrzEmojiSurface] in [LayrzBottomSheet] on a compact viewport.
+  /// Opens [LayrzEmojiSurface] via [LayrzResponsiveModal.show].
   ///
-  /// **`scrollable: false`.** [LayrzEmojiSurface] now scrolls its own emoji
-  /// grid internally (a lazy, non-shrink-wrapped [LayrzGlyphGrid] filling an
-  /// `Expanded` section of the surface's `Column` — see that class's own
-  /// doc), so it must not additionally be wrapped in
-  /// [LayrzBottomSheet.show]'s default `SingleChildScrollView`: that would
-  /// hand the surface's `Column` unbounded height, which its `Expanded`
-  /// grid section cannot resolve against (a `RenderFlex` "unbounded height"
-  /// layout error). This mirrors [LayrzBottomSheet.show]'s own documented
-  /// guidance for a caller whose `builder` supplies its own scrollable.
-  Future<void> _openMobileSurface() async {
+  /// **`scrollable: false`** (on the sheet branch, via [LayrzBottomSheetConfig]).
+  /// [LayrzEmojiSurface] scrolls its own emoji grid internally (a lazy,
+  /// non-shrink-wrapped [LayrzGlyphGrid] filling an `Expanded` section of the
+  /// surface's `Column` — see that class's own doc), so it must not
+  /// additionally be wrapped in a default `SingleChildScrollView`: that would
+  /// hand the surface's `Column` unbounded height, which its `Expanded` grid
+  /// section cannot resolve against (a `RenderFlex` "unbounded height"
+  /// layout error). The dialog branch has no equivalent scrollable wrapper to
+  /// suppress — [LayrzDialogConfig] carries no `scrollable` field — so this
+  /// concern only applies to [sheet].
+  ///
+  /// No `actions` are passed (commit-on-tap, see class doc), so `canDismiss`
+  /// infers `true` from [LayrzResponsiveModal.show]'s own default — barrier
+  /// tap, Escape, and the back gesture all close the modal with no value,
+  /// exactly like backing out of the pick.
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
 
-    await LayrzBottomSheet.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
       semanticLabel: widget.labelText ?? widget.hintText,
-      scrollable: false,
-      builder: (context) => LayrzEmojiSurface(
-        onEmojiSelected: (char) {
-          _handleSelected(char);
-          LayrzModalRoute.popIfCurrent(context);
-        },
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss's own inference (still `true`, since no
+      // `actions` are passed) -- barrier tap, Escape, and the back gesture
+      // all still close the modal with no value.
+      showCloseIcon: false,
+      sheet: const LayrzBottomSheetConfig(
+        scrollable: false,
+        initialSize: 0.6,
+        maxSize: 0.9,
+        snapSizes: [0.6, 0.9],
       ),
-      initialSize: 0.6,
-      maxSize: 0.9,
-      snapSizes: const [0.6, 0.9],
-    );
-  }
-
-  /// Opens [LayrzEmojiSurface] in [LayrzEndDrawer] on a wide viewport.
-  ///
-  /// **`scrollable: false`**, for the same reason as
-  /// [_openMobileSurface]'s own: [LayrzEmojiSurface] scrolls its own emoji
-  /// grid internally via an `Expanded`, non-shrink-wrapped [LayrzGlyphGrid],
-  /// so it must not additionally be wrapped in [LayrzEndDrawer.show]'s
-  /// default `SingleChildScrollView` — that would hand the surface's
-  /// `Column` unbounded height.
-  Future<void> _openDesktopDrawer() async {
-    if (widget.disabled) return;
-
-    await LayrzEndDrawer.show<void>(
-      context,
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
-      // No `actions` are passed (commit-on-tap, see class doc), so
-      // `canDismiss` infers `true` from `LayrzEndDrawer.show`'s own default —
-      // barrier tap, Escape, and the back gesture all close this drawer with
-      // no value, exactly like backing out of the pick.
-      scrollable: false,
       builder: (context) => LayrzEmojiSurface(
+        labelText: widget.labelText,
         onEmojiSelected: (char) {
           _handleSelected(char);
           LayrzModalRoute.popIfCurrent(context);
@@ -267,10 +256,6 @@ class _LayrzEmojiInputState extends State<LayrzEmojiInput> {
 
   @override
   Widget build(BuildContext context) {
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

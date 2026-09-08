@@ -9,9 +9,10 @@ import 'picker_drawer_footer.dart';
 ///
 /// **Mobile-only, by design.** DESIGN-98 moved the desktop container from
 /// composing this footer inline (which is what stranded it under short
-/// content — see [LayrzEndDrawer]'s own class doc) to building the same
-/// three buttons as [LayrzEndDrawer.show]'s `actions` parameter instead, so
-/// they pin to the drawer's bottom edge. The mobile [LayrzBottomSheet]
+/// content, when that container was an end drawer) to building the same
+/// three buttons as [LayrzResponsiveModal.show]'s `actions` parameter
+/// instead, so they pin to the hosting surface's bottom edge. The mobile
+/// [LayrzBottomSheet]
 /// container is explicitly out of scope for that fix, so every picker
 /// surface still renders this widget inline as the last child of its own
 /// scrolling body when hosted there — unchanged from the pre-DESIGN-98

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/calendar/calendar.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -20,11 +21,10 @@ import 'datetime_surface.dart';
 /// update). Composes [LayrzPickersDayGrid] and [LayrzPickersTimeFieldsPanel]
 /// stacked in **one** scrollable surface via [LayrzDateTimeSurface].
 ///
-/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
-/// below `isCompact`.** This widget previously opened [LayrzDateTimeSurface]
-/// in the picker-private `LayrzPickerDrawer`, composing Cancel/Save inline —
-/// see [LayrzDateRangeInput]'s identical doc for the full rationale, which
-/// applies here unchanged. The mobile branch is unchanged.
+/// **Opens via [LayrzResponsiveModal.show]**, which resolves to a dialog on
+/// wide viewports or a [LayrzBottomSheet] below `isCompact` — see
+/// [LayrzDateRangeInput]'s identical doc for the full rationale, which
+/// applies here unchanged.
 ///
 /// **Commit model — Cancel/Save inside the surface, not commit-on-tap.** This
 /// widget is single-valued by *type* (one [DateTime]) but collects **two
@@ -58,7 +58,7 @@ class LayrzDateTimeInput extends StatefulWidget {
   /// moment — see [LayrzDateTimeInputPresentation]'s own doc for what
   /// genuinely differs between them.
   @Deprecated(
-    'Ignored as of DESIGN-49: LayrzEndDrawer always shows the calendar and '
+    'Ignored as of DESIGN-49: the picker always shows the calendar and '
     'time fields together, so there is no longer a tab strip or step sequence '
     'to select between. Safe to drop from call sites.',
   )
@@ -144,7 +144,7 @@ class LayrzDateTimeInput extends StatefulWidget {
     // parameter) and is what makes `deprecated_member_use` fire on
     // `LayrzDateTimeInput(presentation: ...)` itself.
     @Deprecated(
-      'Ignored as of DESIGN-49: LayrzEndDrawer always shows the calendar and '
+      'Ignored as of DESIGN-49: the picker always shows the calendar and '
       'time fields together, so there is no longer a tab strip or step sequence '
       'to select between. Safe to drop from call sites.',
     )
@@ -266,59 +266,28 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
     });
   }
 
-  Future<void> _openMobileSurface() async {
-    if (widget.disabled) return;
-    await LayrzBottomSheet.show<void>(
-      context,
-      // Names the sheet's route for screen readers with this field's own
-      // label, mirroring `LayrzTimeInput`'s identical fallback -- without
-      // it the sheet carries no name for what is being picked.
-      semanticLabel: widget.labelText ?? widget.hintText,
-      builder: (context) => LayrzDateTimeSurface(
-        presentation: widget.presentation,
-        initialDate: widget.value,
-        initialTime: widget.value == null ? null : LayrzTimeOfDay.fromDateTime(widget.value!),
-        firstDay: widget.firstDay,
-        lastDay: widget.lastDay,
-        disabledDays: widget.disabledDays,
-        firstDayOfWeek: widget.firstDayOfWeek,
-        showWeekNumbers: widget.showWeekNumbers,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
-        onSave: (date, time) {
-          _handleSave(date, time);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      initialSize: 0.85,
-      maxSize: 0.95,
-      snapSizes: const [0.85, 0.95],
-    );
-  }
-
-  /// Opens [LayrzDateTimeSurface] in [LayrzEndDrawer] on desktop — see
-  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
-  /// rationale (DESIGN-98). This surface has no Clear affordance, so
-  /// `hasSelection` is always `false`.
+  /// Opens [LayrzDateTimeSurface] via [LayrzResponsiveModal.show] — see
+  /// [LayrzDateRangeInput._openPicker]'s identical doc for the full
+  /// rationale. This surface has no Clear affordance, so `hasSelection` is
+  /// always `false`.
   ///
   /// **The race that made Save appear to do nothing (maintainer review,
   /// Finding 1).** `draftState` used to seed `canSave` from a hardcoded
   /// `false`, relying entirely on [LayrzDateTimeSurfaceState.initState]'s own
-  /// post-frame callback to correct it via `syncDraftState`. [LayrzEndDrawer]
-  /// hosts the surface behind a 300ms routed slide transition, so that
-  /// callback can fire before [surfaceKey.currentState] is attached --
-  /// `syncDraftState` then silently returned on a `null` state, and nothing
-  /// else ever re-primed `draftState`: Save rendered permanently disabled
-  /// for the rest of that open, even after the user picked both a date and a
-  /// time. Reopening won because a fresh `State` wins the race the next
-  /// time. Computing the seed from [widget.value] directly (mirroring
+  /// post-frame callback to correct it via `syncDraftState`. The hosting
+  /// surface can render behind a routed transition, so that callback can
+  /// fire before [surfaceKey.currentState] is attached -- `syncDraftState`
+  /// then silently returned on a `null` state, and nothing else ever
+  /// re-primed `draftState`: Save rendered permanently disabled for the
+  /// rest of that open, even after the user picked both a date and a time.
+  /// Reopening won because a fresh `State` wins the race the next time.
+  /// Computing the seed from [widget.value] directly (mirroring
   /// [LayrzDateTimeSurfaceState.canSave]'s own `_date != null && _time !=
   /// null` predicate) makes `draftState` correct from its very first frame,
   /// before any callback runs at all -- `syncDraftState` below then only
   /// ever updates an already-correct value, so losing the race no longer
   /// matters.
-  Future<void> _openDesktopDrawer() async {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
       canSave: widget.value != null,
@@ -335,25 +304,28 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
       draftState.value = (canSave: state!.canSave, hasSelection: false);
     }
 
-    await LayrzEndDrawer.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
-      // `title` below carries `labelText` visibly, so `semanticLabel` falls
-      // back to `hintText` only -- see LayrzDateInput's identical doc for
-      // why passing `labelText` to both would double the announcement.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
       // rule is about a DECISION being skipped; a picker's Cancel/Escape/
       // barrier tap are all equally safe "discard the draft" gestures, and
       // Escape=Cancel specifically is required by every picker test in
-      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // this batch). Explicitly overrides LayrzResponsiveModal.show's own
       // actions-present-infers-false default.
       canDismiss: true,
-      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
-      // should be the labelText of the input" -- see LayrzDateInput's
-      // identical doc for the full rationale.
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // The surface's own Cancel action already sits in `actions` below, so
+      // the dialog branch's floating X would be redundant -- and, worse, it
+      // would land directly on top of the calendar's own top-right
+      // next-month/year chevron, swallowing its tap. Suppressing only the
+      // icon's render here does not affect canDismiss: true above -- barrier
+      // tap, Escape, and the back gesture still cancel the draft.
+      showCloseIcon: false,
       builder: (context) => LayrzDateTimeSurface(
         key: surfaceKey,
         presentation: widget.presentation,
@@ -366,6 +338,7 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         showWeekNumbers: widget.showWeekNumbers,
         showSeconds: widget.showSeconds,
         use24HourFormat: widget.use24HourFormat,
+        labelText: widget.labelText,
         showInlineFooter: false,
         onDraftChanged: syncDraftState,
         onSave: (date, time) {
@@ -444,10 +417,6 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
       _updateSummary();
     }
 
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

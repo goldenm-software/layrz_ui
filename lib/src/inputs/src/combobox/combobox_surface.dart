@@ -4,6 +4,8 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_dialog_header.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 
 import '../shared/editable_field.dart';
@@ -303,16 +305,17 @@ class _ComboBoxSheetOptionRow extends StatelessWidget {
 /// closed field already allows.
 ///
 /// The option list is built as a [SingleChildScrollView] wrapping a plain
-/// [Column], never a [ListView]: [LayrzBottomSheet] is shown with
-/// `scrollable: false` for this content (see
-/// `LayrzComboBoxInput._openBottomSheet`), which hands this subtree the sheet's
-/// own [ScrollController] via an ambient `PrimaryScrollController` instead of
-/// nesting it inside another same-axis scrollable. [LayrzEndDrawer] wraps its
-/// own `builder` content in a bare [SingleChildScrollView] too, so the same
-/// shape works unmodified on desktop. A lazy-loading [ListView] here would
-/// receive unbounded height from that same-axis nesting and assert; a
-/// [Column] does not need laziness in the first place, since combobox option
-/// counts are small.
+/// [Column], never a [ListView]: the sheet branch of `LayrzResponsiveModal.show`
+/// is configured with `sheet: LayrzBottomSheetConfig(scrollable: false)` for
+/// this content (see `LayrzComboBoxInput._openPicker`), which hands this
+/// subtree the sheet's own [ScrollController] via an ambient
+/// `PrimaryScrollController` instead of nesting it inside another same-axis
+/// scrollable. The dialog branch's `child` slot needs no equivalent flag --
+/// it is already bounded by `LayrzDialogConfig.maxHeight` with no
+/// intermediate scroll view imposed, so the same shape works unmodified on
+/// desktop. A lazy-loading [ListView] here would receive unbounded height
+/// from the sheet branch's same-axis nesting and assert; a [Column] does not
+/// need laziness in the first place, since combobox option counts are small.
 class BottomSheetContent extends StatefulWidget {
   /// The pool of options to display and filter, as handed to the sheet at open
   /// time -- see the class doc for how this composes with this widget's own,
@@ -333,17 +336,20 @@ class BottomSheetContent extends StatefulWidget {
   /// separate question of whether it is also rendered as VISIBLE text here.
   final String? labelText;
 
-  /// Whether this widget renders [labelText] as its own inline heading
-  /// `Text`, above the search field.
+  /// Whether this widget renders its own [LayrzPickerDialogHeader] — the
+  /// [labelText] title plus the close ("X") affordance — above the search
+  /// field.
   ///
-  /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
-  /// exactly as it behaved before DESIGN-98's title work -- [LayrzBottomSheet]
-  /// has no title slot of its own, so this inline heading is the only visible
-  /// title mechanism available there. Pass `false` when hosting this widget
-  /// in [LayrzEndDrawer], whose own `title` slot (DESIGN-98) renders the
-  /// picker's name styled as a real title (headline, left-aligned) instead --
-  /// `LayrzComboBoxInput._openDesktopDrawer` does exactly this, since
-  /// rendering both would read as a duplicate title stacked over a caption.
+  /// Defaults to `true` and is left at that default on both
+  /// `LayrzResponsiveModal.show` branches (`LayrzComboBoxInput._openPicker`) --
+  /// neither the dialog nor the bottom sheet branch offers a `title:` slot of
+  /// its own, so this header is the only visible title mechanism available
+  /// on either (Fix 1: the previous revision wrongly rendered no header at
+  /// all, leaving only this row's own `Text`, itself gated on
+  /// [labelText] being non-null so a caller with no label saw no header
+  /// row -- [LayrzPickerDialogHeader] always renders, with an empty title
+  /// slot when [labelText] is `null`, so the row's presence and the close
+  /// affordance no longer depend on whether a label was supplied).
   /// [labelText] itself is still passed through to this widget's own
   /// [Semantics] name either way.
   final bool showInlineTitle;
@@ -354,9 +360,9 @@ class BottomSheetContent extends StatefulWidget {
   /// Mirrors [LayrzComboBoxInput.enableAutocomplete]'s documented contract
   /// ("if false, all options are always displayed") onto this surface's own
   /// search field -- the sole remaining filter mechanism as of the
-  /// maintainer's Finding 6 fix (see [LayrzComboBoxInput._openDesktopDrawer]'s
-  /// own doc for why the caller no longer pre-filters [options] before
-  /// handing them to this widget). When `false`, typing into the search
+  /// maintainer's Finding 6 fix (see [LayrzComboBoxInput._openPicker]'s own
+  /// doc for why the caller no longer pre-filters [options] before handing
+  /// them to this widget). When `false`, typing into the search
   /// field still updates its own text (so the custom-value row and Enter-to-
   /// commit-typed-text keep working), but never narrows [options] itself.
   final bool enableAutocomplete;
@@ -384,8 +390,8 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
   ///
   /// [_searchFocusNode] has `autofocus: false` (see [showInlineTitle]'s own
   /// doc for why the search field never autofocuses), so when neither band's
-  /// host (the [Focus] node [LayrzEndDrawer]/[LayrzBottomSheet] each
-  /// autofocus on open) requests focus onto anything inside this widget's own
+  /// host (the [Focus] node each `LayrzResponsiveModal.show` branch
+  /// autofocuses on open) requests focus onto anything inside this widget's own
   /// subtree, [_listFocusNode] is what actually holds focus -- without a real
   /// [FocusNode] of its own requesting focus on mount, the `Focus`
   /// wrapping this widget's whole subtree (see [build]) would never be part
@@ -530,9 +536,9 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
 
   /// Handles arrow-key navigation and Enter-to-commit across the navigable
   /// rows (see the class doc's "Keyboard navigation" section). Escape is not
-  /// handled here: [LayrzBottomSheet] and [LayrzEndDrawer] each already
-  /// dismiss themselves on Escape (their own barrier/PopScope handling), and
-  /// this widget commits nothing on dismissal, matching a barrier tap.
+  /// handled here: both `LayrzResponsiveModal.show` branches already dismiss
+  /// themselves on Escape (their own barrier/PopScope handling), and this
+  /// widget commits nothing on dismissal, matching a barrier tap.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
@@ -560,13 +566,17 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
     return KeyEventResult.ignored;
   }
 
-  /// Builds the search field row, shown above the option list.
+  /// Builds the search field, rendered inline in the header row (title |
+  /// dense search | X) when [BottomSheetContent.showInlineTitle] is true --
+  /// see [build]'s own doc for the pinned-header layout this feeds. When
+  /// [showInlineTitle] is false, this method is not called at all -- see
+  /// [build] for that fallback.
   ///
-  /// Deliberately borderless ([LayrzInputChrome.showBorder] false), mirroring
-  /// `LayrzSelectInputSurface._buildSearchField` for the identical reason: the
-  /// sheet itself already reads as one bordered surface, so a second, inner
-  /// border here would read as two competing fields instead of a search row
-  /// inside the sheet.
+  /// Deliberately borderless ([LayrzInputChrome.showBorder] false) and
+  /// `dense: true`, mirroring `LayrzSelectInputSurface._buildSearchField` for
+  /// the identical reasons: borderless so it does not read as a second field
+  /// competing with the surface's own chrome, dense so it is compact enough
+  /// to sit inline between the title and the close button.
   ///
   /// The hint (`l10n.inputsSearchHint`) and the accessible name
   /// (`l10n.inputsSearchFieldLabel`) are both drawn from the shared `inputs`
@@ -634,11 +644,32 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
         controller: _searchController,
         showBorder: false,
         borderRadius: BorderRadius.zero,
+        dense: true,
         child: LayrzEditableField(config: fieldConfig),
       ),
     );
   }
 
+  /// Builds this surface's content.
+  ///
+  /// **Pinned header + search, scrolling list only (maintainer review).**
+  /// Restructured from a `Column` whose option list sat in a `Flexible`-
+  /// wrapped `SingleChildScrollView` (with its own inner `Column`) below a
+  /// separate search row into a `Column` of exactly: the header row (title,
+  /// inline search, close — never scrolls), a divider, and an [Expanded]
+  /// `ListView.builder` that is the only scrolling region — combobox option
+  /// counts are small enough that laziness is not the point here, but a
+  /// `ListView` also fixes the row-stretch behaviour
+  /// [_ComboBoxSheetOptionRow] depends on more directly than the previous
+  /// `Column(crossAxisAlignment: stretch)` inside a `SingleChildScrollView`
+  /// did, without changing that widget itself.
+  ///
+  /// **Search moved into the header row itself (title | dense search | X)
+  /// when [BottomSheetContent.showInlineTitle] is true**, via
+  /// [LayrzPickerDialogHeader.middleSlot] — see that parameter's own doc.
+  /// When [showInlineTitle] is false, the search field renders as its own
+  /// separate row instead (there being no header row to place it in), kept
+  /// pinned above the divider exactly as before.
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -658,32 +689,31 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
         ),
       );
     } else {
-      listOrEmptyState = SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          // Stretches every row (the custom-value row and each option row)
-          // to the list's own full width -- see _ComboBoxSheetOptionRow's own
-          // doc comment for why this is what makes their text read as
-          // left-aligned rather than centered.
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (hasCustomValueRow)
-              _ComboBoxSheetOptionRow(
-                text: _searchController.text,
-                isHighlighted: _highlightedIndex == 0,
-                isBold: true,
-                onTap: () => _commit(_searchController.text),
-              ),
-            for (final (index, option) in _filteredOptions.indexed)
-              _ComboBoxSheetOptionRow(
-                text: option,
-                isHighlighted: _highlightedIndex == (hasCustomValueRow ? index + 1 : index),
-                onTap: () => _commit(option),
-              ),
-          ],
-        ),
+      final rowCount = (hasCustomValueRow ? 1 : 0) + _filteredOptions.length;
+      listOrEmptyState = ListView.builder(
+        padding: EdgeInsets.zero,
+        itemCount: rowCount,
+        itemBuilder: (context, index) {
+          if (hasCustomValueRow && index == 0) {
+            return _ComboBoxSheetOptionRow(
+              text: _searchController.text,
+              isHighlighted: _highlightedIndex == 0,
+              isBold: true,
+              onTap: () => _commit(_searchController.text),
+            );
+          }
+          final optionIndex = hasCustomValueRow ? index - 1 : index;
+          final option = _filteredOptions[optionIndex];
+          return _ComboBoxSheetOptionRow(
+            text: option,
+            isHighlighted: _highlightedIndex == index,
+            onTap: () => _commit(option),
+          );
+        },
       );
     }
+
+    final searchField = _buildSearchField(context);
 
     // Names the sheet's subtree with what is being picked (DESIGN-161): before
     // this, nothing in the sheet was nameable at all, since the label lives on
@@ -698,36 +728,24 @@ class _BottomSheetContentState extends State<BottomSheetContent> {
         focusNode: _listFocusNode,
         skipTraversal: true,
         onKeyEvent: _handleKeyEvent,
-        // Stretches the search field and the title row to the same full
-        // width as the option list, for the identical reason -- see
-        // _ComboBoxSheetOptionRow's own doc comment.
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (widget.showInlineTitle && widget.labelText != null)
+            if (widget.showInlineTitle)
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  tokens.spacing.sp4,
-                  tokens.spacing.sp2,
-                  tokens.spacing.sp4,
-                  0,
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+                child: LayrzPickerDialogHeader(
+                  labelText: widget.labelText,
+                  onClose: () => LayrzModalRoute.popIfCurrent(context),
+                  middleSlot: searchField,
                 ),
-                child: ExcludeSemantics(
-                  child: Text(
-                    widget.labelText!,
-                    style: tokens.typography.label.copyWith(
-                      color: tokens.colors.fg2,
-                    ),
-                  ),
-                ),
+              )
+            else
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+                child: searchField,
               ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-              child: _buildSearchField(context),
-            ),
             Container(height: 1, color: tokens.colors.divider),
-            Flexible(child: listOrEmptyState),
+            Expanded(child: listOrEmptyState),
           ],
         ),
       ),

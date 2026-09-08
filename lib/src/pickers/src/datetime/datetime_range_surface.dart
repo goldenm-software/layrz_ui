@@ -3,12 +3,15 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tabs/tabs.dart';
 
 import '../models/date_range.dart';
 import '../models/time_of_day.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
@@ -21,10 +24,10 @@ import '../shared/time_fields_panel.dart';
 /// for a dialog here, the maintainer ruled a shared container with Save for
 /// consistency across the whole batch). **No dialog variant.**
 ///
-/// **Hosted in [LayrzEndDrawer] on desktop as of DESIGN-98** (previously the
+/// **Hosted via a dialog (through [LayrzResponsiveModal.show]) on desktop as of DESIGN-98** (previously the
 /// picker-private `LayrzPickerDrawer`, and before that [LayrzAnchoredPanel]).
 /// On desktop, Cancel/Clear/Save are built by [LayrzDateTimeRangeInput] and
-/// passed to [LayrzEndDrawer.show]'s `actions` parameter — see
+/// passed to [LayrzResponsiveModal.show]'s `actions` parameter — see
 /// [LayrzDateTimeRangeSurfaceState]'s class doc. Order and styling follow
 /// `LayrzPickerDrawerFooter.build`'s own doc (DESIGN-46: Cancel, Clear, Save
 /// — Clear only once a selection exists).
@@ -59,6 +62,25 @@ import '../shared/time_fields_panel.dart';
 /// **Owns its own month-navigation header**, exactly like
 /// [LayrzDateRangeSurface] — this widget renders only a single page and
 /// exposes no navigation of its own.
+///
+/// **Tabbed layout (Fix 3): the calendar and both time clusters are two
+/// [LayrzTabView] tabs, "Date" and "Time", not one long stacked column.**
+/// Before this, the calendar grid plus a Start and an End time-field cluster
+/// stacked in a single scrolling column ran taller than
+/// [LayrzDialogConfig.maxHeight]'s default (`640`) before any date was even
+/// selected, overflowing by roughly 118px on the dialog branch. Splitting the
+/// content into tabs — Tab 1 the range calendar, Tab 2 *both* the Start and
+/// End clusters together — means only one tab's content is ever laid out at
+/// once, and each tab's own content comfortably fits the dialog's default
+/// height on its own.
+///
+/// **The `SingleChildScrollView` safety wrapper around the whole
+/// [LayrzTabView] was removed** once the digital-clock redesign of
+/// [LayrzPickersTimeFieldsPanel] made the Time tab's two clusters compact by
+/// construction (big digits plus, only in 12h mode, a short horizontal AM/PM
+/// row — no more field rows or reserved hidden-seconds space). The two
+/// compact clocks now fit comfortably inside the dialog's default
+/// [LayrzDialogConfig.maxHeight] without a scroll fallback.
 class LayrzDateTimeRangeSurface extends StatefulWidget {
   /// The currently committed date range, or `null`.
   final LayrzDateRange? value;
@@ -92,6 +114,11 @@ class LayrzDateTimeRangeSurface extends StatefulWidget {
   /// Whether the hour fields use 24-hour form.
   final bool use24HourFormat;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzDateTimeRangeInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the saved, auto-swapped-if-needed (start, end) datetimes.
   final void Function(DateTime start, DateTime end) onSave;
 
@@ -108,8 +135,9 @@ class LayrzDateTimeRangeSurface extends StatefulWidget {
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
   /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
-  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
-  /// identical doc for the full rationale.
+  /// surface via [LayrzResponsiveModal.show]'s `actions` slot — see
+  /// [LayrzDateRangeSurface.showInlineFooter]'s identical doc for the full
+  /// rationale.
   final bool showInlineFooter;
 
   /// Creates a new [LayrzDateTimeRangeSurface].
@@ -125,6 +153,7 @@ class LayrzDateTimeRangeSurface extends StatefulWidget {
     this.showWeekNumbers = true,
     this.showSeconds = false,
     this.use24HourFormat = true,
+    this.labelText,
     required this.onSave,
     required this.onCancel,
     this.onDraftChanged,
@@ -324,10 +353,9 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// Builds Tab 1's content: the month header plus the range calendar.
+  Widget _buildDateTab(BuildContext context) {
     final tokens = context.tokens;
-    final l10n = context.l10n;
 
     final visible = gridPageFor(
       reference: _displayedMonth,
@@ -336,61 +364,109 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
       firstDayOfWeek: widget.firstDayOfWeek,
     );
 
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildMonthHeader(context),
+        SizedBox(height: tokens.spacing.sp2),
+        LayrzPickersDayGrid(
+          displayedMonth: _displayedMonth,
+          rangeStart: _draft.anchor,
+          rangeEnd: _draft.end,
+          rejectedDates: _rejectedDates(visible),
+          firstDay: widget.firstDay,
+          lastDay: widget.lastDay,
+          disabledDays: widget.disabledDays,
+          firstDayOfWeek: widget.firstDayOfWeek,
+          showWeekNumbers: widget.showWeekNumbers,
+          onDayTap: _handleTap,
+          keyboardHandler: buildDayGridKeyboardHandler(
+            isDisabled: _isDisabled,
+            onSelect: _handleTap,
+            firstDayOfWeek: widget.firstDayOfWeek,
+          ),
+          onDisplayedMonthChanged: _stepMonth,
+        ),
+      ],
+    );
+  }
+
+  /// Builds Tab 2's content: BOTH the Start and End time-field clusters
+  /// together, in that one tab — see this class's own "Tabbed layout" doc
+  /// for why the two endpoints share a tab rather than each getting their
+  /// own.
+  Widget _buildTimeTab(BuildContext context) {
+    final tokens = context.tokens;
+    final l10n = context.l10n;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
+        SizedBox(height: tokens.spacing.sp1),
+        LayrzPickersTimeFieldsPanel(
+          // Genuinely unset until the user edits a field -- never
+          // defaulted to midnight (see the class doc). The panel itself
+          // requires a non-null `value` to render, so an unset draft is
+          // shown as 00:00 without ever being *reported* as 00:00:
+          // `onChanged` below is the only path that sets `_startTime`, and
+          // it only runs when the user actually edits a field.
+          value: _startTime,
+          showSeconds: widget.showSeconds,
+          use24HourFormat: widget.use24HourFormat,
+          onChanged: (t) {
+            setState(() => _startTime = t);
+            widget.onDraftChanged?.call();
+          },
+        ),
+        SizedBox(height: tokens.spacing.sp3),
+        Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
+        SizedBox(height: tokens.spacing.sp1),
+        LayrzPickersTimeFieldsPanel(
+          value: _endTime,
+          showSeconds: widget.showSeconds,
+          use24HourFormat: widget.use24HourFormat,
+          onChanged: (t) {
+            setState(() => _endTime = t);
+            widget.onDraftChanged?.call();
+          },
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+    final l10n = context.l10n;
+
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildMonthHeader(context),
-          SizedBox(height: tokens.spacing.sp2),
-          LayrzPickersDayGrid(
-            displayedMonth: _displayedMonth,
-            rangeStart: _draft.anchor,
-            rangeEnd: _draft.end,
-            rejectedDates: _rejectedDates(visible),
-            firstDay: widget.firstDay,
-            lastDay: widget.lastDay,
-            disabledDays: widget.disabledDays,
-            firstDayOfWeek: widget.firstDayOfWeek,
-            showWeekNumbers: widget.showWeekNumbers,
-            onDayTap: _handleTap,
-            keyboardHandler: buildDayGridKeyboardHandler(
-              isDisabled: _isDisabled,
-              onSelect: _handleTap,
-              firstDayOfWeek: widget.firstDayOfWeek,
-            ),
-            onDisplayedMonthChanged: _stepMonth,
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
           ),
-          SizedBox(height: tokens.spacing.sp3),
-          Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
-          SizedBox(height: tokens.spacing.sp1),
-          LayrzPickersTimeFieldsPanel(
-            // Genuinely unset until the user edits a field -- never
-            // defaulted to midnight (see the class doc). The panel itself
-            // requires a non-null `value` to render, so an unset draft is
-            // shown as 00:00 without ever being *reported* as 00:00:
-            // `onChanged` below is the only path that sets `_startTime`, and
-            // it only runs when the user actually edits a field.
-            value: _startTime,
-            showSeconds: widget.showSeconds,
-            use24HourFormat: widget.use24HourFormat,
-            onChanged: (t) {
-              setState(() => _startTime = t);
-              widget.onDraftChanged?.call();
-            },
-          ),
-          SizedBox(height: tokens.spacing.sp3),
-          Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
-          SizedBox(height: tokens.spacing.sp1),
-          LayrzPickersTimeFieldsPanel(
-            value: _endTime,
-            showSeconds: widget.showSeconds,
-            use24HourFormat: widget.use24HourFormat,
-            onChanged: (t) {
-              setState(() => _endTime = t);
-              widget.onDraftChanged?.call();
-            },
+          // Fix 3: the calendar and both time clusters are two
+          // LayrzTabView tabs -- "Date" and "Time" -- rather than one
+          // long stacked column. See this class's own "Tabbed layout" doc
+          // for the ~118px overflow this also resolves.
+          LayrzTabView(
+            isScrollable: false,
+            tabs: [
+              LayrzTab(
+                labelText: l10n.dateTimePickerDate,
+                child: _buildDateTab(context),
+              ),
+              LayrzTab(
+                labelText: l10n.dateTimePickerTime,
+                child: _buildTimeTab(context),
+              ),
+            ],
           ),
           if (widget.showInlineFooter) ...[
             SizedBox(height: tokens.spacing.sp3),

@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/src/buttons/buttons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -15,9 +16,9 @@ import 'multi_select_surface.dart';
 /// design system.
 ///
 /// [LayrzMultiSelectInput] mirrors [LayrzSelectInput]'s adaptive-surface,
-/// searchable-list pattern — desktop/wide (`>= 960px`) opens
-/// [LayrzMultiSelectInputSurface] in a [LayrzEndDrawer], compact
-/// (`< 960px`) opens it in a [LayrzBottomSheet] — but resolves to a
+/// searchable-list pattern — opened via [LayrzResponsiveModal.show], which
+/// resolves to a dialog on wide viewports (`>= 960px`) or a
+/// [LayrzBottomSheet] below `isCompact` (`< 960px`) — but resolves to a
 /// **`List<T>`** of selected values instead of a single one. It composes
 /// [LayrzInputChrome] directly through the `pickers/shared/picker_anchor.dart`
 /// helpers (D63), never `input_chrome.dart` itself, matching every other
@@ -273,7 +274,25 @@ class _LayrzMultiSelectInputState<T> extends State<LayrzMultiSelectInput<T>> {
     return labels.join(', ');
   }
 
-  Future<void> _openMobileSurface() async {
+  /// Opens [LayrzMultiSelectInputSurface] via [LayrzResponsiveModal.show],
+  /// which resolves to a dialog on wide viewports or a [LayrzBottomSheet]
+  /// below `isCompact`.
+  ///
+  /// **Bigger dialog + pinned header/search, scrolling list only (maintainer
+  /// review).** [LayrzMultiSelectInputSurface] no longer needs a
+  /// `ConstrainedBox`/`SingleChildScrollView` pairing imposed by this caller:
+  /// its own root `Column` now pins the header (title, inline search, close)
+  /// and lets only its `Expanded`-wrapped `ListView` scroll — see that
+  /// widget's own [LayrzMultiSelectInputSurface.build] doc for the full
+  /// layout. That `Expanded` needs a genuinely bounded incoming height,
+  /// which it gets here from [LayrzDialogConfig]'s enlarged `maxWidth`/
+  /// `maxHeight` (roomier than the 480×640 default, per the maintainer's
+  /// request) flowing down through [LayrzResponsiveModal.show]'s dialog
+  /// branch exactly the way every other pinned-`actions` picker
+  /// (`LayrzPickerDrawerActions` siblings) already relies on a bounded
+  /// `Flexible` around its own builder content — no `SizedBox`/
+  /// `ConstrainedBox` of this widget's own is needed to force that bound.
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
       canSave: true,
@@ -286,9 +305,20 @@ class _LayrzMultiSelectInputState<T> extends State<LayrzMultiSelectInput<T>> {
       draftState.value = (canSave: state!.canSave, hasSelection: state.hasSelection);
     }
 
-    await LayrzBottomSheet.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
       semanticLabel: widget.labelText ?? widget.hintText,
+      canDismiss: true,
+      // The surface's own header (LayrzPickerDialogHeader) already renders a
+      // close X next to the title, so the dialog branch's floating X would
+      // be a redundant second X -- suppressing only the icon's render here
+      // does not affect canDismiss: true above -- barrier tap, Escape, and
+      // the back gesture still close the modal with no value.
+      showCloseIcon: false,
+      dialog: const LayrzDialogConfig(maxWidth: 600, maxHeight: 760),
       builder: (context) => LayrzMultiSelectInputSurface<T>(
         key: surfaceKey,
         items: widget.items,
@@ -296,6 +326,7 @@ class _LayrzMultiSelectInputState<T> extends State<LayrzMultiSelectInput<T>> {
         enableSearch: widget.enableSearch,
         filter: widget.filter,
         emptyListText: widget.emptyListText,
+        labelText: widget.labelText,
         itemExtent: widget.itemExtent,
         onDraftChanged: syncDraftState,
         onDraftCommitted: (values) {
@@ -303,59 +334,19 @@ class _LayrzMultiSelectInputState<T> extends State<LayrzMultiSelectInput<T>> {
           LayrzModalRoute.popIfCurrent(context);
         },
       ),
-      actions: [
-        _MultiSelectDrawerActions(
-          draftState: draftState,
-          onCancel: (drawerContext) => LayrzModalRoute.popIfCurrent(drawerContext),
-          onSelectAll: (_) => surfaceKey.currentState?.selectAll(),
-          onUnselectAll: (_) => surfaceKey.currentState?.unselectAll(),
-          onSave: (_) => surfaceKey.currentState?.save(),
-        ),
-      ],
-      initialSize: 0.6,
-      maxSize: 0.9,
-      snapSizes: const [0.6, 0.9],
-    );
-
-    draftState.dispose();
-  }
-
-  Future<void> _openDesktopDrawer() async {
-    if (widget.disabled) return;
-    final draftState = ValueNotifier<({bool canSave, bool hasSelection})>((
-      canSave: true,
-      hasSelection: _displayedValues.isNotEmpty,
-    ));
-    final surfaceKey = GlobalKey<LayrzMultiSelectInputSurfaceState<T>>();
-
-    void syncDraftState() {
-      final state = surfaceKey.currentState;
-      draftState.value = (canSave: state!.canSave, hasSelection: state.hasSelection);
-    }
-
-    await LayrzEndDrawer.show<void>(
-      context,
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
-      canDismiss: true,
-      builder: (context) => ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 300.0),
-        child: SingleChildScrollView(
-          child: LayrzMultiSelectInputSurface<T>(
-            key: surfaceKey,
-            items: widget.items,
-            initialValues: _displayedValues,
-            enableSearch: widget.enableSearch,
-            filter: widget.filter,
-            emptyListText: widget.emptyListText,
-            itemExtent: widget.itemExtent,
-            onDraftChanged: syncDraftState,
-            onDraftCommitted: (values) {
-              _commitSelection(values);
-              LayrzModalRoute.popIfCurrent(context);
-            },
-          ),
-        ),
+      sheet: const LayrzBottomSheetConfig(
+        initialSize: 0.6,
+        maxSize: 0.9,
+        snapSizes: [0.6, 0.9],
+        // The surface's own root now lays out a pinned header plus an
+        // `Expanded`-wrapped `ListView` (see
+        // [LayrzMultiSelectInputSurface.build]'s own doc) -- a same-axis
+        // scrollable nested inside the sheet's default `SingleChildScrollView`
+        // would receive unbounded height and assert. `scrollable: false`
+        // hands the surface the sheet's own bounded `Expanded` region
+        // directly, mirroring `LayrzComboBoxInput._openPicker`'s identical
+        // fix for the same shape of content.
+        scrollable: false,
       ),
       actions: [
         _MultiSelectDrawerActions(
@@ -423,10 +414,7 @@ class _LayrzMultiSelectInputState<T> extends State<LayrzMultiSelectInput<T>> {
 
   @override
   Widget build(BuildContext context) {
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }
 
@@ -521,25 +509,33 @@ class _MultiSelectDrawerActions extends StatelessWidget {
         // rather than overflowing the row. `LayoutBuilder` supplies the
         // explicit bounded width `Expanded` requires even when this widget
         // is placed directly into an unbounded-width host row (confirmed:
-        // `LayrzBottomSheet.show`'s own `actions` row does exactly this) --
-        // `Expanded` alone asserts in that unbounded context.
+        // BOTH `LayrzResponsiveModal.show` branches' own `actions` rows do
+        // this -- see the fallback comment below for why the dialog branch
+        // is not the bounded exception this used to assume).
         return LayoutBuilder(
           builder: (context, constraints) {
-            // `LayrzBottomSheet.show`'s own `actions` row hands each entry to
-            // a bare (non-flex) slot in its own `Row` -- Flutter's flex
+            // Neither `LayrzResponsiveModal.show` branch's own `actions` row
+            // bounds a single non-flex entry's width -- Flutter's flex
             // layout gives a non-flex child an UNBOUNDED main-axis
-            // constraint there (confirmed: a real "RenderFlex children have
-            // non-zero flex but incoming width constraints are unbounded"
-            // assertion without this fallback), unlike `LayrzEndDrawer`,
-            // whose fixed-width drawer already bounds it. `MediaQuery`'s
-            // full device width, minus the sheet's own `sp3` padding on
-            // each side (the exact `Padding` that widget wraps `actions` in
-            // -- see `bottom_sheet.dart`), reconstructs the same bounded
-            // width the drawer gets natively, so `Expanded` below has a
-            // real share to divide on either host.
+            // constraint regardless of the `Row`'s own (bounded) width
+            // (confirmed: a real "RenderFlex children have non-zero flex but
+            // incoming width constraints are unbounded" assertion without
+            // this fallback, and a 1000+px overflow into the full device
+            // width via the naive `MediaQuery.sizeOf` fallback before this
+            // fix, since that fallback assumed the dialog branch never hit
+            // it at all). `context.isCompact` reads which branch
+            // [LayrzResponsiveModal.show] actually resolved to (this widget
+            // never overrides `isCompact`, so the default -- resolved from
+            // the same `context.isCompact` -- is what decided it), and each
+            // branch's own known content-area formula reconstructs the real
+            // bounded width natively: the dialog's [LayrzDialogConfig.maxWidth]
+            // default (480) minus its own `2*sp3` panel padding, or the
+            // sheet's full device width minus its own `2*sp3` padding.
             final width = constraints.maxWidth.isFinite
                 ? constraints.maxWidth
-                : MediaQuery.sizeOf(context).width - (tokens.spacing.sp3 * 2);
+                : context.isCompact
+                ? MediaQuery.sizeOf(context).width - (tokens.spacing.sp3 * 2)
+                : 480.0 - (tokens.spacing.sp3 * 2);
             return SizedBox(
               width: width,
               child: Row(

@@ -190,6 +190,13 @@ class LayrzResponsiveModal {
   ///   [LayrzBottomSheet.show]'s for how the equivalent three-route sheet contract composes
   ///   with `isPersistent` and drag-to-dismiss — drag-to-dismiss included, since
   ///   [LayrzBottomSheet.show]'s single `canDismiss` flag already gates that route too.
+  /// - [showCloseIcon]: whether the dialog branch renders its floating close ("X")
+  ///   affordance. Defaults to `true` and is forwarded verbatim to [LayrzDialog.show]'s own
+  ///   `showCloseIcon` — see its doc for the full contract: it suppresses only the icon's
+  ///   render, never [canDismiss]'s barrier/Escape/back-gesture behaviour. **The sheet branch
+  ///   has no such icon at all, so this parameter is silently ignored when [isCompact]
+  ///   resolves to the sheet.** Useful when [builder]'s content already supplies its own
+  ///   close/cancel affordance in the same corner the X would occupy.
   /// - [semanticLabel]: semantic label describing the modal's purpose for
   ///   screen readers, forwarded to whichever branch is chosen. Must be
   ///   equivalent regardless of which surface is presented, since an
@@ -254,6 +261,7 @@ class LayrzResponsiveModal {
     String? semanticLabel,
     LayrzDialogConfig dialog = const LayrzDialogConfig(),
     LayrzBottomSheetConfig sheet = const LayrzBottomSheetConfig(),
+    bool showCloseIcon = true,
   }) {
     final effectiveIsCompact = isCompact ?? context.isCompact;
 
@@ -308,6 +316,7 @@ class LayrzResponsiveModal {
       semanticLabel: semanticLabel,
       maxWidth: dialog.maxWidth,
       maxHeight: dialog.maxHeight,
+      showCloseIcon: showCloseIcon,
     );
   }
 }
@@ -379,7 +388,17 @@ class _DialogBodyWithPinnedActions extends StatelessWidget {
           children: [
             for (int i = 0; i < actions!.length; i++) ...[
               if (i > 0) SizedBox(width: tokens.spacing.sp2),
-              actions![i],
+              // Flexible (loose fit, not Expanded) so a naturally-narrow entry --
+              // a single OK button, or a two-button Cancel/Save pair that already
+              // fits -- keeps shrink-wrapping to its own content exactly as
+              // before, while an entry that renders MORE than it has room for
+              // (LayrzPickerDrawerActions's own Cancel/Clear/Save row on a range
+              // picker) finally receives a bounded maxWidth from this Row instead
+              // of the unbounded width a bare Row child gets. That bound is what
+              // lets LayrzPickerDrawerActions's own internal Flexible-wrapped
+              // buttons actually shrink instead of laying out at natural width
+              // and overflowing the dialog.
+              Flexible(child: actions![i]),
             ],
           ],
         ),

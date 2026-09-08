@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
@@ -36,12 +37,10 @@ import 'month_range_surface.dart';
 /// [disabledMonths] is documented as **ignored in consecutive mode**,
 /// matching old layrz_theme behaviour.
 ///
-/// **DESIGN-98: opens in [LayrzEndDrawer] on desktop, [LayrzBottomSheet]
-/// below `isCompact`.** This widget previously opened
-/// [LayrzMonthRangeSurface] in the picker-private `LayrzPickerDrawer`,
-/// composing Cancel/Clear/Save inline — see [LayrzDateRangeInput]'s
-/// identical doc for the full rationale, which applies here unchanged. The
-/// mobile branch is unchanged.
+/// **Opens via [LayrzResponsiveModal.show]**, which resolves to a dialog on
+/// wide viewports or a [LayrzBottomSheet] below `isCompact` — see
+/// [LayrzDateRangeInput]'s identical doc for the full rationale, which
+/// applies here unchanged.
 class LayrzMonthRangeInput extends StatefulWidget {
   /// Whether this widget operates in consecutive (contiguous) mode rather
   /// than the default arbitrary (non-contiguous) multi-select mode.
@@ -292,53 +291,22 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
     setState(() {});
   }
 
-  Future<void> _openMobileSurface() async {
-    if (widget.disabled) return;
-    await LayrzBottomSheet.show<void>(
-      context,
-      builder: (context) => LayrzMonthRangeSurface(
-        consecutive: widget.consecutive,
-        arbitraryValue: widget.arbitraryValue,
-        rangeValue: widget.rangeValue,
-        minimum: widget.minimum,
-        maximum: widget.maximum,
-        disabledMonths: widget.disabledMonths,
-        onArbitrarySave: (months) {
-          _handleArbitrarySave(months);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onRangeSave: (range) {
-          _handleRangeSave(range);
-          LayrzModalRoute.popIfCurrent(context);
-        },
-        onCancel: () => LayrzModalRoute.popIfCurrent(context),
-      ),
-      // Names the sheet for screen readers -- omitting this leaves it
-      // unannounced, a defect this batch's mobile branches shipped once
-      // already (see the implementation plan's known scaffold defects).
-      semanticLabel: widget.labelText ?? widget.hintText,
-      initialSize: 0.8,
-      maxSize: 0.95,
-      snapSizes: const [0.8, 0.95],
-    );
-  }
-
-  /// Opens [LayrzMonthRangeSurface] in [LayrzEndDrawer] on desktop — see
-  /// [LayrzDateRangeInput._openDesktopDrawer]'s identical doc for the full
-  /// rationale (DESIGN-98).
+  /// Opens [LayrzMonthRangeSurface] via [LayrzResponsiveModal.show] — see
+  /// [LayrzDateRangeInput._openPicker]'s identical doc for the full
+  /// rationale.
   ///
   /// **Seeded from the widget's own values, not a hardcoded `false`
-  /// (maintainer review, Finding 1).** [LayrzEndDrawer] hosts this surface
-  /// behind a 300ms routed slide transition, so the surface's own post-frame
-  /// `onDraftChanged` priming call can land before [surfaceKey.currentState]
-  /// is attached -- when that happens, seeding `draftState` from a hardcoded
-  /// `false` leaves Save permanently disabled for the rest of that open, even
-  /// once a selection already exists, since nothing else ever re-primes it.
+  /// (maintainer review, Finding 1).** The hosting surface can render behind
+  /// a routed transition, so the surface's own post-frame `onDraftChanged`
+  /// priming call can land before [surfaceKey.currentState] is attached --
+  /// when that happens, seeding `draftState` from a hardcoded `false` leaves
+  /// Save permanently disabled for the rest of that open, even once a
+  /// selection already exists, since nothing else ever re-primes it.
   /// Computing the seed here mirrors [LayrzMonthRangeSurfaceState.canSave]/
   /// `.hasSelection`'s own per-mode predicates exactly, so `draftState` is
   /// correct from its very first frame, before any callback runs at all --
   /// `syncDraftState` below then only ever updates an already-correct value.
-  Future<void> _openDesktopDrawer() async {
+  Future<void> _openPicker() async {
     if (widget.disabled) return;
     final seedCanSave = widget.consecutive ? widget.rangeValue != null : widget.arbitraryValue.isNotEmpty;
     final seedHasSelection = widget.consecutive ? widget.rangeValue != null : widget.arbitraryValue.isNotEmpty;
@@ -355,25 +323,28 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
       draftState.value = (canSave: state!.canSave, hasSelection: state.hasSelection);
     }
 
-    await LayrzEndDrawer.show<void>(
+    await LayrzResponsiveModal.show<void>(
       context,
-      // `title` below carries `labelText` visibly, so `semanticLabel` falls
-      // back to `hintText` only -- see LayrzDateInput's identical doc for
-      // why passing `labelText` to both would double the announcement.
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
+      // [LayrzResponsiveModal.show] has no `title:` slot -- matches the
+      // mobile bottom sheet path's own contract exactly: no visible title
+      // anywhere, only a screen-reader `semanticLabel`.
+      semanticLabel: widget.labelText ?? widget.hintText,
       // Escape and the barrier tap must still cancel a picker draft even
       // with actions present -- a settled ruling distinct from
       // LayrzDialog's "answered, not escaped" contract (that dialog-level
       // rule is about a DECISION being skipped; a picker's Cancel/Escape/
       // barrier tap are all equally safe "discard the draft" gestures, and
       // Escape=Cancel specifically is required by every picker test in
-      // this batch). Explicitly overrides LayrzEndDrawer.show's own
+      // this batch). Explicitly overrides LayrzResponsiveModal.show's own
       // actions-present-infers-false default.
       canDismiss: true,
-      // DESIGN-98 Finding 5: the maintainer's explicit ruling is "title
-      // should be the labelText of the input" -- see LayrzDateInput's
-      // identical doc for the full rationale.
-      title: widget.labelText != null ? Text(widget.labelText!) : null,
+      // The surface's own Cancel action already sits in `actions` below, so
+      // the dialog branch's floating X would be redundant -- and, worse, it
+      // would land directly on top of the surface's own top-right
+      // next-year chevron, swallowing its tap. Suppressing only the icon's
+      // render here does not affect canDismiss: true above -- barrier tap,
+      // Escape, and the back gesture still cancel the draft.
+      showCloseIcon: false,
       builder: (context) => LayrzMonthRangeSurface(
         key: surfaceKey,
         consecutive: widget.consecutive,
@@ -382,6 +353,7 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
         minimum: widget.minimum,
         maximum: widget.maximum,
         disabledMonths: widget.disabledMonths,
+        labelText: widget.labelText,
         showInlineFooter: false,
         onDraftChanged: syncDraftState,
         onArbitrarySave: (months) {
@@ -472,10 +444,6 @@ class _LayrzMonthRangeInputState extends State<LayrzMonthRangeInput> {
       _updateSummary();
     }
 
-    if (context.isCompact) {
-      return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openMobileSurface);
-    }
-
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openDesktopDrawer);
+    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
   }
 }

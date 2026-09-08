@@ -4,8 +4,8 @@ import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 /// Builds the shared Cancel/Clear/Save action list for every Save-carrying
-/// picker surface hosted in [LayrzEndDrawer] (or, below `isCompact`,
-/// [LayrzBottomSheet]).
+/// picker surface hosted via [LayrzResponsiveModal.show] (a dialog on wide
+/// viewports, or below `isCompact`, [LayrzBottomSheet]).
 ///
 /// **Order and styling are the maintainer's explicit ruling on DESIGN-46**,
 /// verbatim: *"the action buttons below, it must be this order: cancel -
@@ -21,14 +21,14 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 /// `if (_draft.anchor != null)` gate) and preserved here, not made
 /// always-on. [onClear] is `null` to omit the button entirely.
 ///
-/// **DESIGN-98: returns a `List<Widget>` for [LayrzEndDrawer]'s/
-/// [LayrzBottomSheet]'s `actions` slot, not a composed [Row].** Before
-/// DESIGN-98 this was a [StatelessWidget] rendering its own `Row`, placed as
-/// an ordinary trailing child of the surface's scrolling body — which is
-/// exactly why the maintainer's screenshot showed the footer stranded under
-/// short content instead of pinned to the drawer's bottom edge. [build] hands
-/// the same three buttons to the caller as a flat list instead, so they can
-/// be passed straight through to `actions:` and pinned by the drawer/sheet
+/// **DESIGN-98: returns a `List<Widget>` for [LayrzResponsiveModal.show]'s
+/// `actions` slot, not a composed [Row].** Before DESIGN-98 this was a
+/// [StatelessWidget] rendering its own `Row`, placed as an ordinary trailing
+/// child of the surface's scrolling body — which is exactly why the
+/// maintainer's screenshot showed the footer stranded under short content
+/// instead of pinned to the hosting surface's bottom edge. [build] hands the
+/// same three buttons to the caller as a flat list instead, so they can be
+/// passed straight through to `actions:` and pinned by the dialog/sheet
 /// itself.
 class LayrzPickerDrawerFooter {
   LayrzPickerDrawerFooter._();

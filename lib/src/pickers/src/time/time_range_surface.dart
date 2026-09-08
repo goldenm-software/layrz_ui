@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../models/time_of_day.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/time_fields_panel.dart';
 
@@ -10,10 +12,10 @@ import '../shared/time_fields_panel.dart';
 /// bottom-sheet path, a Cancel/Save footer — **`LayrzTimeRangeInput` counts
 /// as a range and gets Save**, per the implementation plan's explicit ruling.
 ///
-/// **Hosted in [LayrzEndDrawer] on desktop as of DESIGN-98** (previously the
+/// **Hosted via a dialog (through [LayrzResponsiveModal.show]) on desktop as of DESIGN-98** (previously the
 /// picker-private `LayrzPickerDrawer`, and before that [LayrzAnchoredPanel]).
 /// On desktop, Cancel/Save are built by [LayrzTimeRangeInput] and passed to
-/// [LayrzEndDrawer.show]'s `actions` parameter instead of composed inline —
+/// [LayrzResponsiveModal.show]'s `actions` parameter instead of composed inline —
 /// see [LayrzTimeRangeSurfaceState]'s class doc. No Clear affordance existed
 /// here before or after (DESIGN-46): this cluster pair has nothing to reset
 /// to an empty state the way a range grid does.
@@ -42,6 +44,11 @@ class LayrzTimeRangeSurface extends StatefulWidget {
   /// Whether the hour fields use 24-hour form.
   final bool use24HourFormat;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzTimeRangeInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the saved, auto-swapped-if-needed (start, end) pair.
   final void Function(LayrzTimeOfDay start, LayrzTimeOfDay end) onSave;
 
@@ -60,8 +67,9 @@ class LayrzTimeRangeSurface extends StatefulWidget {
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
   /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
-  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
-  /// identical doc for the full rationale.
+  /// surface via [LayrzResponsiveModal.show]'s `actions` slot — see
+  /// [LayrzDateRangeSurface.showInlineFooter]'s identical doc for the full
+  /// rationale.
   final bool showInlineFooter;
 
   /// Creates a new [LayrzTimeRangeSurface].
@@ -71,6 +79,7 @@ class LayrzTimeRangeSurface extends StatefulWidget {
     required this.endValue,
     this.showSeconds = false,
     this.use24HourFormat = true,
+    this.labelText,
     required this.onSave,
     required this.onCancel,
     this.onDraftChanged,
@@ -134,8 +143,11 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
       padding: EdgeInsets.all(tokens.spacing.sp2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
           SizedBox(height: tokens.spacing.sp1),
           LayrzPickersTimeFieldsPanel(

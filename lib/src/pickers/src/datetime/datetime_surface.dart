@@ -3,32 +3,40 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
+import 'package:layrz_ui/src/tabs/tabs.dart';
 
 import '../models/time_of_day.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/time_fields_panel.dart';
 import 'datetime_presentation.dart';
 
 /// The surface content for [LayrzDateTimeInput]: composes [LayrzPickersDayGrid]
-/// and [LayrzPickersTimeFieldsPanel] stacked in **one** scrollable container
-/// (its host is [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below
+/// and [LayrzPickersTimeFieldsPanel] as two [LayrzTabView] tabs ("Date" and
+/// "Time") inside one bounded container (its host is a dialog via
+/// [LayrzResponsiveModal.show] on desktop, [LayrzBottomSheet] below
 /// `isCompact`), with a Cancel/Save footer on the mobile path.
 ///
-/// **DESIGN-49 retired the tab/step presentation.** [LayrzDateTimeInput]
+/// **DESIGN-49 retired the tab/step `presentation` parameter — this is a
+/// separate, later mechanism, not a revival of it.** [LayrzDateTimeInput]
 /// previously arranged its date and time parts per [presentation]
 /// ([LayrzDateTimeInputPresentation.tabbed]/`.stepped`), because the old
-/// [LayrzAnchoredPanel] container was too cramped to show both at once. The
-/// drawer has the vertical room to show the calendar and the time fields
-/// together, so the presentation split has no reason left to exist — this
-/// surface always renders both parts stacked, in that fixed order, and
-/// [presentation] is accepted but ignored (see that enum's own doc for why
-/// it is deprecated rather than removed).
+/// [LayrzAnchoredPanel] container was too cramped to show both at once; that
+/// parameter stays deprecated and ignored (see [LayrzDateTimeInputPresentation]'s
+/// own doc). What changed later is a genuinely different problem: stacking
+/// both parts in one scrollable column read as visually heavy once the
+/// header (see [LayrzPickerDialogHeader]) was added on top of it, so the
+/// calendar and the time fields are now each one [LayrzTabView] tab's
+/// content instead of two stacked sections — a layout choice, independent
+/// of [presentation]'s own now-dead tabbed/stepped distinction, which was
+/// about *separate screens*, not tabs within one screen.
 ///
-/// **DESIGN-98: Cancel/Save move to [LayrzEndDrawer.show]'s `actions` slot on
-/// desktop.** See [LayrzDateTimeSurfaceState]'s class doc for why this
+/// **DESIGN-98: Cancel/Save move to [LayrzResponsiveModal.show]'s `actions`
+/// slot on desktop.** See [LayrzDateTimeSurfaceState]'s class doc for why this
 /// surface's `State` is now public.
 ///
 /// **Commit model — Cancel/Save, not commit-on-tap.** [LayrzDateTimeInput] is
@@ -45,7 +53,7 @@ import 'datetime_presentation.dart';
 /// is disabled while either part is unset, so there is no way to commit a
 /// time the user never chose; see [_canSave].
 ///
-/// **Involuntary close.** [LayrzEndDrawer.show] reconstructs this widget's
+/// **Involuntary close.** [LayrzResponsiveModal.show] reconstructs this widget's
 /// `State` fresh on every open — a [Navigator.push] always builds a fresh
 /// subtree — so seeding in [initState] alone is sufficient;
 /// [didUpdateWidget] additionally re-seeds for the rare case a caller
@@ -88,6 +96,11 @@ class LayrzDateTimeSurface extends StatefulWidget {
   /// Whether the hour field uses 24-hour form.
   final bool use24HourFormat;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzDateTimeInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the committed date and time when the user presses Save.
   /// Never called with a `null` part — see [_canSave].
   final void Function(DateTime date, LayrzTimeOfDay time) onSave;
@@ -107,8 +120,9 @@ class LayrzDateTimeSurface extends StatefulWidget {
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
   /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
-  /// surface in [LayrzEndDrawer] — see [LayrzDateRangeSurface.showInlineFooter]'s
-  /// identical doc for the full rationale.
+  /// surface via [LayrzResponsiveModal.show]'s `actions` slot — see
+  /// [LayrzDateRangeSurface.showInlineFooter]'s identical doc for the full
+  /// rationale.
   final bool showInlineFooter;
 
   /// Creates a new [LayrzDateTimeSurface].
@@ -124,6 +138,7 @@ class LayrzDateTimeSurface extends StatefulWidget {
     this.showWeekNumbers = true,
     this.showSeconds = false,
     this.use24HourFormat = true,
+    this.labelText,
     required this.onSave,
     required this.onCancel,
     this.onDraftChanged,
@@ -273,21 +288,25 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
     ],
   );
 
-  Widget _buildTimePart(BuildContext context) => LayrzPickersTimeFieldsPanel(
-    // Genuinely unset until the user edits a field -- never defaulted to
-    // midnight (see the class doc). The panel itself requires a non-null
-    // `value` to render, so an unset draft is shown as 00:00 without ever
-    // being *reported* as 00:00: `_handleTimeChanged` is the only path that
-    // sets `_time`, and it only runs when the user actually edits a field.
-    value: _time,
-    showSeconds: widget.showSeconds,
-    use24HourFormat: widget.use24HourFormat,
-    onChanged: _handleTimeChanged,
+  Widget _buildTimePart(BuildContext context) => Center(
+    child: LayrzPickersTimeFieldsPanel(
+      // Genuinely unset until the user edits a field -- never defaulted to
+      // midnight (see the class doc). The panel itself requires a non-null
+      // `value` to render, so an unset draft is shown as 00:00 without ever
+      // being *reported* as 00:00: `_handleTimeChanged` is the only path
+      // that sets `_time`, and it only runs when the user actually edits a
+      // field.
+      value: _time,
+      showSeconds: widget.showSeconds,
+      use24HourFormat: widget.use24HourFormat,
+      onChanged: _handleTimeChanged,
+    ),
   );
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final l10n = context.l10n;
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
@@ -295,9 +314,29 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildDatePart(context),
-          SizedBox(height: tokens.spacing.sp3),
-          _buildTimePart(context),
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
+          // Fix 2: the calendar and the time fields are now two
+          // LayrzTabView tabs -- "Date" and "Time" -- rather than stacked
+          // sections, so the surface reads as one focused screen at a time
+          // instead of a tall, scrolling column. See this class's own doc
+          // for why this is unrelated to the deprecated, retired
+          // `presentation` (tabbed/stepped) split.
+          LayrzTabView(
+            isScrollable: false,
+            tabs: [
+              LayrzTab(
+                labelText: l10n.dateTimePickerDate,
+                child: _buildDatePart(context),
+              ),
+              LayrzTab(
+                labelText: l10n.dateTimePickerTime,
+                child: _buildTimePart(context),
+              ),
+            ],
+          ),
           if (widget.showInlineFooter) ...[
             SizedBox(height: tokens.spacing.sp3),
             LayrzPickerInlineFooter(

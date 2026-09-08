@@ -3,11 +3,13 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:layrz_ui/src/calendar/calendar.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/formatting/formatting.dart';
+import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 
 import '../models/date_range.dart';
 import '../shared/day_grid.dart';
 import '../shared/grid_keyboard_handler.dart';
 import '../shared/grid_math.dart';
+import '../shared/picker_dialog_header.dart';
 import '../shared/picker_inline_footer.dart';
 import '../shared/range_draft.dart';
 import '../shared/range_policy.dart';
@@ -26,20 +28,20 @@ import '../shared/range_policy.dart';
 /// Clear is visible as soon as a range exists. Order and styling follow
 /// `LayrzPickerDrawerFooter.build`'s own doc (DESIGN-46). **DESIGN-98**:
 /// those actions are built by [LayrzDateRangeInput] and passed to
-/// [LayrzEndDrawer.show]'s `actions` parameter — this widget itself renders
-/// only the calendar, no footer.
+/// [LayrzResponsiveModal.show]'s `actions` parameter — this widget itself
+/// renders only the calendar, no footer.
 ///
 /// **Container**: as of DESIGN-98, [LayrzDateRangeInput] hosts this surface
-/// in [LayrzEndDrawer] on desktop, [LayrzBottomSheet] below `isCompact`. That
+/// via a dialog (through [LayrzResponsiveModal.show]) on desktop, [LayrzBottomSheet] below `isCompact`. That
 /// container wiring lives in `date_range_input.dart`, not this file.
 ///
 /// **Involuntary close discards the draft**: [initState] and
 /// [didUpdateWidget] both re-seed [_draft] from [widget.value], so a
 /// dismissed surface never leaves stale in-progress state for the next open
 /// — see the implementation plan's "Involuntary close" section. Both
-/// [LayrzEndDrawer] and [LayrzAnchoredPanel] reconstruct this widget's
-/// `State` fresh on every open, so no generation-counter key is needed for
-/// either container.
+/// branches of [LayrzResponsiveModal.show] and [LayrzAnchoredPanel]
+/// reconstruct this widget's `State` fresh on every open, so no
+/// generation-counter key is needed for any of them.
 ///
 /// **Owns its own month-navigation header**, exactly like [LayrzDateSurface]
 /// — this widget renders only a single page and exposes no navigation of its
@@ -65,6 +67,11 @@ class LayrzDateRangeSurface extends StatefulWidget {
   /// Whether the ISO week-number gutter renders.
   final bool showWeekNumbers;
 
+  /// The title shown in this surface's own [LayrzPickerDialogHeader], normally
+  /// [LayrzDateRangeInput.labelText]. `null` renders an empty title slot
+  /// rather than no header at all — see that widget's own doc.
+  final String? labelText;
+
   /// Called with the saved range when the user presses Save.
   final ValueChanged<LayrzDateRange> onSave;
 
@@ -84,11 +91,9 @@ class LayrzDateRangeSurface extends StatefulWidget {
   /// the last child of its scrolling body.
   ///
   /// Defaults to `true`, preserving the mobile [LayrzBottomSheet] path
-  /// exactly as it behaved before DESIGN-98 — that container is out of scope
-  /// for this change (the maintainer's report and fix are desktop-only), so
-  /// this surface still renders its own footer when hosted there. Pass
-  /// `false` when hosting this surface in [LayrzEndDrawer], whose `actions`
-  /// slot pins Cancel/Clear/Save to the drawer's own bottom edge instead —
+  /// exactly as it behaved before DESIGN-98. Pass `false` when hosting this
+  /// surface via [LayrzResponsiveModal.show]'s `actions` slot, which pins
+  /// Cancel/Clear/Save to the hosting surface's own bottom edge instead —
   /// [LayrzDateRangeInput] reads this surface's state through a [GlobalKey]
   /// in that case (see [LayrzDateRangeSurfaceState]'s class doc).
   final bool showInlineFooter;
@@ -102,6 +107,7 @@ class LayrzDateRangeSurface extends StatefulWidget {
     this.disabledDays = const {},
     this.firstDayOfWeek = DateTime.monday,
     this.showWeekNumbers = true,
+    this.labelText,
     required this.onSave,
     required this.onCancel,
     this.onDraftChanged,
@@ -115,10 +121,11 @@ class LayrzDateRangeSurface extends StatefulWidget {
 /// State for [LayrzDateRangeSurface].
 ///
 /// **Public, not library-private, so [LayrzDateRangeInput] can reach it
-/// through a [GlobalKey]** (DESIGN-98). The drawer's `actions` row must be
-/// built as a sibling of this surface, not nested inside it (that nesting is
-/// exactly the bug the maintainer reported — see [LayrzEndDrawer]'s own
-/// doc), so [LayrzDateRangeInput] builds the Cancel/Clear/Save actions itself
+/// through a [GlobalKey]** (DESIGN-98). The hosting surface's `actions` row
+/// must be built as a sibling of this surface, not nested inside it (that
+/// nesting is exactly the bug the maintainer originally reported against the
+/// end drawer this now-retired container preceded), so [LayrzDateRangeInput]
+/// builds the Cancel/Clear/Save actions itself
 /// and needs a way to read this surface's live draft state ([canSave],
 /// [hasSelection]) and invoke its mutations ([save], [clear]) from outside.
 /// A [GlobalKey] is the same tool [LayrzEditableFieldState] and
@@ -280,6 +287,10 @@ class LayrzDateRangeSurfaceState extends State<LayrzDateRangeSurface> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          LayrzPickerDialogHeader(
+            labelText: widget.labelText,
+            onClose: () => LayrzModalRoute.popIfCurrent(context),
+          ),
           _buildHeader(context),
           SizedBox(height: tokens.spacing.sp2),
           LayrzPickersDayGrid(

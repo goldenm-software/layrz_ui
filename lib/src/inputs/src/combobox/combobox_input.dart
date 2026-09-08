@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/selection/selection.dart';
-import 'package:layrz_ui/src/sheets/sheets.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import '../shared/editable_field.dart';
@@ -17,15 +17,16 @@ import 'combobox_surface.dart';
 /// It composes [LayrzInputChrome] and the shared editable field primitive directly,
 /// adding suggestion filtering and intelligent overlay positioning on top.
 ///
-/// **Desktop vs. Mobile behavior**:
-/// - **Desktop (>= 960px)**: Opens [LayrzEndDrawer] (DESIGN-98), hosting the
-///   same [BottomSheetContent] surface the mobile band opens -- see
-///   [_LayrzComboBoxInputState._openDesktopDrawer] for why this replaced the
+/// **Desktop vs. Mobile behavior**: the option list opens via
+/// [LayrzResponsiveModal.show], which resolves to:
+/// - **Desktop (>= 960px)**: a dialog (DESIGN-98), hosting the same
+///   [BottomSheetContent] surface the mobile band opens -- see
+///   [_LayrzComboBoxInputState._openPicker] for why this replaced the
 ///   previous `LayrzAnchoredPanel`, and why that also means the field no
 ///   longer continues live into the opened surface (Q3 below no longer
-///   applies once this widget adopted [LayrzEndDrawer]; kept here as
-///   historical context for readers of the diff).
-/// - **Mobile (< 960px)**: Opens a bottom sheet, allowing touch-friendly interaction
+///   applies once this widget adopted this hosting; kept here as historical
+///   context for readers of the diff).
+/// - **Mobile (< 960px)**: a bottom sheet, allowing touch-friendly interaction
 ///   with better use of screen space.
 ///
 /// **Q3, historical: the panel's first row WAS the live input, before
@@ -36,14 +37,14 @@ import 'combobox_surface.dart';
 /// reparented into the open `LayrzAnchoredPanel`'s first row via a stable
 /// `GlobalKey`, letting text/caret/focus continue uninterrupted across the
 /// open transition. That trick depended on `RawMenuAnchor` building both the
-/// anchor and the overlay in one pass -- a route pushed via
-/// [Navigator.push] (what [LayrzEndDrawer] and [LayrzBottomSheet] both are)
-/// has no such shared pass to reparent across, so DESIGN-98 retires this
-/// entirely: both bands now open a wholly independent [BottomSheetContent]
-/// surface with its own search field, exactly like the mobile band already
-/// did. **This is a real, user-visible behavior change on desktop:** the
-/// drawer opens with an empty search field rather than continuing whatever
-/// the closed field's own text and caret position already were.
+/// anchor and the overlay in one pass -- a route pushed via [Navigator.push]
+/// (what both [LayrzResponsiveModal.show] branches are) has no such shared
+/// pass to reparent across, so DESIGN-98 retires this entirely: both bands
+/// now open a wholly independent [BottomSheetContent] surface with its own
+/// search field, exactly like the mobile band already did. **This is a real,
+/// user-visible behavior change on desktop:** the dialog opens with an empty
+/// search field rather than continuing whatever the closed field's own text
+/// and caret position already were.
 ///
 /// **Free-form entry** (default): When [allowFreeForm] is true, any text the user types
 /// is a valid value -- reported via [onChanged] as the user types, with no separate
@@ -387,7 +388,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// deferred and re-checked across two post-frame callbacks to tolerate the
   /// transient blur `RawMenuAnchor`'s own focus handoff caused. Now that the
   /// closed field never keeps its focus node live inside an open overlay --
-  /// [LayrzEndDrawer] and [LayrzBottomSheet] both host a wholly independent
+  /// both [LayrzResponsiveModal.show] branches host a wholly independent
   /// [BottomSheetContent] with its own focus node instead (see the class doc)
   /// -- a blur here is never that transient handoff; it is simply the user
   /// leaving the closed field, and there is no panel left to close in
@@ -398,64 +399,31 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
     }
   }
 
-  void _openOverlay() {
-    if (context.isCompact) {
-      _openBottomSheet();
-    } else {
-      _openDesktopDrawer();
-    }
-  }
-
-  Future<void> _openBottomSheet() async {
-    final selected = await LayrzBottomSheet.show<String?>(
-      context,
-      builder: (context) => BottomSheetContent(
-        options: widget.options,
-        emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
-        labelText: widget.labelText,
-        enableAutocomplete: widget.enableAutocomplete,
-      ),
-      // BottomSheetContent renders a plain Column, never a same-axis ListView, so
-      // it needs no lazy-loading scrollable of its own — but it still needs a
-      // *bounded* incoming height to scroll within. scrollable: false hands it the
-      // sheet's own ScrollController via an ambient PrimaryScrollController instead
-      // of nesting it inside the sheet's SingleChildScrollView, so this content's
-      // own SingleChildScrollView receives a real bound directly from the sheet's
-      // Expanded region and shares the sheet's drag/scroll handoff.
-      scrollable: false,
-    );
-
-    // The sheet reports the selection solely by popping with a value — see
-    // BottomSheetContent's doc comment for why there is no second, callback-based
-    // commit path here.
-    if (selected != null) {
-      _commitValue(selected);
-    }
-  }
-
-  /// Opens the option list in [LayrzEndDrawer] on desktop (DESIGN-98),
-  /// replacing the previous `LayrzAnchoredPanel` hosting.
+  /// Opens the option list via [LayrzResponsiveModal.show], which resolves to
+  /// a dialog on wide viewports (DESIGN-98, replacing the previous
+  /// `LayrzAnchoredPanel` hosting) or a bottom sheet below `isCompact`. Both
+  /// branches host the same [BottomSheetContent] surface.
   ///
   /// **The Q3 "same live field continues into the panel" trick does not carry
   /// over, and this is a real behavior change from before DESIGN-98.** That
   /// trick depended structurally on `RawMenuAnchor` building the closed
   /// field's anchor and the open panel's overlay in one and the same build
   /// pass, letting a stable `GlobalKey` reparent a single `Element` instead of
-  /// unmounting and remounting it (see the class doc's Q3 section).
-  /// [LayrzEndDrawer] is [Navigator.push]ed as a separate route -- there is no
-  /// shared build pass for a `GlobalKey` to reparent across, so the field the
-  /// user was typing into and the drawer's own content are unavoidably two
-  /// separate widget subtrees. Rather than fight that boundary (and risk
-  /// reintroducing the exact focus-loss-closes-the-panel race
-  /// [_handleBlur] was written against, this time across a route boundary
-  /// instead of a single frame), this reuses [BottomSheetContent] verbatim --
-  /// the same self-contained surface the mobile branch already uses, with its
-  /// own independent search field over the full [widget.options] pool, and
-  /// commit-by-pop contract (see that class's own doc for why it has no
-  /// callback-based commit path). This makes desktop's drawer behavior
-  /// consistent with mobile's sheet instead of continuing to differ from it,
-  /// at the cost of the closed field's typed text and caret position not
-  /// continuing into the drawer -- the drawer opens with its own empty
+  /// unmounting and remounting it (see the class doc's Q3 section). Both
+  /// [LayrzResponsiveModal.show] branches are [Navigator.push]ed as a separate
+  /// route -- there is no shared build pass for a `GlobalKey` to reparent
+  /// across, so the field the user was typing into and the opened surface's
+  /// own content are unavoidably two separate widget subtrees. Rather than
+  /// fight that boundary (and risk reintroducing the exact
+  /// focus-loss-closes-the-panel race [_handleBlur] was written against, this
+  /// time across a route boundary instead of a single frame), this reuses
+  /// [BottomSheetContent] verbatim on both branches -- a self-contained
+  /// surface with its own independent search field over the full
+  /// [widget.options] pool, and commit-by-pop contract (see that class's own
+  /// doc for why it has no callback-based commit path). This makes desktop's
+  /// dialog behavior consistent with mobile's sheet instead of continuing to
+  /// differ from it, at the cost of the closed field's typed text and caret
+  /// position not continuing into the dialog -- it opens with its own empty
   /// search field instead of the closed field's current text.
   ///
   /// **The pool handed to [BottomSheetContent] is always [widget.options]
@@ -466,7 +434,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// the user is actively typing a query, but the closed field also holds
   /// the full text of an already-*committed* selection (e.g. "Canada") once
   /// one exists, and that helper could not tell those two cases apart.
-  /// Reopening the drawer after selecting "Canada" pre-filtered the pool
+  /// Reopening the surface after selecting "Canada" pre-filtered the pool
   /// down to only options whose name starts with "canada" -- i.e. "Canada"
   /// alone -- stranding every other option unreachable. [BottomSheetContent]
   /// already owns its own independent search field, starting empty on every
@@ -476,40 +444,54 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// committed" (a distinction this widget has no reliable way to make from
   /// `_controller.text` alone). The full list is always reachable on open;
   /// the committed value stays visible as the closed field's own text once
-  /// the drawer is dismissed.
+  /// the surface is dismissed.
   ///
-  /// **Title (DESIGN-98 follow-up).** [LayrzEndDrawer.show]'s `title` slot
-  /// renders [widget.labelText] as a real title (headline, left-aligned) --
-  /// [BottomSheetContent.showInlineTitle] is `false` here so that widget does
-  /// not ALSO render its own small, caption-styled inline heading for the
-  /// same text; passing both would stack a title over a duplicate caption.
-  /// The mobile bottom sheet path above keeps `showInlineTitle`'s default
-  /// (`true`) unchanged, since [LayrzBottomSheet] has no title slot of its
-  /// own to defer to.
-  ///
-  /// **`semanticLabel` falls back to `hintText` only (maintainer review).**
-  /// Before this, `semanticLabel` passed `widget.labelText` unconditionally,
-  /// alongside `title` above already rendering that exact text as a real
-  /// `Text` widget -- doubling the accessibility announcement, exactly the
-  /// trap `end_drawer.dart`'s own doc warns about ("passing both usually
-  /// reads as a duplicate title, not a title plus a caption"). Mirrors
-  /// `LayrzDateInput`/`LayrzSelectInput`'s identical fix: `semanticLabel`
-  /// only fills the gap when there is no visible `title` to announce it
-  /// instead.
-  Future<void> _openDesktopDrawer() async {
-    final selected = await LayrzEndDrawer.show<String?>(
+  /// **No visible `title:` slot on either branch.** [LayrzResponsiveModal.show]
+  /// has no `title:` parameter -- unlike the desktop-only end drawer this
+  /// replaced, it renders exactly one builder result on both branches, so
+  /// [BottomSheetContent.showInlineTitle] keeps its default (`true`)
+  /// uniformly here: that widget renders its own small, caption-styled inline
+  /// heading for [widget.labelText] on both the dialog and the sheet,
+  /// matching what the mobile branch already did before this migration.
+  /// `semanticLabel` falls back to `hintText` only, since the inline heading
+  /// already produces a Semantics node with the `labelText` announcement when
+  /// it is non-null.
+  Future<void> _openPicker() async {
+    final selected = await LayrzResponsiveModal.show<String?>(
       context,
-      semanticLabel: widget.labelText == null ? widget.hintText : null,
-      title: widget.labelText == null ? null : Text(widget.labelText!),
+      semanticLabel: widget.labelText ?? widget.hintText,
+      // BottomSheetContent's own header (LayrzPickerDialogHeader, rendered
+      // when `showInlineTitle` is true -- see that widget's own doc) already
+      // renders a close X next to the title, so the dialog branch's floating
+      // X would be a redundant second X -- suppressing only the icon's
+      // render here does not affect canDismiss's own inference (still
+      // `true`, since no `actions` are passed) -- barrier tap, Escape, and
+      // the back gesture all still close the modal with no value.
+      showCloseIcon: false,
+      // BottomSheetContent's own root now pins a header (title, inline
+      // search, close) above an `Expanded`-wrapped `ListView.builder` --
+      // see that widget's own `build` doc for the pinned-header, scrolling-
+      // list-only layout (maintainer review). That `Expanded`/`ListView`
+      // needs a genuinely bounded incoming height: `scrollable: false` hands
+      // it the sheet's own bounded `Expanded` region directly (rather than
+      // nesting it inside the sheet's default `SingleChildScrollView`, which
+      // would give it unbounded height and assert), and the dialog branch's
+      // `child` slot needs no equivalent flag -- it is already bounded by
+      // the enlarged `LayrzDialogConfig` below, with no intermediate scroll
+      // view imposed.
+      dialog: const LayrzDialogConfig(maxWidth: 600, maxHeight: 760),
+      sheet: const LayrzBottomSheetConfig(scrollable: false),
       builder: (context) => BottomSheetContent(
         options: widget.options,
         emptyText: widget.emptyOptionsText ?? context.l10n.comboboxEmpty,
         labelText: widget.labelText,
-        showInlineTitle: false,
         enableAutocomplete: widget.enableAutocomplete,
       ),
     );
 
+    // Both branches report the selection solely by popping with a value — see
+    // BottomSheetContent's doc comment for why there is no second, callback-based
+    // commit path here.
     if (selected != null) {
       _commitValue(selected);
     }
@@ -599,7 +581,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       // row on the closed field left to commit (see `_handleKeyEvent`'s own
       // doc for why that navigation moved entirely into the opened
       // BottomSheetContent surface).
-      onSubmit: (_) => _openOverlay(),
+      onSubmit: (_) => _openPicker(),
       onFocusChanged: (isFocused) {
         setState(() {
           if (isFocused) {
@@ -657,17 +639,18 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// arrow-key highlight navigation and Enter/Escape while the desktop
   /// `LayrzAnchoredPanel` was open in place, since that panel's option rows
   /// lived in the same subtree as this field. Now that opening the overlay
-  /// always pushes a separate [LayrzEndDrawer]/[LayrzBottomSheet] route
-  /// hosting its own independent [BottomSheetContent] -- with its own
-  /// [Focus]/key handling, mirroring [LayrzSelectInputSurface]'s identical
-  /// self-contained pattern -- there is no in-place option list left for this
-  /// handler to navigate. It keeps exactly the one job that still belongs to
-  /// the closed field: opening the overlay on arrow-down.
+  /// always pushes a separate route (a dialog or a bottom sheet, both via
+  /// [LayrzResponsiveModal.show]) hosting its own independent
+  /// [BottomSheetContent] -- with its own [Focus]/key handling, mirroring
+  /// [LayrzSelectInputSurface]'s identical self-contained pattern -- there is
+  /// no in-place option list left for this handler to navigate. It keeps
+  /// exactly the one job that still belongs to the closed field: opening the
+  /// overlay on arrow-down.
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.arrowDown && !context.isCompact) {
-      _openOverlay();
+      _openPicker();
       return KeyEventResult.handled;
     }
 
@@ -678,11 +661,12 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   Widget build(BuildContext context) {
     // Both bands render the same standalone field now (DESIGN-98): desktop no
     // longer continues this same live field into an overlay that covers it
-    // (see [_openDesktopDrawer]'s own doc for why the Q3 shared-field trick
-    // does not survive a route boundary) -- it opens [LayrzEndDrawer] hosting
-    // an independent [BottomSheetContent], exactly like the compact band
-    // already opens [LayrzBottomSheet] hosting the same widget.
-    final anchor = _buildFieldChrome(context, onOpen: _openOverlay);
+    // (see [_openPicker]'s own doc for why the Q3 shared-field trick does not
+    // survive a route boundary) -- it opens a dialog hosting an independent
+    // [BottomSheetContent], exactly like the compact band already opens a
+    // bottom sheet hosting the same widget, both via
+    // [LayrzResponsiveModal.show].
+    final anchor = _buildFieldChrome(context, onOpen: _openPicker);
 
     return Semantics(
       label: widget.labelText,
@@ -698,7 +682,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
       // announcing this as an expandable control even though its live state
       // is not tracked.
       expanded: false,
-      onTap: (widget.disabled || widget.readOnly) ? null : _openOverlay,
+      onTap: (widget.disabled || widget.readOnly) ? null : _openPicker,
       child: Focus(
         onKeyEvent: _handleKeyEvent,
         child: _appendExtras(anchor, context.tokens),
@@ -715,7 +699,7 @@ class _LayrzComboBoxInputState extends State<LayrzComboBoxInput> {
   /// `LayrzDurationInput._buildInteractiveField`'s identical composition.
   /// Post-DESIGN-98 this is no longer load-bearing for anchor positioning the
   /// way it was under `LayrzAnchoredPanel.coverAnchor` (see [_buildFieldChrome]'s
-  /// own doc) -- [LayrzEndDrawer] and [LayrzBottomSheet] both position
+  /// own doc) -- both [LayrzResponsiveModal.show] branches position
   /// themselves independently of this field's rect -- but the composition is
   /// kept identical to the other DESIGN-98 inputs regardless, for the same
   /// label/footer placement every one of them uses.
