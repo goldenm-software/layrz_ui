@@ -8,7 +8,6 @@ export 'src/dynamic_avatar/dynamic_avatar_input.dart';
 export 'src/emoji/emoji_input.dart';
 export 'src/icon/icon_input.dart';
 export 'src/icon/icon_surface.dart';
-export 'src/image/image_input.dart';
 export 'src/models/date_range.dart';
 export 'src/models/month.dart';
 export 'src/models/month_range.dart';

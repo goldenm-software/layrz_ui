@@ -8,34 +8,30 @@ import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The fixed width/height, in logical pixels, of [LayrzDynamicAvatarTile] --
-/// matching [LayrzImageInput]'s own default `size` exactly, per the
-/// maintainer's explicit direction to mirror that widget's tile rather than
-/// introduce a second, independently configurable tile size for this field.
+/// a fixed 100px square, per the maintainer's explicit direction for this
+/// field's tile rather than an independently configurable tile size.
 const double kDynamicAvatarTileSize = 100;
 
 /// The tappable avatar tile presented by `LayrzDynamicAvatarInput`'s closed
 /// field, in the layrz_ui design system.
 ///
-/// Mirrors `LayrzImageInput`'s tile presentation (see that widget's class
-/// doc) almost exactly: a fixed [kDynamicAvatarTileSize]-square,
-/// rounded-corner tile that is tappable in both its empty and populated
-/// states, styled via [LayrzFileInputStyleSpec] (the exact same style-spec
-/// type `LayrzImageInput` resolves its own tile from -- reused rather than
-/// re-derived, since both widgets are "a tappable square that opens a
-/// picker surface" with an identical state set: empty/hover/dragging is
-/// irrelevant here since this tile has no drag-and-drop, so only
-/// empty/hover/populated ever apply).
+/// A fixed [kDynamicAvatarTileSize]-square, rounded-corner tile that is
+/// tappable in both its empty and populated states, styled via
+/// [LayrzFileInputStyleSpec] (the same style-spec type [LayrzFileInput]
+/// resolves its own tile from -- reused rather than re-derived, since both
+/// widgets are "a tappable square that opens a picker surface" with an
+/// identical state set: empty/hover/dragging is irrelevant here since this
+/// tile has no drag-and-drop, so only empty/hover/populated ever apply).
 ///
-/// Unlike [LayrzImageInput], this tile never renders a preview widget of its
+/// Unlike [LayrzFileInput], this tile never renders a preview widget of its
 /// own -- the current [LayrzAvatarSource] (URL, base64, icon, or emoji) is
 /// rendered by [LayrzAvatar], which already knows how to present every
 /// variant plus the empty/initials fallback. Passing `nameText: null` (the
 /// tile never has a name to fall back to) means a `null` [source] would
 /// render `LayrzAvatar`'s own "NA" initials tile -- **not what this field
 /// wants for "no avatar yet"** -- so the empty state is special-cased here
-/// (mirroring [LayrzImageInput]'s own empty-content branch) into a centered
-/// add-avatar affordance icon instead of ever constructing a [LayrzAvatar]
-/// with a null source.
+/// into a centered add-avatar affordance icon instead of ever constructing a
+/// [LayrzAvatar] with a null source.
 class LayrzDynamicAvatarTile extends StatefulWidget {
   /// The avatar source currently displayed, or `null` for "no avatar".
   final LayrzAvatarSource? source;
@@ -88,7 +84,7 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
 
   /// Resolves the tile's current [LayrzFileInputState] -- this tile never
   /// enters [LayrzFileInputState.dragging] (it has no drop-target
-  /// machinery, only [LayrzImageInput] does), so only hover/populated/empty
+  /// machinery, only [LayrzFileInput] does), so only hover/populated/empty
   /// ever apply.
   LayrzFileInputState _resolveState() {
     if (_isHovered || widget.focusNode.hasFocus) return LayrzFileInputState.hover;
@@ -109,7 +105,7 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
       disabled: widget.disabled,
     );
 
-    // See `LayrzImageInput._buildTile`'s identical comment: the rounded clip
+    // See `LayrzFileInput`'s tile-building code for the identical comment: the rounded clip
     // is kept as its own non-decorated `ClipRRect` layer, separate from the
     // `AnimatedContainer` that paints the fill/border, to avoid a measured
     // Impeller artifact where a clipped, animated `BoxDecoration` fill
@@ -171,7 +167,7 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
   }
 
   /// Builds the empty-state content: a centered add-avatar icon, sized to
-  /// the tile -- mirroring [LayrzImageInput]'s own `_buildEmptyContent`.
+  /// the tile.
   Widget _buildEmptyContent(LayrzFileInputStyleSpec spec) {
     return Center(
       child: Icon(
@@ -206,8 +202,7 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
   }
 
   /// Builds the independently tappable circular clear (X) badge overlaid at
-  /// the tile's top-right corner, matching [LayrzImageInput]'s own
-  /// `_buildClearBadge` exactly.
+  /// the tile's top-right corner.
   Widget _buildClearBadge(LayrzTokens tokens, LayrzUiL10n l10n) {
     return Positioned(
       right: -tokens.spacing.sp1,

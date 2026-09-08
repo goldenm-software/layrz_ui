@@ -1,4 +1,4 @@
-import 'package:file_picker/file_picker.dart' show FilePicker, FileType;
+import 'package:file_picker/file_picker.dart' show FilePicker, FileType, PlatformFile;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
@@ -285,19 +285,22 @@ class _LayrzFileInputState extends State<LayrzFileInput> {
     if (widget.disabled) return;
 
     final allowed = widget.allowedExtensions;
-    final result = await FilePicker.platform.pickFiles(
-      type: allowed != null && allowed.isNotEmpty ? FileType.custom : FileType.any,
-      allowedExtensions: allowed != null && allowed.isNotEmpty ? allowed : null,
-      allowMultiple: widget.maxFiles != 1,
-      withData: true,
-    );
+    List<PlatformFile>? result;
+    if (widget.maxFiles == 1) {
+      final file = await FilePicker.pickFile();
+      if (file != null) result = [file];
+    } else {
+      result = await FilePicker.pickFiles(
+        type: allowed != null && allowed.isNotEmpty ? FileType.custom : FileType.any,
+        allowedExtensions: allowed != null && allowed.isNotEmpty ? allowed : null,
+      );
+    }
 
     if (result == null) return;
 
     final incoming = <LayrzFileInputResult>[];
-    for (final platformFile in result.files) {
-      final bytes = platformFile.bytes;
-      if (bytes == null) continue;
+    for (final platformFile in result) {
+      final bytes = await platformFile.xFile.readAsBytes();
       incoming.add(
         LayrzFileInputResult(
           name: platformFile.name,

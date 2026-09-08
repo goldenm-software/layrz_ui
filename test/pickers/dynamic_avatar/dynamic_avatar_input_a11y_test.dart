@@ -276,8 +276,8 @@ void main() {
 
       // `pumpThemedApp`'s `LayrzApp` provides the `WidgetsApp`/`Shortcuts`
       // binding for the default Enter->ActivateIntent mapping
-      // `FocusableActionDetector` relies on -- mirrors
-      // `image_input_a11y_test.dart`'s identical setup for this same trap.
+      // `FocusableActionDetector` relies on -- other a11y suites in this
+      // module hit the same trap without this setup.
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar', focusNode: focusNode));
       await tester.pump();
 
