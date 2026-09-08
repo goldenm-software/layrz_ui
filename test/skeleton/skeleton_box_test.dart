@@ -104,6 +104,47 @@ void main() {
       expect(decoration.color, const Color(0xFF000000));
     });
 
+    guardedTestWidgets('input() presets the height to the standard LayrzInput chrome height', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
+
+      final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonBox));
+      expect(box.size, const Size(200, 43.0));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    guardedTestWidgets('input() presets the border radius to the standard LayrzInput radius', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
+
+      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(10));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    guardedTestWidgets('input() honors a caller-supplied borderRadius override', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200, borderRadius: 4));
+
+      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      final decoration = decoratedBox.decoration as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(4));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
     guardedTestWidgets('reads the shared shimmer from an ancestor LayrzSkeleton instead of a fallback', (
       tester,
     ) async {

@@ -2,6 +2,26 @@ import 'package:flutter/widgets.dart';
 
 import 'skeleton_shimmer_box.dart';
 
+/// The standard height of a `LayrzInput` chrome, in logical pixels, used as
+/// the preset for [LayrzSkeletonBox.input].
+///
+/// Derived from the non-dense, regular (viewport ≥ 960px) input chrome:
+/// `contentHeight` (20) + two vertical paddings of `tokens.spacing.pd2` (10
+/// each, 20 total) + two borders of `tokens.border.base` (1.5 each, 3 total)
+/// = 43.0.
+///
+/// This constant does **not** cover the dense variant (~35lp) or the
+/// compact-viewport variant (~51lp) of `LayrzInput` — matching those exactly
+/// is a known limitation of [LayrzSkeletonBox.input].
+const double kLayrzSkeletonInputHeight = 43.0;
+
+/// The standard corner radius of a `LayrzInput` chrome, in logical pixels,
+/// used as the preset for [LayrzSkeletonBox.input].
+///
+/// Mirrors `tokens.radius.br2`, the `BorderRadius.circular(10)` applied to
+/// the input container.
+const double kLayrzSkeletonInputRadius = 10.0;
+
 /// A rectangular skeleton shape primitive — the loading placeholder for a
 /// block of content with an explicit, known size, such as an image, a card,
 /// or a button.
@@ -45,6 +65,24 @@ class LayrzSkeletonBox extends StatelessWidget {
     required this.height,
     this.borderRadius = 0.0,
   });
+
+  /// Creates a [LayrzSkeletonBox] preset to simulate a standard `LayrzInput`.
+  ///
+  /// Presets [height] to [kLayrzSkeletonInputHeight] and [borderRadius] to
+  /// [kLayrzSkeletonInputRadius], matching the non-dense, regular
+  /// (viewport ≥ 960px) input chrome. Only [width] is required from the
+  /// caller — skeletons have no way to know the width of the real content
+  /// they stand in for.
+  ///
+  /// This preset does **not** account for the dense (~35lp) or
+  /// compact-viewport (~51lp) `LayrzInput` variants; use the default
+  /// constructor with an explicit [height] to match those instead.
+  const LayrzSkeletonBox.input({
+    super.key,
+    required this.width,
+    double? borderRadius,
+  }) : height = kLayrzSkeletonInputHeight,
+       borderRadius = borderRadius ?? kLayrzSkeletonInputRadius;
 
   @override
   Widget build(BuildContext context) {
