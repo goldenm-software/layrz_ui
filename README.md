@@ -85,6 +85,37 @@ Live progress across milestones M1–M8 is tracked on the [Notion board](https:/
 
 ---
 
+## Kotlin Gradle Plugin warning
+
+`layrz_ui` depends on `desktop_drop` and `file_picker`, whose Android plugin modules apply the
+Kotlin Gradle Plugin (KGP) themselves. On AGP 9+, this triggers Flutter's KGP deprecation warning
+in your app's build output — something like *"plugins that apply Kotlin Gradle Plugin (KGP):
+desktop_drop, file_picker"*.
+
+To silence it, set `android.builtInKotlin=true` (alongside `android.newDsl=false`) in your app's
+`android/gradle.properties`. With the flag set, those plugins defer to AGP's built-in Kotlin
+instead of applying KGP themselves, and the warning goes away — no plugin fork or version bump
+needed.
+
+```properties
+android.builtInKotlin=true
+android.newDsl=false
+```
+
+If the warning persists after setting the flag, it's a stale Gradle configuration cache (the
+conditional is evaluated at Gradle configuration time). From your app's root:
+
+```bash
+./gradlew --stop
+rm -rf ~/.gradle/caches android/.gradle build
+```
+
+`./gradlew --stop` stops the Gradle daemon holding the stale configuration, and removing the
+Gradle cache / `.gradle` / build directories forces a fresh configuration where the
+`builtInKotlin` flag takes effect.
+
+---
+
 ## Running the example
 
 ```bash
@@ -105,30 +136,6 @@ make run-macos
 > unaffected; whether other Impeller desktop targets (macOS, Windows) show the same aliasing is not
 > yet verified. The shapes themselves are correct — this is an engine-level rendering limitation,
 > not a geometry bug. See `engineering/decisions.md` (D77) for details.
-
-### Android Gradle notes
-
-Building the example for Android on AGP 9+ requires `android.builtInKotlin=true` in
-`example/android/gradle.properties` (alongside the existing `android.newDsl=false`). Without it,
-the bundled `desktop_drop` and `file_picker` plugins apply the Kotlin Gradle Plugin (KGP)
-themselves, which triggers Flutter's KGP deprecation warning. With the flag set, those plugins
-defer to AGP's built-in Kotlin instead and the warning goes away — no plugin fork or version bump
-needed.
-
-```properties
-android.builtInKotlin=true
-android.newDsl=false
-```
-
-If the KGP warning persists after setting the flag, it's a stale Gradle configuration cache (the
-conditional is evaluated at Gradle configuration time). `./gradlew --stop` stops the Gradle daemon
-holding the stale configuration, and removing the cache/`.gradle`/build directories forces a fresh
-configuration where the `builtInKotlin` flag takes effect:
-
-```bash
-cd example/android && ./gradlew --stop
-rm -rf ~/.gradle/caches example/android/.gradle example/build
-```
 
 ---
 
