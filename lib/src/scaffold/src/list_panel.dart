@@ -1,10 +1,11 @@
 import "package:flutter/widgets.dart";
+import "package:layrz_ui/src/constants/constants.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/inputs/inputs.dart";
-import "package:layrz_ui/src/tappable/tappable.dart";
 import "package:layrz_ui/src/tokens/src/tokens.dart";
 
 import "scaffold_item.dart";
+import "scaffold_row.dart";
 
 /// The left list panel of the scaffold shell.
 ///
@@ -145,12 +146,22 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
           Expanded(
             child: _filteredItems.isEmpty
                 ? _buildEmptyState(tokens)
-                : ListView.builder(
-                    itemCount: _filteredItems.length,
-                    itemExtent: widget.itemExtent,
-                    itemBuilder: (context, index) {
-                      return _buildListItem(context, tokens, _filteredItems[index]);
-                    },
+                : Padding(
+                    // Reserves the vertical scrollbar's gutter (LayrzScrollBehavior
+                    // installs one globally on pointer platforms — see
+                    // kLayrzScrollbarThickness) so its thumb overlays this padding
+                    // strip instead of the rows' own content, most visibly the
+                    // trailing-edge action reveal in ScaffoldRow. Same fix as
+                    // kLayrzCalendarHourGridEndPadding for the calendar's day/week
+                    // scroll surfaces.
+                    padding: const EdgeInsets.only(right: kLayrzScrollbarThickness),
+                    child: ListView.builder(
+                      itemCount: _filteredItems.length,
+                      itemExtent: widget.itemExtent,
+                      itemBuilder: (context, index) {
+                        return _buildListItem(context, tokens, _filteredItems[index]);
+                      },
+                    ),
                   ),
           ),
           if (widget.footer != null) ...[
@@ -168,32 +179,11 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
   Widget _buildListItem(BuildContext context, LayrzTokens tokens, LayrzScaffoldItem<T> item) {
     final isSelected = item.key == widget.openedKey;
 
-    return LayrzTappable(
-      disabled: isSelected,
+    return ScaffoldRow<T>(
+      key: item.key,
+      item: item,
+      isSelected: isSelected,
       onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
-      borderRadius: tokens.radius.br2,
-      color: isSelected ? tokens.colors.sf4 : tokens.colors.sf1,
-      child: Padding(
-        padding: tokens.spacing.pd2,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // The tappable tile
-            Expanded(child: item.tile),
-            if (isSelected) ...[
-              // Indicator bar — reserved space always (same width whether selected or not)
-              Container(
-                width: 3,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  color: tokens.colors.primary,
-                  borderRadius: tokens.radius.br3,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 
