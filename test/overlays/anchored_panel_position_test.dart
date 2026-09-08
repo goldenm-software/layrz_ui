@@ -337,6 +337,129 @@ void main() {
     });
   });
 
+  // Of the four `.clamp(0.0, double.infinity)` negative-guards in
+  // `getConstraintsForChild`, only the `:170` guard (horizontalBudget) is
+  // observable by deleting it in isolation — the test below catches it.
+  // The other three guards are masked by construction and stay green even
+  // with their clamp deleted on its own; this was verified against the
+  // running delegate, not assumed:
+  //   - `:178`/`:179` (roomLeft/roomRight): `mainAxisRoom = math.max(roomLeft,
+  //     roomRight)`. Whichever sibling room still has its clamp keeps
+  //     `mainAxisRoom >= 0` regardless of how negative the unclamped room
+  //     goes, since `max` never selects the more-negative operand. They are
+  //     defensive/redundant-by-design given the sibling clamp, not
+  //     uncovered.
+  //   - `:192` (availableHeight): `constrainedHeight` is re-clamped
+  //     unconditionally two lines later
+  //     (`(... ).clamp(0.0, double.infinity)`), which subsumes `:192`'s own
+  //     clamp in every case, `maxHeight` set or not.
+  // The four tests still assert the correct BoxConstraints invariants for
+  // these degenerate shapes and are kept as regression coverage.
+  group('getConstraintsForChild — degenerate overlay negative-guards', () {
+    test(
+      'an overlay narrower than 2*sp2 clamps maxWidth to 0.0 instead of going negative',
+      () {
+        // width = 10 < 2*sp2 (20.0), so horizontalBudget would be negative
+        // without the clamp at the width-budget guard.
+        const overlaySize = Size(10, 600);
+        const anchorRect = Rect.fromLTWH(2, 250, 5, 40);
+
+        final delegate = buildDelegate(
+          anchorRect: anchorRect,
+          preferredSide: LayrzPreferredSide.bottom,
+          overlaySize: overlaySize,
+        );
+
+        final constraints = delegate.getConstraintsForChild(const BoxConstraints());
+
+        expect(constraints.maxWidth, 0.0);
+        expect(constraints.minWidth, lessThanOrEqualTo(constraints.maxWidth));
+        expect(constraints.minHeight, lessThanOrEqualTo(constraints.maxHeight));
+        expect(constraints.minWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minHeight, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxHeight, greaterThanOrEqualTo(0.0));
+      },
+    );
+
+    test(
+      'a horizontal-side anchor flush against the left edge does not drive roomLeft negative',
+      () {
+        // anchorRect.left == 0, so (anchorRect.left - gap) is -8 without the clamp.
+        // preferredSide.left keeps this on the isHorizontal branch that computes
+        // roomLeft/roomRight, unlike a vertical side which never reaches them.
+        const overlaySize = Size(400, 600);
+        const anchorRect = Rect.fromLTWH(0, 250, 100, 40);
+
+        final delegate = buildDelegate(
+          anchorRect: anchorRect,
+          preferredSide: LayrzPreferredSide.left,
+          overlaySize: overlaySize,
+        );
+
+        final constraints = delegate.getConstraintsForChild(const BoxConstraints());
+
+        expect(constraints.minWidth, lessThanOrEqualTo(constraints.maxWidth));
+        expect(constraints.maxWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minHeight, lessThanOrEqualTo(constraints.maxHeight));
+        expect(constraints.minHeight, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxHeight, greaterThanOrEqualTo(0.0));
+      },
+    );
+
+    test(
+      'a horizontal-side anchor flush against the right edge does not drive roomRight negative',
+      () {
+        // anchorRect.right == overlaySize.width, so
+        // (overlaySize.width - anchorRect.right - gap) is -8 without the clamp.
+        const overlaySize = Size(400, 600);
+        const anchorRect = Rect.fromLTWH(300, 250, 100, 40);
+
+        final delegate = buildDelegate(
+          anchorRect: anchorRect,
+          preferredSide: LayrzPreferredSide.right,
+          overlaySize: overlaySize,
+        );
+
+        final constraints = delegate.getConstraintsForChild(const BoxConstraints());
+
+        expect(constraints.minWidth, lessThanOrEqualTo(constraints.maxWidth));
+        expect(constraints.maxWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minHeight, lessThanOrEqualTo(constraints.maxHeight));
+        expect(constraints.minHeight, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxHeight, greaterThanOrEqualTo(0.0));
+      },
+    );
+
+    test(
+      'an overlay shorter than 2*sp2 clamps maxHeight to 0.0 instead of going negative',
+      () {
+        // height = 10 < 2*sp2 (20.0), so availableHeight would be negative
+        // without the clamp at the height-budget guard.
+        const overlaySize = Size(400, 10);
+        const anchorRect = Rect.fromLTWH(150, 2, 100, 5);
+
+        final delegate = buildDelegate(
+          anchorRect: anchorRect,
+          preferredSide: LayrzPreferredSide.bottom,
+          overlaySize: overlaySize,
+        );
+
+        final constraints = delegate.getConstraintsForChild(const BoxConstraints());
+
+        expect(constraints.maxHeight, 0.0);
+        expect(constraints.minHeight, lessThanOrEqualTo(constraints.maxHeight));
+        expect(constraints.minWidth, lessThanOrEqualTo(constraints.maxWidth));
+        expect(constraints.minWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxWidth, greaterThanOrEqualTo(0.0));
+        expect(constraints.minHeight, greaterThanOrEqualTo(0.0));
+        expect(constraints.maxHeight, greaterThanOrEqualTo(0.0));
+      },
+    );
+  });
+
   group('shouldRelayout', () {
     test('returns true when preferredSide changes', () {
       const anchorRect = Rect.fromLTWH(150, 250, 100, 40);
