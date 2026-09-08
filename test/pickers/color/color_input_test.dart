@@ -544,7 +544,11 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox());
 
-      expect(() => controller.text, returnsNormally);
+      // `.text` reads a cached field and never throws even on a disposed
+      // TextEditingController, so it cannot detect disposal. addListener() on a
+      // disposed ChangeNotifier does throw (debug assertion), so it is the real
+      // liveness probe for "the widget did not dispose the caller's controller".
+      expect(() => controller.addListener(() {}), returnsNormally);
     });
 
     guardedTestWidgets('does not dispose a caller-provided focus node', (tester) async {
@@ -561,7 +565,10 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox());
 
-      expect(() => focusNode.hasFocus, returnsNormally);
+      // `.hasFocus` never throws even on a disposed FocusNode, so it cannot detect
+      // disposal. addListener() on a disposed ChangeNotifier does throw, so it is
+      // the real liveness probe for "the widget did not dispose the caller's node".
+      expect(() => focusNode.addListener(() {}), returnsNormally);
     });
   });
 

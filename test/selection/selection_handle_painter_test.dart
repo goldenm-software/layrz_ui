@@ -49,7 +49,12 @@ void main() {
       final recordingCanvas = ui.PictureRecorder();
       final canvas = Canvas(recordingCanvas);
 
-      // This should not throw
+      // Smoke test only: `paint()` draws into a Canvas backed by a PictureRecorder,
+      // which does not expose the recorded Path/drawing calls back out, and
+      // LayrzSelectionHandlePainter builds its teardrop Path as a local variable with
+      // no getter to inspect. A real shape assertion would require adding test-only
+      // instrumentation to the lib painter, which is out of scope for this
+      // tests-only sweep (DESIGN-155). This only proves paint() does not throw.
       expect(
         () => painter.paint(canvas, size),
         returnsNormally,

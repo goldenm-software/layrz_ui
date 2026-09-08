@@ -196,6 +196,9 @@ void main() {
       );
 
       LayrzShortcutHandle? handle;
+      // Genuine no-throw contract: an empty key set is degenerate input the
+      // registry must tolerate (it can never match a key event, but registering
+      // it must not crash) -- the next line confirms it still returns a handle.
       expect(
         () => handle = registry.register(
           keys: <LogicalKeyboardKey>{},
@@ -232,6 +235,8 @@ void main() {
       );
 
       registry.deregister(handle);
+      // Genuine no-throw contract (test name states it): a second deregister of an
+      // already-deregistered handle must be a safe idempotent no-op.
       expect(() => registry.deregister(handle), returnsNormally);
     });
 
@@ -260,6 +265,8 @@ void main() {
       // disposes every live ShortcutRegistryEntry it owns internally.
       await tester.pumpWidget(const SizedBox.shrink());
 
+      // Genuine no-throw contract (test name states it): deregistering a handle
+      // whose owning State has already been disposed must be a safe no-op.
       expect(() => registry.deregister(handle), returnsNormally);
     });
   });
@@ -345,7 +352,8 @@ void main() {
       await tester.pump();
 
       // The inert handle (if the assertion path still produced one) is a
-      // safe no-op to deregister.
+      // safe no-op to deregister. Genuine no-throw contract: an inert handle
+      // from a conflicting registration must still deregister cleanly.
       if (secondHandle != null) {
         expect(() => registry.deregister(secondHandle!), returnsNormally);
       }

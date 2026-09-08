@@ -56,7 +56,15 @@ void main() {
       // a focusNode swap, so `dispose()` (which checks the *final*
       // `widget.focusNode`, now null) disposed the node the widget was
       // actually still holding -- the caller's external node.
-      expect(() => external.dispose(), returnsNormally);
+      //
+      // addListener() on a disposed ChangeNotifier throws (debug assertion), so
+      // it is the real liveness probe here -- unlike calling dispose() directly,
+      // which both consumes the only chance to check liveness and would throw a
+      // *different*, misleading error ("dispose() called twice") if the widget
+      // had already disposed the node, rather than the intended "used after
+      // being disposed" signal.
+      expect(() => external.addListener(() {}), returnsNormally);
+      external.dispose();
     });
   });
 

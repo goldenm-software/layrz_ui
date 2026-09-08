@@ -73,7 +73,15 @@ void main() {
       // once for this whole file, across every zone exercised in this group.
       final lordHowe = tz.getLocation('Australia/Lord_Howe');
       final reference = tz.TZDateTime(lordHowe, 2024, 4, 6);
-      expect(() => sameZoneDate(reference, 2024, 4, 8), returnsNormally);
+      final result = sameZoneDate(reference, 2024, 4, 8);
+
+      // Not just no-throw: confirms the call actually reused `reference`'s own
+      // Location (rather than, say, silently falling back to a plain DateTime,
+      // which would also "return normally" but defeat the whole point of the
+      // helper).
+      expect(result, isA<tz.TZDateTime>());
+      expect((result as tz.TZDateTime).location, lordHowe);
+      expect(result.day, 8);
     });
   });
 

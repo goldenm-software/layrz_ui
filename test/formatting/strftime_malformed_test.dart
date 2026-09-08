@@ -7,11 +7,16 @@ void main() {
 
   group('formatStrftime — malformed/unsupported directives never throw', () {
     test('an unsupported directive letter passes through literally', () {
+      // Genuine no-throw contract (group name states it): malformed/unsupported
+      // directives must never throw -- the line below asserts the actual pass-through
+      // value, so this is not standing in for a behavioural check, just stating the
+      // contract explicitly before it.
       expect(() => formatStrftime(reference, '%Q', l10n), returnsNormally);
       expect(formatStrftime(reference, '%Q', l10n), '%Q');
     });
 
     test('a trailing lone percent passes through literally', () {
+      // Genuine no-throw contract: see note above.
       expect(() => formatStrftime(reference, 'value: %', l10n), returnsNormally);
       expect(formatStrftime(reference, 'value: %', l10n), 'value: %');
     });
@@ -32,6 +37,7 @@ void main() {
     });
 
     test('an empty pattern renders to an empty string without throwing', () {
+      // Genuine no-throw contract: see note above.
       expect(() => formatStrftime(reference, '', l10n), returnsNormally);
       expect(formatStrftime(reference, '', l10n), '');
     });

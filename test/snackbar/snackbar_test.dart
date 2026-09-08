@@ -44,6 +44,9 @@ void main() {
       });
 
       test('custom type with both icon and color does not throw', () {
+        // Genuine no-throw contract: paired with the three throwsAssertionError
+        // cases above, this confirms the one valid `custom`-type combination
+        // (both icon and color provided) does not trip the constructor assert.
         expect(
           () => LayrzSnackbar(
             titleText: 'Title',
@@ -79,6 +82,9 @@ void main() {
       });
 
       test('non-custom type with both icon and color null does not throw', () {
+        // Genuine no-throw contract: paired with the two throwsAssertionError
+        // cases above, this confirms the valid non-custom combination (neither
+        // icon nor color provided) does not trip the constructor assert.
         expect(
           () => LayrzSnackbar(
             titleText: 'Title',

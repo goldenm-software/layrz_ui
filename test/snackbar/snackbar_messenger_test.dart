@@ -268,6 +268,9 @@ void main() {
             );
             await tester.pump();
           },
+          // Genuine no-throw contract (paired with the real `.of()` resolution
+          // assertion below): the point of this test is that pumping a redundant
+          // nested messenger does not crash the tree.
           returnsNormally,
           reason: 'a redundant nested LayrzSnackbarMessenger must not crash the tree',
         );
@@ -627,6 +630,8 @@ void main() {
         // setState on an unmounted State.
         await tester.pumpWidget(const SizedBox.shrink());
 
+        // Genuine no-throw contract (test name states it): the drain timer must
+        // guard on `mounted` rather than calling setState on a disposed State.
         expect(() async {
           await tester.pump(const Duration(milliseconds: 3100));
         }, returnsNormally);

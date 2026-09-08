@@ -83,12 +83,12 @@ void main() {
       expect(theme.body.fontFamilyFallback, equals(const ['Noto Color Emoji']));
     });
 
-    // The factory ALSO fires registerOnWeb unconditionally for the two
-    // always-on bundled fonts (Noto Color Emoji, JetBrains Mono), independent
-    // of the caller's own `font` choice -- see the factory's own doc. Both
-    // resolve to a real (if inert on the VM target) asset read via
-    // rootBundle.load, so this proves the call completes without throwing
-    // rather than merely existing in source.
+    // Genuine no-throw contract. The factory ALSO fires registerOnWeb
+    // unconditionally for the two always-on bundled fonts (Noto Color Emoji,
+    // JetBrains Mono), independent of the caller's own `font` choice -- see the
+    // factory's own doc. Both resolve to a real (if inert on the VM target)
+    // asset read via rootBundle.load, so this proves the call completes without
+    // throwing rather than merely existing in source.
     test('does not throw when constructing the theme (bundled-font registerOnWeb calls complete)', () async {
       expect(
         () => LayrzTextTheme.defaults(textColor: const Color(0xFF000000)),
@@ -204,9 +204,10 @@ void main() {
     });
 
     test('LayrzRobotoFont (the null-font default) exposes a synchronous no-op registerOnWeb', () {
-      // The null-font branch resolves to LayrzRobotoFont, whose inherited
-      // registerOnWeb is the base no-op — calling defaults() with no font must not
-      // throw or hang despite firing registerOnWeb unawaited.
+      // Genuine no-throw contract. The null-font branch resolves to
+      // LayrzRobotoFont, whose inherited registerOnWeb is the base no-op —
+      // calling defaults() with no font must not throw or hang despite firing
+      // registerOnWeb unawaited.
       expect(
         () => LayrzTextTheme.defaults(textColor: const Color(0xFF000000)),
         returnsNormally,

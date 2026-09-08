@@ -899,9 +899,12 @@ void main() {
         ),
       );
 
-      // External focusNode should still be usable (not disposed by the widget).
-      // Calling requestFocus() on a disposed FocusNode throws, so if we get here,
-      // the node was not disposed.
+      // Liveness probe, not a wiring check: after the swap to null the widget owns a
+      // NEW internal FocusNode, so externalFocusNode is detached (hasFocus would be
+      // false) — that is expected and is not what this test is about. FocusNode has
+      // no public `disposed` getter, and requestFocus() on a disposed node throws, so
+      // this is the only available signal that didUpdateWidget's ownership check
+      // (`oldWidget.config.focusNode == null`) correctly skipped disposing it.
       expect(() => externalFocusNode.requestFocus(), returnsNormally);
 
       addTearDown(externalFocusNode.dispose);
@@ -932,9 +935,11 @@ void main() {
         ),
       );
 
-      // Both should be usable (not disposed by the widget).
-      // Calling requestFocus() on a disposed FocusNode throws, so if we get here,
-      // neither node was disposed.
+      // Liveness probe: both focusNode1 and focusNode2 are caller-supplied, so
+      // neither is ever owned by the widget (`config.focusNode == null` is false for
+      // both), meaning neither should be disposed across the swap. FocusNode has no
+      // public `disposed` getter, so requestFocus() throwing on a disposed node is
+      // the only available signal to confirm that.
       expect(() => focusNode1.requestFocus(), returnsNormally);
       expect(() => focusNode2.requestFocus(), returnsNormally);
 

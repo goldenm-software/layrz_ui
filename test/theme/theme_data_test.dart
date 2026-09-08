@@ -249,6 +249,9 @@ void main() {
 
     group('Light mode only', () {
       test('LayrzThemeData.light() constructs without arguments', () {
+        // Genuine no-throw contract: this is a zero-arg constructor smoke test --
+        // every parameter falls back to its default, and the sibling test below
+        // ('has no dark mode factory') already asserts the result is non-null.
         expect(
           () => LayrzThemeData.light(),
           returnsNormally,
