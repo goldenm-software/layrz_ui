@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../helpers/root_semantics_node.dart';
+
 void main() {
   /// Sets a wide desktop viewport so tests don't accidentally exercise the
   /// compact-only default 800×600 test surface (CLAUDE.md testing traps).
@@ -32,7 +34,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         final matches = walkSemantics(root, 'mango');
 
@@ -97,7 +99,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         // Only the wrapper's own label is findable — the excluded child's
         // label never reaches the semantics tree at all.

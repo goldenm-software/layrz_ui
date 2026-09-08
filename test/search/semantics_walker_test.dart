@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/src/search/src/semantics_walker.dart';
 
+import '../helpers/root_semantics_node.dart';
+
 void main() {
   group('walkSemantics', () {
     testWidgets('finds matches across nodes in reading order', (tester) async {
@@ -28,7 +30,7 @@ void main() {
       try {
         await tester.pumpAndSettle();
 
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         final matches = walkSemantics(root, 'mango');
 
@@ -57,7 +59,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         expect(walkSemantics(root, ''), isEmpty);
         expect(walkSemantics(root, '   '), isEmpty);
@@ -89,7 +91,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         final matches = walkSemantics(root, 'mango');
 
@@ -123,7 +125,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         // At a 300px viewport with a 40px itemExtent, rows 0-7 are on
         // screen. Flutter's Scrollable also keeps a bounded cache-extent's
@@ -195,7 +197,7 @@ void main() {
       final handle = tester.ensureSemantics();
       try {
         await tester.pumpAndSettle();
-        final root = tester.binding.pipelineOwner.semanticsOwner!.rootSemanticsNode!;
+        final root = rootSemanticsNode();
 
         final unfiltered = walkSemantics(root, 'mango');
         expect(unfiltered.length, 3);

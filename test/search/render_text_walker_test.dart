@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/src/search/src/render_text_walker.dart';
 
+import '../helpers/root_render_object.dart';
+
 void main() {
   group('findRenderTextSources', () {
     testWidgets('collects a RenderParagraph source per Text/RichText with its painted plain text', (tester) async {
@@ -24,7 +26,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       final sources = findRenderTextSources(root);
 
       final plainTexts = sources.map((s) => s.plainText).toList();
@@ -55,7 +57,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       final sources = findRenderTextSources(root);
 
       expect(sources, hasLength(1));
@@ -96,7 +98,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final root = tester.binding.pipelineOwner.rootNode!;
+        final root = rootRenderObject();
         final source = findRenderTextSources(root).single;
 
         // Exactly one 0xFFFC per WidgetSpan — the placeholder-inclusive
@@ -143,7 +145,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       final sources = findRenderTextSources(root);
 
       expect(sources.map((s) => s.plainText), contains('An editable field with mango inside.'));
@@ -167,7 +169,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       final sources = findRenderTextSources(root);
 
       expect(sources, hasLength(1));
@@ -216,7 +218,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final root = tester.binding.pipelineOwner.rootNode!;
+        final root = rootRenderObject();
         final sources = findRenderTextSources(root);
 
         final routedSource = sources.firstWhere((s) => s.plainText == 'Routed mango content');
@@ -252,7 +254,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       final source = findRenderTextSources(root).single;
 
       // "mango" is offsets 0-5, "kiwi" is offsets 6-10.
@@ -280,7 +282,7 @@ void main() {
         ),
       );
 
-      final root = tester.binding.pipelineOwner.rootNode!;
+      final root = rootRenderObject();
       expect(findRenderTextSources(root), isEmpty);
     });
   });

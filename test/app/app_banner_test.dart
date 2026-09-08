@@ -2,7 +2,6 @@ import 'package:flutter/gestures.dart' show HitTestResult;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_ui/src/app/src/app_banner_painter.dart';
 
 /// Sets an explicit, wide desktop viewport for a [testWidgets] body and
 /// registers the matching teardown, per the repo's mandatory viewport rule.
