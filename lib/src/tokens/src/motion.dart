@@ -32,7 +32,8 @@ class LayrzMotionTokens {
 
   /// Duration for dialog entrance and exit animations.
   ///
-  /// Defaults to 300 milliseconds, giving dialogs a more prominent entrance.
+  /// Must equal [kPageTransitionDuration] (250 milliseconds), capping dialog
+  /// motion at the same duration as page transitions.
   final Duration dDialog;
 
   /// Duration for a single indeterminate sweep cycle in looping progress
@@ -43,7 +44,7 @@ class LayrzMotionTokens {
   /// match `LayrzButtonIndicator`'s hardcoded indeterminate cycle so the two
   /// loading affordances in the design system read at the same speed. This is
   /// deliberately slower than [dDialog]: a repeating sweep at dialog speed
-  /// (300ms) completes over three cycles per second, which reads as frantic
+  /// (250ms) completes over four cycles per second, which reads as frantic
   /// rather than as a calm, ongoing operation.
   final Duration dIndeterminate;
 
@@ -81,7 +82,7 @@ class LayrzMotionTokens {
     this.dPress = const Duration(milliseconds: 80),
     this.dTransition = const Duration(milliseconds: 200),
     this.dPageTransition = kPageTransitionDuration,
-    this.dDialog = const Duration(milliseconds: 300),
+    this.dDialog = kPageTransitionDuration,
     this.dIndeterminate = kIndeterminateDuration,
     this.easing = Curves.easeInOut,
     this.easingEnter = Curves.easeOut,

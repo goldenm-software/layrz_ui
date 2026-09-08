@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
+
 /// Progress indicator for [LayrzButton] with determinate and indeterminate modes.
 ///
 /// This widget is internal to the buttons package and not exported publicly.
@@ -50,13 +52,33 @@ class LayrzButtonIndicator extends StatefulWidget {
 class LayrzButtonIndicatorState extends State<LayrzButtonIndicator> with SingleTickerProviderStateMixin {
   late AnimationController _indeterminateController;
 
+  /// Whether [didChangeDependencies] has already resolved [_indeterminateController]'s
+  /// duration from `context.tokens.motion.dIndeterminate`.
+  ///
+  /// `context.tokens` requires an ancestor [LayrzTheme], which is not guaranteed to be
+  /// available yet in [initState] -- so the controller starts with a placeholder duration
+  /// there and this flag stops [didChangeDependencies] (which can fire more than once)
+  /// from resolving it a second time.
+  bool _themedInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    // Placeholder duration; overwritten in didChangeDependencies below, before
+    // the repeat() loop can complete a single cycle at this value.
     _indeterminateController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     )..repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_themedInitialized) {
+      _indeterminateController.duration = context.tokens.motion.dIndeterminate;
+      _themedInitialized = true;
+    }
   }
 
   @override

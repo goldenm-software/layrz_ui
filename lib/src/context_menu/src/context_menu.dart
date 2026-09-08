@@ -132,10 +132,12 @@ class _LayrzContextMenuState extends State<LayrzContextMenu> with SingleTickerPr
     // unconditionally would crash before `build` ever gets a chance to
     // degrade.
     try {
-      _animationController.duration = context.tokens.motion.dHover;
+      final motion = context.tokens.motion;
+      _animationController.duration = motion.dHover;
+      _curvedAnimation.curve = motion.easingEmphasized;
     } catch (_) {
       // Theme not available; the animation keeps its placeholder duration
-      // and the widget still degrades correctly in `build`.
+      // and curve, and the widget still degrades correctly in `build`.
     }
   }
 

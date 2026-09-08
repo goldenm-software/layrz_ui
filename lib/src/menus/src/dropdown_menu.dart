@@ -177,7 +177,9 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _animationController.duration = context.tokens.motion.dHover;
+    final motion = context.tokens.motion;
+    _animationController.duration = motion.dHover;
+    _curvedAnimation.curve = motion.easingEmphasized;
 
     if (!_registered) {
       _registered = true;

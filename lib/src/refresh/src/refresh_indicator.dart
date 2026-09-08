@@ -124,6 +124,15 @@ class _LayrzRefreshIndicatorState extends State<LayrzRefreshIndicator> with Sing
   late LayrzRefreshController _effectiveController;
   late AnimationController _bandController;
 
+  /// Whether [didChangeDependencies] has already resolved [_bandController]'s
+  /// duration from `context.tokens.motion.dTransition`.
+  ///
+  /// `context.tokens` requires an ancestor [LayrzTheme], which is not guaranteed to be
+  /// available yet in [initState] -- so the controller starts with a placeholder duration
+  /// there and this flag stops [didChangeDependencies] (which can fire more than once)
+  /// from resolving it a second time.
+  bool _themedInitialized = false;
+
   @override
   void initState() {
     super.initState();
@@ -135,6 +144,8 @@ class _LayrzRefreshIndicatorState extends State<LayrzRefreshIndicator> with Sing
       _effectiveController = _internalController;
     }
 
+    // Placeholder duration; overwritten in didChangeDependencies below, before
+    // this controller ever animates.
     _bandController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -142,6 +153,15 @@ class _LayrzRefreshIndicatorState extends State<LayrzRefreshIndicator> with Sing
     );
 
     _effectiveController.addListener(_onControllerChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_themedInitialized) {
+      _bandController.duration = context.tokens.motion.dTransition;
+      _themedInitialized = true;
+    }
   }
 
   @override
