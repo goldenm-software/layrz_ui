@@ -344,6 +344,14 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/app-banner',
         onTap: () => _navigateTo(context, '/app-banner'),
       ),
+      // TEMPORARY: DESIGN-109 find-in-page spike route — remove before the DESIGN-109 PR.
+      LayrzNavigatorPage(
+        id: '/find-spike',
+        labelText: 'Find Spike',
+        icon: MdiIcons.magnify,
+        isSelected: currentRoute == '/find-spike',
+        onTap: () => _navigateTo(context, '/find-spike'),
+      ),
     ];
   }
 
