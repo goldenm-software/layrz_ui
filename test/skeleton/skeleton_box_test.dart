@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/skeleton/src/skeleton_fill.dart';
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
@@ -27,9 +28,9 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonBox(width: 100, height: 40, borderRadius: 12));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.circular(12));
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.borderRadius, 12);
+      expect(fill.isCircle, isFalse);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -41,9 +42,8 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonBox(width: 100, height: 40));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.zero);
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.borderRadius, 0.0);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -89,19 +89,16 @@ void main() {
 
       // Regression: the static frame must recolor the shape itself in place
       // (ColorFiltered) rather than painting baseColor into a separate,
-      // rectangular DecoratedBox behind it -- a box painted behind a rounded
-      // shape has square corners peeking out past the shape's own rounded
+      // rectangular fill behind it -- a shape painted behind a rounded one
+      // has square corners peeking out past the shape's own rounded
       // corners, which read as a stray border/outline around the shape.
       final colorFilter = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
       expect(colorFilter.colorFilter, const ColorFilter.mode(Color(0xFFF0F0F0), BlendMode.srcIn));
 
-      // Only one DecoratedBox exists in the static path -- the shape's own,
-      // still filled with the opaque mask color -- not a second one behind
-      // it carrying baseColor with mismatched (square) geometry.
-      expect(find.byType(DecoratedBox), findsOneWidget);
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, const Color(0xFF000000));
+      // Only one fill exists in the static path -- the shape's own, still
+      // filled with the opaque mask color -- not a second one behind it
+      // carrying baseColor with mismatched (square) geometry.
+      expect(find.byType(LayrzSkeletonFill), findsOneWidget);
     });
 
     guardedTestWidgets('input() presets the height to the standard LayrzInput chrome height', (tester) async {
@@ -112,7 +109,7 @@ void main() {
       await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
 
       final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonBox));
-      expect(box.size, const Size(200, 43.5));
+      expect(box.size, const Size(200, 43.0));
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -124,9 +121,8 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.circular(10));
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.borderRadius, 10);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -138,9 +134,8 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200, borderRadius: 4));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.circular(4));
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.borderRadius, 4);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });

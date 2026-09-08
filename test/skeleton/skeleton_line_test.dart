@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/skeleton/src/skeleton_fill.dart';
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
@@ -92,9 +93,8 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonLine(width: 100));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.borderRadius, BorderRadius.circular(kDefaultLayrzSkeletonLineRadius));
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.borderRadius, kDefaultLayrzSkeletonLineRadius);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -140,19 +140,16 @@ void main() {
 
       // Regression: the static frame must recolor the line itself in place
       // (ColorFiltered) rather than painting baseColor into a separate,
-      // rectangular DecoratedBox behind it -- a box painted behind a rounded
-      // shape has square corners peeking out past the shape's own rounded
+      // rectangular fill behind it -- a shape painted behind a rounded one
+      // has square corners peeking out past the shape's own rounded
       // corners, which read as a stray border/outline around the shape.
       final colorFilter = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
       expect(colorFilter.colorFilter, const ColorFilter.mode(Color(0xFFF0F0F0), BlendMode.srcIn));
 
-      // Only one DecoratedBox exists in the static path -- the line's own,
-      // still filled with the opaque mask color -- not a second one behind
-      // it carrying baseColor with mismatched (square) geometry.
-      expect(find.byType(DecoratedBox), findsOneWidget);
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, const Color(0xFF000000));
+      // Only one fill exists in the static path -- the line's own, still
+      // filled with the opaque mask color -- not a second one behind it
+      // carrying baseColor with mismatched (square) geometry.
+      expect(find.byType(LayrzSkeletonFill), findsOneWidget);
     });
   });
 }
