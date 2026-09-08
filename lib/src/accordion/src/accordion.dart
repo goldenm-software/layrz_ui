@@ -575,10 +575,12 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
                   ],
                   Expanded(
                     child: ExcludeSemantics(
-                      child: Text(
-                        widget.titleText,
-                        style: tokens.typography.body.copyWith(color: spec.headerContentColor),
-                        overflow: TextOverflow.ellipsis,
+                      child: SelectionContainer.disabled(
+                        child: Text(
+                          widget.titleText,
+                          style: tokens.typography.body.copyWith(color: spec.headerContentColor),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),

@@ -148,11 +148,13 @@ class _LayrzContextMenuEntryTileState extends State<_LayrzContextMenuEntryTile> 
                         SizedBox(width: tokens.spacing.sp2),
                       ],
                       Expanded(
-                        child: Text(
-                          entry.labelText,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.typography.body.copyWith(color: contentColor),
+                        child: SelectionContainer.disabled(
+                          child: Text(
+                            entry.labelText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.typography.body.copyWith(color: contentColor),
+                          ),
                         ),
                       ),
                     ],
@@ -195,11 +197,13 @@ class _LayrzContextMenuLabelTile extends StatelessWidget {
         ),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            label.labelText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.typography.body.copyWith(color: label.color ?? tokens.colors.fg3),
+          child: SelectionContainer.disabled(
+            child: Text(
+              label.labelText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.typography.body.copyWith(color: label.color ?? tokens.colors.fg3),
+            ),
           ),
         ),
       ),

@@ -357,11 +357,13 @@ class _LayrzFileInputState extends State<LayrzFileInput> {
         if (_rejection != null)
           Padding(
             padding: EdgeInsets.only(top: tokens.spacing.sp2),
-            child: Text(
-              _rejection!,
-              style: tokens.typography.label.copyWith(
-                fontWeight: FontWeight.w700,
-                color: tokens.colors.danger,
+            child: SelectionContainer.disabled(
+              child: Text(
+                _rejection!,
+                style: tokens.typography.label.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: tokens.colors.danger,
+                ),
               ),
             ),
           ),
@@ -379,19 +381,21 @@ class _LayrzFileInputState extends State<LayrzFileInput> {
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
       child: ExcludeSemantics(
-        child: RichText(
-          text: TextSpan(
-            children: [
-              TextSpan(
-                text: widget.labelText,
-                style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
-              ),
-              if (widget.isRequired)
+        child: SelectionContainer.disabled(
+          child: RichText(
+            text: TextSpan(
+              children: [
                 TextSpan(
-                  text: '*',
-                  style: tokens.typography.label.copyWith(color: tokens.colors.danger),
+                  text: widget.labelText,
+                  style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
                 ),
-            ],
+                if (widget.isRequired)
+                  TextSpan(
+                    text: '*',
+                    style: tokens.typography.label.copyWith(color: tokens.colors.danger),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -495,10 +499,12 @@ class _LayrzFileInputState extends State<LayrzFileInput> {
         children: [
           Icon(MdiIcons.cloudUploadOutline, size: 32, color: spec.contentColor),
           SizedBox(height: tokens.spacing.sp2),
-          Text(
-            widget.hintText ?? 'Click to browse or drag files here',
-            textAlign: TextAlign.center,
-            style: tokens.typography.body.copyWith(color: spec.contentColor),
+          SelectionContainer.disabled(
+            child: Text(
+              widget.hintText ?? 'Click to browse or drag files here',
+              textAlign: TextAlign.center,
+              style: tokens.typography.body.copyWith(color: spec.contentColor),
+            ),
           ),
         ],
       ),
@@ -584,11 +590,13 @@ class _FilePreviewRow extends StatelessWidget {
             LayrzFileInputPreview(result: result, size: 40),
             SizedBox(width: tokens.spacing.sp2),
             Expanded(
-              child: Text(
-                result.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tokens.typography.body.copyWith(color: tokens.colors.fg1),
+              child: SelectionContainer.disabled(
+                child: Text(
+                  result.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.typography.body.copyWith(color: tokens.colors.fg1),
+                ),
               ),
             ),
             SizedBox(width: tokens.spacing.sp2),
@@ -671,7 +679,9 @@ class _AddMoreRow extends StatelessWidget {
                 children: [
                   Icon(MdiIcons.plusCircleOutline, size: 18, color: color),
                   SizedBox(width: tokens.spacing.sp2),
-                  Text('Add more', style: tokens.typography.label.copyWith(color: color)),
+                  SelectionContainer.disabled(
+                    child: Text('Add more', style: tokens.typography.label.copyWith(color: color)),
+                  ),
                 ],
               ),
             ),
@@ -737,7 +747,9 @@ class _ClearAllRow extends StatelessWidget {
                 children: [
                   Icon(MdiIcons.trashCanOutline, size: 18, color: color),
                   SizedBox(width: tokens.spacing.sp2),
-                  Text('Clear all', style: tokens.typography.label.copyWith(color: color)),
+                  SelectionContainer.disabled(
+                    child: Text('Clear all', style: tokens.typography.label.copyWith(color: color)),
+                  ),
                 ],
               ),
             ),
