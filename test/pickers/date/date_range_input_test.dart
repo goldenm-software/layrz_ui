@@ -158,11 +158,12 @@ void main() {
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    // DESIGN-49: this widget no longer opens LayrzAnchoredPanel on desktop --
-    // it opens LayrzPickerDrawer, a fixed-width (420px) drawer. See
-    // `datetime_input_test.dart`'s equivalent group for the reference
-    // conversion this test follows.
-    guardedTestWidgets('the desktop drawer is fixed-width, not the anchor\'s width', (tester) async {
+    // Post-migration to LayrzResponsiveModal.show: this widget no longer
+    // opens LayrzAnchoredPanel or the picker-private LayrzPickerDrawer on
+    // desktop -- it opens a LayrzDialog, bounded by LayrzDialogConfig's
+    // default `maxWidth: 480` (not the anchor's own width), regardless of
+    // how wide the anchor field or the viewport is.
+    guardedTestWidgets('the desktop dialog is fixed-width, not the anchor\'s width', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -174,7 +175,7 @@ void main() {
 
       expect(find.byType(LayrzDateRangeSurface), findsOneWidget);
       final surfaceWidth = tester.getSize(find.byType(LayrzDateRangeSurface)).width;
-      expect(surfaceWidth, lessThanOrEqualTo(420.0));
+      expect(surfaceWidth, lessThanOrEqualTo(480.0));
     });
   });
 
@@ -489,12 +490,21 @@ void main() {
       final clearButton = findButtonLabel(const LayrzUiL10nDefault().pickerRangeReset);
       expect(clearButton, findsOneWidget);
 
-      final scrollFinder = find.byType(SingleChildScrollView);
-      expect(scrollFinder, findsOneWidget);
+      // DESIGN-98 moved Clear/Cancel/Save out of the surface's own body and
+      // into LayrzResponsiveModal.show's pinned `actions` slot (see
+      // LayrzPickerDrawerActions) -- LayrzDateRangeSurface no longer renders
+      // its own inline footer at all when hosted this way, so there is no
+      // scrolling body for Clear to be composed into in the first place.
+      // Asserting the structural fact directly -- Clear is NOT a descendant
+      // of the surface -- is what actually distinguishes "pinned in actions"
+      // from "floating in body" (Finding 4's original concern), independent
+      // of whether that body happens to scroll.
+      final surfaceFinder = find.byType(LayrzDateRangeSurface);
+      expect(surfaceFinder, findsOneWidget);
       expect(
-        find.descendant(of: scrollFinder, matching: clearButton),
+        find.descendant(of: surfaceFinder, matching: clearButton),
         findsNothing,
-        reason: 'Clear must be pinned to the drawer actions row, not composed into the scrolling body',
+        reason: 'Clear must be pinned to the drawer actions row, not composed into the surface body',
       );
     });
   });
@@ -857,13 +867,13 @@ void main() {
   });
 
   group('LayrzDateRangeInput — viewport branch selection', () {
-    // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
-    // viewport -- desktop opens LayrzPickerDrawer, compact opens
-    // LayrzBottomSheet. Both push a route rather than mounting inline, so
-    // neither surface is present before the tap. See
-    // `datetime_input_test.dart`'s equivalent group for the reference
-    // conversion this test follows.
-    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width drawer, never an anchored panel', (
+    // Post-migration to LayrzResponsiveModal.show: LayrzAnchoredPanel is no
+    // longer used by this widget at any viewport -- desktop opens a
+    // LayrzDialog (bounded by LayrzDialogConfig's default `maxWidth: 480`,
+    // not the anchor's own width), compact opens LayrzBottomSheet. Both push
+    // a route rather than mounting inline, so neither surface is present
+    // before the tap.
+    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width dialog, never an anchored panel', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -886,7 +896,7 @@ void main() {
       expect(find.byIcon(MdiIcons.chevronLeft), findsOneWidget);
       expect(find.byType(LayrzDateRangeSurface), findsOneWidget);
       final surfaceWidth = tester.getSize(find.byType(LayrzDateRangeSurface)).width;
-      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: "the drawer is fixed-width, not the anchor's width");
+      expect(surfaceWidth, lessThanOrEqualTo(480.0), reason: "the dialog is fixed-width, not the anchor's width");
     });
 
     guardedTestWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel or a drawer', (

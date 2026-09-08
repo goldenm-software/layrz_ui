@@ -100,7 +100,14 @@ void main() {
       expect(findButtonLabel('Cancel'), findsOneWidget);
     });
 
-    guardedTestWidgets('the drawer shows labelText as a visible title', (tester) async {
+    // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal.show`
+    // itself still has no `title:` slot, but [LayrzColorSurface] now composes
+    // its own `LayrzPickerDialogHeader` inside the builder content instead
+    // (see that class's own doc), which DOES render `labelText` as a
+    // visible title `Text`.
+    guardedTestWidgets('the open surface renders exactly one visible title via LayrzPickerDialogHeader', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -110,6 +117,9 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
+      // The closed field's own label renders via `LayrzInputChrome`'s
+      // RichText/TextSpan, not a plain Text, so only the surface's own
+      // header title contributes a "Brand color" plain-Text match.
       expect(find.text('Brand color'), findsOneWidget);
     });
   });

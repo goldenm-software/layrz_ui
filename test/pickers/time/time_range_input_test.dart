@@ -19,6 +19,13 @@ const double _kSafeAnchorWidth = 700.0;
 
 Widget _bounded(Widget child) => SizedBox(width: _kSafeAnchorWidth, child: child);
 
+/// Locates the [LayrzButton] rendering [label] ("AM" or "PM") within a
+/// meridiem control -- [LayrzButton]'s label renders via [RichText] (a
+/// [TextSpan], not a plain [Text] widget), so `find.text` never matches it.
+Finder _meridiemButton(String label) {
+  return find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+}
+
 void main() {
   group('LayrzTimeRangeInput — construction and assertions', () {
     test('requires labelText or hintText', () {
@@ -91,8 +98,10 @@ void main() {
       await tester.tap(find.byType(LayrzTimeRangeInput));
       await tester.pumpAndSettle();
 
-      // Two clusters * (hour, minute, hidden-seconds) = 6 EditableText.
-      expect(find.byType(EditableText), findsNWidgets(6));
+      // Two clusters * (hour, minute) = 4 EditableText -- showSeconds
+      // defaults to false and the digital-clock panel genuinely omits the
+      // seconds group rather than mounting it hidden.
+      expect(find.byType(EditableText), findsNWidgets(4));
       expect(find.byType(LayrzTimeRangeSurface), findsOneWidget);
     });
   });
@@ -230,8 +239,8 @@ void main() {
     // midnight, so this is not a distinct "zero looks unset" bug in that
     // predicate. It is a SYMPTOM of Finding 1's seeding race: `draftState`
     // used to seed `canSave` from a hardcoded `false`, correctable only by a
-    // post-frame callback that can lose the race against
-    // `LayrzEndDrawer`'s 300ms slide transition -- when it does, Save stays
+    // post-frame callback that can lose the race against the hosting
+    // surface's own routed transition -- when it does, Save stays
     // disabled regardless of what value is already seeded, all-zero or
     // otherwise. Stepping frames explicitly (never `pumpAndSettle`, which
     // conceals the race) through the transition is what actually exercises
@@ -356,7 +365,7 @@ void main() {
         final startHourText = tester.widget<EditableText>(find.byType(EditableText).first).controller.text;
         expect(
           startHourText,
-          '9',
+          '09',
           reason:
               'reopening after an involuntary close must re-seed from widget.startValue, not the discarded '
               'draft',
@@ -548,8 +557,8 @@ void main() {
       await tester.tap(find.byType(LayrzTimeRangeInput));
       await tester.pumpAndSettle();
 
-      expect(find.text('AM'), findsNWidgets(2));
-      expect(find.text('PM'), findsNWidgets(2));
+      expect(_meridiemButton('AM'), findsNWidgets(2));
+      expect(_meridiemButton('PM'), findsNWidgets(2));
     });
   });
 
@@ -598,12 +607,16 @@ void main() {
       await tester.tap(find.byType(LayrzTimeRangeInput));
       await tester.pumpAndSettle();
 
-      // End cluster: hour(3), minute(4), seconds(5, hidden) -- see the
-      // trap-4 test above for the same index layout. Editing the end field
-      // (rather than start) keeps the pair in order (9:00 <= 23:00), so
-      // this isolates the clamp behaviour from the auto-swap rule tested
-      // separately above.
-      await tester.enterText(find.byType(EditableText).at(3), '25');
+      // End cluster: hour(2), minute(3) -- showSeconds is false. Editing the
+      // end field (rather than start) keeps the pair in order (9:00 <=
+      // 23:00), so this isolates the clamp behaviour from the auto-swap
+      // rule tested separately above.
+      await tester.enterText(find.byType(EditableText).at(2), '25');
+      await tester.pumpAndSettle();
+      // The digital-clock field only clamps on blur/submit (see
+      // `_DigitField`'s own doc) -- 25 is out of range and never reported
+      // per-keystroke, so the field must commit before Save reads the draft.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pumpAndSettle();
 
       await tester.tap(findButtonLabel(const LayrzUiL10nDefault().actionSave));
@@ -676,11 +689,11 @@ void main() {
 
   group('LayrzTimeRangeInput — responsive surface (isCompact boundary)', () {
     // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
-    // viewport -- desktop opens LayrzPickerDrawer, compact opens
-    // LayrzBottomSheet. Both push a route rather than mounting inline, so
-    // neither the drawer's surface nor the anchored panel is present before
-    // the tap.
-    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width drawer, never an anchored panel', (
+    // viewport -- both branches open via LayrzResponsiveModal.show: desktop
+    // resolves to a dialog, compact resolves to LayrzBottomSheet. Both push
+    // a route rather than mounting inline, so neither the dialog's surface
+    // nor the anchored panel is present before the tap.
+    guardedTestWidgets('wide viewport (>=960px) opens the fixed-width dialog, never an anchored panel', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -707,7 +720,8 @@ void main() {
       expect(find.byType(EditableText), findsWidgets);
       expect(find.byType(LayrzTimeRangeSurface), findsOneWidget);
       final surfaceWidth = tester.getSize(find.byType(LayrzTimeRangeSurface)).width;
-      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: 'the drawer is fixed-width, not the anchor\'s width');
+      // LayrzDialogConfig.maxWidth's 480px default, minus 2*sp3 (14.0) panel padding.
+      expect(surfaceWidth, lessThanOrEqualTo(452.0), reason: 'the dialog is fixed-width, not the anchor\'s width');
     });
 
     testWidgets('narrow viewport (<960px) opens a bottom sheet, never an anchored panel', (tester) async {
@@ -923,9 +937,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(EditableText).at(1), '15'); // start minute
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText).at(3), '18'); // end hour
+      await tester.enterText(find.byType(EditableText).at(2), '18'); // end hour
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(EditableText).at(4), '45'); // end minute
+      await tester.enterText(find.byType(EditableText).at(3), '45'); // end minute
       await tester.pumpAndSettle();
 
       final saveButton = tester.widget<LayrzButton>(

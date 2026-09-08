@@ -15,21 +15,22 @@ import '../../helpers/pump_themed_app.dart';
 /// input row inherited the field's own hintText, slots, and lack of border
 /// structurally. That entire mechanism is gone: the maintainer's DESIGN-98
 /// instruction ("use the EndDrawer instead of the overlay, because it's kinda
-/// weird after a few days of usage") replaced the field-continuing panel with
-/// [LayrzEndDrawer] hosting a wholly independent [BottomSheetContent] surface
-/// -- the same one the compact/mobile band already opened. There is no more
-/// panel row sharing the field's own chrome, no more "field row IS the input,
-/// continuing" contract, and so nothing left for a "look-and-feel parity"
-/// group to assert against `LayrzComboBoxPanelContent` on desktop specifically
-/// -- `LayrzComboBoxPanelContent` is no longer built by the real desktop flow
+/// weird after a few days of usage") replaced the field-continuing panel
+/// with a dialog (now presented via [LayrzResponsiveModal.show]) hosting a
+/// wholly independent [BottomSheetContent] surface -- the same one the
+/// compact/mobile band already opened. There is no more panel row sharing
+/// the field's own chrome, no more "field row IS the input, continuing"
+/// contract, and so nothing left for a "look-and-feel parity" group to
+/// assert against `LayrzComboBoxPanelContent` on desktop specifically --
+/// `LayrzComboBoxPanelContent` is no longer built by the real desktop flow
 /// at all (see `combobox_input.dart`'s class doc's Q3 section).
 ///
 /// [BottomSheetContent]'s own look-and-feel (search field, hint, filtering,
 /// commit-by-pop) is unit-tested directly in `combobox_surface_test.dart`,
 /// which already covers both the mobile and (now) desktop hosts identically,
 /// since both open the exact same widget. This file's remaining tests assert
-/// what DESIGN-98 actually changed: the desktop panel's geometry (still
-/// governed, differently, by `LayrzEndDrawer`'s fixed width) and that the
+/// what DESIGN-98 actually changed: the desktop panel's geometry (now
+/// governed, differently, by [LayrzDialogConfig.maxWidth]) and that the
 /// closed field alone keeps its own border, with no panel row left to
 /// (mis)inherit it from.
 void main() {
@@ -65,15 +66,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Post-DESIGN-98 there is no `LayrzComboBoxPanelContent` in the real
-      // desktop flow at all (see the file doc) -- the drawer hosts
+      // desktop flow at all (see the file doc) -- the dialog hosts
       // `BottomSheetContent` instead, which has its own `LayrzInputChrome`
       // for its search field, so two chromes are expected here: the closed
-      // field's own and the drawer's.
+      // field's own and the dialog's.
       expect(find.byType(LayrzComboBoxPanelContent), findsNothing);
       expect(find.byType(LayrzInputChrome), findsNWidgets(2));
 
       final closedWhileOpen = (closedChromeContainer().decoration as BoxDecoration).border;
-      expect(closedWhileOpen, isNotNull, reason: 'the closed field keeps its border while the drawer is open too');
+      expect(closedWhileOpen, isNotNull, reason: 'the closed field keeps its border while the dialog is open too');
     });
 
     testWidgets('with no caller-supplied slots, the closed field renders no invented prefix/suffix icon', (
@@ -105,13 +106,13 @@ void main() {
   // `select_input_test.dart`'s own DESIGN-145 regression group and
   // `anchored_panel_border_test.dart`.
   //
-  // DESIGN-98 changes what "geometry" means here: the drawer is a fixed-width
-  // (`LayrzEndDrawer.width`, 420px) right-edge panel independent of the anchor
-  // field's own width, so it no longer tracks the field's width the way
-  // `LayrzAnchoredPanel.matchAnchor` did. This group now pins the NEW
-  // geometry contract instead of the old one.
+  // DESIGN-98 changes what "geometry" means here: the dialog is a fixed-width
+  // ([LayrzDialogConfig.maxWidth], 480px default) centered panel independent
+  // of the anchor field's own width, so it no longer tracks the field's
+  // width the way `LayrzAnchoredPanel.matchAnchor` did. This group now pins
+  // the NEW geometry contract instead of the old one.
   group('LayrzComboBoxInput panel geometry (DESIGN-98)', () {
-    testWidgets('the drawer opens at a fixed width, independent of the anchor field\'s own width', (tester) async {
+    testWidgets('the dialog opens at a fixed width, independent of the anchor field\'s own width', (tester) async {
       tester.view.physicalSize = const Size(1449, 812);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -159,11 +160,14 @@ void main() {
       await tester.tap(find.byType(EditableText));
       await tester.pumpAndSettle();
 
-      final drawerWidth = tester.getSize(find.byType(BottomSheetContent)).width;
-      expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
+      // CHANGED (maintainer review, search/list-pinning rework): the dialog
+      // config grew from the 480px default to a bigger 600x760
+      // LayrzDialogConfig -- see `combobox_input.dart`'s `_openPicker`.
+      final dialogWidth = tester.getSize(find.byType(BottomSheetContent)).width;
+      expect(dialogWidth, closeTo(600.0 - 2 * 14.0, 1.0));
 
-      final drawerRect = tester.getRect(find.byType(BottomSheetContent));
-      expect(drawerRect.right, lessThanOrEqualTo(1449.0));
+      final dialogRect = tester.getRect(find.byType(BottomSheetContent));
+      expect(dialogRect.right, lessThanOrEqualTo(1449.0));
     });
   });
 }

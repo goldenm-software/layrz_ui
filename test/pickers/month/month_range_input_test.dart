@@ -739,13 +739,14 @@ void main() {
     });
 
     group('desktop viewport (>=960px)', () {
-      // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
-      // viewport -- desktop opens LayrzPickerDrawer, compact opens
-      // LayrzBottomSheet. Both push a route rather than mounting inline, so
-      // no drawer surface is present before the tap. See
-      // `datetime_input_test.dart`'s equivalent group for the reference
-      // conversion this test follows.
-      guardedTestWidgets('opens the fixed-width drawer, never an anchored panel', (tester) async {
+      // DESIGN-98: LayrzAnchoredPanel is no longer used by this widget at any
+      // viewport -- desktop opens a dialog via LayrzResponsiveModal.show
+      // (previously LayrzPickerDrawer, and before that LayrzAnchoredPanel),
+      // compact opens LayrzBottomSheet. Both push a route rather than
+      // mounting inline, so no drawer/dialog surface is present before the
+      // tap. See `datetime_input_test.dart`'s equivalent group for the
+      // reference conversion this test follows.
+      guardedTestWidgets('opens the fixed-width dialog, never an anchored panel', (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -762,7 +763,8 @@ void main() {
 
         expect(find.byType(LayrzMonthRangeSurface), findsOneWidget);
         final surfaceWidth = tester.getSize(find.byType(LayrzMonthRangeSurface)).width;
-        expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: "the drawer is fixed-width, not the anchor's width");
+        // LayrzDialogConfig.maxWidth's 480px default, minus 2*sp3 (14.0) panel padding.
+        expect(surfaceWidth, lessThanOrEqualTo(452.0), reason: "the dialog is fixed-width, not the anchor's width");
       });
 
       guardedTestWidgets('no overflow rendering the month grid (3 rows x 4 cols) plus footer on a wide viewport', (

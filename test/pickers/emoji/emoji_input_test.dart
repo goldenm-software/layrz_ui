@@ -97,7 +97,15 @@ void main() {
       expect(findButtonLabel('Cancel'), findsNothing);
     });
 
-    guardedTestWidgets('the drawer shows labelText as a visible title', (tester) async {
+    // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal.show`
+    // itself still has no `title:` slot, but every picker surface -- this one
+    // included -- now composes its own `LayrzPickerDialogHeader` inside the
+    // builder content instead (see that class's own doc for why), which DOES
+    // render `labelText` as a visible title `Text`. This asserts exactly one
+    // such title renders, not that none does.
+    guardedTestWidgets('the open surface renders exactly one visible title via LayrzPickerDialogHeader', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -107,6 +115,10 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
+      // With no value set, the anchor field's own labelText renders as
+      // hintText (via `LayrzInputChrome`) rather than a floating label, so
+      // only the surface's own `LayrzPickerDialogHeader` title contributes
+      // a "Preferred reaction" Text once the surface is open.
       expect(find.text('Preferred reaction'), findsOneWidget);
     });
   });

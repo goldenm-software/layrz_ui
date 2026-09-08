@@ -1174,15 +1174,16 @@ void main() {
     });
 
     // DESIGN-98: `LayrzDurationInput` moved off `LayrzAnchoredPanel` onto
-    // `LayrzEndDrawer` -- see the class doc on `_LayrzDurationInputState.build`.
-    // The old `matchAnchor`/`coverAnchor` rect-tracking, primary/danger
-    // `LayrzAnchoredPanelBorder`, and width-follows-the-field behavior these
-    // tests used to assert are gone: the drawer is a fixed-width
-    // (`LayrzEndDrawer.width`, 420px) right-edge panel independent of the
-    // anchor field's own rect or width. This is a container change only --
-    // the only functional move is Reset, relocated from the panel's own
-    // inline footer into the drawer's `actions` slot; no Cancel/Save added.
-    guardedTestWidgets('the drawer opens with a fixed 420px width, independent of the anchor field\'s own width', (
+    // a dialog via `LayrzResponsiveModal.show` -- see the class doc on
+    // `_LayrzDurationInputState._openPicker`. The old `matchAnchor`/
+    // `coverAnchor` rect-tracking, primary/danger `LayrzAnchoredPanelBorder`,
+    // and width-follows-the-field behavior these tests used to assert are
+    // gone: the dialog is a fixed-width ([LayrzDialogConfig.maxWidth], 480px
+    // default) centered panel independent of the anchor field's own rect or
+    // width. This is a container change only -- the only functional move is
+    // Reset, relocated from the panel's own inline footer into the modal's
+    // `actions` slot; no Cancel/Save added.
+    guardedTestWidgets('the dialog opens with a fixed width, independent of the anchor field\'s own width', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1200, 800);
@@ -1202,33 +1203,42 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      final drawerWidth = tester.getSize(find.byType(LayrzDurationPickerPanel)).width;
-      expect(drawerWidth, closeTo(LayrzEndDrawer.width, 1.0));
+      final dialogWidth = tester.getSize(find.byType(LayrzDurationPickerPanel)).width;
+      // LayrzDialogConfig.maxWidth's 480px default, minus the dialog panel's
+      // own 2*sp3 (14.0) padding.
+      expect(dialogWidth, closeTo(480.0 - 2 * 14.0, 1.0));
     });
 
     // Finding 2 (maintainer review): "Duration ... didn't display the
     // labelText above on the Drawer" -- confirmed by grep: this widget's
     // `_openDesktopDrawer` passed zero `title:` arguments. Mirrors
     // `LayrzDateInput`'s identical fix and test.
-    guardedTestWidgets('the drawer renders labelText as a visible title (DESIGN-98 Finding 2)', (tester) async {
-      tester.view.physicalSize = const Size(1200, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    guardedTestWidgets(
+      'the open panel renders exactly one visible title via LayrzPickerDialogHeader',
+      (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpThemedApp(
-        tester,
-        LayrzDurationInput(labelText: 'Duration'),
-      );
+        await pumpThemedApp(
+          tester,
+          LayrzDurationInput(labelText: 'Duration'),
+        );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(LayrzInputChrome).first);
+        await tester.pumpAndSettle();
 
-      // `LayrzDurationPickerPanel` renders no inline caption of its own
-      // (unlike ComboBox's `showInlineTitle`), so a bare `find.text` for the
-      // title is unambiguous -- the closed field's own label renders via
-      // `LayrzInputChrome`'s RichText/TextSpan, not a plain Text.
-      expect(find.text('Duration'), findsOneWidget, reason: 'the drawer must render a visible title Text');
-    });
+        // CHANGED (LayrzPickerDialogHeader migration): `LayrzResponsiveModal
+        // .show` itself still has no `title:` slot, but
+        // `LayrzDurationPickerPanel` now composes its own
+        // `LayrzPickerDialogHeader` inside the builder content instead,
+        // which DOES render `labelText` as a visible title `Text`. The
+        // closed field's own label still renders via `LayrzInputChrome`'s
+        // RichText/TextSpan, not a plain Text, so only the panel's own
+        // header title contributes a plain-Text match.
+        expect(find.text('Duration'), findsOneWidget);
+      },
+    );
 
     // Escape and the barrier tap must still cancel the draft even with
     // Cancel/Reset/Save actions present now (Finding 4) -- mirrors every
@@ -1445,13 +1455,12 @@ void main() {
     // `GoRouterDelegate`'s real `'currentConfiguration.isNotEmpty'`
     // assertion. Verified by hand against a genuine double pop (not a single
     // tap, which this package's own suite already covered without ever
-    // catching the bug): a first `Navigator.pop` removes only
-    // `LayrzEndDrawer`'s own imperative route, harmlessly, exactly as
-    // intended; a SECOND pop attempt arriving after the first -- from a
-    // duplicated gesture callback, a race between two actions, or (as
-    // `_openDesktopDrawer`'s own doc now explains) simply the wrong
-    // safeguard being absent -- then pops the router delegate's own root
-    // page instead, which is what the maintainer's crash trace actually
+    // catching the bug): a first `Navigator.pop` removes only the dialog's
+    // own imperative route, harmlessly, exactly as intended; a SECOND pop
+    // attempt arriving after the first -- from a duplicated gesture
+    // callback, a race between two actions, or (as `_openPicker`'s own doc
+    // now explains) simply the wrong safeguard being absent -- then pops the
+    // router delegate's own root page instead, which is what the maintainer's crash trace actually
     // reports.
     guardedTestWidgets(
       'a second pop after Save already closed the drawer does not also pop the hosting router\'s own page',

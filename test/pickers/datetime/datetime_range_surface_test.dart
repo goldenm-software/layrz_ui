@@ -16,6 +16,16 @@ const double _kSafeWidth = 700.0;
 
 Widget _bounded(Widget child) => SizedBox(width: _kSafeWidth, child: child);
 
+/// Taps the "Time" LayrzTabView tab, which -- since the "Fix 3" tabbed
+/// layout -- must be selected before the Start/End time-field clusters are
+/// reachable at all; the Date tab (the range calendar) is selected by
+/// default. LayrzTab pills render their label via a plain Text widget
+/// (unlike LayrzButton's RichText), so find.text is the correct finder.
+Future<void> _switchToTimeTab(WidgetTester tester) async {
+  await tester.tap(find.text('Time'));
+  await tester.pump();
+}
+
 void main() {
   tzdata.initializeTimeZones();
 
@@ -292,14 +302,18 @@ void main() {
       await tester.tap(find.text('10').first);
       await tester.pump();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3)
+      // -- showSeconds is false, so each cluster is 2 fields wide.
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '15');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '45');
+      await tester.enterText(fields.at(3), '45');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -370,14 +384,17 @@ void main() {
       await tester.tap(find.text('5').first);
       await tester.pump();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '17');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '9');
+      await tester.enterText(fields.at(2), '9');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -417,14 +434,17 @@ void main() {
       await tester.tap(find.text('5').first);
       await tester.pump();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -625,7 +645,31 @@ void main() {
         ),
       );
 
+      await _switchToTimeTab(tester);
+
       expect(find.byType(EditableText), findsNWidgets(6));
+    });
+
+    guardedTestWidgets('showSeconds false renders exactly four fields per cluster pair (two clusters of two)', (
+      tester,
+    ) async {
+      setWide(tester);
+      await pumpThemed(
+        tester,
+        _bounded(
+          LayrzDateTimeRangeSurface(
+            value: LayrzDateRange(start: DateTime(2026, 9, 5), end: DateTime(2026, 9, 10)),
+            startTime: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endTime: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onSave: (_, _) {},
+            onCancel: () {},
+          ),
+        ),
+      );
+
+      await _switchToTimeTab(tester);
+
+      expect(find.byType(EditableText), findsNWidgets(4));
     });
 
     guardedTestWidgets('37 minutes is representable and round-trips unchanged through Save', (tester) async {
@@ -643,6 +687,8 @@ void main() {
           ),
         ),
       );
+
+      await _switchToTimeTab(tester);
 
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(1), '37');

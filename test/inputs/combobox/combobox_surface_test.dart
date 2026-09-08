@@ -6,6 +6,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/combobox/combobox_surface.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 
 import '../../helpers/pump_themed.dart';
 import '../../helpers/pump_themed_app.dart';
@@ -280,21 +281,37 @@ void main() {
       expect(find.text('Nothing here'), findsOneWidget);
     });
 
-    testWidgets('renders every option as scrollable text, never a ListView', (tester) async {
-      // Building on a Column (not a ListView) is what lets this content sit
-      // inside LayrzBottomSheet with `scrollable: false` without asserting
-      // "Vertical viewport was given unbounded height" — a same-axis ListView
-      // nested under the sheet's own scrollable does exactly that (DESIGN-35).
+    // CHANGED (maintainer review: "Pinned header + search, scrolling list
+    // only"). The retired layout built the option list on a plain `Column`
+    // inside a `SingleChildScrollView` (a same-axis lazy `ListView` there
+    // would have asserted "Vertical viewport was given unbounded height"
+    // under `LayrzBottomSheet`'s own `scrollable: false` sheet, DESIGN-35).
+    // The current layout inverts that: a fixed, non-scrolling header (title,
+    // inline search, close) sits above an `Expanded`-wrapped `ListView` that
+    // is the ONLY scrolling region -- see `BottomSheetContent`'s own class
+    // doc. That `Expanded` needs a genuinely bounded incoming height, which
+    // `pumpThemed` alone does not provide (unbounded via `Center`), so this
+    // test hosts the surface in a fixed-height `SizedBox` matching how
+    // `LayrzComboBoxInput._openPicker` actually bounds it in production.
+    testWidgets('renders every option inside a scrollable ListView, not a plain Column', (tester) async {
       await pumpThemed(
         tester,
-        const BottomSheetContent(
-          options: ['One', 'Two', 'Three'],
-          emptyText: 'Nothing here',
+        const SizedBox(
+          height: 400,
+          width: 400,
+          child: BottomSheetContent(
+            options: ['One', 'Two', 'Three'],
+            emptyText: 'Nothing here',
+          ),
         ),
       );
 
-      expect(find.byType(ListView), findsNothing);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
+      expect(find.byType(ListView), findsOneWidget);
+      expect(
+        find.ancestor(of: find.byType(ListView), matching: find.byType(Expanded)),
+        findsOneWidget,
+        reason: 'the list must be the Expanded child claiming the surface\'s remaining bounded height',
+      );
       expect(find.text('One'), findsOneWidget);
       expect(find.text('Two'), findsOneWidget);
       expect(find.text('Three'), findsOneWidget);
@@ -419,10 +436,18 @@ void main() {
       await tester.pump();
       expect(find.text('Banana'), findsNothing);
 
-      // Located by icon, not `find.bySemanticsLabel` -- that matcher also
-      // matches literal text on renderable widgets and has already produced a
-      // false green in this repo; an `Icon` lookup carries no such risk.
-      final clearIcon = find.byWidgetPredicate((widget) => widget is Icon && widget.icon == MdiIcons.close);
+      // CHANGED (LayrzPickerDialogHeader.middleSlot migration): the header
+      // now also renders its own close ("X") icon next to the title, so a
+      // bare icon-type match is ambiguous between it and the search field's
+      // own clear suffix -- scope to the search field's EditableText
+      // ancestor to disambiguate. Located by icon (within that scope), not
+      // `find.bySemanticsLabel` -- that matcher also matches literal text on
+      // renderable widgets and has already produced a false green in this
+      // repo.
+      final clearIcon = find.descendant(
+        of: find.ancestor(of: find.byType(EditableText), matching: find.byType(LayrzInputChrome)).first,
+        matching: find.byWidgetPredicate((widget) => widget is Icon && widget.icon == MdiIcons.close),
+      );
       expect(clearIcon, findsOneWidget);
       await tester.tap(clearIcon);
       await tester.pump();
@@ -489,7 +514,14 @@ void main() {
         final l10n = LayrzUiL10n.of(tester.element(find.byType(BottomSheetContent)));
         final labels = dumpSemanticsLabels(tester);
 
-        expect(labels, contains('Item picker'));
+        // CHANGED (LayrzPickerDialogHeader migration): the header's own
+        // title Text is no longer ExcludeSemantics-wrapped, so it merges
+        // into BottomSheetContent's own container label as one combined
+        // string ("Item picker\nItem picker\nClose dialog") rather than
+        // remaining a separately exact-matchable list element -- assert
+        // containment within the joined tree instead of exact list
+        // membership.
+        expect(labels.any((label) => label.contains('Item picker')), isTrue);
         expect(
           labels.any((label) => label.contains(l10n.inputsSearchFieldLabel)),
           isTrue,
@@ -705,15 +737,22 @@ void main() {
   // own).
   group('BottomSheetContent row alignment and hover (device-reported defect)', () {
     testWidgets('every row (including the custom-value row) stretches to the list\'s full width', (tester) async {
+      // The Expanded(ListView) layout needs a genuinely bounded incoming
+      // height -- see the identical bounded-SizedBox doc on the "renders
+      // every option inside a scrollable ListView" test above.
       await pumpThemed(
         tester,
-        const BottomSheetContent(
-          options: ['Alpha', 'Bravo'],
-          emptyText: 'Nothing here',
+        const SizedBox(
+          height: 400,
+          width: 400,
+          child: BottomSheetContent(
+            options: ['Alpha', 'Bravo'],
+            emptyText: 'Nothing here',
+          ),
         ),
       );
 
-      final listWidth = tester.getSize(find.byType(SingleChildScrollView)).width;
+      final listWidth = tester.getSize(find.byType(ListView)).width;
 
       // The rendered width of each row's own LayrzTappable, not the
       // Container's `constraints` field -- `width: double.infinity` is

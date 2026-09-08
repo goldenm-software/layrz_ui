@@ -30,8 +30,8 @@ class _ThinPage extends Page<void> {
 /// crash report.
 ///
 /// [builder] supplies this delegate's single page's content, hosted inside a
-/// real, page-based [Navigator] this delegate owns. [LayrzEndDrawer]/
-/// [LayrzBottomSheet] push their own route onto that same [Navigator]
+/// real, page-based [Navigator] this delegate owns. [LayrzResponsiveModal]'s
+/// dialog/[LayrzBottomSheet] branches push their own route onto that same [Navigator]
 /// imperatively (via `Navigator.of(context, rootNavigator: true)`), sitting
 /// above this delegate's one page in the Navigator's history -- exactly like
 /// a real app's drawer sits above go_router's own current page. **A single

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
@@ -21,6 +22,17 @@ import '../../helpers/pump_themed_app.dart';
 const double _kSafeAnchorWidth = 700.0;
 
 Widget _bounded(Widget child) => SizedBox(width: _kSafeAnchorWidth, child: child);
+
+/// Taps the "Time" LayrzTabView tab, which -- since the "Fix 3" tabbed
+/// layout on [LayrzDateTimeRangeSurface] -- must be selected before the
+/// Start/End time-field clusters are reachable at all; the Date tab (the
+/// range calendar) is selected by default. LayrzTab pills render their
+/// label via a plain Text widget (unlike LayrzButton's RichText), so
+/// find.text is the correct finder.
+Future<void> _switchToTimeTab(WidgetTester tester) async {
+  await tester.tap(find.text('Time'));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   tzdata.initializeTimeZones();
@@ -235,9 +247,16 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      // Two clusters * (hour, minute, hidden-seconds) = 6 EditableText.
-      expect(find.byType(EditableText), findsNWidgets(6));
+      // The Date tab (the range calendar) is selected by default -- no
+      // EditableText until the Time tab is selected.
+      expect(find.byType(EditableText), findsNothing);
       expect(find.byType(LayrzDateTimeRangeSurface), findsOneWidget);
+
+      await _switchToTimeTab(tester);
+
+      // Two clusters * (hour, minute) = 4 EditableText -- showSeconds
+      // defaults to false.
+      expect(find.byType(EditableText), findsNWidgets(4));
     });
   });
 
@@ -259,6 +278,8 @@ void main() {
 
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
 
       await tester.enterText(find.byType(EditableText).first, '11');
       await tester.pump();
@@ -369,14 +390,18 @@ void main() {
       await tester.tap(find.text('5').first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3)
+      // -- showSeconds is false, so each cluster is 2 fields wide.
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -531,6 +556,8 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
@@ -618,15 +645,17 @@ void main() {
       await tester.tap(find.text('10').first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
       final fields = find.byType(EditableText);
-      // Start cluster: hour, minute. End cluster: hour, minute.
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '15');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '45');
+      await tester.enterText(fields.at(3), '45');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -671,15 +700,18 @@ void main() {
       await tester.tap(find.text('5').first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
       final fields = find.byType(EditableText);
       // Start time: 17:00 (later). End time: 09:00 (earlier). Same day.
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       await tester.enterText(fields.at(0), '17');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '9');
+      await tester.enterText(fields.at(2), '9');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -726,14 +758,17 @@ void main() {
       await tester.tap(find.text('10').first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -844,14 +879,17 @@ void main() {
       await tester.tap(find.text('10').first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
+      // Start cluster: hour(0), minute(1). End cluster: hour(2), minute(3).
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '9');
       await tester.pump();
       await tester.enterText(fields.at(1), '0');
       await tester.pump();
-      await tester.enterText(fields.at(3), '17');
+      await tester.enterText(fields.at(2), '17');
       await tester.pump();
-      await tester.enterText(fields.at(4), '0');
+      await tester.enterText(fields.at(3), '0');
       await tester.pump();
 
       await tester.tap(findButtonLabel('Save'));
@@ -1107,6 +1145,8 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
       expect(find.byType(EditableText), findsNWidgets(6));
     });
 
@@ -1147,8 +1187,13 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('AM'), findsNothing);
-      expect(find.textContaining('PM'), findsNothing);
+      await _switchToTimeTab(tester);
+
+      // LayrzButton's label renders via RichText (a TextSpan, not a plain
+      // Text widget), so find.textContaining never matches it -- a widget
+      // predicate is the correct finder here.
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'AM'), findsNothing);
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'PM'), findsNothing);
     });
 
     guardedTestWidgets('37 minutes is representable and round-trips unchanged (no interval snapping)', (
@@ -1174,6 +1219,8 @@ void main() {
 
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
 
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(1), '37');
@@ -1210,9 +1257,16 @@ void main() {
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
 
+      await _switchToTimeTab(tester);
+
       final fields = find.byType(EditableText);
       await tester.enterText(fields.at(0), '25');
       await tester.pump();
+      // The digital-clock field only clamps on blur/submit (see
+      // `_DigitField`'s own doc) -- 25 is out of range and never reported
+      // per-keystroke, so the field must commit before Save reads the draft.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
 
       await tester.tap(findButtonLabel('Save'));
       await tester.pumpAndSettle();
@@ -1223,11 +1277,13 @@ void main() {
   });
 
   group('LayrzDateTimeRangeInput — viewport branch selection', () {
-    // DESIGN-49: LayrzAnchoredPanel is no longer used by this widget at any
-    // viewport -- desktop opens LayrzPickerDrawer, compact opens
-    // LayrzBottomSheet. Both container types push a route rather than
-    // mounting inline, so neither is present in the tree before the tap.
-    guardedTestWidgets('opens the drawer (fixed-width, not a bottom sheet) at a wide viewport', (tester) async {
+    // DESIGN-98: LayrzAnchoredPanel is no longer used by this widget at any
+    // viewport -- desktop opens a dialog via LayrzResponsiveModal.show
+    // (previously LayrzPickerDrawer, and before that LayrzAnchoredPanel),
+    // compact opens LayrzBottomSheet. Both container types push a route
+    // rather than mounting inline, so neither is present in the tree before
+    // the tap.
+    guardedTestWidgets('opens the dialog (fixed-width, not a bottom sheet) at a wide viewport', (tester) async {
       setWide(tester);
       await pumpThemedApp(tester, _bounded(LayrzDateTimeRangeInput(labelText: 'Trip')));
 
@@ -1239,7 +1295,8 @@ void main() {
 
       expect(find.byType(LayrzDateTimeRangeSurface), findsOneWidget);
       final surfaceWidth = tester.getSize(find.byType(LayrzDateTimeRangeSurface)).width;
-      expect(surfaceWidth, lessThanOrEqualTo(420.0), reason: 'the drawer is fixed-width, not the anchor\'s width');
+      // LayrzDialogConfig.maxWidth's 480px default, minus 2*sp3 (14.0) panel padding.
+      expect(surfaceWidth, lessThanOrEqualTo(452.0), reason: 'the dialog is fixed-width, not the anchor\'s width');
     });
 
     guardedTestWidgets('opens a bottom sheet route (not the drawer) below isCompact', (tester) async {
@@ -1261,6 +1318,8 @@ void main() {
 
       await tester.tap(find.byType(LayrzInputChrome).first);
       await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
 
       final l10n = const LayrzUiL10nDefault();
       expect(find.text(l10n.timePickerStart), findsOneWidget);

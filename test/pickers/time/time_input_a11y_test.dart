@@ -43,24 +43,24 @@ Widget _bounded(Widget child) => SizedBox(width: 700, child: child);
 /// even though both now produce the identical panel width.
 ///
 /// **DESIGN-98 note, corrected (Finding 3):** since this widget's desktop
-/// path always opens the fixed 420px [LayrzEndDrawer] regardless of the
-/// anchor's own width, this `SizedBox` has had no effect on the panel's
-/// actual measured width since the drawer migration -- the panel always
-/// receives the drawer's own padded width (~372px) either way. An earlier
-/// pass concluded from this that the full-word label form was "no longer
-/// reachable from this widget at all." That conclusion no longer holds:
-/// `LayrzPickersTimeFieldsPanel`'s `fieldsPerRow` is now derived FROM
-/// `LayrzPickersTimeField.kNarrowWidth` itself (see that panel's own class
-/// doc), so at ~372px it wraps the three time fields to one per row, each
-/// spanning the panel's own full width -- comfortably above the 280px
-/// threshold. The full-word form IS reachable again; see the test below.
+/// path always opens a dialog via [LayrzResponsiveModal.show] (with a fixed
+/// [LayrzDialogConfig.maxWidth] default) regardless of the anchor's own
+/// width, this `SizedBox` has had no effect on the panel's actual measured
+/// width since that migration -- the panel always receives the dialog's own
+/// padded width (~432px) either way. An earlier pass concluded from this
+/// that the full-word label form was "no longer reachable from this widget
+/// at all." That conclusion no longer holds: `LayrzPickersTimeFieldsPanel`'s
+/// `fieldsPerRow` is now derived FROM `LayrzPickersTimeField.kNarrowWidth`
+/// itself (see that panel's own class doc), so at ~432px it wraps the three
+/// time fields to one per row, each spanning the panel's own full width --
+/// comfortably above the 280px threshold. The full-word form IS reachable
+/// again; see the test below.
 Widget _wideThreeSlot(Widget child) => SizedBox(width: 1000, child: child);
 
 /// An anchor width, retained for historical contrast with [_wideThreeSlot]
 /// even though both now produce the identical panel width -- see that
 /// helper's own doc for why the anchor's width has no bearing on the
-/// panel's actual measured width once hosted in the fixed-width
-/// [LayrzEndDrawer].
+/// panel's actual measured width once hosted in the fixed-width dialog.
 Widget _narrowThreeSlot(Widget child) => SizedBox(width: 700, child: child);
 
 void main() {
@@ -195,19 +195,19 @@ void main() {
       }
     });
 
-    // CHANGED (Finding 3, DESIGN-98): this test previously asserted the
-    // full-word label form was "no longer reachable from this widget at
-    // all" once the drawer replaced the wide-anchor container -- see
-    // _wideThreeSlot's own doc for why that conclusion no longer holds.
-    // `LayrzPickersTimeFieldsPanel` now derives `fieldsPerRow` from
-    // `LayrzPickersTimeField.kNarrowWidth`, so at the drawer's own ~372px
-    // panel width it wraps the three time fields to one per row, each at
-    // the full ~372px -- comfortably above the 280px threshold. The
-    // full-word label form IS reachable again inside the drawer; this test
-    // now asserts that restored state instead of its retired opposite.
+    // CHANGED (time-fields digital-clock redesign): the retired field-row
+    // panel switched between long-form ("Hours") and short-form ("h") unit
+    // labels depending on the available per-field width, which is why this
+    // suite exercised two different anchor widths. The new digital-clock
+    // panel (`LayrzPickersTimeFieldsPanel`) has no such switch at all -- each
+    // `_DigitGroup` always renders its full-word caption below the digit box,
+    // regardless of the hosting anchor's width (see that panel's own class
+    // doc). Both tests below are kept (never delete a threshold test because
+    // it became moot) but now assert the same width-independent outcome at
+    // both anchor widths, which is itself the proof that width no longer
+    // matters here.
     testWidgets(
-      'hour, minute and (when shown) second fields expose the unabridged label form inside the drawer, regardless '
-      'of anchor width (DESIGN-98, Finding 3)',
+      'hour, minute and second fields expose the unabridged caption regardless of anchor width (wide anchor)',
       (tester) async {
         final handle = tester.ensureSemantics();
         try {
@@ -236,26 +236,14 @@ void main() {
           expect(labels.any((l) => l.contains(l10n.timePickerHours)), isTrue);
           expect(labels.any((l) => l.contains(l10n.timePickerMinutes)), isTrue);
           expect(labels.any((l) => l.contains(l10n.timePickerSeconds)), isTrue);
-          expect(
-            labels.any((l) => l.contains(l10n.timePickerHourShortSingular)),
-            isFalse,
-            reason: 'one field per row at drawer width clears kNarrowWidth -- the short form must not render',
-          );
         } finally {
           handle.dispose();
         }
       },
     );
 
-    // CHANGED (Finding 3, DESIGN-98): same restored-behavior correction as
-    // the test above -- see _narrowThreeSlot's own doc. Both this test and
-    // the one above now exercise the identical panel width (the anchor's
-    // own width has had no bearing on it since the drawer migration), so
-    // both now assert the same restored long-form outcome; kept as two
-    // separate tests rather than merged, per instructions not to delete a
-    // threshold test because it became awkward.
     testWidgets(
-      'hour, minute and second fields expose the unabridged label form inside the drawer, at a narrow anchor',
+      'hour, minute and second fields expose the unabridged caption regardless of anchor width (narrow anchor)',
       (tester) async {
         final handle = tester.ensureSemantics();
         try {
@@ -284,18 +272,23 @@ void main() {
           expect(labels.any((l) => l.contains(l10n.timePickerHours)), isTrue);
           expect(labels.any((l) => l.contains(l10n.timePickerMinutes)), isTrue);
           expect(labels.any((l) => l.contains(l10n.timePickerSeconds)), isTrue);
-          expect(
-            labels.any((l) => l.contains(l10n.timePickerHourShortSingular)),
-            isFalse,
-            reason: 'one field per row at drawer width clears kNarrowWidth -- the short form must not render',
-          );
         } finally {
           handle.dispose();
         }
       },
     );
 
-    testWidgets('meridiem AM/PM options are exposed as selectable semantics buttons', (tester) async {
+    // CHANGED (time-fields digital-clock redesign): the meridiem control is
+    // now built from two [LayrzButton]s (see `_MeridiemControl` in
+    // `time_fields_panel.dart`) rather than a hand-rolled
+    // `Semantics(selected: ...)` control. [LayrzButton]'s own Semantics node
+    // exposes no `selected` flag at all -- an accepted, documented
+    // limitation (see that class's own "Accessibility note"), not a
+    // regression this pass attempts to recover. The AM/PM labels are found
+    // via a [LayrzButton] widget predicate (its label renders through
+    // [RichText], not a plain [Text] widget, so `find.text` never matches
+    // it) rather than walking up from a text node.
+    testWidgets('meridiem AM/PM options are exposed as enabled semantics buttons', (tester) async {
       final handle = tester.ensureSemantics();
       try {
         tester.view.physicalSize = const Size(1600, 1200);
@@ -317,27 +310,33 @@ void main() {
         await tester.tap(find.byType(LayrzTimeInput));
         await tester.pumpAndSettle();
 
-        // `find.text('AM')` resolves to the *inner* `ExcludeSemantics`-wrapped
-        // glyph (an empty-label node -- see this control's own
-        // `ExcludeSemantics` wrapper), not the outer button-level `Semantics`
-        // that actually carries the label/isButton/isSelected flags. Walk up
-        // to the nearest ancestor `Semantics` widget instead.
+        final amButtonFinder = find.byWidgetPredicate(
+          (widget) => widget is LayrzButton && widget.labelText == 'AM',
+        );
+        final pmButtonFinder = find.byWidgetPredicate(
+          (widget) => widget is LayrzButton && widget.labelText == 'PM',
+        );
+
         final amNode = tester.getSemantics(
-          find.ancestor(of: find.text('AM'), matching: find.byType(Semantics)).first,
+          find.descendant(of: amButtonFinder, matching: find.byType(Semantics)).first,
         );
         final pmNode = tester.getSemantics(
-          find.ancestor(of: find.text('PM'), matching: find.byType(Semantics)).first,
+          find.descendant(of: pmButtonFinder, matching: find.byType(Semantics)).first,
         );
 
         expect(amNode.getSemanticsData().flagsCollection.isButton, isTrue);
         expect(pmNode.getSemanticsData().flagsCollection.isButton, isTrue);
-        // isSelected is a Tristate (true/false/mixed), not a plain bool.
-        expect(
-          pmNode.getSemanticsData().flagsCollection.isSelected,
-          Tristate.isTrue,
-          reason: '14:05 is in the afternoon, so PM must report selected',
-        );
-        expect(amNode.getSemanticsData().flagsCollection.isSelected, Tristate.isFalse);
+        // isEnabled is a Tristate (true/false/mixed), not a plain bool.
+        expect(amNode.getSemanticsData().flagsCollection.isEnabled, Tristate.isTrue);
+        expect(pmNode.getSemanticsData().flagsCollection.isEnabled, Tristate.isTrue);
+
+        // The visual filled/text contrast (not semantics) communicates which
+        // option is selected -- 14:05 is in the afternoon, so PM renders
+        // filled and AM renders text (low-emphasis).
+        final pmWidget = tester.widget<LayrzButton>(pmButtonFinder);
+        final amWidget = tester.widget<LayrzButton>(amButtonFinder);
+        expect(pmWidget.style, LayrzButtonStyle.filled);
+        expect(amWidget.style, LayrzButtonStyle.text);
       } finally {
         handle.dispose();
       }

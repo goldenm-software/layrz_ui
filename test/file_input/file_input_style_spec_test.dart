@@ -40,6 +40,12 @@ void main() {
         tokens: tokens,
         hasErrors: false,
       );
+      // DESIGN-55: dragging's background is `sf3` (was `primary.shade50`) --
+      // matching hover's own background exactly, since both are the same
+      // "actively engaged" surface tint; only the border/content color and
+      // width distinguish dragging from hover.
+      expect(dragging.backgroundColor, tokens.colors.sf3);
+      expect(dragging.backgroundColor, hover.backgroundColor);
       expect(dragging.borderColor, tokens.colors.primary);
       expect(dragging.contentColor, tokens.colors.primary);
       expect(dragging.borderWidth, greaterThan(hover.borderWidth));

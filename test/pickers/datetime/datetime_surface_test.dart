@@ -38,26 +38,54 @@ void main() {
   });
 
   group('LayrzDateTimeSurface — presentation is deprecated and ignored (DESIGN-49)', () {
-    guardedTestWidgets('the calendar and time fields are both visible together, regardless of presentation', (
-      tester,
-    ) async {
-      setWide(tester);
-      for (final presentation in LayrzDateTimeInputPresentation.values) {
-        await pumpThemed(
-          tester,
-          LayrzDateTimeSurface(
-            presentation: presentation,
-            initialDate: null,
-            initialTime: null,
-            onSave: (_, _) {},
-            onCancel: () {},
-          ),
-        );
-        // No tab strip and no step-back affordance exist any longer.
-        expect(findButtonLabel('Time'), findsNothing, reason: '$presentation');
-        expect(find.byType(EditableText), findsWidgets, reason: '$presentation');
-      }
-    });
+    // CHANGED (LayrzTabView migration): the date and time parts now live in
+    // two separate LayrzTabView tabs ("Date"/"Time") rather than being
+    // stacked in one scrollable column -- see this surface's own class doc
+    // ("Fix 2"). Only the selected tab's content is in the tree at a time,
+    // so "both visible together" no longer holds for either presentation
+    // value; what remains true, independent of `presentation`, is that BOTH
+    // parts are reachable -- the calendar by default, the time fields after
+    // switching tabs -- with no distinct behaviour between the deprecated
+    // presentation values.
+    // NOTE: each presentation value gets its own `testWidgets` (a fresh
+    // WidgetTester, hence a genuinely fresh element/State tree) rather than
+    // looping multiple `pumpThemed` calls inside one test -- `pumpThemed`
+    // wraps its child in `Overlay(initialEntries: [...])`, and
+    // `Overlay.initialEntries` is read only once at construction: a second
+    // `pumpThemed` call on the same tester updates the existing `Overlay`
+    // widget in place rather than replacing it, so `LayrzTabView`'s own
+    // State (and its tab selection) silently survives across "iterations"
+    // that look independent but are not.
+    for (final presentation in LayrzDateTimeInputPresentation.values) {
+      guardedTestWidgets(
+        'the calendar renders by default; the time fields render after switching tabs ($presentation)',
+        (tester) async {
+          setWide(tester);
+          await pumpThemed(
+            tester,
+            LayrzDateTimeSurface(
+              presentation: presentation,
+              initialDate: null,
+              initialTime: null,
+              onSave: (_, _) {},
+              onCancel: () {},
+            ),
+          );
+
+          // The Date tab is selected by default -- the day grid is present,
+          // the time fields are not (LayrzTabView only builds the active tab).
+          expect(find.byType(EditableText), findsNothing);
+
+          // LayrzTab pills render their label via a plain Text widget
+          // (unlike LayrzButton's RichText), so find.text -- not
+          // findButtonLabel -- is the correct finder here.
+          await tester.tap(find.text('Time'));
+          await tester.pumpAndSettle();
+
+          expect(find.byType(EditableText), findsWidgets);
+        },
+      );
+    }
   });
 
   group('LayrzDateTimeSurface — Cancel/Save footer', () {
@@ -245,6 +273,9 @@ void main() {
         ),
       );
 
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
       await tester.enterText(find.byType(EditableText).first, '9');
       await tester.pumpAndSettle();
 
@@ -271,6 +302,9 @@ void main() {
           onCancel: () {},
         ),
       );
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(EditableText).first, '11');
       await tester.pumpAndSettle();
@@ -329,9 +363,12 @@ void main() {
         ),
       );
 
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
       expect(
         tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-        '8',
+        '08',
       );
 
       // Simulate the input re-seeding with a fresh value on reopen.
@@ -343,7 +380,7 @@ void main() {
 
       expect(
         tester.widget<EditableText>(find.byType(EditableText).first).controller.text,
-        '0',
+        '00',
         reason: 'a null initialTime re-seeds the field to the panel\'s own 00:00 placeholder draft',
       );
     });
