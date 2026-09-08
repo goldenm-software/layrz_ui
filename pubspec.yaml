@@ -40,3 +40,10 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 flutter:
+  fonts:
+    - family: Noto Color Emoji
+      fonts:
+        - asset: assets/NotoColorEmoji-Regular.ttf
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/JetBrainsMono-VariableFont_wght.ttf
