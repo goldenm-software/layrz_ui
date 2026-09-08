@@ -11,7 +11,7 @@ void main() {
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf1));
       expect(spec.headerContentColor, equals(tokens.colors.fg1));
-      expect(spec.borderColor, equals(tokens.colors.divider));
+      expect(spec.borderColor, equals(tokens.colors.fg3));
       expect(spec.borderWidth, equals(tokens.border.base));
       expect(spec.shadow, equals(tokens.shadow.elevation2));
     });
@@ -39,6 +39,7 @@ void main() {
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf2));
       expect(spec.headerContentColor, equals(tokens.colors.fg1));
+      expect(spec.borderColor, equals(tokens.colors.fg3));
     });
 
     test('focused state resolves identically to hovered state', () {
@@ -55,6 +56,7 @@ void main() {
       );
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf3));
+      expect(spec.borderColor, equals(tokens.colors.fg3));
     });
 
     test('pressed takes precedence over hovered', () {
@@ -85,6 +87,21 @@ void main() {
       );
 
       expect(disabledWithOthers, equals(disabledOnly));
+    });
+
+    test('border color is fg3 in every state, so the collapsed panel stays visible', () {
+      final states = [
+        const <WidgetState>{},
+        {WidgetState.hovered},
+        {WidgetState.focused},
+        {WidgetState.pressed},
+        {WidgetState.disabled},
+      ];
+
+      for (final s in states) {
+        final spec = LayrzAccordionStyleSpec.resolve(states: s, tokens: tokens);
+        expect(spec.borderColor, equals(tokens.colors.fg3), reason: 'states: $s');
+      }
     });
 
     test('border width is identical across every state (D15: no geometry change)', () {
