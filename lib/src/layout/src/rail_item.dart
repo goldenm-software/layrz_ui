@@ -81,31 +81,33 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
               children: [
                 // Icon + label as RichText, count badge and active indicator in outer Row
                 Expanded(
-                  child: RichText(
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      children: [
-                        if (widget.page.icon != null) ...[
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Icon(
-                              widget.page.icon,
-                              size: iconSize,
-                              color: widget.isSelected ? tokens.colors.primary : tokens.colors.fg3,
+                  child: SelectionContainer.disabled(
+                    child: RichText(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        children: [
+                          if (widget.page.icon != null) ...[
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Icon(
+                                widget.page.icon,
+                                size: iconSize,
+                                color: widget.isSelected ? tokens.colors.primary : tokens.colors.fg3,
+                              ),
+                            ),
+                            WidgetSpan(child: SizedBox(width: tokens.spacing.sp2)),
+                          ],
+                          TextSpan(
+                            text: widget.page.labelText,
+                            style: TextStyle(
+                              fontSize: fontSize,
+                              fontWeight: labelWeight,
+                              color: labelColor,
                             ),
                           ),
-                          WidgetSpan(child: SizedBox(width: tokens.spacing.sp2)),
                         ],
-                        TextSpan(
-                          text: widget.page.labelText,
-                          style: TextStyle(
-                            fontSize: fontSize,
-                            fontWeight: labelWeight,
-                            color: labelColor,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -114,12 +116,14 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
                 if (widget.page.count != null)
                   Padding(
                     padding: EdgeInsets.only(left: tokens.spacing.sp2),
-                    child: Text(
-                      widget.page.count.toString(),
-                      style: TextStyle(
-                        fontSize: countFontSize,
-                        fontWeight: FontWeight.w500,
-                        color: tokens.colors.fg2,
+                    child: SelectionContainer.disabled(
+                      child: Text(
+                        widget.page.count.toString(),
+                        style: TextStyle(
+                          fontSize: countFontSize,
+                          fontWeight: FontWeight.w500,
+                          color: tokens.colors.fg2,
+                        ),
                       ),
                     ),
                   ),

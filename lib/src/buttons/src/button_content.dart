@@ -99,11 +99,13 @@ Widget buildButtonContent({
     padding: EdgeInsets.symmetric(
       horizontal: tokens.spacing.sp3,
     ),
-    child: RichText(
-      text: span,
-      overflow: TextOverflow.ellipsis,
-      maxLines: 1,
-      textScaler: textScaler,
+    child: SelectionContainer.disabled(
+      child: RichText(
+        text: span,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        textScaler: textScaler,
+      ),
     ),
   );
 }

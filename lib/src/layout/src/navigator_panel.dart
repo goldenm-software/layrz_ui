@@ -279,12 +279,14 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
             top: tokens.spacing.sp3,
             left: tokens.spacing.sp2,
           ),
-          child: Text(
-            'No results',
-            style: TextStyle(
-              fontSize: tokens.typography.label.fontSize,
-              fontWeight: kLayrzLayoutNoResultsFontWeight,
-              color: tokens.colors.fg3,
+          child: SelectionContainer.disabled(
+            child: Text(
+              'No results',
+              style: TextStyle(
+                fontSize: tokens.typography.label.fontSize,
+                fontWeight: kLayrzLayoutNoResultsFontWeight,
+                color: tokens.colors.fg3,
+              ),
             ),
           ),
         ),
@@ -345,14 +347,16 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
         ),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            label.labelText.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.typography.label.copyWith(
-              color: effectiveColor,
-              letterSpacing: 0.11 * (tokens.typography.label.fontSize ?? 14),
-              fontWeight: kLayrzLayoutSectionCaptionFontWeight,
+          child: SelectionContainer.disabled(
+            child: Text(
+              label.labelText.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.typography.label.copyWith(
+                color: effectiveColor,
+                letterSpacing: 0.11 * (tokens.typography.label.fontSize ?? 14),
+                fontWeight: kLayrzLayoutSectionCaptionFontWeight,
+              ),
             ),
           ),
         ),
@@ -387,27 +391,31 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    'Notifications',
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: kLayrzLayoutNotificationsLabelFontWeight,
-                      color: tokens.colors.fg1,
+                  child: SelectionContainer.disabled(
+                    child: Text(
+                      'Notifications',
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: kLayrzLayoutNotificationsLabelFontWeight,
+                        color: tokens.colors.fg1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
               if (widget.notifications.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(right: 10.0),
-                  child: Text(
-                    widget.notifications.length.toString(),
-                    style: TextStyle(
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.w500,
-                      color: tokens.colors.fg2,
+                  child: SelectionContainer.disabled(
+                    child: Text(
+                      widget.notifications.length.toString(),
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w500,
+                        color: tokens.colors.fg2,
+                      ),
                     ),
                   ),
                 ),

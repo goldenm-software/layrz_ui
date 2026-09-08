@@ -111,9 +111,11 @@ class LayrzStepIndicator extends StatelessWidget {
         size: kLayrzStepIndicatorGlyphSize,
       );
     } else {
-      content = Text(
-        '${index + 1}',
-        style: tokens.typography.label.copyWith(color: foregroundColor),
+      content = SelectionContainer.disabled(
+        child: Text(
+          '${index + 1}',
+          style: tokens.typography.label.copyWith(color: foregroundColor),
+        ),
       );
     }
 

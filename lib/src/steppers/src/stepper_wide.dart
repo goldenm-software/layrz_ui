@@ -265,14 +265,16 @@ class _StepCell extends StatelessWidget {
               SizedBox(height: tokens.spacing.sp1),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
-                child: Text(
-                  step.labelText,
-                  textAlign: TextAlign.center,
-                  style: tokens.typography.label.copyWith(
-                    color: isUpcoming ? tokens.colors.fg2 : tokens.colors.fg1,
+                child: SelectionContainer.disabled(
+                  child: Text(
+                    step.labelText,
+                    textAlign: TextAlign.center,
+                    style: tokens.typography.label.copyWith(
+                      color: isUpcoming ? tokens.colors.fg2 : tokens.colors.fg1,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

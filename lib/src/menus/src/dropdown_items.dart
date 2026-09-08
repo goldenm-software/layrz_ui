@@ -123,12 +123,14 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
         ),
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Text(
-            labelText,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tokens.typography.body.copyWith(
-              color: color != null ? color! : tokens.colors.fg3,
+          child: SelectionContainer.disabled(
+            child: Text(
+              labelText,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.typography.body.copyWith(
+                color: color != null ? color! : tokens.colors.fg3,
+              ),
             ),
           ),
         ),
@@ -610,24 +612,28 @@ class _LayrzDropdownEntryState extends State<_LayrzDropdownEntryWidget> {
                       ],
                       // Label (expanded to fill available space)
                       Expanded(
-                        child: Text(
-                          widget.labelText,
-                          style: tokens.typography.body.copyWith(
-                            color: spec.labelColor,
+                        child: SelectionContainer.disabled(
+                          child: Text(
+                            widget.labelText,
+                            style: tokens.typography.body.copyWith(
+                              color: spec.labelColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       // Shortcut (right-aligned, hidden on mobile)
                       if (widget.shortcut != null && !LayrzPlatform.isMobile) ...[
                         SizedBox(width: tokens.spacing.sp2),
-                        Text(
-                          formatLayrzShortcut(widget.shortcut),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tokens.typography.label.copyWith(
-                            color: tokens.colors.fg3,
+                        SelectionContainer.disabled(
+                          child: Text(
+                            formatLayrzShortcut(widget.shortcut),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: tokens.typography.label.copyWith(
+                              color: tokens.colors.fg3,
+                            ),
                           ),
                         ),
                       ],
