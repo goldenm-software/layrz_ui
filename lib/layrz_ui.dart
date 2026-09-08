@@ -8,6 +8,7 @@ export 'src/calendar/calendar.dart';
 export 'src/cards/cards.dart';
 export 'src/chips/chips.dart';
 export 'src/constants/constants.dart';
+export 'src/context_menu/context_menu.dart';
 export 'src/dialogs/dialogs.dart';
 export 'src/extensions/extensions.dart';
 export 'src/file_input/file_input.dart';
