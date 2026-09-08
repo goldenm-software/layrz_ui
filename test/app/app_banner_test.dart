@@ -96,7 +96,27 @@ void main() {
   });
 
   group('LayrzApp debug watermark', () {
-    testWidgets('with a non-null banner, the watermark CustomPaint renders', (tester) async {
+    testWidgets(
+      'with NO banner passed, the watermark renders automatically in debug with the localized default label',
+      (tester) async {
+        _setWideViewport(tester);
+
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            home: const SizedBox(width: 100, height: 100),
+          ),
+        );
+        await tester.pump();
+
+        expect(_watermarkFinder(), findsOneWidget);
+        final customPaint = tester.widget<CustomPaint>(_watermarkFinder());
+        final painter = customPaint.painter! as LayrzAppBannerPainter;
+        expect(painter.labelText, equals(const LayrzUiL10nDefault().debugBanner));
+      },
+    );
+
+    testWidgets('an explicit banner overrides the automatic default label', (tester) async {
       _setWideViewport(tester);
 
       await tester.pumpWidget(
@@ -109,14 +129,34 @@ void main() {
       await tester.pump();
 
       expect(_watermarkFinder(), findsOneWidget);
+      final customPaint = tester.widget<CustomPaint>(_watermarkFinder());
+      final painter = customPaint.painter! as LayrzAppBannerPainter;
+      expect(painter.labelText, equals('STAGING'));
     });
 
-    testWidgets('with banner null, no watermark CustomPaint is present', (tester) async {
+    testWidgets('showDebugWatermark: false suppresses the watermark even in debug with no banner', (tester) async {
       _setWideViewport(tester);
 
       await tester.pumpWidget(
         LayrzApp(
           title: 'Test App',
+          showDebugWatermark: false,
+          home: const SizedBox(width: 100, height: 100),
+        ),
+      );
+      await tester.pump();
+
+      expect(_watermarkFinder(), findsNothing);
+    });
+
+    testWidgets('showDebugWatermark: false suppresses the watermark even with an explicit banner', (tester) async {
+      _setWideViewport(tester);
+
+      await tester.pumpWidget(
+        LayrzApp(
+          title: 'Test App',
+          showDebugWatermark: false,
+          banner: const LayrzAppBanner(labelText: 'STAGING'),
           home: const SizedBox(width: 100, height: 100),
         ),
       );
@@ -126,7 +166,7 @@ void main() {
     });
 
     testWidgets(
-      'a non-null banner suppresses the SDK CheckedModeBanner even when debugShowCheckedModeBanner is true',
+      'an explicit banner: the SDK CheckedModeBanner never renders (removed entirely; the watermark replaces it)',
       (tester) async {
         _setWideViewport(tester);
 
@@ -134,7 +174,6 @@ void main() {
           LayrzApp(
             title: 'Test App',
             banner: const LayrzAppBanner(labelText: 'STAGING'),
-            debugShowCheckedModeBanner: true,
             home: const SizedBox(width: 100, height: 100),
           ),
         );
@@ -146,20 +185,40 @@ void main() {
     );
 
     testWidgets(
-      'with banner null and debugShowCheckedModeBanner true, the SDK CheckedModeBanner renders (normal path)',
+      'the automatic default watermark (no banner passed): the SDK CheckedModeBanner never renders',
       (tester) async {
         _setWideViewport(tester);
 
         await tester.pumpWidget(
           LayrzApp(
             title: 'Test App',
-            debugShowCheckedModeBanner: true,
             home: const SizedBox(width: 100, height: 100),
           ),
         );
         await tester.pump();
 
-        expect(find.byType(CheckedModeBanner), findsOneWidget);
+        expect(find.byType(CheckedModeBanner), findsNothing);
+        expect(_watermarkFinder(), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'with showDebugWatermark false, the watermark is gone AND the SDK CheckedModeBanner still never renders',
+      (tester) async {
+        _setWideViewport(tester);
+
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            showDebugWatermark: false,
+            home: const SizedBox(width: 100, height: 100),
+          ),
+        );
+        await tester.pump();
+
+        // The SDK banner is gone for good — LayrzApp hardcodes
+        // debugShowCheckedModeBanner to false regardless of showDebugWatermark.
+        expect(find.byType(CheckedModeBanner), findsNothing);
         expect(_watermarkFinder(), findsNothing);
       },
     );

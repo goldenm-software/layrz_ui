@@ -157,7 +157,6 @@ void main() {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
           navigatorObservers: [_RecordingNavigatorObserver(rootPushedRoutes)],
           home: Navigator(
             observers: [_RecordingNavigatorObserver(nestedPushedRoutes)],

@@ -24,7 +24,6 @@ void main() {
   Future<void> pumpFocusedApp(WidgetTester tester, Widget child) async {
     await tester.pumpWidget(
       LayrzApp(
-        debugShowCheckedModeBanner: false,
         home: Focus(
           autofocus: true,
           child: child,
@@ -359,7 +358,6 @@ void main() {
 
       await tester.pumpWidget(
         LayrzApp(
-          debugShowCheckedModeBanner: false,
           home: LayrzShortcut(
             child: const SizedBox.shrink(),
           ),

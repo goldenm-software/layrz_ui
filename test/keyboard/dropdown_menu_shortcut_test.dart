@@ -133,7 +133,6 @@ void main() {
       // LayrzShortcutState registrations via dispose()).
       await tester.pumpWidget(
         LayrzApp(
-          debugShowCheckedModeBanner: false,
           home: const SizedBox.shrink(),
         ),
       );

@@ -2,19 +2,23 @@ import 'package:flutter/widgets.dart';
 
 /// Configuration for [LayrzApp]'s debug-only tiled diagonal watermark.
 ///
-/// Passing a non-null [LayrzAppBanner] to `LayrzApp.banner` replaces Flutter's
-/// red DEBUG corner banner with a low-opacity, tiled, diagonal watermark that
-/// repeats [labelText] across the whole screen. Unlike the SDK's corner
-/// banner, this cannot be mistaken for production because it survives
-/// cropping (it is not confined to one corner) and it does not obscure any
-/// single element, since it renders at low opacity behind the app content and
-/// never intercepts pointer events.
+/// `LayrzApp` renders this watermark automatically in debug builds — even
+/// without a [LayrzAppBanner] ever being passed — as its full replacement
+/// for Flutter's red DEBUG corner banner, which `LayrzApp` never renders at
+/// all (its `debugShowCheckedModeBanner` is unconditionally `false`
+/// internally). Passing a non-null [LayrzAppBanner] to `LayrzApp.banner`
+/// only overrides the label (and optionally the color) of that automatic
+/// watermark — it is a low-opacity, tiled, diagonal watermark that repeats
+/// [labelText] across the whole screen. Unlike the SDK's corner banner, this
+/// cannot be mistaken for production because it survives cropping (it is not
+/// confined to one corner) and it does not obscure any single element, since
+/// it renders at low opacity behind the app content and never intercepts
+/// pointer events.
 ///
-/// This watermark only ever renders when `kDebugMode` is `true` — see
-/// `LayrzApp._wrapWithTheme`. Passing a non-null [LayrzAppBanner] also forces
-/// `LayrzApp.debugShowCheckedModeBanner` to `false` internally, so the SDK's
-/// own checked-mode banner and this watermark never stack on top of each
-/// other.
+/// This watermark only ever renders when `kDebugMode` is `true` and
+/// `LayrzApp.showDebugWatermark` is `true` (the default) — see
+/// `LayrzApp._wrapWithTheme`. Set `LayrzApp.showDebugWatermark` to `false` to
+/// opt out of it entirely, for example in golden/screenshot tests.
 ///
 /// There is deliberately no style enum — this is the one tiled-diagonal style
 /// that solves the "don't mistake this screenshot for production" problem

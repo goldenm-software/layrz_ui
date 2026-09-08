@@ -54,7 +54,6 @@ void main() {
     await tester.pumpWidget(
       LayrzApp(
         theme: LayrzThemeData.light(),
-        debugShowCheckedModeBanner: false,
         home: Builder(
           builder: (context) {
             capturedContext = context;

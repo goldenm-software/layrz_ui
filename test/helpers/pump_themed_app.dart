@@ -40,7 +40,14 @@ Future<void> pumpThemedApp(
     LayrzApp(
       home: Center(child: child),
       theme: theme ?? LayrzThemeData.light(),
-      debugShowCheckedModeBanner: false,
+      // Debug watermark is opt-in here: `showDebugWatermark` defaults to
+      // `true` on LayrzApp and injects a Stack/Positioned/CustomPaint into
+      // the tree whenever kDebugMode is true (which it is under `flutter
+      // test`). Left at its default, that extra subtree ambiguates any test
+      // using `find.byType(Stack)`/`find.byType(Positioned)`/
+      // `find.byType(Container)`. Tests that specifically want the watermark
+      // build their own LayrzApp (see test/app/app_banner_test.dart).
+      showDebugWatermark: false,
     ),
   );
   // Additional pump to allow the tree to fully settle and semantics to build.

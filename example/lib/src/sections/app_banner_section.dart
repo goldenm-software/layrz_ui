@@ -8,15 +8,19 @@ import '../common/showroom_section.dart';
 ///
 /// [LayrzAppBanner] is app-level configuration read by `LayrzApp` itself, not
 /// a widget a caller drops into a page, so there is no bare component to
-/// render inline the way most other sections do. Instead this section nests
-/// a second, independent [LayrzApp] inside a bounded box: `LayrzApp` builds on
-/// [WidgetsApp], which nests like any other widget, so the nested instance
-/// paints its own tiled diagonal watermark confined to that box, without
-/// touching the showroom's own root `LayrzApp` or its `banner` configuration.
+/// render inline the way most other sections do. Nesting a second `LayrzApp`
+/// to preview it is not an option either: `LayrzApp` auto-installs a
+/// `LayrzShortcut` registry host, and a `LayrzShortcut` found further up the
+/// tree (the showroom's own root `LayrzApp`) throws at runtime. Instead this
+/// section paints [LayrzAppBannerPainter] directly with a `CustomPaint`,
+/// confined to a bounded box over sample content -- the exact painter
+/// `LayrzApp` itself uses internally, with zero `LayrzApp` nesting.
 ///
-/// The watermark only ever paints in debug builds (`kDebugMode`), which is
-/// exactly the build this example app runs under, so the preview below shows
-/// the real painter output rather than a redrawn approximation of it.
+/// The color mirrors how `LayrzApp` resolves it: a caller-supplied override
+/// on `LayrzAppBanner.color`, falling back to `LayrzColorTokens.watermark`
+/// when absent. This preview always renders (unlike the real watermark,
+/// which is gated to `kDebugMode` inside `LayrzApp`), since it paints the
+/// painter directly rather than going through that gate.
 class AppBannerSection extends StatelessWidget {
   /// Creates a new [AppBannerSection].
   const AppBannerSection({super.key});
@@ -33,28 +37,37 @@ class AppBannerSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Live preview -- nested LayrzApp with banner set', style: tokens.typography.title),
+          Text('Live preview -- LayrzAppBannerPainter over sample content', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp2),
           Text(
-            "This box embeds a second LayrzApp configured with banner: LayrzAppBanner("
-            "labelText: 'STAGING'), so the tiled watermark below is the real painter, not a "
-            'mock-up. It renders only because this example app is itself a debug build.',
+            'This box paints the real LayrzAppBannerPainter -- the same painter LayrzApp uses '
+            'internally -- directly over a mock app screen via CustomPaint, so the tiled '
+            'watermark below is the actual painter output, not a mock-up.',
             style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp3),
           Container(
             width: 400,
-            height: 300,
+            height: 260,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: tokens.radius.br2,
               border: Border.all(color: tokens.colors.divider),
             ),
-            child: LayrzApp(
-              theme: context.theme,
-              debugShowCheckedModeBanner: false,
-              banner: const LayrzAppBanner(labelText: 'STAGING'),
-              home: _SamplePage(tokens: tokens),
+            child: Stack(
+              children: [
+                _SamplePage(tokens: tokens),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomPaint(
+                      painter: LayrzAppBannerPainter(
+                        labelText: 'STAGING',
+                        color: tokens.colors.watermark,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: tokens.spacing.sp4),
@@ -77,11 +90,8 @@ class AppBannerSection extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp3),
           Text(
             'The watermark only paints in debug builds -- release and profile builds never '
-            'render it regardless of what is passed here. When banner is non-null, '
-            "debugShowCheckedModeBanner is forced to false internally so the SDK's own "
-            'checked-mode corner banner never stacks on top of the watermark. The optional '
-            'color parameter overrides the muted default sourced from '
-            'LayrzColorTokens.watermark.',
+            'render it regardless of what is passed here. The optional color parameter on '
+            'LayrzAppBanner overrides the muted default sourced from LayrzColorTokens.watermark.',
             style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
           ),
         ],
@@ -90,8 +100,8 @@ class AppBannerSection extends StatelessWidget {
   }
 }
 
-/// The nested [LayrzApp.home] content shown behind the watermark preview --
-/// stands in for a real app screen so the watermark has something to overlay.
+/// The sample content shown behind the watermark preview -- stands in for a
+/// real app screen so the watermark has something to overlay.
 class _SamplePage extends StatelessWidget {
   /// Creates a new [_SamplePage].
   const _SamplePage({required this.tokens});

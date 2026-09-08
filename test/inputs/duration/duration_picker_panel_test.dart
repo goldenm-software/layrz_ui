@@ -181,7 +181,6 @@ Future<void> _pumpDesktopDrawer(
       ),
       theme: LayrzThemeData.light(),
       localizationsDelegates: delegate == null ? null : [delegate],
-      debugShowCheckedModeBanner: false,
     ),
   );
   await tester.pump();
@@ -222,7 +221,6 @@ Future<void> _pumpNarrowPanel(
       ),
       theme: LayrzThemeData.light(),
       localizationsDelegates: delegate == null ? null : [delegate],
-      debugShowCheckedModeBanner: false,
     ),
   );
   await tester.pump();
@@ -259,7 +257,6 @@ Future<void> _pumpMobileSheet(
       ),
       theme: LayrzThemeData.light(),
       localizationsDelegates: delegate == null ? null : [delegate],
-      debugShowCheckedModeBanner: false,
     ),
   );
   await tester.pump();

@@ -102,8 +102,9 @@ void main() {
         // Notifications (1 key)
         expect(localizations.notificationsEmpty, 'No notifications');
 
-        // Scaffold (1 key)
+        // Scaffold (2 keys)
         expect(localizations.scaffoldEmpty, 'No items');
+        expect(localizations.debugBanner, 'DEBUG');
 
         // Inputs (6 keys)
         expect(localizations.inputsRequiredIndicator, 'required');
@@ -412,7 +413,6 @@ void main() {
               builder: (context) => Text(context.l10n.actionCancel),
             ),
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
           ),
         );
         await tester.pump();
@@ -439,7 +439,6 @@ void main() {
               ),
             ),
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
           ),
         );
         await tester.pump();
@@ -461,7 +460,6 @@ void main() {
               builder: (context) => Text(context.l10n.actionCancel),
             ),
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
           ),
         );
         await tester.pump();
