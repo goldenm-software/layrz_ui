@@ -17,6 +17,7 @@ import 'src/sections/buttons_section.dart';
 import 'src/sections/calendar_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
+import 'src/sections/context_menu_section.dart';
 import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
 import 'src/sections/file_input_section.dart';
@@ -140,6 +141,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/grid',
           pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
+        ),
+        GoRoute(
+          path: '/context-menu',
+          pageBuilder: (context, state) => NoTransitionPage(child: ContextMenuSection()),
         ),
         GoRoute(
           path: '/dialogs',

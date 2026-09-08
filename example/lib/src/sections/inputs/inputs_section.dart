@@ -26,6 +26,7 @@ import 'demos/month_range_input_demo.dart';
 import 'demos/color_input_demo.dart';
 import 'demos/multi_select_input_demo.dart';
 import 'demos/emoji_input_demo.dart';
+import 'demos/icon_input_demo.dart';
 import 'demos/image_input_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
@@ -222,6 +223,13 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Pickers',
       details: EmojiInputDemo(),
       icon: MdiIcons.emoticonOutline,
+    ),
+    InputDemo(
+      id: 'icon-input',
+      name: 'Icon Input',
+      category: 'Pickers',
+      details: IconInputDemo(),
+      icon: MdiIcons.shapeOutline,
     ),
     InputDemo(
       id: 'image-input',
