@@ -16,7 +16,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 | 2b | Foldable-hinge-aware LayrzScaffoldShell (D73: only a vertical seam splits, mapped via RenderBox into the shell's own local box; a horizontal seam never splits; a `kLayrzFoldMinSplitHeight` shell-height gate retracts the split when the keyboard opens; multiple qualifying seams (Z TriFold) pick the one nearest 1/3 of the shell's width; `cutout` features ignored, `postureHalfOpened` supported like `postureFlat`) | In progress |
 | 3 | LayrzScrollbar (Material-free on RawScrollbar, installed by default in LayrzApp) | Done |
 | 4 | LayrzTabView and LayrzTab (horizontal tabs with Material 3 styling) | Todo |
-| 5 | LayrzSnackbar and LayrzSnackbarMessenger (transient feedback) | Todo |
+| 5 | DESIGN-60: LayrzSnackbar and LayrzSnackbarMessenger (transient feedback; countdown progress bar renders at the bottom edge of the card) | Merged · Review required |
 | 6 | Dialogs on RawDialogRoute (general, alert, confirmation) | Todo |
 | 7 | LayrzAboutDialog | Todo |
 | 8 | DESIGN-81: Page transitions (`LayrzPageTransitions`: fade, slide, scale, rotation, none — shared builders for both `PageRouteBuilder.transitionsBuilder` and go_router's `CustomTransitionPage.transitionsBuilder`) | Merged · Review required |

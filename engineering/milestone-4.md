@@ -31,7 +31,7 @@ milestone and beyond builds on.
 | 56 | LayrzIconInput (Solar icon set picker) | TO DO |
 | 57 | LayrzEmojiInput (Unicode emoji picker) | TO DO |
 | 58 | LayrzAvatarInput (image avatar picker) | TO DO |
-| 59 | LayrzDynamicAvatarInput (URL/base64/icon/emoji avatar picker) | TO DO · blocked, see note |
+| 59 | LayrzDynamicAvatarInput (URL/base64/icon/emoji avatar picker) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M4 work items, kept in step with the code in the
 same commit. It was sourced by querying the Notion ⚒️ Progress database for every row with
@@ -52,15 +52,17 @@ deliverable, and `wiki/Widgets/LayrzTimeRangeInput.md` already existed as a spec
 
 ## M4 is NOT complete when this batch ships
 
-Seven rows remain `TO DO`: `LayrzMultiSelectInput` (41), `LayrzDualListInput` (43),
-`LayrzColorInput` (54), `LayrzIconInput` (56), `LayrzEmojiInput` (57), `LayrzAvatarInput` (58),
-`LayrzDynamicAvatarInput` (59) — Emoji, Icon, Avatar, Dynamic Avatar, and Color inputs, plus
-MultiSelect and DualList carried over from M3 (D61). `LayrzFileInput` (55) shipped in this release
-and is now `Merged · Review required`. `LayrzColorInput`
+Six rows remain `TO DO`: `LayrzMultiSelectInput` (41), `LayrzDualListInput` (43),
+`LayrzColorInput` (54), `LayrzIconInput` (56), `LayrzEmojiInput` (57), `LayrzAvatarInput` (58) —
+Emoji, Icon, and Avatar (54, 56–58) inputs, plus MultiSelect and DualList carried over from M3
+(D61). `LayrzFileInput` (55) shipped in this release and is now `Merged · Review required`.
+`LayrzDynamicAvatarInput` (59) has since shipped as well and is now `Merged · Review required` —
+its blocker (`LayrzAvatarInput`, `LayrzIconInput`, and `LayrzEmojiInput` all shipping first, since
+it composes all three) is resolved; see the note under DESIGN-54–59 below (this repo's status
+table has not otherwise caught up with rows 56–58's own code state, per that note). `LayrzColorInput`
 additionally carries a real blocker (`flex_color_picker` 3.8.0 is Material-built — 23 Material
 imports, 2 Cupertino — so its wheel and palette must be written from scratch rather than wrapping
-that package), and `LayrzDynamicAvatarInput` is blocked until `LayrzAvatarInput`, `LayrzIconInput`,
-and `LayrzEmojiInput` ship, since it composes all three.
+that package).
 
 ## Definition of Done
 
@@ -139,13 +141,22 @@ Scoped to a separate batch per the maintainer's explicit instruction that DESIGN
 
 ### DESIGN-54–59 — Media/Appearance Pickers
 
-**Status**: TO DO (all six)
+**Status**: TO DO (54) · not confidently re-verified in this update (56–58, see note) · Merged ·
+Review required (59)
 
-Not started in this batch. `LayrzColorInput` (54) carries a real blocker: `flex_color_picker` 3.8.0
-pulls in 23 Material and 2 Cupertino imports, so its wheel and palette selection UI must be
-implemented from scratch rather than wrapping that package, per this repository's Material/Cupertino
-invariant. `LayrzDynamicAvatarInput` (59) is blocked on `LayrzAvatarInput`, `LayrzIconInput`, and
-`LayrzEmojiInput` shipping first, since it composes all three by design.
+Not started in the original DateTime batch this file otherwise documents. `LayrzColorInput` (54)
+carries a real blocker: `flex_color_picker` 3.8.0 pulls in 23 Material and 2 Cupertino imports, so
+its wheel and palette selection UI must be implemented from scratch rather than wrapping that
+package, per this repository's Material/Cupertino invariant.
+
+`LayrzDynamicAvatarInput` (59) has since shipped (DESIGN-59, merged to `development`) and moved to
+`Merged · Review required` in the table above — its dependency on `LayrzAvatarInput` (58),
+`LayrzIconInput` (56), and `LayrzEmojiInput` (57) all shipping first (it composes all three) is
+resolved, since `lib/src/pickers/src/icon/`, `lib/src/pickers/src/emoji/`, and
+`lib/src/pickers/src/image/` (the avatar upload input) all exist in the tree with merged commit
+history. **Note — not corrected here**: rows 56–58 in the table above still read `TO DO` despite
+that code existing; confirming and updating their exact status (and `LayrzColorInput`'s) was outside
+this update's scope and is flagged for a maintainer/follow-up pass rather than guessed at here.
 
 ---
 
