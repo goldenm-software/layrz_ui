@@ -10,10 +10,19 @@ import 'skeleton_shimmer_box.dart';
 /// each, 20 total) + two borders of `tokens.border.base` (1.5 each, 3 total)
 /// = 43.0.
 ///
+/// A trailing `.5` is added on top of that geometric `43.0` — not part of
+/// the derivation above, but a half-logical-pixel anti-hairline snap. A
+/// whole-number height of exactly `43.0` can land the box's top edge on a
+/// fractional physical-pixel boundary at certain devicePixelRatios, which
+/// anti-aliases into a faint 1px seam rendered just above the box. Adding
+/// `.5` nudges the edge off that boundary, matching the identical `+ .5`
+/// fix already applied to derived line heights in
+/// `skeleton_line.dart:88` (`LayrzSkeletonLine._resolvedHeight`).
+///
 /// This constant does **not** cover the dense variant (~35lp) or the
 /// compact-viewport variant (~51lp) of `LayrzInput` — matching those exactly
 /// is a known limitation of [LayrzSkeletonBox.input].
-const double kLayrzSkeletonInputHeight = 43.0;
+const double kLayrzSkeletonInputHeight = 43.5;
 
 /// The standard corner radius of a `LayrzInput` chrome, in logical pixels,
 /// used as the preset for [LayrzSkeletonBox.input].

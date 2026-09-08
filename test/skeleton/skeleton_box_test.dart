@@ -112,7 +112,7 @@ void main() {
       await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
 
       final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonBox));
-      expect(box.size, const Size(200, 43.0));
+      expect(box.size, const Size(200, 43.5));
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
