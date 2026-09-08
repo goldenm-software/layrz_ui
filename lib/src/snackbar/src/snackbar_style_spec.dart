@@ -59,9 +59,8 @@ class LayrzSnackbarStyleSpec {
 
   /// The fill color of the auto-dismiss progress bar.
   ///
-  /// Always equal to [accentColor]. Unlike the filled treatment's draining
-  /// hairline (bottom edge), the view (R2) places this bar flush at the **top**
-  /// edge of the card.
+  /// Always equal to [accentColor]. The view (R2) places this bar flush at the
+  /// **bottom** edge of the card.
   final Color progressColor;
 
   /// The border color of the card.

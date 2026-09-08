@@ -11,7 +11,7 @@ void main() {
       expect(tokens.dPress, equals(const Duration(milliseconds: 80)));
       expect(tokens.dTransition, equals(const Duration(milliseconds: 200)));
       expect(tokens.dPageTransition, equals(kPageTransitionDuration));
-      expect(tokens.dDialog, equals(const Duration(milliseconds: 300)));
+      expect(tokens.dDialog, equals(const Duration(milliseconds: 250)));
       expect(tokens.dIndeterminate, equals(kIndeterminateDuration));
     });
 

@@ -350,7 +350,7 @@ void main() {
 
       expect(sweepPositionOf(tester), 0.0);
 
-      // A full dDialog interval (300ms, the old — too fast — duration) must
+      // A full dDialog interval (250ms, the old — too fast — duration) must
       // NOT complete a full repeat cycle now that dIndeterminate (1500ms) is
       // in effect: regression guard for the "too fast" defect.
       await tester.pump(theme.tokens.motion.dDialog);

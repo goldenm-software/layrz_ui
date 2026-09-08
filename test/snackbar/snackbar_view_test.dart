@@ -201,7 +201,7 @@ void main() {
     });
 
     group('Progress bar', () {
-      testWidgets('sits at the top edge of the card', (tester) async {
+      testWidgets('sits at the bottom edge of the card', (tester) async {
         setWideViewport(tester);
         const snackbar = LayrzSnackbar(
           titleText: 'Saved',
@@ -220,8 +220,8 @@ void main() {
         );
 
         final positioned = tester.widget<Positioned>(find.byType(Positioned));
-        expect(positioned.top, 0);
-        expect(positioned.bottom, isNull);
+        expect(positioned.bottom, 0);
+        expect(positioned.top, isNull);
       });
 
       testWidgets('reflects the progress input at full width', (tester) async {

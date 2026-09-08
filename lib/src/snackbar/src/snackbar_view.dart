@@ -13,21 +13,21 @@ import 'snackbar_style_spec.dart';
 ///
 /// [LayrzSnackbarView] is pure presentation: it paints exactly one card from a
 /// [snackbar], its resolved [style], and a host-supplied [progress] value
-/// (0.0–1.0) driving the top-edge progress bar. It owns **no timer, no
+/// (0.0–1.0) driving the bottom-edge progress bar. It owns **no timer, no
 /// [AnimationController], and no overlay** — the messenger is the sole owner
 /// of timing and animation, and drives [progress] frame-by-frame (or
 /// value-by-value) as the toast's remaining duration elapses.
 ///
-/// Anatomy (top to bottom): when [snackbar] is auto-dismissing
-/// (`LayrzSnackbar.isAutoDismiss`), a thin progress bar flush at the top edge
-/// of the card; then a row of `[semantic icon] [title + description column]
-/// [close LayrzButton — aside slot, auto-dismiss only]`; then — only when
+/// Anatomy (top to bottom): a row of `[semantic icon] [title + description
+/// column] [close LayrzButton — aside slot, auto-dismiss only]`; then — only when
 /// [LayrzSnackbar.actions] is non-empty — a wrapping row of the caller's
-/// [LayrzButton]s below the content. The aside slot is reserved for the close
-/// affordance only; actions never render there. A **persistent** snackbar
-/// (`LayrzSnackbar.isPersistent`) renders neither the progress bar nor the
-/// close button — just the icon/title/description content and, if present,
-/// the actions row (DESIGN-60, duration-driven dismissal — final).
+/// [LayrzButton]s below the content; then, when [snackbar] is auto-dismissing,
+/// a thin progress bar flush at the bottom edge of the card. The aside slot is
+/// reserved for the close affordance only; actions never render there. A
+/// **persistent** snackbar (`LayrzSnackbar.isPersistent`) renders neither the
+/// progress bar nor the close button — just the icon/title/description
+/// content and, if present, the actions row (DESIGN-60, duration-driven
+/// dismissal — final).
 ///
 /// The widget never dismisses itself: [onClose] is a plain [VoidCallback]
 /// supplied by the host, which is responsible for actually removing the toast
@@ -46,7 +46,7 @@ class LayrzSnackbarView extends StatefulWidget {
   /// live theme tokens.
   final LayrzSnackbarStyleSpec style;
 
-  /// The remaining-duration fraction driving the top-edge progress bar, from
+  /// The remaining-duration fraction driving the bottom-edge progress bar, from
   /// `1.0` (just shown, full width) to `0.0` (about to auto-dismiss, zero
   /// width).
   ///
@@ -180,7 +180,7 @@ class _LayrzSnackbarViewState extends State<LayrzSnackbarView> {
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: 0,
+                    bottom: 0,
                     child: _buildProgressBar(style),
                   ),
                 ],
@@ -215,7 +215,7 @@ class _LayrzSnackbarViewState extends State<LayrzSnackbarView> {
     );
   }
 
-  /// Builds the top-edge progress bar, whose width is
+  /// Builds the bottom-edge progress bar, whose width is
   /// [LayrzSnackbarView.progress] as a fraction of the card's full width.
   ///
   /// Driven purely by the host-supplied [LayrzSnackbarView.progress] — this

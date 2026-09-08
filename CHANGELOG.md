@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.0.26
+
+**New `LayrzDynamicAvatarInput` — a composed avatar picker.** Its value is a
+`LayrzAvatarSource?` — one of `LayrzAvatarUrl`, `LayrzAvatarBase64`, `LayrzAvatarIcon`,
+`LayrzAvatarEmoji`, or `null` for no avatar. The closed field is a 100px tappable avatar tile —
+mirroring `LayrzImageInput` — that previews the current selection via `LayrzAvatar`, shows an add
+affordance when empty, and carries a clear badge that resets the value to no avatar. Tapping the
+tile opens a single dialog with four fixed tabs: URL, base64 image upload (constrained to
+`.gif`/`.png`/`.jpg`, up to 1 MB), an inline MDI icon grid, and an inline Unicode emoji grid.
+
+**BREAKING: `LayrzAvatarIcon` now carries `MdiRemapIcon` instead of `IconData`.** The
+`LayrzAvatarIcon` variant of `LayrzAvatarSource` was remodeled to hold an `MdiRemapIcon` — whose
+`name` is stable and serializable across `flutter_material_design_icons` versions — rather than a
+raw `IconData`. Callers constructing `LayrzAvatarIcon(...)` directly must now pass an
+`MdiRemapIcon` (e.g. via `findMdiRemapIconByName('mdi-...')`). The
+`LayrzAvatar.icon({required IconData icon})` convenience constructor is unchanged.
+
+**`LayrzSnackbar` progress bar moved to the bottom edge.** The auto-dismiss countdown progress bar
+now renders flush at the bottom edge of the snackbar card instead of the top.
+
+**Motion standardized on tokens.** Animation durations and curves were standardized on
+`LayrzMotionTokens`: `dDialog` is now capped at 250 ms, several hardcoded controller durations read
+from motion tokens instead, and symmetric menu transitions use the `easeInOutCirc` emphasized
+curve.
+
 ## 0.0.25
 
 **Find-in-page highlights now land correctly at any display scale.** On a screen whose device

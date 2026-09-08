@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter_mdi_remap/flutter_mdi_remap.dart';
 
 /// Sealed hierarchy representing the source and type of an avatar.
 ///
@@ -75,30 +75,45 @@ final class LayrzAvatarBase64 extends LayrzAvatarSource {
   }
 }
 
-/// Avatar source: display an icon from an [IconData].
+/// Avatar source: display an icon from a [MdiRemapIcon].
 ///
 /// The icon is rendered at 70% of the avatar size to maintain visual balance.
-/// When the [icon] is null, [LayrzAvatar] falls back to initials.
+/// [MdiRemapIcon] (not a raw [IconData]) is the stable, serializable icon
+/// identity for this source: an [IconData]'s codepoint is not guaranteed
+/// stable across `flutter_material_design_icons` package versions, while
+/// [MdiRemapIcon.name] is the registry's own lookup key
+/// ([findMdiRemapIconByName]) and is guaranteed stable. Callers that only
+/// have a persisted name string can resolve it back to a [MdiRemapIcon] via
+/// [findMdiRemapIconByName] before constructing this source.
 final class LayrzAvatarIcon extends LayrzAvatarSource {
   /// Creates an icon-based avatar source.
   ///
-  /// The [icon] parameter specifies the Flutter [IconData] to render.
-  /// It is displayed at 70% of the avatar size on a colored background
-  /// (defaulting to the primary token color).
+  /// The [icon] parameter specifies the [MdiRemapIcon] to render, whose
+  /// renderable [MdiRemapIcon.data] is displayed at 70% of the avatar size
+  /// on a colored background (defaulting to the primary token color).
   const LayrzAvatarIcon(this.icon);
 
   /// The icon to display as an avatar.
-  final IconData icon;
+  final MdiRemapIcon icon;
 
+  /// Compares by [MdiRemapIcon.name] — the stable registry lookup key —
+  /// rather than the whole [icon] object, so equality survives regeneration
+  /// of the underlying `flutter_mdi_remap` registry as long as the name is
+  /// unchanged. ([MdiRemapIcon] itself already implements `==` this way,
+  /// but comparing the name explicitly keeps this source's equality
+  /// contract self-documenting and independent of that implementation
+  /// detail.)
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || other is LayrzAvatarIcon && runtimeType == other.runtimeType && icon == other.icon;
+      identical(this, other) ||
+      other is LayrzAvatarIcon && runtimeType == other.runtimeType && icon.name == other.icon.name;
 
+  /// Hashes on [MdiRemapIcon.name] to match the name-based [operator ==].
   @override
-  int get hashCode => Object.hash(runtimeType, icon);
+  int get hashCode => Object.hash(runtimeType, icon.name);
 
   /// Returns a copy of this source with the given field replaced.
-  LayrzAvatarIcon copyWith({IconData? icon}) {
+  LayrzAvatarIcon copyWith({MdiRemapIcon? icon}) {
     return LayrzAvatarIcon(icon ?? this.icon);
   }
 }
