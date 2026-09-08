@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/snackbar/snackbar.dart';
@@ -325,7 +326,7 @@ class _LayrzAppState extends State<LayrzApp> {
           data: themeData.iconTheme,
           child: ColoredBox(
             color: themeData.backgroundColor,
-            child: LayrzSnackbarMessenger(child: userChild),
+            child: LayrzShortcut(child: LayrzSnackbarMessenger(child: userChild)),
           ),
         ),
       ),
