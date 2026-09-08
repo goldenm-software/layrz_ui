@@ -92,27 +92,25 @@ Kotlin Gradle Plugin (KGP) themselves. On AGP 9+, this triggers Flutter's KGP de
 in your app's build output — something like *"plugins that apply Kotlin Gradle Plugin (KGP):
 desktop_drop, file_picker"*.
 
-To silence it, set `android.builtInKotlin=true` (alongside `android.newDsl=false`) in your app's
-`android/gradle.properties`. With the flag set, those plugins defer to AGP's built-in Kotlin
-instead of applying KGP themselves, and the warning goes away — no plugin fork or version bump
-needed.
+Set `android.builtInKotlin=true` (alongside `android.newDsl=false`) in your app's
+`android/gradle.properties` regardless — it's still the correct fix for `file_picker`, and it makes
+`desktop_drop`'s own Kotlin setup defer to AGP's built-in Kotlin at build time instead of applying
+KGP itself.
 
 ```properties
 android.builtInKotlin=true
 android.newDsl=false
 ```
 
-If the warning persists after setting the flag, it's a stale Gradle configuration cache (the
-conditional is evaluated at Gradle configuration time). From your app's root:
-
-```bash
-./gradlew --stop
-rm -rf ~/.gradle/caches android/.gradle build
-```
-
-`./gradlew --stop` stops the Gradle daemon holding the stale configuration, and removing the
-Gradle cache / `.gradle` / build directories forces a fresh configuration where the
-`builtInKotlin` flag takes effect.
+**This silences the warning for `file_picker`, but not for `desktop_drop`.** Flutter detects KGP
+usage with a static text scan of each plugin's `build.gradle` — it greps the raw file for
+`apply plugin: 'kotlin-android'` rather than checking whether that line actually runs. `desktop_drop`
+0.8.4's `build.gradle` still contains that line, guarded behind a condition that `builtInKotlin=true`
+makes false — so the plugin is *never applied* at build time, but the text is still there for the
+scan to match. The warning is cosmetic on the current toolchain: the build succeeds either way, and
+nothing you set in `gradle.properties` or clear from the Gradle cache can remove a string that lives
+in `desktop_drop`'s own file. It will stop appearing once `desktop_drop` upstream ships a version
+whose `build.gradle` no longer contains that legacy line.
 
 ---
 
