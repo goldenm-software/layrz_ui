@@ -637,9 +637,7 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
                 child: GestureDetector(
                   key: entry.cardKey,
                   behavior: HitTestBehavior.opaque,
-                  onVerticalDragEnd: (details) => _handleSwipe(entry, details.primaryVelocity ?? 0, isVertical: true),
-                  onHorizontalDragEnd: (details) =>
-                      _handleSwipe(entry, details.primaryVelocity ?? 0, isVertical: false),
+                  onPanEnd: (details) => _handleSwipe(entry, details.velocity.pixelsPerSecond),
                   child: LayrzSnackbarView(
                     snackbar: entry.snackbar,
                     style: style,
@@ -664,37 +662,61 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     );
   }
 
-  /// Handles a swipe gesture on [entry] (DESIGN-60, revised gesture contract):
+  /// Handles a pan-end gesture on [entry] (DESIGN-60, revised gesture
+  /// contract), deciding both the dominant axis and the direction from
+  /// [velocity] itself rather than relying on separate axis-specific
+  /// recognizers:
   ///
-  /// * **Swipe-down** (positive vertical velocity past the threshold) expands
-  ///   the deck — it latches the exact same fanned/hovered state the desktop
-  ///   hover fan-out uses, by calling [_handleStackEnter] directly, so a touch
-  ///   user gets the same "see every card in full" affordance a mouse user
-  ///   gets from hovering. This works regardless of which card (which
-  ///   [entry]/depth) the swipe originated on — the whole stack fans, exactly
-  ///   as it does on hover.
-  /// * **Swipe-up** (negative vertical velocity past the threshold) is a
-  ///   no-op. It neither dismisses nor collapses the deck — there is
-  ///   deliberately no "swipe up to collapse" gesture; hover-exit (desktop)
-  ///   or moving away from the stack remains the only collapse path.
-  /// * **Horizontal swipe**, either left or right (velocity magnitude past
-  ///   the threshold in either direction), dismisses [entry] — horizontal
-  ///   drag is the mobile dismiss gesture, direction-agnostic.
+  /// * **Swipe-down** (dominant vertical axis, positive `dy` past the
+  ///   threshold) expands the deck — it latches the exact same
+  ///   fanned/hovered state the desktop hover fan-out uses, by calling
+  ///   [_handleStackEnter] directly, so a touch user gets the same "see every
+  ///   card in full" affordance a mouse user gets from hovering. This works
+  ///   regardless of which card (which [entry]/depth) the swipe originated
+  ///   on — the whole stack fans, exactly as it does on hover.
+  /// * **Swipe-up** (dominant vertical axis, negative `dy` past the
+  ///   threshold) collapses the deck back to its compact resting state — the
+  ///   exact reverse of swipe-down — by calling [_handleStackExit] directly,
+  ///   the same call the desktop hover-exit path uses.
+  /// * **Horizontal swipe**, either left or right (dominant horizontal axis,
+  ///   `dx` magnitude past the threshold in either direction), dismisses
+  ///   [entry] — horizontal drag is the mobile dismiss gesture,
+  ///   direction-agnostic.
   ///
-  /// A swipe below [kSwipeVelocityThreshold] in any direction is ignored as
-  /// an accidental drag rather than a deliberate gesture.
-  void _handleSwipe(_SnackbarEntry entry, double primaryVelocity, {required bool isVertical}) {
+  /// The dominant axis is whichever of `dx`/`dy` has the larger magnitude,
+  /// so a mostly-horizontal flick is never misread as vertical (or vice
+  /// versa). A swipe below [kSwipeVelocityThreshold] on the dominant axis is
+  /// ignored as an accidental drag rather than a deliberate gesture.
+  ///
+  /// Wired from a single [GestureDetector.onPanEnd] (see [_buildToast])
+  /// rather than separate `onVerticalDragEnd`/`onHorizontalDragEnd`
+  /// callbacks. Attaching both a vertical and a horizontal drag recognizer to
+  /// the same [GestureDetector] makes Flutter's gesture arena run a
+  /// [VerticalDragGestureRecognizer] and a [HorizontalDragGestureRecognizer]
+  /// side by side, competing for every drag — on a real touch device, an
+  /// ambiguous or near-vertical flick regularly lets the vertical recognizer
+  /// win the arena even when the user meant a horizontal swipe, so
+  /// `onHorizontalDragEnd` silently never fires and dismissal fails. A single
+  /// pan recognizer has nothing to compete with in the arena for any drag
+  /// direction, so it reliably wins and reports the true velocity vector —
+  /// the axis/direction split then happens here, in plain code, instead of
+  /// being left to gesture-recognizer arbitration.
+  void _handleSwipe(_SnackbarEntry entry, Offset velocity) {
     const double kSwipeVelocityThreshold = 200;
-    if (isVertical) {
-      if (primaryVelocity > kSwipeVelocityThreshold) {
-        _handleStackEnter();
+    final dx = velocity.dx;
+    final dy = velocity.dy;
+
+    if (dx.abs() >= dy.abs()) {
+      if (dx.abs() > kSwipeVelocityThreshold) {
+        _dismiss(entry);
       }
-      // Swipe-up (primaryVelocity < -kSwipeVelocityThreshold) is intentionally
-      // a no-op — see the doc comment above.
       return;
     }
-    if (primaryVelocity.abs() > kSwipeVelocityThreshold) {
-      _dismiss(entry);
+
+    if (dy > kSwipeVelocityThreshold) {
+      _handleStackEnter();
+    } else if (dy < -kSwipeVelocityThreshold) {
+      _handleStackExit();
     }
   }
 

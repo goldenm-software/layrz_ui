@@ -1016,7 +1016,67 @@ void main() {
         expect(
           find.text('Saved'),
           findsOneWidget,
-          reason: 'swipe-up is a no-op in the revised gesture contract — it must not dismiss',
+          reason: 'swipe-up collapses the deck in the revised gesture contract — it must not dismiss',
+        );
+      });
+
+      testWidgets('swipe-up collapses an expanded deck back to the compact rest offsets', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester, maxVisible: 3);
+        final messenger = LayrzSnackbarMessenger.of(context);
+
+        for (var i = 0; i < 3; i++) {
+          messenger.show(LayrzSnackbar(titleText: 'Toast $i', descriptionText: 'Description $i'));
+        }
+        await pumpPastEntry(tester);
+
+        final restCards = findPeekingCards(tester);
+        final restDeepestTop = restCards.last.top!;
+
+        // Swipe down first to expand/fan the deck out (same latch as hover).
+        await tester.fling(find.text('Toast 2'), const Offset(0, 60), 1000);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        final fannedCards = findPeekingCards(tester);
+        final fannedDeepestTop = fannedCards.last.top!;
+        expect(fannedDeepestTop, greaterThan(restDeepestTop), reason: 'swipe-down must have expanded the deck first');
+
+        // Every visible card is interactive while fanned — proof _isHovered
+        // is genuinely latched, matching the hover fan-out contract.
+        var ignorePointers = tester.widgetList<IgnorePointer>(find.byType(IgnorePointer)).toList();
+        expect(ignorePointers.where((w) => w.ignoring), isEmpty, reason: 'fanned state is fully interactive');
+
+        // Now swipe up on the (still fanned/interactive) front card — this
+        // must reverse the expansion, collapsing the deck back to its
+        // compact resting offsets, exactly like hover-exit.
+        await tester.fling(find.text('Toast 2'), const Offset(0, -60), 1000);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        final collapsedCards = findPeekingCards(tester);
+        final collapsedDeepestTop = collapsedCards.last.top!;
+        expect(
+          collapsedDeepestTop,
+          lessThan(fannedDeepestTop),
+          reason: 'swipe-up must collapse the fanned deck back toward its compact resting offsets',
+        );
+        expect(
+          collapsedDeepestTop,
+          closeTo(restDeepestTop, 0.5),
+          reason: 'swipe-up must reverse swipe-down exactly, landing back at the original rest offset',
+        );
+
+        // Back at rest, only the front card is interactive again — the
+        // exact reverse of the fanned "all interactive" state above.
+        ignorePointers = tester.widgetList<IgnorePointer>(find.byType(IgnorePointer)).toList();
+        final ignoringCount = ignorePointers.where((w) => w.ignoring).length;
+        expect(
+          ignoringCount,
+          2,
+          reason: 'swipe-up must restore the rest-state IgnorePointer contract (only depth 0 interactive)',
         );
       });
 
