@@ -71,14 +71,62 @@ import 'find_text_occurrences.dart';
 /// [SemanticsNode.transform] into a running [Matrix4] (parent transform
 /// composed with the node's own, `null` treated as identity), so every node's
 /// [SemanticsNode.rect] — which is expressed in its **parent's** coordinate
-/// space — can be converted to the root's (global) coordinate space via
-/// `MatrixUtils.transformRect`. This is the same accumulation
-/// [SemanticsNode.transform]'s own doc describes ("the transform from this
-/// node's coordinate system to its parent's coordinate system"). A hidden
-/// node's global rect may legitimately sit far outside the current viewport
-/// (large or negative offsets) — that is expected and correct; it reflects
-/// wherever the offscreen content actually is, and becomes meaningful again
-/// once the node is scrolled into view.
+/// space — can be converted to [root]'s own (logical, root-relative)
+/// coordinate space via `MatrixUtils.transformRect`. This is the same
+/// accumulation [SemanticsNode.transform]'s own doc describes ("the transform
+/// from this node's coordinate system to its parent's coordinate system") —
+/// with one deliberate correction applied at exactly one level of the walk.
+///
+/// [root] itself always carries `transform == null` (verified empirically:
+/// the framework's `_SemanticsGeometry.root` factory seeds it with
+/// [Matrix4.identity] — [root]'s coordinate system needs no conversion since
+/// it *is* the coordinate space this walk targets). The device-pixel-ratio
+/// scale is not on [root] at all — it is fused into the **first real
+/// [SemanticsNode] children of [root]** instead: building any child's
+/// `transform` walks `RenderObject.applyPaintTransform` from the parent
+/// node's render object down to the child's (see
+/// `_SemanticsGeometry.computeChildGeometry` in the framework), and when the
+/// parent is [root] that walk's outermost step is `RenderView`'s own
+/// `applyPaintTransform`, which left-multiplies in exactly
+/// `Matrix4.diagonal3Values(devicePixelRatio, devicePixelRatio, 1.0)` — the
+/// same scale `RenderObject.getTransformTo`'s doc says its own (render-chain)
+/// walk deliberately stops short of, noting a caller must apply
+/// `RenderView.applyPaintTransform` separately to reach physical pixels.
+/// [RenderView] never reappears as a `parentRenderObject` at any deeper hop,
+/// so this fusion happens exactly once, always at depth 1, however many
+/// [SemanticsNode]s are actually nested inside that first real child's own
+/// [SemanticsNode.transform] (it is fused with whatever real translation that
+/// node also carries — the two are not stored separately). Composing that
+/// scale into the accumulator uncorrected would put every
+/// [FindMatch.globalRect] in physical pixels while the render chain
+/// (`RenderBox.localToGlobal`) and the paint canvas (the root `Overlay`,
+/// painted in logical space) both stay logical — exactly one stray factor of
+/// `devicePixelRatio` on every axis, invisible at `devicePixelRatio == 1.0`
+/// and increasingly wrong past it.
+///
+/// The correction (implemented in `_logicalNodeTransform`): at depth 1 only,
+/// the child's fused transform is **left-divided** by a pure uniform scale
+/// built from [Matrix4.getMaxScaleOnAxis] — read directly off that same fused
+/// transform (`getMaxScaleOnAxis` derives it purely from the matrix's
+/// linear/rotation block, ignoring translation), never a `devicePixelRatio`
+/// fetched separately from `MediaQuery`/`FlutterView`. Left-division (rather
+/// than right-division/post-multiplying) matters because the fused scale is
+/// the **outermost/leftmost** factor of the product — `RenderView`'s hop is
+/// the first the render-chain walk composes — so undoing it means
+/// left-multiplying by its inverse:
+/// `corrected = Matrix4.diagonal3Values(1/scale, 1/scale, 1.0) * fused`. On a
+/// normal (non-scaled, non-DPR-affected) depth-1 transform `scale` is `1.0`
+/// and the correction is a no-op; at any [devicePixelRatio], dividing out
+/// that factor leaves exactly the translation/rotation the render chain also
+/// sees, so the composed rect lands in [root]'s logical, root-relative
+/// coordinate space at any [devicePixelRatio] — matching the render chain and
+/// the paint canvas to sub-pixel precision, which is the invariant this walk
+/// targets.
+///
+/// A hidden node's global rect may legitimately sit far outside the current
+/// viewport (large or negative offsets) — that is expected and correct; it
+/// reflects wherever the offscreen content actually is, and becomes
+/// meaningful again once the node is scrolled into view.
 ///
 /// For each non-excluded, non-route-scoping node, [SemanticsNode.getSemanticsData]
 /// is read once and used to build a "haystack": the node's `label`, and — if
@@ -122,13 +170,12 @@ List<FindMatch> walkSemantics(
   final needle = caseSensitive ? query : query.toLowerCase();
   final matches = <FindMatch>[];
 
-  void visit(SemanticsNode node, Matrix4 ancestorTransform) {
+  void visit(SemanticsNode node, Matrix4 ancestorTransform, {required bool isRootChild}) {
     if (excludeSubtreeRootIds.contains(node.id)) {
       return;
     }
 
-    final nodeTransform = node.transform;
-    final transform = nodeTransform == null ? ancestorTransform : ancestorTransform.multiplied(nodeTransform);
+    final transform = ancestorTransform.multiplied(_logicalNodeTransform(node, isRootChild: isRootChild));
 
     final data = node.getSemanticsData();
     final isHidden = data.flagsCollection.isHidden;
@@ -150,13 +197,14 @@ List<FindMatch> walkSemantics(
       }
     }
 
+    final childIsRootChild = identical(node, root);
     node.visitChildren((child) {
-      visit(child, transform);
+      visit(child, transform, isRootChild: childIsRootChild);
       return true;
     });
   }
 
-  visit(root, Matrix4.identity());
+  visit(root, Matrix4.identity(), isRootChild: false);
 
   matches.sort((a, b) {
     final topCompare = a.globalRect.top.compareTo(b.globalRect.top);
@@ -165,4 +213,36 @@ List<FindMatch> walkSemantics(
   });
 
   return matches;
+}
+
+/// Returns [node]'s own [SemanticsNode.transform], corrected to logical
+/// (root-relative) space, treating [Matrix4.identity] as `node.transform ==
+/// null`.
+///
+/// [isRootChild] is `true` exactly when [node] is a direct child of the
+/// semantics tree's root — the one hop where the framework fuses in the
+/// physical devicePixelRatio scale (see `walkSemantics`'s "### Algorithm"
+/// doc). That scale is always the **outermost** (left) factor of the fused
+/// matrix — `RenderView.applyPaintTransform` is the first of the render-chain
+/// hops `_SemanticsGeometry.computeChildGeometry` composes when building this
+/// transform — so it is removed by left-multiplying the fused transform by
+/// the inverse of a pure uniform scale built from
+/// [Matrix4.getMaxScaleOnAxis] (read directly off the fused transform itself,
+/// never a `devicePixelRatio` fetched separately). A `scale` of `0` (a
+/// degenerate, zeroed-out transform) or `1` (nothing to strip — the common
+/// case at `devicePixelRatio == 1.0`, and always the case at every deeper
+/// hop) is left untouched.
+Matrix4 _logicalNodeTransform(SemanticsNode node, {required bool isRootChild}) {
+  final transform = node.transform;
+  if (transform == null) {
+    return Matrix4.identity();
+  }
+  if (!isRootChild) {
+    return transform;
+  }
+  final scale = transform.getMaxScaleOnAxis();
+  if (scale == 0 || scale == 1) {
+    return transform;
+  }
+  return Matrix4.diagonal3Values(1 / scale, 1 / scale, 1.0)..multiply(transform);
 }
