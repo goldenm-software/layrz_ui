@@ -13,6 +13,22 @@ void main() {
       expect(spec.headerContentColor, equals(tokens.colors.fg1));
       expect(spec.borderColor, equals(tokens.colors.divider));
       expect(spec.borderWidth, equals(tokens.border.base));
+      expect(spec.shadow, equals(tokens.shadow.elevation2));
+    });
+
+    test('shadow is always the medium elevation2 token, regardless of interaction state', () {
+      final states = [
+        const <WidgetState>{},
+        {WidgetState.hovered},
+        {WidgetState.focused},
+        {WidgetState.pressed},
+        {WidgetState.disabled},
+      ];
+
+      for (final s in states) {
+        final spec = LayrzAccordionStyleSpec.resolve(states: s, tokens: tokens);
+        expect(spec.shadow, equals(tokens.shadow.elevation2), reason: 'states: $s');
+      }
     });
 
     test('hovered state lifts background to sf2', () {
@@ -86,11 +102,13 @@ void main() {
     });
 
     test('copyWith replaces only the given fields', () {
+      const shadow = [BoxShadow(color: Color(0x33000000), blurRadius: 4.0)];
       const spec = LayrzAccordionStyleSpec(
         headerBackgroundColor: Color(0xFF000000),
         headerContentColor: Color(0xFF111111),
         borderColor: Color(0xFF222222),
         borderWidth: 1.0,
+        shadow: shadow,
       );
 
       final copy = spec.copyWith(headerBackgroundColor: const Color(0xFFFFFFFF));
@@ -99,31 +117,60 @@ void main() {
       expect(copy.headerContentColor, equals(spec.headerContentColor));
       expect(copy.borderColor, equals(spec.borderColor));
       expect(copy.borderWidth, equals(spec.borderWidth));
+      expect(copy.shadow, equals(spec.shadow));
+    });
+
+    test('copyWith replaces shadow when given', () {
+      const shadow = [BoxShadow(color: Color(0x33000000), blurRadius: 4.0)];
+      const newShadow = [BoxShadow(color: Color(0x55000000), blurRadius: 8.0)];
+      const spec = LayrzAccordionStyleSpec(
+        headerBackgroundColor: Color(0xFF000000),
+        headerContentColor: Color(0xFF111111),
+        borderColor: Color(0xFF222222),
+        borderWidth: 1.0,
+        shadow: shadow,
+      );
+
+      final copy = spec.copyWith(shadow: newShadow);
+
+      expect(copy.shadow, equals(newShadow));
     });
 
     test('equality and hashCode are value-based', () {
+      const shadow = [BoxShadow(color: Color(0x33000000), blurRadius: 4.0)];
       const a = LayrzAccordionStyleSpec(
         headerBackgroundColor: Color(0xFF000000),
         headerContentColor: Color(0xFF111111),
         borderColor: Color(0xFF222222),
         borderWidth: 1.0,
+        shadow: shadow,
       );
       const b = LayrzAccordionStyleSpec(
         headerBackgroundColor: Color(0xFF000000),
         headerContentColor: Color(0xFF111111),
         borderColor: Color(0xFF222222),
         borderWidth: 1.0,
+        shadow: shadow,
       );
       const c = LayrzAccordionStyleSpec(
         headerBackgroundColor: Color(0xFFFFFFFF),
         headerContentColor: Color(0xFF111111),
         borderColor: Color(0xFF222222),
         borderWidth: 1.0,
+        shadow: shadow,
+      );
+      const d = LayrzAccordionStyleSpec(
+        headerBackgroundColor: Color(0xFF000000),
+        headerContentColor: Color(0xFF111111),
+        borderColor: Color(0xFF222222),
+        borderWidth: 1.0,
+        shadow: [BoxShadow(color: Color(0x99000000), blurRadius: 12.0)],
       );
 
       expect(a, equals(b));
       expect(a.hashCode, equals(b.hashCode));
       expect(a, isNot(equals(c)));
+      expect(a, isNot(equals(d)), reason: 'a different shadow list must not be equal');
     });
   });
 }

@@ -254,6 +254,26 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// with the same progress: while collapsed the body is absent from the tree
   /// (`maintainState: false`) and the divider must also occupy zero space, or
   /// a stray line would render with nothing below it.
+  ///
+  /// **Elevation on open (DESIGN-92 follow-up).** An outer [DecoratedBox] --
+  /// carrying only [BoxDecoration.boxShadow] and the same animated
+  /// [borderRadius], no border and no fill -- wraps the existing
+  /// [ClipRRect]/border/[Column] stack instead of sitting inside it. This is
+  /// load-bearing, not stylistic: [ClipRRect] clips its subtree to its rounded
+  /// rect, so a shadow painted on the inner, clipped [DecoratedBox] is clipped
+  /// away and never reaches the screen. Placing the shadow on a node that
+  /// wraps the clip, rather than one the clip contains, is the only way for it
+  /// to render at all. The border itself stays on the inner [DecoratedBox]
+  /// exactly as before, so it keeps painting *over* the clipped fill and
+  /// remains visible sitting on top of the shadow in both states.
+  ///
+  /// The shadow fades in and out on the same [progress] driving the corner
+  /// radius and divider above -- never a second timeline, for the same
+  /// "blink" reason documented on the class. [spec.shadow] is the constant,
+  /// full-elevation [LayrzTokens.shadow.elevation2] list; [_fadeShadow] scales
+  /// each [BoxShadow]'s alpha by [progress] so it is fully absent at 0
+  /// (collapsed, flat) and at full strength at 1 (expanded, reads as a raised
+  /// card), interpolating continuously in between.
   Widget _buildPanelShell(
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
@@ -275,25 +295,50 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
         );
         final dividerHeight = spec.borderWidth * progress;
 
-        return ClipRRect(
-          borderRadius: borderRadius,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: borderRadius,
-              border: Border.all(color: spec.borderColor, width: spec.borderWidth),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                header,
-                if (dividerHeight > 0) Container(height: dividerHeight, color: spec.borderColor),
-                body,
-              ],
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: _fadeShadow(spec.shadow, progress),
+          ),
+          child: ClipRRect(
+            borderRadius: borderRadius,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: borderRadius,
+                border: Border.all(color: spec.borderColor, width: spec.borderWidth),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  header,
+                  if (dividerHeight > 0) Container(height: dividerHeight, color: spec.borderColor),
+                  body,
+                ],
+              ),
             ),
           ),
         );
       },
     );
+  }
+
+  /// Scales the alpha of every [BoxShadow] in [shadow] by [progress].
+  ///
+  /// [shadow] is the panel's constant, full-elevation shadow list --
+  /// [LayrzAccordionStyleSpec.shadow], resolved from
+  /// [LayrzTokens.shadow.elevation2]. [progress] is the same 0-to-1 expansion
+  /// value driving the outer shell's corner radius and divider, so the shadow
+  /// fades in lockstep with the reveal instead of snapping in once fully
+  /// expanded. At `progress == 0` every returned [BoxShadow] has alpha `0`
+  /// (invisible, so the collapsed panel reads as flat); at `progress == 1` the
+  /// original, unmodified alphas are returned (full [LayrzTokens.shadow.elevation2]
+  /// strength).
+  List<BoxShadow> _fadeShadow(List<BoxShadow> shadow, double progress) {
+    final clamped = progress.clamp(0.0, 1.0);
+    return [
+      for (final boxShadow in shadow)
+        boxShadow.copyWith(color: boxShadow.color.withValues(alpha: boxShadow.color.a * clamped)),
+    ];
   }
 
   /// Wraps [LayrzAccordion.body] in a surface that shares [spec]'s header
