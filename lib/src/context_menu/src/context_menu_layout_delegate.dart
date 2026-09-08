@@ -1,5 +1,6 @@
 import 'package:flutter/rendering.dart';
 
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Positions a [LayrzContextMenu] panel at the pointer location that opened
@@ -76,9 +77,17 @@ class LayrzContextMenuLayoutDelegate extends SingleChildLayoutDelegate {
 
     final constrainedHeight = maxHeight != null ? maxHeight!.clamp(0.0, availableHeight) : availableHeight;
 
+    // Width parity with `LayrzDropdownMenu`: the panel is content-sized within
+    // the same [kLayrzDropdownMenuMinWidth, kLayrzDropdownMenuMaxWidth] band
+    // the dropdown menu uses, not the full overlay width. The upper bound is
+    // additionally clamped to `availableWidth` so the panel never overflows a
+    // viewport narrower than `kLayrzDropdownMenuMaxWidth` itself.
+    final maxWidth = kLayrzDropdownMenuMaxWidth.clamp(0.0, availableWidth);
+    final minWidth = kLayrzDropdownMenuMinWidth.clamp(0.0, maxWidth);
+
     return BoxConstraints(
-      minWidth: 0.0,
-      maxWidth: availableWidth,
+      minWidth: minWidth,
+      maxWidth: maxWidth,
       minHeight: 0.0,
       maxHeight: constrainedHeight,
     );

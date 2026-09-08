@@ -93,6 +93,45 @@ void main() {
       expect((panelTopLeft - clickPoint).distance, lessThan(60.0));
     });
 
+    testWidgets('panel width is clamped to kLayrzDropdownMenuMaxWidth, not full-viewport', (tester) async {
+      // Regression test for the width bug: the panel used to stretch to
+      // (nearly) the full overlay width. At a wide 1600px viewport, the
+      // rendered panel must stay within the same width band
+      // `LayrzDropdownMenu` uses, never anywhere close to full-viewport.
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzContextMenu(
+          entries: const [
+            LayrzContextMenuEntry(labelText: 'Copy', onTap: _noop),
+            LayrzContextMenuEntry(labelText: 'Paste', onTap: _noop),
+          ],
+          child: const SizedBox(width: 200, height: 100, child: Text('Target')),
+        ),
+      );
+
+      await tester.tap(
+        find.text('Target'),
+        buttons: kSecondaryMouseButton,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Copy'), findsOneWidget);
+
+      final panelSize = tester.getSize(
+        find.ancestor(
+          of: find.text('Copy'),
+          matching: find.byType(ClipRRect),
+        ),
+      );
+
+      expect(panelSize.width, lessThanOrEqualTo(kLayrzDropdownMenuMaxWidth));
+    });
+
     testWidgets('dismisses on outside tap', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;

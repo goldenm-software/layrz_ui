@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'context_menu_item.dart';
@@ -30,6 +31,12 @@ class LayrzContextMenuItemWidget extends StatelessWidget {
 }
 
 /// Renders an interactive [LayrzContextMenuEntry] row.
+///
+/// Mirrors `LayrzDropdownEntry`'s row design for visual parity between the
+/// two menu families: fixed [kLayrzDropdownEntryHeight] row height,
+/// `horizontal: sp3` padding, a [kLayrzDropdownIconSize] icon with an `sp2`
+/// gap before the label, and the label rendered in `tokens.typography.body`
+/// inside an [Expanded] so it fills the remaining row width.
 ///
 /// Hover, press, and focus states vary background, label, and icon color
 /// only — never size, padding, or geometry (see D15).
@@ -121,28 +128,35 @@ class _LayrzContextMenuEntryTileState extends State<_LayrzContextMenuEntryTile> 
               child: AnimatedContainer(
                 duration: tokens.motion.dHover,
                 curve: tokens.motion.easing,
-                constraints: const BoxConstraints(minWidth: 160.0),
+                height: kLayrzDropdownEntryHeight,
                 decoration: BoxDecoration(color: backgroundColor),
-                padding: EdgeInsets.symmetric(
-                  horizontal: tokens.spacing.sp3,
-                  vertical: tokens.spacing.sp2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (entry.icon != null) ...[
-                      Icon(entry.icon, size: 18.0, color: contentColor),
-                      SizedBox(width: tokens.spacing.sp2),
-                    ],
-                    Flexible(
-                      child: Text(
-                        entry.labelText,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: tokens.typography.body.copyWith(color: contentColor),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (entry.icon != null) ...[
+                        SizedBox(
+                          width: kLayrzDropdownIconSize,
+                          height: kLayrzDropdownIconSize,
+                          child: Icon(
+                            entry.icon,
+                            size: kLayrzDropdownIconSize,
+                            color: contentColor,
+                          ),
+                        ),
+                        SizedBox(width: tokens.spacing.sp2),
+                      ],
+                      Expanded(
+                        child: Text(
+                          entry.labelText,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tokens.typography.body.copyWith(color: contentColor),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -154,6 +168,11 @@ class _LayrzContextMenuEntryTileState extends State<_LayrzContextMenuEntryTile> 
 }
 
 /// Renders a non-interactive [LayrzContextMenuLabel] section heading.
+///
+/// Mirrors `LayrzDropdownLabel`'s band treatment for visual parity: a
+/// full-width [LayrzColorTokens.sf3] background band, `horizontal: sp3` /
+/// `vertical: sp2` padding, and `tokens.typography.body` text in the muted
+/// [LayrzColorTokens.fg3] foreground (or [LayrzContextMenuLabel.color] when set).
 class _LayrzContextMenuLabelTile extends StatelessWidget {
   /// The label this tile renders.
   final LayrzContextMenuLabel label;
@@ -168,7 +187,8 @@ class _LayrzContextMenuLabelTile extends StatelessWidget {
     return Semantics(
       header: true,
       excludeSemantics: true,
-      child: Padding(
+      child: Container(
+        color: tokens.colors.sf3,
         padding: EdgeInsets.symmetric(
           horizontal: tokens.spacing.sp3,
           vertical: tokens.spacing.sp2,
@@ -179,7 +199,7 @@ class _LayrzContextMenuLabelTile extends StatelessWidget {
             label.labelText,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: tokens.typography.label.copyWith(color: label.color ?? tokens.colors.fg3),
+            style: tokens.typography.body.copyWith(color: label.color ?? tokens.colors.fg3),
           ),
         ),
       ),

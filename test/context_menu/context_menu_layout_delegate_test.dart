@@ -132,7 +132,7 @@ void main() {
   });
 
   group('getConstraintsForChild', () {
-    test('bounds width and height to the overlay size minus padding when maxHeight is null', () {
+    test('bounds width to the dropdown menu width band and height to the overlay minus padding', () {
       const overlaySize = Size(800, 600);
       final delegate = buildDelegate(
         anchorRect: const Rect.fromLTWH(0, 0, 0, 0),
@@ -142,12 +142,31 @@ void main() {
 
       final constraints = delegate.getConstraintsForChild(const BoxConstraints());
 
-      final horizontalPadding = 2 * tokens.spacing.sp2;
       final verticalPadding = 2 * tokens.spacing.sp2;
-      expect(constraints.maxWidth, overlaySize.width - horizontalPadding);
+      // Width parity with `LayrzDropdownMenu`: content-sized within
+      // [kLayrzDropdownMenuMinWidth, kLayrzDropdownMenuMaxWidth], never the
+      // full overlay width (the bug this test guards against).
+      expect(constraints.minWidth, kLayrzDropdownMenuMinWidth);
+      expect(constraints.maxWidth, kLayrzDropdownMenuMaxWidth);
       expect(constraints.maxHeight, overlaySize.height - verticalPadding);
-      expect(constraints.minWidth, 0.0);
       expect(constraints.minHeight, 0.0);
+    });
+
+    test('clamps maxWidth to the available overlay width on a narrower-than-max viewport', () {
+      // Overlay narrower than kLayrzDropdownMenuMaxWidth (320) itself.
+      const overlaySize = Size(200, 600);
+      final delegate = buildDelegate(
+        anchorRect: const Rect.fromLTWH(0, 0, 0, 0),
+        position: Offset.zero,
+        overlaySize: overlaySize,
+      );
+
+      final constraints = delegate.getConstraintsForChild(const BoxConstraints());
+
+      final horizontalPadding = 2 * tokens.spacing.sp2;
+      expect(constraints.maxWidth, overlaySize.width - horizontalPadding);
+      expect(constraints.maxWidth, lessThan(kLayrzDropdownMenuMaxWidth));
+      expect(constraints.minWidth, lessThanOrEqualTo(constraints.maxWidth));
     });
 
     test('clamps maxHeight to the smaller of the explicit value and available space', () {
