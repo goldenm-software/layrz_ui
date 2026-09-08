@@ -55,22 +55,24 @@ import 'accordion_style_spec.dart';
 /// built header, the built body, and the raw reveal [Animation] together --
 /// wraps both in one [DecoratedBox]/[ClipRRect] pair, so the border traces one
 /// continuous rounded rectangle around header and body in every frame,
-/// including mid-animation. Its bottom corners collapse to [Radius.zero] as
-/// the body attaches (fully rounded when collapsed, matching a standalone
-/// header; square-bottomed once expanded, reading as one block with the
-/// body), and a single hairline divider is drawn between header and body,
-/// sized to zero height while collapsed. This geometry is driven by that same
-/// [LayrzMotionTokens.dTransition] / [LayrzMotionTokens.easingEmphasized]
-/// timeline, via the `animation` value [Expansible.expansibleBuilder]
-/// supplies -- the very same object [Expansible.headerBuilder] and
-/// [Expansible.bodyBuilder] receive. It is deliberately *not* part of the
-/// header's own [AnimatedContainer], which instead animates only
-/// hover/press/focus color changes on the snappier [LayrzMotionTokens.dHover].
-/// Coupling both concerns to one [AnimatedContainer] duration previously
-/// forced a choice between a sluggish hover and geometry that snapped to its
-/// expanded state before the body finished revealing -- visible as a "blink"
-/// on both expand and collapse. Driving geometry from the reveal's own
-/// animation keeps the two perfectly in lockstep instead.
+/// including mid-animation. All four corners stay uniformly rounded to
+/// [LayrzTokens.radius.r2] in every expansion state -- collapsed, expanded,
+/// and everywhere in between -- so the panel always reads as one
+/// consistently rounded card and never squares off at the bottom once open.
+/// A single hairline divider is drawn between header and body, sized to zero
+/// height while collapsed; that divider height (not the corner radius) is
+/// driven by the same [LayrzMotionTokens.dTransition] /
+/// [LayrzMotionTokens.easingEmphasized] timeline, via the `animation` value
+/// [Expansible.expansibleBuilder] supplies -- the very same object
+/// [Expansible.headerBuilder] and [Expansible.bodyBuilder] receive. It is
+/// deliberately *not* part of the header's own [AnimatedContainer], which
+/// instead animates only hover/press/focus color changes on the snappier
+/// [LayrzMotionTokens.dHover]. Coupling both concerns to one
+/// [AnimatedContainer] duration previously forced a choice between a
+/// sluggish hover and geometry that snapped to its expanded state before the
+/// body finished revealing -- visible as a "blink" on both expand and
+/// collapse. Driving the divider from the reveal's own animation keeps the
+/// two perfectly in lockstep instead.
 ///
 /// **Interaction states.** Per decision D15, hovering, focusing, or pressing
 /// the header only ever changes colour -- never its size, padding, or border
@@ -235,19 +237,20 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// one continuous outline in every frame, collapsed or expanded or
   /// mid-animation.
   ///
-  /// The bottom corners interpolate from [LayrzTokens.radius.r2] (fully
-  /// rounded, matching a standalone collapsed header) down to [Radius.zero]
-  /// (square, so the panel reads as one rounded-top block while the body is
-  /// visible) using the same [progress] the header's own geometry and the
-  /// body reveal are driven by -- see [animation] below. The top corners stay
-  /// fixed at [LayrzTokens.radius.r2] regardless of expansion state.
+  /// The corner radius is a constant [LayrzTokens.radius.r2] on all four
+  /// corners, in every expansion state -- collapsed, expanded, and every
+  /// frame in between. The panel is meant to read as one consistently
+  /// rounded card whether closed or open; it must never square off at the
+  /// bottom once expanded. [progress] no longer drives any part of the
+  /// corner geometry -- only the shadow fade (below) and the internal
+  /// divider's height are still keyed to it.
   ///
   /// [animation] is [Expansible]'s raw, linear controller -- the same object
   /// passed to [Expansible.headerBuilder] and [Expansible.bodyBuilder] -- so
-  /// this shell's corner radius interpolates in lockstep with the body's own
-  /// height-factor reveal, not on a separately-timed animation. See the
-  /// [LayrzAccordion] class docs for the "blink" bug that separate timelines
-  /// previously caused.
+  /// the divider and shadow below still interpolate in lockstep with the
+  /// body's own height-factor reveal, not on a separately-timed animation.
+  /// See the [LayrzAccordion] class docs for the "blink" bug that separate
+  /// timelines previously caused.
   ///
   /// The seam between header and body is a single hairline [Container] whose
   /// *height* (not merely its opacity) animates from `0` to [spec.borderWidth]
@@ -256,7 +259,7 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// a stray line would render with nothing below it.
   ///
   /// **Elevation on open (DESIGN-92 follow-up).** An outer [DecoratedBox] --
-  /// carrying only [BoxDecoration.boxShadow] and the same animated
+  /// carrying only [BoxDecoration.boxShadow] and the same constant
   /// [borderRadius], no border and no fill -- wraps the existing
   /// [ClipRRect]/border/[Column] stack instead of sitting inside it. This is
   /// load-bearing, not stylistic: [ClipRRect] clips its subtree to its rounded
@@ -267,13 +270,15 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// exactly as before, so it keeps painting *over* the clipped fill and
   /// remains visible sitting on top of the shadow in both states.
   ///
-  /// The shadow fades in and out on the same [progress] driving the corner
-  /// radius and divider above -- never a second timeline, for the same
-  /// "blink" reason documented on the class. [spec.shadow] is the constant,
-  /// full-elevation [LayrzTokens.shadow.elevation2] list; [_fadeShadow] scales
-  /// each [BoxShadow]'s alpha by [progress] so it is fully absent at 0
-  /// (collapsed, flat) and at full strength at 1 (expanded, reads as a raised
-  /// card), interpolating continuously in between.
+  /// The shadow fades in and out on the same [progress] driving the divider
+  /// above -- never a second timeline, for the same "blink" reason documented
+  /// on the class. [spec.shadow] is the constant, full-elevation
+  /// [LayrzTokens.shadow.elevation2] list; [_fadeShadow] scales each
+  /// [BoxShadow]'s alpha by [progress] so it is fully absent at 0 (collapsed,
+  /// flat, border-only) and at full strength at 1 (expanded, reads as a
+  /// raised card), interpolating continuously in between. The corner radius
+  /// itself never participates in this fade -- it is constant regardless of
+  /// [progress].
   Widget _buildPanelShell(
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
@@ -286,13 +291,7 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
       animation: expandProgress,
       builder: (context, child) {
         final progress = expandProgress.value;
-        final bottomRadius = Radius.circular(tokens.radius.r2 * (1 - progress));
-        final borderRadius = BorderRadius.only(
-          topLeft: Radius.circular(tokens.radius.r2),
-          topRight: Radius.circular(tokens.radius.r2),
-          bottomLeft: bottomRadius,
-          bottomRight: bottomRadius,
-        );
+        final borderRadius = BorderRadius.circular(tokens.radius.r2);
         final dividerHeight = spec.borderWidth * progress;
 
         return DecoratedBox(

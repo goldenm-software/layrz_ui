@@ -396,7 +396,7 @@ void main() {
     }
 
     testWidgets(
-      'the outer shell geometry animates on the body reveal timeline, not a separate one (no blink)',
+      'the outer shell corner radius stays uniform across the entire reveal, never interpolating',
       (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -416,40 +416,36 @@ void main() {
           ),
         );
 
-        // Fully collapsed: bottom corners are rounded, matching a standalone
-        // header with no body attached.
+        // Fully collapsed: all four corners are rounded, matching a
+        // standalone header with no body attached.
         expect(outerShellBorderRadius(tester).bottomLeft, equals(const Radius.circular(10.0)));
+        expect(outerShellBorderRadius(tester).topLeft, equals(const Radius.circular(10.0)));
 
         await tester.tap(find.text('Timeline check'));
         await tester.pump();
 
-        // Pump to roughly the midpoint of the 200ms dTransition reveal, well
-        // past the 100ms dHover duration a header-only color animation would
-        // already have finished within. If the shell's geometry were driven
-        // by dHover instead of the shared reveal animation, the bottom radius
-        // would already have snapped to its fully-expanded value
-        // (Radius.zero) here -- the very blink this fix removes.
+        // Pump to roughly the midpoint of the 200ms dTransition reveal. The
+        // corner radius must not move at all during the reveal -- only the
+        // shadow and the internal divider are still keyed to this timeline.
         await tester.pump(const Duration(milliseconds: 100));
 
-        final midRadius = outerShellBorderRadius(tester).bottomLeft;
+        final midRadius = outerShellBorderRadius(tester);
         expect(
-          midRadius,
-          isNot(equals(Radius.zero)),
-          reason:
-              'outer shell bottom radius must not have reached its expanded value before the body reveal '
-              'finishes',
+          midRadius.bottomLeft,
+          equals(const Radius.circular(10.0)),
+          reason: 'corner radius must stay constant mid-reveal, not interpolate toward square',
         );
-        expect(
-          midRadius,
-          isNot(equals(const Radius.circular(10.0))),
-          reason: 'outer shell bottom radius must be interpolating, not stuck at its collapsed value',
-        );
+        expect(midRadius.topLeft, equals(const Radius.circular(10.0)));
 
         await tester.pumpAndSettle();
 
-        // Fully expanded and settled: bottom corners are square, landing in
-        // the same frame the body finished revealing.
-        expect(outerShellBorderRadius(tester).bottomLeft, equals(Radius.zero));
+        // Fully expanded and settled: still uniformly rounded on all four
+        // corners -- expansion never squares off the bottom.
+        final expandedRadius = outerShellBorderRadius(tester);
+        expect(expandedRadius.topLeft, equals(const Radius.circular(10.0)));
+        expect(expandedRadius.topRight, equals(const Radius.circular(10.0)));
+        expect(expandedRadius.bottomLeft, equals(const Radius.circular(10.0)));
+        expect(expandedRadius.bottomRight, equals(const Radius.circular(10.0)));
       },
     );
 
@@ -490,11 +486,13 @@ void main() {
       // encloses header and body together rather than only the header.
       expect(find.byType(_BodyMarker), findsOneWidget);
 
-      // Bottom corners are square while expanded -- the panel reads as one
-      // rounded-top block with the body attached, not a rounded box floating
-      // above a second rounded box.
-      expect(outerShellBorderRadius(tester).bottomLeft, equals(Radius.zero));
-      expect(outerShellBorderRadius(tester).bottomRight, equals(Radius.zero));
+      // Bottom corners stay rounded, equal to the top corners, even while
+      // expanded -- the panel always reads as one consistently rounded
+      // card, never squaring off at the bottom once open.
+      expect(outerShellBorderRadius(tester).bottomLeft, equals(const Radius.circular(10.0)));
+      expect(outerShellBorderRadius(tester).bottomRight, equals(const Radius.circular(10.0)));
+      expect(outerShellBorderRadius(tester).topLeft, equals(const Radius.circular(10.0)));
+      expect(outerShellBorderRadius(tester).topRight, equals(const Radius.circular(10.0)));
     });
 
     testWidgets('at full expansion, the panel is elevated with a full-strength drop shadow', (tester) async {
