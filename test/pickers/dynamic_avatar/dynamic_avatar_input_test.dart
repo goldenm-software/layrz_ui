@@ -6,7 +6,7 @@ import 'package:flutter_mdi_remap/flutter_mdi_remap.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/images/src/avatar.dart';
 import 'package:layrz_ui/src/images/src/avatar_source.dart';
-import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
+import 'package:layrz_ui/src/pickers/src/dynamic_avatar/dynamic_avatar_tile.dart';
 import 'package:layrz_ui/src/pickers/src/dynamic_avatar/dynamic_avatar_input.dart';
 import 'package:layrz_ui/src/pickers/src/image/image_input.dart';
 
@@ -59,24 +59,35 @@ void main() {
       expect(findButtonLabel('Avatar'), findsOneWidget);
     });
 
-    guardedTestWidgets('shows hint text when value is null', (tester) async {
+    guardedTestWidgets('the empty tile shows the add-avatar affordance icon and no clear badge', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar', hintText: 'Pick an avatar'));
 
-      expect(find.text('Pick an avatar'), findsWidgets);
+      expect(find.byIcon(MdiIcons.accountPlusOutline), findsOneWidget);
+      expect(find.byWidgetPredicate((widget) => widget is LayrzAvatar), findsNothing);
     });
 
-    guardedTestWidgets('renders the account-circle affordance icon', (tester) async {
+    guardedTestWidgets('the closed field is a LayrzDynamicAvatarTile', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      expect(find.byIcon(MdiIcons.accountCircleOutline), findsOneWidget);
+      expect(find.byType(LayrzDynamicAvatarTile), findsOneWidget);
+    });
+
+    guardedTestWidgets('isRequired renders a trailing asterisk in the label', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar', isRequired: true));
+
+      expect(findButtonLabel('Avatar*'), findsOneWidget);
     });
 
     guardedTestWidgets('the closed-field preview renders a LayrzAvatar for a non-null value', (tester) async {
@@ -102,7 +113,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       expect(find.text('URL'), findsOneWidget);
@@ -117,12 +128,119 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       expect(find.text('URL'), findsOneWidget);
       expect(find.text('Icon'), findsOneWidget);
       expect(find.text('Emoji'), findsOneWidget);
+    });
+  });
+
+  group('LayrzDynamicAvatarInput — closed-field clear badge', () {
+    // The clear affordance is an icon-only circular badge overlaid on the
+    // tile's top-right corner (mirroring `LayrzImageInput`'s own), announced
+    // via `Semantics(label: 'Remove avatar')` -- `tester.tap` on that
+    // semantics finder hit-tests through to the badge's own `GestureDetector`
+    // beneath it.
+    Finder clearBadgeFinder() => find.bySemanticsLabel('Remove avatar');
+
+    guardedTestWidgets('no clear badge is shown when the value is null (empty tile)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
+
+        expect(clearBadgeFinder(), findsNothing);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('the clear badge appears once a value is set', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemedApp(
+          tester,
+          LayrzDynamicAvatarInput(labelText: 'Avatar', value: const LayrzAvatarEmoji('😀')),
+        );
+
+        expect(clearBadgeFinder(), findsOneWidget);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('tapping the clear badge fires onChanged with null without opening the surface', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        LayrzAvatarSource? changed = const LayrzAvatarEmoji('😀');
+        var callCount = 0;
+        await pumpThemedApp(
+          tester,
+          LayrzDynamicAvatarInput(
+            labelText: 'Avatar',
+            value: const LayrzAvatarEmoji('😀'),
+            onChanged: (c) {
+              callCount++;
+              changed = c;
+            },
+          ),
+        );
+
+        await tester.tap(clearBadgeFinder());
+        await tester.pumpAndSettle();
+
+        expect(callCount, 1);
+        expect(changed, isNull);
+        // The surface never opened -- no tab labels on screen.
+        expect(find.text('URL'), findsNothing);
+        // The tile returns to its empty state.
+        expect(clearBadgeFinder(), findsNothing);
+        expect(find.byIcon(MdiIcons.accountPlusOutline), findsOneWidget);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('a disabled populated field does not render an interactive clear badge', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        var called = false;
+        await pumpThemedApp(
+          tester,
+          LayrzDynamicAvatarInput(
+            labelText: 'Avatar',
+            value: const LayrzAvatarEmoji('😀'),
+            disabled: true,
+            onChanged: (_) => called = true,
+          ),
+        );
+
+        await tester.tap(clearBadgeFinder());
+        await tester.pumpAndSettle();
+
+        expect(called, isFalse);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 
@@ -140,7 +258,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Icon'));
@@ -166,7 +284,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Icon'));
       await tester.pumpAndSettle();
@@ -184,7 +302,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Icon'));
       await tester.pumpAndSettle();
@@ -217,7 +335,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Emoji'));
@@ -244,7 +362,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Emoji'));
       await tester.pumpAndSettle();
@@ -262,7 +380,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Emoji'));
       await tester.pumpAndSettle();
@@ -291,7 +409,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Emoji'));
       await tester.pumpAndSettle();
@@ -326,7 +444,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       // URL is the first (initial) tab -- already selected on open.
@@ -349,7 +467,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(EditableText).first, '   ');
@@ -370,7 +488,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar'));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Base64'));
@@ -398,7 +516,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Base64'));
       await tester.pumpAndSettle();
@@ -422,7 +540,7 @@ void main() {
         LayrzDynamicAvatarInput(labelText: 'Avatar', onChanged: (c) => changed = c),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Base64'));
       await tester.pumpAndSettle();
@@ -456,7 +574,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Remove avatar'));
@@ -476,7 +594,7 @@ void main() {
 
       await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar', disabled: true));
 
-      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.tap(find.byType(LayrzDynamicAvatarTile).first);
       await tester.pumpAndSettle();
 
       expect(find.text('URL'), findsNothing);

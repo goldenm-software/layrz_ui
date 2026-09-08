@@ -1,26 +1,39 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/src/dialogs/dialogs.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/images/images.dart';
-import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
 
-import '../shared/picker_anchor.dart';
 import 'dynamic_avatar_surface.dart';
+import 'dynamic_avatar_tile.dart';
 
 /// A Material-free, composed avatar picker input, backed by
 /// [LayrzAvatarSource], in the layrz_ui design system.
 ///
-/// [LayrzDynamicAvatarInput] presents a picker anchor whose closed-state
-/// preview renders the current selection via [LayrzAvatar] — an image (URL
-/// or base64), an `MdiRemapIcon`, a Unicode emoji, or (when [value] is
-/// `null`) the field's own [hintText]. Tapping the anchor opens
-/// [LayrzDynamicAvatarSurface] via [LayrzResponsiveModal.show] (a dialog on
-/// wide viewports, a [LayrzBottomSheet] below `isCompact`), which lets the
-/// user pick from exactly four fixed modes — URL, Upload, Icon, and Emoji —
-/// or clear the selection back to `null`.
+/// [LayrzDynamicAvatarInput] presents its closed state as a **tappable
+/// avatar tile** ([LayrzDynamicAvatarTile]) — mirroring `LayrzImageInput`'s
+/// own tile presentation exactly, per the maintainer's explicit direction
+/// that this field's closed state should show the full avatar prominently
+/// rather than a compact picker-anchor row. The tile renders the current
+/// selection via [LayrzAvatar] — an image (URL or base64), an
+/// `MdiRemapIcon`, or a Unicode emoji — or, when [value] is `null`, a
+/// centered add-avatar affordance icon. Tapping the tile (empty or
+/// populated) opens [LayrzDynamicAvatarSurface] via
+/// [LayrzResponsiveModal.show] (a dialog on wide viewports, a
+/// [LayrzBottomSheet] below `isCompact`), which lets the user pick from
+/// exactly four fixed modes — URL, Upload, Icon, and Emoji — or clear the
+/// selection back to `null`. A populated tile additionally carries an
+/// independently tappable circular clear (X) badge at its top-right corner,
+/// matching [LayrzDynamicAvatarTile]/`LayrzImageInput`'s own clear-badge
+/// convention.
+///
+/// **The tabbed dialog surface is unchanged by this presentation** — only
+/// the closed field's own build changed; [LayrzDynamicAvatarSurface] (its
+/// four tabs, inline grids, and commit contract) is exactly the same
+/// surface a picker-anchor-shaped closed field used to open.
 ///
 /// **The four modes are fixed — there is no `enabledTypes` parameter.**
 /// Unlike a caller-configurable subset, every [LayrzDynamicAvatarSurface]
@@ -79,27 +92,38 @@ class LayrzDynamicAvatarInput extends StatefulWidget {
   /// Whether the field is disabled (not interactive).
   final bool disabled;
 
-  /// The text editing controller for the anchor field. If null, one is
-  /// created and disposed by the widget.
+  /// A text editing controller, retained for API compatibility with the
+  /// previous picker-anchor-row presentation. If null, one is created and
+  /// disposed by the widget.
   ///
-  /// This field is display-only (the anchor never accepts direct text
-  /// entry) — the controller exists only so [LayrzInputFooterSlot] and
-  /// [LayrzInputChrome]'s own machinery, which key off a controller's
-  /// `hasListeners`/`text` state, behave consistently with every sibling
-  /// picker anchor in this module.
+  /// The tile presentation has no text field of any kind, so this
+  /// controller is never attached to anything rendered by this widget — it
+  /// is created/disposed following the same lifecycle as before purely so a
+  /// caller passing its own [TextEditingController] does not need to change
+  /// anything when this field's closed-state presentation changes.
   final TextEditingController? controller;
 
-  /// The focus node for the anchor field. If null, one is created and
-  /// disposed by the widget.
+  /// The focus node the tile itself attaches to. If null, one is created
+  /// and disposed by the widget.
   final FocusNode? focusNode;
 
-  /// Whether the field uses the dense density variant.
+  /// Retained for API compatibility with the previous picker-anchor-row
+  /// presentation.
+  ///
+  /// The tile presentation has a single fixed size
+  /// ([kDynamicAvatarTileSize], matching `LayrzImageInput`'s own default) in
+  /// every state, so there is no dense/regular density distinction to make
+  /// — this flag has no visible effect.
   final bool dense;
 
-  /// The title text for the help affordance tooltip.
+  /// Retained for API compatibility with the previous picker-anchor-row
+  /// presentation, which rendered this as a help-affordance tooltip title
+  /// via [LayrzInputChrome]. The tile presentation has no chrome to host
+  /// such a tooltip, so this value is accepted but not rendered anywhere.
   final String? helpTitleText;
 
-  /// The content text for the help affordance tooltip.
+  /// Retained for API compatibility — see [helpTitleText]. Accepted but not
+  /// rendered anywhere by the tile presentation.
   final String? helpContentText;
 
   /// Creates a new [LayrzDynamicAvatarInput].
@@ -218,78 +242,54 @@ class _LayrzDynamicAvatarInputState extends State<LayrzDynamicAvatarInput> {
     );
   }
 
-  Widget _buildInteractiveField({required BuildContext context, required VoidCallback? onTap}) {
-    final tokens = context.tokens;
-    final current = _displayedValue;
-
-    final contentChild = SizedBox(
-      width: double.infinity,
-      child: current != null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LayrzAvatar(source: current, size: tokens.typography.body.fontSize! * 1.8),
-                SizedBox(width: tokens.spacing.sp2),
-                Flexible(
-                  child: Text(
-                    widget.hintText ?? '',
-                    style: tokens.typography.body,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+  /// Builds the label row above the tile, mirroring [LayrzImageInput]'s
+  /// `_buildLabel` composition exactly.
+  Widget _buildLabel(LayrzTokens tokens) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
+      child: ExcludeSemantics(
+        child: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: widget.labelText,
+                style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
+              ),
+              if (widget.isRequired)
+                TextSpan(
+                  text: '*',
+                  style: tokens.typography.label.copyWith(color: tokens.colors.danger),
                 ),
-              ],
-            )
-          : Text(
-              widget.hintText ?? '',
-              style: tokens.typography.body,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-    );
-
-    final states = <WidgetState>{if (widget.disabled) WidgetState.disabled};
-    final hasErrors = widget.errors.isNotEmpty;
-    final spec = LayrzInputStyleSpec.resolve(states: states, tokens: tokens, hasErrors: hasErrors);
-
-    final fieldRow = buildPickerFieldRow(
-      context: context,
-      tokens: tokens,
-      contentChild: contentChild,
-      states: states,
-      errors: widget.errors,
-      disabled: widget.disabled,
-      isRequired: widget.isRequired,
-      hintText: widget.hintText,
-      controller: _controller,
-      dense: widget.dense,
-      helpTitleText: widget.helpTitleText,
-      helpContentText: widget.helpContentText,
-      affordanceIcon: buildPickerAffordanceIcon(
-        tokens: tokens,
-        spec: spec,
-        hasErrors: hasErrors,
-        icon: MdiIcons.accountCircleOutline,
+            ],
+          ),
+        ),
       ),
-    );
-
-    return buildPickerAnchorColumn(
-      context: context,
-      tokens: tokens,
-      labelText: widget.labelText,
-      isRequired: widget.isRequired,
-      fieldRow: fieldRow,
-      errors: widget.errors,
-      hideDetails: widget.hideDetails,
-      controller: _controller,
-      focusNode: _focusNode,
-      onTap: onTap,
-      disabled: widget.disabled,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return _buildInteractiveField(context: context, onTap: widget.disabled ? null : _openPicker);
+    final tokens = context.tokens;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.labelText != null) _buildLabel(tokens),
+        LayrzDynamicAvatarTile(
+          source: _displayedValue,
+          onTap: widget.disabled ? null : _openPicker,
+          onClear: widget.disabled ? null : _handleCleared,
+          disabled: widget.disabled,
+          hasErrors: widget.errors.isNotEmpty,
+          focusNode: _focusNode,
+          semanticLabel: widget.labelText ?? widget.hintText,
+        ),
+        LayrzInputFooterSlot(
+          errors: widget.errors,
+          hideDetails: widget.hideDetails,
+        ),
+      ],
+    );
   }
 }
