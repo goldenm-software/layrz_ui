@@ -98,9 +98,9 @@ void main() {
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
 
-    test('aiAccent defaults to the raw Layrz accent orange', () {
+    test('aiAccent defaults to the raw Layrz accent light blue', () {
       final tokens = LayrzColorTokens.light();
-      expect(tokens.aiAccent, equals(const Color(0xFFFF9800)));
+      expect(tokens.aiAccent, equals(const Color(0xFF03A9F4)));
     });
 
     test('aiAccent survives copyWith for other fields', () {
@@ -114,7 +114,7 @@ void main() {
       final modified = original.copyWith(aiAccent: const Color(0xFF00FF00));
 
       expect(modified.aiAccent, equals(const Color(0xFF00FF00)));
-      expect(original.aiAccent, equals(const Color(0xFFFF9800))); // original unchanged
+      expect(original.aiAccent, equals(const Color(0xFF03A9F4))); // original unchanged
     });
 
     test('equality accounts for aiAccent', () {

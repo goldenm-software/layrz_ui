@@ -76,11 +76,14 @@ class LayrzColorTokens {
   /// Accent color for AI-generated or AI-assisted content markers.
   ///
   /// This is a standalone named handle — deliberately NOT a reuse of
-  /// [LayrzColors.orange] or any other palette entry — so it can evolve
-  /// independently of the semantic [warning] color, which was itself moved
-  /// off Material orange (`#FF9800`) for contrast reasons (see the comment
-  /// on [LayrzColorTokens.light]). AI-disclosure surfaces are icon-only, so
-  /// that contrast concern does not apply here.
+  /// [LayrzColors.warning] or any other semantic status color — so it can
+  /// evolve independently of them. It is set to a light blue
+  /// (`#03A9F4`, matching [LayrzColors.lightBlue]'s 500 shade) rather than
+  /// orange: orange is the semantic [warning] hue, and reusing it on an
+  /// AI-disclosure marker reads as a caution/alert rather than a neutral
+  /// "this was AI-assisted" signal. Blue carries no such semantic baggage in
+  /// this design system, which is why it was chosen as the dedicated
+  /// AI-accent hue.
   final Color aiAccent;
 
   /// Creates a new [LayrzColorTokens].
@@ -138,7 +141,7 @@ class LayrzColorTokens {
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
-      aiAccent: const Color(0xFFFF9800),
+      aiAccent: const Color(0xFF03A9F4),
     );
   }
 
