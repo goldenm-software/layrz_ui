@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.25
+
+**Find-in-page highlights now land correctly at any display scale.** On a screen whose device
+pixel ratio isn't 1.0 — a 150%/200%-scaled Windows display, a HiDPI Linux desktop, most 4K
+monitors — `LayrzFindInPage` painted each match's highlight box devicePixelRatio-times too large
+and offset from the matched word (the text itself was always correct; only the highlight was
+wrong). It was invisible at 100% scale, which is why it slipped through. The semantics-derived
+match geometry carried one extra device-pixel-ratio factor that the rest of the highlight
+pipeline did not; the match rectangles are now resolved in logical pixels so the highlight sits
+exactly over the word at every scale.
+
+**Chrome text in `LayrzAccordion`, `LayrzContextMenu`, and `LayrzFileInput` is now unselectable.**
+Their structural labels — the accordion header title, context-menu entry and section labels, and
+the file-input's hint, rejection, label, picked-file name, and action labels — are wrapped in
+`SelectionContainer.disabled`, so dragging a text selection across the page no longer sweeps up
+these widgets' own chrome along with the real content.
+
 ## 0.0.24
 
 **Browser-style find-in-page lands: `LayrzFindInPage` (DESIGN-109).** Ctrl+F (Cmd+F on macOS) now
