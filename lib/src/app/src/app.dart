@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/find_in_page/find_in_page.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
@@ -206,6 +207,28 @@ class LayrzApp extends StatefulWidget {
   /// applied.
   final LayrzTransitionType pageTransitionType;
 
+  // ── Find-in-page ────────────────────────────────────────────────────
+
+  /// Whether the browser-style, in-page Ctrl/Cmd+F find feature is enabled.
+  ///
+  /// Defaults to **`true`** — this is opt-**out**, not opt-in: find-in-page
+  /// ships on for every app unless a caller explicitly disables it per
+  /// customer/build. When `true`, [_LayrzAppState._wrapWithTheme] wraps the
+  /// app's content in a [LayrzFindInPageHost], which registers Ctrl+F
+  /// (Cmd+F on macOS) via the ambient [LayrzShortcut] registry and — on web
+  /// only — additionally suppresses the browser's own native find dialog so
+  /// this themed one opens instead (see [LayrzFindInPageHost]'s own doc for
+  /// the full mechanism).
+  ///
+  /// **Idle cost is negligible.** [LayrzFindInPageHost] holds no
+  /// [SemanticsHandle] — the expensive resource behind find's match search —
+  /// until the user actually opens find; see
+  /// [LayrzFindInPageController]'s "Idle cost" doc for why this is safe to
+  /// leave on by default for every app rather than something a caller must
+  /// remember to enable. Set this to `false` to opt a specific app (or a
+  /// specific customer build) out entirely.
+  final bool enableFindInPage;
+
   /// Imperative-routing constructor.
   const LayrzApp({
     super.key,
@@ -234,6 +257,7 @@ class LayrzApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
+    this.enableFindInPage = true,
   }) : routerConfig = null,
        routerDelegate = null,
        routeInformationParser = null,
@@ -267,6 +291,7 @@ class LayrzApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
+    this.enableFindInPage = true,
   }) : home = null,
        routes = null,
        onGenerateRoute = null,
@@ -352,15 +377,38 @@ class _LayrzAppState extends State<LayrzApp> {
   }) {
     final userChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
 
+    // Without an ancestor `DefaultSelectionStyle`, `EditableText.selectionColor`
+    // and `SelectableRegion.selectionColor` both resolve to null and paint
+    // fully transparent — text selection is present but invisible everywhere
+    // in the app (Material installs this via `TextSelectionTheme`; this
+    // Material-free design system has no equivalent unless installed here).
+    // Both colors are first-class themeable fields on `LayrzThemeData` (see
+    // `LayrzThemeData.selectionColor` / `.cursorColor`) rather than hardcoded
+    // here, so a future dark theme can override them without touching this file.
+    // enableFindInPage wraps the innermost user content only — it needs to
+    // sit UNDER LayrzShortcut (so LayrzFindInPageHost can register its
+    // Ctrl/Cmd+F chord against the ambient registry) and under
+    // LayrzSnackbarMessenger's own root Overlay/WidgetsApp chain (so its
+    // root-overlay highlight/find-bar painting has an Overlay ancestor to
+    // resolve). Composing it here — nearest to userChild, innermost in the
+    // chain — satisfies both without disturbing LayrzShortcut,
+    // LayrzSnackbarMessenger, DefaultSelectionStyle, or the debug watermark
+    // built around this whole themedChild below.
+    final contentWithFindInPage = widget.enableFindInPage ? LayrzFindInPageHost(child: userChild) : userChild;
+
     final themedChild = LayrzTheme(
       data: themeData,
-      child: DefaultTextStyle(
-        style: themeData.textStyle,
-        child: IconTheme(
-          data: themeData.iconTheme,
-          child: ColoredBox(
-            color: themeData.backgroundColor,
-            child: LayrzShortcut(child: LayrzSnackbarMessenger(child: userChild)),
+      child: DefaultSelectionStyle(
+        selectionColor: themeData.selectionColor,
+        cursorColor: themeData.cursorColor,
+        child: DefaultTextStyle(
+          style: themeData.textStyle,
+          child: IconTheme(
+            data: themeData.iconTheme,
+            child: ColoredBox(
+              color: themeData.backgroundColor,
+              child: LayrzShortcut(child: LayrzSnackbarMessenger(child: contentWithFindInPage)),
+            ),
           ),
         ),
       ),
