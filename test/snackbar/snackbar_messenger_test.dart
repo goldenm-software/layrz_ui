@@ -67,13 +67,13 @@ void main() {
 
   /// Finds the outer stack-positioning [Positioned] (the one placing the
   /// whole accordion deck relative to the [Overlay]) rather than the
-  /// per-card progress bar's own [Positioned] (`top: 0, left: 0, right: 0`
-  /// inside [LayrzSnackbarView]'s [ClipRRect]) — both share the same
-  /// non-null-top/null-bottom/zero-left/zero-right shape, so a bare
-  /// predicate on those fields alone is ambiguous. Disambiguates by
-  /// ancestry instead: the outer stack [Positioned] is an *ancestor* of the
-  /// (single, in every test using this helper) [LayrzSnackbarView] card,
-  /// while the progress bar's own [Positioned] is a *descendant* of one.
+  /// per-card progress bar's own [Positioned] (`bottom: 0, left: 0, right: 0`
+  /// inside [LayrzSnackbarView]'s [ClipRRect]). Disambiguates by ancestry:
+  /// the outer stack [Positioned] is an *ancestor* of the (single, in every
+  /// test using this helper) [LayrzSnackbarView] card, while the progress
+  /// bar's own [Positioned] is a *descendant* of one — so restricting the
+  /// predicate to non-null-top/null-bottom candidates and then to ancestors
+  /// of the card unambiguously selects the outer one.
   Finder findStackPositioned() {
     final candidates = find.byWidgetPredicate(
       (widget) => widget is Positioned && widget.top != null && widget.bottom == null,
