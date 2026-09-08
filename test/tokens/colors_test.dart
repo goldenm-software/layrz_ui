@@ -98,9 +98,9 @@ void main() {
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
 
-    test('aiAccent defaults to the raw Layrz accent orange', () {
+    test('aiAccent defaults to the raw Layrz accent light blue', () {
       final tokens = LayrzColorTokens.light();
-      expect(tokens.aiAccent, equals(const Color(0xFFFF9800)));
+      expect(tokens.aiAccent, equals(const Color(0xFF03A9F4)));
     });
 
     test('aiAccent survives copyWith for other fields', () {
@@ -114,7 +114,7 @@ void main() {
       final modified = original.copyWith(aiAccent: const Color(0xFF00FF00));
 
       expect(modified.aiAccent, equals(const Color(0xFF00FF00)));
-      expect(original.aiAccent, equals(const Color(0xFFFF9800))); // original unchanged
+      expect(original.aiAccent, equals(const Color(0xFF03A9F4))); // original unchanged
     });
 
     test('equality accounts for aiAccent', () {
@@ -126,6 +126,52 @@ void main() {
     test('hashCode differs when aiAccent differs', () {
       final tokens1 = LayrzColorTokens.light();
       final tokens2 = LayrzColorTokens.light().copyWith(aiAccent: const Color(0xFF00FF00));
+      expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
+    });
+
+    test('selectionColor defaults to LayrzColors.lightBlue', () {
+      final tokens = LayrzColorTokens.light();
+      expect(tokens.selectionColor, isA<LayrzColorSwatch>());
+      expect(tokens.selectionColor, equals(LayrzColors.lightBlue));
+      expect(tokens.selectionColor.shade500, equals(const Color(0xFF03A9F4)));
+      expect(tokens.selectionColor.shade100, equals(const Color(0xFFB3E5FC)));
+    });
+
+    test('selectionColor survives copyWith for other fields', () {
+      final original = LayrzColorTokens.light();
+      final modified = original.copyWith(primary: const Color(0xFF123456));
+      expect(modified.selectionColor, equals(original.selectionColor));
+    });
+
+    test('copyWith replaces selectionColor independently, coercing a plain Color into a swatch', () {
+      final original = LayrzColorTokens.light();
+      final modified = original.copyWith(selectionColor: const Color(0xFF00FF00));
+
+      expect(modified.selectionColor, isA<LayrzColorSwatch>());
+      // Mirrors the coercion fallback shared by every other swatch field
+      // (danger/success/warning/info/contextual): a plain Color is wrapped
+      // with only its 50 shade populated, not a full ramp.
+      expect(modified.selectionColor.shade50, equals(const Color(0xFF00FF00)));
+      expect(original.selectionColor, equals(LayrzColors.lightBlue)); // original unchanged
+    });
+
+    test('copyWith accepts a full LayrzColorSwatch for selectionColor unchanged', () {
+      final original = LayrzColorTokens.light();
+      final modified = original.copyWith(selectionColor: LayrzColors.blue);
+
+      expect(modified.selectionColor, equals(LayrzColors.blue));
+      expect(modified.selectionColor.shade100, equals(LayrzColors.blue.shade100));
+    });
+
+    test('equality accounts for selectionColor', () {
+      final tokens1 = LayrzColorTokens.light();
+      final tokens2 = LayrzColorTokens.light().copyWith(selectionColor: const Color(0xFF00FF00));
+      expect(tokens1, isNot(equals(tokens2)));
+    });
+
+    test('hashCode differs when selectionColor differs', () {
+      final tokens1 = LayrzColorTokens.light();
+      final tokens2 = LayrzColorTokens.light().copyWith(selectionColor: const Color(0xFF00FF00));
       expect(tokens1.hashCode, isNot(equals(tokens2.hashCode)));
     });
   });

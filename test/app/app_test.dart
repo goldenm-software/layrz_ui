@@ -142,6 +142,80 @@ void main() {
       expect(find.byType(LayrzSnackbarMessenger), findsOneWidget);
     });
 
+    group('enableFindInPage', () {
+      testWidgets('defaults to true — LayrzFindInPageHost is present', (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            home: const SizedBox.shrink(),
+          ),
+        );
+
+        expect(find.byType(LayrzFindInPageHost), findsOneWidget);
+      });
+
+      testWidgets('false omits LayrzFindInPageHost entirely', (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            enableFindInPage: false,
+            home: const SizedBox.shrink(),
+          ),
+        );
+
+        expect(find.byType(LayrzFindInPageHost), findsNothing);
+      });
+
+      testWidgets('defaults to true on the router constructor too', (tester) async {
+        final routerConfig = RouterConfig<Object>(
+          routeInformationProvider: _SimpleRouteInformationProvider(),
+          routeInformationParser: SimpleRouteInformationParser(),
+          routerDelegate: SimpleRouterDelegate(),
+        );
+
+        await tester.pumpWidget(
+          LayrzApp.router(
+            title: 'Router Test',
+            routerConfig: routerConfig,
+          ),
+        );
+
+        expect(find.byType(LayrzFindInPageHost), findsOneWidget);
+      });
+
+      testWidgets('false on the router constructor omits it too', (tester) async {
+        final routerConfig = RouterConfig<Object>(
+          routeInformationProvider: _SimpleRouteInformationProvider(),
+          routeInformationParser: SimpleRouteInformationParser(),
+          routerDelegate: SimpleRouterDelegate(),
+        );
+
+        await tester.pumpWidget(
+          LayrzApp.router(
+            title: 'Router Test',
+            enableFindInPage: false,
+            routerConfig: routerConfig,
+          ),
+        );
+
+        expect(find.byType(LayrzFindInPageHost), findsNothing);
+      });
+
+      testWidgets('home content is still reachable when enabled', (tester) async {
+        await tester.pumpWidget(
+          LayrzApp(
+            title: 'Test App',
+            home: const SizedBox(width: 77, height: 77),
+          ),
+        );
+
+        expect(
+          find.byWidgetPredicate((widget) => widget is SizedBox && widget.width == 77 && widget.height == 77),
+          findsOneWidget,
+        );
+      });
+    });
+
     testWidgets('ColoredBox carries theme.backgroundColor', (tester) async {
       final theme = LayrzThemeData.light();
 

@@ -177,6 +177,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/menus'),
       ),
       LayrzNavigatorPage(
+        id: '/context-menu',
+        labelText: 'Context Menu',
+        icon: MdiIcons.cursorDefaultClickOutline,
+        isSelected: currentRoute == '/context-menu',
+        onTap: () => _navigateTo(context, '/context-menu'),
+      ),
+      LayrzNavigatorPage(
         id: '/dialogs',
         labelText: 'Dialogs',
         icon: MdiIcons.windowMaximize,
@@ -329,6 +336,13 @@ class ShowroomLayout extends StatelessWidget {
         icon: MdiIcons.tabUnselected,
         isSelected: currentRoute == '/tab-view',
         onTap: () => _navigateTo(context, '/tab-view'),
+      ),
+      LayrzNavigatorPage(
+        id: '/app-banner',
+        labelText: 'App Banner',
+        icon: MdiIcons.flaskOutline,
+        isSelected: currentRoute == '/app-banner',
+        onTap: () => _navigateTo(context, '/app-banner'),
       ),
     ];
   }

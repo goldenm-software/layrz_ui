@@ -64,6 +64,23 @@ class LayrzColorTokens {
   /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
   final LayrzColorSwatch contextual;
 
+  /// The tint swatch behind app-wide text selection and the find-in-page
+  /// highlight.
+  ///
+  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50
+  /// (lightest) to 900 (darkest). Two shades are used directly by name:
+  /// [LayrzColorSwatch.shade500] is the primary selection tone — the
+  /// app-wide text-selection highlight (see `LayrzThemeData.selectionColor`)
+  /// and the find-spike's "current match" tint both derive from it — and
+  /// [LayrzColorSwatch.shade100] is the secondary tone used for the
+  /// find-spike's "other matches" tint. Keeping both on one swatch means text
+  /// selection and find-highlighting always read as the same visual language
+  /// rather than two independently-tuned colors.
+  ///
+  /// First-class themeable: a future dark theme overrides this single swatch
+  /// and both consumers pick up the new hue automatically.
+  final LayrzColorSwatch selectionColor;
+
   /// Color used for borders, dividers, and separator lines.
   final Color divider;
 
@@ -76,12 +93,26 @@ class LayrzColorTokens {
   /// Accent color for AI-generated or AI-assisted content markers.
   ///
   /// This is a standalone named handle — deliberately NOT a reuse of
-  /// [LayrzColors.orange] or any other palette entry — so it can evolve
-  /// independently of the semantic [warning] color, which was itself moved
-  /// off Material orange (`#FF9800`) for contrast reasons (see the comment
-  /// on [LayrzColorTokens.light]). AI-disclosure surfaces are icon-only, so
-  /// that contrast concern does not apply here.
+  /// [LayrzColors.warning] or any other semantic status color — so it can
+  /// evolve independently of them. It is set to a light blue
+  /// (`#03A9F4`, matching [LayrzColors.lightBlue]'s 500 shade) rather than
+  /// orange: orange is the semantic [warning] hue, and reusing it on an
+  /// AI-disclosure marker reads as a caution/alert rather than a neutral
+  /// "this was AI-assisted" signal. Blue carries no such semantic baggage in
+  /// this design system, which is why it was chosen as the dedicated
+  /// AI-accent hue.
   final Color aiAccent;
+
+  /// Default color for `LayrzApp`'s debug-only tiled diagonal watermark
+  /// (`LayrzAppBanner`).
+  ///
+  /// Deliberately a standalone, muted neutral gray — not a reuse of [danger]
+  /// or any other semantic status color. A staging/debug watermark is not an
+  /// error state, so it must not borrow the danger hue; sharing that color
+  /// would make a build marker read as an alert. Used only as the fallback
+  /// when the app-level banner config's own color override is `null`; a
+  /// caller-supplied color always takes precedence.
+  final Color watermark;
 
   /// Creates a new [LayrzColorTokens].
   const LayrzColorTokens({
@@ -99,10 +130,12 @@ class LayrzColorTokens {
     required this.warning,
     required this.info,
     required this.contextual,
+    required this.selectionColor,
     required this.divider,
     required this.overlay,
     required this.tonalOpacity,
     required this.aiAccent,
+    required this.watermark,
   });
 
   /// Light theme color tokens using Layrz brand defaults.
@@ -135,10 +168,12 @@ class LayrzColorTokens {
       warning: LayrzColors.warningOrange,
       info: LayrzColors.blue,
       contextual: LayrzColors.grey,
+      selectionColor: LayrzColors.lightBlue,
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
-      aiAccent: const Color(0xFFFF9800),
+      aiAccent: const Color(0xFF03A9F4),
+      watermark: const Color(0xFF9E9E9E),
     );
   }
 
@@ -158,10 +193,12 @@ class LayrzColorTokens {
     Color? warning,
     Color? info,
     Color? contextual,
+    Color? selectionColor,
     Color? divider,
     Color? overlay,
     double? tonalOpacity,
     Color? aiAccent,
+    Color? watermark,
   }) {
     return LayrzColorTokens(
       primary: primary == null
@@ -190,10 +227,16 @@ class LayrzColorTokens {
       contextual: contextual == null
           ? this.contextual
           : (contextual is LayrzColorSwatch ? contextual : LayrzColorSwatch(contextual.toARGB32(), {50: contextual})),
+      selectionColor: selectionColor == null
+          ? this.selectionColor
+          : (selectionColor is LayrzColorSwatch
+                ? selectionColor
+                : LayrzColorSwatch(selectionColor.toARGB32(), {50: selectionColor})),
       divider: divider ?? this.divider,
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,
       aiAccent: aiAccent ?? this.aiAccent,
+      watermark: watermark ?? this.watermark,
     );
   }
 
@@ -216,10 +259,12 @@ class LayrzColorTokens {
           warning == other.warning &&
           info == other.info &&
           contextual == other.contextual &&
+          selectionColor == other.selectionColor &&
           divider == other.divider &&
           overlay == other.overlay &&
           tonalOpacity == other.tonalOpacity &&
-          aiAccent == other.aiAccent;
+          aiAccent == other.aiAccent &&
+          watermark == other.watermark;
 
   @override
   int get hashCode => Object.hash(
@@ -237,9 +282,11 @@ class LayrzColorTokens {
     warning,
     info,
     contextual,
+    selectionColor,
     divider,
     overlay,
     tonalOpacity,
     aiAccent,
+    watermark,
   );
 }

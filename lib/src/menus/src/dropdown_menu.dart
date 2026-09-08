@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/src/menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'dropdown_items.dart';
@@ -33,6 +34,13 @@ typedef LayrzDropdownMenuBuilder = Widget Function(
 /// - Arrow keys traverse focusable entries (dividers and labels are skipped)
 /// - Outside taps close the menu
 /// - Entries expose button semantics with enabled state
+/// - Every enabled entry carrying a non-empty [LayrzDropdownEntry.shortcut] is
+///   auto-bound to its [LayrzDropdownEntry.onTap] via the ambient
+///   [LayrzShortcut] registry for as long as this widget is mounted — the
+///   shortcut fires without the menu panel ever being opened. This requires a
+///   [LayrzShortcut] ancestor (installed automatically by [LayrzApp]); outside
+///   one, [LayrzDropdownEntry.shortcut] silently stays display-only, exactly
+///   as it behaved before this binding existed.
 ///
 /// **Animation:**
 /// - Menu enters with a fade + 4px translate from the anchor's side
@@ -121,6 +129,32 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
   MenuController? _lastSuppliedController;
   late FocusNode _menuFocusNode;
 
+  /// Handles for every [LayrzDropdownEntry.shortcut] currently registered
+  /// with the ambient [LayrzShortcut], in the same order as [widget.items].
+  ///
+  /// Populated once in [didChangeDependencies] (guarded by [_registered]) and
+  /// kept in sync by [didUpdateWidget] whenever [widget.items] changes.
+  /// Registration is mount-scoped: these bindings are live for as long as
+  /// this widget is mounted, independent of whether the menu panel itself is
+  /// open or closed — the whole point is that the shortcut works without
+  /// having to open the menu first.
+  final List<LayrzShortcutHandle> _shortcutHandles = [];
+
+  /// Whether [_registerShortcuts] has already run once for this state.
+  ///
+  /// Registration must happen in [didChangeDependencies] rather than
+  /// [initState] because [LayrzShortcut.of] depends on an [InheritedWidget]
+  /// that is not guaranteed to be available yet during [initState]. This flag
+  /// stops [didChangeDependencies] (which can fire more than once) from
+  /// registering the same entries twice.
+  bool _registered = false;
+
+  /// The [LayrzShortcutState] shortcuts were last registered against, cached
+  /// so [dispose] can deregister without depending on an [InheritedWidget] —
+  /// by the time [dispose] runs, this element is already defunct and
+  /// [BuildContext.dependOnInheritedWidgetOfExactType] would throw.
+  LayrzShortcutState? _shortcutRegistry;
+
   @override
   void initState() {
     super.initState();
@@ -141,6 +175,17 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _animationController.duration = context.tokens.motion.dHover;
+
+    if (!_registered) {
+      _registered = true;
+      _registerShortcuts();
+    }
+  }
+
+  @override
   void didUpdateWidget(LayrzDropdownMenu oldWidget) {
     super.didUpdateWidget(oldWidget);
 
@@ -156,18 +201,72 @@ class _LayrzDropdownMenuState extends State<LayrzDropdownMenu> with SingleTicker
 
     // Update animation timing if tokens change
     _animationController.duration = context.tokens.motion.dHover;
+
+    if (!identical(widget.items, oldWidget.items)) {
+      _deregisterShortcuts();
+      _registerShortcuts();
+    }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _animationController.duration = context.tokens.motion.dHover;
+  /// Registers a [LayrzShortcut] binding for every enabled
+  /// [LayrzDropdownEntry] in [widget.items] that carries a non-empty
+  /// [LayrzDropdownEntry.shortcut] and a non-null
+  /// [LayrzDropdownEntry.onTap], so pressing the shortcut invokes the entry's
+  /// action directly without requiring the menu to be opened first.
+  ///
+  /// [LayrzDropdownLabel] items (and disabled entries) are filtered out —
+  /// neither is a valid registration target. Resolves the ambient
+  /// [LayrzShortcut] via [LayrzShortcut.maybeOf] rather than [LayrzShortcut.of]
+  /// — a [LayrzDropdownMenu] must keep working (display-only shortcuts, same
+  /// as before this feature existed) when used outside a [LayrzApp] subtree,
+  /// e.g. in a widget test that pumps a bare themed tree with no
+  /// [LayrzShortcut] host. When no ancestor is found, this is a silent no-op:
+  /// no handles are registered and the menu functions exactly as it did
+  /// before shortcut auto-binding existed.
+  void _registerShortcuts() {
+    final registry = LayrzShortcut.maybeOf(context);
+    if (registry == null) return;
+    _shortcutRegistry = registry;
+    for (final item in widget.items) {
+      if (item is! LayrzDropdownEntry) continue;
+      final shortcut = item.shortcut;
+      if (shortcut == null || shortcut.isEmpty) continue;
+      if (!item.enabled) continue;
+
+      _shortcutHandles.add(
+        registry.register(
+          keys: shortcut,
+          onInvoke: item.onTap,
+          debugLabel: 'LayrzDropdownEntry("${item.labelText}")',
+        ),
+      );
+    }
+  }
+
+  /// Deregisters every handle in [_shortcutHandles] from [_shortcutRegistry]
+  /// and clears the list.
+  ///
+  /// Uses the cached [_shortcutRegistry] rather than re-resolving
+  /// [LayrzShortcut.maybeOf] from [context] — this is called from [dispose],
+  /// by which point this element is already unmounted and establishing a new
+  /// [InheritedWidget] dependency would throw. Safe to call even if some (or
+  /// all) handles were already deregistered — [LayrzShortcutState.deregister]
+  /// is itself idempotent.
+  void _deregisterShortcuts() {
+    final registry = _shortcutRegistry;
+    if (registry != null) {
+      for (final handle in _shortcutHandles) {
+        registry.deregister(handle);
+      }
+    }
+    _shortcutHandles.clear();
   }
 
   @override
   void dispose() {
     // Do not call _menuController.close() during dispose; the overlay may already be
     // torn down and hideOverlay() would fail. RawMenuAnchor handles cleanup.
+    _deregisterShortcuts();
     _animationController.dispose();
     _curvedAnimation.dispose();
     _menuFocusNode.dispose();

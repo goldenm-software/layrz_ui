@@ -123,7 +123,6 @@ void main() {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
           home: Row(
             children: [
               const SizedBox(width: 300),

@@ -69,7 +69,6 @@ void main() {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
           home: LayrzLayout(
             logo: 'assets/test-logo.png',
             items: [LayrzNavigatorPage(id: 'home', labelText: 'Home')],

@@ -211,7 +211,6 @@ void main() {
             body: const Text('Drawer body'),
             selectableContent: true,
           ),
-          debugShowCheckedModeBanner: false,
         ),
       );
       await tester.pump();
@@ -234,7 +233,6 @@ void main() {
           body: const Text('Show Dialog'),
           selectableContent: true,
         ),
-        debugShowCheckedModeBanner: false,
       );
 
       await tester.pumpWidget(app);
@@ -393,7 +391,6 @@ void main() {
             body: const Text('Drawer mode'),
             selectableContent: true,
           ),
-          debugShowCheckedModeBanner: false,
         ),
       );
       await tester.pump();

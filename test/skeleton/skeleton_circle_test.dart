@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/skeleton/src/skeleton_fill.dart';
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
@@ -27,9 +28,8 @@ void main() {
 
       await pumpThemed(tester, const LayrzSkeletonCircle(diameter: 32));
 
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.shape, BoxShape.circle);
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.isCircle, isTrue);
 
       await tester.pumpWidget(const SizedBox.shrink());
     });
@@ -75,20 +75,18 @@ void main() {
 
       // Regression: the static frame must recolor the circle itself in place
       // (ColorFiltered) rather than painting baseColor into a separate,
-      // rectangular DecoratedBox behind it -- a square box painted behind a
+      // rectangular fill behind it -- a square shape painted behind a
       // circle leaves its corners peeking out past the circle's curve,
       // which read as a stray border/outline around the circle.
       final colorFilter = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
       expect(colorFilter.colorFilter, const ColorFilter.mode(Color(0xFFF0F0F0), BlendMode.srcIn));
 
-      // Only one DecoratedBox exists in the static path -- the circle's own,
-      // still filled with the opaque mask color and BoxShape.circle -- not a
+      // Only one fill exists in the static path -- the circle's own, still
+      // filled with the opaque mask color and painted as a circle -- not a
       // second, rectangular one behind it carrying baseColor.
-      expect(find.byType(DecoratedBox), findsOneWidget);
-      final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
-      final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, const Color(0xFF000000));
-      expect(decoration.shape, BoxShape.circle);
+      expect(find.byType(LayrzSkeletonFill), findsOneWidget);
+      final fill = tester.widget<LayrzSkeletonFill>(find.byType(LayrzSkeletonFill));
+      expect(fill.isCircle, isTrue);
     });
 
     guardedTestWidgets('reads the shared shimmer from an ancestor LayrzSkeleton instead of a fallback', (

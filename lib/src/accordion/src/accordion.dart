@@ -13,10 +13,14 @@ import 'accordion_style_spec.dart';
 /// [LayrzAccordion] renders a fixed header -- an optional leading icon, a
 /// title, and a trailing chevron that rotates with the expansion progress --
 /// followed by a body that is only present in the widget tree while expanded.
-/// It is built on the SDK [Expansible] primitive (`package:flutter/widgets.dart`),
-/// which supplies the expand/collapse animation and height interpolation; this
-/// widget is a styling and interaction wrap around it, not a ground-up
-/// implementation.
+/// It is hand-rolled directly on top of [AnimationController] and
+/// [CurvedAnimation] (`package:flutter/widgets.dart`); it does not use the SDK
+/// [Expansible] primitive. That primitive's own height-interpolation and
+/// state machine previously produced a janky body reveal, an inconsistent
+/// border/seam between header and body, and a shadow that did not track the
+/// reveal cleanly -- driving every one of those concerns off a single
+/// controller and a single [CurvedAnimation] owned by this widget removes the
+/// layer of indirection that caused them.
 ///
 /// **This is a single panel, not a group.** Group behaviour -- multiple
 /// accordions coordinating so only one stays open, nesting one accordion
@@ -26,10 +30,11 @@ import 'accordion_style_spec.dart';
 /// themselves, driving each instance's [expanded] from shared state.
 ///
 /// **Controlled, not stateful.** [LayrzAccordion] holds no expansion state of
-/// its own. [expanded] is the single source of truth, and [onExpansionChanged]
-/// is the only way the widget asks its caller to change it -- mirroring every
-/// other controlled input in this design system. There is no internal toggle
-/// that can drift from what the caller believes is showing.
+/// its own beyond the animation position. [expanded] is the single source of
+/// truth, and [onExpansionChanged] is the only way the widget asks its caller
+/// to change it -- mirroring every other controlled input in this design
+/// system. There is no internal toggle that can drift from what the caller
+/// believes is showing.
 ///
 /// **Whole-header hit target.** The entire header row -- leading icon, title,
 /// and chevron alike -- is a single tap and keyboard target. This is a hard
@@ -37,30 +42,56 @@ import 'accordion_style_spec.dart';
 /// common real-world complaint about disclosure widgets, since users expect
 /// to be able to tap or click anywhere on a visually cohesive row.
 ///
-/// **Collapsed body is genuinely absent from the tree.** [Expansible] is
-/// configured with `maintainState: false`, so once the collapse animation
-/// finishes, the body subtree is not merely hidden (as an [Offstage] or
-/// zero-height box would do) -- it is not built at all. A screen reader
-/// walking the tree while collapsed never encounters the body's content.
+/// **Collapsed body is genuinely absent from the tree.** The body subtree is
+/// only built while the reveal [AnimationController] is above `0.0`, or
+/// mid-flight toward it. Once the collapse animation settles back to `0.0`,
+/// the body is not merely hidden (as an [Offstage] or zero-height box would
+/// do) -- it is not built at all. A screen reader walking the tree while
+/// collapsed never encounters the body's content.
 ///
-/// **Motion.** The reveal animation always uses
-/// [LayrzMotionTokens.easingEmphasized] (`Curves.easeInOutCirc` by default),
-/// never a hardcoded curve -- this is the token disclosure components use for
-/// a height change large enough that the standard [LayrzMotionTokens.easing]
-/// reads as too subtle.
+/// **Motion.** The reveal animation always drives a single
+/// [CurvedAnimation] built from [LayrzMotionTokens.easingEmphasized]
+/// (`Curves.easeInOutCirc` by default) over [LayrzMotionTokens.dTransition]
+/// -- never a hardcoded curve or duration -- this is the token disclosure
+/// components use for a height change large enough that the standard
+/// [LayrzMotionTokens.easing] reads as too subtle.
 ///
-/// The header's own expand-state geometry -- the bottom corners collapsing to
-/// [Radius.zero] and the bottom border disappearing once the body attaches --
-/// is driven by that same [LayrzMotionTokens.dTransition] /
-/// [LayrzMotionTokens.easingEmphasized] timeline, via the `animation` value
-/// [Expansible.headerBuilder] supplies. It is deliberately *not* part of the
-/// header's [AnimatedContainer], which instead animates only hover/press/focus
-/// color changes on the snappier [LayrzMotionTokens.dHover]. Coupling both
-/// concerns to one [AnimatedContainer] duration previously forced a choice
-/// between a sluggish hover and a header whose corners/border snapped to
-/// their expanded state before the body finished revealing -- visible as a
-/// "blink" on both expand and collapse. Driving geometry from the reveal's own
-/// animation keeps the two perfectly in lockstep instead.
+/// **One continuous border around the whole panel -- present only while
+/// collapsed.** The header and body do not each paint their own border. A
+/// single outer shell -- built by `_buildPanelShell` -- wraps both in one
+/// bordered [DecoratedBox], so the border traces one continuous rounded
+/// rectangle around header and body whenever it is visible. Border and
+/// elevation shadow are mutually exclusive across the expand state: fully
+/// collapsed the border is at full alpha and the shadow is invisible; fully
+/// expanded the shadow is at full strength and the border has faded to fully
+/// transparent, so the shadow alone defines the panel's edge. Between the two
+/// the border's alpha and the shadow's alpha cross-fade against each other on
+/// the same progress -- see `_fadeBorder` and `_fadeShadow`. All four corners
+/// stay uniformly rounded to [LayrzTokens.radius.r2] in every expansion
+/// state -- collapsed, expanded, and everywhere in between -- so the panel
+/// always reads as one consistently rounded card and never squares off at
+/// the bottom once open. A single hairline divider is drawn between header
+/// and body, sized to zero
+/// height while collapsed; that divider height (not the corner radius) is
+/// driven by the same reveal animation. It is deliberately *not* part of the
+/// header's own [AnimatedContainer], which instead animates only
+/// hover/press/focus color changes on the snappier
+/// [LayrzMotionTokens.dHover]. Coupling both concerns to one
+/// [AnimatedContainer] duration previously forced a choice between a
+/// sluggish hover and geometry that snapped to its expanded state before the
+/// body finished revealing -- visible as a "blink" on both expand and
+/// collapse. Driving the divider from the reveal's own animation keeps the
+/// two perfectly in lockstep instead.
+///
+/// **Body reveal.** The body is wrapped in a [ClipRect] +
+/// `Align(alignment: Alignment.topCenter, heightFactor: progress)`, keyed to
+/// the same [CurvedAnimation] driving the divider and shadow below, so the
+/// body's visible height grows from the top edge in lockstep with everything
+/// else -- no separately-timed geometry to "blink" against. The body's own
+/// background [DecoratedBox] rounds only its bottom-left/bottom-right corners
+/// to [LayrzTokens.radius.r2] (top corners stay square -- the header already
+/// occupies that space), so the expanded panel's bottom edge stays flush with
+/// the outer border's own rounded stroke instead of squaring off inside it.
 ///
 /// **Interaction states.** Per decision D15, hovering, focusing, or pressing
 /// the header only ever changes colour -- never its size, padding, or border
@@ -114,14 +145,51 @@ class LayrzAccordion extends StatefulWidget {
   State<LayrzAccordion> createState() => _LayrzAccordionState();
 }
 
-class _LayrzAccordionState extends State<LayrzAccordion> {
-  /// Drives [Expansible]'s expand/collapse animation and state machine.
+/// A private wrapper around [LayrzAccordion.body], used only so tests (and,
+/// incidentally, the widget inspector) can identify the actual body subtree
+/// independently of the surface [DecoratedBox] and reveal machinery around
+/// it.
+///
+/// Deliberately kept in this file rather than exported: it carries no public
+/// contract of its own, it exists purely as a stable marker in the render
+/// tree.
+class _BodyMarker extends StatelessWidget {
+  /// The accordion body content this marker wraps.
+  final Widget child;
+
+  /// Creates a new [_BodyMarker] wrapping [child].
+  const _BodyMarker({required this.child});
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProviderStateMixin {
+  /// Drives the expand/collapse reveal: `0.0` fully collapsed, `1.0` fully
+  /// expanded.
   ///
-  /// Kept in sync with [LayrzAccordion.expanded] in [didUpdateWidget] and on
-  /// first build via [initState], since [LayrzAccordion] itself holds no
-  /// expansion state -- [Expansible] still needs a concrete controller object
-  /// to drive its internal animation.
-  late final ExpansibleController _controller;
+  /// Owned entirely by this widget -- [LayrzAccordion] itself holds no
+  /// expansion state, [expanded] is the source of truth, and this controller
+  /// is just the concrete animation object that tracks progress toward it.
+  /// Seeded to the correct starting value in [initState] so the first frame
+  /// never animates from the wrong end.
+  late final AnimationController _controller;
+
+  /// The eased view of [_controller], built once dependencies (and therefore
+  /// [LayrzTokens]) are available. Every visual that keys off expansion
+  /// progress -- shadow fade, divider height, chevron rotation, body reveal --
+  /// reads this, not [_controller] directly, so they all move on exactly the
+  /// same eased timeline.
+  late CurvedAnimation _curved;
+
+  /// Whether [_curved] has been constructed yet.
+  ///
+  /// [didChangeDependencies] runs before the first [build], but also again on
+  /// later dependency changes (e.g. an ancestor [LayrzTheme] rebuilding with
+  /// new tokens) -- this flag distinguishes "first-time construction" from
+  /// "tokens changed, refresh the curve and duration" so the former only ever
+  /// happens once.
+  bool _curvedInitialized = false;
 
   /// The interactive states currently active on the header (hover, focus,
   /// press, disabled), resolved into a [LayrzAccordionStyleSpec] on every build.
@@ -140,9 +208,24 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   @override
   void initState() {
     super.initState();
-    _controller = ExpansibleController();
-    if (widget.expanded) {
-      _controller.expand();
+    _controller = AnimationController(
+      vsync: this,
+      // Tokens need a BuildContext, which is not yet available here; the
+      // real duration is set from LayrzTokens in didChangeDependencies below,
+      // before this controller ever animates.
+      duration: const Duration(milliseconds: 200),
+      value: widget.expanded ? 1.0 : 0.0,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final motion = context.tokens.motion;
+    _controller.duration = motion.dTransition;
+    if (!_curvedInitialized) {
+      _curved = CurvedAnimation(parent: _controller, curve: motion.easingEmphasized);
+      _curvedInitialized = true;
     }
   }
 
@@ -151,9 +234,9 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.expanded != widget.expanded) {
       if (widget.expanded) {
-        _controller.expand();
+        _controller.forward();
       } else {
-        _controller.collapse();
+        _controller.reverse();
       }
     }
     if (_isDisabled) {
@@ -166,6 +249,7 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   @override
   void dispose() {
     _controller.dispose();
+    _curved.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -197,54 +281,240 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
     }
 
     final spec = LayrzAccordionStyleSpec.resolve(states: _states, tokens: tokens);
+    final header = _buildHeader(context, tokens, spec);
 
-    return ClipRRect(
-      borderRadius: tokens.radius.br2,
-      child: Expansible(
-        controller: _controller,
-        maintainState: false,
-        animationStyle: AnimationStyle(
-          duration: tokens.motion.dTransition,
-          curve: tokens.motion.easingEmphasized,
-        ),
-        headerBuilder: (context, animation) => _buildHeader(context, tokens, spec, animation),
-        bodyBuilder: (context, animation) => _buildBody(spec, tokens),
-      ),
+    return _buildPanelShell(tokens, spec, header);
+  }
+
+  /// Wraps the whole panel -- [header] and the reveal-driven body together --
+  /// in a single outer border, plus the internal divider line drawn between
+  /// them while expanded.
+  ///
+  /// Owning the outer border in exactly one place -- here -- guarantees one
+  /// continuous outline in every frame, collapsed or expanded or
+  /// mid-animation, rather than the header and body each painting an
+  /// independent border that could drift apart at the seam.
+  ///
+  /// The corner radius is a constant [LayrzTokens.radius.r2] on all four
+  /// corners, in every expansion state -- collapsed, expanded, and every
+  /// frame in between. The panel is meant to read as one consistently
+  /// rounded card whether closed or open; it must never square off at the
+  /// bottom once expanded. Expansion progress never drives any part of the
+  /// corner geometry -- only the shadow fade (below), the internal divider's
+  /// height, and the body reveal are still keyed to it.
+  ///
+  /// [_curved] is the single eased [Animation] this whole method (and the
+  /// header's chevron, and the body reveal) reads from, so the divider,
+  /// shadow, and body height all interpolate in lockstep on one timeline --
+  /// never separately-timed geometry that could visibly "blink" apart on
+  /// expand or collapse.
+  ///
+  /// The seam between header and body is a single hairline [Container] whose
+  /// *height* (not merely its opacity) animates from `0` to [spec.borderWidth]
+  /// with the same progress: while collapsed the body is absent from the tree
+  /// and the divider must also occupy zero space, or a stray line would
+  /// render with nothing below it.
+  ///
+  /// **Elevation on open.** An outer [DecoratedBox] -- carrying only
+  /// [BoxDecoration.boxShadow] and the same constant [borderRadius], no
+  /// border and no fill -- wraps the border/[Column] stack instead of sitting
+  /// inside it, so the shadow is free to paint outside the panel's own
+  /// rounded rect. The border itself stays on the inner [DecoratedBox], which
+  /// paints its own rounded stroke directly (no enclosing clip): a
+  /// [ClipRRect] around a bordered [DecoratedBox] previously fought the
+  /// border's own antialiased edge, producing a faint seam down the left and
+  /// right sides where the two antialiased rounded-rect outlines composited
+  /// against each other. Removing the clip and letting the border draw its
+  /// rounded stroke unclipped is what eliminates that seam; see
+  /// `_buildBodyReveal` for how the body's bottom corners stay rounded
+  /// without reintroducing it.
+  ///
+  /// **Border painted in the foreground, not the background.** The inner
+  /// [DecoratedBox] uses [DecorationPosition.foreground], so its
+  /// [BoxDecoration.border] paints *on top of* the [Column] beneath it
+  /// instead of behind it (the default). The header's [AnimatedContainer]
+  /// fill and the body's own background [DecoratedBox] both paint edge to
+  /// edge horizontally, and with the default background position those
+  /// fills painted over the border's left/right stroke, leaving only the
+  /// top/bottom hairlines visible on a collapsed panel (the fills never
+  /// extend above the first row or below the last, so those two edges
+  /// survived by accident). Painting the border in the foreground instead
+  /// means it always paints last, over every child fill, so all four sides
+  /// stay visible regardless of what the header or body fill beneath it.
+  /// This is a single stroked rounded-rect painted as one antialiased edge --
+  /// not composited against a separate clip -- so it does not reintroduce
+  /// the left/right seam the [ClipRRect] removal above already fixed; that
+  /// seam came specifically from two antialiased edges (the clip's and the
+  /// border's) competing, which cannot happen here since there is no clip.
+  ///
+  /// **Border and shadow are mutually exclusive across the expand state.**
+  /// Collapsed, the panel reads as a bordered, flat card; expanded, it reads
+  /// as a shadow-elevated card with no outer stroke -- the shadow alone
+  /// defines the panel's edge once open. The two fade on the same progress
+  /// driving the divider above -- never a second timeline, and always an
+  /// inverse cross-fade of each other, never both at full strength together.
+  /// [spec.shadow] is the constant, full-elevation
+  /// [LayrzTokens.shadow.elevation2] list; [_fadeShadow] scales each
+  /// [BoxShadow]'s alpha by progress so it is fully absent at 0 (collapsed)
+  /// and at full strength at 1 (expanded). [spec.borderColor] is the
+  /// constant, full-alpha border color; [_fadeBorder] scales its alpha by
+  /// `(1 - progress)` so it is fully visible at 0 (collapsed) and fully
+  /// transparent at 1 (expanded) -- the exact inverse of the shadow fade,
+  /// interpolating continuously in between. The border's *width* is never
+  /// animated -- only its color alpha -- so no geometry changes and the
+  /// zero-width-with-nonzero-radius assertion never applies (a width > 0
+  /// side with a fully transparent color paints nothing but asserts fine).
+  /// The corner radius itself never participates in either fade -- it is
+  /// constant regardless of progress.
+  Widget _buildPanelShell(
+    LayrzTokens tokens,
+    LayrzAccordionStyleSpec spec,
+    Widget header,
+  ) {
+    return AnimatedBuilder(
+      animation: _curved,
+      builder: (context, _) {
+        final progress = _curved.value;
+        final borderRadius = BorderRadius.circular(tokens.radius.r2);
+        final dividerHeight = spec.borderWidth * progress;
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: borderRadius,
+            boxShadow: _fadeShadow(spec.shadow, progress),
+          ),
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              border: _fadeBorder(spec.borderColor, spec.borderWidth, progress),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                header,
+                if (dividerHeight > 0) Container(height: dividerHeight, color: spec.borderColor),
+                _buildBodyReveal(spec, progress, borderRadius),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  /// Wraps [LayrzAccordion.body] in a surface that shares [spec]'s header
-  /// background color.
+  /// Scales the alpha of every [BoxShadow] in [shadow] by [progress].
   ///
-  /// Without this, the body paints on whatever is behind the accordion --
-  /// transparent by default -- so an expanded panel reads as a filled header
-  /// floating above a detached body. Filling the body with the same color as
-  /// the header makes the two read as one continuous panel surface with no
-  /// seam, which is only ever visible while expanded since the collapsed body
-  /// is absent from the tree (`maintainState: false`).
-  Widget _buildBody(LayrzAccordionStyleSpec spec, LayrzTokens tokens) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: spec.headerBackgroundColor,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(tokens.radius.r2),
-          bottomRight: Radius.circular(tokens.radius.r2),
+  /// [shadow] is the panel's constant, full-elevation shadow list --
+  /// [LayrzAccordionStyleSpec.shadow], resolved from
+  /// [LayrzTokens.shadow.elevation2]. [progress] is the same 0-to-1 expansion
+  /// value driving the outer shell's divider and body reveal, so the shadow
+  /// fades in lockstep with the reveal instead of snapping in once fully
+  /// expanded. At `progress == 0` every returned [BoxShadow] has alpha `0`
+  /// (invisible, so the collapsed panel reads as flat); at `progress == 1` the
+  /// original, unmodified alphas are returned (full [LayrzTokens.shadow.elevation2]
+  /// strength).
+  List<BoxShadow> _fadeShadow(List<BoxShadow> shadow, double progress) {
+    final clamped = progress.clamp(0.0, 1.0);
+    return [
+      for (final boxShadow in shadow)
+        boxShadow.copyWith(color: boxShadow.color.withValues(alpha: boxShadow.color.a * clamped)),
+    ];
+  }
+
+  /// Scales the alpha of [color] by `(1 - progress)`, returning a
+  /// [Border.all] of [width] in that faded color -- the exact inverse of
+  /// [_fadeShadow], so the outer border and the elevation shadow always
+  /// cross-fade against each other rather than both being visible at once.
+  ///
+  /// [color] is the panel's constant, full-alpha border color --
+  /// [LayrzAccordionStyleSpec.borderColor], resolved from
+  /// [LayrzTokens.colors.fg3]. [progress] is the same 0-to-1 expansion value
+  /// driving the shadow fade and body reveal. At `progress == 0` (collapsed)
+  /// the returned border has the original, unmodified alpha -- full
+  /// strength, since the collapsed panel has no shadow to help delineate it.
+  /// At `progress == 1` (expanded) the border's alpha is `0` -- fully
+  /// transparent, since the elevation shadow now defines the panel's edge
+  /// instead.
+  ///
+  /// [width] is passed through unchanged and never animated: only the
+  /// color's alpha varies, so the border never changes geometry (per
+  /// decision D15) and a fully transparent side at full [width] never trips
+  /// the width-0-with-nonzero-radius assertion -- that assertion fires only
+  /// for an actual zero width paired with a non-zero radius, not for a
+  /// nonzero width whose color happens to be transparent.
+  Border _fadeBorder(Color color, double width, double progress) {
+    final clamped = progress.clamp(0.0, 1.0);
+    final faded = color.withValues(alpha: color.a * (1.0 - clamped));
+    return Border.all(color: faded, width: width);
+  }
+
+  /// Builds the reveal-driven body slot -- present in the tree and clipped to
+  /// [progress] of its natural height while `progress > 0`, and genuinely
+  /// absent (a zero-size [SizedBox.shrink]) once the controller has settled
+  /// fully at `0.0`.
+  ///
+  /// The absence check is on [AnimationController.isDismissed] rather than a
+  /// bare `progress == 0` comparison: `isDismissed` is `true` only once the
+  /// controller is both at `0.0` *and* not mid-forward (i.e. it is not merely
+  /// passing through `0.0` while animating), which is exactly the "fully
+  /// collapsed and settled" condition the body's absence must track --
+  /// matching the class docs' "collapsed body is genuinely absent" contract
+  /// and the `_BodyMarker findsNothing` test assertion.
+  ///
+  /// While present, the body is wrapped in a [ClipRect] +
+  /// `Align(heightFactor: progress)` anchored to the top, so its visible
+  /// height grows from `0` to its natural height as [progress] goes from `0`
+  /// to `1` -- a smooth, top-anchored reveal keyed to the very same
+  /// [CurvedAnimation] driving the divider and shadow, rather than a
+  /// separately-timed geometry change. [ExcludeSemantics] wraps the interior
+  /// while the controller is at rest and collapsed is impossible here (the
+  /// branch that would render collapsed content already builds
+  /// [SizedBox.shrink] instead), so no extra semantics gating is needed on
+  /// this branch beyond what [_BodyMarker] itself carries.
+  ///
+  /// [panelRadius] is the same [BorderRadius] driving the outer shell's
+  /// border -- passed through so the body's own background [DecoratedBox] can
+  /// round its bottom-left/bottom-right corners to match ([BorderRadius.only]
+  /// with the top corners left square, since the header already occupies
+  /// that space). With no enclosing [ClipRRect] around the panel any more
+  /// (removed to fix a left/right edge seam -- see `_buildPanelShell`), the
+  /// body's flat rectangular background would otherwise poke square corners
+  /// out past the border's rounded bottom stroke once expanded. Rounding the
+  /// background's own corners here, rather than reaching for a separate
+  /// [ClipRRect], keeps the border and the body fill antialiasing as one
+  /// edge instead of two competing ones -- which is exactly the class of
+  /// seam this fix removes, so it must not be reintroduced by this corner.
+  Widget _buildBodyReveal(LayrzAccordionStyleSpec spec, double progress, BorderRadius panelRadius) {
+    if (_controller.isDismissed) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRect(
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: progress.clamp(0.0, 1.0),
+        child: _BodyMarker(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: spec.headerBackgroundColor,
+              borderRadius: BorderRadius.only(
+                bottomLeft: panelRadius.bottomLeft,
+                bottomRight: panelRadius.bottomRight,
+              ),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              child: widget.body,
+            ),
+          ),
         ),
-        border: Border(
-          left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-          right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-          bottom: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-        ),
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: widget.body,
       ),
     );
   }
 
   /// Builds the header row: leading icon (optional), title, and a chevron
-  /// that rotates in step with [animation].
+  /// that rotates in step with [_curved].
   ///
   /// The whole row shares a single [GestureDetector] and [Focus] node, so
   /// tapping or activating anywhere on the row -- not just the chevron --
@@ -254,19 +524,14 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
   /// contract and the title [Text] excluded from semantics beneath it so its
   /// string is not announced twice.
   ///
-  /// [animation] is the raw, linear controller [Expansible] drives over
-  /// [LayrzMotionTokens.dTransition] -- the same timeline (once curved by
-  /// [LayrzMotionTokens.easingEmphasized] below) that the body reveal uses.
-  /// It is wrapped in a [CurvedAnimation] here so the header's expand-state
-  /// geometry (see [_buildHeaderGeometry]) tracks the exact eased progress of
-  /// the body's height factor, not merely the same duration.
+  /// The header paints only its background color and content here -- the
+  /// border and corner radius are owned entirely by [_buildPanelShell], which
+  /// encloses header and body in one continuous outline.
   Widget _buildHeader(
     BuildContext context,
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
-    Animation<double> animation,
   ) {
-    final expandProgress = CurvedAnimation(parent: animation, curve: tokens.motion.easingEmphasized);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _isDisabled ? null : _toggle,
@@ -297,94 +562,36 @@ class _LayrzAccordionState extends State<LayrzAccordion> {
             enabled: !_isDisabled,
             expanded: widget.expanded,
             onTap: _isDisabled ? null : _toggle,
-            child: AnimatedBuilder(
-              animation: expandProgress,
-              builder: (context, child) => _buildHeaderShell(tokens, spec, expandProgress.value, child!),
-              child: AnimatedContainer(
-                duration: tokens.motion.dHover,
-                curve: tokens.motion.easing,
-                padding: tokens.spacing.pd3,
-                color: spec.headerBackgroundColor,
-                child: Row(
-                  children: [
-                    if (widget.leadingIcon != null) ...[
-                      Icon(widget.leadingIcon, color: spec.headerContentColor, size: 20),
-                      SizedBox(width: tokens.spacing.sp2),
-                    ],
-                    Expanded(
-                      child: ExcludeSemantics(
-                        child: Text(
-                          widget.titleText,
-                          style: tokens.typography.body.copyWith(color: spec.headerContentColor),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            child: AnimatedContainer(
+              duration: tokens.motion.dHover,
+              curve: tokens.motion.easing,
+              padding: tokens.spacing.pd3,
+              color: spec.headerBackgroundColor,
+              child: Row(
+                children: [
+                  if (widget.leadingIcon != null) ...[
+                    Icon(widget.leadingIcon, color: spec.headerContentColor, size: 20),
+                    SizedBox(width: tokens.spacing.sp2),
+                  ],
+                  Expanded(
+                    child: ExcludeSemantics(
+                      child: Text(
+                        widget.titleText,
+                        style: tokens.typography.body.copyWith(color: spec.headerContentColor),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    SizedBox(width: tokens.spacing.sp2),
-                    RotationTransition(
-                      turns: animation.drive(Tween<double>(begin: 0.0, end: 0.5)),
-                      child: Icon(MdiIcons.chevronDown, color: spec.headerContentColor, size: 20),
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(width: tokens.spacing.sp2),
+                  RotationTransition(
+                    turns: _curved.drive(Tween<double>(begin: 0.0, end: 0.5)),
+                    child: Icon(MdiIcons.chevronDown, color: spec.headerContentColor, size: 20),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  /// Wraps [child] (the header's color-and-content layer) in the border and
-  /// corner radius that interpolate with [progress] -- the eased expand/collapse
-  /// progress from [_buildHeader]'s `expandProgress`, where 0.0 is fully
-  /// collapsed and 1.0 is fully expanded.
-  ///
-  /// This geometry is intentionally split out of the color-animating
-  /// [AnimatedContainer] passed as [child]: the bottom corners collapsing to
-  /// [Radius.zero] and the bottom border fading out must land in the same
-  /// frame the body finishes revealing, which only holds if both are driven
-  /// by the same [Animation] -- not by a separately-timed [AnimatedContainer]
-  /// running on [LayrzMotionTokens.dHover]. See the [LayrzAccordion] class
-  /// docs for the blink this replaces.
-  ///
-  /// The top corners and top/left/right border are constant regardless of
-  /// [progress] -- only the edge shared with the body (bottom) animates.
-  Widget _buildHeaderShell(
-    LayrzTokens tokens,
-    LayrzAccordionStyleSpec spec,
-    double progress,
-    Widget child,
-  ) {
-    final bottomRadius = Radius.circular(tokens.radius.r2 * (1 - progress));
-    final borderRadius = BorderRadius.only(
-      topLeft: Radius.circular(tokens.radius.r2),
-      topRight: Radius.circular(tokens.radius.r2),
-      bottomLeft: bottomRadius,
-      bottomRight: bottomRadius,
-    );
-    final bottomBorderWidth = spec.borderWidth * (1 - progress);
-    // A hairline (width: 0.0) solid BorderSide cannot be painted alongside a
-    // non-zero BorderRadius -- Flutter's Border painter asserts on that
-    // combination. At full expansion the interpolated width lands on exactly
-    // 0.0, so it must become BorderSide.none rather than a zero-width side.
-    final bottomBorder = bottomBorderWidth <= 0
-        ? BorderSide.none
-        : BorderSide(color: spec.borderColor, width: bottomBorderWidth);
-
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: borderRadius,
-          border: Border(
-            top: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-            left: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-            right: BorderSide(color: spec.borderColor, width: spec.borderWidth),
-            bottom: bottomBorder,
-          ),
-        ),
-        child: child,
       ),
     );
   }

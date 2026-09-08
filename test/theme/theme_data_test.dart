@@ -27,6 +27,29 @@ void main() {
         expect(data.iconTheme.size, equals(24));
       });
 
+      test('defaults selectionColor to tokens.colors.selectionColor.shade500 tinted by tonalOpacity', () {
+        final data = LayrzThemeData.light();
+        final expected = data.tokens.colors.selectionColor.shade500.withValues(alpha: data.tokens.colors.tonalOpacity);
+        expect(data.selectionColor, equals(expected));
+      });
+
+      test('defaults cursorColor to tokens.colors.primary.shade500', () {
+        final data = LayrzThemeData.light();
+        expect(data.cursorColor, equals(data.tokens.colors.primary.shade500));
+      });
+
+      test('accepts custom selectionColor', () {
+        const customSelectionColor = Color(0x330000FF);
+        final data = LayrzThemeData.light(selectionColor: customSelectionColor);
+        expect(data.selectionColor, equals(customSelectionColor));
+      });
+
+      test('accepts custom cursorColor', () {
+        const customCursorColor = Color(0xFF00FF00);
+        final data = LayrzThemeData.light(cursorColor: customCursorColor);
+        expect(data.cursorColor, equals(customCursorColor));
+      });
+
       test('accepts custom font', () {
         final customFont = LayrzRobotoFont();
         final data = LayrzThemeData.light(
@@ -144,6 +167,24 @@ void main() {
 
         expect(data2.tokens, same(data1.tokens));
       });
+
+      test('replaces selectionColor when provided, without touching cursorColor', () {
+        final data1 = LayrzThemeData.light();
+        const customSelectionColor = Color(0x33FF00FF);
+        final data2 = data1.copyWith(selectionColor: customSelectionColor);
+
+        expect(data2.selectionColor, equals(customSelectionColor));
+        expect(data2.cursorColor, equals(data1.cursorColor));
+      });
+
+      test('replaces cursorColor when provided, without touching selectionColor', () {
+        final data1 = LayrzThemeData.light();
+        const customCursorColor = Color(0xFFABCDEF);
+        final data2 = data1.copyWith(cursorColor: customCursorColor);
+
+        expect(data2.cursorColor, equals(customCursorColor));
+        expect(data2.selectionColor, equals(data1.selectionColor));
+      });
     });
 
     group('Equality', () {
@@ -165,6 +206,20 @@ void main() {
         final data = LayrzThemeData.light();
         expect(data, equals(data));
       });
+
+      test('two instances with different selectionColor are unequal', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light(selectionColor: const Color(0x33112233));
+
+        expect(data1, isNot(equals(data2)));
+      });
+
+      test('two instances with different cursorColor are unequal', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light(cursorColor: const Color(0xFF445566));
+
+        expect(data1, isNot(equals(data2)));
+      });
     });
 
     group('hashCode', () {
@@ -181,6 +236,13 @@ void main() {
 
         // While hash codes are not guaranteed to be different for unequal objects
         // the likelihood is very high for well-distributed hash functions.
+        expect(data1.hashCode, isNot(equals(data2.hashCode)));
+      });
+
+      test('two instances with different selectionColor have different hash codes', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = LayrzThemeData.light(selectionColor: const Color(0x33112233));
+
         expect(data1.hashCode, isNot(equals(data2.hashCode)));
       });
     });

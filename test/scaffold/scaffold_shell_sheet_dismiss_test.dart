@@ -45,7 +45,6 @@ Future<void> _pumpShellApp(
     LayrzApp(
       navigatorObservers: [observer],
       theme: LayrzThemeData.light(),
-      debugShowCheckedModeBanner: false,
       home: SizedBox.expand(
         child: LayrzScaffoldShell<_TestItem>(
           controller: controller,

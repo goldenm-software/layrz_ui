@@ -194,8 +194,13 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// and a key like [LogicalKeyboardKey.keyS]). The set is formatted using [formatLayrzShortcut]
   /// for display.
   ///
-  /// This is display-only and never binds any keys. The application owns all keyboard binding.
-  /// When [LayrzPlatform.isMobile] is true, the shortcut is hidden entirely (no reserved space).
+  /// When this entry is rendered inside a [LayrzDropdownMenu] hosted under a [LayrzApp] (which
+  /// provides the ambient [LayrzShortcut] registry automatically), the menu auto-binds this key
+  /// combination to [onTap] for as long as the menu widget is mounted — the shortcut works
+  /// without the menu panel being open. Outside that context (no [LayrzShortcut] ancestor, e.g. a
+  /// bare widget test), this field is purely a display hint and binds no keys itself; the entry
+  /// widget never registers a shortcut on its own. When [LayrzPlatform.isMobile] is true, the
+  /// hint is hidden entirely regardless (no reserved space).
   final Set<LogicalKeyboardKey>? shortcut;
 
   /// Private field tracking the semantic type, used to resolve token colors at build time.

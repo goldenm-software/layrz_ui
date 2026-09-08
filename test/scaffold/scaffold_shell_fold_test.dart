@@ -96,7 +96,6 @@ Future<void> _pumpFoldableShell(
   await tester.pumpWidget(
     LayrzApp(
       theme: LayrzThemeData.light(),
-      debugShowCheckedModeBanner: false,
       home: Builder(
         builder: (context) {
           return MediaQuery(
@@ -474,7 +473,6 @@ void main() {
         await tester.pumpWidget(
           LayrzApp(
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
             home: Builder(
               builder: (context) {
                 return MediaQuery(

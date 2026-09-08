@@ -66,7 +66,6 @@ void main() {
         await tester.pumpWidget(
           LayrzApp(
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
             // The real shape: LayrzLayout wraps LayrzScaffoldShell, exactly
             // as example/lib/layout.dart's ShowroomLayout wraps
             // InputsSection. selectableContent defaults to true, so this
@@ -132,7 +131,6 @@ void main() {
         await tester.pumpWidget(
           LayrzApp(
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
             home: LayrzLayout(
               logo: 'assets/test-logo.png',
               items: [
@@ -229,7 +227,6 @@ void main() {
         await tester.pumpWidget(
           LayrzApp(
             theme: LayrzThemeData.light(),
-            debugShowCheckedModeBanner: false,
             home: Builder(
               builder: (context) {
                 return MediaQuery(

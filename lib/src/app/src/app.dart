@@ -1,9 +1,16 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/find_in_page/find_in_page.dart';
+import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/snackbar/snackbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 import 'package:layrz_ui/src/transitions/transitions.dart';
+
+import 'app_banner.dart';
+import 'app_banner_painter.dart';
 
 /// Root application widget for layrz_ui.
 ///
@@ -89,8 +96,35 @@ class LayrzApp extends StatefulWidget {
   /// Defaults to [LayrzThemeData.primaryColor] of the effective theme.
   final Color? color;
 
-  /// Whether to show the debug banner in the top-right corner. Defaults to `true`.
-  final bool debugShowCheckedModeBanner;
+  /// Configures the debug-only, tiled diagonal watermark rendered above the
+  /// app's content — this is `LayrzApp`'s full replacement for Flutter's red
+  /// DEBUG corner banner, which `LayrzApp` never renders (the SDK's
+  /// `debugShowCheckedModeBanner` is always hardcoded to `false`
+  /// internally — there is no way to bring it back).
+  ///
+  /// **Automatic by default**: when [showDebugWatermark] is `true` (the
+  /// default) and [banner] is `null`, [_LayrzAppState._wrapWithTheme]
+  /// automatically renders the watermark in debug builds — no caller
+  /// action required — using `LayrzAppBanner(labelText: l10n.debugBanner)`
+  /// so the label is localized. Passing a non-null [banner] overrides the
+  /// label (and optionally the color) shown, for example to read `'STAGING'`
+  /// instead of the localized default. To disable the watermark entirely,
+  /// set [showDebugWatermark] to `false` rather than relying on `banner`,
+  /// since `banner: null` now means "use the automatic default" rather than
+  /// "no watermark". This has no effect at all outside debug mode — release
+  /// and profile builds never render a watermark regardless of what is
+  /// passed here.
+  final LayrzAppBanner? banner;
+
+  /// Whether the debug-only watermark described by [banner] may render at
+  /// all. Defaults to `true`.
+  ///
+  /// Set this to `false` to opt out of the watermark entirely — for example
+  /// in golden/screenshot tests, or an app that never wants the watermark —
+  /// even in debug mode and even if [banner] is provided. When `true` (the
+  /// default), the watermark still only ever renders in debug builds, per
+  /// [banner]'s doc comment.
+  final bool showDebugWatermark;
 
   /// Whether to show the semantics debugger overlay. Defaults to `false`.
   final bool showSemanticsDebugger;
@@ -173,6 +207,28 @@ class LayrzApp extends StatefulWidget {
   /// applied.
   final LayrzTransitionType pageTransitionType;
 
+  // ── Find-in-page ────────────────────────────────────────────────────
+
+  /// Whether the browser-style, in-page Ctrl/Cmd+F find feature is enabled.
+  ///
+  /// Defaults to **`true`** — this is opt-**out**, not opt-in: find-in-page
+  /// ships on for every app unless a caller explicitly disables it per
+  /// customer/build. When `true`, [_LayrzAppState._wrapWithTheme] wraps the
+  /// app's content in a [LayrzFindInPageHost], which registers Ctrl+F
+  /// (Cmd+F on macOS) via the ambient [LayrzShortcut] registry and — on web
+  /// only — additionally suppresses the browser's own native find dialog so
+  /// this themed one opens instead (see [LayrzFindInPageHost]'s own doc for
+  /// the full mechanism).
+  ///
+  /// **Idle cost is negligible.** [LayrzFindInPageHost] holds no
+  /// [SemanticsHandle] — the expensive resource behind find's match search —
+  /// until the user actually opens find; see
+  /// [LayrzFindInPageController]'s "Idle cost" doc for why this is safe to
+  /// leave on by default for every app rather than something a caller must
+  /// remember to enable. Set this to `false` to opt a specific app (or a
+  /// specific customer build) out entirely.
+  final bool enableFindInPage;
+
   /// Imperative-routing constructor.
   const LayrzApp({
     super.key,
@@ -186,9 +242,10 @@ class LayrzApp extends StatefulWidget {
     this.title = '',
     this.onGenerateTitle,
     this.color,
-    this.debugShowCheckedModeBanner = true,
     this.showSemanticsDebugger = false,
     this.debugShowWidgetInspector = false,
+    this.banner,
+    this.showDebugWatermark = true,
     this.locale,
     this.localizationsDelegates,
     this.supportedLocales = const [Locale('en')],
@@ -200,6 +257,7 @@ class LayrzApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
+    this.enableFindInPage = true,
   }) : routerConfig = null,
        routerDelegate = null,
        routeInformationParser = null,
@@ -218,9 +276,10 @@ class LayrzApp extends StatefulWidget {
     this.title = '',
     this.onGenerateTitle,
     this.color,
-    this.debugShowCheckedModeBanner = true,
     this.showSemanticsDebugger = false,
     this.debugShowWidgetInspector = false,
+    this.banner,
+    this.showDebugWatermark = true,
     this.locale,
     this.localizationsDelegates,
     this.supportedLocales = const [Locale('en')],
@@ -232,6 +291,7 @@ class LayrzApp extends StatefulWidget {
     this.actions,
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
+    this.enableFindInPage = true,
   }) : home = null,
        routes = null,
        onGenerateRoute = null,
@@ -317,19 +377,72 @@ class _LayrzAppState extends State<LayrzApp> {
   }) {
     final userChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
 
-    final innerChild = LayrzTheme(
+    // Without an ancestor `DefaultSelectionStyle`, `EditableText.selectionColor`
+    // and `SelectableRegion.selectionColor` both resolve to null and paint
+    // fully transparent — text selection is present but invisible everywhere
+    // in the app (Material installs this via `TextSelectionTheme`; this
+    // Material-free design system has no equivalent unless installed here).
+    // Both colors are first-class themeable fields on `LayrzThemeData` (see
+    // `LayrzThemeData.selectionColor` / `.cursorColor`) rather than hardcoded
+    // here, so a future dark theme can override them without touching this file.
+    // enableFindInPage wraps the innermost user content only — it needs to
+    // sit UNDER LayrzShortcut (so LayrzFindInPageHost can register its
+    // Ctrl/Cmd+F chord against the ambient registry) and under
+    // LayrzSnackbarMessenger's own root Overlay/WidgetsApp chain (so its
+    // root-overlay highlight/find-bar painting has an Overlay ancestor to
+    // resolve). Composing it here — nearest to userChild, innermost in the
+    // chain — satisfies both without disturbing LayrzShortcut,
+    // LayrzSnackbarMessenger, DefaultSelectionStyle, or the debug watermark
+    // built around this whole themedChild below.
+    final contentWithFindInPage = widget.enableFindInPage ? LayrzFindInPageHost(child: userChild) : userChild;
+
+    final themedChild = LayrzTheme(
       data: themeData,
-      child: DefaultTextStyle(
-        style: themeData.textStyle,
-        child: IconTheme(
-          data: themeData.iconTheme,
-          child: ColoredBox(
-            color: themeData.backgroundColor,
-            child: LayrzSnackbarMessenger(child: userChild),
+      child: DefaultSelectionStyle(
+        selectionColor: themeData.selectionColor,
+        cursorColor: themeData.cursorColor,
+        child: DefaultTextStyle(
+          style: themeData.textStyle,
+          child: IconTheme(
+            data: themeData.iconTheme,
+            child: ColoredBox(
+              color: themeData.backgroundColor,
+              child: LayrzShortcut(child: LayrzSnackbarMessenger(child: contentWithFindInPage)),
+            ),
           ),
         ),
       ),
     );
+
+    // Resolve the effective banner: an explicit `widget.banner` always wins;
+    // otherwise, in debug builds, fall back to the localized automatic
+    // default — unless the caller opted out via `showDebugWatermark: false`.
+    // Reading `context.l10n` here is safe: this builder runs inside
+    // WidgetsApp's own `builder`, which is invoked below the `Localizations`
+    // widget WidgetsApp installs, so localizations are already in scope.
+    final effectiveBanner = !widget.showDebugWatermark
+        ? null
+        : widget.banner ?? (kDebugMode ? LayrzAppBanner(labelText: context.l10n.debugBanner) : null);
+
+    final innerChild = kDebugMode && effectiveBanner != null
+        ? Stack(
+            children: [
+              themedChild,
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      painter: LayrzAppBannerPainter(
+                        labelText: effectiveBanner.labelText,
+                        color: effectiveBanner.color ?? themeData.tokens.colors.watermark,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          )
+        : themedChild;
 
     // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
     final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
@@ -357,7 +470,7 @@ class _LayrzAppState extends State<LayrzApp> {
         color: appColor,
         title: widget.title,
         onGenerateTitle: widget.onGenerateTitle,
-        debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
+        debugShowCheckedModeBanner: false,
         showSemanticsDebugger: widget.showSemanticsDebugger,
         debugShowWidgetInspector: widget.debugShowWidgetInspector,
         locale: widget.locale,
@@ -382,7 +495,7 @@ class _LayrzAppState extends State<LayrzApp> {
       color: appColor,
       title: widget.title,
       onGenerateTitle: widget.onGenerateTitle,
-      debugShowCheckedModeBanner: widget.debugShowCheckedModeBanner,
+      debugShowCheckedModeBanner: false,
       showSemanticsDebugger: widget.showSemanticsDebugger,
       debugShowWidgetInspector: widget.debugShowWidgetInspector,
       locale: widget.locale,

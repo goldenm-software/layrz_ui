@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'skeleton_fill.dart';
 import 'skeleton_shimmer_box.dart';
 
 /// A single text-line skeleton shape primitive — the loading placeholder
@@ -97,12 +98,7 @@ class LayrzSkeletonLine extends StatelessWidget {
       shape: SizedBox(
         width: width,
         height: _resolvedHeight,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: const Color(0xFF000000),
-            borderRadius: BorderRadius.circular(borderRadius),
-          ),
-        ),
+        child: LayrzSkeletonFill(borderRadius: borderRadius),
       ),
     );
   }

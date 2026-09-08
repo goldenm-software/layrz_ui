@@ -5,11 +5,16 @@ import 'package:go_router/go_router.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 
+// TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
+// (/find-spike) but intentionally not listed in the showroom sidebar.
+import 'src/sections/find_in_page/find_spike.dart';
+
 import 'layout.dart';
 import 'src/sections/access_paths_section.dart';
 import 'src/sections/accordion_section.dart';
 import 'src/sections/ai_marker_section.dart';
 import 'src/sections/alerts_section.dart';
+import 'src/sections/app_banner_section.dart';
 import 'src/sections/badge_section.dart';
 import 'src/sections/borders_section.dart';
 import 'src/sections/button_group_section.dart';
@@ -17,6 +22,7 @@ import 'src/sections/buttons_section.dart';
 import 'src/sections/calendar_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
+import 'src/sections/context_menu_section.dart';
 import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
 import 'src/sections/file_input_section.dart';
@@ -142,6 +148,10 @@ final _router = GoRouter(
           pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
         ),
         GoRoute(
+          path: '/context-menu',
+          pageBuilder: (context, state) => NoTransitionPage(child: ContextMenuSection()),
+        ),
+        GoRoute(
           path: '/dialogs',
           pageBuilder: (context, state) => NoTransitionPage(child: DialogsSection()),
         ),
@@ -260,6 +270,16 @@ final _router = GoRouter(
         GoRoute(
           path: '/tab-view',
           pageBuilder: (context, state) => NoTransitionPage(child: TabViewSection()),
+        ),
+        GoRoute(
+          path: '/app-banner',
+          pageBuilder: (context, state) => NoTransitionPage(child: AppBannerSection()),
+        ),
+        // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
+        // (/find-spike) but intentionally not listed in the showroom sidebar.
+        GoRoute(
+          path: '/find-spike',
+          pageBuilder: (context, state) => NoTransitionPage(child: LayrzFindSpike()),
         ),
       ],
     ),

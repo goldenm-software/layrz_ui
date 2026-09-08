@@ -1,5 +1,60 @@
 # Changelog
 
+## 0.0.24
+
+**Browser-style find-in-page lands: `LayrzFindInPage` (DESIGN-109).** Ctrl+F (Cmd+F on macOS) now
+searches the *current page in place* — no navigation, no route change — highlighting every visible
+match at word granularity. `LayrzApp` installs `LayrzFindInPageHost` automatically (an invisible,
+app-wide coordinator) and `enableFindInPage` (default `true`) opts a whole app out if needed. A
+match triggers `LayrzFindBar`, a compact floating bar anchored top-right. `Text` and `RichText`
+widgets are found automatically with no annotation; only text drawn via `CustomPaint` needs to be
+wrapped in the new `LayrzSearchable` escape hatch to participate. The shortcut itself is wired
+through the new `LayrzShortcut` registry (see below). On web, activating find-in-page calls
+`preventDefault` on the browser's own Ctrl+F, since a CanvasKit canvas has no DOM for the browser to
+search natively.
+
+**Text selection is visible again.** Being Material-free meant `LayrzApp` never installed a
+`DefaultSelectionStyle`, so selected text painted with a transparent highlight everywhere. `LayrzApp`
+now installs one app-wide, backed by a new `selectionColor` swatch on `LayrzColorTokens` (default
+`LayrzColors.lightBlue`) and new `selectionColor` / `cursorColor` fields on `LayrzThemeData`, both
+themeable like every other token.
+
+**`LayrzShortcut` (DESIGN-71) — an app-wide keyboard-shortcut registry.**
+`LayrzShortcut.of(context).register(...)` returns a disposable handle; `deregister(...)` removes it.
+`LayrzApp` installs the registry automatically. `LayrzDropdownMenu` now auto-binds each entry's
+`shortcut` to its `onTap` — previously the shortcut was display-only text next to the entry and
+firing it did nothing. Registering a duplicate activator asserts in debug builds; in release, the
+first registration wins.
+
+**`LayrzContextMenu` (DESIGN-75) — a pointer-anchored context menu**, opened by right-click on
+desktop/web and long-press on touch, reusing the same surface as `LayrzDropdownMenu`.
+
+**`LayrzIconInput` (DESIGN-56) — a searchable, virtualized MDI icon picker** that persists a stable
+icon name rather than an index or a glyph. Adds the `flutter_mdi_remap` dependency.
+
+**`LayrzSkeletonBox.input()` (DESIGN-91)** — a new skeleton variant sized to match input height, for
+form loading states.
+
+**BREAKING — `LayrzApp` drops `debugShowCheckedModeBanner` (DESIGN-114).** `LayrzApp` now auto-shows
+a debug-only tiled watermark in its place, and the `debugShowCheckedModeBanner` parameter has been
+**removed** entirely. Migration: delete any `debugShowCheckedModeBanner:` argument passed to
+`LayrzApp`; if the watermark itself isn't wanted, pass `showDebugWatermark: false`.
+
+**`LayrzAccordion` rebuilt without `Expansible` (DESIGN-92).** The header and body now share one
+continuous border, visible while collapsed and backed by a shadow while expanded, with corners that
+stay uniformly rounded in every state instead of only when closed.
+
+**`LayrzSnackbar` swipe gestures fixed (DESIGN-60).** Swipe-down expands the stack, swipe-up
+collapses or dismisses it, drag position now follows the finger instead of jumping, every fanned
+card is swipeable once expanded (not just the top one), and a mobile gutter keeps the stack off the
+screen edge.
+
+**Fix:** `LayrzBadge`'s count number is now vertically centered (DESIGN-90).
+
+**Fix:** `LayrzAiMarker`'s accent color changed from orange to light blue (DESIGN-69).
+
+**Fix:** skeleton hairline-seam and sub-pixel height issues resolved (DESIGN-91).
+
 ## 0.0.23
 
 **Picker surfaces move from the end-drawer to an adaptive dialog.** All fourteen date, time,

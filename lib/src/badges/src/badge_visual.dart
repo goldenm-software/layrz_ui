@@ -134,7 +134,6 @@ class LayrzBadgeVisual extends StatelessWidget {
         style: tokens.typography.label.copyWith(
           color: spec.contentColor,
           fontSize: tokens.typography.label.fontSize ?? kLayrzBadgeCountFontSize,
-          height: 1.0,
           fontWeight: FontWeight.w600,
         ),
         maxLines: 1,
@@ -209,6 +208,30 @@ class LayrzBadgeVisual extends StatelessWidget {
     //    alignment corrected too. See
     //    `test/badges/badge_visual_centering_test.dart` for the ink-bounds
     //    regression test this discrepancy required.
+    //
+    // A THIRD, independent cause was found later (DESIGN-90): the vertical
+    // axis carried its own visible defect, unrelated to (1) and (2) above.
+    // The `Text`'s `TextStyle` set `height: 1.0` -- forcing the paragraph's
+    // line box down to exactly the font's em-square, positioned by ascent/
+    // descent metrics rather than by the font's natural leading. Roboto's
+    // digit glyphs sit high within that collapsed box, so even though
+    // `Center(heightFactor: 1.0)` correctly centers the *paragraph's own box*
+    // in the badge, the glyph ink inside that box was measurably off-center
+    // within it. Measured directly against real Roboto glyph ink (not the
+    // paragraph's layout box), uniformly across every count form (3, 5, 42,
+    // 99, 99+) at fontSize 12: -0.602lp with `height: 1.0` set -- large
+    // enough, at the badge's actual on-screen scale, to read as visibly high
+    // on a real device, matching the reviewer's screenshot. This was NOT a
+    // sub-pixel or uncorrectable font-intrinsic bias as an earlier pass here
+    // concluded; it was this widget's own `height: 1.0` override fighting the
+    // font's natural metrics. Removing `height: 1.0` (letting `TextStyle`
+    // fall back to the font's natural line height, still centered by the
+    // same `Center(heightFactor: 1.0)`) measures at -0.031lp uniformly across
+    // every count form -- effectively zero, ~20x inside the tolerance below.
+    // `height: 1.2` was also measured for comparison (-0.102lp, still passable
+    // but worse and needlessly inflates the line box) and rejected in favor
+    // of simply omitting `height`. See
+    // `test/badges/badge_visual_centering_test.dart` for the regression test.
     return Container(
       constraints: BoxConstraints(minWidth: diameter, minHeight: diameter),
       padding: isDot

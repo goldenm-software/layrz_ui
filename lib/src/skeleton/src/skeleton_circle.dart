@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'skeleton_fill.dart';
 import 'skeleton_shimmer_box.dart';
 
 /// A circular skeleton shape primitive — the loading placeholder for a
@@ -37,12 +38,7 @@ class LayrzSkeletonCircle extends StatelessWidget {
       shape: SizedBox(
         width: diameter,
         height: diameter,
-        child: const DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0xFF000000),
-            shape: BoxShape.circle,
-          ),
-        ),
+        child: const LayrzSkeletonFill.circle(),
       ),
     );
   }

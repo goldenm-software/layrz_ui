@@ -22,7 +22,6 @@ void main() {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
           home: Center(
             child: Builder(
               builder: (context) => GestureDetector(
@@ -85,7 +84,6 @@ void main() {
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
-          debugShowCheckedModeBanner: false,
           home: Center(
             child: Builder(
               builder: (context) => GestureDetector(

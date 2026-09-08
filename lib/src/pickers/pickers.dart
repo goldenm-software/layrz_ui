@@ -5,6 +5,8 @@ export 'src/datetime/datetime_input.dart';
 export 'src/datetime/datetime_presentation.dart';
 export 'src/datetime/datetime_range_input.dart';
 export 'src/emoji/emoji_input.dart';
+export 'src/icon/icon_input.dart';
+export 'src/icon/icon_surface.dart';
 export 'src/image/image_input.dart';
 export 'src/models/date_range.dart';
 export 'src/models/month.dart';
@@ -15,6 +17,3 @@ export 'src/month/month_range_input.dart';
 export 'src/multi_select/multi_select_input.dart';
 export 'src/time/time_input.dart';
 export 'src/time/time_range_input.dart';
-
-// Icon is intentionally NOT listed: the MDI icon picker moved to a separate
-// follow-up track (flutter_mdi_map) and is out of this batch.

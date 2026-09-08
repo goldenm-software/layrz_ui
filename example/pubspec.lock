@@ -139,6 +139,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.0+7447"
+  flutter_mdi_remap:
+    dependency: transitive
+    description:
+      name: flutter_mdi_remap
+      sha256: fcccfabdcac74c72b62b971b9c9a46496f0ffac87c418db542069efd68fc5386
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   flutter_plugin_android_lifecycle:
     dependency: transitive
     description:
@@ -224,7 +232,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.0.23"
+    version: "0.0.24"
   leak_tracker:
     dependency: transitive
     description:

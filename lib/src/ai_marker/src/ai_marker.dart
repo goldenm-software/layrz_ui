@@ -17,11 +17,11 @@ import 'ai_marker_wrapper.dart';
 /// glyphs — a bigger sparkle inset toward the top-left, a smaller accent
 /// sparkle inset toward the bottom-right, the conventional diagonal
 /// "AI sparkle" motif — in white, on top of a fully-rounded container filled
-/// with `tokens.colors.aiAccent`. The orange-on-orange contrast of an earlier
-/// revision (bare orange stars directly on the page background) was too weak
-/// against light surfaces; painting the accent as a solid pill behind white
-/// glyphs keeps the marker legible everywhere it's dropped (Kenny,
-/// 2026-09-04). It is deliberately **icon-only**: there is no visible text
+/// with `tokens.colors.aiAccent`. The blue-on-blue contrast of an earlier
+/// revision (bare accent-colored stars directly on the page background) was
+/// too weak against light surfaces; painting the accent as a solid pill
+/// behind white glyphs keeps the marker legible everywhere it's dropped
+/// (Kenny, 2026-09-04). It is deliberately **icon-only**: there is no visible text
 /// label parameter, and none should be added. Disclosure is carried instead
 /// by two mandatory, always-present mechanisms, both sourced from
 /// [LayrzUiL10n] and **not** configurable by the caller:
@@ -54,7 +54,7 @@ import 'ai_marker_wrapper.dart';
 ///   phase-offset behind the big star's (see [LayrzAiMarkerBurst]), settling
 ///   between repeats. This must read as an AI *twinkle*, never as a spinning
 ///   loading indicator — there is no rotation anywhere in this widget.
-/// - **Glow** — a soft [BoxShadow] in `tokens.colors.aiAccent` slowly orbits
+/// - **Glow** — a soft, light-blue [BoxShadow] in `tokens.colors.aiAccent` slowly orbits
 ///   the container: its [BoxShadow.offset] sweeps around the container's edge
 ///   on a continuous loop, as if a light source were circling the marker (see
 ///   [_LayrzAiMarkerState._glowFor]). This replaced an earlier

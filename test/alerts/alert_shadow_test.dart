@@ -146,7 +146,6 @@ void main() {
         await tester.pumpWidget(
           LayrzApp(
             theme: themeData,
-            debugShowCheckedModeBanner: false,
             home: Center(
               child: SizedBox(
                 width: 300,

@@ -374,3 +374,9 @@ abstract final class LayrzColors {
   /// Pure white — the lightest color on the palette.
   static const Color white = Color(0xFFFFFFFF);
 }
+
+/// [Colors] is an alias for [LayrzColors], provided for compatibility with
+/// Flutter's Material [Colors] class. It allows developers to use the same
+/// familiar [Colors] name while working with the layrz_ui design system, without
+/// introducing a dependency on the Material package.
+typedef Colors = LayrzColors;
