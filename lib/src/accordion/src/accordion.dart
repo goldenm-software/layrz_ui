@@ -56,15 +56,22 @@ import 'accordion_style_spec.dart';
 /// components use for a height change large enough that the standard
 /// [LayrzMotionTokens.easing] reads as too subtle.
 ///
-/// **One continuous border around the whole panel.** The header and body do
-/// not each paint their own border. A single outer shell -- built by
-/// `_buildPanelShell` -- wraps both in one [DecoratedBox]/[ClipRRect] pair, so
-/// the border traces one continuous rounded rectangle around header and body
-/// in every frame, including mid-animation. All four corners stay uniformly
-/// rounded to [LayrzTokens.radius.r2] in every expansion state -- collapsed,
-/// expanded, and everywhere in between -- so the panel always reads as one
-/// consistently rounded card and never squares off at the bottom once open.
-/// A single hairline divider is drawn between header and body, sized to zero
+/// **One continuous border around the whole panel -- present only while
+/// collapsed.** The header and body do not each paint their own border. A
+/// single outer shell -- built by `_buildPanelShell` -- wraps both in one
+/// bordered [DecoratedBox], so the border traces one continuous rounded
+/// rectangle around header and body whenever it is visible. Border and
+/// elevation shadow are mutually exclusive across the expand state: fully
+/// collapsed the border is at full alpha and the shadow is invisible; fully
+/// expanded the shadow is at full strength and the border has faded to fully
+/// transparent, so the shadow alone defines the panel's edge. Between the two
+/// the border's alpha and the shadow's alpha cross-fade against each other on
+/// the same progress -- see `_fadeBorder` and `_fadeShadow`. All four corners
+/// stay uniformly rounded to [LayrzTokens.radius.r2] in every expansion
+/// state -- collapsed, expanded, and everywhere in between -- so the panel
+/// always reads as one consistently rounded card and never squares off at
+/// the bottom once open. A single hairline divider is drawn between header
+/// and body, sized to zero
 /// height while collapsed; that divider height (not the corner radius) is
 /// driven by the same reveal animation. It is deliberately *not* part of the
 /// header's own [AnimatedContainer], which instead animates only
@@ -80,7 +87,11 @@ import 'accordion_style_spec.dart';
 /// `Align(alignment: Alignment.topCenter, heightFactor: progress)`, keyed to
 /// the same [CurvedAnimation] driving the divider and shadow below, so the
 /// body's visible height grows from the top edge in lockstep with everything
-/// else -- no separately-timed geometry to "blink" against.
+/// else -- no separately-timed geometry to "blink" against. The body's own
+/// background [DecoratedBox] rounds only its bottom-left/bottom-right corners
+/// to [LayrzTokens.radius.r2] (top corners stay square -- the header already
+/// occupies that space), so the expanded panel's bottom edge stays flush with
+/// the outer border's own rounded stroke instead of squaring off inside it.
 ///
 /// **Interaction states.** Per decision D15, hovering, focusing, or pressing
 /// the header only ever changes colour -- never its size, padding, or border
@@ -276,8 +287,8 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   }
 
   /// Wraps the whole panel -- [header] and the reveal-driven body together --
-  /// in a single outer border and rounded-rectangle clip, plus the internal
-  /// divider line drawn between them while expanded.
+  /// in a single outer border, plus the internal divider line drawn between
+  /// them while expanded.
   ///
   /// Owning the outer border in exactly one place -- here -- guarantees one
   /// continuous outline in every frame, collapsed or expanded or
@@ -306,24 +317,55 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   ///
   /// **Elevation on open.** An outer [DecoratedBox] -- carrying only
   /// [BoxDecoration.boxShadow] and the same constant [borderRadius], no
-  /// border and no fill -- wraps the [ClipRRect]/border/[Column] stack
-  /// instead of sitting inside it. This is load-bearing, not stylistic:
-  /// [ClipRRect] clips its subtree to its rounded rect, so a shadow painted
-  /// on the inner, clipped [DecoratedBox] is clipped away and never reaches
-  /// the screen. Placing the shadow on a node that wraps the clip, rather
-  /// than one the clip contains, is the only way for it to render at all.
-  /// The border itself stays on the inner [DecoratedBox] exactly as before,
-  /// so it keeps painting *over* the clipped fill and remains visible
-  /// sitting on top of the shadow in both states.
+  /// border and no fill -- wraps the border/[Column] stack instead of sitting
+  /// inside it, so the shadow is free to paint outside the panel's own
+  /// rounded rect. The border itself stays on the inner [DecoratedBox], which
+  /// paints its own rounded stroke directly (no enclosing clip): a
+  /// [ClipRRect] around a bordered [DecoratedBox] previously fought the
+  /// border's own antialiased edge, producing a faint seam down the left and
+  /// right sides where the two antialiased rounded-rect outlines composited
+  /// against each other. Removing the clip and letting the border draw its
+  /// rounded stroke unclipped is what eliminates that seam; see
+  /// `_buildBodyReveal` for how the body's bottom corners stay rounded
+  /// without reintroducing it.
   ///
-  /// The shadow fades in and out on the same progress driving the divider
-  /// above -- never a second timeline. [spec.shadow] is the constant,
-  /// full-elevation [LayrzTokens.shadow.elevation2] list; [_fadeShadow]
-  /// scales each [BoxShadow]'s alpha by progress so it is fully absent at 0
-  /// (collapsed, flat, border-only) and at full strength at 1 (expanded,
-  /// reads as a raised card), interpolating continuously in between. The
-  /// corner radius itself never participates in this fade -- it is constant
-  /// regardless of progress.
+  /// **Border painted in the foreground, not the background.** The inner
+  /// [DecoratedBox] uses [DecorationPosition.foreground], so its
+  /// [BoxDecoration.border] paints *on top of* the [Column] beneath it
+  /// instead of behind it (the default). The header's [AnimatedContainer]
+  /// fill and the body's own background [DecoratedBox] both paint edge to
+  /// edge horizontally, and with the default background position those
+  /// fills painted over the border's left/right stroke, leaving only the
+  /// top/bottom hairlines visible on a collapsed panel (the fills never
+  /// extend above the first row or below the last, so those two edges
+  /// survived by accident). Painting the border in the foreground instead
+  /// means it always paints last, over every child fill, so all four sides
+  /// stay visible regardless of what the header or body fill beneath it.
+  /// This is a single stroked rounded-rect painted as one antialiased edge --
+  /// not composited against a separate clip -- so it does not reintroduce
+  /// the left/right seam the [ClipRRect] removal above already fixed; that
+  /// seam came specifically from two antialiased edges (the clip's and the
+  /// border's) competing, which cannot happen here since there is no clip.
+  ///
+  /// **Border and shadow are mutually exclusive across the expand state.**
+  /// Collapsed, the panel reads as a bordered, flat card; expanded, it reads
+  /// as a shadow-elevated card with no outer stroke -- the shadow alone
+  /// defines the panel's edge once open. The two fade on the same progress
+  /// driving the divider above -- never a second timeline, and always an
+  /// inverse cross-fade of each other, never both at full strength together.
+  /// [spec.shadow] is the constant, full-elevation
+  /// [LayrzTokens.shadow.elevation2] list; [_fadeShadow] scales each
+  /// [BoxShadow]'s alpha by progress so it is fully absent at 0 (collapsed)
+  /// and at full strength at 1 (expanded). [spec.borderColor] is the
+  /// constant, full-alpha border color; [_fadeBorder] scales its alpha by
+  /// `(1 - progress)` so it is fully visible at 0 (collapsed) and fully
+  /// transparent at 1 (expanded) -- the exact inverse of the shadow fade,
+  /// interpolating continuously in between. The border's *width* is never
+  /// animated -- only its color alpha -- so no geometry changes and the
+  /// zero-width-with-nonzero-radius assertion never applies (a width > 0
+  /// side with a fully transparent color paints nothing but asserts fine).
+  /// The corner radius itself never participates in either fade -- it is
+  /// constant regardless of progress.
   Widget _buildPanelShell(
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
@@ -341,21 +383,19 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
             borderRadius: borderRadius,
             boxShadow: _fadeShadow(spec.shadow, progress),
           ),
-          child: ClipRRect(
-            borderRadius: borderRadius,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: borderRadius,
-                border: Border.all(color: spec.borderColor, width: spec.borderWidth),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  header,
-                  if (dividerHeight > 0) Container(height: dividerHeight, color: spec.borderColor),
-                  _buildBodyReveal(spec, progress),
-                ],
-              ),
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              border: _fadeBorder(spec.borderColor, spec.borderWidth, progress),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                header,
+                if (dividerHeight > 0) Container(height: dividerHeight, color: spec.borderColor),
+                _buildBodyReveal(spec, progress, borderRadius),
+              ],
             ),
           ),
         );
@@ -382,6 +422,33 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
     ];
   }
 
+  /// Scales the alpha of [color] by `(1 - progress)`, returning a
+  /// [Border.all] of [width] in that faded color -- the exact inverse of
+  /// [_fadeShadow], so the outer border and the elevation shadow always
+  /// cross-fade against each other rather than both being visible at once.
+  ///
+  /// [color] is the panel's constant, full-alpha border color --
+  /// [LayrzAccordionStyleSpec.borderColor], resolved from
+  /// [LayrzTokens.colors.fg3]. [progress] is the same 0-to-1 expansion value
+  /// driving the shadow fade and body reveal. At `progress == 0` (collapsed)
+  /// the returned border has the original, unmodified alpha -- full
+  /// strength, since the collapsed panel has no shadow to help delineate it.
+  /// At `progress == 1` (expanded) the border's alpha is `0` -- fully
+  /// transparent, since the elevation shadow now defines the panel's edge
+  /// instead.
+  ///
+  /// [width] is passed through unchanged and never animated: only the
+  /// color's alpha varies, so the border never changes geometry (per
+  /// decision D15) and a fully transparent side at full [width] never trips
+  /// the width-0-with-nonzero-radius assertion -- that assertion fires only
+  /// for an actual zero width paired with a non-zero radius, not for a
+  /// nonzero width whose color happens to be transparent.
+  Border _fadeBorder(Color color, double width, double progress) {
+    final clamped = progress.clamp(0.0, 1.0);
+    final faded = color.withValues(alpha: color.a * (1.0 - clamped));
+    return Border.all(color: faded, width: width);
+  }
+
   /// Builds the reveal-driven body slot -- present in the tree and clipped to
   /// [progress] of its natural height while `progress > 0`, and genuinely
   /// absent (a zero-size [SizedBox.shrink]) once the controller has settled
@@ -405,7 +472,20 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   /// branch that would render collapsed content already builds
   /// [SizedBox.shrink] instead), so no extra semantics gating is needed on
   /// this branch beyond what [_BodyMarker] itself carries.
-  Widget _buildBodyReveal(LayrzAccordionStyleSpec spec, double progress) {
+  ///
+  /// [panelRadius] is the same [BorderRadius] driving the outer shell's
+  /// border -- passed through so the body's own background [DecoratedBox] can
+  /// round its bottom-left/bottom-right corners to match ([BorderRadius.only]
+  /// with the top corners left square, since the header already occupies
+  /// that space). With no enclosing [ClipRRect] around the panel any more
+  /// (removed to fix a left/right edge seam -- see `_buildPanelShell`), the
+  /// body's flat rectangular background would otherwise poke square corners
+  /// out past the border's rounded bottom stroke once expanded. Rounding the
+  /// background's own corners here, rather than reaching for a separate
+  /// [ClipRRect], keeps the border and the body fill antialiasing as one
+  /// edge instead of two competing ones -- which is exactly the class of
+  /// seam this fix removes, so it must not be reintroduced by this corner.
+  Widget _buildBodyReveal(LayrzAccordionStyleSpec spec, double progress, BorderRadius panelRadius) {
     if (_controller.isDismissed) {
       return const SizedBox.shrink();
     }
@@ -416,7 +496,13 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
         heightFactor: progress.clamp(0.0, 1.0),
         child: _BodyMarker(
           child: DecoratedBox(
-            decoration: BoxDecoration(color: spec.headerBackgroundColor),
+            decoration: BoxDecoration(
+              color: spec.headerBackgroundColor,
+              borderRadius: BorderRadius.only(
+                bottomLeft: panelRadius.bottomLeft,
+                bottomRight: panelRadius.bottomRight,
+              ),
+            ),
             child: SizedBox(
               width: double.infinity,
               child: widget.body,

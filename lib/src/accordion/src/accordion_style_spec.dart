@@ -101,16 +101,24 @@ class LayrzAccordionStyleSpec {
   /// **State precedence**: disabled > pressed > hovered/focused > default.
   ///
   /// - **Default (idle)**: header fill is [LayrzTokens.colors.sf1], content is
-  ///   [LayrzTokens.colors.fg1], border is [LayrzTokens.colors.divider].
+  ///   [LayrzTokens.colors.fg1], border is [LayrzTokens.colors.fg3] -- a
+  ///   medium gray chosen so the collapsed panel's border is clearly visible
+  ///   against the near-white background, rather than the faint
+  ///   [LayrzTokens.colors.divider] that all but disappears when the panel
+  ///   has no shadow to help delineate it (collapsed panels are unshadowed;
+  ///   see [shadow] below).
   /// - **Hovered or focused**: header fill lifts to [LayrzTokens.colors.sf2],
   ///   signalling the whole row is a single tap/keyboard target (not just the
   ///   chevron). Focus is mapped identically to hover, satisfying WCAG 2.4.7
-  ///   without a fifth state.
+  ///   without a fifth state. Border stays [LayrzTokens.colors.fg3], same as
+  ///   the default state.
   /// - **Pressed**: header fill deepens further to [LayrzTokens.colors.sf3].
+  ///   Border stays [LayrzTokens.colors.fg3], same as the default state.
   /// - **Disabled**: content and border fade to [LayrzTokens.colors.fg3]; the
   ///   header fill stays [LayrzTokens.colors.sf1] since a disabled accordion
   ///   still occupies its normal position in the layout, it simply stops
-  ///   responding.
+  ///   responding. This is visually identical to the default border since
+  ///   both already resolve to [LayrzTokens.colors.fg3].
   ///
   /// [tokens] supplies every color, the border width, and the elevation
   /// shadow; no value here is hardcoded outside of the token lookups
@@ -141,7 +149,7 @@ class LayrzAccordionStyleSpec {
       return LayrzAccordionStyleSpec(
         headerBackgroundColor: tokens.colors.sf3,
         headerContentColor: tokens.colors.fg1,
-        borderColor: tokens.colors.divider,
+        borderColor: tokens.colors.fg3,
         borderWidth: borderWidth,
         shadow: shadow,
       );
@@ -151,7 +159,7 @@ class LayrzAccordionStyleSpec {
       return LayrzAccordionStyleSpec(
         headerBackgroundColor: tokens.colors.sf2,
         headerContentColor: tokens.colors.fg1,
-        borderColor: tokens.colors.divider,
+        borderColor: tokens.colors.fg3,
         borderWidth: borderWidth,
         shadow: shadow,
       );
@@ -160,7 +168,7 @@ class LayrzAccordionStyleSpec {
     return LayrzAccordionStyleSpec(
       headerBackgroundColor: tokens.colors.sf1,
       headerContentColor: tokens.colors.fg1,
-      borderColor: tokens.colors.divider,
+      borderColor: tokens.colors.fg3,
       borderWidth: borderWidth,
       shadow: shadow,
     );

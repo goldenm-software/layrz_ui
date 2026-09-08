@@ -343,41 +343,42 @@ void main() {
 
     /// Locates the border-carrying [DecoratedBox] built by `_buildPanelShell`
     /// -- the shell that owns the border and corner radius enclosing both the
-    /// header and the body. It sits directly inside the outermost
-    /// [ClipRRect] under [LayrzAccordion], one level above every other
-    /// [DecoratedBox] the header/body themselves might paint.
+    /// header and the body.
     ///
-    /// This is the *inner* of the two [DecoratedBox]es `_buildPanelShell`
-    /// builds -- the one still inside the [ClipRRect]. The border was left
-    /// here (rather than hoisted to the outer, shadow-carrying box) when the
-    /// DESIGN-92 follow-up added elevation, so this helper's search --
-    /// descendant of the first [ClipRRect] -- still finds it unchanged.
+    /// `_buildPanelShell` no longer wraps this box in a [ClipRRect] (removed
+    /// to fix a left/right edge seam where the clip's antialiasing fought the
+    /// border's own antialiased stroke -- see that method's doc comment), so
+    /// this is now found by its own decoration: it is the [DecoratedBox] in
+    /// [LayrzAccordion]'s subtree whose [BoxDecoration.border] is non-null,
+    /// distinguishing it from the outer, shadow-only box [shadowDecoratedBox]
+    /// locates and from any [DecoratedBox] the header or body paint
+    /// internally (none of which set a border).
     DecoratedBox outerShellDecoratedBox(WidgetTester tester) {
       return tester.widget<DecoratedBox>(
-        find
-            .descendant(
-              of: find.byType(ClipRRect).first,
-              matching: find.byType(DecoratedBox),
-            )
-            .first,
+        find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).border != null,
+        ),
       );
     }
 
     /// Locates the shadow-carrying [DecoratedBox] built by `_buildPanelShell`
-    /// -- the outer node that wraps the panel's [ClipRRect] and carries only
-    /// [BoxDecoration.boxShadow] and the shared, animated border radius. It is
-    /// the ancestor of, not a descendant inside, the outermost [ClipRRect] --
-    /// unlike [outerShellDecoratedBox] above -- since a shadow painted inside
-    /// the clip would be clipped away and never render (see
-    /// `_buildPanelShell`'s doc comment).
+    /// -- the outer node that wraps the border/[Column] stack and carries
+    /// only [BoxDecoration.boxShadow] and the shared, animated border radius,
+    /// with no border of its own.
+    ///
+    /// Matched by the presence of a non-null [BoxDecoration.boxShadow] key
+    /// rather than merely the absence of a border: while expanded, the
+    /// body's own background [DecoratedBox] (see `_buildBodyReveal`) also
+    /// sets a border-less [BoxDecoration.borderRadius] for its rounded bottom
+    /// corners, so "no border" alone would match two boxes once the body is
+    /// present. Only `_buildPanelShell`'s outer box ever sets [boxShadow], so
+    /// keying on that (even an empty, faded-to-nothing list still satisfies
+    /// "not null") stays unambiguous in every expansion state.
     DecoratedBox shadowDecoratedBox(WidgetTester tester) {
       return tester.widget<DecoratedBox>(
-        find
-            .ancestor(
-              of: find.byType(ClipRRect).first,
-              matching: find.byType(DecoratedBox),
-            )
-            .first,
+        find.byWidgetPredicate(
+          (widget) => widget is DecoratedBox && (widget.decoration as BoxDecoration).boxShadow != null,
+        ),
       );
     }
 
@@ -449,51 +450,59 @@ void main() {
       },
     );
 
-    testWidgets('at full expansion, a single continuous border encloses header and body', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      'at full expansion, a single continuous (now fully transparent) border shape encloses header and body',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpThemed(
-        tester,
-        LayrzAccordion(
-          titleText: 'Continuous border',
-          expanded: true,
-          onExpansionChanged: (_) {},
-          body: const _BodyMarker(),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await pumpThemed(
+          tester,
+          LayrzAccordion(
+            titleText: 'Continuous border',
+            expanded: true,
+            onExpansionChanged: (_) {},
+            body: const _BodyMarker(),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Exactly one DecoratedBox draws the panel's outer border -- there is
-      // no second, independently-clipped border around the header alone
-      // (the defect this fix removes) and none around the body alone.
-      final border = outerShellBorder(tester);
+        // Exactly one DecoratedBox draws the panel's outer border -- there is
+        // no second, independently-clipped border around the header alone
+        // (the defect this fix removes) and none around the body alone.
+        final border = outerShellBorder(tester);
 
-      expect(border.top, isNot(equals(BorderSide.none)), reason: 'top side must be present');
-      expect(border.left, isNot(equals(BorderSide.none)), reason: 'left side must be present');
-      expect(border.right, isNot(equals(BorderSide.none)), reason: 'right side must be present');
-      expect(border.bottom, isNot(equals(BorderSide.none)), reason: 'bottom side must be present');
+        // All four sides still share one continuous color and width -- a
+        // single Border.all, not four independently-resolved sides that
+        // could drift -- even though that shared color is now fully faded.
+        expect(border.top.color, equals(border.bottom.color));
+        expect(border.left.color, equals(border.right.color));
+        expect(border.top.width, equals(border.bottom.width));
+        expect(border.left.width, equals(border.right.width));
 
-      // All four sides share one continuous color and width -- a single
-      // Border.all, not four independently-resolved sides that could drift.
-      expect(border.top.color, equals(border.bottom.color));
-      expect(border.left.color, equals(border.right.color));
-      expect(border.top.width, equals(border.bottom.width));
-      expect(border.left.width, equals(border.right.width));
+        // Border and shadow are mutually exclusive at full expansion: the
+        // border has faded to fully transparent (alpha ~0) so the shadow
+        // alone defines the panel's edge, per the "border on closed, shadow
+        // on opened" design. Width stays the constant token width -- only
+        // the color's alpha animates, never geometry.
+        expect(border.top.color.a, closeTo(0.0, 0.001));
+        expect(border.top.width, equals(LayrzTokens.light().border.base));
 
-      // The body is present beneath this same shell, proving the border
-      // encloses header and body together rather than only the header.
-      expect(find.byType(_BodyMarker), findsOneWidget);
+        // The body is present beneath this same shell, proving the border
+        // shape encloses header and body together rather than only the
+        // header.
+        expect(find.byType(_BodyMarker), findsOneWidget);
 
-      // Bottom corners stay rounded, equal to the top corners, even while
-      // expanded -- the panel always reads as one consistently rounded
-      // card, never squaring off at the bottom once open.
-      expect(outerShellBorderRadius(tester).bottomLeft, equals(const Radius.circular(10.0)));
-      expect(outerShellBorderRadius(tester).bottomRight, equals(const Radius.circular(10.0)));
-      expect(outerShellBorderRadius(tester).topLeft, equals(const Radius.circular(10.0)));
-      expect(outerShellBorderRadius(tester).topRight, equals(const Radius.circular(10.0)));
-    });
+        // Bottom corners stay rounded, equal to the top corners, even while
+        // expanded -- the panel always reads as one consistently rounded
+        // card, never squaring off at the bottom once open.
+        expect(outerShellBorderRadius(tester).bottomLeft, equals(const Radius.circular(10.0)));
+        expect(outerShellBorderRadius(tester).bottomRight, equals(const Radius.circular(10.0)));
+        expect(outerShellBorderRadius(tester).topLeft, equals(const Radius.circular(10.0)));
+        expect(outerShellBorderRadius(tester).topRight, equals(const Radius.circular(10.0)));
+      },
+    );
 
     testWidgets('at full expansion, the panel is elevated with a full-strength drop shadow', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -525,10 +534,13 @@ void main() {
         expect(shadow[i].offset, equals(expectedShadow[i].offset));
       }
 
-      // The border painted on the inner shell must still be visible under
-      // the shadow -- elevation must not have replaced or hidden it.
+      // Border and shadow are mutually exclusive: at full expansion the
+      // border has faded fully out (alpha ~0), since the shadow alone now
+      // defines the panel's edge -- it has not been "replaced" by removing
+      // the BorderSide, only faded to transparent while its width and shape
+      // stay in place.
       final border = outerShellBorder(tester);
-      expect(border.top, isNot(equals(BorderSide.none)));
+      expect(border.top.color.a, closeTo(0.0, 0.001));
     });
 
     testWidgets('when collapsed, the panel is flat -- no visible drop shadow', (tester) async {
@@ -553,57 +565,87 @@ void main() {
       final allInvisible = shadow.every((s) => s.color.a < 0.001);
       expect(allInvisible, isTrue, reason: 'a collapsed panel must read as flat -- no visible shadow');
 
-      // The border must still be present while collapsed -- this was already
-      // true before elevation was added, and must remain so.
+      // The border must be at full alpha while collapsed -- this was already
+      // true before elevation was added, and must remain so: collapsed reads
+      // as a bordered, flat card with no shadow to help delineate it.
       final border = outerShellBorder(tester);
-      expect(border.bottom, isNot(equals(BorderSide.none)));
-    });
-
-    testWidgets('the shadow fades in continuously with expansion progress, not a second timeline', (tester) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      bool expanded = false;
-
-      await pumpThemedApp(
-        tester,
-        StatefulBuilder(
-          builder: (context, setState) => LayrzAccordion(
-            titleText: 'Shadow timeline check',
-            expanded: expanded,
-            onExpansionChanged: (value) => setState(() => expanded = value),
-            body: const _BodyMarker(),
-          ),
-        ),
-      );
-
-      // Collapsed: no visible shadow.
-      expect(shellShadow(tester).every((s) => s.color.a < 0.001), isTrue);
-
-      await tester.tap(find.text('Shadow timeline check'));
-      await tester.pump();
-      // Roughly the midpoint of the 200ms dTransition reveal.
-      await tester.pump(const Duration(milliseconds: 100));
-
-      final midShadow = shellShadow(tester);
       final tokens = LayrzTokens.light();
-      final fullAlpha = tokens.shadow.elevation2.first.color.a;
-
-      expect(midShadow, isNotEmpty);
-      // Mid-flight the shadow must be partially faded in -- neither fully
-      // absent (0) nor already at full strength -- proving it interpolates
-      // in lockstep with the same reveal animation rather than blinking in
-      // once the body finishes revealing.
-      expect(
-        midShadow.first.color.a,
-        allOf(greaterThan(0.0), lessThan(fullAlpha)),
-        reason: 'shadow alpha must be interpolating mid-reveal, not stuck at either end',
-      );
-
-      await tester.pumpAndSettle();
-      expect(shellShadow(tester).first.color.a, closeTo(fullAlpha, 0.01));
+      expect(border.bottom.color.a, closeTo(tokens.colors.fg3.a, 0.001));
     });
+
+    testWidgets(
+      'the shadow fades in and the border fades out continuously with expansion progress, as an inverse cross-fade',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        bool expanded = false;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) => LayrzAccordion(
+              titleText: 'Shadow timeline check',
+              expanded: expanded,
+              onExpansionChanged: (value) => setState(() => expanded = value),
+              body: const _BodyMarker(),
+            ),
+          ),
+        );
+
+        final tokens = LayrzTokens.light();
+        final fullShadowAlpha = tokens.shadow.elevation2.first.color.a;
+        final fullBorderAlpha = tokens.colors.fg3.a;
+
+        // Collapsed: no visible shadow, full-alpha border.
+        expect(shellShadow(tester).every((s) => s.color.a < 0.001), isTrue);
+        expect(outerShellBorder(tester).top.color.a, closeTo(fullBorderAlpha, 0.001));
+
+        await tester.tap(find.text('Shadow timeline check'));
+        await tester.pump();
+        // Roughly the midpoint of the 200ms dTransition reveal.
+        await tester.pump(const Duration(milliseconds: 100));
+
+        final midShadow = shellShadow(tester);
+        final midBorderAlpha = outerShellBorder(tester).top.color.a;
+
+        expect(midShadow, isNotEmpty);
+        // Mid-flight the shadow must be partially faded in -- neither fully
+        // absent (0) nor already at full strength -- proving it interpolates
+        // in lockstep with the same reveal animation rather than blinking in
+        // once the body finishes revealing.
+        expect(
+          midShadow.first.color.a,
+          allOf(greaterThan(0.0), lessThan(fullShadowAlpha)),
+          reason: 'shadow alpha must be interpolating mid-reveal, not stuck at either end',
+        );
+
+        // The border must be the exact inverse: also partially faded, never
+        // fully opaque nor fully transparent mid-flight -- a clean cross-fade
+        // against the shadow rather than a border that lingers at full
+        // strength while the shadow comes in on top of it.
+        expect(
+          midBorderAlpha,
+          allOf(greaterThan(0.0), lessThan(fullBorderAlpha)),
+          reason: 'border alpha must be interpolating (fading out) mid-reveal, not stuck at either end',
+        );
+
+        // The two fractions must sum to ~1: exactly what "fades in" and
+        // "fades out" mean for the same underlying progress value.
+        final shadowFraction = midShadow.first.color.a / fullShadowAlpha;
+        final borderFraction = midBorderAlpha / fullBorderAlpha;
+        expect(
+          shadowFraction + borderFraction,
+          closeTo(1.0, 0.02),
+          reason: 'border and shadow must be an inverse cross-fade of the same progress value',
+        );
+
+        await tester.pumpAndSettle();
+        expect(shellShadow(tester).first.color.a, closeTo(fullShadowAlpha, 0.01));
+        expect(outerShellBorder(tester).top.color.a, closeTo(0.0, 0.001));
+      },
+    );
 
     testWidgets('when collapsed, the outer shell is fully rounded like a standalone header', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
