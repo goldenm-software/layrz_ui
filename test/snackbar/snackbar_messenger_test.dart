@@ -1175,6 +1175,58 @@ void main() {
 
         expect(find.text('Saved'), findsOneWidget);
       });
+
+      testWidgets(
+        'once expanded, a horizontal swipe on a NON-FRONT card dismisses that card (DESIGN-60 fanned hit-test bug)',
+        (tester) async {
+          setWideViewport(tester);
+          final context = await pumpMessenger(tester, maxVisible: 3);
+          final messenger = LayrzSnackbarMessenger.of(context);
+
+          for (var i = 0; i < 3; i++) {
+            messenger.show(LayrzSnackbar(titleText: 'Toast $i', descriptionText: 'Description $i'));
+          }
+          await pumpPastEntry(tester);
+
+          // Expand the deck (swipe-down on the front card, same latch hover
+          // uses) so every visible card is fanned out and, per the
+          // IgnorePointer contract, individually interactive.
+          await tester.fling(find.text('Toast 2'), const Offset(0, 60), 1000);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 400));
+          await tester.pump();
+
+          // Sanity-check the deck really is expanded before testing the bug:
+          // every card's IgnorePointer must be non-ignoring.
+          final ignorePointers = tester.widgetList<IgnorePointer>(find.byType(IgnorePointer)).toList();
+          expect(
+            ignorePointers.where((w) => w.ignoring),
+            isEmpty,
+            reason: 'the deck must be genuinely expanded (all cards interactive) before this test is meaningful',
+          );
+
+          // 'Toast 1' is depth 1 — a NON-FRONT, fanned-out card, previously
+          // outside the accordion Stack's hit-test bounds even though it
+          // painted on-screen (Clip.none paints past layout bounds; Stack
+          // hit-testing does not extend past them). A horizontal swipe on it
+          // must now reach its own GestureDetector and dismiss it, exactly
+          // like the front card.
+          await tester.fling(find.text('Toast 1'), const Offset(60, 0), 1000);
+          await tester.pumpAndSettle();
+
+          expect(
+            find.text('Toast 1'),
+            findsNothing,
+            reason:
+                'a non-front fanned-out card must be swipeable/dismissible once the deck is expanded — it must fall '
+                'inside the enclosing Stack (or its sized wrapper)\'s hit-test region, not just its paint region',
+          );
+
+          // The other two cards, untouched by this swipe, must remain.
+          expect(find.text('Toast 0'), findsOneWidget);
+          expect(find.text('Toast 2'), findsOneWidget);
+        },
+      );
     });
 
     group('Drag-follow feedback (mid-gesture)', () {

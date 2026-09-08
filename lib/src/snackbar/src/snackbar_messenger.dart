@@ -535,8 +535,27 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// [_scheduleRemeasure] uses to measure card height — rather than
   /// `BuildContext.size`, which asserts when called during `build` (as this
   /// is, from [_buildToast]'s `AnimatedBuilder`).
+  ///
+  /// [GlobalKey.currentContext] can momentarily still resolve to an element
+  /// that is being reparented this very frame — e.g. an entry demoted from
+  /// depth 0 to depth 1 when a new toast is enqueued while the deck is
+  /// already fanned out, which swaps its wrapper widget between
+  /// [KeyedSubtree] and [AnimatedPositioned] at the same [ValueKey]. That
+  /// element can be `_ElementLifecycle.inactive` (its `debugIsActive` is
+  /// only meaningful in debug builds — see [Element.debugIsActive] — so it
+  /// cannot gate this in profile/release), and calling
+  /// [Element.findRenderObject] on it throws "Cannot get renderObject of
+  /// inactive element". The `try`/`catch` here is the actual guard (works in
+  /// every build mode); falling back to [widget.maxWidth] for that one
+  /// transient frame is exactly the same graceful fallback already used for
+  /// "never laid out yet".
   double _measuredCardWidth(_SnackbarEntry entry) {
-    final renderBox = entry.cardKey.currentContext?.findRenderObject() as RenderBox?;
+    RenderBox? renderBox;
+    try {
+      renderBox = entry.cardKey.currentContext?.findRenderObject() as RenderBox?;
+    } on FlutterError {
+      renderBox = null;
+    }
     final width = renderBox?.hasSize == true ? renderBox!.size.width : null;
     return (width != null && width > 0) ? width : widget.maxWidth;
   }
@@ -635,43 +654,113 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     );
   }
 
+  /// The extent (in logical pixels) the accordion deck's enclosing box must
+  /// reserve so every visible card — including the deepest fanned-out one —
+  /// falls **inside** the [Stack]'s hit-test region.
+  ///
+  /// At rest (`_isHovered == false`), behind cards only peek
+  /// `_kRestOffsetStep * depth` below the front card, so the compact extent
+  /// is the front card's own measured height plus that last, deepest peek
+  /// offset — a small sliver taller than the front card alone.
+  ///
+  /// When fanned out (`_isHovered == true`), every card sits at
+  /// [_fannedOffsetFor]'s cumulative offset, so the extent must reach past
+  /// the deepest card's own measured height on top of its offset — otherwise
+  /// that card would render (paint, via `clipBehavior: Clip.none`) outside
+  /// the [Stack]'s laid-out bounds and silently stop receiving pointer
+  /// events (a [Stack] only hit-tests within its own layout size; painting
+  /// past it is visual only). This is exactly the DESIGN-60 bug this method
+  /// exists to close: only the front card was ever inside the Stack's
+  /// bounds, so only it could be swiped once the deck was expanded.
+  ///
+  /// [visible] is newest-first, matching every other helper here, and must
+  /// hold at least 2 entries — [_buildAccordionDeck] only calls this when
+  /// there is at least one "behind" card to enclose. A card not yet measured
+  /// falls back to [_kFallbackCardHeight], the same fallback
+  /// [_fannedOffsetFor] uses, so the very first frame (before any
+  /// [_scheduleRemeasure] callback has landed) still reserves a sane extent
+  /// instead of collapsing toward zero.
+  double _deckExtent(List<_SnackbarEntry> visible, double gap) {
+    final front = visible.first;
+    final frontHeight = _measuredHeights[front] ?? _kFallbackCardHeight;
+    final deepest = visible.length - 1;
+
+    if (_isHovered) {
+      final deepestHeight = _measuredHeights[visible[deepest]] ?? _kFallbackCardHeight;
+      return _fannedOffsetFor(visible, deepest, gap) + deepestHeight;
+    }
+    return frontHeight + _kRestOffsetStep * deepest;
+  }
+
   /// Builds the accordion [Stack] itself from [visible] (newest-first).
   ///
   /// Depth 0 (the front/newest card) is the Stack's sole non-positioned
-  /// child, so the Stack's height comes from that card's natural content
-  /// size — never unbounded. Every deeper card is [AnimatedPositioned],
-  /// tweening its `top` between the compact rest offset
-  /// (`_kRestOffsetStep * depth`) and the fanned offset returned by
-  /// [_fannedOffsetFor] (the cumulative measured height of every card in
-  /// front of it), so hover reveals each card's complete content with no
-  /// overlap regardless of how tall any of them render.
+  /// child — this bounds the Stack's own intrinsic size, which matters under
+  /// the unbounded-height constraints the enclosing `Overlay` → `Positioned`
+  /// → `Center` → `Column` chain gives it (see the "single toast" regression
+  /// guard test). Every deeper card is [AnimatedPositioned], tweening its
+  /// `top` between the compact rest offset (`_kRestOffsetStep * depth`) and
+  /// the fanned offset returned by [_fannedOffsetFor] (the cumulative
+  /// measured height of every card in front of it), so hover reveals each
+  /// card's complete content with no overlap regardless of how tall any of
+  /// them render.
+  ///
+  /// The [Stack] is always wrapped in the same [AnimatedContainer] — with a
+  /// single visible card its `height` is left `null` (an unconstrained
+  /// [AnimatedContainer] sizes purely from its child, identical to the bare
+  /// [Stack] this replaced), and with two or more cards its `height` becomes
+  /// [_deckExtent] — enclosing every fanned-out card so it falls **inside**
+  /// the Stack's hit-test region (see [_deckExtent]'s doc for why this is
+  /// required, not cosmetic: this is exactly the DESIGN-60 bug this wrapper
+  /// exists to close, where only the front card was ever inside the Stack's
+  /// bounds once fanned, so only it could be swiped).
+  ///
+  /// Keeping the [AnimatedContainer] present unconditionally (rather than
+  /// only wrapping once a second card exists) matters for its own reason:
+  /// switching the widget *type* at this position in the tree — bare
+  /// [Stack] one build, [AnimatedContainer] the next, as the deck grows from
+  /// 1 to 2 entries — makes the framework deactivate and reinflate the whole
+  /// subtree at exactly the moment a build is already in flight elsewhere in
+  /// it, and this specific tree hits a real framework race from that
+  /// (`Cannot get renderObject of inactive element`, from
+  /// [_measuredCardWidth] reading a card's [RenderBox] mid-rebuild while its
+  /// element is momentarily inactive). Keeping one stable widget type at
+  /// this position for every entry count avoids that reinflation entirely.
+  /// The inner [Stack]'s own front-card sizing mechanism is untouched either
+  /// way; only the outer container's height ever changes.
   Widget _buildAccordionDeck(List<_SnackbarEntry> visible, double gap) {
     final front = visible.first;
     final behind = visible.skip(1).toList(growable: false);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Deepest-first paint order: a Stack paints later children ON TOP of
-        // earlier ones, and the front (newest) card must always be on top —
-        // so every "behind" card is added before it, deepest first.
-        for (var i = behind.length - 1; i >= 0; i--)
-          AnimatedPositioned(
-            key: ValueKey(behind[i]),
-            duration: _kFanDuration,
-            curve: _kEntryCurve,
-            top: _isHovered ? _fannedOffsetFor(visible, i + 1, gap) : _kRestOffsetStep * (i + 1),
-            left: 0,
-            right: 0,
-            child: _buildToast(behind[i], depth: i + 1),
+    return AnimatedContainer(
+      duration: _kFanDuration,
+      curve: _kEntryCurve,
+      height: behind.isEmpty ? null : _deckExtent(visible, gap),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Deepest-first paint order: a Stack paints later children ON TOP
+          // of earlier ones, and the front (newest) card must always be on
+          // top — so every "behind" card is added before it, deepest first.
+          for (var i = behind.length - 1; i >= 0; i--)
+            AnimatedPositioned(
+              key: ValueKey(behind[i]),
+              duration: _kFanDuration,
+              curve: _kEntryCurve,
+              top: _isHovered ? _fannedOffsetFor(visible, i + 1, gap) : _kRestOffsetStep * (i + 1),
+              left: 0,
+              right: 0,
+              child: _buildToast(behind[i], depth: i + 1),
+            ),
+          // Depth 0 — non-positioned (bounds the Stack's own intrinsic
+          // size) and painted last, so it always sits on top of every
+          // peeking card behind it.
+          KeyedSubtree(
+            key: ValueKey(front),
+            child: _buildToast(front, depth: 0),
           ),
-        // Depth 0 — non-positioned (bounds the Stack's height) and painted
-        // last, so it always sits on top of every peeking card behind it.
-        KeyedSubtree(
-          key: ValueKey(front),
-          child: _buildToast(front, depth: 0),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
