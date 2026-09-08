@@ -57,27 +57,43 @@ void main() {
     // ink-bounds measurement reads 0.0lp for every count form, including the
     // 99+ overflow form.
     //
-    // Vertically, the current code carries a small, real, FONT-INTRINSIC
-    // bias that is not a layout defect: Roboto's digit glyphs (and,
-    // separately, its `+` glyph) do not sit exactly centered within their own
-    // line-box ascent/descent, even when that line box itself is perfectly
-    // centered in the badge. Measured directly: -0.6lp uniformly across
-    // every count form (3, 5, 42, 99, 99+) at fontSize 12 -- sub-pixel at any
-    // real device pixel ratio, and NOT something this widget's layout can
-    // correct, since it is a property of the glyphs themselves, not of the
-    // constraint chain. Two compensation attempts were tried and rejected:
-    // `StrutStyle(forceStrutHeight: true)` and
-    // `TextHeightBehavior(applyHeightToFirstAscent/LastDescent: false)` each
-    // shifted the bias to a DIFFERENT, larger value per content string (up to
-    // 1.1lp) instead of removing it, because digits and `+` have different
-    // vertical ink centers relative to each other -- there is no single
-    // strut/height adjustment that centers both simultaneously. The
-    // horizontal tolerance below stays tight (this is where the real,
-    // measured 3.0lp defect lived); the vertical tolerance is set to admit
-    // the known-harmless ~0.6lp font-intrinsic bias while still catching a
-    // genuine multi-pixel regression.
+    // Vertically, an earlier pass over this widget (DESIGN-167 follow-up)
+    // shipped with the count `Text`'s `TextStyle` setting `height: 1.0`, and
+    // concluded the resulting vertical offset was a small, uncorrectable,
+    // font-intrinsic bias -- sub-pixel and not worth chasing. A reviewer
+    // screenshot (DESIGN-90) contradicted that: the count sat visibly high in
+    // the circle, with noticeably more colored space below the glyph than
+    // above, for every count form (single digits, two digits, and the `99+`
+    // overflow form) -- far larger than a sub-pixel defect. Re-measuring
+    // directly against real Roboto glyph ink confirmed it: -0.602lp uniformly
+    // across every count form (3, 5, 42, 99, 99+) at fontSize 12 with
+    // `height: 1.0` set. That number matches what the earlier pass measured,
+    // but "-0.6lp" is not sub-pixel at this badge's actual on-screen scale --
+    // the earlier conclusion that it was harmless was simply wrong.
+    //
+    // The root cause was `height: 1.0` itself: it collapses the paragraph's
+    // line box down to exactly the font's em-square, positioned by ascent/
+    // descent metrics rather than the font's natural leading, and Roboto's
+    // digit glyphs sit high within that collapsed box. `Center` above it
+    // correctly centers the (collapsed) box, but the ink inside that box was
+    // never centered within it. Removing `height: 1.0` -- letting the
+    // `TextStyle` fall back to the font's natural line height, still centered
+    // by the same `Center(heightFactor: 1.0)` -- measures at -0.031lp
+    // uniformly across every count form: effectively zero, and not a layout
+    // hack (no `Transform.translate`, no `StrutStyle` tuning) -- just letting
+    // the font's own metrics center the glyph the way they were designed to.
+    // (`height: 1.2` was also measured for comparison: -0.102lp, still well
+    // within tolerance but strictly worse than omitting `height` entirely,
+    // so it was not used.)
+    //
+    // The horizontal tolerance below stays tight (this is where the real,
+    // measured 3.0lp defect from the DESIGN-167 follow-up lived, and it is
+    // unaffected by this vertical fix); the vertical tolerance is now
+    // tightened to match the corrected reality -- 0.5lp comfortably admits
+    // the measured ~0.03lp residual while still catching a genuine
+    // regression back toward the old ~0.6lp (or worse) defect.
     const horizontalTolerance = 0.5;
-    const verticalTolerance = 0.75;
+    const verticalTolerance = 0.5;
 
     /// Pumps a [LayrzBadgeVisual] displaying [count] and returns the badge's
     /// painted `Container` rect alongside the real, ink-tight bounding rect
