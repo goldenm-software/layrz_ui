@@ -341,8 +341,32 @@ void main() {
       expect(bodyColor, equals(headerColor));
     });
 
+    /// Locates the single outer [DecoratedBox] built by `_buildPanelShell` --
+    /// the one shell that owns the border and corner radius enclosing both
+    /// the header and the body. It sits directly inside the outermost
+    /// [ClipRRect] under [LayrzAccordion], one level above every other
+    /// [DecoratedBox] the header/body themselves might paint.
+    DecoratedBox outerShellDecoratedBox(WidgetTester tester) {
+      return tester.widget<DecoratedBox>(
+        find
+            .descendant(
+              of: find.byType(ClipRRect).first,
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+    }
+
+    BorderRadius outerShellBorderRadius(WidgetTester tester) {
+      return (outerShellDecoratedBox(tester).decoration as BoxDecoration).borderRadius! as BorderRadius;
+    }
+
+    Border outerShellBorder(WidgetTester tester) {
+      return (outerShellDecoratedBox(tester).decoration as BoxDecoration).border! as Border;
+    }
+
     testWidgets(
-      'header bottom-edge geometry animates on the body reveal timeline, not a separate one (no blink)',
+      'the outer shell geometry animates on the body reveal timeline, not a separate one (no blink)',
       (tester) async {
         tester.view.physicalSize = const Size(1600, 1200);
         tester.view.devicePixelRatio = 1.0;
@@ -362,62 +386,110 @@ void main() {
           ),
         );
 
-        BorderRadius headerBorderRadius() {
-          final decoratedBox = tester.widget<DecoratedBox>(
-            find.ancestor(of: find.byType(AnimatedContainer), matching: find.byType(DecoratedBox)).first,
-          );
-          return (decoratedBox.decoration as BoxDecoration).borderRadius! as BorderRadius;
-        }
-
-        BorderSide headerBottomBorder() {
-          final decoratedBox = tester.widget<DecoratedBox>(
-            find.ancestor(of: find.byType(AnimatedContainer), matching: find.byType(DecoratedBox)).first,
-          );
-          return (decoratedBox.decoration as BoxDecoration).border!.bottom;
-        }
-
-        // Fully collapsed: bottom corners are rounded and the bottom border
-        // is present, matching the closed panel's outline.
-        expect(headerBorderRadius().bottomLeft, equals(const Radius.circular(10.0)));
-        expect(headerBottomBorder().width, greaterThan(0.0));
+        // Fully collapsed: bottom corners are rounded, matching a standalone
+        // header with no body attached.
+        expect(outerShellBorderRadius(tester).bottomLeft, equals(const Radius.circular(10.0)));
 
         await tester.tap(find.text('Timeline check'));
         await tester.pump();
 
         // Pump to roughly the midpoint of the 200ms dTransition reveal, well
         // past the 100ms dHover duration a header-only color animation would
-        // already have finished within. If header geometry were still driven
-        // by dHover, the bottom radius/border would already have snapped to
-        // their fully-expanded values (Radius.zero / BorderSide.none) here --
-        // the very blink this fix removes.
+        // already have finished within. If the shell's geometry were driven
+        // by dHover instead of the shared reveal animation, the bottom radius
+        // would already have snapped to its fully-expanded value
+        // (Radius.zero) here -- the very blink this fix removes.
         await tester.pump(const Duration(milliseconds: 100));
 
-        final midRadius = headerBorderRadius().bottomLeft;
+        final midRadius = outerShellBorderRadius(tester).bottomLeft;
         expect(
           midRadius,
           isNot(equals(Radius.zero)),
-          reason: 'header bottom radius must not have reached its expanded value before the body reveal finishes',
+          reason: 'outer shell bottom radius must not have reached its expanded value before the body reveal '
+              'finishes',
         );
         expect(
           midRadius,
           isNot(equals(const Radius.circular(10.0))),
-          reason: 'header bottom radius must be interpolating, not stuck at its collapsed value',
-        );
-        expect(
-          headerBottomBorder().width,
-          allOf(greaterThan(0.0), lessThan(1.5)),
-          reason: 'header bottom border width must be interpolating in step with the radius',
+          reason: 'outer shell bottom radius must be interpolating, not stuck at its collapsed value',
         );
 
         await tester.pumpAndSettle();
 
-        // Fully expanded and settled: bottom corners are square and the
-        // bottom border has been removed, landing in the same frame the body
-        // finished revealing.
-        expect(headerBorderRadius().bottomLeft, equals(Radius.zero));
-        expect(headerBottomBorder(), equals(BorderSide.none));
+        // Fully expanded and settled: bottom corners are square, landing in
+        // the same frame the body finished revealing.
+        expect(outerShellBorderRadius(tester).bottomLeft, equals(Radius.zero));
       },
     );
+
+    testWidgets('at full expansion, a single continuous border encloses header and body', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzAccordion(
+          titleText: 'Continuous border',
+          expanded: true,
+          onExpansionChanged: (_) {},
+          body: const _BodyMarker(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Exactly one DecoratedBox draws the panel's outer border -- there is
+      // no second, independently-clipped border around the header alone
+      // (the defect this fix removes) and none around the body alone.
+      final border = outerShellBorder(tester);
+
+      expect(border.top, isNot(equals(BorderSide.none)), reason: 'top side must be present');
+      expect(border.left, isNot(equals(BorderSide.none)), reason: 'left side must be present');
+      expect(border.right, isNot(equals(BorderSide.none)), reason: 'right side must be present');
+      expect(border.bottom, isNot(equals(BorderSide.none)), reason: 'bottom side must be present');
+
+      // All four sides share one continuous color and width -- a single
+      // Border.all, not four independently-resolved sides that could drift.
+      expect(border.top.color, equals(border.bottom.color));
+      expect(border.left.color, equals(border.right.color));
+      expect(border.top.width, equals(border.bottom.width));
+      expect(border.left.width, equals(border.right.width));
+
+      // The body is present beneath this same shell, proving the border
+      // encloses header and body together rather than only the header.
+      expect(find.byType(_BodyMarker), findsOneWidget);
+
+      // Bottom corners are square while expanded -- the panel reads as one
+      // rounded-top block with the body attached, not a rounded box floating
+      // above a second rounded box.
+      expect(outerShellBorderRadius(tester).bottomLeft, equals(Radius.zero));
+      expect(outerShellBorderRadius(tester).bottomRight, equals(Radius.zero));
+    });
+
+    testWidgets('when collapsed, the outer shell is fully rounded like a standalone header', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzAccordion(
+          titleText: 'Collapsed shell',
+          expanded: false,
+          onExpansionChanged: (_) {},
+          body: const _BodyMarker(),
+        ),
+      );
+
+      final radius = outerShellBorderRadius(tester);
+      expect(radius.topLeft, equals(const Radius.circular(10.0)));
+      expect(radius.topRight, equals(const Radius.circular(10.0)));
+      expect(radius.bottomLeft, equals(const Radius.circular(10.0)));
+      expect(radius.bottomRight, equals(const Radius.circular(10.0)));
+
+      final border = outerShellBorder(tester);
+      expect(border.bottom, isNot(equals(BorderSide.none)));
+    });
 
     testWidgets('rotates the chevron between collapsed and expanded', (tester) async {
       bool expanded = false;
