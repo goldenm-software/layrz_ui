@@ -495,6 +495,13 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// asserts under the unbounded-height constraints this overlay sits in
   /// (Overlay → Positioned → Center); keeping the front card unpositioned is
   /// what avoids that crash.
+  ///
+  /// [widget.padding]'s left/right insets are applied on this `Positioned`
+  /// itself (not just its `top`), so a viewport narrower than [widget.maxWidth]
+  /// always keeps a horizontal gutter instead of stretching the card
+  /// edge-to-edge. The inner `Center` + `ConstrainedBox(maxWidth)` still caps
+  /// and centers the card on wide viewports — the inset only ever tightens
+  /// the available width, it never widens it past [widget.maxWidth].
   Widget _buildStackOverlay(BuildContext context) {
     if (_queue.isEmpty) {
       return const SizedBox.shrink();
@@ -510,8 +517,8 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
 
     return Positioned(
       top: effectiveTop,
-      left: 0,
-      right: 0,
+      left: widget.padding.left,
+      right: widget.padding.right,
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: widget.maxWidth),
@@ -657,16 +664,36 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     );
   }
 
-  /// Handles a swipe gesture on [entry] — swipe-up (negative vertical
-  /// velocity) and swipe-right (positive horizontal velocity) both dismiss,
-  /// per the user-approved dual-direction decision (DESIGN-60 plan, U4 risk
-  /// notes). A swipe below this speed threshold is ignored as an accidental
-  /// drag rather than a deliberate dismiss gesture.
+  /// Handles a swipe gesture on [entry] (DESIGN-60, revised gesture contract):
+  ///
+  /// * **Swipe-down** (positive vertical velocity past the threshold) expands
+  ///   the deck — it latches the exact same fanned/hovered state the desktop
+  ///   hover fan-out uses, by calling [_handleStackEnter] directly, so a touch
+  ///   user gets the same "see every card in full" affordance a mouse user
+  ///   gets from hovering. This works regardless of which card (which
+  ///   [entry]/depth) the swipe originated on — the whole stack fans, exactly
+  ///   as it does on hover.
+  /// * **Swipe-up** (negative vertical velocity past the threshold) is a
+  ///   no-op. It neither dismisses nor collapses the deck — there is
+  ///   deliberately no "swipe up to collapse" gesture; hover-exit (desktop)
+  ///   or moving away from the stack remains the only collapse path.
+  /// * **Horizontal swipe**, either left or right (velocity magnitude past
+  ///   the threshold in either direction), dismisses [entry] — horizontal
+  ///   drag is the mobile dismiss gesture, direction-agnostic.
+  ///
+  /// A swipe below [kSwipeVelocityThreshold] in any direction is ignored as
+  /// an accidental drag rather than a deliberate gesture.
   void _handleSwipe(_SnackbarEntry entry, double primaryVelocity, {required bool isVertical}) {
     const double kSwipeVelocityThreshold = 200;
-    final bool isSwipeUp = isVertical && primaryVelocity < -kSwipeVelocityThreshold;
-    final bool isSwipeRight = !isVertical && primaryVelocity > kSwipeVelocityThreshold;
-    if (isSwipeUp || isSwipeRight) {
+    if (isVertical) {
+      if (primaryVelocity > kSwipeVelocityThreshold) {
+        _handleStackEnter();
+      }
+      // Swipe-up (primaryVelocity < -kSwipeVelocityThreshold) is intentionally
+      // a no-op — see the doc comment above.
+      return;
+    }
+    if (primaryVelocity.abs() > kSwipeVelocityThreshold) {
       _dismiss(entry);
     }
   }

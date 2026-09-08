@@ -1003,7 +1003,7 @@ void main() {
     });
 
     group('Swipe dismissal', () {
-      testWidgets('swipe-up dismisses the toast', (tester) async {
+      testWidgets('swipe-up does NOT dismiss the toast', (tester) async {
         setWideViewport(tester);
         final context = await pumpMessenger(tester);
 
@@ -1013,7 +1013,11 @@ void main() {
         await tester.fling(find.text('Saved'), const Offset(0, -60), 1000);
         await tester.pump();
 
-        expect(find.text('Saved'), findsNothing);
+        expect(
+          find.text('Saved'),
+          findsOneWidget,
+          reason: 'swipe-up is a no-op in the revised gesture contract — it must not dismiss',
+        );
       });
 
       testWidgets('swipe-right dismisses the toast', (tester) async {
@@ -1029,6 +1033,72 @@ void main() {
         expect(find.text('Saved'), findsNothing);
       });
 
+      testWidgets('swipe-left dismisses the toast', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        await tester.fling(find.text('Saved'), const Offset(-60, 0), 1000);
+        await tester.pump();
+
+        expect(
+          find.text('Saved'),
+          findsNothing,
+          reason: 'horizontal swipe dismisses in either direction, not just right',
+        );
+      });
+
+      testWidgets('swipe-down expands the deck via the same fan-out hover uses', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester, maxVisible: 3);
+        final messenger = LayrzSnackbarMessenger.of(context);
+
+        for (var i = 0; i < 3; i++) {
+          messenger.show(LayrzSnackbar(titleText: 'Toast $i', descriptionText: 'Description $i'));
+        }
+        await pumpPastEntry(tester);
+
+        // At rest, both peeking cards sit at the small compact sliver offset.
+        final restCards = findPeekingCards(tester);
+        expect(restCards, hasLength(2));
+        final restDeepestTop = restCards.last.top!;
+
+        // Swipe down on the front card — must latch the same expanded state
+        // _handleStackEnter() (hover) uses, fanning the whole stack out even
+        // though the gesture originated on the front (depth 0) card.
+        await tester.fling(find.text('Toast 2'), const Offset(0, 60), 1000);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+
+        final fannedCards = findPeekingCards(tester);
+        expect(fannedCards, hasLength(2));
+        expect(
+          fannedCards.last.top!,
+          greaterThan(restDeepestTop),
+          reason:
+              'swipe-down must latch the same _isHovered/fanned state _handleStackEnter() (hover) uses, spreading '
+              'cards further than their resting sliver offset',
+        );
+
+        // Every visible card becomes interactive once fanned, exactly like
+        // the hover fan-out (DESIGN-60 final: "hovered = all interactive") —
+        // proof the swipe latched the real _isHovered state, not a lookalike.
+        final ignorePointers = tester.widgetList<IgnorePointer>(find.byType(IgnorePointer)).toList();
+        expect(ignorePointers, hasLength(3));
+        expect(
+          ignorePointers.where((w) => w.ignoring),
+          isEmpty,
+          reason: 'swipe-down must make every visible card interactive, same as hover',
+        );
+
+        expect(find.text('Description 0'), findsOneWidget);
+        expect(find.text('Description 1'), findsOneWidget);
+        expect(find.text('Description 2'), findsOneWidget);
+      });
+
       testWidgets('a slow drag below the velocity threshold does not dismiss', (tester) async {
         setWideViewport(tester);
         final context = await pumpMessenger(tester);
@@ -1041,6 +1111,54 @@ void main() {
         await tester.pump();
 
         expect(find.text('Saved'), findsOneWidget);
+      });
+    });
+
+    group('Mobile edge-to-edge gutter', () {
+      testWidgets('a narrow viewport still leaves a horizontal gutter — the card is not edge-to-edge', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        final viewportWidth = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+        final cardWidth = tester.getSize(find.byType(LayrzSnackbarView)).width;
+
+        expect(
+          cardWidth,
+          lessThan(viewportWidth),
+          reason: 'padding.left/right must carve out a gutter — the card must never stretch edge-to-edge',
+        );
+
+        final cardLeft = tester.getTopLeft(find.byType(LayrzSnackbarView)).dx;
+        final cardRight = tester.getTopRight(find.byType(LayrzSnackbarView)).dx;
+        expect(cardLeft, greaterThan(0), reason: 'a left gutter must be present on a narrow viewport');
+        expect(cardRight, lessThan(viewportWidth), reason: 'a right gutter must be present on a narrow viewport');
+      });
+
+      testWidgets('a wide viewport still caps the card at maxWidth, centered — not stretched', (tester) async {
+        setWideViewport(tester);
+        final context = await pumpMessenger(tester);
+
+        LayrzSnackbarMessenger.of(context).show(savedSnackbar);
+        await pumpPastEntry(tester);
+
+        final cardWidth = tester.getSize(find.byType(LayrzSnackbarView)).width;
+        expect(
+          cardWidth,
+          lessThanOrEqualTo(kLayrzSnackbarMaxWidth),
+          reason: 'on a wide viewport the card is still capped at maxWidth, not stretched to viewport minus padding',
+        );
+
+        final screenCenterX = tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
+        final cardCenter = tester.getCenter(find.byType(LayrzSnackbarView));
+        expect(cardCenter.dx, closeTo(screenCenterX, 1.0), reason: 'the capped card remains centered, not left-shoved');
       });
     });
 
@@ -1118,8 +1236,8 @@ void main() {
 
         final positioned = tester.widget<Positioned>(findStackPositioned());
         expect(positioned.top, 16.0, reason: 'no safe-area inset on desktop — falls back to the 16px padding');
-        expect(positioned.left, 0.0);
-        expect(positioned.right, 0.0);
+        expect(positioned.left, 16.0, reason: 'the default 16px padding.left is applied as a horizontal gutter');
+        expect(positioned.right, 16.0, reason: 'the default 16px padding.right is applied as a horizontal gutter');
 
         final screenCenterX = tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
         // The card widget's own bounds are centered on screen — not
@@ -1138,8 +1256,8 @@ void main() {
 
         final positioned = tester.widget<Positioned>(findStackPositioned());
         expect(positioned.top, 16.0, reason: 'no simulated safe-area inset in this test — falls back to padding');
-        expect(positioned.left, 0.0);
-        expect(positioned.right, 0.0);
+        expect(positioned.left, 16.0, reason: 'the default 16px padding.left is applied as a horizontal gutter');
+        expect(positioned.right, 16.0, reason: 'the default 16px padding.right is applied as a horizontal gutter');
 
         final screenCenterX = tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
         // The card widget's own bounds are centered on screen — not
