@@ -52,7 +52,7 @@ class _MultiSelectInputDemoState extends State<MultiSelectInputDemo> {
               labelText: 'Favorite fruits',
               items: _fruitItems,
               value: _selectedFruits,
-              itemExtent: 48,
+              itemExtent: 52,
               onChanged: (values) => setState(() => _selectedFruits = values),
             ),
             SizedBox(height: tokens.spacing.sp2),

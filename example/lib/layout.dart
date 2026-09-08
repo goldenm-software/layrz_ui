@@ -323,6 +323,13 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/layo',
         onTap: () => _navigateTo(context, '/layo'),
       ),
+      LayrzNavigatorPage(
+        id: '/tab-view',
+        labelText: 'Tab View',
+        icon: MdiIcons.tabUnselected,
+        isSelected: currentRoute == '/tab-view',
+        onTap: () => _navigateTo(context, '/tab-view'),
+      ),
     ];
   }
 

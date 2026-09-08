@@ -36,6 +36,7 @@ import 'src/sections/skeleton_section.dart';
 import 'src/sections/snackbar_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
+import 'src/sections/tab_view_section.dart';
 import 'src/sections/text_section.dart';
 import 'src/sections/timeline_section.dart';
 import 'src/sections/tooltips_section.dart';
@@ -255,6 +256,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/layo',
           pageBuilder: (context, state) => NoTransitionPage(child: LayoSection()),
+        ),
+        GoRoute(
+          path: '/tab-view',
+          pageBuilder: (context, state) => NoTransitionPage(child: TabViewSection()),
         ),
       ],
     ),
