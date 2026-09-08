@@ -106,6 +106,30 @@ make run-macos
 > yet verified. The shapes themselves are correct — this is an engine-level rendering limitation,
 > not a geometry bug. See `engineering/decisions.md` (D77) for details.
 
+### Android Gradle notes
+
+Building the example for Android on AGP 9+ requires `android.builtInKotlin=true` in
+`example/android/gradle.properties` (alongside the existing `android.newDsl=false`). Without it,
+the bundled `desktop_drop` and `file_picker` plugins apply the Kotlin Gradle Plugin (KGP)
+themselves, which triggers Flutter's KGP deprecation warning. With the flag set, those plugins
+defer to AGP's built-in Kotlin instead and the warning goes away — no plugin fork or version bump
+needed.
+
+```properties
+android.builtInKotlin=true
+android.newDsl=false
+```
+
+If the KGP warning persists after setting the flag, it's a stale Gradle configuration cache (the
+conditional is evaluated at Gradle configuration time). `./gradlew --stop` stops the Gradle daemon
+holding the stale configuration, and removing the cache/`.gradle`/build directories forces a fresh
+configuration where the `builtInKotlin` flag takes effect:
+
+```bash
+cd example/android && ./gradlew --stop
+rm -rf ~/.gradle/caches example/android/.gradle example/build
+```
+
 ---
 
 ## FAQ
