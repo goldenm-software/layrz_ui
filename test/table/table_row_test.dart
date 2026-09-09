@@ -201,6 +201,33 @@ void main() {
 
       expect(checkboxCellBackground, rowBackground);
     });
+
+    testWidgets('a data cell still paints its right-side divider border, on top of the tappable fill', (
+      tester,
+    ) async {
+      // Regression test: giving each data cell's LayrzTappable an opaque
+      // idle color (the stripe fix above) covers a background-positioned
+      // divider border painted behind it. The border must be moved to a
+      // DecoratedBox with DecorationPosition.foreground so it is painted
+      // AFTER (visually on top of) the tappable's fill, and this must stay
+      // true regardless of the tappable's current idle/hover color.
+      final scrollSync = LayrzTableRowScrollSync();
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        buildRow(item: row, rowIndex: 0, scrollSync: scrollSync),
+      );
+
+      final dividerBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(LayrzTappable), matching: find.byType(DecoratedBox)).first,
+      );
+
+      expect(dividerBox.position, DecorationPosition.foreground);
+      final decoration = dividerBox.decoration as BoxDecoration;
+      expect(decoration.border, isNotNull);
+      expect((decoration.border as Border).right.width, greaterThan(0));
+    });
   });
 
   group('LayrzTableRow striping', () {

@@ -214,31 +214,44 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     return SizedBox(
       width: width,
       height: widget.height,
-      child: LayrzTappable(
-        borderRadius: BorderRadius.zero,
-        // Idle must equal this row's own stripe color, not transparent: with
-        // a transparent idle, the hover transition animates
-        // transparent -> hover instead of stripe -> hover, and since the
-        // stripe itself is painted on a DecoratedBox *behind* this tappable
-        // (see build()'s outer background), the transparent-to-opaque ramp
-        // reads as a visible "blink" the instant the pointer enters. Idle ==
-        // stripeColor makes hover a plain color-to-color transition (D15).
-        color: stripeColor,
-        onTap: () => _handleCellTap(column),
-        child: Align(
-          alignment: column.alignment,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
-            child: richSpans != null
-                ? RichText(
-                    text: TextSpan(style: tokens.typography.body, children: richSpans),
-                    overflow: TextOverflow.ellipsis,
-                  )
-                : Text(
-                    column.valueBuilder(widget.item),
-                    style: tokens.typography.body,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      // The right-side column divider is painted in the FOREGROUND, on top
+      // of the LayrzTappable below, rather than as a background the
+      // tappable's own fill would sit above. LayrzTappable paints an opaque
+      // AnimatedContainer covering this exact rect (idle == stripeColor, see
+      // below) — a background-positioned border drawn behind that fill is
+      // fully covered and invisible; DecorationPosition.foreground paints
+      // this border last, after the tappable's content, so it always shows
+      // regardless of the tappable's current (idle/hover/pressed) color.
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(border: Border(right: tokens.border.light)),
+        child: LayrzTappable(
+          borderRadius: BorderRadius.zero,
+          // Idle must equal this row's own stripe color, not transparent:
+          // with a transparent idle, the hover transition animates
+          // transparent -> hover instead of stripe -> hover, and since the
+          // stripe itself is painted on a DecoratedBox *behind* this
+          // tappable (see build()'s outer background), the
+          // transparent-to-opaque ramp reads as a visible "blink" the
+          // instant the pointer enters. Idle == stripeColor makes hover a
+          // plain color-to-color transition (D15).
+          color: stripeColor,
+          onTap: () => _handleCellTap(column),
+          child: Align(
+            alignment: column.alignment,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+              child: richSpans != null
+                  ? RichText(
+                      text: TextSpan(style: tokens.typography.body, children: richSpans),
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : Text(
+                      column.valueBuilder(widget.item),
+                      style: tokens.typography.body,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+            ),
           ),
         ),
       ),
@@ -246,7 +259,6 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
   }
 
   Widget _buildMiddleRegion(BuildContext context, Color stripeColor) {
-    final tokens = context.tokens;
     return Expanded(
       child: SingleChildScrollView(
         controller: _middleController,
@@ -254,10 +266,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
         child: Row(
           children: [
             for (var i = 0; i < widget.visibleColumns.length; i++)
-              DecoratedBox(
-                decoration: BoxDecoration(border: Border(right: tokens.border.light)),
-                child: _buildDataCell(context, widget.visibleColumns[i], widget.columnWidths[i], stripeColor),
-              ),
+              _buildDataCell(context, widget.visibleColumns[i], widget.columnWidths[i], stripeColor),
           ],
         ),
       ),
