@@ -176,6 +176,50 @@ void main() {
     });
   });
 
+  group('LayrzTableHeader title style (body base, title weight)', () {
+    testWidgets('the header title text renders at body size with title\'s fontWeight and fontVariations', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+      final typography = LayrzThemeData.light().tokens.typography;
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final titleText = tester.widget<Text>(find.text('Col 1'));
+      final style = titleText.style!;
+
+      // Body-based: size (and family) must come from body, proving this is
+      // not still the label style.
+      expect(style.fontSize, typography.body.fontSize);
+      expect(style.fontFamily, typography.body.fontFamily);
+      expect(style.fontSize, isNot(typography.label.fontSize));
+
+      // Title's actual bold rendering: fontWeight AND fontVariations (the
+      // `wght` variable-font axis) must both carry over — fontWeight alone
+      // is not enough for a variable-weight font, so this specifically
+      // guards against a copyWith that only sets fontWeight.
+      expect(style.fontWeight, typography.title.fontWeight);
+      expect(style.fontVariations, typography.title.fontVariations);
+    });
+
+    testWidgets('the header title still ellipsizes to one line', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final titleText = tester.widget<Text>(find.text('Col 1'));
+
+      expect(titleText.overflow, TextOverflow.ellipsis);
+      expect(titleText.maxLines, 1);
+    });
+  });
+
   group('LayrzTableHeader bottom divider (continuous across the full width)', () {
     testWidgets('a scrolling-middle header cell paints its own bottom divider, on top of its opaque background', (
       tester,

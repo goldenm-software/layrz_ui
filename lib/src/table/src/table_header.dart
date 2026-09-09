@@ -480,13 +480,29 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
   Widget _buildSortRegion(BuildContext context, LayrzColumn<T> column, Color backgroundColor) {
     final tokens = context.tokens;
 
+    // Body as the base (size/family/height/letterSpacing/colour), with
+    // title's actual bold rendering laid on top. These are variable-weight
+    // fonts, so `fontWeight` alone would not carry the bolder appearance —
+    // `fontVariations` (the `wght` axis Flutter drives variable fonts
+    // through) must come along too, or the weight silently reverts to
+    // body's on a variable-font LayrzFont. Mirrors the same
+    // `body.copyWith(fontWeight: title.fontWeight, fontVariations:
+    // title.fontVariations)` blend already used in snackbar_view.dart and
+    // chip.dart. `title` sets no `fontFeatures` anywhere in this design
+    // system's `LayrzFont` implementations, so there is nothing there to
+    // carry forward.
+    final titleStyle = tokens.typography.body.copyWith(
+      fontWeight: tokens.typography.title.fontWeight,
+      fontVariations: tokens.typography.title.fontVariations,
+    );
+
     final label = LayrzTooltip(
       titleText: column.headerText,
       contentText: column.headerText,
       trigger: LayrzTooltipTrigger.pointer,
       child: Text(
         column.headerText,
-        style: tokens.typography.label,
+        style: titleStyle,
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
       ),
