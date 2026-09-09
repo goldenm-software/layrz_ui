@@ -24,6 +24,7 @@ import 'demos/datetime_range_input_demo.dart';
 import 'demos/month_input_demo.dart';
 import 'demos/month_range_input_demo.dart';
 import 'demos/color_input_demo.dart';
+import 'demos/dual_list_input_demo.dart';
 import 'demos/multi_select_input_demo.dart';
 import 'demos/emoji_input_demo.dart';
 import 'demos/icon_input_demo.dart';
@@ -216,6 +217,13 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Pickers',
       details: MultiSelectInputDemo(),
       icon: MdiIcons.checkboxMultipleMarkedOutline,
+    ),
+    InputDemo(
+      id: 'dual-list-input',
+      name: 'Dual-List Input',
+      category: 'Pickers',
+      details: DualListInputDemo(),
+      icon: MdiIcons.swapHorizontal,
     ),
     InputDemo(
       id: 'emoji-input',
