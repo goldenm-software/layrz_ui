@@ -17,6 +17,7 @@ filed in Notion, not invented ahead of time.
 |---|---|---|
 | 1 | DESIGN-101: LayrzForm (behavioural password-manager autofill wrapper wiring `finishAutofillContext`) | Merged · Review required |
 | 2 | DESIGN-110: Motion token standardization (cap `dDialog` at 250ms/`kPageTransitionDuration`; migrate hardcoded durations in `button_indicator`/`refresh_indicator` to motion tokens; point dropdown-menu/context-menu fade curves at the emphasized `easeInOutCirc` token) | Merged · Review required |
+| 3 | DESIGN-209: LayrzConnectionIndicator (Material-free port of `layrz_theme`'s `TelemetryIndicator` — 5-state elapsed-time model, `.dot`/`.full` render modes, independent `LayrzConnectionTimes` config type with no `layrz_models` dependency) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M9 work items, kept in step with the code in
 the same commit. The Notion ⚒️ Progress database is the shared, publicly linkable view of this
@@ -88,6 +89,38 @@ same status (rows are identified as `DESIGN-N` for cross-reference).
 
 ---
 
+### 3. LayrzConnectionIndicator (DESIGN-209)
+
+**Status**: Merged · Review required
+
+**Domain**: Feedback
+
+**What it does**:
+- Material-free, modernized port of `layrz_theme`'s `TelemetryIndicator`
+- Resolves a 5-state model (online/idle/offline/disconnected/no-data) purely from elapsed time
+  since a `receivedAt` timestamp, via the standalone `resolveLayrzConnectionState` function
+- Two render modes: `.dot` (a small colored `LayrzBadgeVisual` dot wrapped in a `LayrzTooltip`
+  announcing the state and a humanized "time ago" string) and `.full` (the state color wraps a
+  caller-supplied `child` as a colored pill chrome)
+- Re-renders once a minute via an internally owned, dispose-safe `Timer.periodic` so the indicator
+  stays live without the caller polling it
+- Defines its own `LayrzConnectionTimes` config type (online/idle thresholds) instead of depending
+  on `layrz_models`' `Connection` class — `layrz_ui` gains no new dependency; downstream packages
+  bind their own `Connection` model to `LayrzConnectionTimes` via an extension, outside this
+  package's concern
+
+**Constraints**:
+- Only the online/idle boundaries are configurable; the 30-day offline→disconnected boundary and
+  the no-data state are fixed constants
+- `.dot` must not receive a `child`; `.full` requires one — both enforced via constructor asserts
+- Clock source is plain `DateTime.now()` (overridable via an optional `clock` parameter for
+  testability), not a timezone-database dependency
+
+**API contract**: See
+[wiki LayrzConnectionIndicator page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzConnectionIndicator).
+
+---
+
 ## Dependencies
 
 - **M3 (Inputs)**: `LayrzForm` wraps existing text input components; it does not introduce a new
@@ -111,6 +144,6 @@ placeholder for future rows, not a commitment.
 ---
 
 **Milestone 9 started**: 2026-09-04
-**Last updated**: 2026-09-08
+**Last updated**: 2026-09-09
 **Related documents**: [Roadmap](roadmap.md), [Milestone 6](milestone-6.md),
 [Component Catalog](https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog)
