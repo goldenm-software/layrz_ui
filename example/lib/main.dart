@@ -43,6 +43,7 @@ import 'src/sections/snackbar_section.dart';
 import 'src/sections/spacing_section.dart';
 import 'src/sections/steppers_section.dart';
 import 'src/sections/tab_view_section.dart';
+import 'src/sections/table_section.dart';
 import 'src/sections/text_section.dart';
 import 'src/sections/timeline_section.dart';
 import 'src/sections/tooltips_section.dart';
@@ -274,6 +275,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/app-banner',
           pageBuilder: (context, state) => NoTransitionPage(child: AppBannerSection()),
+        ),
+        GoRoute(
+          path: '/table',
+          pageBuilder: (context, state) => NoTransitionPage(child: TableSection()),
         ),
         // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
         // (/find-spike) but intentionally not listed in the showroom sidebar.

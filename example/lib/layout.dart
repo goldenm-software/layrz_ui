@@ -344,6 +344,13 @@ class ShowroomLayout extends StatelessWidget {
         isSelected: currentRoute == '/app-banner',
         onTap: () => _navigateTo(context, '/app-banner'),
       ),
+      LayrzNavigatorPage(
+        id: '/table',
+        labelText: 'Table',
+        icon: MdiIcons.table,
+        isSelected: currentRoute == '/table',
+        onTap: () => _navigateTo(context, '/table'),
+      ),
     ];
   }
 
