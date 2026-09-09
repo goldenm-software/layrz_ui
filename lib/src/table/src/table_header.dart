@@ -298,6 +298,20 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
   /// Builds one header cell for [column], wired with tap-to-sort,
   /// drag-to-reorder (wide only), and the right-click/long-press context
   /// menu (wide only).
+  ///
+  /// **Semantics structure (why the drag handle is a sibling, not a
+  /// descendant):** the sort region below wraps itself in
+  /// `Semantics(excludeSemantics: true)` so the visible header [Text]'s own
+  /// implicit label doesn't bleed into the explicit "Sort by X" label (see
+  /// the comment on that Semantics node). `excludeSemantics` has no "except
+  /// this subtree" escape hatch — it discards every descendant's semantics
+  /// unconditionally. The drag handle carries its own distinct
+  /// [Semantics.label] and [CustomSemanticsAction]s (built in
+  /// [_buildDragHandle]), so if it were nested inside the sort region's
+  /// excluded subtree — as it was before this fix — its node would vanish
+  /// too, leaving a screen-reader user with a sort button and no reorder
+  /// affordance. Making it a sibling under the shared `Row` in
+  /// [cellChildren] keeps both nodes distinct.
   Widget _buildHeaderCell(BuildContext context, LayrzColumn<T> column, bool isCompact) {
     final tokens = context.tokens;
 
@@ -313,23 +327,19 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       ),
     );
 
-    final cellContent = Row(
+    final sortContent = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(child: label),
         SizedBox(width: tokens.spacing.sp1),
         _buildSortGlyph(context, column),
-        if (!isCompact) ...[
-          SizedBox(width: tokens.spacing.sp1),
-          _buildDragHandle(context, column),
-        ],
       ],
     );
 
-    final cell = Semantics(
+    final sortRegion = Semantics(
       // MANDATORY per D64: without container: true, the LayrzTooltip's
-      // semantics (and, on wide viewports, the drag handle's) merge into
-      // this button's node instead of remaining distinct. See input_chrome.dart.
+      // semantics merge into this button's node instead of remaining
+      // distinct. See input_chrome.dart.
       //
       // excludeSemantics: true additionally discards the visible header
       // Text's (and LayrzTooltip's) own implicit label, which would otherwise
@@ -346,6 +356,10 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       // isButton flag but no invokable action for assistive tech. Matches the
       // Semantics(button:, label:, onTap:, excludeSemantics:) shape in
       // glyph_grid.dart and the pickers' shared headers.
+      //
+      // The drag handle is deliberately NOT inside this subtree — see the
+      // dartdoc above [_buildHeaderCell] for why nesting it here would
+      // silently discard its semantics node.
       container: true,
       button: column.isSortable,
       label: column.isSortable ? 'Sort by ${column.headerText}' : null,
@@ -360,7 +374,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
         onTap: column.isSortable ? () => _handleSortTap(column) : null,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
-          child: Align(alignment: column.alignment, child: cellContent),
+          child: Align(alignment: column.alignment, child: sortContent),
         ),
       ),
     );
@@ -368,8 +382,25 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
     final width = widget.columnWidths[column.key] ?? widget.fallbackColumnWidth;
 
     if (isCompact) {
-      return SizedBox(width: width, height: widget.height, child: cell);
+      return SizedBox(width: width, height: widget.height, child: sortRegion);
     }
+
+    // Wide viewport: the drag handle is a sibling of `sortRegion`, sharing
+    // the cell's overall `width` with it instead of living inside it, so the
+    // handle keeps its own semantics node (see dartdoc above) while the
+    // total footprint still equals `width` — the same budget the pre-fix
+    // single-Row layout consumed, just split across two widgets instead of
+    // one Row's children.
+    final cell = Row(
+      children: [
+        Expanded(child: sortRegion),
+        SizedBox(width: tokens.spacing.sp1),
+        Padding(
+          padding: EdgeInsets.only(right: tokens.spacing.sp2),
+          child: _buildDragHandle(context, column),
+        ),
+      ],
+    );
 
     final controller = widget.controller;
     final dragTarget = DragTarget<Key>(
