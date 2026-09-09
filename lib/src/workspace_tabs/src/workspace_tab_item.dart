@@ -67,9 +67,10 @@ class LayrzWorkspaceTabItem extends StatefulWidget {
 }
 
 class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
-  /// Whether the pointer is currently hovering this tab item, used to reveal
-  /// the close (×) affordance on an inactive tab (default #2: always shown
-  /// on the active tab, hover-revealed on inactive ones).
+  /// Whether the pointer is currently hovering this tab item, used only to
+  /// vary this item's fill colour (D15: interaction states are colour/opacity
+  /// only). The close (×) affordance's visibility is independent of hover —
+  /// see [showClose] at the top of [build].
   bool _isHovered = false;
 
   void _setHovered(bool value) {
@@ -80,12 +81,23 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final showClose = widget.onClosed != null && (widget.isActive || _isHovered);
+    // `widget.onClosed` is already null when this tab isn't closable, or
+    // when the parent strip has no `onTabClosed` handler (see
+    // `LayrzWorkspaceTabs`'s wiring), so a non-null value alone means the ×
+    // should render. It is intentionally NOT gated on hover or `isActive`:
+    // the close affordance is always visible on every closable tab, active
+    // or not, and — because it's spread into the `Row` only when true — its
+    // presence in the layout is fixed, so it never shifts on hover.
+    final showClose = widget.onClosed != null;
 
     final fillColor = widget.isActive ? tokens.colors.sf1 : (_isHovered ? tokens.colors.sf3 : tokens.colors.sf2);
     final labelColor = widget.isActive ? tokens.colors.fg1 : tokens.colors.fg2;
     final topRadius = tokens.radius.r2;
-    final bottomRadius = widget.isActive ? 0.0 : tokens.radius.innerRadiusValue(outerRadius: topRadius, spacer: 4.0);
+    // The outward-flaring bottom shoulder is smaller than the inward top
+    // radius on every tab (active or not) — it's a subtle S-curve accent,
+    // not a mirrored corner, and it's token-driven rather than a hardcoded
+    // magic number.
+    final shoulderRadius = tokens.radius.r1;
 
     return Semantics(
       container: true,
@@ -103,51 +115,59 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
               painter: LayrzWorkspaceTabChromePainter(
                 fillColor: fillColor,
                 topRadius: topRadius,
-                bottomRadius: bottomRadius,
+                shoulderRadius: shoulderRadius,
                 borderColor: widget.isFocused ? tokens.colors.primary.shade500 : null,
                 borderWidth: 2.0,
+                mergeBottom: widget.isActive,
               ),
-              child: LayrzTappable(
-                onTap: widget.onSelected,
-                color: const Color(0x00000000),
-                hoverColor: const Color(0x00000000),
-                pressedColor: const Color(0x00000000),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.tab.icon != null) ...[
-                        Icon(widget.tab.icon, size: 16.0, color: labelColor),
-                        SizedBox(width: tokens.spacing.sp1),
-                      ],
-                      Flexible(
-                        // Excluded from the semantics tree so its own
-                        // auto-generated text label doesn't duplicate the
-                        // label already carried by this item's outer
-                        // Semantics node (which would otherwise read as
-                        // "Alpha\nAlpha" to assistive technology).
-                        child: ExcludeSemantics(
-                          child: Text(
-                            widget.tab.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: tokens.typography.body.copyWith(
-                              color: labelColor,
-                              fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.w400,
+              // A tab is a control, not selectable body text — disabled here
+              // per the same convention `LayrzTabView`'s pills use (see
+              // `_LayrzTabPill.build` in `lib/src/tabs/src/tab_view.dart`),
+              // so the label can't be drag-selected like a paragraph while
+              // tap/close/drag gestures underneath are unaffected.
+              child: SelectionContainer.disabled(
+                child: LayrzTappable(
+                  onTap: widget.onSelected,
+                  color: const Color(0x00000000),
+                  hoverColor: const Color(0x00000000),
+                  pressedColor: const Color(0x00000000),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.tab.icon != null) ...[
+                          Icon(widget.tab.icon, size: 16.0, color: labelColor),
+                          SizedBox(width: tokens.spacing.sp1),
+                        ],
+                        Flexible(
+                          // Excluded from the semantics tree so its own
+                          // auto-generated text label doesn't duplicate the
+                          // label already carried by this item's outer
+                          // Semantics node (which would otherwise read as
+                          // "Alpha\nAlpha" to assistive technology).
+                          child: ExcludeSemantics(
+                            child: Text(
+                              widget.tab.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: tokens.typography.body.copyWith(
+                                color: labelColor,
+                                fontWeight: widget.isActive ? FontWeight.w600 : FontWeight.w400,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      if (showClose) ...[
-                        SizedBox(width: tokens.spacing.sp1),
-                        _LayrzWorkspaceTabCloseButton(
-                          label: widget.tab.label,
-                          color: labelColor,
-                          onTap: widget.onClosed!,
-                        ),
+                        if (showClose) ...[
+                          SizedBox(width: tokens.spacing.sp1),
+                          _LayrzWorkspaceTabCloseButton(
+                            label: widget.tab.label,
+                            color: labelColor,
+                            onTap: widget.onClosed!,
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
               ),
