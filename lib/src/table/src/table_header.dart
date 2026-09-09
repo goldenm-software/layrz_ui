@@ -339,9 +339,17 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       // descendant's own label merging down. Matches the same
       // Semantics(button:, label:) + excludeSemantics: true shape used for a
       // tooltip-wrapped visible label in button.dart.
+      //
+      // onTap is required here too: excludeSemantics: true also discards the
+      // descendant LayrzTappable's own tap action, so without redeclaring it
+      // on this node directly, the sort button would carry a label and
+      // isButton flag but no invokable action for assistive tech. Matches the
+      // Semantics(button:, label:, onTap:, excludeSemantics:) shape in
+      // glyph_grid.dart and the pickers' shared headers.
       container: true,
       button: column.isSortable,
       label: column.isSortable ? 'Sort by ${column.headerText}' : null,
+      onTap: column.isSortable ? () => _handleSortTap(column) : null,
       excludeSemantics: true,
       child: LayrzTappable(
         // Idle must stay transparent, not the LayrzTappable default opaque
