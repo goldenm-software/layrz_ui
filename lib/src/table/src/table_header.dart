@@ -254,6 +254,10 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
       child: Semantics(
+        // MANDATORY per D64: without container: true, this label and its
+        // custom actions merge into the header cell's own sort-button node
+        // instead of forming a distinct one. See input_chrome.dart.
+        container: true,
         label: 'Reorder ${column.headerText} column',
         customSemanticsActions: {
           CustomSemanticsAction(label: 'Move ${column.headerText} left'): () => _moveByOneVisibleStep(column.key, -1),
@@ -323,6 +327,10 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
     );
 
     final cell = Semantics(
+      // MANDATORY per D64: without container: true, the LayrzTooltip's
+      // semantics (and, on wide viewports, the drag handle's) merge into
+      // this button's node instead of remaining distinct. See input_chrome.dart.
+      container: true,
       button: column.isSortable,
       label: column.isSortable ? 'Sort by ${column.headerText}' : null,
       child: LayrzTappable(
