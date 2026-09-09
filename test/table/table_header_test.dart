@@ -138,6 +138,42 @@ void main() {
     });
   });
 
+  group('LayrzTableHeader cell idle color (hover-blink fix)', () {
+    testWidgets('a sort-tap tappable idles at the header background color, not transparent', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final tappable = tester.widget<LayrzTappable>(headerCellFor('Col 1'));
+
+      // Previously this was `const Color(0x00000000)` (transparent), which
+      // made the hover transition ramp transparent -> hover instead of
+      // background -> hover, producing a visible blink the instant the
+      // pointer entered. The idle color must now equal the header's own
+      // background color, mirroring the same fix applied to
+      // `LayrzTableRow`'s data cells.
+      expect(tappable.color, isNot(const Color(0x00000000)));
+    });
+
+    testWidgets('a sort-tap tappable idles at the header background color on a compact viewport too', (
+      tester,
+    ) async {
+      useCompactViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final tappable = tester.widget<LayrzTappable>(headerCellFor('Col 1'));
+
+      expect(tappable.color, isNot(const Color(0x00000000)));
+    });
+  });
+
   group('LayrzTableHeader drag-to-reorder (wide only)', () {
     testWidgets('a completed drag updates both rendered order and controller order together', (tester) async {
       useWideViewport(tester);

@@ -361,6 +361,82 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
   Widget _buildHeaderCell(BuildContext context, LayrzColumn<T> column, bool isCompact) {
     final tokens = context.tokens;
 
+    final width = widget.columnWidths[column.key] ?? widget.fallbackColumnWidth;
+
+    if (isCompact) {
+      // Compact has no drag target underneath, so the sort region always
+      // sits directly on the header's own `sf2` background.
+      return SizedBox(
+        width: width,
+        height: widget.height,
+        child: _buildSortRegion(context, column, tokens.colors.sf2),
+      );
+    }
+
+    // Wide viewport: the drag handle is a sibling of the sort region, sharing
+    // the cell's overall `width` with it instead of living inside it, so the
+    // handle keeps its own semantics node (see dartdoc above) while the
+    // total footprint still equals `width` — the same budget the pre-fix
+    // single-Row layout consumed, just split across two widgets instead of
+    // one Row's children.
+    final controller = widget.controller;
+    final dragTarget = DragTarget<Key>(
+      onWillAcceptWithDetails: (details) => details.data != column.key,
+      onAcceptWithDetails: (details) {
+        final visible = controller.visibleColumnKeys.toList(growable: false);
+        final targetIndex = visible.indexOf(column.key);
+        if (targetIndex == -1) return;
+        controller.reorderColumn(details.data, targetIndex);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isDragTarget = candidateData.isNotEmpty;
+        // The sort region's tappable idle color must match whichever
+        // background is actually painted behind it right now — `sf2`
+        // normally, or `sf3` while this column is a live drop target —
+        // otherwise the sort cell would show a mismatched patch (or, if left
+        // transparent, blink on hover: see the dartdoc note on
+        // `_buildSortRegion`).
+        final backgroundColor = isDragTarget ? tokens.colors.sf3 : tokens.colors.sf2;
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(right: tokens.border.light),
+            color: backgroundColor,
+          ),
+          child: Row(
+            children: [
+              Expanded(child: _buildSortRegion(context, column, backgroundColor)),
+              SizedBox(width: tokens.spacing.sp1),
+              Padding(
+                padding: EdgeInsets.only(right: tokens.spacing.sp2),
+                child: _buildDragHandle(context, column),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    return SizedBox(width: width, height: widget.height, child: dragTarget);
+  }
+
+  /// Builds the tap-to-sort region of [column]'s header cell: the label,
+  /// sort-direction glyph, and the [LayrzTappable] that makes the whole area
+  /// tappable.
+  ///
+  /// [backgroundColor] must equal whatever color is actually painted behind
+  /// this region at call time — the header's own `sf2` background normally,
+  /// or the `sf3` drag-target highlight while the owning column is a live
+  /// drop target (see the two call sites in [_buildHeaderCell]). It becomes
+  /// the tappable's idle [LayrzTappable.color]: with a transparent idle, the
+  /// hover transition animates transparent -> hover instead of
+  /// background -> hover, which reads as a visible "blink" the instant the
+  /// pointer enters, since the real background is painted on a widget
+  /// *behind* this tappable. Idle == backgroundColor makes hover a plain
+  /// color-to-color transition (D15), mirroring the same fix applied to
+  /// `LayrzTableRow`'s data cells.
+  Widget _buildSortRegion(BuildContext context, LayrzColumn<T> column, Color backgroundColor) {
+    final tokens = context.tokens;
+
     final label = LayrzTooltip(
       titleText: column.headerText,
       contentText: column.headerText,
@@ -382,7 +458,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       ],
     );
 
-    final sortRegion = Semantics(
+    return Semantics(
       // MANDATORY per D64: without container: true, the LayrzTooltip's
       // semantics merge into this button's node instead of remaining
       // distinct. See input_chrome.dart.
@@ -412,11 +488,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       onTap: column.isSortable ? () => _handleSortTap(column) : null,
       excludeSemantics: true,
       child: LayrzTappable(
-        // Idle must stay transparent, not the LayrzTappable default opaque
-        // `sf1`: this cell sits on top of the header's own `sf2` background
-        // (and, on a drag target, a `sf3` highlight), and an opaque `sf1`
-        // square would paint over both instead of letting them show through.
-        color: const Color(0x00000000),
+        color: backgroundColor,
         onTap: column.isSortable ? () => _handleSortTap(column) : null,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
@@ -424,52 +496,6 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
         ),
       ),
     );
-
-    final width = widget.columnWidths[column.key] ?? widget.fallbackColumnWidth;
-
-    if (isCompact) {
-      return SizedBox(width: width, height: widget.height, child: sortRegion);
-    }
-
-    // Wide viewport: the drag handle is a sibling of `sortRegion`, sharing
-    // the cell's overall `width` with it instead of living inside it, so the
-    // handle keeps its own semantics node (see dartdoc above) while the
-    // total footprint still equals `width` — the same budget the pre-fix
-    // single-Row layout consumed, just split across two widgets instead of
-    // one Row's children.
-    final cell = Row(
-      children: [
-        Expanded(child: sortRegion),
-        SizedBox(width: tokens.spacing.sp1),
-        Padding(
-          padding: EdgeInsets.only(right: tokens.spacing.sp2),
-          child: _buildDragHandle(context, column),
-        ),
-      ],
-    );
-
-    final controller = widget.controller;
-    final dragTarget = DragTarget<Key>(
-      onWillAcceptWithDetails: (details) => details.data != column.key,
-      onAcceptWithDetails: (details) {
-        final visible = controller.visibleColumnKeys.toList(growable: false);
-        final targetIndex = visible.indexOf(column.key);
-        if (targetIndex == -1) return;
-        controller.reorderColumn(details.data, targetIndex);
-      },
-      builder: (context, candidateData, rejectedData) {
-        final isDragTarget = candidateData.isNotEmpty;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(right: tokens.border.light),
-            color: isDragTarget ? tokens.colors.sf3 : null,
-          ),
-          child: cell,
-        );
-      },
-    );
-
-    return SizedBox(width: width, height: widget.height, child: dragTarget);
   }
 
   /// Builds the pinned-left select-all checkbox cell, mirroring
