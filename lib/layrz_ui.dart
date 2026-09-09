@@ -39,6 +39,7 @@ export 'src/snackbar/snackbar.dart';
 export 'src/state/state.dart';
 export 'src/steppers/steppers.dart';
 export 'src/tabs/tabs.dart';
+export 'src/table/table.dart';
 export 'src/tappable/tappable.dart';
 export 'src/theme/theme.dart';
 export 'src/timelines/timelines.dart';
