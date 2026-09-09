@@ -60,6 +60,8 @@ class _DualListInputDemoState extends State<DualListInputDemo> {
               items: _fruitItems,
               value: _selectedFruits,
               itemExtent: 48,
+              availableListName: 'Available',
+              selectedListName: 'Selected',
               onChanged: (values) => setState(() => _selectedFruits = values),
             ),
             SizedBox(height: tokens.spacing.sp2),
