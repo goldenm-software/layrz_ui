@@ -13,6 +13,14 @@ import 'package:layrz_ui/src/table/src/table_action.dart';
 import 'package:layrz_ui/src/table/src/table_header.dart';
 import 'package:layrz_ui/src/table/src/table_row.dart';
 
+/// The fixed height, in logical pixels, of the loading-indicator strip
+/// pinned above [LayrzTable]'s header.
+///
+/// This space is always reserved, whether or not the strip is currently
+/// animating — see [LayrzTable]'s "Loading indicator" doc section and
+/// decision D15 (interaction/state changes never move geometry).
+const double _kTableTopProgressHeight = 2.0;
+
 /// A generic, virtualized, Material-free data table.
 ///
 /// [LayrzTable] renders [items] across [columns], with sorting, search,
@@ -53,6 +61,18 @@ import 'package:layrz_ui/src/table/src/table_row.dart';
 /// [sortTableItemsOffThread] when `LayrzColumn.customSort` is set. The
 /// resulting filtered+sorted count is reported through
 /// [onFilteredCountChanged] whenever it changes.
+///
+/// **Loading indicator**: a 2-logical-pixel-tall linear progress strip is
+/// pinned above the header, and its height is reserved unconditionally — it
+/// occupies the same 2px regardless of loading state, so toggling loading
+/// never shifts the header or rows (see decision D15: interaction/state
+/// changes vary color/opacity, never geometry). The strip animates
+/// (indeterminate sweep) whenever [isLoading] is `true`, or while the table
+/// is running its own off-thread sort/filter recompute (see
+/// [LayrzTableController]'s change notifications above); it is present but
+/// visually empty otherwise. This is the table's only loading affordance —
+/// there is no separate full-table spinner, and the header/body are always
+/// rendered regardless of [isLoading].
 ///
 /// **Column widths**: computed once per [LayoutBuilder] pass from the
 /// available width — fixed-width columns ([LayrzColumn.width] non-null) keep
@@ -134,10 +154,14 @@ class LayrzTable<T> extends StatefulWidget {
   /// matches.
   final String? emptySearchText;
 
-  /// The label shown alongside the loading indicator while [isLoading] is
-  /// `true`.
+  /// Previously the label shown alongside a centered loading spinner while
+  /// [isLoading] was `true`.
   ///
-  /// When `null`, a house default string is used.
+  /// That centered spinner has been replaced by a thin progress strip pinned
+  /// above the header (see [isLoading]), which has no room for a label — so
+  /// this parameter is currently unused. It is kept, rather than removed, to
+  /// avoid a breaking constructor change; a future loading-text treatment may
+  /// give it a home again.
   final String? loadingLabelText;
 
   /// The confirmation-toast title shown after a cell's displayed text is
@@ -157,9 +181,13 @@ class LayrzTable<T> extends StatefulWidget {
 
   /// Whether the table is in a caller-driven loading state.
   ///
-  /// When `true`, the table renders a centered progress indicator and
-  /// [loadingLabelText] instead of the header/body, regardless of [items].
-  /// Defaults to `false`.
+  /// The table always reserves a thin (2 logical pixel) strip above its
+  /// header for a linear progress indicator — see the class-level doc's
+  /// "Loading indicator" section. That strip animates whenever [isLoading] is
+  /// `true`, or while the table is sorting/filtering off the UI thread
+  /// internally; it stays present but inert otherwise. Unlike the previous
+  /// behavior, the header and rows are never hidden or replaced while
+  /// loading. Defaults to `false`.
   final bool isLoading;
 
   /// Creates a [LayrzTable].
@@ -498,29 +526,35 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
     );
   }
 
-  Widget _buildLoadingState(BuildContext context) {
-    final tokens = context.tokens;
-    return Center(
-      child: Padding(
-        padding: tokens.spacing.pd3,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const LayrzProgressBar(format: LayrzProgressFormat.circular, semanticLabel: 'Loading table data'),
-            SizedBox(height: tokens.spacing.sp2),
-            Text(widget.loadingLabelText ?? 'Computing data, please wait...', style: tokens.typography.label),
-          ],
-        ),
-      ),
+  /// Builds the always-present, always-2px-tall strip pinned above the
+  /// header (see [LayrzTable]'s "Loading indicator" doc section).
+  ///
+  /// The outer [SizedBox] height is exactly [_kTableTopProgressHeight]
+  /// regardless of [_isTopProgressVisible] — that is what keeps toggling
+  /// loading from ever moving the header or rows. When inactive, an empty
+  /// [SizedBox] is rendered instead of the bar itself, so no sweep animation
+  /// ticker exists (and no repaint cost is paid) while idle.
+  Widget _buildTopProgressStrip(BuildContext context) {
+    return SizedBox(
+      height: _kTableTopProgressHeight,
+      child: _isTopProgressVisible
+          ? const LayrzProgressBar(
+              format: LayrzProgressFormat.linear,
+              height: _kTableTopProgressHeight,
+              borderRadius: 0,
+              semanticLabel: 'Loading table data',
+            )
+          : const SizedBox.shrink(),
     );
   }
 
+  /// Whether the top progress strip (see [_buildTopProgressStrip]) should
+  /// currently animate: either the caller set [LayrzTable.isLoading], or the
+  /// table itself is mid off-thread sort/filter recompute ([_isComputing]).
+  bool get _isTopProgressVisible => widget.isLoading || _isComputing;
+
   @override
   Widget build(BuildContext context) {
-    if (widget.isLoading) {
-      return _buildLoadingState(context);
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -545,6 +579,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _buildTopProgressStrip(context),
                   LayrzTableHeader<T>(
                     columns: widget.columns,
                     controller: _controller,
@@ -570,8 +605,6 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                           }
                         : null,
                   ),
-                  if (_isComputing)
-                    LayrzProgressBar(format: LayrzProgressFormat.linear, semanticLabel: 'Sorting table data'),
                   Expanded(
                     child: isEmpty
                         ? _buildEmptyState(context, isSearchMiss: isSearchMiss)

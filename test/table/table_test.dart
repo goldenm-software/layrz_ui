@@ -668,7 +668,20 @@ void main() {
   });
 
   group('LayrzTable loading state', () {
-    testWidgets('isLoading: true renders a spinner and the loading label, not the table body', (tester) async {
+    /// Finds the [SizedBox] that reserves the top progress strip's space.
+    ///
+    /// [LayrzProgressBar] itself also renders a 2px-tall [SizedBox] inside
+    /// its own tree when active (sized to its `height`), so a bare
+    /// height-2.0 predicate over-matches while loading — excluding any
+    /// [SizedBox] that has a [LayrzProgressBar] ancestor isolates
+    /// [LayrzTable]'s own reserved-space wrapper, which sits above it.
+    Finder topProgressStripSpace() => find.byElementPredicate((element) {
+      final widget = element.widget;
+      if (widget is! SizedBox || widget.height != 2.0) return false;
+      return element.findAncestorWidgetOfExactType<LayrzProgressBar>() == null;
+    }, description: 'top progress strip space');
+
+    testWidgets('isLoading: true keeps rendering the header/body, with an animating top strip', (tester) async {
       useWideViewport(tester);
       final rows = sampleRows();
 
@@ -682,13 +695,23 @@ void main() {
         ),
       );
 
-      expect(find.text('Please hold on...'), findsOneWidget);
+      // The header and rows are never hidden while loading — the top strip
+      // is the only loading affordance now.
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+      // loadingLabelText is currently unused (no home now that the centered
+      // spinner+label is gone); it must not be rendered anywhere.
+      expect(find.text('Please hold on...'), findsNothing);
+
+      expect(topProgressStripSpace(), findsOneWidget);
       expect(find.byType(LayrzProgressBar), findsOneWidget);
-      expect(find.text('Name'), findsNothing);
-      expect(find.text('Banana'), findsNothing);
+
+      final bar = tester.widget<LayrzProgressBar>(find.byType(LayrzProgressBar));
+      expect(bar.format, LayrzProgressFormat.linear);
+      expect(bar.value, isNull, reason: 'indeterminate while isLoading is true');
     });
 
-    testWidgets('isLoading: false (default) renders the table body, not the loading state', (tester) async {
+    testWidgets('isLoading: false (default) reserves the same top strip space, but paints no bar', (tester) async {
       useWideViewport(tester);
       final rows = sampleRows();
 
@@ -698,7 +721,53 @@ void main() {
       );
 
       expect(find.text('Name'), findsOneWidget);
-      expect(find.text('Please hold on...'), findsNothing);
+      // The space is still reserved — toggling isLoading must never move the
+      // header — but no LayrzProgressBar is mounted while idle, so there is
+      // no sweep ticker running for nothing.
+      expect(topProgressStripSpace(), findsOneWidget);
+      expect(find.byType(LayrzProgressBar), findsNothing);
+    });
+
+    testWidgets('the top strip sits above the header in the widget tree, in both loading states', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      for (final isLoading in [false, true]) {
+        await pumpTable(
+          tester,
+          LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), isLoading: isLoading),
+        );
+
+        final stripRect = tester.getRect(topProgressStripSpace());
+        // 'Name' is the header's own text (LayrzTable renders no other
+        // widget with that exact text), so its rect stands in for the
+        // header row's position without reaching for an internal type.
+        final headerTextRect = tester.getRect(find.text('Name'));
+        expect(
+          stripRect.bottom,
+          lessThanOrEqualTo(headerTextRect.top),
+          reason: 'strip must sit above the header when isLoading is $isLoading',
+        );
+      }
+    });
+
+    testWidgets('toggling isLoading does not move the header', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+      final headerTopBefore = tester.getRect(find.text('Name')).top;
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), isLoading: true),
+      );
+      final headerTopAfter = tester.getRect(find.text('Name')).top;
+
+      expect(headerTopAfter, headerTopBefore);
     });
   });
 
