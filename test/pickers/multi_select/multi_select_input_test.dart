@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_chrome.dart';
 import 'package:layrz_ui/src/pickers/src/multi_select/multi_select_surface.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_metrics.dart';
 
 import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
@@ -22,6 +23,24 @@ void main() {
       expect(
         () => LayrzMultiSelectInput<String>(items: items, itemExtent: 52),
         throwsAssertionError,
+      );
+    });
+
+    guardedTestWidgets('asserts itemExtent is at least kLayrzPickerMinItemExtent', (tester) async {
+      expect(
+        () => LayrzMultiSelectInput<String>(items: items, itemExtent: 51.9, labelText: 'Fruits'),
+        throwsAssertionError,
+      );
+    });
+
+    guardedTestWidgets('accepts an itemExtent exactly at kLayrzPickerMinItemExtent', (tester) async {
+      expect(
+        () => LayrzMultiSelectInput<String>(
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent,
+          labelText: 'Fruits',
+        ),
+        returnsNormally,
       );
     });
 

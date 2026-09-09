@@ -6,13 +6,28 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
+import 'package:layrz_ui/src/tabs/tabs.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 
 import '../../../inputs/src/shared/editable_field.dart';
 import '../../../inputs/src/shared/input_chrome.dart';
 import '../../../inputs/src/shared/input_slot.dart';
 import '../shared/picker_dialog_header.dart';
-import 'multi_select_tab_strip.dart';
+
+/// Which partition of items [LayrzMultiSelectInputSurface] is currently
+/// showing in its list.
+///
+/// Formerly declared alongside the now-removed `LayrzMultiSelectTabStrip` (a
+/// hand-rolled tab bar); it now lives here since [LayrzMultiSelectInputSurface]
+/// is this enum's only owner, having replaced that strip with a strip-only
+/// [LayrzTabView] (see the class doc's tab section).
+enum LayrzMultiSelectTab {
+  /// Every (search-filtered) item, regardless of draft membership.
+  all,
+
+  /// Only the items currently present in the surface's draft.
+  selected,
+}
 
 /// The selection surface content used by [LayrzMultiSelectInput].
 ///
@@ -40,17 +55,20 @@ import 'multi_select_tab_strip.dart';
 /// [LayrzMultiSelectInput] through a [GlobalKey], mirroring how the
 /// date/time pickers reach their own surface state.
 ///
-/// **"All (count)" / "Selected (count)" tabs (DESIGN-43).** A
-/// [LayrzMultiSelectTabStrip] sits between the header divider and the
-/// scrolling list, switching which partition of [_filteredItems] the list
-/// shows: [LayrzMultiSelectTab.all] shows every (search-filtered) item,
-/// [LayrzMultiSelectTab.selected] shows only the ones currently in [_draft].
-/// This is a **light re-filter of the one existing `ListView`**, not a
-/// second content tree — [LayrzTabView] is deliberately not used here
-/// because it owns and swaps its own content `Column`, which would fight
-/// this surface's pinned-header + single-`Expanded`-list layout. Both counts
-/// are live and update on every draft mutation and every search keystroke
-/// (see [_visibleItems]).
+/// **"All (count)" / "Selected (count)" tabs (DESIGN-43).** A [LayrzTabView]
+/// sits between the header divider and the scrolling list, switching which
+/// partition of [_filteredItems] the list shows: [LayrzMultiSelectTab.all]
+/// shows every (search-filtered) item, [LayrzMultiSelectTab.selected] shows
+/// only the ones currently in [_draft]. This is a **light re-filter of the
+/// one existing `ListView`**, not a second content tree — [LayrzTabView] is
+/// used **strip-only** here: both its [LayrzTab] entries carry a
+/// `SizedBox.shrink()` child (so the tab view renders no content of its
+/// own, `contentGap: 0` suppresses the gap it would otherwise leave for that
+/// empty child) and [_visibleItems] — not [LayrzTabView] — is what actually
+/// re-filters the surface's single, always-mounted `ListView`. Both counts
+/// are live and update on every draft mutation and every search keystroke,
+/// since the tab labels are computed fresh from [_filteredItems] and
+/// [_draft] on every [build] (see [_visibleItems]).
 ///
 /// This is a private implementation detail; consumers use
 /// [LayrzMultiSelectInput] instead.
@@ -501,11 +519,28 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
             ),
           ),
           Container(height: 1, color: tokens.colors.divider),
-          LayrzMultiSelectTabStrip(
-            activeTab: _activeTab,
-            allCount: _filteredItems.length,
-            selectedCount: _draft.length,
-            onTabChanged: _handleTabChanged,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+            child: LayrzTabView(
+              // Strip-only usage (see the class doc): both tabs carry an
+              // empty `child` and `contentGap: 0` suppresses the gap
+              // `LayrzTabView` would otherwise leave beneath the strip for
+              // that (never-rendered) content. `initialIndex` seeds the
+              // strip's own internal selection from `_activeTab` on first
+              // mount only -- `_handleTabChanged` (via `onTabChanged`) is
+              // what keeps them in agreement afterward, mirroring how every
+              // other `LayrzTabView` caller owns the source of truth outside
+              // the widget.
+              isScrollable: false,
+              contentGap: 0,
+              initialIndex: _activeTab == LayrzMultiSelectTab.all ? 0 : 1,
+              onTabChanged: (index) =>
+                  _handleTabChanged(index == 0 ? LayrzMultiSelectTab.all : LayrzMultiSelectTab.selected),
+              tabs: [
+                LayrzTab(labelText: l10n.multiSelectTabAll(_filteredItems.length), child: const SizedBox.shrink()),
+                LayrzTab(labelText: l10n.multiSelectTabSelected(_draft.length), child: const SizedBox.shrink()),
+              ],
+            ),
           ),
           Expanded(child: listOrEmptyState),
         ],

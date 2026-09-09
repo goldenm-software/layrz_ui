@@ -10,6 +10,7 @@ import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
 import '../shared/picker_anchor.dart';
+import '../shared/picker_metrics.dart';
 import 'multi_select_surface.dart';
 
 /// A Material-free, adaptive multiple-value picker input in the layrz_ui
@@ -146,6 +147,13 @@ class LayrzMultiSelectInput<T> extends StatefulWidget {
   final bool dense;
 
   /// Defines the expected height of each item in the opened surface's list.
+  ///
+  /// Must be at least [kLayrzPickerMinItemExtent] (52px) — every row renders
+  /// a full [LayrzCheckboxInput] as its reflective selection indicator,
+  /// which is 40px tall on its own, plus the row's own vertical padding; a
+  /// smaller extent overflows the row (see [kLayrzPickerMinItemExtent]'s own
+  /// doc for the full accounting). Enforced by an assertion in the
+  /// constructor rather than left as a silent overflow.
   final double itemExtent;
 
   /// Creates a new [LayrzMultiSelectInput].
@@ -172,6 +180,11 @@ class LayrzMultiSelectInput<T> extends StatefulWidget {
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
+       ),
+       assert(
+         itemExtent >= kLayrzPickerMinItemExtent,
+         'itemExtent must be >= $kLayrzPickerMinItemExtent to fit the row content (checkbox + padding) '
+         'without a vertical overflow.',
        );
 
   @override
