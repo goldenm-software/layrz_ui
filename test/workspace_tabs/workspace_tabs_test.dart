@@ -76,7 +76,9 @@ void main() {
   });
 
   group('LayrzWorkspaceTabs — close', () {
-    guardedTestWidgets('closing a closable tab fires onTabClosed with its id', (tester) async {
+    guardedTestWidgets('the close affordance is visible on an inactive closable tab without hovering it', (
+      tester,
+    ) async {
       _setWideViewport(tester);
       String? closed;
 
@@ -93,21 +95,64 @@ void main() {
         ),
       );
 
+      // Beta ('b') is inactive and closable, and no pointer has hovered it —
+      // the close (×) affordance must already be visible: it is no longer
+      // hover-gated.
       expect(find.text('Beta'), findsOneWidget);
-      // Beta is inactive: hover the tab item to reveal its close affordance
-      // (default #2 — always shown on the active tab, hover-revealed on
-      // inactive ones).
+      expect(find.bySemanticsLabel('Close Beta'), findsOneWidget);
+
+      await tester.tap(find.bySemanticsLabel('Close Beta'));
+      await tester.pump();
+
+      expect(closed, 'b');
+    });
+
+    guardedTestWidgets('the close affordance is visible on the active closable tab too', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+            onTabClosed: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.bySemanticsLabel('Close Alpha'), findsOneWidget);
+    });
+
+    guardedTestWidgets("the close affordance's position does not shift when the tab is hovered", (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+            onTabClosed: (_) {},
+          ),
+        ),
+      );
+
+      final unhoveredCenter = tester.getCenter(find.bySemanticsLabel('Close Beta'));
+
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
       await gesture.moveTo(tester.getCenter(find.text('Beta')));
       await tester.pump();
 
-      expect(find.bySemanticsLabel('Close Beta'), findsOneWidget);
-      await tester.tap(find.bySemanticsLabel('Close Beta'));
-      await tester.pump();
+      final hoveredCenter = tester.getCenter(find.bySemanticsLabel('Close Beta'));
 
-      expect(closed, 'b');
+      expect(hoveredCenter, unhoveredCenter);
     });
 
     guardedTestWidgets('a non-closable tab renders no close affordance and emits nothing', (tester) async {
@@ -515,6 +560,33 @@ void main() {
       await tester.pump();
 
       expect(selected, 'b');
+    });
+  });
+
+  group('LayrzWorkspaceTabs — text selection', () {
+    guardedTestWidgets('a tab\'s label sits under a SelectionContainer.disabled ancestor', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+
+      final labelElement = tester.element(find.text('Alpha'));
+      final registrar = SelectionContainer.maybeOf(labelElement);
+
+      // `SelectionContainer.disabled` installs a registrar whose
+      // `SelectionRegistrar` is null-safe but non-functional for the
+      // widgets beneath it, so the label's own registrar resolves to null —
+      // the same signature `LayrzTabView`'s disabled pills produce.
+      expect(registrar, isNull);
     });
   });
 }
