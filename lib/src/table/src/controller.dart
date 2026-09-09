@@ -230,29 +230,78 @@ class LayrzTableController<T> extends ChangeNotifier {
     setColumnVisible(key, _hiddenColumns.contains(key));
   }
 
-  /// Moves the column identified by [key] to [targetIndex] within
-  /// [columnOrder].
+  /// Moves the **visible** column identified by [key] to [targetVisibleIndex]
+  /// among the currently-visible columns.
   ///
-  /// [targetIndex] is a position in the full [columnOrder] list (which
-  /// includes hidden columns), clamped to the valid range
-  /// `[0, columnOrder.length - 1]`. This is the programmatic reorder
-  /// entrypoint driven by both the header drag-to-reorder gesture and the
-  /// column-management menu's up/down controls.
+  /// [targetVisibleIndex] is a position within [visibleColumnKeys] (in its
+  /// current relative order) — **not** a position in the full [columnOrder]
+  /// — clamped to `[0, visibleColumnKeys.length - 1]`. This is the
+  /// programmatic reorder entrypoint driven by both the header
+  /// drag-to-reorder gesture and the column-management menu's up/down
+  /// controls; both operate purely on what the user can see, so they think
+  /// in visible positions, not full-list positions.
   ///
-  /// If [key] is unknown, this is a no-op. If [targetIndex] (after
-  /// clamping) is [key]'s current index, this is a no-op — no state change,
-  /// no [notifyListeners], no emitted event. Otherwise [key] is removed
-  /// from its current slot and reinserted at [targetIndex], [notifyListeners]
-  /// is called, and a [LayrzTableColumnsEvent] is emitted on [events].
-  void reorderColumn(Key key, int targetIndex) {
-    final currentIndex = _columnOrder.indexOf(key);
-    if (currentIndex == -1) return;
+  /// [key] must currently be **visible**: if it is hidden or unknown, this
+  /// is a no-op — hidden columns have no drag handle and no reorderable
+  /// menu row, so there is no visible position to move them to. If
+  /// [targetVisibleIndex] (after clamping) is [key]'s current visible
+  /// index, this is also a no-op. In either no-op case: no state change, no
+  /// [notifyListeners], no emitted event.
+  ///
+  /// **Hidden columns' stored positions are not perturbed.** Reordering
+  /// only changes the relative order of visible columns; every hidden
+  /// column stays anchored immediately after the same visible column it
+  /// followed before the move (or, if it preceded every visible column,
+  /// it stays before the new first visible column). Concretely: before
+  /// moving, each hidden key is recorded as anchored to the nearest
+  /// visible key at or before it in [columnOrder] (or to "start" if none
+  /// precedes it). After computing the new visible order, the full
+  /// [columnOrder] is rebuilt by walking that new visible order and
+  /// re-inserting each hidden key immediately after its anchor (or before
+  /// the first visible key, for "start"-anchored hidden keys), preserving
+  /// the relative order hidden keys sharing the same anchor had before.
+  ///
+  /// On success, [notifyListeners] is called and a [LayrzTableColumnsEvent]
+  /// is emitted on [events] carrying the rebuilt [columnOrder] and the
+  /// (unchanged, but reordered) [visibleColumnKeys].
+  void reorderColumn(Key key, int targetVisibleIndex) {
+    if (_hiddenColumns.contains(key) || !_columnOrder.contains(key)) return;
 
-    final clampedTarget = targetIndex.clamp(0, _columnOrder.length - 1);
-    if (clampedTarget == currentIndex) return;
+    final visibleKeys = _columnOrder.where((k) => !_hiddenColumns.contains(k)).toList(growable: false);
+    final currentVisibleIndex = visibleKeys.indexOf(key);
+    final clampedTarget = targetVisibleIndex.clamp(0, visibleKeys.length - 1);
+    if (clampedTarget == currentVisibleIndex) return;
 
-    _columnOrder.removeAt(currentIndex);
-    _columnOrder.insert(clampedTarget, key);
+    // Anchor each hidden key to the nearest preceding visible key in the
+    // CURRENT order (null means "before every visible column").
+    final anchors = <Key?, List<Key>>{};
+    Key? lastVisibleSeen;
+    for (final k in _columnOrder) {
+      if (_hiddenColumns.contains(k)) {
+        anchors.putIfAbsent(lastVisibleSeen, () => []).add(k);
+      } else {
+        lastVisibleSeen = k;
+      }
+    }
+
+    // Compute the new visible order.
+    final newVisibleOrder = List<Key>.of(visibleKeys)
+      ..removeAt(currentVisibleIndex)
+      ..insert(clampedTarget, key);
+
+    // Rebuild the full order: hidden keys anchored to "start" first, then
+    // each visible key followed immediately by the hidden keys anchored to it.
+    final rebuilt = <Key>[
+      ...anchors[null] ?? const [],
+    ];
+    for (final visibleKey in newVisibleOrder) {
+      rebuilt.add(visibleKey);
+      rebuilt.addAll(anchors[visibleKey] ?? const []);
+    }
+
+    _columnOrder
+      ..clear()
+      ..addAll(rebuilt);
     notifyListeners();
     _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, visibleColumnKeys: visibleColumnKeys));
   }
