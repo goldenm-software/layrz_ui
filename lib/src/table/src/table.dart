@@ -561,7 +561,11 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
         if (widget.canSearch)
           Padding(
             padding: EdgeInsets.only(bottom: context.tokens.spacing.sp2),
-            child: LayrzSearchInput(value: _controller.searchText, onSearch: _controller.search),
+            child: LayrzSearchInput(
+              value: _controller.searchText,
+              onSearch: _controller.search,
+              mode: LayrzSearchInputMode.field,
+            ),
           ),
         Expanded(
           child: LayoutBuilder(
