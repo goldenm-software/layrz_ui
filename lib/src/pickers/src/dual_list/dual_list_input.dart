@@ -128,15 +128,19 @@ class LayrzDualListInput<T> extends StatefulWidget {
 
   /// The label for the left ("Available") panel.
   ///
-  /// If null, defaults to localized text from
-  /// [LayrzUiL10n.dualListAvailableListName].
-  final String? availableListName;
+  /// **Required (BREAKING).** Every dual-list field must name both of its
+  /// panels explicitly — there is no localized fallback, so callers can no
+  /// longer omit it and get [LayrzUiL10n.dualListAvailableListName] for
+  /// free.
+  final String availableListName;
 
   /// The label for the right ("Selected") panel.
   ///
-  /// If null, defaults to localized text from
-  /// [LayrzUiL10n.dualListSelectedListName].
-  final String? selectedListName;
+  /// **Required (BREAKING).** Every dual-list field must name both of its
+  /// panels explicitly — there is no localized fallback, so callers can no
+  /// longer omit it and get [LayrzUiL10n.dualListSelectedListName] for
+  /// free.
+  final String selectedListName;
 
   /// Creates a new [LayrzDualListInput].
   const LayrzDualListInput({
@@ -156,8 +160,8 @@ class LayrzDualListInput<T> extends StatefulWidget {
     this.enableSelectedSearch = true,
     required this.itemExtent,
     this.emptyListText,
-    this.availableListName,
-    this.selectedListName,
+    required this.availableListName,
+    required this.selectedListName,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -332,11 +336,13 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
   /// Text shown in a panel with nothing to display.
   final String? emptyListText;
 
-  /// The "Available" panel's label, or null to use the localized default.
-  final String? availableListName;
+  /// The "Available" panel's label. Required (BREAKING) — see
+  /// [LayrzDualListInput.availableListName].
+  final String availableListName;
 
-  /// The "Selected" panel's label, or null to use the localized default.
-  final String? selectedListName;
+  /// The "Selected" panel's label. Required (BREAKING) — see
+  /// [LayrzDualListInput.selectedListName].
+  final String selectedListName;
 
   /// Called with a single value tapped in the "Available" panel.
   final ValueChanged<T> onSelectOne;
@@ -405,7 +411,7 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
         children: [
           Expanded(
             child: LayrzDualListPanel<T>(
-              title: availableListName ?? l10n.dualListAvailableListName,
+              title: availableListName,
               items: availableItems,
               onItemTap: onSelectOne,
               enableSearch: enableAvailableSearch,
@@ -422,7 +428,7 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
                 LayrzButton(
                   labelText: l10n.dualListToggleToSelected,
                   icon: MdiIcons.chevronRight,
-                  style: LayrzButtonStyle.outlinedFab,
+                  style: (disabled || availableItems.isEmpty) ? LayrzButtonStyle.textFab : LayrzButtonStyle.filledFab,
                   isDisabled: disabled || availableItems.isEmpty,
                   onTap: disabled || availableItems.isEmpty
                       ? null
@@ -435,7 +441,7 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
                 LayrzButton(
                   labelText: l10n.dualListToggleToAvailable,
                   icon: MdiIcons.chevronLeft,
-                  style: LayrzButtonStyle.outlinedFab,
+                  style: (disabled || selectedItems.isEmpty) ? LayrzButtonStyle.textFab : LayrzButtonStyle.filledFab,
                   isDisabled: disabled || selectedItems.isEmpty,
                   onTap: disabled || selectedItems.isEmpty
                       ? null
@@ -449,7 +455,7 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
           ),
           Expanded(
             child: LayrzDualListPanel<T>(
-              title: selectedListName ?? l10n.dualListSelectedListName,
+              title: selectedListName,
               items: selectedItems,
               onItemTap: onUnselectOne,
               enableSearch: enableSelectedSearch,

@@ -105,8 +105,16 @@ class _LayrzDualListPanelState<T> extends State<LayrzDualListPanel<T>> {
         ],
         Expanded(
           child: DecoratedBox(
+            // Mirrors `LayrzInputStyleSpec`'s own enabled-state resolution
+            // (`input_style_spec.dart`, default branch) so the panel reads as
+            // an input surface rather than a bare bordered box -- `sf2` fill,
+            // a transparent border at the input's own `borderWidth`. This
+            // does not modify the frozen `input_chrome.dart`/
+            // `input_style_spec.dart` files; it just matches their resolved
+            // values from this panel's own decoration.
             decoration: BoxDecoration(
-              border: Border.all(color: tokens.colors.divider),
+              color: tokens.colors.sf2,
+              border: Border.all(color: const Color(0x00000000), width: tokens.border.base),
               borderRadius: tokens.radius.br2,
             ),
             child: ClipRRect(
@@ -179,11 +187,22 @@ class _DualListItemRow<T> extends StatelessWidget {
         disabled: disabled,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-          child: DefaultTextStyle(
-            style: context.bodyStyle.copyWith(
-              color: disabled ? tokens.colors.fg3.withValues(alpha: 0.5) : tokens.colors.fg1,
-            ),
-            child: item.child,
+          // A `Row` fills the fixed `itemExtent` height handed down by the
+          // parent `ListView.builder` and centers its children on the cross
+          // axis by default, so `item.child` is vertically centered in the
+          // row's slot instead of top-aligning and clipping taller content --
+          // mirrors `_MultiSelectItemRow` in `multi_select_surface.dart`.
+          child: Row(
+            children: [
+              Expanded(
+                child: DefaultTextStyle(
+                  style: context.bodyStyle.copyWith(
+                    color: disabled ? tokens.colors.fg3.withValues(alpha: 0.5) : tokens.colors.fg1,
+                  ),
+                  child: item.child,
+                ),
+              ),
+            ],
           ),
         ),
       ),
