@@ -178,6 +178,19 @@ class _DualListItemRow<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
+    // Idle matches the panel's own `sf2` fill (`dual_list_panel.dart`'s
+    // `DecoratedBox`, above) so each row reads as a solid surface rather than
+    // transparent-over-`sf2` -- an explicit idle color also avoids a
+    // transparent-to-filled blink on first hover (see `LayrzTappable`'s own
+    // "black blink" doc for the general shape of that problem). Hover steps
+    // one level darker than the default (`sf4` instead of `sf3`) and pressed
+    // goes one step deeper still; since the surface ramp stops at `sf4`
+    // (there is no `sf5`), the pressed tone is derived by nudging `sf4`
+    // toward `fg1` with [Color.lerp] at a small factor -- the same
+    // token-derived-tone pattern already used for state colors elsewhere
+    // (e.g. `month_grid_cell.dart`'s hover tint), rather than a hardcoded hex.
+    final pressedColor = Color.lerp(tokens.colors.sf4, tokens.colors.fg1, 0.12)!;
+
     return Semantics(
       button: true,
       enabled: !disabled,
@@ -185,6 +198,9 @@ class _DualListItemRow<T> extends StatelessWidget {
       child: LayrzTappable(
         onTap: onTap,
         disabled: disabled,
+        color: tokens.colors.sf2,
+        hoverColor: tokens.colors.sf4,
+        pressedColor: pressedColor,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
           // A `Row` fills the fixed `itemExtent` height handed down by the
