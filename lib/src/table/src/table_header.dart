@@ -330,9 +330,19 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       // MANDATORY per D64: without container: true, the LayrzTooltip's
       // semantics (and, on wide viewports, the drag handle's) merge into
       // this button's node instead of remaining distinct. See input_chrome.dart.
+      //
+      // excludeSemantics: true additionally discards the visible header
+      // Text's (and LayrzTooltip's) own implicit label, which would otherwise
+      // merge INTO this node's explicit label — e.g. "Sort by Col 1\nCol 1"
+      // instead of "Sort by Col 1". container: true alone only stops this
+      // node merging UPWARD into an ancestor; it says nothing about a
+      // descendant's own label merging down. Matches the same
+      // Semantics(button:, label:) + excludeSemantics: true shape used for a
+      // tooltip-wrapped visible label in button.dart.
       container: true,
       button: column.isSortable,
       label: column.isSortable ? 'Sort by ${column.headerText}' : null,
+      excludeSemantics: true,
       child: LayrzTappable(
         // Idle must stay transparent, not the LayrzTappable default opaque
         // `sf1`: this cell sits on top of the header's own `sf2` background
