@@ -15,8 +15,8 @@ milestone and beyond builds on.
 
 | # | Item | Status |
 |---|---|---|
-| 41 | LayrzMultiSelectInput (searchable multi-value picker) | TO DO · own batch, not DateTime-related |
-| 43 | LayrzDualListInput (two-panel available/selected picker) | TO DO |
+| 41 | LayrzMultiSelectInput (searchable multi-value picker) | Review required · gained All/Selected tabs alongside DESIGN-43 |
+| 43 | LayrzDualListInput (two-panel available/selected picker, desktop-only; delegates to MultiSelect on compact) | Review required |
 | 45 | LayrzDateInput (single date, commit on tap) | Review required |
 | 46 | LayrzDateRangeInput (contiguous date range, in-panel Save) | Review required |
 | 47 | LayrzTimeInput (single time, commit on tap) | Review required |
@@ -52,10 +52,12 @@ deliverable, and `wiki/Widgets/LayrzTimeRangeInput.md` already existed as a spec
 
 ## M4 is NOT complete when this batch ships
 
-Six rows remain `TO DO`: `LayrzMultiSelectInput` (41), `LayrzDualListInput` (43),
-`LayrzColorInput` (54), `LayrzIconInput` (56), `LayrzEmojiInput` (57), `LayrzAvatarInput` (58) —
-Emoji, Icon, and Avatar (54, 56–58) inputs, plus MultiSelect and DualList carried over from M3
-(D61). `LayrzFileInput` (55) shipped in this release and is now `Merged · Review required`.
+Four rows remain `TO DO`: `LayrzColorInput` (54), `LayrzIconInput` (56), `LayrzEmojiInput` (57),
+`LayrzAvatarInput` (58) — the remaining media/appearance pickers. `LayrzMultiSelectInput` (41) and
+`LayrzDualListInput` (43), carried over from M3 (D61), have since shipped together in one follow-up
+unit and are now `Review required` — see the DESIGN-41, 43 section above for the desktop-only
+DualList / MultiSelect-tabs design. `LayrzFileInput` (55) shipped in this release and is now
+`Merged · Review required`.
 `LayrzDynamicAvatarInput` (59) has since shipped as well and is now `Merged · Review required` —
 its blocker (`LayrzAvatarInput`, `LayrzIconInput`, and `LayrzEmojiInput` all shipping first, since
 it composes all three) is resolved; see the note under DESIGN-54–59 below (this repo's status
@@ -131,11 +133,18 @@ file list and reported rather than corrected here.**
 
 ### DESIGN-41, 43 — Deferred from M3 (D61)
 
-**Status**: TO DO
+**Status**: Review required (both)
 
 Scoped to a separate batch per the maintainer's explicit instruction that DESIGN-41
-(`LayrzMultiSelectInput`) is not DateTime-related and should not ride along with this batch.
-`LayrzDualListInput` (DESIGN-43) has not been started.
+(`LayrzMultiSelectInput`) is not DateTime-related and should not ride along with this batch. Both
+rows shipped together in one follow-up unit: the team settled on `LayrzDualListInput` being
+**desktop-only** (`context.isCompact == false`) — its two-panel "Available"/"Selected" surface has no
+compact rendering of its own — and delegating entirely to `LayrzMultiSelectInput` on compact
+viewports instead. `LayrzMultiSelectInput` gained "All (count)" / "Selected (count)" tabs in its own
+opened surface as part of the same unit, specifically so a mobile user still has a way to see what
+they've already selected without the side-by-side layout. `LayrzDualListInput`'s transfer mechanic in
+this v1 is tap-a-row-to-move plus two move-all buttons; drag-and-drop and within-"Selected" reordering
+are out of scope for v1.
 
 ---
 
