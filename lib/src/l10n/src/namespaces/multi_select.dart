@@ -31,4 +31,16 @@ mixin LayrzUiL10nMultiSelectMixin {
   ///
   /// Default: "Unselect all"
   String get multiSelectUnselectAll => 'Unselect all';
+
+  /// Localized label for the "All" tab in the surface's tab strip, carrying
+  /// the total (or search-filtered) item count.
+  ///
+  /// Default: "All ($count)"
+  String multiSelectTabAll(int count) => 'All ($count)';
+
+  /// Localized label for the "Selected" tab in the surface's tab strip,
+  /// carrying the count of items currently in the draft.
+  ///
+  /// Default: "Selected ($count)"
+  String multiSelectTabSelected(int count) => 'Selected ($count)';
 }

@@ -4,6 +4,7 @@ export 'src/date/date_range_input.dart';
 export 'src/datetime/datetime_input.dart';
 export 'src/datetime/datetime_presentation.dart';
 export 'src/datetime/datetime_range_input.dart';
+export 'src/dual_list/dual_list_input.dart';
 export 'src/dynamic_avatar/dynamic_avatar_input.dart';
 export 'src/emoji/emoji_input.dart';
 export 'src/icon/icon_input.dart';

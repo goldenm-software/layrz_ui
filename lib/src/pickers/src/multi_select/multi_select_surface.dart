@@ -12,6 +12,7 @@ import '../../../inputs/src/shared/editable_field.dart';
 import '../../../inputs/src/shared/input_chrome.dart';
 import '../../../inputs/src/shared/input_slot.dart';
 import '../shared/picker_dialog_header.dart';
+import 'multi_select_tab_strip.dart';
 
 /// The selection surface content used by [LayrzMultiSelectInput].
 ///
@@ -38,6 +39,18 @@ import '../shared/picker_dialog_header.dart';
 /// tap — see [selectAll] and [unselectAll], both called by
 /// [LayrzMultiSelectInput] through a [GlobalKey], mirroring how the
 /// date/time pickers reach their own surface state.
+///
+/// **"All (count)" / "Selected (count)" tabs (DESIGN-43).** A
+/// [LayrzMultiSelectTabStrip] sits between the header divider and the
+/// scrolling list, switching which partition of [_filteredItems] the list
+/// shows: [LayrzMultiSelectTab.all] shows every (search-filtered) item,
+/// [LayrzMultiSelectTab.selected] shows only the ones currently in [_draft].
+/// This is a **light re-filter of the one existing `ListView`**, not a
+/// second content tree — [LayrzTabView] is deliberately not used here
+/// because it owns and swaps its own content `Column`, which would fight
+/// this surface's pinned-header + single-`Expanded`-list layout. Both counts
+/// are live and update on every draft mutation and every search keystroke
+/// (see [_visibleItems]).
 ///
 /// This is a private implementation detail; consumers use
 /// [LayrzMultiSelectInput] instead.
@@ -114,6 +127,10 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
   final Set<WidgetState> _searchStates = {};
   int _highlightedIndex = -1;
   List<LayrzSelectItem<T>> _filteredItems = [];
+
+  /// Which partition of [_filteredItems] the list currently shows — see the
+  /// class doc's tab-strip section. Defaults to [LayrzMultiSelectTab.all].
+  LayrzMultiSelectTab _activeTab = LayrzMultiSelectTab.all;
 
   /// The tapped-but-unsaved set of selected values.
   ///
@@ -269,6 +286,30 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
     _highlightedIndex = -1;
   }
 
+  /// The rows the list actually renders: [_filteredItems] (already narrowed
+  /// by search) further narrowed to [_activeTab]'s partition.
+  ///
+  /// [LayrzMultiSelectTab.all] passes every filtered item through unchanged;
+  /// [LayrzMultiSelectTab.selected] keeps only the ones already in [_draft].
+  /// This is what the [ListView.builder], keyboard navigation, and the
+  /// empty-state check in [build] all read — never [_filteredItems] directly
+  /// once a tab exists.
+  List<LayrzSelectItem<T>> get _visibleItems {
+    if (_activeTab == LayrzMultiSelectTab.all) return _filteredItems;
+    return _filteredItems.where((item) => item.value != null && _draft.contains(item.value as T)).toList();
+  }
+
+  /// Switches [_activeTab] and resets keyboard highlight, since the
+  /// highlighted index no longer necessarily points at the same row once the
+  /// visible partition changes.
+  void _handleTabChanged(LayrzMultiSelectTab tab) {
+    if (tab == _activeTab) return;
+    setState(() {
+      _activeTab = tab;
+      _highlightedIndex = -1;
+    });
+  }
+
   /// Handles keyboard events (arrow keys, Enter, Escape).
   ///
   /// Mirrors `LayrzSelectInputSurface._handleKeyEvent` exactly, except Enter
@@ -282,11 +323,13 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
 
     final key = event.logicalKey;
 
+    final visibleItems = _visibleItems;
+
     if (key == LogicalKeyboardKey.arrowDown) {
       setState(() {
-        if (_highlightedIndex < _filteredItems.length - 1) {
+        if (_highlightedIndex < visibleItems.length - 1) {
           _highlightedIndex++;
-        } else if (_filteredItems.isNotEmpty) {
+        } else if (visibleItems.isNotEmpty) {
           _highlightedIndex = 0;
         }
       });
@@ -295,14 +338,14 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
       setState(() {
         if (_highlightedIndex > 0) {
           _highlightedIndex--;
-        } else if (_filteredItems.isNotEmpty) {
-          _highlightedIndex = _filteredItems.length - 1;
+        } else if (visibleItems.isNotEmpty) {
+          _highlightedIndex = visibleItems.length - 1;
         }
       });
       return KeyEventResult.handled;
     } else if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
-      if (_highlightedIndex >= 0 && _highlightedIndex < _filteredItems.length) {
-        final value = _filteredItems[_highlightedIndex].value;
+      if (_highlightedIndex >= 0 && _highlightedIndex < visibleItems.length) {
+        final value = visibleItems[_highlightedIndex].value;
         if (value != null) _toggle(value);
         return KeyEventResult.handled;
       }
@@ -403,13 +446,20 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
   /// The search field is always visible while the list scrolls underneath it,
   /// rather than scrolling away with the list the way a search row placed
   /// above the list inside the same scrollable would.
+  ///
+  /// **"All (count)" / "Selected (count)" tab strip (DESIGN-43)** sits
+  /// between the header divider and the scrolling list, as its own fixed
+  /// (never-scrolling) row — see [_visibleItems] and the class doc's tab
+  /// section for how it re-filters the one `ListView` rather than swapping
+  /// content trees.
   @override
   Widget build(BuildContext context) {
     final l10n = LayrzUiL10n.of(context);
     final tokens = context.tokens;
+    final visibleItems = _visibleItems;
 
     final Widget listOrEmptyState;
-    if (_filteredItems.isEmpty) {
+    if (visibleItems.isEmpty) {
       listOrEmptyState = Padding(
         padding: tokens.spacing.pd3,
         child: Text(
@@ -421,9 +471,9 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
       listOrEmptyState = ListView.builder(
         padding: EdgeInsets.zero,
         itemExtent: widget.itemExtent,
-        itemCount: _filteredItems.length,
+        itemCount: visibleItems.length,
         itemBuilder: (context, index) {
-          final item = _filteredItems[index];
+          final item = visibleItems[index];
           final isSelected = item.value != null && _draft.contains(item.value as T);
           return _MultiSelectItemRow<T>(
             key: ValueKey(item.value),
@@ -451,6 +501,12 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
             ),
           ),
           Container(height: 1, color: tokens.colors.divider),
+          LayrzMultiSelectTabStrip(
+            activeTab: _activeTab,
+            allCount: _filteredItems.length,
+            selectedCount: _draft.length,
+            onTabChanged: _handleTabChanged,
+          ),
           Expanded(child: listOrEmptyState),
         ],
       ),
