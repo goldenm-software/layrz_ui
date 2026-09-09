@@ -7,6 +7,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/progress/progress.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
+import 'package:layrz_ui/src/table/src/column_menu.dart';
 import 'package:layrz_ui/src/table/src/controller.dart';
 import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
 import 'package:layrz_ui/src/table/src/sort.dart';
@@ -155,11 +156,15 @@ class LayrzTable<T> extends StatefulWidget {
   /// selection via the controller.
   final bool hasMultiselect;
 
-  /// Whether the table renders a search field above the header.
+  /// Whether the table renders a search field in its toolbar row, above the
+  /// header.
   ///
   /// Defaults to `true`. When `false`, no search field is rendered and the
   /// controller's [LayrzTableController.searchText] (if ever set
-  /// programmatically) still applies as a filter.
+  /// programmatically) still applies as a filter. Either way, the toolbar
+  /// row itself is always rendered — its trailing column-visibility/reorder
+  /// menu trigger must stay reachable regardless of [canSearch]; see
+  /// `_buildToolbar`.
   final bool canSearch;
 
   /// The minimum width, in logical pixels, a flex column (one with a `null`
@@ -627,20 +632,46 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// table itself is mid off-thread sort/filter recompute ([_isComputing]).
   bool get _isTopProgressVisible => widget.isLoading || _isComputing;
 
+  /// Builds the toolbar row above the loading strip/header/rows: the search
+  /// field (when [LayrzTable.canSearch] is `true`) and, always, the trailing
+  /// [LayrzColumnMenu] trigger.
+  ///
+  /// The column-visibility/reorder menu trigger lives here — beside the
+  /// search field — rather than inside [LayrzTableHeader], so it reads as a
+  /// table-level control, not a per-column one. It must stay reachable
+  /// regardless of [LayrzTable.canSearch]: when search is enabled, the
+  /// search field fills the remaining width to its left ([Expanded]); when
+  /// disabled, this row still renders with just the trigger, right-aligned,
+  /// rather than disappearing along with the search field.
+  Widget _buildToolbar(BuildContext context) {
+    final sp2 = context.tokens.spacing.sp2;
+    return Padding(
+      padding: EdgeInsets.only(bottom: sp2),
+      child: Row(
+        children: [
+          if (widget.canSearch) ...[
+            Expanded(
+              child: LayrzSearchInput(
+                value: _controller.searchText,
+                onSearch: _controller.search,
+                mode: LayrzSearchInputMode.field,
+              ),
+            ),
+            SizedBox(width: sp2),
+          ] else
+            const Spacer(),
+          LayrzColumnMenu<T>(columns: widget.columns, controller: _controller),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.canSearch)
-          Padding(
-            padding: EdgeInsets.only(bottom: context.tokens.spacing.sp2),
-            child: LayrzSearchInput(
-              value: _controller.searchText,
-              onSearch: _controller.search,
-              mode: LayrzSearchInputMode.field,
-            ),
-          ),
+        _buildToolbar(context),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {

@@ -6,15 +6,18 @@ import 'package:layrz_ui/src/context_menu/context_menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
-import 'package:layrz_ui/src/table/src/column_menu.dart';
 import 'package:layrz_ui/src/table/src/controller.dart';
 import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 /// The frozen header row of a `LayrzTable<T>`: one cell per visible column,
-/// each carrying up to three interactions, plus the trigger for
-/// [LayrzColumnMenu].
+/// each carrying up to three interactions.
+///
+/// This header does **not** render the column-visibility/reorder menu
+/// trigger (`LayrzColumnMenu`) — the assembling `LayrzTable` widget places
+/// that trigger in its own toolbar row, beside the search field, rather
+/// than in this header. See `LayrzColumnMenu`'s own doc for what it drives.
 ///
 /// **Structural seam (a note for whoever assembles `LayrzTable` in U9):**
 /// this widget does not compute column widths itself — the widget that owns
@@ -39,7 +42,7 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 ///    target, built from raw [Draggable]/[DragTarget] (there is no
 ///    Material `ReorderableListView` in this design system). **Rendered only
 ///    when `!context.isCompact`** — on compact, reorder lives entirely in
-///    [LayrzColumnMenu]'s up/down controls.
+///    `LayrzColumnMenu`'s up/down controls.
 /// 3. **Right-click or long-press opens a per-column [LayrzContextMenu]**
 ///    with explicit "Sort ascending" / "Sort descending" / "Clear sort" /
 ///    "Hide column" actions, the last disabled at the
@@ -47,17 +50,14 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 ///    `!context.isCompact`** — compact devices get neither gesture.
 ///
 /// Overflowing header text is wrapped in a [LayrzTooltip] showing the full
-/// [LayrzColumn.headerText]. The trailing [LayrzColumnMenu] trigger is
-/// rendered once, after every column cell, regardless of viewport (it is the
-/// only reorder/visibility surface on compact and coexists with the header
-/// drag handle on wide).
+/// [LayrzColumn.headerText].
 ///
 /// **Drag semantics:** the drag handle carries its own
 /// [Semantics.label] plus [CustomSemanticsAction]s for "Move left"/"Move
 /// right", entirely separate from the header cell's own tap-to-sort
 /// [Semantics.button] — a screen-reader user is told these are two distinct
 /// affordances, not one overloaded gesture. The handle itself does not need
-/// to be operable by keyboard alone: [LayrzColumnMenu]'s "Move up"/"Move
+/// to be operable by keyboard alone: `LayrzColumnMenu`'s "Move up"/"Move
 /// down" entries are the keyboard-accessible reorder route (WCAG 2.1.1) on
 /// every viewport, per the plan's explicit call-out.
 class LayrzTableHeader<T> extends StatefulWidget {
@@ -234,7 +234,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
   ///
   /// "Hide column" is disabled whenever hiding [column] would drop the
   /// number of visible columns below [LayrzTableController.minVisibleColumns]
-  /// — the same guard [LayrzColumnMenu] applies to its own visibility
+  /// — the same guard `LayrzColumnMenu` applies to its own visibility
   /// checklist, so both entry points agree at the boundary.
   ///
   List<LayrzContextMenuItem> _buildContextMenuEntries(BuildContext context, LayrzColumn<T> column) {
@@ -590,10 +590,6 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
                   ],
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
-              child: LayrzColumnMenu<T>(columns: widget.columns, controller: controller),
             ),
             if (hasActionsColumn) _buildActionsCell(context, actionsColumnWidth),
           ],

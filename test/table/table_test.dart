@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/table/src/table_header.dart';
 
 import 'helpers/pump_table.dart';
 
@@ -33,12 +34,12 @@ void main() {
   ];
 
   /// Finds only the per-row [LayrzTableAction] buttons, excluding the
-  /// header's own [LayrzColumnMenu] trigger.
+  /// toolbar's own [LayrzColumnMenu] trigger.
   ///
-  /// [LayrzTable]'s header always renders a column-visibility menu trigger
-  /// (keyed `'layrz-column-menu-trigger'`), and that trigger is itself a
-  /// [LayrzButton] — so a bare `find.byType(LayrzButton)` over-counts by one
-  /// whenever the header is present, which it always is.
+  /// [LayrzTable]'s toolbar row always renders a column-visibility menu
+  /// trigger (keyed `'layrz-column-menu-trigger'`), and that trigger is
+  /// itself a [LayrzButton] — so a bare `find.byType(LayrzButton)`
+  /// over-counts by one whenever the toolbar is present, which it always is.
   Finder actionButtons() =>
       find.byWidgetPredicate((w) => w is LayrzButton && w.key != const ValueKey('layrz-column-menu-trigger'));
 
@@ -266,6 +267,82 @@ void main() {
 
       expect(find.text('Banana'), findsOneWidget);
       expect(find.text('Apple'), findsNothing);
+    });
+  });
+
+  group('LayrzTable toolbar column-visibility trigger placement', () {
+    /// Finds the column-visibility/reorder menu's trigger button by its
+    /// stable key (see `LayrzColumnMenu`'s trigger, keyed
+    /// `'layrz-column-menu-trigger'`).
+    Finder columnMenuTrigger() => find.byKey(const ValueKey('layrz-column-menu-trigger'));
+
+    testWidgets('the column-menu trigger is NOT a descendant of LayrzTableHeader', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+
+      expect(
+        find.descendant(of: find.byType(LayrzTableHeader<TableTestRow>), matching: columnMenuTrigger()),
+        findsNothing,
+      );
+    });
+
+    testWidgets('the column-menu trigger is reachable in the toolbar when canSearch is true', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+
+      expect(columnMenuTrigger(), findsOneWidget);
+      expect(find.byType(LayrzSearchInput), findsOneWidget);
+
+      // Both the search field and the trigger sit in the same toolbar Row,
+      // above the table's LayoutBuilder/header/rows region.
+      final searchTop = tester.getTopLeft(find.byType(LayrzSearchInput)).dy;
+      final triggerTop = tester.getTopLeft(columnMenuTrigger()).dy;
+      final headerTop = tester.getTopLeft(find.byType(LayrzTableHeader<TableTestRow>)).dy;
+      expect(searchTop, lessThan(headerTop));
+      expect(triggerTop, lessThan(headerTop));
+    });
+
+    testWidgets('the column-menu trigger stays reachable when canSearch is false', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), canSearch: false),
+      );
+
+      expect(find.byType(LayrzSearchInput), findsNothing);
+      expect(columnMenuTrigger(), findsOneWidget);
+
+      final triggerTop = tester.getTopLeft(columnMenuTrigger()).dy;
+      final headerTop = tester.getTopLeft(find.byType(LayrzTableHeader<TableTestRow>)).dy;
+      expect(triggerTop, lessThan(headerTop));
+    });
+
+    testWidgets('tapping the toolbar trigger still opens the column-visibility menu', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+
+      await tester.tap(columnMenuTrigger());
+      await tester.pumpAndSettle();
+
+      expect(find.text('Name'), findsWidgets);
+      expect(find.text('Amount'), findsWidgets);
     });
   });
 
