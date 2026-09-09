@@ -228,6 +228,57 @@ void main() {
       expect(decoration.border, isNotNull);
       expect((decoration.border as Border).right.width, greaterThan(0));
     });
+
+    testWidgets('a data cell also paints a bottom-side row divider, on the same foreground layer', (tester) async {
+      // Regression test: the actions cell drew a horizontal row divider but
+      // data cells did not, so rows blurred together in the scrolling-middle
+      // region. The bottom border must live on the same foreground
+      // DecoratedBox as the right-side divider, so it is painted on top of
+      // the tappable's opaque fill for the same reason the right border is.
+      final scrollSync = LayrzTableRowScrollSync();
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        buildRow(item: row, rowIndex: 0, scrollSync: scrollSync),
+      );
+
+      final dividerBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(LayrzTappable), matching: find.byType(DecoratedBox)).first,
+      );
+
+      expect(dividerBox.position, DecorationPosition.foreground);
+      final decoration = dividerBox.decoration as BoxDecoration;
+      final border = decoration.border as Border;
+      expect(border.bottom.width, greaterThan(0));
+      expect(border.bottom.color, border.right.color);
+      expect(border.bottom.width, border.right.width);
+    });
+
+    testWidgets('the checkbox cell also paints a bottom-side row divider matching the data cell', (tester) async {
+      final scrollSync = LayrzTableRowScrollSync();
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        buildRow(item: row, rowIndex: 0, scrollSync: scrollSync, hasMultiselect: true),
+      );
+
+      final checkboxCellBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(LayrzCheckboxInput), matching: find.byType(DecoratedBox)).first,
+      );
+      final checkboxDecoration = checkboxCellBox.decoration as BoxDecoration;
+      final checkboxBorder = checkboxDecoration.border as Border;
+      expect(checkboxBorder.bottom.width, greaterThan(0));
+
+      final dataDividerBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(LayrzTappable), matching: find.byType(DecoratedBox)).first,
+      );
+      final dataBorder = (dataDividerBox.decoration as BoxDecoration).border as Border;
+
+      expect(checkboxBorder.bottom.color, dataBorder.bottom.color);
+      expect(checkboxBorder.bottom.width, dataBorder.bottom.width);
+    });
   });
 
   group('LayrzTableRow striping', () {

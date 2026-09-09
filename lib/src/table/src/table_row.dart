@@ -195,7 +195,11 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: stripeColor,
-        border: Border(right: tokens.border.light),
+        // The bottom side here is the row's horizontal divider, matching the
+        // one every other cell paints (see `_buildDataCell` and
+        // `_buildActionsCell`) so the row-to-row line runs unbroken across
+        // the full width of the table.
+        border: Border(right: tokens.border.light, bottom: tokens.border.light),
       ),
       child: SizedBox(
         width: widget.height,
@@ -214,17 +218,23 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     return SizedBox(
       width: width,
       height: widget.height,
-      // The right-side column divider is painted in the FOREGROUND, on top
-      // of the LayrzTappable below, rather than as a background the
-      // tappable's own fill would sit above. LayrzTappable paints an opaque
-      // AnimatedContainer covering this exact rect (idle == stripeColor, see
-      // below) — a background-positioned border drawn behind that fill is
-      // fully covered and invisible; DecorationPosition.foreground paints
-      // this border last, after the tappable's content, so it always shows
-      // regardless of the tappable's current (idle/hover/pressed) color.
+      // The right-side column divider and the bottom row divider are both
+      // painted in the FOREGROUND, on top of the LayrzTappable below, rather
+      // than as a background the tappable's own fill would sit above.
+      // LayrzTappable paints an opaque AnimatedContainer covering this exact
+      // rect (idle == stripeColor, see below) — a background-positioned
+      // border drawn behind that fill is fully covered and invisible;
+      // DecorationPosition.foreground paints this border last, after the
+      // tappable's content, so it always shows regardless of the tappable's
+      // current (idle/hover/pressed) color. The bottom side matches the one
+      // every other cell paints (see `_buildCheckboxCell` and
+      // `_buildActionsCell`) so the row-to-row line runs unbroken across the
+      // full width of the table.
       child: DecoratedBox(
         position: DecorationPosition.foreground,
-        decoration: BoxDecoration(border: Border(right: tokens.border.light)),
+        decoration: BoxDecoration(
+          border: Border(right: tokens.border.light, bottom: tokens.border.light),
+        ),
         child: LayrzTappable(
           borderRadius: BorderRadius.zero,
           // Idle must equal this row's own stripe color, not transparent:
@@ -278,7 +288,14 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     return SizedBox(
       height: widget.height,
       child: DecoratedBox(
-        decoration: BoxDecoration(border: Border(left: context.tokens.border.light)),
+        // The bottom side is the row's horizontal divider, matching the one
+        // every other cell now paints explicitly (see `_buildCheckboxCell`
+        // and `_buildDataCell`) rather than relying solely on the outer row
+        // `DecoratedBox`'s own bottom border in `build()`, so all three cell
+        // regions draw the exact same border on the exact same layer.
+        decoration: BoxDecoration(
+          border: Border(left: context.tokens.border.light, bottom: context.tokens.border.light),
+        ),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: context.tokens.spacing.sp1),
           child: Row(
