@@ -40,10 +40,10 @@ class ListPanel<T> extends StatefulWidget {
 
   /// The panel's fixed width, in logical pixels.
   ///
-  /// If null, the panel uses its default width of `300`. A fold-aware layout
-  /// passes the leading pane's extent (mapped from the physical seam) here
-  /// instead, so the list panel occupies exactly the space up to the crease
-  /// rather than its usual fixed width.
+  /// If null, the panel uses its default width of [kLayrzScaffoldListWidth]. A
+  /// fold-aware layout passes the leading pane's extent (mapped from the
+  /// physical seam) here instead, so the list panel occupies exactly the space
+  /// up to the crease rather than its usual fixed width.
   final double? width;
 
   /// Creates a new [ListPanel].
@@ -57,7 +57,7 @@ class ListPanel<T> extends StatefulWidget {
   /// - [itemExtent]: The item extent for the list panel. Required.
   /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
   /// - [width]: The panel's fixed width, in logical pixels. Defaults to null, which
-  ///   keeps the panel's default width of `300`.
+  ///   keeps the panel's default width of [kLayrzScaffoldListWidth].
   const ListPanel({
     super.key,
     required this.items,
@@ -126,7 +126,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     final tokens = context.tokens;
 
     return Container(
-      width: widget.width ?? 300,
+      width: widget.width ?? kLayrzScaffoldListWidth,
       margin: EdgeInsets.only(top: tokens.spacing.sp1),
       padding: tokens.spacing.pd1,
       color: tokens.colors.sf1,
@@ -159,7 +159,7 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
                       itemCount: _filteredItems.length,
                       itemExtent: widget.itemExtent,
                       itemBuilder: (context, index) {
-                        return _buildListItem(context, tokens, _filteredItems[index]);
+                        return _buildListItem(context, tokens, _filteredItems[index], index);
                       },
                     ),
                   ),
@@ -176,13 +176,21 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     );
   }
 
-  Widget _buildListItem(BuildContext context, LayrzTokens tokens, LayrzScaffoldItem<T> item) {
+  /// Builds the [ScaffoldRow] for [item] at its position ([index]) within the
+  /// current filtered/on-screen list.
+  ///
+  /// [index] is forwarded as [ScaffoldRow.isEvenRow] (`index.isEven`) so the
+  /// row can paint the table-matching zebra stripe (`sf1`/`sf2`) — using the
+  /// filtered list's index parity rather than the unfiltered [widget.items]
+  /// index keeps the stripe matching what the user actually sees on screen.
+  Widget _buildListItem(BuildContext context, LayrzTokens tokens, LayrzScaffoldItem<T> item, int index) {
     final isSelected = item.key == widget.openedKey;
 
     return ScaffoldRow<T>(
       key: item.key,
       item: item,
       isSelected: isSelected,
+      isEvenRow: index.isEven,
       onTap: widget.onTap != null ? () => widget.onTap!(item) : null,
     );
   }
