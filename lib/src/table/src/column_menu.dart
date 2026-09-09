@@ -58,19 +58,20 @@ class LayrzColumnMenu<T> extends StatelessWidget {
 
   /// Optional hint text shown as a tooltip on the trigger icon.
   ///
-  /// Defaults to `'Columns'` when omitted. Also doubles as the trigger's
-  /// accessible label, since [LayrzButton] surfaces [labelText]-derived
-  /// semantics regardless of its icon-only Fab layout.
-  final String triggerLabelText;
+  /// Defaults to `null`, in which case the localized house default
+  /// (`context.l10n.tableColumnsMenu`) is used. Also doubles as the
+  /// trigger's accessible label, since [LayrzButton] surfaces
+  /// [labelText]-derived semantics regardless of its icon-only Fab layout.
+  final String? triggerLabelText;
 
   /// Creates a [LayrzColumnMenu].
   ///
-  /// [columns] and [controller] are required. [triggerLabelText] is optional
-  /// and defaults to `'Columns'`.
+  /// [columns] and [controller] are required. [triggerLabelText] is optional;
+  /// when `null`, the localized house default is used.
   const LayrzColumnMenu({
     required this.columns,
     required this.controller,
-    this.triggerLabelText = 'Columns',
+    this.triggerLabelText,
     super.key,
   });
 
@@ -112,10 +113,12 @@ class LayrzColumnMenu<T> extends StatelessWidget {
   /// visible order. Reordering targets the adjacent visible index, matching
   /// what a one-step up/down control should do.
   List<LayrzDropdownEntry> _reorderEntries({
+    required BuildContext context,
     required Key key,
     required int visibleIndex,
     required List<Key> visibleKeys,
   }) {
+    final l10n = context.l10n;
     final headerText = _headerTextFor(key);
     final canMoveUp = visibleIndex > 0;
     final canMoveDown = visibleIndex < visibleKeys.length - 1;
@@ -123,14 +126,14 @@ class LayrzColumnMenu<T> extends StatelessWidget {
     return [
       LayrzDropdownEntry(
         key: ValueKey('layrz-column-menu-move-up-$key'),
-        labelText: 'Move $headerText up',
+        labelText: l10n.tableMoveColumnUp(headerText),
         icon: MdiIcons.arrowUpBold,
         enabled: canMoveUp,
         onTap: () => controller.reorderColumn(key, visibleIndex - 1),
       ),
       LayrzDropdownEntry(
         key: ValueKey('layrz-column-menu-move-down-$key'),
-        labelText: 'Move $headerText down',
+        labelText: l10n.tableMoveColumnDown(headerText),
         icon: MdiIcons.arrowDownBold,
         enabled: canMoveDown,
         onTap: () => controller.reorderColumn(key, visibleIndex + 1),
@@ -146,16 +149,18 @@ class LayrzColumnMenu<T> extends StatelessWidget {
   /// when [isCompact] is `true` — appends a "Move up"/"Move down" pair for
   /// every currently-visible column, keyed by that column's position among
   /// [LayrzTableController.visibleColumnKeys].
-  List<LayrzDropdownItem> _buildItems(bool isCompact) {
+  List<LayrzDropdownItem> _buildItems(BuildContext context, bool isCompact) {
     final order = controller.columnOrder;
     final items = <LayrzDropdownItem>[for (final key in order) _visibilityEntry(key)];
 
     if (isCompact) {
       final visibleKeys = order.where((key) => !controller.hiddenColumns.contains(key)).toList(growable: false);
       if (visibleKeys.isNotEmpty) {
-        items.add(const LayrzDropdownLabel(labelText: 'Reorder columns'));
+        items.add(LayrzDropdownLabel(labelText: context.l10n.tableReorderColumns));
         for (var i = 0; i < visibleKeys.length; i++) {
-          items.addAll(_reorderEntries(key: visibleKeys[i], visibleIndex: i, visibleKeys: visibleKeys));
+          items.addAll(
+            _reorderEntries(context: context, key: visibleKeys[i], visibleIndex: i, visibleKeys: visibleKeys),
+          );
         }
       }
     }
@@ -168,12 +173,13 @@ class LayrzColumnMenu<T> extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        final label = triggerLabelText ?? context.l10n.tableColumnsMenu;
         return LayrzDropdownMenu(
-          items: _buildItems(context.isCompact),
+          items: _buildItems(context, context.isCompact),
           builder: (context, menuController) {
             return LayrzButton(
               key: const ValueKey('layrz-column-menu-trigger'),
-              labelText: triggerLabelText,
+              labelText: label,
               icon: MdiIcons.viewColumnOutline,
               style: LayrzButtonStyle.textFab,
               onTap: menuController.isOpen ? menuController.close : menuController.open,

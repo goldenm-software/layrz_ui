@@ -24,6 +24,7 @@ void main() {
     bool hasMultiselect = false,
     bool allSelected = false,
     ValueChanged<bool>? onSelectAllChanged,
+    double? actionsColumnWidth,
   }) {
     // LayrzTableHeader itself never listens to `controller` — inside the
     // real LayrzTable, the enclosing LayrzTableState does that and calls
@@ -44,6 +45,7 @@ void main() {
         hasMultiselect: hasMultiselect,
         allSelected: allSelected,
         onSelectAllChanged: onSelectAllChanged,
+        actionsColumnWidth: actionsColumnWidth,
       ),
     );
   }
@@ -595,6 +597,36 @@ void main() {
       );
       expect(checkboxSize.width, 50);
       expect(checkboxSize.height, 50);
+    });
+  });
+
+  group('LayrzTableHeader actions column', () {
+    testWidgets('actionsColumnWidth: null renders no actions cell', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller, actionsColumnWidth: null));
+
+      // The header's rightmost DecoratedBox besides the column-menu trigger
+      // is the actions-cell placeholder; with no width supplied it must not
+      // exist at all — there is no SizedBox sized to any actions width.
+      expect(find.byWidgetPredicate((w) => w is SizedBox && w.width == 200), findsNothing);
+    });
+
+    testWidgets('actionsColumnWidth: N reserves exactly that width', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller, actionsColumnWidth: 200));
+
+      final actionsCellSize = tester.getSize(
+        find.byWidgetPredicate((w) => w is SizedBox && w.width == 200 && w.height == 40),
+      );
+      expect(actionsCellSize.width, 200);
     });
   });
 }

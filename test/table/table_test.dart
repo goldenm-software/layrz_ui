@@ -609,6 +609,7 @@ void main() {
         LayrzTable<TableTestRow>(
           items: rows,
           columns: baseColumns(),
+          actionsCount: 1,
           actionsBuilder: (row) => [
             LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () => tappedIds.add(row.id)),
           ],
@@ -649,6 +650,7 @@ void main() {
         LayrzTable<TableTestRow>(
           items: rows,
           columns: baseColumns(),
+          actionsCount: 1,
           actionsBuilder: (row) => [
             LayrzTableAction(
               icon: MdiIcons.pencilOutline,
@@ -664,6 +666,105 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tapCount, 0);
+    });
+  });
+
+  group('LayrzTable actionsCount-driven actions column', () {
+    /// Finds the header's actions-cell placeholder [SizedBox] — see
+    /// `LayrzTableHeader._buildActionsCell` — sized to [width] and the
+    /// table's default `headerHeight` (40).
+    Finder headerActionsCellSize(double width) =>
+        find.byWidgetPredicate((w) => w is SizedBox && w.width == width && w.height == 40);
+
+    /// Finds every row's actions-cell [SizedBox] — see
+    /// `LayrzTableRow._buildActionsCell` — sized to [width] and the table's
+    /// default row `height` (50).
+    Finder rowActionsCellSize(double width) =>
+        find.byWidgetPredicate((w) => w is SizedBox && w.width == width && w.height == 50);
+
+    testWidgets('actionsCount: 0 (default) renders no actions column even with actionsBuilder set', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(
+          items: rows,
+          columns: baseColumns(),
+          // actionsCount defaults to 0 — actionsBuilder must be entirely
+          // ignored: no column reserved, no buttons rendered, in header or
+          // rows.
+          actionsBuilder: (row) => [
+            LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () {}),
+          ],
+        ),
+      );
+
+      expect(actionButtons(), findsNothing);
+    });
+
+    testWidgets('wide: actionsCount: N sizes the column to N fabs + spacers, header == rows', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      const actionsCount = 3;
+      // Formula from LayrzTable._computeActionsColumnWidth: each fab is
+      // kLayrzButtonHeight (45.0) square, wrapped in sp1/2 (3.0) horizontal
+      // padding per side inside LayrzTableRow._buildWideActions, so each fab
+      // contributes (45.0 + 6.0) to the row of fabs; the actions cell itself
+      // adds sp1 (6.0) padding on each side (12.0 total).
+      const expectedWidth = actionsCount * (45.0 + 6.0) + 12.0;
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(
+          items: rows,
+          columns: baseColumns(),
+          actionsCount: actionsCount,
+          actionsBuilder: (row) => [
+            LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () {}),
+            LayrzTableAction(icon: MdiIcons.eyeOutline, labelText: 'Show', onTap: () {}),
+            LayrzTableAction(icon: MdiIcons.trashCanOutline, labelText: 'Delete', onTap: () {}),
+          ],
+        ),
+      );
+
+      expect(actionButtons(), findsNWidgets(rows.length * actionsCount));
+      expect(headerActionsCellSize(expectedWidth), findsOneWidget);
+      expect(rowActionsCellSize(expectedWidth), findsNWidgets(rows.length));
+
+      final headerWidth = tester.getSize(headerActionsCellSize(expectedWidth)).width;
+      final rowWidth = tester.getSize(rowActionsCellSize(expectedWidth).first).width;
+      expect(headerWidth, rowWidth);
+    });
+
+    testWidgets('compact: actionsCount: N still sizes the column to exactly one trigger', (tester) async {
+      useCompactViewport(tester);
+      final rows = sampleRows();
+      // Compact collapses to a single overflow trigger regardless of count —
+      // kLayrzButtonCompactHeight (50.0) square + sp1 (6.0) cell padding on
+      // each side (12.0 total).
+      const expectedWidth = 50.0 + 12.0;
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(
+          items: rows,
+          columns: baseColumns(),
+          actionsCount: 3,
+          actionsBuilder: (row) => [
+            LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () {}),
+            LayrzTableAction(icon: MdiIcons.eyeOutline, labelText: 'Show', onTap: () {}),
+            LayrzTableAction(icon: MdiIcons.trashCanOutline, labelText: 'Delete', onTap: () {}),
+          ],
+        ),
+      );
+
+      expect(headerActionsCellSize(expectedWidth), findsOneWidget);
+      expect(rowActionsCellSize(expectedWidth), findsNWidgets(rows.length));
+
+      final headerWidth = tester.getSize(headerActionsCellSize(expectedWidth)).width;
+      final rowWidth = tester.getSize(rowActionsCellSize(expectedWidth).first).width;
+      expect(headerWidth, rowWidth);
     });
   });
 
@@ -831,6 +932,35 @@ void main() {
       // message text distinct from the table's other own strings.
       expect(texts.any((t) => t.isNotEmpty), isTrue);
     });
+
+    testWidgets('emptyText: null falls back to context.l10n.tableEmpty', (tester) async {
+      useWideViewport(tester);
+      const l10n = LayrzUiL10nDefault();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: const [], columns: baseColumns()),
+      );
+
+      expect(find.text(l10n.tableEmpty), findsOneWidget);
+    });
+
+    testWidgets('emptySearchText: null falls back to context.l10n.tableNoSearchResults', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      const l10n = LayrzUiL10nDefault();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'zzz-no-match');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.tableNoSearchResults), findsOneWidget);
+    });
   });
 
   group('LayrzTable pinned-cell / scroll-sync alignment', () {
@@ -859,6 +989,7 @@ void main() {
             items: rows,
             columns: wideColumns,
             hasMultiselect: true,
+            actionsCount: 1,
             actionsBuilder: (row) => [
               LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () {}),
             ],

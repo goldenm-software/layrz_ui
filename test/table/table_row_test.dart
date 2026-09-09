@@ -8,6 +8,10 @@ import 'package:layrz_ui/src/table/src/table_row.dart';
 
 import 'helpers/pump_table.dart';
 
+/// Sentinel distinguishing "caller didn't pass `actionsColumnWidth`" from
+/// "caller explicitly passed `null`" in [buildRow]'s default parameter.
+const Object _unset = Object();
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -31,8 +35,18 @@ void main() {
     bool isSelected = false,
     ValueChanged<bool>? onSelectedChanged,
     List<LayrzTableAction> actions = const [],
+    // A row's actions cell is gated on `actionsColumnWidth`, not on
+    // `actions` being non-empty (see `LayrzTableRow.actionsColumnWidth`'s
+    // doc) — this helper mirrors the old `actions.isNotEmpty` behavior by
+    // default so most call sites need no change, while still letting a test
+    // pass an explicit width (including `null`, to prove the width — not
+    // `actions` — is what controls the cell).
+    Object? actionsColumnWidth = _unset,
   }) {
     final cols = columns();
+    final resolvedActionsColumnWidth = identical(actionsColumnWidth, _unset)
+        ? (actions.isNotEmpty ? 150.0 : null)
+        : actionsColumnWidth as double?;
     return LayrzTableRow<TableTestRow>(
       item: item,
       rowIndex: rowIndex,
@@ -44,6 +58,7 @@ void main() {
       isSelected: isSelected,
       onSelectedChanged: onSelectedChanged,
       actions: actions,
+      actionsColumnWidth: resolvedActionsColumnWidth,
     );
   }
 

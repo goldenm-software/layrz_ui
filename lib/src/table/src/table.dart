@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/progress/progress.dart';
@@ -81,7 +82,11 @@ const double _kTableTopProgressHeight = 2.0;
 /// resolved widths are handed to [LayrzTableHeader] (as a `Map<Key, double>`)
 /// and to every [LayrzTableRow] (as a parallel `List<double>`, in the same
 /// order as that row's visible columns), so header and body columns always
-/// agree pixel-for-pixel.
+/// agree pixel-for-pixel. The pinned-right actions column, when
+/// [actionsCount] is greater than `0`, is computed the same way — once, and
+/// handed verbatim to both the header and every row — but by a fixed formula
+/// over [actionsCount] rather than by this fixed/flex split; see
+/// [actionsCount]'s own doc.
 class LayrzTable<T> extends StatefulWidget {
   /// The rows to render, before filtering and sorting.
   final List<T> items;
@@ -106,8 +111,41 @@ class LayrzTable<T> extends StatefulWidget {
   /// Builds the row-level actions rendered in the trailing pinned-right cell
   /// for a given item.
   ///
-  /// When `null`, no row renders a pinned-right actions cell at all.
+  /// Whether a pinned-right actions cell is rendered at all is controlled
+  /// solely by [actionsCount] — see that field's doc — not by whether this
+  /// builder is `null` or by how many actions it returns. When [actionsCount]
+  /// is `0`, this builder is never even called: the actions column does not
+  /// exist, regardless of what would be supplied here.
   final List<LayrzTableAction> Function(T item)? actionsBuilder;
+
+  /// The number of row-level actions the table reserves pinned-right column
+  /// space for.
+  ///
+  /// This is the **single source of truth** for the actions column — not
+  /// [actionsBuilder]. Defaults to `0`, meaning no actions column is
+  /// rendered at all (no width reserved, no cell in the header or in any
+  /// row) **even when [actionsBuilder] is supplied**: a non-zero count is
+  /// what turns the column on.
+  ///
+  /// When greater than `0`, the actions column's width is computed
+  /// deterministically from this count rather than from actual button
+  /// content, so the header's actions cell and every row's actions cell
+  /// always agree pixel-for-pixel:
+  /// - **Wide viewports** (`!context.isCompact`): the column fits exactly
+  ///   [actionsCount] individual fab buttons side by side, each
+  ///   [kLayrzButtonHeight] square, plus the same horizontal gap
+  ///   [LayrzTableRow] already applies around each one.
+  /// - **Compact viewports** (`context.isCompact`): row actions collapse
+  ///   into a single overflow trigger (see `LayrzTableRow`'s
+  ///   `_buildCompactActions`), so the column fits exactly one
+  ///   [kLayrzButtonCompactHeight]-square trigger regardless of
+  ///   [actionsCount], as long as it is greater than `0`.
+  ///
+  /// Pass a count higher than [actionsBuilder] ever actually returns and the
+  /// column will simply be wider than its content needs; pass a lower count
+  /// and actions beyond it will be clipped. Callers are expected to keep
+  /// this in step with what [actionsBuilder] returns.
+  final int actionsCount;
 
   /// Whether rows render a pinned-left multiselect checkbox cell.
   ///
@@ -194,12 +232,14 @@ class LayrzTable<T> extends StatefulWidget {
   ///
   /// [items] and [columns] are required. [columns] must be non-empty, and
   /// every [LayrzColumn.key] in it must be unique. [minColumnWidth] must be
-  /// greater than `0`.
+  /// greater than `0`. [actionsCount] defaults to `0` (no actions column)
+  /// and must not be negative.
   LayrzTable({
     required this.items,
     required this.columns,
     this.controller,
     this.actionsBuilder,
+    this.actionsCount = 0,
     this.hasMultiselect = false,
     this.canSearch = true,
     this.minColumnWidth = 150,
@@ -214,6 +254,7 @@ class LayrzTable<T> extends StatefulWidget {
     super.key,
   }) : assert(columns.isNotEmpty, 'columns must not be empty'),
        assert(minColumnWidth > 0, 'minColumnWidth must be greater than 0'),
+       assert(actionsCount >= 0, 'actionsCount must not be negative'),
        assert(
          columns.map((column) => column.key).toSet().length == columns.length,
          'every LayrzColumn.key must be unique within columns',
@@ -517,13 +558,46 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
 
   Widget _buildEmptyState(BuildContext context, {required bool isSearchMiss}) {
     final tokens = context.tokens;
+    final l10n = context.l10n;
     final text = isSearchMiss
-        ? (widget.emptySearchText ?? 'No rows match your search.')
-        : (widget.emptyText ?? 'No data to display.');
+        ? (widget.emptySearchText ?? l10n.tableNoSearchResults)
+        : (widget.emptyText ?? l10n.tableEmpty);
     return Padding(
       padding: tokens.spacing.pd3,
       child: Text(text, style: tokens.typography.label),
     );
+  }
+
+  /// Computes the deterministic actions-column width for
+  /// [LayrzTable.actionsCount], or `null` when it is `0` (no actions column
+  /// at all).
+  ///
+  /// This is the single place the width is computed — both
+  /// [LayrzTableHeader] and every [LayrzTableRow] receive this exact value,
+  /// so their actions cells always align pixel-for-pixel (see
+  /// [LayrzTable.actionsCount]'s doc for the formula's rationale).
+  ///
+  /// - **Wide** (`!isCompact`): [LayrzTableRow]'s `_buildWideActions` renders
+  ///   one [kLayrzButtonHeight]-square fab per action, each wrapped in
+  ///   `EdgeInsets.symmetric(horizontal: tokens.spacing.sp1 / 2)` — i.e. each
+  ///   fab contributes `kLayrzButtonHeight + tokens.spacing.sp1` to the row
+  ///   of fabs — inside the actions cell's own
+  ///   `EdgeInsets.symmetric(horizontal: tokens.spacing.sp1)` padding (see
+  ///   `_buildActionsCell`). The total is therefore
+  ///   `actionsCount * (kLayrzButtonHeight + sp1) + sp1 * 2`.
+  /// - **Compact** (`isCompact`): actions collapse into a single
+  ///   [kLayrzButtonCompactHeight]-square overflow trigger (fab sizing is
+  ///   viewport-driven, not style-driven — see `LayrzButton._resolveDimensions`),
+  ///   inside the same cell padding: `kLayrzButtonCompactHeight + sp1 * 2`.
+  double? _computeActionsColumnWidth(BuildContext context) {
+    final actionsCount = widget.actionsCount;
+    if (actionsCount <= 0) return null;
+
+    final sp1 = context.tokens.spacing.sp1;
+    if (context.isCompact) {
+      return kLayrzButtonCompactHeight + sp1 * 2;
+    }
+    return actionsCount * (kLayrzButtonHeight + sp1) + sp1 * 2;
   }
 
   /// Builds the always-present, always-2px-tall strip pinned above the
@@ -579,6 +653,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
               final items = _displayedItems;
               final isEmpty = items.isEmpty;
               final isSearchMiss = isEmpty && widget.items.isNotEmpty;
+              final actionsColumnWidth = _computeActionsColumnWidth(context);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -608,6 +683,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                             }
                           }
                         : null,
+                    actionsColumnWidth: actionsColumnWidth,
                   ),
                   Expanded(
                     child: isEmpty
@@ -633,7 +709,10 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                                     onSelectedChanged: widget.hasMultiselect
                                         ? (_) => _controller.toggleSelection(item)
                                         : null,
-                                    actions: widget.actionsBuilder?.call(item) ?? const [],
+                                    actions: widget.actionsCount > 0
+                                        ? (widget.actionsBuilder?.call(item) ?? const [])
+                                        : const [],
+                                    actionsColumnWidth: actionsColumnWidth,
                                     copyToClipboardText: widget.copyToClipboardText,
                                   );
                                 },

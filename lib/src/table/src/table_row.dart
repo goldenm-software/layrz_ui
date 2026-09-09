@@ -26,7 +26,9 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 ///   region moves in lockstep with every other row's middle region and with
 ///   the table header, however the user drags any one of them.
 /// - The **pinned-right** cell renders [actions] as buttons, and is only
-///   rendered when [actions] is non-empty. It never scrolls.
+///   rendered when [actionsColumnWidth] is non-null (see that field's doc —
+///   this is `LayrzTable.actionsCount`'s width, not [actions]' own length).
+///   It never scrolls.
 ///
 /// **Cell tap**: tapping a data cell invokes that column's
 /// [LayrzColumn.onTap] when non-null. Otherwise, the cell's *displayed*
@@ -98,10 +100,27 @@ class LayrzTableRow<T> extends StatefulWidget {
   /// The row-level actions rendered in the pinned-right actions cell, for
   /// this row's [item].
   ///
-  /// When empty, no pinned-right cell is rendered at all — not even an
-  /// empty placeholder — and the scrolling-middle region extends to the
-  /// row's trailing edge.
+  /// Whether the pinned-right cell is rendered at all is controlled solely by
+  /// [actionsColumnWidth], not by whether this list is empty — see that
+  /// field's doc. When [actionsColumnWidth] reserves a column but this list
+  /// happens to be empty, an empty actions cell of that width is still
+  /// rendered, keeping the row's geometry identical to every other row's.
   final List<LayrzTableAction> actions;
+
+  /// The resolved width, in logical pixels, of the pinned-right actions
+  /// cell, or `null` when no actions column is rendered at all.
+  ///
+  /// This is the **single source of truth** for whether a pinned-right cell
+  /// exists on this row — not [actions]. Computed once by the assembling
+  /// `LayrzTable` widget from `LayrzTable.actionsCount` (deterministically:
+  /// wide viewports fit exactly that many fab buttons plus their spacing,
+  /// compact viewports fit exactly one overflow trigger) and handed
+  /// verbatim to `LayrzTableHeader` as well, so the header's actions cell
+  /// and every row's actions cell always agree pixel-for-pixel. `null` (or
+  /// `<= 0`) means `LayrzTable.actionsCount` is `0`: no pinned-right cell is
+  /// rendered, and the scrolling-middle region extends to the row's
+  /// trailing edge.
+  final double? actionsColumnWidth;
 
   /// The shared scroll-sync helper this row's middle region joins.
   ///
@@ -124,7 +143,8 @@ class LayrzTableRow<T> extends StatefulWidget {
   /// [scrollSync] are required. [visibleColumns] and [columnWidths] must be
   /// the same length. [hasMultiselect] defaults to `false`; when `true`,
   /// [isSelected] and [onSelectedChanged] are meaningful. [actions] defaults
-  /// to an empty list, meaning no pinned-right cell is rendered.
+  /// to an empty list. [actionsColumnWidth] defaults to `null`, meaning no
+  /// pinned-right cell is rendered regardless of [actions].
   const LayrzTableRow({
     super.key,
     required this.item,
@@ -137,6 +157,7 @@ class LayrzTableRow<T> extends StatefulWidget {
     this.isSelected = false,
     this.onSelectedChanged,
     this.actions = const [],
+    this.actionsColumnWidth,
     this.copyToClipboardText,
   }) : assert(visibleColumns.length == columnWidths.length, 'visibleColumns and columnWidths must be the same length');
 
@@ -187,7 +208,10 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     if (!mounted) return;
 
     LayrzSnackbarMessenger.of(context).show(
-      LayrzSnackbar(titleText: widget.copyToClipboardText ?? 'Copied to clipboard', descriptionText: text),
+      LayrzSnackbar(
+        titleText: widget.copyToClipboardText ?? context.l10n.tableCopiedToClipboard,
+        descriptionText: text,
+      ),
     );
   }
 
@@ -284,8 +308,9 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     );
   }
 
-  Widget _buildActionsCell(BuildContext context) {
+  Widget _buildActionsCell(BuildContext context, double width) {
     return SizedBox(
+      width: width,
       height: widget.height,
       child: DecoratedBox(
         // The bottom side is the row's horizontal divider, matching the one
@@ -351,7 +376,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
   Widget _buildCompactActions(BuildContext context) {
     return LayrzButtonGroup(
       useDropdown: true,
-      triggerHintText: 'Actions',
+      triggerHintText: context.l10n.tableActionsHint,
       items: [
         for (final action in widget.actions)
           LayrzDropdownEntry(
@@ -369,6 +394,8 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final background = widget.rowIndex.isEven ? tokens.colors.sf1 : tokens.colors.sf2;
+    final actionsColumnWidth = widget.actionsColumnWidth;
+    final hasActionsColumn = actionsColumnWidth != null && actionsColumnWidth > 0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -382,7 +409,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
           children: [
             if (widget.hasMultiselect) _buildCheckboxCell(context, background),
             _buildMiddleRegion(context, background),
-            if (widget.actions.isNotEmpty) _buildActionsCell(context),
+            if (hasActionsColumn) _buildActionsCell(context, actionsColumnWidth),
           ],
         ),
       ),

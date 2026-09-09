@@ -143,6 +143,18 @@ class LayrzTableHeader<T> extends StatefulWidget {
   /// widget.
   final ValueChanged<bool>? onSelectAllChanged;
 
+  /// The resolved width, in logical pixels, of the pinned-right actions
+  /// cell, or `null` when the table renders no actions column at all.
+  ///
+  /// Computed once by the assembling `LayrzTable` widget from
+  /// `LayrzTable.actionsCount` — deterministically, not from any button's
+  /// intrinsic content size — and handed verbatim to every `LayrzTableRow`'s
+  /// own actions cell as well, so this header's trailing edge always lines up
+  /// with the rows' actions column pixel-for-pixel. `null` (or `<= 0`) means
+  /// `LayrzTable.actionsCount` is `0`: no actions column is reserved here,
+  /// matching a row with no actions cell.
+  final double? actionsColumnWidth;
+
   /// Creates a [LayrzTableHeader].
   ///
   /// [columns], [controller], [columnWidths], and [scrollSync] are
@@ -151,7 +163,8 @@ class LayrzTableHeader<T> extends StatefulWidget {
   /// `false`; when `true`, [checkboxCellSize], [allSelected], and
   /// [onSelectAllChanged] become meaningful. [checkboxCellSize] defaults to
   /// `50`, matching `LayrzTable`'s own default row height. [allSelected]
-  /// defaults to `false`.
+  /// defaults to `false`. [actionsColumnWidth] defaults to `null` (no actions
+  /// column reserved).
   const LayrzTableHeader({
     required this.columns,
     required this.controller,
@@ -163,6 +176,7 @@ class LayrzTableHeader<T> extends StatefulWidget {
     this.checkboxCellSize = 50,
     this.allSelected = false,
     this.onSelectAllChanged,
+    this.actionsColumnWidth,
     super.key,
   });
 
@@ -223,38 +237,33 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
   /// — the same guard [LayrzColumnMenu] applies to its own visibility
   /// checklist, so both entry points agree at the boundary.
   ///
-  /// **i18n note:** this menu's labels are plain string fallbacks, not
-  /// `context.l10n` getters — no `LayrzUiL10n` mixin defines
-  /// sort/hide-column context-menu strings yet (the existing
-  /// `LayrzUiL10nTableMixin` covers only the legacy paginator). Per the
-  /// dossier's OQ8, a full key audit/addition is an explicit fast-follow,
-  /// not a blocker for this component's first ship.
-  List<LayrzContextMenuItem> _buildContextMenuEntries(LayrzColumn<T> column) {
+  List<LayrzContextMenuItem> _buildContextMenuEntries(BuildContext context, LayrzColumn<T> column) {
+    final l10n = context.l10n;
     final controller = widget.controller;
     final wouldBreachFloor = controller.visibleColumnKeys.length <= controller.minVisibleColumns;
 
     return [
       LayrzContextMenuEntry(
-        labelText: 'Sort ascending',
+        labelText: l10n.tableSortAscending,
         icon: MdiIcons.sortAscending,
         enabled: column.isSortable,
         onTap: () => controller.sort(column.key, true),
       ),
       LayrzContextMenuEntry(
-        labelText: 'Sort descending',
+        labelText: l10n.tableSortDescending,
         icon: MdiIcons.sortDescending,
         enabled: column.isSortable,
         onTap: () => controller.sort(column.key, false),
       ),
       LayrzContextMenuEntry(
-        labelText: 'Clear sort',
+        labelText: l10n.tableClearSort,
         icon: MdiIcons.eraser,
         enabled: controller.sortColumnKey == column.key,
         onTap: controller.clearSort,
       ),
       const LayrzContextMenuDivider(),
       LayrzContextMenuEntry(
-        labelText: 'Hide column',
+        labelText: l10n.tableHideColumn,
         icon: MdiIcons.eyeOffOutline,
         enabled: !wouldBreachFloor,
         onTap: () => controller.setColumnVisible(column.key, false),
@@ -527,12 +536,31 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
     );
   }
 
+  /// Builds the pinned-right actions-column placeholder cell, reserving
+  /// exactly [LayrzTableHeader.actionsColumnWidth] so this header's trailing
+  /// edge aligns with every `LayrzTableRow`'s own actions cell.
+  ///
+  /// Carries no interactive content of its own — the header has nothing to
+  /// show per-column here, unlike a row's per-item action buttons — it only
+  /// exists to reserve the same width and paint the same borders every row's
+  /// actions cell paints, so the column reads as one continuous strip instead
+  /// of the rows' actions column floating unaligned under the header.
+  Widget _buildActionsCell(BuildContext context, double width) {
+    final tokens = context.tokens;
+    return DecoratedBox(
+      decoration: BoxDecoration(border: Border(left: tokens.border.light)),
+      child: SizedBox(width: width, height: widget.height),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final isCompact = context.isCompact;
     final controller = widget.controller;
     final visibleKeys = controller.columnOrder.where((key) => controller.visibleColumnKeys.contains(key));
+    final actionsColumnWidth = widget.actionsColumnWidth;
+    final hasActionsColumn = actionsColumnWidth != null && actionsColumnWidth > 0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -556,7 +584,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
                         isCompact
                             ? _buildHeaderCell(context, column, true)
                             : LayrzContextMenu(
-                                entries: _buildContextMenuEntries(column),
+                                entries: _buildContextMenuEntries(context, column),
                                 child: _buildHeaderCell(context, column, false),
                               ),
                   ],
@@ -567,6 +595,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
               padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
               child: LayrzColumnMenu<T>(columns: widget.columns, controller: controller),
             ),
+            if (hasActionsColumn) _buildActionsCell(context, actionsColumnWidth),
           ],
         ),
       ),
