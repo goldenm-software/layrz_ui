@@ -216,6 +216,111 @@ void main() {
       expect(find.text('Banana'), findsOneWidget);
     });
 
+    guardedTestWidgets('move-all-to-selected with an Available search active moves only the matching items', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      // Both panels render a search field -- the first belongs to Available.
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.first, 'an');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      // 'an' matches Banana only -- Apple and Cherry stay out of view.
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Cherry'), findsNothing);
+
+      await tester.tap(_findButtonByLabel('Toggle all to selected'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['banana'], reason: 'only the searched/visible Available item should transfer');
+      expect(find.text('Selected (1)'), findsOneWidget);
+      // Apple and Cherry never matched the query -- they must stay in
+      // Available, not be swept along by the move-all button.
+      expect(find.text('Available (2)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-available with a Selected search active moves only the matching items', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['apple', 'banana', 'cherry'],
+          itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      // Both panels render a search field -- the second belongs to Selected.
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.at(1), 'cherry');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cherry'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Banana'), findsNothing);
+
+      await tester.tap(_findButtonByLabel('Toggle all to available'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['apple', 'banana'], reason: 'only the searched/visible Selected item should transfer back');
+      // Cherry left Selected; Apple and Banana were never part of the
+      // filtered move and must remain selected.
+      expect(find.text('Selected (2)'), findsOneWidget);
+      expect(find.text('Available (1)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-selected is disabled when the Available search matches nothing', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.first, 'zzz-no-match');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<LayrzButton>(_findButtonByLabel('Toggle all to selected'));
+      expect(button.style, LayrzButtonStyle.textFab);
+      expect(button.isDisabled, isTrue);
+      expect(button.onTap, isNull);
+    });
+
     guardedTestWidgets('a disabled field does not respond to row taps', (tester) async {
       setDesktopViewport(tester);
       var committed = false;

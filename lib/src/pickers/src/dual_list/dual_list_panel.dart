@@ -14,6 +14,15 @@ import 'package:layrz_ui/src/tappable/tappable.dart';
 /// widget, which knows nothing about which panel it is or where a tap
 /// should send the item).
 ///
+/// **Search is a controlled value (owned by the parent).** [query] and
+/// [onQueryChanged] lift the panel's search text up to
+/// `_DesktopDualListSurface` in `dual_list_input.dart`, so the move-all
+/// buttons there can transfer only this panel's currently search-filtered
+/// items instead of its full unfiltered partition. This panel still renders
+/// its own [LayrzSearchInput] field and still narrows its own [_visibleItems]
+/// from [query] via [LayrzSelectItem.matches] — the only thing that moved is
+/// *where the string lives*, not how filtering works.
+///
 /// This is a private implementation detail of `dual_list/`; consumers use
 /// [LayrzDualListInput] instead.
 class LayrzDualListPanel<T> extends StatefulWidget {
@@ -44,6 +53,16 @@ class LayrzDualListPanel<T> extends StatefulWidget {
   /// respond to taps and the search field, if shown, is disabled too.
   final bool disabled;
 
+  /// The panel's current search query, owned by the parent
+  /// `_DesktopDualListSurface` rather than this widget — see the class doc's
+  /// "Search is a controlled value" section. Empty string means unfiltered.
+  final String query;
+
+  /// Called with the new query text every time the user edits this panel's
+  /// search field. The caller is expected to feed the new value back in as
+  /// [query] on the next build.
+  final ValueChanged<String> onQueryChanged;
+
   /// Creates a new [LayrzDualListPanel].
   const LayrzDualListPanel({
     super.key,
@@ -54,6 +73,8 @@ class LayrzDualListPanel<T> extends StatefulWidget {
     required this.emptyText,
     required this.itemExtent,
     required this.disabled,
+    required this.query,
+    required this.onQueryChanged,
   });
 
   @override
@@ -61,19 +82,12 @@ class LayrzDualListPanel<T> extends StatefulWidget {
 }
 
 class _LayrzDualListPanelState<T> extends State<LayrzDualListPanel<T>> {
-  /// The panel's own search query, entirely local — [LayrzDualListInput]
-  /// never sees it, mirroring how each `ThemedDualListInput` panel's search
-  /// only ever narrows its own list.
-  String _query = '';
-
-  /// The panel's items narrowed by [_query], via [LayrzSelectItem.matches].
+  /// The panel's items narrowed by [LayrzDualListPanel.query], via
+  /// [LayrzSelectItem.matches].
   List<LayrzSelectItem<T>> get _visibleItems {
-    if (_query.isEmpty) return widget.items;
-    return widget.items.where((item) => item.matches(_query)).toList();
-  }
-
-  void _handleSearch(String query) {
-    setState(() => _query = query);
+    final query = widget.query;
+    if (query.isEmpty) return widget.items;
+    return widget.items.where((item) => item.matches(query)).toList();
   }
 
   @override
@@ -97,7 +111,7 @@ class _LayrzDualListPanelState<T> extends State<LayrzDualListPanel<T>> {
           LayrzSearchInput(
             mode: LayrzSearchInputMode.field,
             hintText: context.l10n.dualListSearch(widget.title),
-            onSearch: _handleSearch,
+            onSearch: widget.onQueryChanged,
             disabled: widget.disabled,
             dense: true,
           ),

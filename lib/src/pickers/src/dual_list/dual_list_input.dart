@@ -301,7 +301,15 @@ class _LayrzDualListInputState<T> extends State<LayrzDualListInput<T>> {
 /// to open: this **is** the field, rendered inline wherever
 /// [LayrzDualListInput] is placed, exactly like `ThemedDualListInput`'s own
 /// always-visible layout.
-class _DesktopDualListSurface<T> extends StatelessWidget {
+///
+/// **Owns both panels' search queries.** Each [LayrzDualListPanel] renders
+/// its own search field but no longer holds its query as private state — this
+/// widget does, one string per panel (see
+/// [_DesktopDualListSurfaceState._availableQuery]/
+/// [_DesktopDualListSurfaceState._selectedQuery]), so the move-all buttons
+/// below can transfer exactly the currently search-filtered set rather than
+/// each panel's full unfiltered partition.
+class _DesktopDualListSurface<T> extends StatefulWidget {
   /// The full item list, forwarded from [LayrzDualListInput.items].
   final List<LayrzSelectItem<T>> items;
 
@@ -388,36 +396,62 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
   static const double _surfaceHeight = 400;
 
   @override
+  State<_DesktopDualListSurface<T>> createState() => _DesktopDualListSurfaceState<T>();
+}
+
+class _DesktopDualListSurfaceState<T> extends State<_DesktopDualListSurface<T>> {
+  /// The "Available" panel's current search query, lifted up from
+  /// [LayrzDualListPanel] so [_visibleAvailable] (and therefore the
+  /// move-to-selected button) can be computed here. Empty means unfiltered.
+  String _availableQuery = '';
+
+  /// The "Selected" panel's current search query, mirroring [_availableQuery].
+  String _selectedQuery = '';
+
+  @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final l10n = context.l10n;
-    final selectedSet = selected.toSet();
+    final selectedSet = widget.selected.toSet();
 
     final availableItems = [
-      for (final item in items)
+      for (final item in widget.items)
         if (item.value == null || !selectedSet.contains(item.value as T)) item,
     ];
     final selectedItems = [
-      for (final item in items)
+      for (final item in widget.items)
         if (item.value != null && selectedSet.contains(item.value as T)) item,
     ];
 
-    final emptyText = emptyListText ?? l10n.selectEmpty;
+    // The same search-filtered set each panel is currently displaying (see
+    // [LayrzDualListPanel._visibleItems]) — computed here too so the move-all
+    // buttons below can transfer exactly what the user can see, never a
+    // panel's full unfiltered partition.
+    final visibleAvailable = _availableQuery.isEmpty
+        ? availableItems
+        : availableItems.where((item) => item.matches(_availableQuery)).toList();
+    final visibleSelected = _selectedQuery.isEmpty
+        ? selectedItems
+        : selectedItems.where((item) => item.matches(_selectedQuery)).toList();
+
+    final emptyText = widget.emptyListText ?? l10n.selectEmpty;
 
     final surface = SizedBox(
-      height: _surfaceHeight,
+      height: _DesktopDualListSurface._surfaceHeight,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
             child: LayrzDualListPanel<T>(
-              title: availableListName,
+              title: widget.availableListName,
               items: availableItems,
-              onItemTap: onSelectOne,
-              enableSearch: enableAvailableSearch,
+              onItemTap: widget.onSelectOne,
+              enableSearch: widget.enableAvailableSearch,
               emptyText: emptyText,
-              itemExtent: itemExtent,
-              disabled: disabled,
+              itemExtent: widget.itemExtent,
+              disabled: widget.disabled,
+              query: _availableQuery,
+              onQueryChanged: (query) => setState(() => _availableQuery = query),
             ),
           ),
           Padding(
@@ -428,12 +462,14 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
                 LayrzButton(
                   labelText: l10n.dualListToggleToSelected,
                   icon: MdiIcons.chevronRight,
-                  style: (disabled || availableItems.isEmpty) ? LayrzButtonStyle.textFab : LayrzButtonStyle.filledFab,
-                  isDisabled: disabled || availableItems.isEmpty,
-                  onTap: disabled || availableItems.isEmpty
+                  style: (widget.disabled || visibleAvailable.isEmpty)
+                      ? LayrzButtonStyle.textFab
+                      : LayrzButtonStyle.filledFab,
+                  isDisabled: widget.disabled || visibleAvailable.isEmpty,
+                  onTap: widget.disabled || visibleAvailable.isEmpty
                       ? null
-                      : () => onSelectAll([
-                          for (final item in availableItems)
+                      : () => widget.onSelectAll([
+                          for (final item in visibleAvailable)
                             if (item.value != null) item.value as T,
                         ]),
                 ),
@@ -441,12 +477,14 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
                 LayrzButton(
                   labelText: l10n.dualListToggleToAvailable,
                   icon: MdiIcons.chevronLeft,
-                  style: (disabled || selectedItems.isEmpty) ? LayrzButtonStyle.textFab : LayrzButtonStyle.filledFab,
-                  isDisabled: disabled || selectedItems.isEmpty,
-                  onTap: disabled || selectedItems.isEmpty
+                  style: (widget.disabled || visibleSelected.isEmpty)
+                      ? LayrzButtonStyle.textFab
+                      : LayrzButtonStyle.filledFab,
+                  isDisabled: widget.disabled || visibleSelected.isEmpty,
+                  onTap: widget.disabled || visibleSelected.isEmpty
                       ? null
-                      : () => onUnselectAll([
-                          for (final item in selectedItems)
+                      : () => widget.onUnselectAll([
+                          for (final item in visibleSelected)
                             if (item.value != null) item.value as T,
                         ]),
                 ),
@@ -455,13 +493,15 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
           ),
           Expanded(
             child: LayrzDualListPanel<T>(
-              title: selectedListName,
+              title: widget.selectedListName,
               items: selectedItems,
-              onItemTap: onUnselectOne,
-              enableSearch: enableSelectedSearch,
+              onItemTap: widget.onUnselectOne,
+              enableSearch: widget.enableSelectedSearch,
               emptyText: emptyText,
-              itemExtent: itemExtent,
-              disabled: disabled,
+              itemExtent: widget.itemExtent,
+              disabled: widget.disabled,
+              query: _selectedQuery,
+              onQueryChanged: (query) => setState(() => _selectedQuery = query),
             ),
           ),
         ],
@@ -472,17 +512,17 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (labelText != null)
+        if (widget.labelText != null)
           Padding(
             padding: EdgeInsets.only(bottom: tokens.spacing.sp2),
             child: RichText(
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: labelText,
+                    text: widget.labelText,
                     style: tokens.typography.label.copyWith(color: tokens.colors.fg2),
                   ),
-                  if (isRequired)
+                  if (widget.isRequired)
                     TextSpan(
                       text: '*',
                       style: tokens.typography.label.copyWith(color: tokens.colors.danger),
@@ -492,7 +532,7 @@ class _DesktopDualListSurface<T> extends StatelessWidget {
             ),
           ),
         surface,
-        LayrzInputFooterSlot(errors: errors, hideDetails: hideDetails),
+        LayrzInputFooterSlot(errors: widget.errors, hideDetails: widget.hideDetails),
       ],
     );
   }
