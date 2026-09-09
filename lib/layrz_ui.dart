@@ -48,3 +48,4 @@ export 'src/tokens/tokens.dart';
 export 'src/tooltips/tooltips.dart';
 export 'src/transitions/transitions.dart';
 export 'src/trees/trees.dart';
+export 'src/workspace_tabs/workspace_tabs.dart';
