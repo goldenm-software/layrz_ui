@@ -313,6 +313,10 @@ class LayrzTableHeader<T> extends StatelessWidget {
 
     final width = columnWidths[column.key] ?? fallbackColumnWidth;
 
+    if (isCompact) {
+      return SizedBox(width: width, height: height, child: cell);
+    }
+
     final dragTarget = DragTarget<Key>(
       onWillAcceptWithDetails: (details) => details.data != column.key,
       onAcceptWithDetails: (details) {
@@ -333,7 +337,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
       },
     );
 
-    return SizedBox(width: width, height: height, child: isCompact ? cell : dragTarget);
+    return SizedBox(width: width, height: height, child: dragTarget);
   }
 
   @override
