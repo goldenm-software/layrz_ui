@@ -16,16 +16,16 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 /// [LayrzColumnMenu].
 ///
 /// **Structural seam (a note for whoever assembles `LayrzTable` in U9):**
-/// this widget does not compute column widths itself and does not join the
-/// scroll-sync group itself — the widget that owns the global column-width
-/// math (fixed columns subtract, flex columns split evenly, both floored at
-/// `minColumnWidth`) must compute one resolved width per visible column
-/// **once** and hand the same [columnWidths] map to both this header and
-/// every `LayrzTableRow`, so the two stay pixel-aligned. Likewise,
-/// [scrollController] must be obtained by calling [LayrzTableRowScrollSync.join]
-/// exactly once for the header (mirroring one `join()` call per row) and
-/// passed in already-built, so this widget can stay ignorant of whether a
-/// [LayrzTableRowScrollSync] even exists in a given test harness.
+/// this widget does not compute column widths itself — the widget that owns
+/// the global column-width math (fixed columns subtract, flex columns split
+/// evenly, both floored at `minColumnWidth`) must compute one resolved width
+/// per visible column **once** and hand the same [columnWidths] map to both
+/// this header and every `LayrzTableRow`, so the two stay pixel-aligned. The
+/// header DOES join the shared scroll-sync group itself: it takes the same
+/// [LayrzTableRowScrollSync] instance the assembling widget constructs once
+/// and shares with every row, and calls [LayrzTableRowScrollSync.join] for
+/// its own linked controller in `initState`, disposing that controller in
+/// `dispose` — the same lifecycle `LayrzTableRow` follows.
 ///
 /// **The three header interactions (wide viewport only, per
 /// [context.isCompact]):**
@@ -59,7 +59,7 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 /// to be operable by keyboard alone: [LayrzColumnMenu]'s "Move up"/"Move
 /// down" entries are the keyboard-accessible reorder route (WCAG 2.1.1) on
 /// every viewport, per the plan's explicit call-out.
-class LayrzTableHeader<T> extends StatelessWidget {
+class LayrzTableHeader<T> extends StatefulWidget {
   /// Every column the owning `LayrzTable<T>` was given, in the caller's
   /// declared order.
   ///
@@ -95,39 +95,58 @@ class LayrzTableHeader<T> extends StatelessWidget {
   /// The height of the header row, in logical pixels.
   final double height;
 
-  /// The linked [ScrollController] driving this header's horizontally
-  /// scrollable middle region.
+  /// The shared scroll-sync group this header's middle region joins.
   ///
-  /// Obtained by the assembling widget via one call to
-  /// [LayrzTableRowScrollSync.join] — scrolling this controller (or any
-  /// other controller joined from the same [LayrzTableRowScrollSync]) moves
-  /// every row's middle region, and this header's, in lockstep. This widget
-  /// never joins the group itself; it only consumes an already-linked
-  /// controller so it stays testable without a real scroll-sync group.
-  final ScrollController scrollController;
+  /// The assembling widget constructs exactly one [LayrzTableRowScrollSync]
+  /// and shares it with this header and with every `LayrzTableRow` — this
+  /// widget calls [LayrzTableRowScrollSync.join] once, in
+  /// `State.initState`, to obtain its own linked [ScrollController], so
+  /// scrolling any row's middle region (or this header's) moves all of them
+  /// in lockstep.
+  final LayrzTableRowScrollSync scrollSync;
 
   /// Creates a [LayrzTableHeader].
   ///
-  /// [columns], [controller], [columnWidths], and [scrollController] are
+  /// [columns], [controller], [columnWidths], and [scrollSync] are
   /// required. [height] defaults to `40` (the baseline's header height).
   /// [fallbackColumnWidth] defaults to `150`.
   const LayrzTableHeader({
     required this.columns,
     required this.controller,
     required this.columnWidths,
-    required this.scrollController,
+    required this.scrollSync,
     this.height = 40,
     this.fallbackColumnWidth = 150,
     super.key,
   });
 
+  @override
+  State<LayrzTableHeader<T>> createState() => _LayrzTableHeaderState<T>();
+}
+
+class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
+  late final ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = widget.scrollSync.join();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   /// Looks up the [LayrzColumn] whose [LayrzColumn.key] equals [key].
   ///
-  /// Returns `null` if no such column exists in [columns] — this can happen
-  /// transiently if [controller] has not yet been synced via
-  /// [LayrzTableController.syncColumns] against a changed [columns] list.
+  /// Returns `null` if no such column exists in [LayrzTableHeader.columns]
+  /// — this can happen transiently if [LayrzTableHeader.controller] has not
+  /// yet been synced via [LayrzTableController.syncColumns] against a
+  /// changed columns list.
   LayrzColumn<T>? _columnFor(Key key) {
-    for (final column in columns) {
+    for (final column in widget.columns) {
       if (column.key == key) return column;
     }
     return null;
@@ -140,6 +159,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
   /// three-state header tap.
   void _handleSortTap(LayrzColumn<T> column) {
     if (!column.isSortable) return;
+    final controller = widget.controller;
     if (controller.sortColumnKey != column.key) {
       controller.sort(column.key, true);
     } else if (controller.sortAscending) {
@@ -164,6 +184,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
   /// dossier's OQ8, a full key audit/addition is an explicit fast-follow,
   /// not a blocker for this component's first ship.
   List<LayrzContextMenuItem> _buildContextMenuEntries(LayrzColumn<T> column) {
+    final controller = widget.controller;
     final wouldBreachFloor = controller.visibleColumnKeys.length <= controller.minVisibleColumns;
 
     return [
@@ -202,6 +223,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
   /// changes must never perturb geometry).
   Widget _buildSortGlyph(BuildContext context, LayrzColumn<T> column) {
     final tokens = context.tokens;
+    final controller = widget.controller;
     final isActive = controller.sortColumnKey == column.key;
 
     return SizedBox(
@@ -262,6 +284,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
   /// technology user can trigger the same one-step move a mouse drag would
   /// produce, without needing to perform the drag gesture itself.
   void _moveByOneVisibleStep(Key key, int delta) {
+    final controller = widget.controller;
     final visible = controller.visibleColumnKeys.toList(growable: false);
     final currentIndex = visible.indexOf(key);
     if (currentIndex == -1) return;
@@ -303,6 +326,11 @@ class LayrzTableHeader<T> extends StatelessWidget {
       button: column.isSortable,
       label: column.isSortable ? 'Sort by ${column.headerText}' : null,
       child: LayrzTappable(
+        // Idle must stay transparent, not the LayrzTappable default opaque
+        // `sf1`: this cell sits on top of the header's own `sf2` background
+        // (and, on a drag target, a `sf3` highlight), and an opaque `sf1`
+        // square would paint over both instead of letting them show through.
+        color: const Color(0x00000000),
         onTap: column.isSortable ? () => _handleSortTap(column) : null,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
@@ -311,12 +339,13 @@ class LayrzTableHeader<T> extends StatelessWidget {
       ),
     );
 
-    final width = columnWidths[column.key] ?? fallbackColumnWidth;
+    final width = widget.columnWidths[column.key] ?? widget.fallbackColumnWidth;
 
     if (isCompact) {
-      return SizedBox(width: width, height: height, child: cell);
+      return SizedBox(width: width, height: widget.height, child: cell);
     }
 
+    final controller = widget.controller;
     final dragTarget = DragTarget<Key>(
       onWillAcceptWithDetails: (details) => details.data != column.key,
       onAcceptWithDetails: (details) {
@@ -337,13 +366,14 @@ class LayrzTableHeader<T> extends StatelessWidget {
       },
     );
 
-    return SizedBox(width: width, height: height, child: dragTarget);
+    return SizedBox(width: width, height: widget.height, child: dragTarget);
   }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final isCompact = context.isCompact;
+    final controller = widget.controller;
     final visibleKeys = controller.columnOrder.where((key) => controller.visibleColumnKeys.contains(key));
 
     return DecoratedBox(
@@ -352,12 +382,12 @@ class LayrzTableHeader<T> extends StatelessWidget {
         border: Border(bottom: tokens.border.normal),
       ),
       child: SizedBox(
-        height: height,
+        height: widget.height,
         child: Row(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                controller: scrollController,
+                controller: _scrollController,
                 scrollDirection: Axis.horizontal,
                 physics: const ClampingScrollPhysics(),
                 child: Row(
@@ -376,7 +406,7 @@ class LayrzTableHeader<T> extends StatelessWidget {
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
-              child: LayrzColumnMenu<T>(columns: columns, controller: controller),
+              child: LayrzColumnMenu<T>(columns: widget.columns, controller: controller),
             ),
           ],
         ),
