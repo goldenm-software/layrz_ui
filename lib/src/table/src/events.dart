@@ -115,21 +115,30 @@ final class LayrzTableSelectionEvent<T> extends LayrzTableEvent<T> {
 /// Visibility and order are reported together in one event because a single
 /// user action (like re-showing a hidden column, which restores its prior
 /// order slot) can change both at once; consumers that only care about one
-/// aspect can compare [visibleColumnKeys] against their own last-seen value.
+/// aspect can compare [hiddenColumns] against their own last-seen value.
+///
+/// This payload deliberately mirrors `LayrzTableController`'s own
+/// constructor shape (`columnOrder` + `hiddenColumns`, not
+/// `visibleColumnKeys`), so a listener reasons about a received event in the
+/// same terms the controller itself was seeded with — including being able
+/// to feed an event's payload straight into a new controller's constructor,
+/// or into [LayrzTableController.setColumnOrder]/
+/// [LayrzTableController.setHiddenColumns].
 @immutable
 final class LayrzTableColumnsEvent<T> extends LayrzTableEvent<T> {
   /// Creates a columns-changed event.
-  const LayrzTableColumnsEvent({required this.columnOrder, required this.visibleColumnKeys});
+  const LayrzTableColumnsEvent({required this.columnOrder, required this.hiddenColumns});
 
   /// Every known column's [Key], in the controller's current display order
   /// (hidden columns keep their slot in this list so re-showing them
   /// restores their last position).
   final List<Key> columnOrder;
 
-  /// The subset of [columnOrder] that is currently visible, in the same
-  /// relative order. A column [Key] present in [columnOrder] but absent
-  /// here is currently hidden.
-  final Set<Key> visibleColumnKeys;
+  /// The subset of [columnOrder] that is currently hidden.
+  ///
+  /// A column [Key] present in [columnOrder] but absent from this set is
+  /// currently visible.
+  final Set<Key> hiddenColumns;
 
   @override
   bool operator ==(Object other) {
@@ -139,15 +148,15 @@ final class LayrzTableColumnsEvent<T> extends LayrzTableEvent<T> {
     for (var i = 0; i < columnOrder.length; i++) {
       if (other.columnOrder[i] != columnOrder[i]) return false;
     }
-    if (other.visibleColumnKeys.length != visibleColumnKeys.length) return false;
-    return other.visibleColumnKeys.containsAll(visibleColumnKeys);
+    if (other.hiddenColumns.length != hiddenColumns.length) return false;
+    return other.hiddenColumns.containsAll(hiddenColumns);
   }
 
   @override
-  int get hashCode => Object.hash(Object.hashAll(columnOrder), Object.hashAllUnordered(visibleColumnKeys));
+  int get hashCode => Object.hash(Object.hashAll(columnOrder), Object.hashAllUnordered(hiddenColumns));
 
   @override
-  String toString() => 'LayrzTableColumnsEvent(columnOrder: $columnOrder, visibleColumnKeys: $visibleColumnKeys)';
+  String toString() => 'LayrzTableColumnsEvent(columnOrder: $columnOrder, hiddenColumns: $hiddenColumns)';
 }
 
 /// Emitted when the table is asked to refresh, e.g. from a direct call to

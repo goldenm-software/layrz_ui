@@ -137,11 +137,13 @@ class LayrzTableController<T> extends ChangeNotifier {
   /// in addition to calling [notifyListeners] — e.g. [sort] and
   /// [clearSort] emit [LayrzTableSortEvent], [search] emits
   /// [LayrzTableSearchEvent], the selection mutators emit
-  /// [LayrzTableSelectionEvent], the column mutators emit
-  /// [LayrzTableColumnsEvent], and [refresh] emits
-  /// [LayrzTableRefreshEvent]. A mutation refused by the [minVisibleColumns]
-  /// guard emits nothing. The stream is closed in [dispose]; do not listen
-  /// to it after the controller is disposed.
+  /// [LayrzTableSelectionEvent], the column mutators ([setColumnVisible],
+  /// [toggleColumn], [reorderColumn], [syncColumns], [setColumnOrder], and
+  /// [setHiddenColumns]) emit [LayrzTableColumnsEvent], and [refresh] emits
+  /// [LayrzTableRefreshEvent]. A mutation refused (or, for [setHiddenColumns],
+  /// clamped down to a no-op) by the [minVisibleColumns] guard emits
+  /// nothing when nothing actually changed. The stream is closed in
+  /// [dispose]; do not listen to it after the controller is disposed.
   Stream<LayrzTableEvent<T>> get events => _eventsController.stream;
 
   /// Sorts the table by the column identified by [columnKey], in the
@@ -215,7 +217,7 @@ class LayrzTableController<T> extends ChangeNotifier {
       _hiddenColumns.add(key);
     }
     notifyListeners();
-    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, visibleColumnKeys: visibleColumnKeys));
+    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, hiddenColumns: hiddenColumns));
   }
 
   /// Toggles the visibility of the column identified by [key].
@@ -263,7 +265,7 @@ class LayrzTableController<T> extends ChangeNotifier {
   ///
   /// On success, [notifyListeners] is called and a [LayrzTableColumnsEvent]
   /// is emitted on [events] carrying the rebuilt [columnOrder] and the
-  /// (unchanged, but reordered) [visibleColumnKeys].
+  /// (unchanged) [hiddenColumns].
   void reorderColumn(Key key, int targetVisibleIndex) {
     if (_hiddenColumns.contains(key) || !_columnOrder.contains(key)) return;
 
@@ -303,7 +305,7 @@ class LayrzTableController<T> extends ChangeNotifier {
       ..clear()
       ..addAll(rebuilt);
     notifyListeners();
-    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, visibleColumnKeys: visibleColumnKeys));
+    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, hiddenColumns: hiddenColumns));
   }
 
   /// Reconciles the controller's known column set against the [columns]
@@ -358,7 +360,111 @@ class LayrzTableController<T> extends ChangeNotifier {
     }
 
     notifyListeners();
-    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, visibleColumnKeys: visibleColumnKeys));
+    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, hiddenColumns: hiddenColumns));
+  }
+
+  /// Replaces the entire column display order in one call.
+  ///
+  /// This is the wholesale counterpart to [reorderColumn]'s one-step move —
+  /// useful for restoring a previously-persisted order (e.g. from a
+  /// [LayrzTableColumnsEvent] payload) in a single call instead of replaying
+  /// individual moves.
+  ///
+  /// Reconciled the same way [syncColumns] reconciles a changed column set,
+  /// by pure [Key] membership against the controller's *currently known*
+  /// keys (this does **not** add or remove known columns — pass [order]
+  /// only from keys already known to this controller):
+  /// - Any [Key] in [order] not currently known to this controller (i.e.
+  ///   absent from the current [columnOrder]) is dropped — an unknown key
+  ///   has no column to reorder.
+  /// - Any currently-known [Key] omitted from [order] is appended to the
+  ///   end, in its existing relative order — a caller supplying a partial
+  ///   order does not silently lose columns.
+  ///
+  /// [hiddenColumns] is untouched by this call; only the order changes.
+  ///
+  /// If the reconciled order is identical to the current [columnOrder],
+  /// this is a no-op: no [notifyListeners] call, no emitted event.
+  /// Otherwise [notifyListeners] is called and a [LayrzTableColumnsEvent] is
+  /// emitted on [events] carrying the new [columnOrder] and the (unchanged)
+  /// [hiddenColumns].
+  void setColumnOrder(List<Key> order) {
+    final knownKeys = _columnOrder.toSet();
+    final reconciled = order.where(knownKeys.contains).toList(growable: false);
+    final reconciledSet = reconciled.toSet();
+    final omitted = _columnOrder.where((key) => !reconciledSet.contains(key)).toList(growable: false);
+    final next = [...reconciled, ...omitted];
+
+    if (next.length == _columnOrder.length) {
+      var unchanged = true;
+      for (var i = 0; i < next.length; i++) {
+        if (next[i] != _columnOrder[i]) {
+          unchanged = false;
+          break;
+        }
+      }
+      if (unchanged) return;
+    }
+
+    _columnOrder
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, hiddenColumns: hiddenColumns));
+  }
+
+  /// Replaces the entire hidden-columns set in one call.
+  ///
+  /// This is the wholesale counterpart to [setColumnVisible]'s one-column
+  /// toggle — useful for restoring a previously-persisted visibility set
+  /// (e.g. from a [LayrzTableColumnsEvent] payload) in a single call instead
+  /// of replaying individual toggles.
+  ///
+  /// Reconciled by pure [Key] membership against the controller's
+  /// *currently known* keys, mirroring [syncColumns]'s membership-only
+  /// reconciliation:
+  /// - Any [Key] in [hidden] not currently known to this controller (i.e.
+  ///   absent from [columnOrder]) is dropped — an unknown key cannot be
+  ///   hidden.
+  ///
+  /// **[minVisibleColumns] floor**: if hiding every remaining (known,
+  /// requested) key would drop the number of visible columns below
+  /// [minVisibleColumns], the request is **clamped, not refused** — unlike
+  /// [setColumnVisible]'s single-column no-op, a wholesale replacement must
+  /// still leave the table in a valid state. Keys are un-hidden back into
+  /// visibility, in [columnOrder] order starting from the end of [hidden]'s
+  /// [columnOrder]-relative order, until exactly [minVisibleColumns] columns
+  /// are visible.
+  ///
+  /// If the reconciled (and, if applicable, clamped) hidden set is identical
+  /// to the current [hiddenColumns], this is a no-op: no [notifyListeners]
+  /// call, no emitted event. Otherwise [notifyListeners] is called and a
+  /// [LayrzTableColumnsEvent] is emitted on [events] carrying the (unchanged)
+  /// [columnOrder] and the new [hiddenColumns].
+  void setHiddenColumns(Set<Key> hidden) {
+    final knownKeys = _columnOrder.toSet();
+    // Reconcile to known keys, then walk in columnOrder's own order so the
+    // floor-clamping step below has a deterministic, documented direction to
+    // drop from (the tail of this list, i.e. the last-in-columnOrder
+    // requested-hidden keys are the first restored to visibility).
+    final reconciled = _columnOrder
+        .where((key) => hidden.contains(key) && knownKeys.contains(key))
+        .toList(
+          growable: false,
+        );
+
+    final floor = minVisibleColumns;
+    final maxHidable = _columnOrder.length - floor;
+    final clamped = maxHidable <= 0 ? const <Key>[] : reconciled.take(maxHidable).toList(growable: false);
+    final next = clamped.toSet();
+
+    if (next.length == _hiddenColumns.length && next.containsAll(_hiddenColumns)) return;
+
+    _hiddenColumns
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+    _eventsController.add(LayrzTableColumnsEvent<T>(columnOrder: columnOrder, hiddenColumns: hiddenColumns));
   }
 
   /// Adds [item] to the current selection.

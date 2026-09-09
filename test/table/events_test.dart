@@ -125,34 +125,35 @@ void main() {
   });
 
   group('LayrzTableColumnsEvent', () {
-    test('carries the given columnOrder and visibleColumnKeys payload', () {
+    test('carries the given columnOrder and hiddenColumns payload', () {
       final event = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b'), ValueKey('c')],
-        visibleColumnKeys: {ValueKey('a'), ValueKey('c')},
+        hiddenColumns: {ValueKey('b')},
       );
 
       expect(event.columnOrder, [const ValueKey('a'), const ValueKey('b'), const ValueKey('c')]);
-      expect(event.visibleColumnKeys, {const ValueKey('a'), const ValueKey('c')});
+      expect(event.hiddenColumns, {const ValueKey('b')});
     });
 
-    test('a key absent from visibleColumnKeys but present in columnOrder is hidden', () {
+    test('a key present in hiddenColumns and columnOrder is hidden; one absent from hiddenColumns is visible', () {
       final event = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('a')},
+        hiddenColumns: {ValueKey('b')},
       );
 
-      expect(event.columnOrder.contains(const ValueKey('b')), isTrue);
-      expect(event.visibleColumnKeys.contains(const ValueKey('b')), isFalse);
+      expect(event.columnOrder.contains(const ValueKey('a')), isTrue);
+      expect(event.hiddenColumns.contains(const ValueKey('a')), isFalse);
+      expect(event.hiddenColumns.contains(const ValueKey('b')), isTrue);
     });
 
-    test('equal when columnOrder (in order) and visibleColumnKeys (as a set) match', () {
+    test('equal when columnOrder (in order) and hiddenColumns (as a set) match', () {
       final a = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('a'), ValueKey('b')},
+        hiddenColumns: {ValueKey('a'), ValueKey('b')},
       );
       final b = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('b'), ValueKey('a')},
+        hiddenColumns: {ValueKey('b'), ValueKey('a')},
       );
 
       expect(a, b);
@@ -162,11 +163,11 @@ void main() {
     test('unequal when columnOrder differs in sequence, even with the same keys', () {
       final a = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('a'), ValueKey('b')},
+        hiddenColumns: {ValueKey('a'), ValueKey('b')},
       );
       final b = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('b'), ValueKey('a')],
-        visibleColumnKeys: {ValueKey('a'), ValueKey('b')},
+        hiddenColumns: {ValueKey('a'), ValueKey('b')},
       );
 
       expect(a == b, isFalse);
@@ -175,33 +176,33 @@ void main() {
     test('unequal when columnOrder lengths differ', () {
       final a = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a')],
-        visibleColumnKeys: {ValueKey('a')},
+        hiddenColumns: {ValueKey('a')},
       );
       final b = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('a')},
+        hiddenColumns: {ValueKey('a')},
       );
 
       expect(a == b, isFalse);
     });
 
-    test('unequal when visibleColumnKeys differ', () {
+    test('unequal when hiddenColumns differ', () {
       final a = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('a')},
+        hiddenColumns: {ValueKey('a')},
       );
       final b = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a'), ValueKey('b')],
-        visibleColumnKeys: {ValueKey('b')},
+        hiddenColumns: {ValueKey('b')},
       );
 
       expect(a == b, isFalse);
     });
 
-    test('toString reports both columnOrder and visibleColumnKeys', () {
+    test('toString reports both columnOrder and hiddenColumns', () {
       final event = LayrzTableColumnsEvent<int>(
         columnOrder: const [ValueKey('a')],
-        visibleColumnKeys: {ValueKey('a')},
+        hiddenColumns: {ValueKey('a')},
       );
 
       expect(event.toString(), contains('a'));
@@ -244,7 +245,7 @@ void main() {
         LayrzTableSortEvent<int>(columnKey: ValueKey('a'), ascending: true),
         LayrzTableSearchEvent<int>(searchText: ''),
         LayrzTableSelectionEvent<int>(selection: {}),
-        LayrzTableColumnsEvent<int>(columnOrder: [], visibleColumnKeys: {}),
+        LayrzTableColumnsEvent<int>(columnOrder: [], hiddenColumns: {}),
         LayrzTableRefreshEvent<int>(),
       ];
 
@@ -265,7 +266,7 @@ void main() {
       expect(describe(const LayrzTableSortEvent<int>(columnKey: ValueKey('a'), ascending: true)), 'sort');
       expect(describe(const LayrzTableSearchEvent<int>(searchText: '')), 'search');
       expect(describe(const LayrzTableSelectionEvent<int>(selection: {})), 'selection');
-      expect(describe(const LayrzTableColumnsEvent<int>(columnOrder: [], visibleColumnKeys: {})), 'columns');
+      expect(describe(const LayrzTableColumnsEvent<int>(columnOrder: [], hiddenColumns: {})), 'columns');
       expect(describe(const LayrzTableRefreshEvent<int>()), 'refresh');
     });
   });

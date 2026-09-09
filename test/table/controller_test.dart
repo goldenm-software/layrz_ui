@@ -242,7 +242,7 @@ void main() {
       await sub.cancel();
 
       expect(events, [
-        LayrzTableColumnsEvent<int>(columnOrder: const [a, b], visibleColumnKeys: {b}),
+        LayrzTableColumnsEvent<int>(columnOrder: const [a, b], hiddenColumns: {a}),
       ]);
     });
 
@@ -436,7 +436,7 @@ void main() {
       await sub.cancel();
 
       expect(events, [
-        LayrzTableColumnsEvent<int>(columnOrder: const [b, a, c], visibleColumnKeys: {a, b, c}),
+        LayrzTableColumnsEvent<int>(columnOrder: const [b, a, c], hiddenColumns: const {}),
       ]);
     });
 
@@ -593,7 +593,7 @@ void main() {
       await sub.cancel();
 
       expect(events, [
-        LayrzTableColumnsEvent<int>(columnOrder: const [a, b], visibleColumnKeys: {a, b}),
+        LayrzTableColumnsEvent<int>(columnOrder: const [a, b], hiddenColumns: const {}),
       ]);
     });
 
@@ -607,6 +607,206 @@ void main() {
 
       expect(controller.columnOrder, isEmpty);
       expect(controller.hiddenColumns, isEmpty);
+    });
+  });
+
+  group('setColumnOrder', () {
+    test('replaces the full order with the given known keys', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const c = ValueKey('c');
+      final controller = LayrzTableController<int>(columnOrder: [a, b, c]);
+      addTearDown(controller.dispose);
+
+      controller.setColumnOrder([c, a, b]);
+
+      expect(controller.columnOrder, [c, a, b]);
+    });
+
+    test('drops keys unknown to the controller', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const unknown = ValueKey('unknown');
+      final controller = LayrzTableController<int>(columnOrder: [a, b]);
+      addTearDown(controller.dispose);
+
+      controller.setColumnOrder([unknown, b, a]);
+
+      expect(controller.columnOrder, [b, a]);
+    });
+
+    test('appends known keys omitted from the given order, in their existing relative order', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const c = ValueKey('c');
+      final controller = LayrzTableController<int>(columnOrder: [a, b, c]);
+      addTearDown(controller.dispose);
+
+      // c omitted entirely — it must not be dropped, only pushed to the end.
+      controller.setColumnOrder([b, a]);
+
+      expect(controller.columnOrder, [b, a, c]);
+    });
+
+    test('does not change hiddenColumns', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b], hiddenColumns: {b});
+      addTearDown(controller.dispose);
+
+      controller.setColumnOrder([b, a]);
+
+      expect(controller.hiddenColumns, {b});
+    });
+
+    test('emits a LayrzTableColumnsEvent with the new order when order actually changes', () async {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b], hiddenColumns: {b});
+      addTearDown(controller.dispose);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.setColumnOrder([b, a]);
+      await pumpEventQueue();
+      await sub.cancel();
+
+      expect(events, [
+        LayrzTableColumnsEvent<int>(columnOrder: const [b, a], hiddenColumns: {b}),
+      ]);
+    });
+
+    test('is a no-op (no notify, no event) when the reconciled order is unchanged', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b]);
+      addTearDown(controller.dispose);
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      controller.events.listen(events.add);
+
+      controller.setColumnOrder([a, b]);
+
+      expect(notified, 0);
+      expect(events, isEmpty);
+    });
+  });
+
+  group('setHiddenColumns', () {
+    test('replaces the full hidden set with the given known keys', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const c = ValueKey('c');
+      final controller = LayrzTableController<int>(columnOrder: [a, b, c]);
+      addTearDown(controller.dispose);
+
+      controller.setHiddenColumns({b, c});
+
+      expect(controller.hiddenColumns, {b, c});
+      expect(controller.visibleColumnKeys, {a});
+    });
+
+    test('drops keys unknown to the controller', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const unknown = ValueKey('unknown');
+      final controller = LayrzTableController<int>(columnOrder: [a, b]);
+      addTearDown(controller.dispose);
+
+      controller.setHiddenColumns({b, unknown});
+
+      expect(controller.hiddenColumns, {b});
+    });
+
+    test('does not change columnOrder', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b]);
+      addTearDown(controller.dispose);
+
+      controller.setHiddenColumns({a});
+
+      expect(controller.columnOrder, [a, b]);
+    });
+
+    test('clamps down to the minVisibleColumns floor instead of throwing', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const c = ValueKey('c');
+      final controller = LayrzTableController<int>(columnOrder: [a, b, c], minVisibleColumns: 2);
+      addTearDown(controller.dispose);
+
+      // Requesting all three hidden would leave 0 visible, breaching the
+      // floor of 2 — the controller must clamp, not throw or leave state
+      // unchanged in a way that silently ignores the call.
+      controller.setHiddenColumns({a, b, c});
+
+      expect(controller.hiddenColumns.length, 1);
+      expect(controller.visibleColumnKeys.length, 2);
+    });
+
+    test('a hidden set already at/under the floor is applied without clamping', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      const c = ValueKey('c');
+      final controller = LayrzTableController<int>(columnOrder: [a, b, c], minVisibleColumns: 1);
+      addTearDown(controller.dispose);
+
+      controller.setHiddenColumns({a, b});
+
+      expect(controller.hiddenColumns, {a, b});
+      expect(controller.visibleColumnKeys, {c});
+    });
+
+    test('emits a LayrzTableColumnsEvent with the new hidden set when it actually changes', () async {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b]);
+      addTearDown(controller.dispose);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.setHiddenColumns({a});
+      await pumpEventQueue();
+      await sub.cancel();
+
+      expect(events, [
+        LayrzTableColumnsEvent<int>(columnOrder: const [a, b], hiddenColumns: {a}),
+      ]);
+    });
+
+    test('is a no-op (no notify, no event) when the reconciled hidden set is unchanged', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b], hiddenColumns: {a});
+      addTearDown(controller.dispose);
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      controller.events.listen(events.add);
+
+      controller.setHiddenColumns({a});
+
+      expect(notified, 0);
+      expect(events, isEmpty);
+    });
+
+    test('is a no-op when the requested hidden set reconciles to the same clamped result', () {
+      const a = ValueKey('a');
+      const b = ValueKey('b');
+      final controller = LayrzTableController<int>(columnOrder: [a, b], hiddenColumns: {a});
+      addTearDown(controller.dispose);
+      var notified = 0;
+      controller.addListener(() => notified++);
+
+      // Both a and b hidden would breach minVisibleColumns (default 1), so
+      // this clamps back down to just {a} hidden — identical to current
+      // state — and must not notify.
+      controller.setHiddenColumns({a, b});
+
+      expect(notified, 0);
+      expect(controller.hiddenColumns, {a});
     });
   });
 
