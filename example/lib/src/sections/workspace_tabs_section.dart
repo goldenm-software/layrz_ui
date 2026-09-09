@@ -6,11 +6,17 @@ import '../common/showroom_section.dart';
 
 /// The content widget for the workspace tabs section.
 ///
-/// Demonstrates [LayrzWorkspaceTabs] as a browser-like, controlled tab strip:
-/// the developer keeps the tab list and active id in local state and reacts
-/// to open (+), close (×), select, and drag-reorder events. The widget below
-/// only ever renders the strip — the content panel is entirely owned by this
-/// demo, exactly as a real caller would wire it.
+/// Demonstrates [LayrzWorkspaceTabs] as a browser-like, controlled
+/// workspace: the developer keeps the tab list and active id in local
+/// state and reacts to open (+), close (×), select, and drag-reorder
+/// events, while each [LayrzWorkspaceTab] now owns its own content through
+/// `left`/`right` and the widget itself renders the connected content panel
+/// — there is no separate body the caller renders and keys by id anymore.
+///
+/// [LayrzWorkspaceTabs] expects a bounded (typically full-screen) height —
+/// its content panel expands to fill whatever height remains below the
+/// strip — so each demo below gives it a fixed-height box standing in for a
+/// full page body.
 class WorkspaceTabsSection extends StatelessWidget {
   /// Creates a new [WorkspaceTabsSection].
   const WorkspaceTabsSection({super.key});
@@ -22,8 +28,8 @@ class WorkspaceTabsSection extends StatelessWidget {
     return ShowroomSection(
       title: 'Workspace Tabs',
       description:
-          'A browser-style, controlled tab strip — open, close, reorder, and select tabs; '
-          'the developer owns the tab list and the content behind it.',
+          'A browser-style, controlled workspace — open, close, reorder, and select tabs; each '
+          'tab owns its own content, and the widget renders the connected strip + panel as one piece.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +43,8 @@ class WorkspaceTabsSection extends StatelessWidget {
 }
 
 /// The main interactive demo: open/close/reorder/select against a small set
-/// of starter tabs, each rendering its own distinct panel below the strip.
+/// of starter tabs, one of which (`report-1`) demonstrates a split-view tab
+/// with both `left` and `right` content panes behind a resizable divider.
 class _WorkspaceDemo extends StatefulWidget {
   /// Creates a new [_WorkspaceDemo].
   const _WorkspaceDemo({required this.tokens});
@@ -51,10 +58,20 @@ class _WorkspaceDemo extends StatefulWidget {
 
 class _WorkspaceDemoState extends State<_WorkspaceDemo> {
   /// The current tab list, mutated in response to open/close/reorder events.
-  List<LayrzWorkspaceTab> _tabs = const [
-    LayrzWorkspaceTab(id: 'overview', label: 'Overview', icon: MdiIcons.viewDashboardOutline),
-    LayrzWorkspaceTab(id: 'report-1', label: 'Q3 Report', icon: MdiIcons.fileChartOutline),
-    LayrzWorkspaceTab(id: 'report-2', label: 'Budget Draft', icon: MdiIcons.fileChartOutline),
+  ///
+  /// `report-1` carries a non-null `right`, so it renders in split view — a
+  /// preview pane alongside a details pane, resizable via the divider
+  /// between them.
+  late List<LayrzWorkspaceTab> _tabs = [
+    _panelTab(id: 'overview', label: 'Overview', icon: MdiIcons.viewDashboardOutline),
+    LayrzWorkspaceTab(
+      id: 'report-1',
+      label: 'Q3 Report',
+      icon: MdiIcons.fileChartOutline,
+      left: const _DemoPane(title: 'Q3 Report', body: 'The primary document pane for this tab.'),
+      right: const _DemoPane(title: 'Notes', body: 'A secondary pane, side-by-side via the resizable split.'),
+    ),
+    _panelTab(id: 'report-2', label: 'Budget Draft', icon: MdiIcons.fileChartOutline),
   ];
 
   /// The id of the tab currently rendered as active.
@@ -63,14 +80,25 @@ class _WorkspaceDemoState extends State<_WorkspaceDemo> {
   /// A monotonically increasing counter used to name newly opened tabs.
   int _nextTabNumber = 1;
 
+  /// Builds a single-pane tab whose `left` is a [_DemoPane] describing
+  /// itself, used for every tab in this demo except the split-view one.
+  static LayrzWorkspaceTab _panelTab({required String id, required String label, IconData? icon}) {
+    return LayrzWorkspaceTab(
+      id: id,
+      label: label,
+      icon: icon,
+      left: _DemoPane(
+        title: label,
+        body: 'This is tab "$id"\'s own content, owned by LayrzWorkspaceTab.left.',
+      ),
+    );
+  }
+
   /// Adds a new tab, named sequentially, and makes it the active one.
   void _openTab() {
     setState(() {
       final id = 'new-${DateTime.now().microsecondsSinceEpoch}';
-      _tabs = [
-        ..._tabs,
-        LayrzWorkspaceTab(id: id, label: 'Untitled $_nextTabNumber', icon: MdiIcons.fileOutline),
-      ];
+      _tabs = [..._tabs, _panelTab(id: id, label: 'Untitled $_nextTabNumber', icon: MdiIcons.fileOutline)];
       _activeId = id;
       _nextTabNumber++;
     });
@@ -110,46 +138,23 @@ class _WorkspaceDemoState extends State<_WorkspaceDemo> {
         Text('Browser-Like Workspace', style: tokens.typography.title),
         SizedBox(height: tokens.spacing.sp3),
         Text(
-          'Open a new tab with the (+) affordance, close one with its (×), drag a tab to '
-          'reorder it, or click a tab to activate it. The panel below always renders '
-          'whatever the developer wires for the active tab id.',
+          'Open a new tab with the (+) affordance, close one with its (×), drag a tab to reorder '
+          'it, or click a tab to activate it. "Q3 Report" is a split-view tab -- drag the divider '
+          'between its two panes to resize them.',
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Container(
-          decoration: BoxDecoration(
-            color: tokens.colors.sf1,
-            borderRadius: tokens.radius.br2,
-            border: Border.all(color: tokens.colors.divider),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LayrzWorkspaceTabs(
-                tabs: _tabs,
-                activeId: _activeId,
-                onTabSelected: (id) => setState(() => _activeId = id),
-                onTabClosed: _closeTab,
-                onNewTab: _openTab,
-                onReorder: _reorderTabs,
-              ),
-              Padding(
-                padding: tokens.spacing.pd4,
-                child: _tabs.isEmpty
-                    ? Text(
-                        'All tabs closed — use (+) to open a new one.',
-                        style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
-                      )
-                    : _ActivePanel(
-                        tab: _tabs.firstWhere(
-                          (t) => t.id == _activeId,
-                          orElse: () => _tabs.first,
-                        ),
-                        tokens: tokens,
-                      ),
-              ),
-            ],
+        // LayrzWorkspaceTabs expands its content panel to fill available
+        // height -- this SizedBox stands in for a full-screen page body.
+        SizedBox(
+          height: 360,
+          child: LayrzWorkspaceTabs(
+            tabs: _tabs,
+            activeId: _activeId,
+            onTabSelected: (id) => setState(() => _activeId = id),
+            onTabClosed: _closeTab,
+            onNewTab: _openTab,
+            onReorder: _reorderTabs,
           ),
         ),
       ],
@@ -174,8 +179,18 @@ class _PinnedTabDemo extends StatefulWidget {
 class _PinnedTabDemoState extends State<_PinnedTabDemo> {
   /// The current tab list; the first entry is pinned (`closable: false`).
   List<LayrzWorkspaceTab> _tabs = const [
-    LayrzWorkspaceTab(id: 'home', label: 'Home', icon: MdiIcons.homeOutline, closable: false),
-    LayrzWorkspaceTab(id: 'notes', label: 'Notes'),
+    LayrzWorkspaceTab(
+      id: 'home',
+      label: 'Home',
+      icon: MdiIcons.homeOutline,
+      closable: false,
+      left: _DemoPane(title: 'Home', body: 'The pinned home tab -- it never shows a close affordance.'),
+    ),
+    LayrzWorkspaceTab(
+      id: 'notes',
+      label: 'Notes',
+      left: _DemoPane(title: 'Notes', body: 'An ordinary closable tab alongside the pinned one.'),
+    ),
   ];
 
   /// The id of the tab currently rendered as active.
@@ -196,13 +211,8 @@ class _PinnedTabDemoState extends State<_PinnedTabDemo> {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Container(
-          decoration: BoxDecoration(
-            color: tokens.colors.sf1,
-            borderRadius: tokens.radius.br2,
-            border: Border.all(color: tokens.colors.divider),
-          ),
-          clipBehavior: Clip.antiAlias,
+        SizedBox(
+          height: 240,
           child: LayrzWorkspaceTabs(
             tabs: _tabs,
             activeId: _activeId,
@@ -215,39 +225,34 @@ class _PinnedTabDemoState extends State<_PinnedTabDemo> {
   }
 }
 
-/// The demo content panel rendered for whichever tab is currently active.
-class _ActivePanel extends StatelessWidget {
-  /// Creates a new [_ActivePanel].
-  const _ActivePanel({required this.tab, required this.tokens});
+/// A minimal content pane used by every tab in this showcase, so each tab's
+/// `left`/`right` content is visibly distinct without duplicating layout
+/// code at every call site.
+class _DemoPane extends StatelessWidget {
+  /// Creates a new [_DemoPane].
+  const _DemoPane({required this.title, required this.body});
 
-  /// The currently active tab, used to key this panel's content.
-  final LayrzWorkspaceTab tab;
+  /// The pane's heading text.
+  final String title;
 
-  /// The design system tokens.
-  final LayrzTokens tokens;
+  /// The pane's descriptive body text.
+  final String body;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      key: ValueKey(tab.id),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            if (tab.icon != null) ...[
-              Icon(tab.icon, size: 20.0, color: tokens.colors.fg2),
-              SizedBox(width: tokens.spacing.sp2),
-            ],
-            Text(tab.label, style: tokens.typography.title),
-          ],
-        ),
-        SizedBox(height: tokens.spacing.sp2),
-        Text(
-          'This is the developer-owned content for tab "${tab.id}". LayrzWorkspaceTabs never '
-          'renders this itself -- it only tells the caller which tab is active.',
-          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
-        ),
-      ],
+    final tokens = context.tokens;
+
+    return Padding(
+      padding: tokens.spacing.pd4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(title, style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp2),
+          Text(body, style: tokens.typography.body.copyWith(color: tokens.colors.fg3)),
+        ],
+      ),
     );
   }
 }
