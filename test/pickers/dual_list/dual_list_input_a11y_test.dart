@@ -34,7 +34,7 @@ void main() {
           LayrzDualListInput<String>(
             labelText: 'Fruits',
             items: items,
-            itemExtent: 48,
+            itemExtent: 52,
             availableListName: 'Available',
             selectedListName: 'Selected',
           ),
@@ -77,7 +77,7 @@ void main() {
           LayrzDualListInput<String>(
             labelText: 'Fruits',
             items: items,
-            itemExtent: 48,
+            itemExtent: 52,
             disabled: true,
             availableListName: 'Available',
             selectedListName: 'Selected',
@@ -115,7 +115,7 @@ void main() {
           LayrzDualListInput<String>(
             labelText: 'Fruits',
             items: items,
-            itemExtent: 48,
+            itemExtent: 52,
             availableListName: 'Available',
             selectedListName: 'Selected',
           ),
@@ -154,7 +154,7 @@ void main() {
           LayrzDualListInput<String>(
             labelText: 'Fruits',
             items: items,
-            itemExtent: 48,
+            itemExtent: 52,
             value: const ['apple'],
             availableListName: 'Available',
             selectedListName: 'Selected',
@@ -179,7 +179,7 @@ void main() {
           LayrzDualListInput<String>(
             labelText: 'Fruits',
             items: items,
-            itemExtent: 48,
+            itemExtent: 52,
             availableListName: 'Available',
             selectedListName: 'Selected',
           ),

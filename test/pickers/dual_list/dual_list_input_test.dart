@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_metrics.dart';
 
 import '../../helpers/no_overflow.dart';
 import '../../helpers/pump_themed.dart';
@@ -42,7 +43,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['banana'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -65,7 +66,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -93,7 +94,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['apple', 'banana'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -121,7 +122,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -146,7 +147,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -171,7 +172,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['apple', 'banana', 'cherry'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -195,7 +196,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['banana'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -228,7 +229,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -268,7 +269,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['apple', 'banana', 'cherry'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -304,7 +305,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -331,7 +332,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           disabled: true,
@@ -354,7 +355,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           errors: const ['This field is required'],
@@ -373,7 +374,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           errors: const ['This field is required'],
@@ -397,7 +398,7 @@ void main() {
               labelText: 'Fruits',
               items: items,
               value: value,
-              itemExtent: 48,
+              itemExtent: 52,
               availableListName: 'Available',
               selectedListName: 'Selected',
             );
@@ -425,7 +426,7 @@ void main() {
           labelText: 'Fruits',
           items: const <LayrzSelectItem<String>>[],
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -443,7 +444,7 @@ void main() {
           labelText: 'Fruits',
           items: const <LayrzSelectItem<String>>[],
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           emptyListText: 'Nothing here',
@@ -462,7 +463,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Left',
           selectedListName: 'Right',
         ),
@@ -483,7 +484,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           enableAvailableSearch: false,
@@ -507,7 +508,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -528,7 +529,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -548,7 +549,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const ['cherry'],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
         ),
@@ -558,7 +559,7 @@ void main() {
       expect(multiSelect.items, items);
       expect(multiSelect.value, ['cherry']);
       expect(multiSelect.labelText, 'Fruits');
-      expect(multiSelect.itemExtent, 48);
+      expect(multiSelect.itemExtent, 52);
     });
 
     guardedTestWidgets('committing through the compact MultiSelect delegate fires onChanged', (tester) async {
@@ -571,7 +572,7 @@ void main() {
           labelText: 'Fruits',
           items: items,
           value: const [],
-          itemExtent: 48,
+          itemExtent: 52,
           availableListName: 'Available',
           selectedListName: 'Selected',
           onChanged: (values) => committed = values,
@@ -582,6 +583,55 @@ void main() {
       multiSelect.onChanged?.call(['apple']);
 
       expect(committed, ['apple']);
+    });
+  });
+
+  group('LayrzDualListInput — itemExtent floor assertion', () {
+    test('throws when itemExtent is below kLayrzPickerMinItemExtent', () {
+      expect(
+        () => LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent - 1,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    guardedTestWidgets('accepts an itemExtent exactly at kLayrzPickerMinItemExtent', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.byType(LayrzDualListInput<String>), findsOneWidget);
+    });
+
+    guardedTestWidgets('accepts an itemExtent above kLayrzPickerMinItemExtent', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent + 12,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.byType(LayrzDualListInput<String>), findsOneWidget);
     });
   });
 }

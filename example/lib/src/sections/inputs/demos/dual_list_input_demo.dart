@@ -59,7 +59,7 @@ class _DualListInputDemoState extends State<DualListInputDemo> {
               labelText: 'Favorite fruits',
               items: _fruitItems,
               value: _selectedFruits,
-              itemExtent: 48,
+              itemExtent: 52,
               availableListName: 'Available',
               selectedListName: 'Selected',
               onChanged: (values) => setState(() => _selectedFruits = values),

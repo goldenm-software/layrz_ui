@@ -6,6 +6,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_footer_slot.dart';
 import 'package:layrz_ui/src/pickers/src/multi_select/multi_select_input.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_metrics.dart';
 
 import 'dual_list_panel.dart';
 
@@ -118,6 +119,12 @@ class LayrzDualListInput<T> extends StatefulWidget {
   /// The expected height of each row in both desktop panels, and forwarded
   /// as-is to the compact [LayrzMultiSelectInput] delegate's own
   /// `itemExtent`. Required, mirroring [LayrzMultiSelectInput.itemExtent].
+  ///
+  /// Must be at least [kLayrzPickerMinItemExtent] — shared with
+  /// [LayrzMultiSelectInput] because this value is forwarded unchanged to
+  /// that widget on a compact viewport (see the class doc's "compact
+  /// delegation" section), so a value that only fits the desktop panels but
+  /// not MultiSelect's checkbox row would overflow once viewed narrow.
   final double itemExtent;
 
   /// Text shown in a panel when it has no items to display (either because
@@ -165,6 +172,11 @@ class LayrzDualListInput<T> extends StatefulWidget {
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
+       ),
+       assert(
+         itemExtent >= kLayrzPickerMinItemExtent,
+         'itemExtent must be >= $kLayrzPickerMinItemExtent; DualList delegates to '
+         'MultiSelect on compact, whose checkbox row needs this height',
        );
 
   @override
