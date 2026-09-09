@@ -1,44 +1,66 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:layrz_ui/src/extensions/extensions.dart';
-
-import 'workspace_new_tab_button.dart';
+import 'workspace_panel.dart';
 import 'workspace_tab.dart';
-import 'workspace_tab_item.dart';
+import 'workspace_tab_strip.dart';
 
-/// A browser-style, controlled tab strip: the developer owns the tab list,
-/// the active tab, and the content rendered below; this widget renders only
-/// the chrome-style tab bar and reports selection, close, new-tab, and
+/// A browser-style, controlled workspace: the developer owns the tab list
+/// and the active tab id; this widget renders the chrome-style tab strip
+/// *and* the connected content panel for the active tab, reading that
+/// panel's content straight from [LayrzWorkspaceTab.left]/
+/// [LayrzWorkspaceTab.right], and reports selection, close, new-tab, and
 /// reorder events.
 ///
-/// **Controlled, bar-only model**: [LayrzWorkspaceTabs] never renders or owns
-/// a body — it paints the strip and nothing else. The caller keeps [tabs]
-/// and [activeId] in its own state, renders the active tab's content
-/// separately (typically directly below this widget), and reacts to this
-/// widget's callbacks by mutating that state.
+/// **Tab-owns-content model**: this supersedes the original bar-only
+/// design. [LayrzWorkspaceTabs] now renders both pieces as one connected
+/// whole — the strip on top (`LayrzWorkspaceTabStrip`), and directly below
+/// it a bordered panel (`LayrzWorkspacePanel`) whose top edge opens under
+/// the active tab and curves into that tab's own outward shoulders, so the
+/// two shapes trace a single continuous outline with no seam between them.
+/// The caller still owns [tabs] and [activeId], but content now lives on
+/// each [LayrzWorkspaceTab] itself rather than being rendered externally and
+/// keyed by id.
 ///
 /// This is a deliberately different component from `LayrzTabView`, which
 /// owns a fixed, author-defined set of pill tabs and swaps its own child
 /// content. `LayrzWorkspaceTabs` is a dynamic, user-driven workspace/document
-/// manager: tabs open, close, and reorder at runtime, and the widget itself
-/// never touches the content those tabs represent.
+/// manager: tabs open, close, and reorder at runtime.
 ///
-/// **v1 scope**: per-tab close (×), a pinned new-tab (+) affordance, and
-/// hand-rolled drag-to-reorder. Overflow beyond the strip's width is handled
-/// by horizontal scrolling rather than an overflow menu; there is no context
-/// menu, no middle-click-to-close, and no tab groups/pinning beyond
+/// **v1 scope**: per-tab close (×), a pinned new-tab (+) affordance,
+/// hand-rolled drag-to-reorder, and a resizable two-pane split per tab.
+/// Overflow beyond the strip's width is handled by horizontal scrolling
+/// rather than an overflow menu; there is no context menu, no
+/// middle-click-to-close, and no tab groups/pinning beyond
 /// [LayrzWorkspaceTab.closable].
 ///
-/// **Visual**: the active tab's chrome merges into the content panel below
-/// it (flat bottom edge, rounded top, `tokens.colors.sf1` fill matching the
-/// panel surface); inactive tabs recede with a quieter fill and foreground.
-/// See `LayrzWorkspaceTabChromePainter` for the connected-tab shape itself.
+/// **Full-screen / expanding layout**: this widget builds a `Column` of
+/// `[strip, Expanded(panel)]` — the strip takes its intrinsic height and the
+/// panel expands to fill whatever height remains. It is designed to be
+/// placed inside a bounded-height ancestor (typically a full page body,
+/// itself inside a `Column`'s own `Expanded` or a `Scaffold`-equivalent
+/// body), the same way a browser's own tab/content region fills its window.
+/// Placing it inside an unbounded-height ancestor (e.g. a plain
+/// `SingleChildScrollView` with no height constraint) is the caller's
+/// responsibility to avoid, exactly as for any other `Expanded`-based
+/// widget — [LayrzWorkspaceTabs] itself does not clamp or measure a
+/// fallback height.
+///
+/// **Split view**: when the active tab's [LayrzWorkspaceTab.right] is
+/// non-null, the panel shows [LayrzWorkspaceTab.left] and
+/// [LayrzWorkspaceTab.right] side-by-side behind a draggable vertical
+/// divider (`LayrzWorkspaceSplitView`) the user can drag to resize the
+/// split, clamped so neither pane shrinks below
+/// `kLayrzWorkspaceSplitMinPaneExtent`. **The split ratio is a single value
+/// per currently-active panel** (not persisted per tab id) — switching
+/// tabs and switching back resets to the default 50/50 ratio. This is a
+/// deliberate v1 scope choice; per-tab ratio memory is a nice-to-have left
+/// for a future revision.
 ///
 /// **Accessibility**: each tab is a `Semantics(button: true, selected: ...)`
 /// node; the close (×) and new-tab (+) affordances are independently
-/// labeled and focusable. The strip supports arrow-key traversal between
-/// tabs and Enter/Space to activate the focused one.
+/// labeled and focusable, and the split divider exposes an adjustable
+/// (`slider: true`) semantics node. The strip supports arrow-key traversal
+/// between tabs and Enter/Space to activate the focused one.
 class LayrzWorkspaceTabs extends StatefulWidget {
   /// The tabs to render, in display order.
   final List<LayrzWorkspaceTab> tabs;
@@ -97,203 +119,95 @@ class LayrzWorkspaceTabs extends StatefulWidget {
 }
 
 class _LayrzWorkspaceTabsState extends State<LayrzWorkspaceTabs> {
-  /// Scroll controller for the horizontal tab strip.
-  final ScrollController _scrollController = ScrollController();
+  /// Anchors the content panel's [RenderBox], used as the coordinate-space
+  /// origin the active tab's reported rect (from
+  /// [LayrzWorkspaceTabStrip.onActiveTabRectChanged]) is translated into, so
+  /// [LayrzWorkspacePanel] can carve its top-border gap at the right
+  /// x-offset.
+  final GlobalKey _panelKey = GlobalKey();
 
-  /// Keyboard focus node for the whole strip; arrow-key traversal moves
-  /// [_focusedIndex] without moving Flutter's own focus tree per tab, since
-  /// there is no per-tab focus requirement beyond visual/traversal state.
-  final FocusNode _focusNode = FocusNode(debugLabel: 'LayrzWorkspaceTabs');
+  /// The active tab's horizontal span, in the panel's own local
+  /// coordinates. `null` until the strip's first rect report resolves it,
+  /// or whenever no tab is active.
+  double? _activeTabLeft;
 
-  /// A [GlobalKey] per currently-rendered tab, keyed by
-  /// [LayrzWorkspaceTab.id], used to look up each tab's on-screen
-  /// [RenderBox] while a drag is in progress. Rebuilt at the top of every
-  /// [build] so it always matches [LayrzWorkspaceTabs.tabs] by identity, not
-  /// by index — stable across reorders.
-  final Map<String, GlobalKey> _itemKeys = {};
+  /// See [_activeTabLeft].
+  double? _activeTabRight;
 
-  /// The index currently highlighted for keyboard traversal.
-  ///
-  /// Distinct from [LayrzWorkspaceTabs.activeId]: arrow keys move this
-  /// highlight without activating a tab, matching standard roving-tabindex
-  /// behaviour; Enter/Space then activates whatever this index points at.
-  int _focusedIndex = 0;
-
-  /// The index of the tab currently being dragged, or `null` when no drag is
-  /// in progress.
-  int? _draggedIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    _syncFocusedIndex();
-  }
+  /// The current split ratio for whichever tab is active, as the fraction
+  /// of width given to [LayrzWorkspaceTab.left]. Reset to the default 50/50
+  /// whenever the active tab id changes — see the class doc's "Split view"
+  /// section for why this is a single value rather than persisted per tab.
+  double _splitRatio = 0.5;
 
   @override
   void didUpdateWidget(LayrzWorkspaceTabs oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncFocusedIndex();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  /// Keeps [_focusedIndex] in range and, when possible, tracking the active
-  /// tab after [LayrzWorkspaceTabs.tabs] or [LayrzWorkspaceTabs.activeId]
-  /// changes.
-  void _syncFocusedIndex() {
-    final activeIndex = widget.tabs.indexWhere((t) => t.id == widget.activeId);
-    if (activeIndex >= 0) {
-      _focusedIndex = activeIndex;
-    } else if (_focusedIndex >= widget.tabs.length) {
-      _focusedIndex = widget.tabs.isEmpty ? 0 : widget.tabs.length - 1;
+    if (oldWidget.activeId != widget.activeId) {
+      _splitRatio = 0.5;
     }
   }
 
-  /// Returns the [GlobalKey] for [tab], creating one on first use and
-  /// dropping keys for tabs no longer present so the map never grows
-  /// unbounded across opens/closes.
-  GlobalKey _keyFor(LayrzWorkspaceTab tab) {
-    final liveIds = widget.tabs.map((t) => t.id).toSet();
-    _itemKeys.removeWhere((id, _) => !liveIds.contains(id));
-    return _itemKeys.putIfAbsent(tab.id, () => GlobalKey());
-  }
-
-  /// Handles a key event on the strip's [Focus] node: arrow-key traversal
-  /// between tabs and Enter/Space activation of the focused tab.
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    if (widget.tabs.isEmpty) return KeyEventResult.ignored;
-
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowRight) {
-      setState(() => _focusedIndex = (_focusedIndex + 1).clamp(0, widget.tabs.length - 1));
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      setState(() => _focusedIndex = (_focusedIndex - 1).clamp(0, widget.tabs.length - 1));
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.space) {
-      widget.onTabSelected(widget.tabs[_focusedIndex].id);
-      return KeyEventResult.handled;
-    }
-    return KeyEventResult.ignored;
-  }
-
-  /// Starts a drag for the tab at [index].
-  void _handleDragStart(int index) {
-    if (widget.onReorder == null) return;
-    setState(() => _draggedIndex = index);
-  }
-
-  /// Updates the in-progress drag using the pointer's current global
-  /// position and, when it now sits over a different tab than
-  /// [_draggedIndex], reorders immediately — matching a live browser tab
-  /// strip, where the dragged tab visibly swaps position as soon as it
-  /// crosses a neighbour's centre.
-  void _handleDragUpdate(Offset globalPosition) {
-    final draggedIndex = _draggedIndex;
-    if (draggedIndex == null) return;
-
-    final targetIndex = _resolveTargetIndex(globalPosition);
-    if (targetIndex == null || targetIndex == draggedIndex) return;
-
-    widget.onReorder!(draggedIndex, targetIndex);
-    setState(() => _draggedIndex = targetIndex);
-  }
-
-  /// Ends the current drag, clearing all drag-tracking state.
-  void _handleDragEnd() {
-    if (_draggedIndex == null) return;
-    setState(() => _draggedIndex = null);
-  }
-
-  /// Resolves which tab index [globalPosition] currently sits over, by
-  /// comparing it against each live tab's [RenderBox] bounds (in global
-  /// coordinates) via [_itemKeys].
-  ///
-  /// Returns `null` when no tab's box can be resolved (e.g. mid-layout).
-  int? _resolveTargetIndex(Offset globalPosition) {
-    for (final (index, tab) in widget.tabs.indexed) {
-      final box = _itemKeys[tab.id]?.currentContext?.findRenderObject() as RenderBox?;
-      if (box == null || !box.hasSize) continue;
-      final topLeft = box.localToGlobal(Offset.zero);
-      final rect = topLeft & box.size;
-      if (globalPosition.dx >= rect.left && globalPosition.dx <= rect.right) {
-        return index;
+  /// Translates the active tab's global [rect] (reported by
+  /// [LayrzWorkspaceTabStrip]) into the content panel's own local
+  /// x-coordinates and stores it, or clears both bounds when [rect] is
+  /// `null`.
+  void _handleActiveTabRectChanged(Rect? rect) {
+    final panelBox = _panelKey.currentContext?.findRenderObject() as RenderBox?;
+    if (rect == null || panelBox == null || !panelBox.hasSize) {
+      if (_activeTabLeft != null || _activeTabRight != null) {
+        setState(() {
+          _activeTabLeft = null;
+          _activeTabRight = null;
+        });
       }
+      return;
     }
-    return null;
+
+    final panelOriginX = panelBox.localToGlobal(Offset.zero).dx;
+    final left = rect.left - panelOriginX;
+    final right = rect.right - panelOriginX;
+
+    if (left != _activeTabLeft || right != _activeTabRight) {
+      setState(() {
+        _activeTabLeft = left;
+        _activeTabRight = right;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
+    final activeIndex = widget.tabs.indexWhere((t) => t.id == widget.activeId);
+    final activeTab = activeIndex >= 0 ? widget.tabs[activeIndex] : null;
 
-    final strip = widget.tabs.isEmpty
-        ? const SizedBox.shrink()
-        : Expanded(
-            child: SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final (index, tab) in widget.tabs.indexed) ...[
-                    if (index > 0) SizedBox(width: tokens.spacing.sp1),
-                    KeyedSubtree(
-                      key: _keyFor(tab),
-                      child: Listener(
-                        onPointerDown: widget.onReorder == null ? null : (_) => _handleDragStart(index),
-                        onPointerMove: widget.onReorder == null ? null : (event) => _handleDragUpdate(event.position),
-                        onPointerUp: widget.onReorder == null ? null : (_) => _handleDragEnd(),
-                        onPointerCancel: widget.onReorder == null ? null : (_) => _handleDragEnd(),
-                        child: LayrzWorkspaceTabItem(
-                          tab: tab,
-                          isActive: tab.id == widget.activeId,
-                          isFocused: index == _focusedIndex,
-                          isDragging: index == _draggedIndex,
-                          onSelected: () {
-                            _focusNode.requestFocus();
-                            setState(() => _focusedIndex = index);
-                            widget.onTabSelected(tab.id);
-                          },
-                          onClosed: !tab.closable || widget.onTabClosed == null
-                              ? null
-                              : () => widget.onTabClosed!(tab.id),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          );
-
-    return Focus(
-      focusNode: _focusNode,
-      onKeyEvent: _handleKeyEvent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: tokens.colors.sf2),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-          child: Row(
-            children: [
-              strip,
-              if (widget.tabs.isEmpty) const Spacer(),
-              if (widget.onNewTab != null) ...[
-                SizedBox(width: tokens.spacing.sp1),
-                LayrzWorkspaceNewTabButton(onTap: widget.onNewTab!),
-              ],
-            ],
+    // The strip takes its intrinsic height; the panel expands to fill
+    // whatever height remains, so this widget is meant to sit inside a
+    // bounded-height (typically full-screen) ancestor -- see the class doc's
+    // "Full-screen / expanding layout" section.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayrzWorkspaceTabStrip(
+          tabs: widget.tabs,
+          activeId: widget.activeId,
+          onTabSelected: widget.onTabSelected,
+          onTabClosed: widget.onTabClosed,
+          onNewTab: widget.onNewTab,
+          onReorder: widget.onReorder,
+          onActiveTabRectChanged: _handleActiveTabRectChanged,
+        ),
+        Expanded(
+          child: LayrzWorkspacePanel(
+            key: _panelKey,
+            tab: activeTab,
+            activeTabLeft: _activeTabLeft,
+            activeTabRight: _activeTabRight,
+            splitRatio: _splitRatio,
+            onSplitRatioChanged: (ratio) => setState(() => _splitRatio = ratio),
           ),
         ),
-      ),
+      ],
     );
   }
 }
