@@ -1,50 +1,59 @@
 import 'package:flutter/foundation.dart' show compute;
 
-/// Payload sent across the isolate boundary to [sortTableItems].
+/// Payload sent across the isolate boundary to [sortByKeys] for the default
+/// (no `LayrzColumn.customSort`) sort path.
 ///
-/// Every field here must be isolate-safe: plain data, or a closure that does
-/// not capture a `BuildContext`, a `State`, a `ChangeNotifier`/`ValueNotifier`,
-/// or any other object tied to the widget tree. `LayrzTable` builds this on
-/// the main thread by precomputing [sortKeys] from `LayrzColumn.valueBuilder`
-/// *before* crossing into the isolate, so that closure never itself needs to
-/// travel — only its already-computed string results do. When the caller
-/// supplies `LayrzColumn.customSort`, that comparator function does cross the
-/// boundary; per its own contract (see `LayrzColumn.customSort`) it must be
-/// isolate-safe on its own.
-class SortParams<T> {
-  /// The rows to sort, in their pre-sort (already search-filtered) order.
-  final List<T> items;
-
-  /// Precomputed sort key strings, one per entry in [items] at the same
-  /// index, built on the main thread from the active sort column's
-  /// `valueBuilder`.
+/// Deliberately carries no domain objects: only [sortKeys] (plain `String`s)
+/// and [ascending] cross into the isolate, so the copy cost of a `compute()`
+/// round trip no longer scales with the size or shape of the table's row
+/// type `T` — only with the row *count*. The isolate returns the sorted
+/// **index order**, not sorted items; the caller (`LayrzTable`, on the main
+/// thread) uses those indices to reorder its own `List<T>` by reference,
+/// which is cheap regardless of how large `T` is.
+class SortKeysParams {
+  /// Sort key strings, one per row, built on the main thread from the active
+  /// sort column's `valueBuilder`.
   ///
   /// Computing these ahead of time keeps `valueBuilder` — which may close
   /// over `BuildContext` or localization objects — from ever crossing the
-  /// isolate boundary. Only used when [customSort] is `null`.
+  /// isolate boundary.
   final List<String> sortKeys;
 
   /// Whether the sort should be ascending (`true`) or descending (`false`).
   final bool ascending;
 
-  /// Optional per-column comparator overriding the default key-based
-  /// comparison.
-  ///
-  /// When non-`null`, this is invoked as `customSort(a, b, ascending)` for
-  /// every comparison and [sortKeys] is ignored. Must be isolate-safe: it
-  /// must not capture a `BuildContext`, i18n lookups, or any notifier/state
-  /// object — see `LayrzColumn.customSort`.
-  final int Function(T a, T b, bool ascending)? customSort;
-
-  /// Creates a [SortParams] payload.
-  ///
-  /// [items] and [sortKeys] must have the same length when [customSort] is
-  /// `null`, since [sortKeys] is indexed in parallel with [items].
-  SortParams({required this.items, required this.sortKeys, required this.ascending, this.customSort});
+  /// Creates a [SortKeysParams] payload.
+  const SortKeysParams({required this.sortKeys, required this.ascending});
 }
 
-/// Isolate entrypoint that sorts [SortParams.items] according to the rest of
-/// [params].
+/// Payload sent across the isolate boundary to [sortTableItems] for the
+/// `LayrzColumn.customSort` path.
+///
+/// Every field here must be isolate-safe: plain data, or a closure that does
+/// not capture a `BuildContext`, a `State`, a `ChangeNotifier`/`ValueNotifier`,
+/// or any other object tied to the widget tree. Unlike [SortKeysParams], this
+/// path does send the full [items] list across the boundary, because
+/// [customSort] must compare the actual `T` objects — there is no
+/// precomputed-key shortcut available when the caller supplies its own
+/// comparator. Per its own contract (see `LayrzColumn.customSort`),
+/// [customSort] itself must be isolate-safe.
+class SortParams<T> {
+  /// The rows to sort, in their pre-sort (already search-filtered) order.
+  final List<T> items;
+
+  /// The per-column comparator to drive every comparison, invoked as
+  /// `customSort(a, b, ascending)`.
+  final int Function(T a, T b, bool ascending) customSort;
+
+  /// Whether the sort should be ascending (`true`) or descending (`false`).
+  final bool ascending;
+
+  /// Creates a [SortParams] payload.
+  SortParams({required this.items, required this.customSort, required this.ascending});
+}
+
+/// Isolate entrypoint that sorts [SortParams.items] using
+/// [SortParams.customSort].
 ///
 /// Intended to be run off the UI thread via `compute(sortTableItems, params)`
 /// so that sorting large datasets does not block a frame. Left
@@ -52,34 +61,39 @@ class SortParams<T> {
 /// future component in this module can reuse the same off-thread sort
 /// primitive.
 ///
-/// When [SortParams.customSort] is provided, it drives the comparison
-/// directly and [SortParams.sortKeys] is unused. Otherwise, a parallel index
-/// array is sorted using [defaultSortCompare] over the precomputed
-/// [SortParams.sortKeys], then [SortParams.items] is reordered to match —
-/// this avoids re-sorting the (potentially large) item objects themselves.
-///
-/// Returns a new list; [SortParams.items] itself may or may not be mutated in
-/// place depending on the code path, so callers must use the returned list.
+/// Returns a new list; [SortParams.items] itself is not mutated in place.
 List<T> sortTableItems<T>(SortParams<T> params) {
-  final customSort = params.customSort;
-  if (customSort != null) {
-    final sorted = List<T>.of(params.items);
-    sorted.sort((a, b) => customSort(a, b, params.ascending));
-    return sorted;
-  }
-
-  final indices = List<int>.generate(params.items.length, (i) => i);
-  indices.sort((a, b) => defaultSortCompare(params.sortKeys[a], params.sortKeys[b], ascending: params.ascending));
-
-  return [for (final i in indices) params.items[i]];
+  final sorted = List<T>.of(params.items);
+  sorted.sort((a, b) => params.customSort(a, b, params.ascending));
+  return sorted;
 }
 
-/// Runs [sortTableItems] off the UI thread via `compute`.
+/// Isolate entrypoint that sorts [SortKeysParams.sortKeys] using
+/// [defaultSortCompare] and returns the resulting **index order** rather than
+/// reordered items.
 ///
-/// This is the entrypoint callers should invoke from the main isolate; it
-/// wraps `compute()` so the sort work (index sort + reordering, or the
-/// caller's [SortParams.customSort]) happens in a background isolate.
+/// This is the default (no `LayrzColumn.customSort`) sort path: only string
+/// keys and an index array cross the isolate boundary, never the row objects
+/// themselves. The caller reorders its own `List<T>` by these indices back on
+/// the main thread — cheap reference shuffling, independent of how large or
+/// deeply-nested `T` is.
+List<int> sortByKeys(SortKeysParams params) {
+  final indices = List<int>.generate(params.sortKeys.length, (i) => i);
+  indices.sort((a, b) => defaultSortCompare(params.sortKeys[a], params.sortKeys[b], ascending: params.ascending));
+  return indices;
+}
+
+/// Runs [sortTableItems] off the UI thread via `compute`, for the
+/// `LayrzColumn.customSort` path.
 Future<List<T>> sortTableItemsOffThread<T>(SortParams<T> params) => compute(sortTableItems, params);
+
+/// Runs [sortByKeys] off the UI thread via `compute`, for the default
+/// (no `LayrzColumn.customSort`) path.
+///
+/// Returns the sorted index order into the original (pre-sort) list; the
+/// caller reorders its own items by these indices rather than sending them
+/// across the isolate boundary — see [SortKeysParams].
+Future<List<int>> sortIndexesOffThread(SortKeysParams params) => compute(sortByKeys, params);
 
 /// Compares two precomputed sort key strings, [a] and [b], for the default
 /// (no `LayrzColumn.customSort`) comparator.

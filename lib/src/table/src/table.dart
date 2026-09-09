@@ -40,15 +40,19 @@ import 'package:layrz_ui/src/table/src/table_row.dart';
 /// current column set (see that method's own doc for the membership-sync
 /// rules).
 ///
-/// **Filtering and sorting**: on every rebuild driven by a data or controller
-/// change, the table precomputes each visible column's display string for
-/// every item (a cache parallel to [items]), filters by
+/// **Filtering and sorting**: the table maintains a lowercased display-string
+/// cache for every column of every item (parallel to [items]), rebuilt only
+/// when [items] or [columns] change identity — not on every keystroke. Each
+/// recompute (triggered by a data/column change or by a controller change
+/// such as search text, sort, selection, or column visibility) filters by
 /// [LayrzTableController.searchText] (case-insensitive `contains` across the
-/// currently-visible columns' precomputed strings), and — when a sort column
-/// is active — precomputes that column's sort keys and sorts the filtered
-/// list off the UI thread via [sortTableItemsOffThread]. The resulting
-/// filtered+sorted count is reported through [onFilteredCountChanged]
-/// whenever it changes.
+/// currently-visible columns' cached strings), and — when a sort column is
+/// active — sorts the filtered list off the UI thread, via
+/// [sortIndexesOffThread] (sending only precomputed sort keys, reordering by
+/// the returned index order) for the default comparator, or via
+/// [sortTableItemsOffThread] when `LayrzColumn.customSort` is set. The
+/// resulting filtered+sorted count is reported through
+/// [onFilteredCountChanged] whenever it changes.
 ///
 /// **Column widths**: computed once per [LayoutBuilder] pass from the
 /// available width — fixed-width columns ([LayrzColumn.width] non-null) keep
@@ -201,6 +205,30 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   int? _lastReportedCount;
   bool _isComputing = false;
 
+  /// Per-row, per-column lowercased display-string cache, parallel to
+  /// [LayrzTable.items] and [LayrzTable.columns] (outer list indexed by item,
+  /// inner list indexed by column, in [LayrzTable.columns] order).
+  ///
+  /// Built once in [_rebuildSearchCache] whenever [LayrzTable.items] or
+  /// [LayrzTable.columns] change identity, rather than on every search
+  /// keystroke — this is the whole point of the cache: at large row counts,
+  /// recomputing `LayrzColumn.valueBuilder(item).toLowerCase()` for every
+  /// column of every row on every recompute is the dominant cost of typing
+  /// into the search field. All columns are cached regardless of current
+  /// visibility (not just the currently-visible subset), so a column
+  /// show/hide toggle — which does not change [LayrzTable.items] or
+  /// [LayrzTable.columns] identity — never needs to invalidate this cache;
+  /// [_recompute] simply reads the cached strings for whichever columns are
+  /// visible at filter time.
+  List<List<String>> _searchCache = const [];
+
+  /// The [LayrzTable.items] and [LayrzTable.columns] instances [_searchCache]
+  /// was built from, so a later [_recompute] (e.g. triggered by a
+  /// controller-only change, like search text) can tell the cache is still
+  /// valid without rebuilding it.
+  List<T>? _searchCacheItems;
+  List<LayrzColumn<T>>? _searchCacheColumns;
+
   /// `true` while the very first [_recompute] (the one kicked off from
   /// [initState]) has not yet reported through
   /// [LayrzTable.onFilteredCountChanged]. That first recompute runs
@@ -278,16 +306,26 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// [_displayedItems] and reports [LayrzTable.onFilteredCountChanged] if the
   /// resulting count changed.
   ///
-  /// Precomputes each row's display string per currently-visible column on
-  /// the main thread (so `LayrzColumn.valueBuilder` never itself crosses the
-  /// isolate boundary), applies the case-insensitive search filter, then —
-  /// only when a sort column is active — precomputes that column's sort keys
-  /// and sorts off the UI thread via [sortTableItemsOffThread].
+  /// Ensures [_searchCache] is up to date (see [_ensureSearchCache] — a
+  /// no-op unless [LayrzTable.items] or [LayrzTable.columns] changed
+  /// identity), applies the case-insensitive search filter against the
+  /// cached strings for whichever columns are currently visible, then — only
+  /// when a sort column is active — sorts off the UI thread: via
+  /// [sortIndexesOffThread] for the default comparator (sending only
+  /// precomputed sort keys and getting back an index order, so
+  /// `LayrzColumn.valueBuilder` never itself crosses the isolate boundary and
+  /// neither does the row data), or via [sortTableItemsOffThread] when
+  /// `LayrzColumn.customSort` is set (which must compare actual row objects).
   Future<void> _recompute() async {
     final items = widget.items;
     final columns = widget.columns;
     final visibleKeys = _controller.visibleColumnKeys;
-    final visibleColumns = columns.where((column) => visibleKeys.contains(column.key)).toList(growable: false);
+    final visibleColumnIndexes = [
+      for (var i = 0; i < columns.length; i++)
+        if (visibleKeys.contains(columns[i].key)) i,
+    ];
+
+    _ensureSearchCache(items, columns);
 
     final searchText = _controller.searchText.trim().toLowerCase();
     List<T> filtered;
@@ -295,8 +333,8 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
       filtered = List<T>.of(items);
     } else {
       filtered = [
-        for (final item in items)
-          if (visibleColumns.any((column) => column.valueBuilder(item).toLowerCase().contains(searchText))) item,
+        for (var i = 0; i < items.length; i++)
+          if (visibleColumnIndexes.any((columnIndex) => _searchCache[i][columnIndex].contains(searchText))) items[i],
       ];
     }
 
@@ -306,15 +344,27 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
       if (sortColumn != null) {
         final ascending = _controller.sortAscending;
         final customSort = sortColumn.customSort;
-        final sortKeys = customSort == null
-            ? [for (final item in filtered) sortColumn.valueBuilder(item)]
-            : const <String>[];
 
         setState(() => _isComputing = true);
         try {
-          filtered = await sortTableItemsOffThread<T>(
-            SortParams<T>(items: filtered, sortKeys: sortKeys, ascending: ascending, customSort: customSort),
-          );
+          if (customSort != null) {
+            // customSort must compare the actual T objects, so there is no
+            // precomputed-key shortcut available here — the full (filtered)
+            // item list crosses the isolate boundary, as before.
+            filtered = await sortTableItemsOffThread<T>(
+              SortParams<T>(items: filtered, customSort: customSort, ascending: ascending),
+            );
+          } else {
+            // Default comparator path: only string sort keys + an index
+            // array cross the isolate boundary, never the row objects
+            // themselves, so the copy cost is independent of how large or
+            // deeply-nested T is. The isolate returns the sorted index
+            // order; reordering `filtered` by it here is cheap reference
+            // shuffling on the main thread.
+            final sortKeys = [for (final item in filtered) sortColumn.valueBuilder(item)];
+            final order = await sortIndexesOffThread(SortKeysParams(sortKeys: sortKeys, ascending: ascending));
+            filtered = [for (final index in order) filtered[index]];
+          }
         } finally {
           if (mounted) setState(() => _isComputing = false);
         }
@@ -328,6 +378,28 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
       _lastReportedCount = filtered.length;
       _notifyFilteredCountChanged(filtered.length);
     }
+  }
+
+  /// Rebuilds [_searchCache] from [items]/[columns] if it is stale — i.e. if
+  /// either instance differs from the one the cache currently reflects — and
+  /// is a no-op otherwise.
+  ///
+  /// This is the guard that keeps the cache from being rebuilt on every
+  /// keystroke: a search-text-only [_recompute] (the overwhelming majority of
+  /// calls) sees the same [items]/[columns] instances as last time and skips
+  /// straight past this to the `contains` filter. Identity (`==`, which for
+  /// `List` defaults to identity) is enough here because [_recompute] is only
+  /// ever invoked for a data/column change from [didUpdateWidget]'s identity
+  /// check, or for a controller-only change (search/sort/column visibility)
+  /// that leaves [LayrzTable.items] and [LayrzTable.columns] untouched.
+  void _ensureSearchCache(List<T> items, List<LayrzColumn<T>> columns) {
+    if (identical(items, _searchCacheItems) && identical(columns, _searchCacheColumns)) return;
+
+    _searchCache = [
+      for (final item in items) [for (final column in columns) column.valueBuilder(item).toLowerCase()],
+    ];
+    _searchCacheItems = items;
+    _searchCacheColumns = columns;
   }
 
   /// Reports [count] through [LayrzTable.onFilteredCountChanged], deferring
@@ -347,6 +419,26 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
       return;
     }
     widget.onFilteredCountChanged?.call(count);
+  }
+
+  /// Computes whether every item in [LayrzTable.items] (the full dataset,
+  /// not the search-filtered [_displayedItems] — see the call site's own
+  /// comment) is currently selected, for the header's select-all checkbox.
+  ///
+  /// Cheap for the common case: [LayrzTableController.selection] can only
+  /// contain every item once `selection.length >= items.length`, so a
+  /// mismatched length short-circuits before ever walking [_controller]'s
+  /// `Set`-backed `contains` per item — the walk this method exists to gate
+  /// only runs when the lengths actually allow "all selected" to be true.
+  /// This keeps an unrelated parent rebuild (which re-evaluates this every
+  /// `build()`, selection unchanged or not) cheap even at very large row
+  /// counts, without caching a value that could otherwise go stale against
+  /// the controller.
+  bool _computeAllSelected() {
+    final items = widget.items;
+    final selection = _controller.selection;
+    if (items.isEmpty || selection.length < items.length) return false;
+    return items.every(selection.contains);
   }
 
   @override
@@ -467,8 +559,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                     // filter must not hide rows out of "select all", per the
                     // documented behavior: it selects everything regardless
                     // of what is currently visible.
-                    allSelected:
-                        widget.items.isNotEmpty && widget.items.every((item) => _controller.selection.contains(item)),
+                    allSelected: _computeAllSelected(),
                     onSelectAllChanged: widget.hasMultiselect
                         ? (selectAll) {
                             if (selectAll) {

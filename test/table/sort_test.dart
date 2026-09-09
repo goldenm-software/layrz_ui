@@ -103,39 +103,68 @@ void main() {
     });
   });
 
-  group('sortTableItems (isolate-callable, invoked directly here)', () {
-    test('sorts ascending by precomputed sortKeys', () {
-      final params = SortParams<String>(items: ['c', 'a', 'b'], sortKeys: ['3', '1', '2'], ascending: true);
+  group('sortByKeys (isolate-callable index sort, invoked directly here)', () {
+    test('sorts ascending by precomputed sortKeys, returning index order', () {
+      final params = SortKeysParams(sortKeys: ['3', '1', '2'], ascending: true);
 
-      expect(sortTableItems(params), ['a', 'b', 'c']);
+      expect(sortByKeys(params), [1, 2, 0]);
     });
 
-    test('sorts descending by precomputed sortKeys', () {
-      final params = SortParams<String>(items: ['c', 'a', 'b'], sortKeys: ['3', '1', '2'], ascending: false);
+    test('sorts descending by precomputed sortKeys, returning index order', () {
+      final params = SortKeysParams(sortKeys: ['3', '1', '2'], ascending: false);
 
-      expect(sortTableItems(params), ['c', 'b', 'a']);
+      expect(sortByKeys(params), [0, 2, 1]);
     });
 
-    test('reorders items to match sortKeys ordering when items are not strings', () {
-      final params = SortParams<Map<String, int>>(
-        items: [
-          {'id': 3},
-          {'id': 1},
-          {'id': 2},
-        ],
-        sortKeys: ['3', '1', '2'],
-        ascending: true,
-      );
+    test('the returned index order reorders arbitrary (non-String) items correctly', () {
+      final items = [
+        {'id': 3},
+        {'id': 1},
+        {'id': 2},
+      ];
+      final params = SortKeysParams(sortKeys: ['3', '1', '2'], ascending: true);
 
-      final sorted = sortTableItems(params);
+      final order = sortByKeys(params);
+      final sorted = [for (final index in order) items[index]];
 
       expect(sorted.map((item) => item['id']), [1, 2, 3]);
     });
 
-    test('honors customSort when provided, ignoring sortKeys entirely', () {
+    test('an empty sortKeys list sorts to an empty index list', () {
+      final params = SortKeysParams(sortKeys: const [], ascending: true);
+
+      expect(sortByKeys(params), isEmpty);
+    });
+
+    test('a single-key list returns the single index unchanged', () {
+      final params = SortKeysParams(sortKeys: const ['42'], ascending: true);
+
+      expect(sortByKeys(params), [0]);
+    });
+  });
+
+  group('sortIndexesOffThread (the isolate path via compute)', () {
+    test('produces the same ascending index order as the direct call', () async {
+      final params = SortKeysParams(sortKeys: ['3', '1', '2'], ascending: true);
+
+      final result = await sortIndexesOffThread(params);
+
+      expect(result, [1, 2, 0]);
+    });
+
+    test('produces the same descending index order as the direct call', () async {
+      final params = SortKeysParams(sortKeys: ['3', '1', '2'], ascending: false);
+
+      final result = await sortIndexesOffThread(params);
+
+      expect(result, [0, 2, 1]);
+    });
+  });
+
+  group('sortTableItems (isolate-callable customSort path, invoked directly here)', () {
+    test('honors customSort ascending', () {
       final params = SortParams<int>(
         items: [3, 1, 2],
-        sortKeys: ['z', 'z', 'z'], // deliberately uninformative — customSort must win
         ascending: true,
         customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
       );
@@ -146,7 +175,6 @@ void main() {
     test('customSort receives the ascending flag and can invert it', () {
       final params = SortParams<int>(
         items: [1, 2, 3],
-        sortKeys: [],
         ascending: false,
         customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
       );
@@ -155,39 +183,43 @@ void main() {
     });
 
     test('an empty items list sorts to an empty list', () {
-      final params = SortParams<int>(items: const [], sortKeys: const [], ascending: true);
+      final params = SortParams<int>(
+        items: const [],
+        ascending: true,
+        customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
+      );
 
       expect(sortTableItems(params), isEmpty);
     });
 
     test('a single-item list is returned unchanged', () {
-      final params = SortParams<int>(items: const [42], sortKeys: const ['42'], ascending: true);
+      final params = SortParams<int>(
+        items: const [42],
+        ascending: true,
+        customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
+      );
 
       expect(sortTableItems(params), [42]);
     });
+
+    test('does not mutate the original items list in place', () {
+      final original = [3, 1, 2];
+      final params = SortParams<int>(
+        items: original,
+        ascending: true,
+        customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
+      );
+
+      sortTableItems(params);
+
+      expect(original, [3, 1, 2]);
+    });
   });
 
-  group('sortTableItemsOffThread (the isolate path via compute)', () {
-    test('produces the same ascending ordering as the direct call', () async {
-      final params = SortParams<String>(items: ['c', 'a', 'b'], sortKeys: ['3', '1', '2'], ascending: true);
-
-      final result = await sortTableItemsOffThread(params);
-
-      expect(result, ['a', 'b', 'c']);
-    });
-
-    test('produces the same descending ordering as the direct call', () async {
-      final params = SortParams<String>(items: ['c', 'a', 'b'], sortKeys: ['3', '1', '2'], ascending: false);
-
-      final result = await sortTableItemsOffThread(params);
-
-      expect(result, ['c', 'b', 'a']);
-    });
-
+  group('sortTableItemsOffThread (the isolate path via compute, customSort)', () {
     test('honors customSort across the isolate boundary', () async {
       final params = SortParams<int>(
         items: [3, 1, 2],
-        sortKeys: const [],
         ascending: true,
         customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
       );
@@ -195,6 +227,18 @@ void main() {
       final result = await sortTableItemsOffThread(params);
 
       expect(result, [1, 2, 3]);
+    });
+
+    test('customSort receives the ascending flag across the isolate boundary', () async {
+      final params = SortParams<int>(
+        items: [1, 2, 3],
+        ascending: false,
+        customSort: (a, b, ascending) => ascending ? a.compareTo(b) : b.compareTo(a),
+      );
+
+      final result = await sortTableItemsOffThread(params);
+
+      expect(result, [3, 2, 1]);
     });
   });
 }

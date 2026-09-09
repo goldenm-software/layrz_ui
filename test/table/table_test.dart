@@ -172,6 +172,101 @@ void main() {
 
       expect(find.byType(LayrzSearchInput), findsNothing);
     });
+
+    testWidgets(
+      'search is served from the precomputed display-string cache, not a per-keystroke valueBuilder call',
+      (tester) async {
+        // Regression/perf test for the display-string cache LayrzTable's own
+        // doc comment claims to maintain: filtering must be served from a
+        // cache built once (on items/columns change), not by re-invoking
+        // valueBuilder on every search-text recompute. A column whose
+        // valueBuilder increments a counter lets us assert that directly.
+        //
+        // valueBuilder is also (separately, unavoidably, and expected)
+        // called once per currently-*rendered* row by LayrzTableRow itself,
+        // to build each visible cell's display text — that cost scales with
+        // the visible/filtered row count, not the full dataset, and is
+        // orthogonal to the search-filtering cache this test targets. A
+        // search with NO matches renders zero rows, isolating that
+        // rendering cost to zero and leaving only the cache-driven filter
+        // pass to observe: if the cache is reused (not rebuilt), a
+        // zero-result search must not invoke valueBuilder at all.
+        useWideViewport(tester);
+        final rows = sampleRows();
+        var nameCallCount = 0;
+        var amountCallCount = 0;
+
+        final columns = [
+          LayrzColumn<TableTestRow>(
+            key: const ValueKey('name'),
+            headerText: 'Name',
+            valueBuilder: (row) {
+              nameCallCount++;
+              return row.name;
+            },
+          ),
+          LayrzColumn<TableTestRow>(
+            key: const ValueKey('amount'),
+            headerText: 'Amount',
+            valueBuilder: (row) {
+              amountCallCount++;
+              return row.amount.toString();
+            },
+          ),
+        ];
+
+        await pumpTable(tester, LayrzTable<TableTestRow>(items: rows, columns: columns));
+        await tester.pumpAndSettle();
+
+        // The cache build (rows.length calls per column) plus rendering all
+        // rows (another rows.length calls per column, since nothing is
+        // filtered out yet) account for every call so far.
+        expect(nameCallCount, rows.length * 2);
+        expect(amountCallCount, rows.length * 2);
+
+        final countsBeforeSearch = (nameCallCount, amountCallCount);
+
+        // A search matching nothing renders zero rows, so any further
+        // valueBuilder call could only come from rebuilding the search
+        // cache — which must not happen, since items/columns didn't change.
+        await tester.enterText(find.byType(EditableText), 'zzz-no-match');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+
+        for (final row in rows) {
+          expect(find.text(row.name), findsNothing);
+        }
+        expect((nameCallCount, amountCallCount), countsBeforeSearch);
+
+        // A second, different zero-match search: still no cache rebuild.
+        await tester.enterText(find.byType(EditableText), 'still-no-match');
+        await tester.pump(const Duration(milliseconds: 350));
+        await tester.pumpAndSettle();
+
+        expect((nameCallCount, amountCallCount), countsBeforeSearch);
+      },
+    );
+
+    testWidgets('search still matches hidden (non-currently-visible) column values via the cache', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+      await tester.pumpAndSettle();
+
+      // Searching by the numeric "amount" column value (visible by default)
+      // still matches, proving the cache carries every column's string, not
+      // just the "name" column exercised by the other search tests.
+      await tester.enterText(find.byType(EditableText), '30');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+    });
   });
 
   group('LayrzTable multiselect', () {
