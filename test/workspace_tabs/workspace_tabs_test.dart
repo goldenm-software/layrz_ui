@@ -10,12 +10,14 @@ import '../helpers/pump_themed.dart';
 /// Builds a fixed list of three [LayrzWorkspaceTab]s for reuse across tests.
 ///
 /// The third tab is `closable: false`, so tests can assert the non-closable
-/// path alongside the two default-closable tabs.
+/// path alongside the two default-closable tabs. Each tab's `left` is a
+/// distinctly-labeled [Text] so panel-content assertions can target it by
+/// its own text without colliding with the tab's own strip label.
 List<LayrzWorkspaceTab> _buildTabs() {
   return const [
-    LayrzWorkspaceTab(id: 'a', label: 'Alpha'),
-    LayrzWorkspaceTab(id: 'b', label: 'Beta'),
-    LayrzWorkspaceTab(id: 'c', label: 'Gamma', closable: false),
+    LayrzWorkspaceTab(id: 'a', label: 'Alpha', left: Text('Alpha panel content')),
+    LayrzWorkspaceTab(id: 'b', label: 'Beta', left: Text('Beta panel content')),
+    LayrzWorkspaceTab(id: 'c', label: 'Gamma', closable: false, left: Text('Gamma panel content')),
   ];
 }
 
@@ -38,6 +40,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -60,6 +63,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -86,6 +90,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -114,6 +119,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -133,6 +139,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -163,6 +170,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'c',
@@ -188,6 +196,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -210,6 +219,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -233,6 +243,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -256,6 +267,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -288,6 +300,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -322,6 +335,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -350,6 +364,7 @@ void main() {
             setState = setter;
             return SizedBox(
               width: 700,
+              height: 400,
               child: LayrzWorkspaceTabs(
                 tabs: _buildTabs(),
                 activeId: activeId,
@@ -379,6 +394,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: const [],
             activeId: 'missing',
@@ -401,6 +417,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: const [],
             activeId: 'missing',
@@ -423,6 +440,7 @@ void main() {
           tester,
           SizedBox(
             width: 700,
+            height: 400,
             child: LayrzWorkspaceTabs(
               tabs: _buildTabs(),
               activeId: 'a',
@@ -455,6 +473,7 @@ void main() {
           tester,
           SizedBox(
             width: 700,
+            height: 400,
             child: LayrzWorkspaceTabs(
               tabs: _buildTabs(),
               activeId: 'a',
@@ -487,6 +506,7 @@ void main() {
           tester,
           SizedBox(
             width: 700,
+            height: 400,
             child: LayrzWorkspaceTabs(
               tabs: _buildTabs(),
               activeId: 'a',
@@ -514,6 +534,7 @@ void main() {
           tester,
           SizedBox(
             width: 700,
+            height: 400,
             child: LayrzWorkspaceTabs(
               tabs: _buildTabs(),
               activeId: 'a',
@@ -542,6 +563,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -571,6 +593,7 @@ void main() {
         tester,
         SizedBox(
           width: 700,
+          height: 400,
           child: LayrzWorkspaceTabs(
             tabs: _buildTabs(),
             activeId: 'a',
@@ -587,6 +610,223 @@ void main() {
       // widgets beneath it, so the label's own registrar resolves to null —
       // the same signature `LayrzTabView`'s disabled pills produce.
       expect(registrar, isNull);
+    });
+  });
+
+  group('LayrzWorkspaceTabs — connected content panel', () {
+    guardedTestWidgets('the active tab\'s left content renders in the panel', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          height: 400,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Alpha panel content'), findsOneWidget);
+      expect(find.text('Beta panel content'), findsNothing);
+      expect(find.text('Gamma panel content'), findsNothing);
+    });
+
+    guardedTestWidgets('switching activeId swaps the panel content', (tester) async {
+      _setWideViewport(tester);
+
+      var activeId = 'a';
+      late StateSetter setState;
+
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setter) {
+            setState = setter;
+            return SizedBox(
+              width: 700,
+              height: 400,
+              child: LayrzWorkspaceTabs(
+                tabs: _buildTabs(),
+                activeId: activeId,
+                onTabSelected: (_) {},
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Alpha panel content'), findsOneWidget);
+      expect(find.text('Beta panel content'), findsNothing);
+
+      setState(() => activeId = 'b');
+      await tester.pump();
+
+      expect(find.text('Alpha panel content'), findsNothing);
+      expect(find.text('Beta panel content'), findsOneWidget);
+    });
+
+    guardedTestWidgets('a tab with no right renders only left, filling the panel', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          height: 400,
+          child: LayrzWorkspaceTabs(
+            tabs: const [
+              LayrzWorkspaceTab(id: 'solo', label: 'Solo', left: Text('Solo left pane')),
+            ],
+            activeId: 'solo',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Solo left pane'), findsOneWidget);
+      expect(find.byType(LayrzWorkspaceSplitView), findsNothing);
+    });
+
+    guardedTestWidgets('a tab with a non-null right renders both left and right in a split view', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          height: 400,
+          child: LayrzWorkspaceTabs(
+            tabs: const [
+              LayrzWorkspaceTab(
+                id: 'split',
+                label: 'Split',
+                left: Text('Split left pane'),
+                right: Text('Split right pane'),
+              ),
+            ],
+            activeId: 'split',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.byType(LayrzWorkspaceSplitView), findsOneWidget);
+      expect(find.text('Split left pane'), findsOneWidget);
+      expect(find.text('Split right pane'), findsOneWidget);
+    });
+  });
+
+  group('LayrzWorkspaceSplitView — resizable divider', () {
+    guardedTestWidgets('dragging the divider changes the split ratio', (tester) async {
+      _setWideViewport(tester);
+      double ratio = 0.5;
+
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setter) {
+            return SizedBox(
+              width: 700,
+              height: 300,
+              child: LayrzWorkspaceSplitView(
+                left: const ColoredBox(color: Color(0xFFEEEEEE), child: Text('Left pane')),
+                right: const ColoredBox(color: Color(0xFFDDDDDD), child: Text('Right pane')),
+                ratio: ratio,
+                onRatioChanged: (value) => setter(() => ratio = value),
+              ),
+            );
+          },
+        ),
+      );
+
+      final dividerCenter = tester.getCenter(find.bySemanticsLabel('Resize split'));
+
+      final gesture = await tester.startGesture(dividerCenter);
+      await gesture.moveBy(const Offset(100, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      expect(ratio, greaterThan(0.5));
+    });
+
+    guardedTestWidgets('dragging past the minimum pane extent clamps rather than collapsing the pane', (
+      tester,
+    ) async {
+      _setWideViewport(tester);
+      double ratio = 0.5;
+
+      await pumpThemed(
+        tester,
+        StatefulBuilder(
+          builder: (context, setter) {
+            return SizedBox(
+              width: 700,
+              height: 300,
+              child: LayrzWorkspaceSplitView(
+                left: const ColoredBox(color: Color(0xFFEEEEEE), child: Text('Left pane')),
+                right: const ColoredBox(color: Color(0xFFDDDDDD), child: Text('Right pane')),
+                ratio: ratio,
+                onRatioChanged: (value) => setter(() => ratio = value),
+              ),
+            );
+          },
+        ),
+      );
+
+      final dividerCenter = tester.getCenter(find.bySemanticsLabel('Resize split'));
+
+      // Drag far past the left edge -- a naive implementation would collapse
+      // the left pane to zero (or negative) width; the clamp must keep it at
+      // least kLayrzWorkspaceSplitMinPaneExtent wide.
+      final gesture = await tester.startGesture(dividerCenter);
+      await gesture.moveBy(const Offset(-2000, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+
+      final usableWidth = 700 - 10.0; // 700 total minus the token-driven divider width (sp2).
+      final minRatio = kLayrzWorkspaceSplitMinPaneExtent / usableWidth;
+      expect(ratio, greaterThanOrEqualTo(minRatio - 0.01));
+      expect(ratio, lessThan(0.5));
+    });
+
+    guardedTestWidgets('the divider exposes an adjustable separator-style semantics node', (tester) async {
+      _setWideViewport(tester);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 700,
+            height: 300,
+            child: LayrzWorkspaceSplitView(
+              left: const Text('Left pane'),
+              right: const Text('Right pane'),
+              ratio: 0.5,
+              onRatioChanged: (_) {},
+            ),
+          ),
+        );
+
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Resize split')),
+          matchesSemantics(
+            label: 'Resize split',
+            isSlider: true,
+            value: '50%',
+            hasIncreaseAction: true,
+            hasDecreaseAction: true,
+          ),
+        );
+      } finally {
+        handle.dispose();
+      }
     });
   });
 }
