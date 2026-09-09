@@ -22,6 +22,7 @@ import 'src/sections/buttons_section.dart';
 import 'src/sections/calendar_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/colors_section.dart';
+import 'src/sections/connection_indicator_section.dart';
 import 'src/sections/context_menu_section.dart';
 import 'src/sections/dialogs_section.dart';
 import 'src/sections/elevation_section.dart';
@@ -232,6 +233,10 @@ final _router = GoRouter(
             transitionsBuilder: LayrzPageTransitions.scale,
             transitionDuration: LayrzPageTransitions.durationOf(context),
           ),
+        ),
+        GoRoute(
+          path: '/connection-indicator',
+          pageBuilder: (context, state) => NoTransitionPage(child: ConnectionIndicatorSection()),
         ),
         GoRoute(
           path: '/transitions',

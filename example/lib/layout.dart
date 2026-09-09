@@ -296,6 +296,13 @@ class ShowroomLayout extends StatelessWidget {
         onTap: () => _navigateTo(context, '/badges'),
       ),
       LayrzNavigatorPage(
+        id: '/connection-indicator',
+        labelText: 'Connection Indicator',
+        icon: MdiIcons.wifiStrength3,
+        isSelected: currentRoute == '/connection-indicator',
+        onTap: () => _navigateTo(context, '/connection-indicator'),
+      ),
+      LayrzNavigatorPage(
         id: '/transitions',
         labelText: 'Page Transitions',
         icon: MdiIcons.swapHorizontal,
