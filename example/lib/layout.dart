@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +77,26 @@ class ShowroomLayout extends StatelessWidget {
         icon: MdiIcons.formatText,
         isSelected: currentRoute == '/typography',
         onTap: () => _navigateTo(context, '/typography'),
+        contextMenuActions: [
+          LayrzContextMenuLabel(labelText: 'Typography actions'),
+          LayrzContextMenuEntry(
+            labelText: 'Open Typography',
+            icon: MdiIcons.openInNew,
+            onTap: () => _navigateTo(context, '/typography'),
+          ),
+          const LayrzContextMenuDivider(),
+          LayrzContextMenuEntry(
+            labelText: 'Copy route',
+            icon: MdiIcons.contentCopy,
+            onTap: () => Clipboard.setData(const ClipboardData(text: '/typography')),
+          ),
+          LayrzContextMenuEntry(
+            labelText: 'Pin page (disabled)',
+            icon: MdiIcons.pinOutline,
+            enabled: false,
+            onTap: () {},
+          ),
+        ],
       ),
       LayrzNavigatorPage(
         id: '/colors',
