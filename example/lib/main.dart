@@ -49,6 +49,7 @@ import 'src/sections/timeline_section.dart';
 import 'src/sections/tooltips_section.dart';
 import 'src/sections/transitions_section.dart';
 import 'src/sections/tree_view_section.dart';
+import 'src/sections/workspace_tabs_section.dart';
 import 'src/sections/typography_section.dart';
 
 /// Run the showroom application with Open Sans font.
@@ -279,6 +280,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/table',
           pageBuilder: (context, state) => NoTransitionPage(child: TableSection()),
+        ),
+        GoRoute(
+          path: '/workspace-tabs',
+          pageBuilder: (context, state) => NoTransitionPage(child: WorkspaceTabsSection()),
         ),
         // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
         // (/find-spike) but intentionally not listed in the showroom sidebar.
