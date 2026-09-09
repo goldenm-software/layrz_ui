@@ -92,5 +92,73 @@ void main() {
       final page2 = page1.copyWith(labelText: 'Home Page');
       expect(page2.count, 5);
     });
+
+    test('creates with a non-empty contextMenuActions', () {
+      final action = LayrzContextMenuEntry(labelText: 'Rename', onTap: () {});
+      final page = LayrzNavigatorPage(
+        id: 'home',
+        labelText: 'Home',
+        contextMenuActions: [action],
+      );
+
+      expect(page.contextMenuActions, [action]);
+    });
+
+    test('contextMenuActions defaults to an empty list', () {
+      final page = LayrzNavigatorPage(id: 'home', labelText: 'Home');
+
+      expect(page.contextMenuActions, isEmpty);
+    });
+
+    test('not equals pages differing only in contextMenuActions', () {
+      final action = LayrzContextMenuEntry(labelText: 'Rename', onTap: () {});
+      final page1 = LayrzNavigatorPage(id: 'home', labelText: 'Home');
+      final page2 = LayrzNavigatorPage(
+        id: 'home',
+        labelText: 'Home',
+        contextMenuActions: [action],
+      );
+
+      expect(page1, isNot(equals(page2)));
+    });
+
+    test('equals pages with equal contextMenuActions lists', () {
+      final action = LayrzContextMenuEntry(labelText: 'Rename', onTap: () {});
+      final page1 = LayrzNavigatorPage(
+        id: 'home',
+        labelText: 'Home',
+        contextMenuActions: [action],
+      );
+      final page2 = LayrzNavigatorPage(
+        id: 'home',
+        labelText: 'Home',
+        contextMenuActions: [action],
+      );
+
+      expect(page1, equals(page2));
+      expect(page1.hashCode, equals(page2.hashCode));
+    });
+
+    test('copyWith replaces contextMenuActions', () {
+      final action = LayrzContextMenuEntry(labelText: 'Rename', onTap: () {});
+      final page1 = LayrzNavigatorPage(id: 'home', labelText: 'Home');
+
+      final page2 = page1.copyWith(contextMenuActions: [action]);
+
+      expect(page2.contextMenuActions, [action]);
+    });
+
+    test('copyWith without contextMenuActions parameter preserves it', () {
+      final action = LayrzContextMenuEntry(labelText: 'Rename', onTap: () {});
+      final page1 = LayrzNavigatorPage(
+        id: 'home',
+        labelText: 'Home',
+        contextMenuActions: [action],
+      );
+
+      final page2 = page1.copyWith(labelText: 'Home Page');
+
+      expect(page2.contextMenuActions, [action]);
+    });
   });
 }

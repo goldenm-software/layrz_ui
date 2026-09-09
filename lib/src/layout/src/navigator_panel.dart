@@ -257,6 +257,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
                   tokens: tokens,
                   page: item,
                   isSelected: item.isSelected,
+                  contextMenuActions: item.contextMenuActions,
                   onTap: () {
                     item.onTap?.call();
                     widget.onClose?.call();
@@ -311,6 +312,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
                 tokens: tokens,
                 page: item,
                 isSelected: item.isSelected,
+                contextMenuActions: item.contextMenuActions,
                 onTap: () {
                   item.onTap?.call();
                   widget.onClose?.call();

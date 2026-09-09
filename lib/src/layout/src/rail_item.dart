@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/context_menu/context_menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -20,6 +21,11 @@ class LayrzLayoutRailItem extends StatefulWidget {
     /// Whether this item is currently selected.
     required this.isSelected,
 
+    /// The actions shown in a context menu when this item is right-clicked
+    /// (desktop/web) or long-pressed (touch). When empty (the default), the
+    /// item renders with no context menu wrapping at all.
+    this.contextMenuActions = const [],
+
     /// Callback fired when the item is tapped.
     required this.onTap,
     super.key,
@@ -33,6 +39,11 @@ class LayrzLayoutRailItem extends StatefulWidget {
 
   /// Whether this item is currently selected.
   final bool isSelected;
+
+  /// The actions shown in a context menu when this item is right-clicked
+  /// (desktop/web) or long-pressed (touch). When empty (the default), the
+  /// item renders with no context menu wrapping at all.
+  final List<LayrzContextMenuItem> contextMenuActions;
 
   /// Callback fired when the item is tapped.
   final VoidCallback onTap;
@@ -64,7 +75,7 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
         ? kLayrzLayoutItemLabelSelectedFontWeight
         : kLayrzLayoutItemLabelUnselectedFontWeight;
 
-    return Container(
+    final item = Container(
       margin: EdgeInsets.only(bottom: kLayrzLayoutItemMarginBottom),
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
@@ -145,6 +156,13 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
           ),
         ),
       ),
+    );
+
+    if (widget.contextMenuActions.isEmpty) return item;
+
+    return LayrzContextMenu(
+      entries: widget.contextMenuActions,
+      child: item,
     );
   }
 }
