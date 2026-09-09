@@ -372,13 +372,38 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
 
     final width = widget.columnWidths[column.key] ?? widget.fallbackColumnWidth;
 
+    // The header's own bottom divider is painted on the outermost
+    // DecoratedBox in `build()`, behind every child — but this cell's
+    // background (below) is opaque and spans the full header height, so it
+    // covers that outer border completely wherever it's painted. Redrawing
+    // the SAME border token in the FOREGROUND here, on top of the cell's own
+    // background, is what makes the header's bottom divider continuous
+    // across the pinned checkbox cell (which has no opaque background of
+    // its own, so the outer border already shows through it) and the
+    // scrolling-middle cells — exactly the technique `LayrzTableRow`'s data
+    // cells already use for their own bottom/right dividers.
+    // IgnorePointer keeps this purely visual — a bare DecoratedBox still
+    // hit-tests (and would otherwise swallow the sort tap / drag-handle
+    // gestures underneath it in the Stack) even though it paints no fill.
+    final bottomDivider = IgnorePointer(
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: BoxDecoration(border: Border(bottom: tokens.border.normal)),
+      ),
+    );
+
     if (isCompact) {
       // Compact has no drag target underneath, so the sort region always
       // sits directly on the header's own `sf2` background.
       return SizedBox(
         width: width,
         height: widget.height,
-        child: _buildSortRegion(context, column, tokens.colors.sf2),
+        child: Stack(
+          children: [
+            _buildSortRegion(context, column, tokens.colors.sf2),
+            Positioned.fill(child: bottomDivider),
+          ],
+        ),
       );
     }
 
@@ -425,7 +450,16 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
       },
     );
 
-    return SizedBox(width: width, height: widget.height, child: dragTarget);
+    return SizedBox(
+      width: width,
+      height: widget.height,
+      child: Stack(
+        children: [
+          dragTarget,
+          Positioned.fill(child: bottomDivider),
+        ],
+      ),
+    );
   }
 
   /// Builds the tap-to-sort region of [column]'s header cell: the label,

@@ -176,6 +176,98 @@ void main() {
     });
   });
 
+  group('LayrzTableHeader bottom divider (continuous across the full width)', () {
+    testWidgets('a scrolling-middle header cell paints its own bottom divider, on top of its opaque background', (
+      tester,
+    ) async {
+      // Regression test: the header's bottom border is painted on the
+      // outermost DecoratedBox in build(), behind every child — but the
+      // scrolling-middle sort cells have an opaque idle background (the
+      // hover-blink fix) that fills the full header height and covers that
+      // outer border wherever it's painted. Each middle cell must redraw the
+      // SAME border, in the foreground, so the header's bottom divider reads
+      // as one continuous line instead of only showing under the pinned
+      // checkbox cell (which has no opaque background of its own).
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final dividerBox = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate((w) => w is DecoratedBox && w.position == DecorationPosition.foreground).first,
+      );
+
+      expect(dividerBox.position, DecorationPosition.foreground);
+      final decoration = dividerBox.decoration as BoxDecoration;
+      expect(decoration.border, isNotNull);
+      expect((decoration.border as Border).bottom.width, greaterThan(0));
+    });
+
+    testWidgets('a compact header cell also paints its own bottom divider', (tester) async {
+      useCompactViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final dividerBox = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate((w) => w is DecoratedBox && w.position == DecorationPosition.foreground).first,
+      );
+
+      expect(dividerBox.position, DecorationPosition.foreground);
+      expect((dividerBox.decoration as BoxDecoration).border!.bottom.width, greaterThan(0));
+    });
+
+    testWidgets('the middle cell bottom divider matches the same token used by the header outer border', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      // The header's own outer DecoratedBox (build()'s root) carries the
+      // base bottom border under the pinned checkbox region; the middle
+      // cell's foreground divider must match it exactly (same color/width)
+      // for the line to read as continuous rather than as two different
+      // borders happening to sit at the same height.
+      final outerBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
+      final outerBottom = (outerBox.decoration as BoxDecoration).border!.bottom;
+
+      final dividerBox = tester.widget<DecoratedBox>(
+        find.byWidgetPredicate((w) => w is DecoratedBox && w.position == DecorationPosition.foreground).first,
+      );
+      final middleBottom = (dividerBox.decoration as BoxDecoration).border!.bottom;
+
+      expect(middleBottom.color, outerBottom.color);
+      expect(middleBottom.width, outerBottom.width);
+    });
+
+    testWidgets('the foreground divider does not intercept the sort-tap gesture underneath it', (tester) async {
+      // Regression guard for the fix's own implementation: the divider is a
+      // Stack sibling above the tappable, so it must be wrapped in
+      // IgnorePointer — otherwise it silently swallows the tap-to-sort
+      // gesture despite painting no visible fill.
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      await tester.tap(headerCellFor('Col 1'));
+      await tester.pumpAndSettle();
+
+      expect(controller.sortColumnKey, columns[0].key);
+      expect(controller.sortAscending, isTrue);
+    });
+  });
+
   group('LayrzTableHeader drag-to-reorder (wide only)', () {
     testWidgets('a completed drag updates both rendered order and controller order together', (tester) async {
       useWideViewport(tester);
