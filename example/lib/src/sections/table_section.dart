@@ -88,6 +88,26 @@ class _TableSectionState extends State<TableSection> {
     _controller = LayrzTableController<_DemoVehicle>();
     _vehicles = _buildVehicles();
     _filteredCount = _vehicles.length;
+
+    _controller.events.listen((event) {
+      switch (event) {
+        case LayrzTableSortEvent(columnKey: final columnKey, ascending: final ascending):
+          debugPrint("Sort changed: columnKey=$columnKey, ascending=$ascending");
+          break;
+        case LayrzTableSearchEvent(searchText: final searchText):
+          debugPrint("Search changed: searchText=$searchText");
+          break;
+        case LayrzTableSelectionEvent(selection: final selection):
+          debugPrint("Selection changed: selection=$selection");
+          break;
+        case LayrzTableColumnsEvent(columnOrder: final columnOrder, hiddenColumns: final hiddenColumns):
+          debugPrint("Columns changed: columnOrder=$columnOrder, hiddenColumns=$hiddenColumns");
+          break;
+        case LayrzTableRefreshEvent _:
+          debugPrint("Refresh requested");
+          break;
+      }
+    });
   }
 
   @override
@@ -252,6 +272,7 @@ class _TableSectionState extends State<TableSection> {
                 canSearch: true,
                 hasMultiselect: true,
                 onFilteredCountChanged: (count) => setState(() => _filteredCount = count),
+                actionsCount: 2,
                 actionsBuilder: (vehicle) => [
                   LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () => _onEdit(vehicle)),
                   LayrzTableAction(
