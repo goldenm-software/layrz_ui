@@ -43,6 +43,8 @@ void main() {
           items: items,
           value: const ['banana'],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -64,6 +66,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );
@@ -90,6 +94,8 @@ void main() {
           items: items,
           value: const ['apple', 'banana'],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );
@@ -116,6 +122,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );
@@ -139,6 +147,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );
@@ -162,6 +172,8 @@ void main() {
           items: items,
           value: const ['apple', 'banana', 'cherry'],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );
@@ -184,6 +196,8 @@ void main() {
           items: items,
           value: const ['banana'],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -213,6 +227,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           disabled: true,
           onChanged: (_) => committed = true,
         ),
@@ -234,6 +250,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           errors: const ['This field is required'],
         ),
       );
@@ -251,6 +269,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           errors: const ['This field is required'],
           hideDetails: true,
         ),
@@ -273,6 +293,8 @@ void main() {
               items: items,
               value: value,
               itemExtent: 48,
+              availableListName: 'Available',
+              selectedListName: 'Selected',
             );
           },
         ),
@@ -299,6 +321,8 @@ void main() {
           items: const <LayrzSelectItem<String>>[],
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -315,6 +339,8 @@ void main() {
           items: const <LayrzSelectItem<String>>[],
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           emptyListText: 'Nothing here',
         ),
       );
@@ -322,7 +348,7 @@ void main() {
       expect(find.text('Nothing here'), findsNWidgets(2));
     });
 
-    guardedTestWidgets('custom availableListName/selectedListName override the localized defaults', (tester) async {
+    guardedTestWidgets('availableListName/selectedListName render as each panel\'s title', (tester) async {
       setDesktopViewport(tester);
 
       await pumpThemed(
@@ -353,6 +379,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           enableAvailableSearch: false,
           enableSelectedSearch: false,
         ),
@@ -375,6 +403,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -394,6 +424,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -412,6 +444,8 @@ void main() {
           items: items,
           value: const ['cherry'],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
         ),
       );
 
@@ -433,6 +467,8 @@ void main() {
           items: items,
           value: const [],
           itemExtent: 48,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
           onChanged: (values) => committed = values,
         ),
       );

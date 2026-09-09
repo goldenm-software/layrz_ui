@@ -31,7 +31,13 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzDualListInput<String>(labelText: 'Fruits', items: items, itemExtent: 48),
+          LayrzDualListInput<String>(
+            labelText: 'Fruits',
+            items: items,
+            itemExtent: 48,
+            availableListName: 'Available',
+            selectedListName: 'Selected',
+          ),
         );
 
         // The row's own Semantics(button: true, ...) is an ancestor of the
@@ -68,7 +74,14 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzDualListInput<String>(labelText: 'Fruits', items: items, itemExtent: 48, disabled: true),
+          LayrzDualListInput<String>(
+            labelText: 'Fruits',
+            items: items,
+            itemExtent: 48,
+            disabled: true,
+            availableListName: 'Available',
+            selectedListName: 'Selected',
+          ),
         );
 
         final rowFinder = find.ancestor(
@@ -99,7 +112,13 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzDualListInput<String>(labelText: 'Fruits', items: items, itemExtent: 48),
+          LayrzDualListInput<String>(
+            labelText: 'Fruits',
+            items: items,
+            itemExtent: 48,
+            availableListName: 'Available',
+            selectedListName: 'Selected',
+          ),
         );
 
         final finder = find.byWidgetPredicate(
@@ -132,7 +151,14 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzDualListInput<String>(labelText: 'Fruits', items: items, itemExtent: 48, value: const ['apple']),
+          LayrzDualListInput<String>(
+            labelText: 'Fruits',
+            items: items,
+            itemExtent: 48,
+            value: const ['apple'],
+            availableListName: 'Available',
+            selectedListName: 'Selected',
+          ),
         );
 
         expect(tester.takeException(), isNull);
@@ -150,7 +176,13 @@ void main() {
       try {
         await pumpThemed(
           tester,
-          LayrzDualListInput<String>(labelText: 'Fruits', items: items, itemExtent: 48),
+          LayrzDualListInput<String>(
+            labelText: 'Fruits',
+            items: items,
+            itemExtent: 48,
+            availableListName: 'Available',
+            selectedListName: 'Selected',
+          ),
         );
 
         final finder = find.byWidgetPredicate(
