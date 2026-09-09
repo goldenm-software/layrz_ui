@@ -462,6 +462,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1"
+  sync_scroll_controller:
+    dependency: transitive
+    description:
+      name: sync_scroll_controller
+      sha256: "4735b21cf5c5a6d44041b0668f8bf35b7db14e942019eef90099bc9f935bdabf"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   term_glyph:
     dependency: transitive
     description:
