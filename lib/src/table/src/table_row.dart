@@ -190,10 +190,13 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     );
   }
 
-  Widget _buildCheckboxCell(BuildContext context) {
+  Widget _buildCheckboxCell(BuildContext context, Color stripeColor) {
     final tokens = context.tokens;
     return DecoratedBox(
-      decoration: BoxDecoration(border: Border(right: tokens.border.light)),
+      decoration: BoxDecoration(
+        color: stripeColor,
+        border: Border(right: tokens.border.light),
+      ),
       child: SizedBox(
         width: widget.height,
         height: widget.height,
@@ -204,7 +207,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     );
   }
 
-  Widget _buildDataCell(BuildContext context, LayrzColumn<T> column, double width) {
+  Widget _buildDataCell(BuildContext context, LayrzColumn<T> column, double width, Color stripeColor) {
     final tokens = context.tokens;
     final richSpans = column.richTextBuilder?.call(widget.item);
 
@@ -213,7 +216,14 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
       height: widget.height,
       child: LayrzTappable(
         borderRadius: BorderRadius.zero,
-        color: const Color(0x00000000),
+        // Idle must equal this row's own stripe color, not transparent: with
+        // a transparent idle, the hover transition animates
+        // transparent -> hover instead of stripe -> hover, and since the
+        // stripe itself is painted on a DecoratedBox *behind* this tappable
+        // (see build()'s outer background), the transparent-to-opaque ramp
+        // reads as a visible "blink" the instant the pointer enters. Idle ==
+        // stripeColor makes hover a plain color-to-color transition (D15).
+        color: stripeColor,
         onTap: () => _handleCellTap(column),
         child: Align(
           alignment: column.alignment,
@@ -235,7 +245,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
     );
   }
 
-  Widget _buildMiddleRegion(BuildContext context) {
+  Widget _buildMiddleRegion(BuildContext context, Color stripeColor) {
     final tokens = context.tokens;
     return Expanded(
       child: SingleChildScrollView(
@@ -246,7 +256,7 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
             for (var i = 0; i < widget.visibleColumns.length; i++)
               DecoratedBox(
                 decoration: BoxDecoration(border: Border(right: tokens.border.light)),
-                child: _buildDataCell(context, widget.visibleColumns[i], widget.columnWidths[i]),
+                child: _buildDataCell(context, widget.visibleColumns[i], widget.columnWidths[i], stripeColor),
               ),
           ],
         ),
@@ -309,8 +319,8 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (widget.hasMultiselect) _buildCheckboxCell(context),
-            _buildMiddleRegion(context),
+            if (widget.hasMultiselect) _buildCheckboxCell(context, background),
+            _buildMiddleRegion(context, background),
             if (widget.actions.isNotEmpty) _buildActionsCell(context),
           ],
         ),

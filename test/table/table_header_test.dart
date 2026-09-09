@@ -21,6 +21,9 @@ void main() {
     required List<LayrzColumn<TableTestRow>> columns,
     required LayrzTableController<TableTestRow> controller,
     LayrzTableRowScrollSync? scrollSync,
+    bool hasMultiselect = false,
+    bool allSelected = false,
+    ValueChanged<bool>? onSelectAllChanged,
   }) {
     // LayrzTableHeader itself never listens to `controller` — inside the
     // real LayrzTable, the enclosing LayrzTableState does that and calls
@@ -38,6 +41,9 @@ void main() {
         controller: controller,
         columnWidths: {for (final c in columns) c.key: 150.0},
         scrollSync: scrollSync ?? LayrzTableRowScrollSync(),
+        hasMultiselect: hasMultiselect,
+        allSelected: allSelected,
+        onSelectAllChanged: onSelectAllChanged,
       ),
     );
   }
@@ -404,6 +410,155 @@ void main() {
       } finally {
         handle.dispose();
       }
+    });
+  });
+
+  group('LayrzTableHeader select-all checkbox', () {
+    testWidgets('hasMultiselect: false renders no header checkbox', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      expect(find.byType(LayrzCheckboxInput), findsNothing);
+    });
+
+    testWidgets('hasMultiselect: true renders exactly one header checkbox', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller, hasMultiselect: true));
+
+      expect(find.byType(LayrzCheckboxInput), findsOneWidget);
+    });
+
+    testWidgets('renders on a compact viewport too, so alignment holds in both modes', (tester) async {
+      useCompactViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller, hasMultiselect: true));
+
+      expect(find.byType(LayrzCheckboxInput), findsOneWidget);
+    });
+
+    testWidgets('allSelected: false renders the checkbox unchecked', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        buildHeader(columns: columns, controller: controller, hasMultiselect: true, allSelected: false),
+      );
+
+      final checkbox = tester.widget<LayrzCheckboxInput>(find.byType(LayrzCheckboxInput));
+      expect(checkbox.value, isFalse);
+    });
+
+    testWidgets('allSelected: true renders the checkbox checked', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        buildHeader(columns: columns, controller: controller, hasMultiselect: true, allSelected: true),
+      );
+
+      final checkbox = tester.widget<LayrzCheckboxInput>(find.byType(LayrzCheckboxInput));
+      expect(checkbox.value, isTrue);
+    });
+
+    testWidgets('tapping the header checkbox when not all selected reports true via onSelectAllChanged', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+      bool? reported;
+
+      await pumpTable(
+        tester,
+        buildHeader(
+          columns: columns,
+          controller: controller,
+          hasMultiselect: true,
+          allSelected: false,
+          onSelectAllChanged: (v) => reported = v,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      expect(reported, isTrue);
+    });
+
+    testWidgets('tapping the header checkbox when all selected reports false via onSelectAllChanged', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+      bool? reported;
+
+      await pumpTable(
+        tester,
+        buildHeader(
+          columns: columns,
+          controller: controller,
+          hasMultiselect: true,
+          allSelected: true,
+          onSelectAllChanged: (v) => reported = v,
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzCheckboxInput));
+      await tester.pumpAndSettle();
+
+      expect(reported, isFalse);
+    });
+
+    testWidgets('the header checkbox cell width equals checkboxCellSize, matching the row checkbox cell', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      // LayrzTableRow's own checkbox cell is a SizedBox.square-shaped cell
+      // sized to the row's `height` (default 50) — checkboxCellSize is the
+      // header's equivalent knob, and this asserts the two default to the
+      // same value end-to-end through LayrzTable's own wiring in table.dart
+      // (checkboxCellSize: widget.height).
+      await pumpTable(
+        tester,
+        LayrzTableHeader<TableTestRow>(
+          columns: columns,
+          controller: controller,
+          columnWidths: {for (final c in columns) c.key: 150.0},
+          scrollSync: LayrzTableRowScrollSync(),
+          hasMultiselect: true,
+          checkboxCellSize: 50,
+        ),
+      );
+
+      final checkboxSize = tester.getSize(
+        find.ancestor(of: find.byType(LayrzCheckboxInput), matching: find.byType(SizedBox)).first,
+      );
+      expect(checkboxSize.width, 50);
+      expect(checkboxSize.height, 50);
     });
   });
 }

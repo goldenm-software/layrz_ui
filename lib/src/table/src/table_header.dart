@@ -4,6 +4,7 @@ import 'package:flutter_material_design_icons/flutter_material_design_icons.dart
 
 import 'package:layrz_ui/src/context_menu/context_menu.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
 import 'package:layrz_ui/src/table/src/column_menu.dart';
 import 'package:layrz_ui/src/table/src/controller.dart';
@@ -105,11 +106,52 @@ class LayrzTableHeader<T> extends StatefulWidget {
   /// in lockstep.
   final LayrzTableRowScrollSync scrollSync;
 
+  /// Whether the header renders a pinned-left select-all checkbox cell.
+  ///
+  /// Mirrors `LayrzTableRow.hasMultiselect`: when `true`, this header's
+  /// pinned-left region reserves the same width as every row's checkbox
+  /// cell ([checkboxCellSize]), so the header's columns stay pixel-aligned
+  /// with the body's. When `false`, no pinned-left cell is rendered here
+  /// at all, matching a row with `hasMultiselect: false`.
+  final bool hasMultiselect;
+
+  /// The width and height, in logical pixels, of the pinned-left checkbox
+  /// cell, when [hasMultiselect] is `true`.
+  ///
+  /// Must equal the value the assembling `LayrzTable` widget passes as every
+  /// `LayrzTableRow.height` — that is the same value `LayrzTableRow` itself
+  /// uses as its checkbox cell's (square) side length — otherwise the header
+  /// and body checkbox columns will not line up.
+  final double checkboxCellSize;
+
+  /// Whether every row in the table's full (unfiltered) dataset is currently
+  /// selected.
+  ///
+  /// Meaningless when [hasMultiselect] is `false`. Drives the select-all
+  /// checkbox's checked state: checked only when this is `true`, unchecked
+  /// otherwise. There is no indeterminate/tristate rendering — a partial
+  /// selection still renders unchecked.
+  final bool allSelected;
+
+  /// Called when the select-all checkbox is toggled by the user.
+  ///
+  /// Meaningless when [hasMultiselect] is `false`. Receives `true` when the
+  /// user checks the box (select every row in the full dataset, ignoring any
+  /// active search filter) and `false` when the user unchecks it (clear the
+  /// selection). Typically wired to `LayrzTableController.selectAll`/
+  /// [LayrzTableController.clearSelection] by the assembling `LayrzTable`
+  /// widget.
+  final ValueChanged<bool>? onSelectAllChanged;
+
   /// Creates a [LayrzTableHeader].
   ///
   /// [columns], [controller], [columnWidths], and [scrollSync] are
   /// required. [height] defaults to `40` (the baseline's header height).
-  /// [fallbackColumnWidth] defaults to `150`.
+  /// [fallbackColumnWidth] defaults to `150`. [hasMultiselect] defaults to
+  /// `false`; when `true`, [checkboxCellSize], [allSelected], and
+  /// [onSelectAllChanged] become meaningful. [checkboxCellSize] defaults to
+  /// `50`, matching `LayrzTable`'s own default row height. [allSelected]
+  /// defaults to `false`.
   const LayrzTableHeader({
     required this.columns,
     required this.controller,
@@ -117,6 +159,10 @@ class LayrzTableHeader<T> extends StatefulWidget {
     required this.scrollSync,
     this.height = 40,
     this.fallbackColumnWidth = 150,
+    this.hasMultiselect = false,
+    this.checkboxCellSize = 50,
+    this.allSelected = false,
+    this.onSelectAllChanged,
     super.key,
   });
 
@@ -426,6 +472,35 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
     return SizedBox(width: width, height: widget.height, child: dragTarget);
   }
 
+  /// Builds the pinned-left select-all checkbox cell, mirroring
+  /// `LayrzTableRow`'s own checkbox cell exactly in size and border so the
+  /// header and body pinned-left regions occupy the same width.
+  ///
+  /// Checked only when [LayrzTableHeader.allSelected] is `true` — there is no
+  /// indeterminate/tristate rendering for a partial selection, matching
+  /// [LayrzCheckboxInput]'s own boolean-only contract. Toggling this checkbox
+  /// calls [LayrzTableHeader.onSelectAllChanged] with the new checked state;
+  /// the assembling `LayrzTable` widget is responsible for turning `true`
+  /// into "select every row in the full dataset" and `false` into "clear the
+  /// selection".
+  Widget _buildCheckboxCell(BuildContext context) {
+    final tokens = context.tokens;
+    return DecoratedBox(
+      decoration: BoxDecoration(border: Border(right: tokens.border.light)),
+      child: SizedBox(
+        width: widget.checkboxCellSize,
+        height: widget.checkboxCellSize,
+        child: Center(
+          child: LayrzCheckboxInput(
+            value: widget.allSelected,
+            onChanged: widget.onSelectAllChanged,
+            hideDetails: true,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -442,6 +517,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
         height: widget.height,
         child: Row(
           children: [
+            if (widget.hasMultiselect) _buildCheckboxCell(context),
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,

@@ -201,6 +201,19 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   int? _lastReportedCount;
   bool _isComputing = false;
 
+  /// `true` while the very first [_recompute] (the one kicked off from
+  /// [initState]) has not yet reported through
+  /// [LayrzTable.onFilteredCountChanged]. That first recompute runs
+  /// synchronously up to its first `await` — which never executes when no
+  /// sort column is active — so it can finish, and therefore try to notify,
+  /// while this widget's owner is still inside its own `build()`. Notifying
+  /// synchronously at that point calls the consumer's callback mid-build; if
+  /// that callback calls `setState` (the obvious, expected thing to do with
+  /// a "count changed" notification) Flutter throws "setState() or
+  /// markNeedsBuild() called during build". So the first notification is
+  /// deferred to a post-frame callback instead of being dropped.
+  bool _pendingInitialNotify = true;
+
   @override
   void initState() {
     super.initState();
@@ -313,8 +326,27 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
 
     if (_lastReportedCount != filtered.length) {
       _lastReportedCount = filtered.length;
-      widget.onFilteredCountChanged?.call(filtered.length);
+      _notifyFilteredCountChanged(filtered.length);
     }
+  }
+
+  /// Reports [count] through [LayrzTable.onFilteredCountChanged], deferring
+  /// the very first report (the one produced by the [initState]-triggered
+  /// recompute) to a post-frame callback so it never runs while this
+  /// widget's owner is mid-`build()` — see [_pendingInitialNotify]. Every
+  /// later report (search, sort, or item/column changes triggered from
+  /// outside the build phase) is delivered synchronously as before. Guards
+  /// against notifying after [dispose] in both paths.
+  void _notifyFilteredCountChanged(int count) {
+    if (_pendingInitialNotify) {
+      _pendingInitialNotify = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.onFilteredCountChanged?.call(count);
+      });
+      return;
+    }
+    widget.onFilteredCountChanged?.call(count);
   }
 
   @override
@@ -428,6 +460,24 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                     scrollSync: _scrollSync,
                     height: widget.headerHeight,
                     fallbackColumnWidth: widget.minColumnWidth,
+                    hasMultiselect: widget.hasMultiselect,
+                    checkboxCellSize: widget.height,
+                    // Select-all is computed against the FULL dataset
+                    // (widget.items), not `_displayedItems` — the search
+                    // filter must not hide rows out of "select all", per the
+                    // documented behavior: it selects everything regardless
+                    // of what is currently visible.
+                    allSelected:
+                        widget.items.isNotEmpty && widget.items.every((item) => _controller.selection.contains(item)),
+                    onSelectAllChanged: widget.hasMultiselect
+                        ? (selectAll) {
+                            if (selectAll) {
+                              _controller.selectAll(widget.items);
+                            } else {
+                              _controller.clearSelection();
+                            }
+                          }
+                        : null,
                   ),
                   if (_isComputing)
                     LayrzProgressBar(format: LayrzProgressFormat.linear, semanticLabel: 'Sorting table data'),

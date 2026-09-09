@@ -135,6 +135,74 @@ void main() {
     });
   });
 
+  group('LayrzTableRow cell idle color (hover-blink fix)', () {
+    testWidgets('a data cell tappable idles at the row stripe color, not transparent', (tester) async {
+      final scrollSync = LayrzTableRowScrollSync();
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        buildRow(item: row, rowIndex: 0, scrollSync: scrollSync),
+      );
+
+      final tappable = tester.widget<LayrzTappable>(
+        find.ancestor(of: find.text(row.name), matching: find.byType(LayrzTappable)).first,
+      );
+
+      // Previously this was `const Color(0x00000000)` (transparent), which
+      // made the hover transition ramp transparent -> hover instead of
+      // stripe -> hover, producing a visible blink the instant the pointer
+      // entered. The idle color must now equal the row's own stripe color.
+      expect(tappable.color, isNot(const Color(0x00000000)));
+    });
+
+    testWidgets('even and odd rows plumb their own distinct stripe color into their cell tappables', (tester) async {
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        Column(
+          children: [
+            buildRow(item: row, rowIndex: 0, scrollSync: LayrzTableRowScrollSync()),
+            buildRow(item: row, rowIndex: 1, scrollSync: LayrzTableRowScrollSync()),
+          ],
+        ),
+      );
+
+      final tappables = tester
+          .widgetList<LayrzTappable>(find.ancestor(of: find.text(row.name), matching: find.byType(LayrzTappable)))
+          .toList();
+
+      expect(tappables, hasLength(2));
+      // Row 0 (even, sf1) and row 1 (odd, sf2) must plumb different idle
+      // colors into their tappables, mirroring LayrzTableRow's own striping.
+      expect(tappables[0].color, isNot(tappables[1].color));
+    });
+
+    testWidgets('the checkbox cell background also equals the row stripe color', (tester) async {
+      final scrollSync = LayrzTableRowScrollSync();
+      final row = sampleRows().first;
+
+      await pumpTable(
+        tester,
+        buildRow(item: row, rowIndex: 0, scrollSync: scrollSync, hasMultiselect: true),
+      );
+
+      final rowBackground =
+          (tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration).color;
+
+      // The checkbox cell's own DecoratedBox is the one wrapping the
+      // LayrzCheckboxInput directly — anchor on that ancestry rather than a
+      // border shape, which every bordered cell in the row shares.
+      final checkboxCellBox = tester.widget<DecoratedBox>(
+        find.ancestor(of: find.byType(LayrzCheckboxInput), matching: find.byType(DecoratedBox)).first,
+      );
+      final checkboxCellBackground = (checkboxCellBox.decoration as BoxDecoration).color;
+
+      expect(checkboxCellBackground, rowBackground);
+    });
+  });
+
   group('LayrzTableRow striping', () {
     testWidgets('even and odd rowIndex paint different backgrounds', (tester) async {
       final scrollSync = LayrzTableRowScrollSync();
@@ -151,7 +219,9 @@ void main() {
       );
 
       final decoratedBoxes = tester
-          .widgetList<DecoratedBox>(find.descendant(of: find.byType(LayrzTableRow<TableTestRow>), matching: find.byType(DecoratedBox)))
+          .widgetList<DecoratedBox>(
+            find.descendant(of: find.byType(LayrzTableRow<TableTestRow>), matching: find.byType(DecoratedBox)),
+          )
           .where((box) => box.decoration is BoxDecoration && (box.decoration as BoxDecoration).color != null)
           .toList();
 
