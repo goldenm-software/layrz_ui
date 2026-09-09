@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
+import 'package:layrz_ui/src/menus/menus.dart';
 import 'package:layrz_ui/src/snackbar/snackbar.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
 import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
@@ -284,7 +285,6 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
   }
 
   Widget _buildActionsCell(BuildContext context) {
-    final isCompact = context.isCompact;
     return SizedBox(
       height: widget.height,
       child: DecoratedBox(
@@ -298,35 +298,70 @@ class _LayrzTableRowState<T> extends State<LayrzTableRow<T>> {
         ),
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: context.tokens.spacing.sp1),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final action in widget.actions)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: context.tokens.spacing.sp1 / 2),
-                  child: LayrzButton(
-                    labelText: action.labelText,
-                    icon: action.icon,
-                    // `LayrzButton`'s constructor only accepts a non-null
-                    // `color` when `type` is `custom` — `LayrzTableAction`
-                    // always models its accent as a plain nullable `color`
-                    // (never a semantic `LayrzButtonType`), so `custom` is
-                    // the only type that can render it, and it degrades to
-                    // the button's own primary-color default when `color`
-                    // is null.
-                    type: LayrzButtonType.custom,
-                    color: action.color,
-                    style: isCompact
-                        ? (action.style ?? LayrzButtonStyle.text)
-                        : (action.style ?? LayrzButtonStyle.text).asFab,
-                    isDisabled: action.disabled,
-                    onTap: action.disabled ? null : action.onTap,
-                  ),
-                ),
-            ],
-          ),
+          child: context.isCompact ? _buildCompactActions(context) : _buildWideActions(context),
         ),
       ),
+    );
+  }
+
+  /// Renders [widget.actions] as a row of individual icon-only fab buttons.
+  ///
+  /// Used on wide (`!context.isCompact`) viewports, where there is enough
+  /// horizontal room for one button per action.
+  Widget _buildWideActions(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final action in widget.actions)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.tokens.spacing.sp1 / 2),
+            child: LayrzButton(
+              labelText: action.labelText,
+              icon: action.icon,
+              // `LayrzButton`'s constructor only accepts a non-null `color`
+              // when `type` is `custom` — `LayrzTableAction` always models
+              // its accent as a plain nullable `color` (never a semantic
+              // `LayrzButtonType`), so `custom` is the only type that can
+              // render it, and it degrades to the button's own primary-color
+              // default when `color` is null.
+              type: LayrzButtonType.custom,
+              color: action.color,
+              style: (action.style ?? LayrzButtonStyle.text).asFab,
+              isDisabled: action.disabled,
+              onTap: action.disabled ? null : action.onTap,
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Renders [widget.actions] collapsed into a single overflow-dots trigger
+  /// that opens a dropdown menu listing every action.
+  ///
+  /// Used on compact (`context.isCompact`) viewports, where a row of N
+  /// individual buttons would eat too much horizontal space. `useDropdown`
+  /// is forced to `true` rather than relying on [LayrzButtonGroup]'s own
+  /// automatic breakpoint switch, so this branch and [_buildWideActions] can
+  /// never disagree about which mode is active even if the two breakpoint
+  /// tables diverge later.
+  ///
+  /// `action.style` has no equivalent on [LayrzDropdownEntry] and is not
+  /// carried into the collapsed menu; `action.color` and the disabled state
+  /// still are.
+  Widget _buildCompactActions(BuildContext context) {
+    return LayrzButtonGroup(
+      useDropdown: true,
+      triggerHintText: 'Actions',
+      items: [
+        for (final action in widget.actions)
+          LayrzDropdownEntry(
+            labelText: action.labelText,
+            icon: action.icon,
+            onTap: action.onTap,
+            enabled: !action.disabled,
+            color: action.color,
+          ),
+      ],
     );
   }
 

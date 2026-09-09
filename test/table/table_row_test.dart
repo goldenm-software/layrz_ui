@@ -103,7 +103,8 @@ void main() {
       expect(find.byType(LayrzButton), findsNothing);
     });
 
-    testWidgets('non-empty actions renders a pinned-right actions cell with one button per action', (tester) async {
+    testWidgets('wide viewport renders one individual fab button per action, no ButtonGroup', (tester) async {
+      useWideViewport(tester);
       final scrollSync = LayrzTableRowScrollSync();
       await pumpTable(
         tester,
@@ -119,6 +120,63 @@ void main() {
       );
 
       expect(find.byType(LayrzButton), findsNWidgets(2));
+      expect(find.byType(LayrzButtonGroup), findsNothing);
+    });
+
+    testWidgets('compact viewport collapses actions into a single ButtonGroup, not individual buttons', (
+      tester,
+    ) async {
+      useCompactViewport(tester);
+      final scrollSync = LayrzTableRowScrollSync();
+      await pumpTable(
+        tester,
+        buildRow(
+          item: sampleRows().first,
+          rowIndex: 0,
+          scrollSync: scrollSync,
+          actions: [
+            LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () {}),
+            LayrzTableAction(icon: MdiIcons.trashCanOutline, labelText: 'Delete', onTap: () {}),
+          ],
+        ),
+      );
+
+      expect(find.byType(LayrzButtonGroup), findsOneWidget);
+      // The collapsed group renders only its own single trigger button, not
+      // one LayrzButton per action.
+      expect(find.byType(LayrzButton), findsOneWidget);
+    });
+
+    testWidgets('compact ButtonGroup opens a dropdown listing every action, mapped from LayrzTableAction', (
+      tester,
+    ) async {
+      useCompactViewport(tester);
+      final scrollSync = LayrzTableRowScrollSync();
+      bool editTapped = false;
+
+      await pumpTable(
+        tester,
+        buildRow(
+          item: sampleRows().first,
+          rowIndex: 0,
+          scrollSync: scrollSync,
+          actions: [
+            LayrzTableAction(icon: MdiIcons.pencilOutline, labelText: 'Edit', onTap: () => editTapped = true),
+            LayrzTableAction(icon: MdiIcons.trashCanOutline, labelText: 'Delete', onTap: () {}, disabled: true),
+          ],
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit'), findsOneWidget);
+      expect(find.text('Delete'), findsOneWidget);
+
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      expect(editTapped, isTrue);
     });
 
     testWidgets('the scrolling-middle region renders one data cell per visible column', (tester) async {
