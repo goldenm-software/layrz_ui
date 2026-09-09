@@ -42,6 +42,18 @@ void main() {
   Finder actionButtons() =>
       find.byWidgetPredicate((w) => w is LayrzButton && w.key != const ValueKey('layrz-column-menu-trigger'));
 
+  /// Finds only the per-row [LayrzCheckboxInput] cells, excluding the
+  /// header's own select-all checkbox.
+  ///
+  /// [LayrzTable] always renders the header's select-all checkbox as a
+  /// sibling [LayrzCheckboxInput] ahead of every row's, in widget-tree order,
+  /// whenever `hasMultiselect` is `true` — so a bare `find.byType` over-counts
+  /// by one, and `.first` resolves to the header's checkbox rather than row
+  /// 0's. Anchoring on a [ListView] ancestor (the row list) isolates the
+  /// row-owned checkboxes: the header lives as the list's sibling, never a
+  /// descendant of it.
+  Finder rowCheckboxes() => find.descendant(of: find.byType(ListView), matching: find.byType(LayrzCheckboxInput));
+
   group('LayrzTable render', () {
     testWidgets('renders header text and every row for its items', (tester) async {
       useWideViewport(tester);
@@ -76,6 +88,37 @@ void main() {
 
       expect(reported, contains(rows.length));
     });
+
+    testWidgets(
+      'does not crash when a consumer calls setState from onFilteredCountChanged (regression)',
+      (tester) async {
+        // Regression test for a real runtime crash: LayrzTable used to call
+        // onFilteredCountChanged synchronously from the recompute kicked off
+        // in initState, which runs while LayrzTable's own parent is still
+        // inside its build() method (that's how a newly-mounted child's
+        // initState is invoked). A consumer doing the obvious thing —
+        // setState-ing the reported count — then hit Flutter's "setState()
+        // or markNeedsBuild() called during build" error. _CountDisplay
+        // below mirrors that exact shape: a StatefulWidget that constructs
+        // LayrzTable in its own build() and calls setState from the
+        // callback, same as example/lib/src/sections/table_section.dart.
+        useWideViewport(tester);
+        final rows = sampleRows();
+
+        await pumpTable(tester, _CountDisplay<TableTestRow>(items: rows, columns: baseColumns()));
+
+        // The crash (if present) surfaces as a FlutterError during this
+        // very first pump, before any post-frame callback has a chance to
+        // run — so reaching this line at all is part of the assertion.
+        expect(tester.takeException(), isNull);
+
+        // The initial count is deferred to a post-frame callback, not
+        // dropped: it must still arrive once the frame settles.
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.text('count: ${rows.length}'), findsOneWidget);
+      },
+    );
   });
 
   group('LayrzTable search filtering', () {
@@ -162,12 +205,12 @@ void main() {
 
       expect(controller.selection, isEmpty);
 
-      await tester.tap(find.byType(LayrzCheckboxInput).first);
+      await tester.tap(rowCheckboxes().first);
       await tester.pumpAndSettle();
 
       expect(controller.selection, hasLength(1));
 
-      await tester.tap(find.byType(LayrzCheckboxInput).first);
+      await tester.tap(rowCheckboxes().first);
       await tester.pumpAndSettle();
 
       expect(controller.selection, isEmpty);
@@ -193,13 +236,160 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.selection, hasLength(rows.length));
-      expect(find.byWidgetPredicate((w) => w is LayrzCheckboxInput && w.value == true), findsNWidgets(rows.length));
+      // Every row's checkbox is checked, and selectAll now also checks the
+      // header's own select-all checkbox (all rows are selected) — so the
+      // full-tree count is rows.length + 1; the row-only count (excluding
+      // the header) is asserted separately via rowCheckboxes().
+      expect(
+        find.byWidgetPredicate((w) => w is LayrzCheckboxInput && w.value == true),
+        findsNWidgets(rows.length + 1),
+      );
+      expect(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.byWidgetPredicate((w) => w is LayrzCheckboxInput && w.value == true),
+        ),
+        findsNWidgets(rows.length),
+      );
 
       controller.clearSelection();
       await tester.pumpAndSettle();
 
       expect(controller.selection, isEmpty);
-      expect(find.byWidgetPredicate((w) => w is LayrzCheckboxInput && w.value == true), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.byWidgetPredicate((w) => w is LayrzCheckboxInput && w.value == true),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
+  group('LayrzTable header select-all checkbox', () {
+    /// Finds the header's own select-all [LayrzCheckboxInput] — the one
+    /// checkbox that is NOT a descendant of the row [ListView].
+    Finder headerCheckbox() {
+      final element = find
+          .byWidgetPredicate((w) => w is LayrzCheckboxInput)
+          .evaluate()
+          .firstWhere((element) => element.findAncestorWidgetOfExactType<ListView>() == null);
+      return find.byWidgetPredicate((w) => identical(w, element.widget));
+    }
+
+    testWidgets('hasMultiselect: false renders no header checkbox', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns()),
+      );
+
+      expect(find.byType(LayrzCheckboxInput), findsNothing);
+    });
+
+    testWidgets('header checkbox is unchecked when nothing is selected', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), controller: controller, hasMultiselect: true),
+      );
+
+      expect(tester.widget<LayrzCheckboxInput>(headerCheckbox()).value, isFalse);
+    });
+
+    testWidgets('header checkbox becomes checked only once every row is selected', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), controller: controller, hasMultiselect: true),
+      );
+
+      controller.selectItem(rows.first);
+      await tester.pumpAndSettle();
+      expect(tester.widget<LayrzCheckboxInput>(headerCheckbox()).value, isFalse);
+
+      controller.selectAll(rows);
+      await tester.pumpAndSettle();
+      expect(tester.widget<LayrzCheckboxInput>(headerCheckbox()).value, isTrue);
+    });
+
+    testWidgets('tapping the header checkbox selects every row via controller.selectAll', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), controller: controller, hasMultiselect: true),
+      );
+
+      await tester.tap(headerCheckbox());
+      await tester.pumpAndSettle();
+
+      expect(controller.selection, hasLength(rows.length));
+      expect(controller.selection, containsAll(rows));
+    });
+
+    testWidgets('tapping the header checkbox again (all selected) clears the selection', (tester) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), controller: controller, hasMultiselect: true),
+      );
+
+      controller.selectAll(rows);
+      await tester.pumpAndSettle();
+
+      await tester.tap(headerCheckbox());
+      await tester.pumpAndSettle();
+
+      expect(controller.selection, isEmpty);
+    });
+
+    testWidgets('select-all selects every row in the FULL dataset, ignoring the active search filter', (
+      tester,
+    ) async {
+      useWideViewport(tester);
+      final rows = sampleRows();
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: baseColumns(), controller: controller, hasMultiselect: true),
+      );
+
+      // Filter down to just "Banana" — only one row is visible/rendered now.
+      await tester.enterText(find.byType(EditableText), 'ban');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+
+      await tester.tap(headerCheckbox());
+      await tester.pumpAndSettle();
+
+      // The selection must include every row of the full dataset — the ones
+      // hidden by the search filter too — not just the single filtered-in
+      // "Banana" row.
+      expect(controller.selection, hasLength(rows.length));
+      expect(controller.selection, containsAll(rows));
     });
   });
 
@@ -514,8 +704,10 @@ void main() {
       );
 
       // Pinned cells render once per row regardless of how far the
-      // scrolling-middle region has scrolled.
-      expect(find.byType(LayrzCheckboxInput), findsNWidgets(rows.length));
+      // scrolling-middle region has scrolled. (rowCheckboxes() excludes the
+      // header's own select-all checkbox, which also renders here since
+      // hasMultiselect is true.)
+      expect(rowCheckboxes(), findsNWidgets(rows.length));
       expect(actionButtons(), findsNWidgets(rows.length));
 
       final middleScrollables = find.byType(SingleChildScrollView);
@@ -541,8 +733,57 @@ void main() {
       expect(beforeOffsets, isNot(equals(afterOffsets)));
 
       // Pinned cells are unaffected by the middle-region scroll.
-      expect(find.byType(LayrzCheckboxInput), findsNWidgets(rows.length));
+      expect(rowCheckboxes(), findsNWidgets(rows.length));
       expect(actionButtons(), findsNWidgets(rows.length));
     });
   });
+}
+
+/// Reproduces the exact widget shape that surfaced the
+/// "setState() or markNeedsBuild() called during build" crash in
+/// `example/lib/src/sections/table_section.dart`: a [StatefulWidget] that
+/// constructs a [LayrzTable] from its own `build()` and updates its own
+/// state from [LayrzTable.onFilteredCountChanged].
+///
+/// Building [LayrzTable] here — rather than passing `reported.add` straight
+/// to a directly-pumped [LayrzTable], as the older
+/// "reports the initial filtered count" test does — matters: the crash only
+/// occurs when the table's `initState` (and therefore its first
+/// [LayrzTable.onFilteredCountChanged] call) runs while a wrapping widget is
+/// still inside its own `build()`, which is how a newly-mounted child is
+/// always initialized. Renders the last reported count as plain text so the
+/// test can assert on it without reaching into private state.
+class _CountDisplay<T> extends StatefulWidget {
+  /// Creates a [_CountDisplay].
+  const _CountDisplay({required this.items, required this.columns});
+
+  /// The rows handed straight through to the wrapped [LayrzTable.items].
+  final List<T> items;
+
+  /// The columns handed straight through to the wrapped [LayrzTable.columns].
+  final List<LayrzColumn<T>> columns;
+
+  @override
+  State<_CountDisplay<T>> createState() => _CountDisplayState<T>();
+}
+
+class _CountDisplayState<T> extends State<_CountDisplay<T>> {
+  int _count = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('count: $_count'),
+        Expanded(
+          child: LayrzTable<T>(
+            items: widget.items,
+            columns: widget.columns,
+            onFilteredCountChanged: (count) => setState(() => _count = count),
+          ),
+        ),
+      ],
+    );
+  }
 }
