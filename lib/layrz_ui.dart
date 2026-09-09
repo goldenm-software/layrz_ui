@@ -7,6 +7,7 @@ export 'src/buttons/buttons.dart';
 export 'src/calendar/calendar.dart';
 export 'src/cards/cards.dart';
 export 'src/chips/chips.dart';
+export 'src/connection/connection.dart';
 export 'src/constants/constants.dart';
 export 'src/context_menu/context_menu.dart';
 export 'src/dialogs/dialogs.dart';

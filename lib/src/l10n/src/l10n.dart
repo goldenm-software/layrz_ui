@@ -6,6 +6,7 @@ import 'namespaces/ai.dart';
 import 'namespaces/calendar.dart';
 import 'namespaces/color_picker.dart';
 import 'namespaces/combobox.dart';
+import 'namespaces/connection.dart';
 import 'namespaces/date_time_pickers.dart';
 import 'namespaces/dialogs.dart';
 import 'namespaces/dual_list.dart';
@@ -108,6 +109,7 @@ abstract class LayrzUiL10n
         LayrzUiL10nCalendarMixin,
         LayrzUiL10nColorPickerMixin,
         LayrzUiL10nComboboxMixin,
+        LayrzUiL10nConnectionMixin,
         LayrzUiL10nDateTimePickersMixin,
         LayrzUiL10nDialogsMixin,
         LayrzUiL10nDualListMixin,
