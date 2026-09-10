@@ -196,8 +196,9 @@ class _TextVariantsDemo extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp5,
+          runSpacing: tokens.spacing.sp3,
           children: [
             // Plain text
             Column(

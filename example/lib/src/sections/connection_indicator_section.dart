@@ -65,9 +65,11 @@ class ConnectionIndicatorSection extends StatelessWidget {
         children: [
           Text('Dot mode — hover each dot for its state + time-ago tooltip', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp5,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final row in demoRows) ...[
+              for (final row in demoRows)
                 Column(
                   children: [
                     LayrzConnectionIndicator(
@@ -83,8 +85,6 @@ class ConnectionIndicatorSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(width: tokens.spacing.sp5),
-              ],
             ],
           ),
           SizedBox(height: tokens.spacing.sp4),
@@ -121,9 +121,11 @@ class ConnectionIndicatorSection extends StatelessWidget {
             style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp5,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final row in _avatarDotRows) ...[
+              for (final row in _avatarDotRows)
                 Column(
                   children: [
                     LayrzBadge(
@@ -143,8 +145,6 @@ class ConnectionIndicatorSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(width: tokens.spacing.sp5),
-              ],
             ],
           ),
           SizedBox(height: tokens.spacing.sp4),

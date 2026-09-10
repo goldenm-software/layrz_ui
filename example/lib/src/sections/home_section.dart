@@ -1,7 +1,9 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+import '../common/showroom_section.dart';
 
 /// The showroom logo shown in the [HomeSection] hero, light-background variant.
 ///
@@ -146,9 +148,12 @@ const List<_FooterLink> _kFooterLinks = [
 ///
 /// [HomeSection] is the default route of the showroom application — the page
 /// developers land on first, before they explore any individual component
-/// section. Unlike [ShowroomSection]-based pages, it does not use the shared
-/// section scaffold: a landing page has its own hero, grid, and footer
-/// layout rather than a single titled content card.
+/// section. It wears the same [ShowroomSection] chrome as every other view
+/// (a top-anchored, scrollable page with the title left-aligned above a
+/// [LayrzCard]-wrapped content area), so Home reads as part of the same
+/// showroom rather than a separate landing app bolted onto it. The hero,
+/// selling-points grid, quick-start sample, and footer links are all rendered
+/// as [ShowroomSection]'s `child`, preserving the original content unchanged.
 ///
 /// The page is entirely dogfooded from layrz_ui: [LayrzCard] for every
 /// surface, [LayrzRow]/[LayrzCol] for the responsive selling-points grid,
@@ -164,27 +169,27 @@ class HomeSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        child: Center(
-          child: LayrzConstrainedView(
-            maxWidth: 1100,
-            spacing: tokens.spacing.sp5,
-            children: [
-              _Hero(tokens: tokens),
-              _WhySection(tokens: tokens),
-              _QuickStartSection(tokens: tokens),
-              _Footer(tokens: tokens),
-            ],
-          ),
-        ),
+    return ShowroomSection(
+      title: 'layrz_ui',
+      description: 'A Material-free, Cupertino-free Flutter design system.',
+      child: Column(
+        spacing: tokens.spacing.sp5,
+        children: [
+          _Hero(tokens: tokens),
+          _WhySection(tokens: tokens),
+          _QuickStartSection(tokens: tokens),
+          _Footer(tokens: tokens),
+        ],
       ),
     );
   }
 }
 
-/// The hero banner at the top of [HomeSection]: logo, title, and tagline.
+/// The hero banner at the top of [HomeSection]: logo and supporting blurb.
+///
+/// The page title and tagline are rendered once, by [ShowroomSection] itself
+/// (see [HomeSection.build]) — this widget only adds the logo mark and the
+/// longer explanatory line beneath them, so nothing is said twice.
 class _Hero extends StatelessWidget {
   /// Creates a new [_Hero].
   const _Hero({required this.tokens});
@@ -197,7 +202,7 @@ class _Hero extends StatelessWidget {
     final isCompact = context.isCompact;
 
     return Padding(
-      padding: EdgeInsets.only(top: tokens.spacing.sp5),
+      padding: EdgeInsets.only(top: tokens.spacing.sp3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -205,19 +210,7 @@ class _Hero extends StatelessWidget {
             context.isDark ? _kDarkLogo : _kLightLogo,
             height: isCompact ? 56 : 72,
           ),
-          SizedBox(height: tokens.spacing.sp4),
-          Text(
-            'layrz_ui',
-            textAlign: TextAlign.center,
-            style: tokens.typography.display.copyWith(color: tokens.colors.fg1),
-          ),
-          SizedBox(height: tokens.spacing.sp2),
-          Text(
-            'A Material-free, Cupertino-free Flutter design system.',
-            textAlign: TextAlign.center,
-            style: tokens.typography.title.copyWith(color: tokens.colors.primary),
-          ),
-          SizedBox(height: tokens.spacing.sp2),
+          SizedBox(height: tokens.spacing.sp3),
           Text(
             'Every widget in this showroom is built exclusively on package:flutter/widgets.dart '
             'and dart:ui — no Material, no Cupertino, anywhere.',
@@ -282,6 +275,7 @@ class _SellingPointCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayrzCard(
+      backgroundColor: context.tokens.colors.sf1,
       child: SizedBox(
         height: 160,
         child: Column(
@@ -356,11 +350,6 @@ class _Footer extends StatelessWidget {
           Container(height: 1, color: tokens.colors.divider),
           SizedBox(height: tokens.spacing.sp4),
           Text('Learn more', style: tokens.typography.title.copyWith(color: tokens.colors.fg1)),
-          SizedBox(height: tokens.spacing.sp1),
-          Text(
-            'Tapping a link copies its URL to your clipboard.',
-            style: tokens.typography.label.copyWith(color: tokens.colors.fg4),
-          ),
           SizedBox(height: tokens.spacing.sp3),
           Wrap(
             spacing: tokens.spacing.sp3,
@@ -375,7 +364,7 @@ class _Footer extends StatelessWidget {
                     type: LayrzButtonType.info,
                     style: LayrzButtonStyle.outlined,
                     hintText: link.url,
-                    onTap: () => Clipboard.setData(ClipboardData(text: link.url)),
+                    onTap: () => launchUrlString(link.url, mode: .externalApplication),
                   ),
                 ),
             ],

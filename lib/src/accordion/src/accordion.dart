@@ -67,10 +67,25 @@ import 'accordion_style_spec.dart';
 /// transparent, so the shadow alone defines the panel's edge. Between the two
 /// the border's alpha and the shadow's alpha cross-fade against each other on
 /// the same progress -- see `_fadeBorder` and `_fadeShadow`. All four corners
-/// stay uniformly rounded to [LayrzTokens.radius.r2] in every expansion
-/// state -- collapsed, expanded, and everywhere in between -- so the panel
-/// always reads as one consistently rounded card and never squares off at
-/// the bottom once open. A single hairline divider is drawn between header
+/// of this *outer shell* stay uniformly rounded to [LayrzTokens.radius.r2]
+/// in every expansion state -- collapsed, expanded, and everywhere in
+/// between -- so the panel always reads as one consistently rounded card
+/// and never squares off at the bottom once open, nor at the top in either
+/// state.
+///
+/// The header's own background fill (see `_buildHeader`) is rounded to
+/// match, on its top corners in every state, so it never paints a square
+/// corner past the outer border's rounded top stroke -- neither while
+/// collapsed (where it would otherwise show as a background-colored sliver
+/// at the corner) nor while expanded (where the border has faded out and
+/// the fill's own square corners would otherwise be the only thing
+/// defining the panel's top edge). The header fill's *bottom* corners are
+/// rounded the same way only while collapsed -- where the header is the
+/// entire panel and its bottom corners are the panel's own bottom corners
+/// -- and interpolate down to square as the panel expands, since an
+/// expanded header sits above a body whose top is deliberately square
+/// (the header/body seam is a plain hairline, not a rounded notch). A
+/// single hairline divider is drawn between header
 /// and body, sized to zero
 /// height while collapsed; that divider height (not the corner radius) is
 /// driven by the same reveal animation. It is deliberately *not* part of the
@@ -281,9 +296,9 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
     }
 
     final spec = LayrzAccordionStyleSpec.resolve(states: _states, tokens: tokens);
-    final header = _buildHeader(context, tokens, spec);
+    final panelRadius = BorderRadius.circular(tokens.radius.r2);
 
-    return _buildPanelShell(tokens, spec, header);
+    return _buildPanelShell(context, tokens, spec, panelRadius);
   }
 
   /// Wraps the whole panel -- [header] and the reveal-driven body together --
@@ -295,13 +310,37 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   /// mid-animation, rather than the header and body each painting an
   /// independent border that could drift apart at the seam.
   ///
-  /// The corner radius is a constant [LayrzTokens.radius.r2] on all four
+  /// [borderRadius] is a constant [LayrzTokens.radius.r2] on all four
   /// corners, in every expansion state -- collapsed, expanded, and every
   /// frame in between. The panel is meant to read as one consistently
   /// rounded card whether closed or open; it must never square off at the
-  /// bottom once expanded. Expansion progress never drives any part of the
-  /// corner geometry -- only the shadow fade (below), the internal divider's
-  /// height, and the body reveal are still keyed to it.
+  /// top in either state. It is computed once in [build] and passed down to
+  /// both [_buildHeader] and `_buildBodyReveal` so the header's clipped top
+  /// corners, the body's clipped bottom corners, and this shell's own border
+  /// and shadow radii are always the exact same [BorderRadius] value --
+  /// never independently recomputed copies that could drift apart by a
+  /// fraction of a pixel.
+  ///
+  /// **The header itself is now built inside this method's own
+  /// [AnimatedBuilder], not passed in as a prebuilt [Widget].** DESIGN-92
+  /// follow-up: the header's own bottom-left/bottom-right corners must be
+  /// rounded to [borderRadius] while collapsed (the header *is* the whole
+  /// panel when there is no body below it, so its bottom corners are the
+  /// panel's bottom corners) and square once expanded (the body sits flush
+  /// below it then, and the header/body seam must stay a plain hairline,
+  /// not a rounded one). That bottom radius must also interpolate smoothly
+  /// across the same `progress` driving everything else in this method, or
+  /// it would visibly pop between rounded and square the instant the
+  /// animation starts/ends rather than tracking the reveal continuously.
+  /// Building the header here, inside the [AnimatedBuilder]'s `builder`
+  /// callback, is what gives [_buildHeader] a live `progress` value to
+  /// compute that interpolated bottom radius from -- passing a
+  /// once-built, static header [Widget] into this method (the prior
+  /// approach) could never see per-frame progress. This costs nothing
+  /// extra: the callback already rebuilds every frame during the reveal for
+  /// the divider height, shadow fade, and border fade below, so the header
+  /// rebuilding alongside them is already priced into this widget's
+  /// per-frame cost, not a new one.
   ///
   /// [_curved] is the single eased [Animation] this whole method (and the
   /// header's chevron, and the body reveal) reads from, so the divider,
@@ -364,19 +403,23 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   /// animated -- only its color alpha -- so no geometry changes and the
   /// zero-width-with-nonzero-radius assertion never applies (a width > 0
   /// side with a fully transparent color paints nothing but asserts fine).
-  /// The corner radius itself never participates in either fade -- it is
-  /// constant regardless of progress.
+  /// [borderRadius] itself -- the *outer shell's* radius -- never
+  /// participates in either fade: it is constant regardless of progress.
+  /// (The header's own *fill* radius is a separate, deliberately
+  /// progress-dependent value on its bottom corners only -- see
+  /// [_buildHeader].)
   Widget _buildPanelShell(
+    BuildContext context,
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
-    Widget header,
+    BorderRadius borderRadius,
   ) {
     return AnimatedBuilder(
       animation: _curved,
       builder: (context, _) {
         final progress = _curved.value;
-        final borderRadius = BorderRadius.circular(tokens.radius.r2);
         final dividerHeight = spec.borderWidth * progress;
+        final header = _buildHeader(context, tokens, spec, borderRadius, progress);
 
         return DecoratedBox(
           decoration: BoxDecoration(
@@ -525,12 +568,50 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
   /// string is not announced twice.
   ///
   /// The header paints only its background color and content here -- the
-  /// border and corner radius are owned entirely by [_buildPanelShell], which
-  /// encloses header and body in one continuous outline.
+  /// outer border is owned entirely by [_buildPanelShell], which encloses
+  /// header and body in one continuous outline.
+  ///
+  /// The header's own fill *is* rounded here, though. Previously this fill
+  /// was an unrounded rectangle painted via [AnimatedContainer]'s plain
+  /// `color:` shorthand, with no [ClipRRect] anywhere in the ancestor chain
+  /// to constrain it (see `_buildPanelShell`'s own doc for why no such clip
+  /// wraps the whole panel). A flat rectangular fill sitting inside a
+  /// rounded outer border always shows its own square corners wherever the
+  /// fill reaches the panel's outer edge.
+  ///
+  /// **Top corners: always rounded to [panelRadius], every state.** While
+  /// collapsed, a sliver of the fill used to peek past the border's rounded
+  /// stroke at each top corner; while expanded, `_fadeBorder` fades that
+  /// border's alpha toward fully transparent, so the fill's square corners
+  /// used to become the dominant visual and the panel read as squaring off
+  /// at the top. Rounding the fill's top-left/top-right corners to
+  /// [panelRadius] removes both symptoms, in every expansion state, without
+  /// touching the outer bordered box or reintroducing the antialiasing seam
+  /// a [ClipRRect] around that box previously caused -- this decoration
+  /// lives entirely inside the header, one layer removed from the border.
+  ///
+  /// **Bottom corners: rounded to [panelRadius] while collapsed, square
+  /// once expanded, interpolating continuously with [progress] in between
+  /// (DESIGN-92 follow-up).** Collapsed, the header *is* the entire visible
+  /// panel -- there is no body below it -- so its bottom-left/bottom-right
+  /// corners are the panel's own bottom corners and must match
+  /// [panelRadius] or the same square-corner-bleeding-past-a-rounded-border
+  /// defect the top corners had shows up at the bottom instead. Expanded,
+  /// the body sits flush beneath the header (rounded only on its own
+  /// bottom, per `_buildBodyReveal`), so the header/body seam must stay a
+  /// plain hairline -- a rounded header-bottom would visibly notch into
+  /// the straight-edged body/divider below it. [Radius.lerp] between
+  /// [panelRadius]'s bottom corners (at `progress == 0`) and [Radius.zero]
+  /// (at `progress == 1`) is keyed to the exact same [_curved] progress
+  /// driving the divider height, shadow fade, and border fade in
+  /// [_buildPanelShell], so the bottom radius shrinks away in lockstep with
+  /// the reveal rather than snapping abruptly at either end.
   Widget _buildHeader(
     BuildContext context,
     LayrzTokens tokens,
     LayrzAccordionStyleSpec spec,
+    BorderRadius panelRadius,
+    double progress,
   ) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -566,7 +647,15 @@ class _LayrzAccordionState extends State<LayrzAccordion> with SingleTickerProvid
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
               padding: tokens.spacing.pd3,
-              color: spec.headerBackgroundColor,
+              decoration: BoxDecoration(
+                color: spec.headerBackgroundColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: panelRadius.topLeft,
+                  topRight: panelRadius.topRight,
+                  bottomLeft: Radius.lerp(panelRadius.bottomLeft, Radius.zero, progress.clamp(0.0, 1.0))!,
+                  bottomRight: Radius.lerp(panelRadius.bottomRight, Radius.zero, progress.clamp(0.0, 1.0))!,
+                ),
+              ),
               child: Row(
                 children: [
                   if (widget.leadingIcon != null) ...[

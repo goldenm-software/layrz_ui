@@ -91,15 +91,16 @@ class _ChipsStylesShowcase extends StatelessWidget {
           'Style Variants',
           style: tokens.typography.title,
         ),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
-          children: [
-            const LayrzChip(
+          runSpacing: tokens.spacing.sp2,
+          children: const [
+            LayrzChip(
               labelText: 'Filled',
               style: LayrzChipStyle.filled,
               type: LayrzChipType.info,
             ),
-            const LayrzChip(
+            LayrzChip(
               labelText: 'Outlined',
               style: LayrzChipStyle.outlined,
               type: LayrzChipType.success,

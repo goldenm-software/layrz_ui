@@ -86,16 +86,20 @@ class ColorsSection extends StatelessWidget {
             children: [
               Text('Overlay & Tonal Opacity', style: tokens.typography.title),
               SizedBox(height: tokens.spacing.sp3),
-              Row(
+              LayrzRow(
+                spacing: tokens.spacing.sp3,
                 children: [
-                  Expanded(
+                  LayrzCol(
+                    xs: 12,
+                    sm: 6,
                     child: LayrzTooltip(
                       contentText: 'overlay — ${tokens.colors.overlay.toHex()}',
                       child: _OverlaySwatch(label: 'overlay', color: tokens.colors.overlay),
                     ),
                   ),
-                  SizedBox(width: tokens.spacing.sp3),
-                  Expanded(
+                  LayrzCol(
+                    xs: 12,
+                    sm: 6,
                     child: LayrzTooltip(
                       contentText: 'tonalOpacity — ${(tokens.colors.tonalOpacity * 100).toStringAsFixed(0)}%',
                       child: _TonalOpacitySwatch(tokens: tokens),

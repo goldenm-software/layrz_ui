@@ -140,8 +140,9 @@ class _StylesDemo extends StatelessWidget {
               LayrzCol(
                 xs: 12,
                 md: 8,
-                child: Row(
+                child: Wrap(
                   spacing: context.tokens.spacing.sp2,
+                  runSpacing: context.tokens.spacing.sp2,
                   children: [
                     ...e.value.map((style) {
                       return LayrzButton(
@@ -306,9 +307,10 @@ class _LoadingDemo extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.start,
           spacing: tokens.spacing.sp3,
+          runSpacing: tokens.spacing.sp3,
           children: [
             AnimatedBuilder(
               animation: controller,
@@ -363,9 +365,10 @@ class _CooldownDemo extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.start,
           spacing: tokens.spacing.sp3,
+          runSpacing: tokens.spacing.sp3,
           children: [
             AnimatedBuilder(
               animation: controller,
@@ -423,8 +426,9 @@ class _DisabledStatesDemo extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp3,
+          runSpacing: tokens.spacing.sp3,
           children: [
             LayrzButton(
               labelText: 'Disabled (onTap: null)',
@@ -641,8 +645,9 @@ class _SharedControllerDemo extends StatelessWidget {
             AnimatedBuilder(
               animation: controller,
               builder: (context, _) {
-                return Row(
+                return Wrap(
                   spacing: tokens.spacing.sp3,
+                  runSpacing: tokens.spacing.sp3,
                   children: [
                     LayrzButton(
                       labelText: controller.isLoading ? 'Stop Loading' : 'Start Loading',
@@ -676,8 +681,10 @@ class _SharedControllerDemo extends StatelessWidget {
               "Outlined": [LayrzButtonStyle.outlined, LayrzButtonStyle.outlinedFab],
               "Text": [LayrzButtonStyle.text, LayrzButtonStyle.textFab],
             }.entries.map((e) {
-              return Row(
+              return Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: tokens.spacing.sp3,
+                runSpacing: tokens.spacing.sp3,
                 children: [
                   Text('${e.key}:', style: tokens.typography.label),
                   ...e.value.map((style) {

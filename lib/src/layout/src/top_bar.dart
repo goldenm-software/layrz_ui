@@ -6,6 +6,7 @@ import 'package:layrz_ui/src/images/images.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'notification_item.dart';
+import 'notifications_panel.dart';
 import 'top_bar_icon_button.dart';
 
 /// The top bar widget displayed in drawer presentation.
@@ -89,6 +90,23 @@ class LayrzLayoutTopBar extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Notifications bell
+                if (notifications.isNotEmpty || onNotificationTap != null)
+                  LayrzLayoutNotificationsPanel(
+                    tokens: tokens,
+                    notifications: notifications,
+                    onNotificationTap: onNotificationTap,
+                    anchorBuilder: (context, isOpen, onTap) {
+                      return LayrzLayoutTopBarIconButton(
+                        key: const ValueKey('notifications_bell_button'),
+                        icon: MdiIcons.bellRingOutline,
+                        iconColor: tokens.colors.fg2,
+                        iconSize: iconSize,
+                        onTap: onTap,
+                      );
+                    },
+                  ),
               ],
             ),
           ),

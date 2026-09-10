@@ -6,10 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
 
-// TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
-// (/find-spike) but intentionally not listed in the showroom sidebar.
-import 'src/sections/find_in_page/find_spike.dart';
-
 import 'layout.dart';
 import 'src/providers/theme_mode_provider.dart';
 import 'src/sections/access_paths_section.dart';
@@ -317,12 +313,6 @@ final _router = GoRouter(
           path: '/scaffold-shell',
           pageBuilder: (context, state) => _fadePage(context, ScaffoldShellSection()),
         ),
-        // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
-        // (/find-spike) but intentionally not listed in the showroom sidebar.
-        GoRoute(
-          path: '/find-spike',
-          pageBuilder: (context, state) => _fadePage(context, LayrzFindSpike()),
-        ),
       ],
     ),
   ],
@@ -389,8 +379,6 @@ class ShowroomApp extends ConsumerWidget {
       ),
       darkTheme: LayrzThemeData.dark(font: font),
       themeMode: mode,
-      // To view the original component showroom, uncomment:
-      // home: const Showroom(),
     );
   }
 }

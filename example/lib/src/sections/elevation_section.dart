@@ -47,9 +47,13 @@ class ElevationSection extends StatelessWidget {
           // Special cases
           Text('Special Cases', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          LayrzRow(
+            spacing: tokens.spacing.sp3,
             children: [
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -65,8 +69,10 @@ class ElevationSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -82,8 +88,10 @@ class ElevationSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

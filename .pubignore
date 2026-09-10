@@ -27,4 +27,7 @@ doc/
 *.iml
 .idea/
 
+layrz-ui-logo.png
+layrz-ui-logo-white.png
+
 # Sub libraries

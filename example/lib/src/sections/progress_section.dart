@@ -86,8 +86,9 @@ class _DeterminateShowcase extends StatelessWidget {
       children: [
         Text('Determinate', style: tokens.typography.title),
         LayrzProgressBar(value: value, semanticLabel: 'Demo progress'),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzButton(
               labelText: '-10%',
@@ -401,8 +402,9 @@ class _CircularShowcase extends StatelessWidget {
             ),
           ],
         ),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzButton(
               labelText: '-10%',

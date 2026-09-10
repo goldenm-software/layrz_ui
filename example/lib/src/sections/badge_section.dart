@@ -28,27 +28,26 @@ class BadgeSection extends StatelessWidget {
         children: [
           Text('Wrapper form — LayrzBadge overlaid on a child', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp5,
+            runSpacing: tokens.spacing.sp3,
             children: [
               LayrzBadge(
                 label: 'Notifications',
                 count: 3,
                 child: Icon(MdiIcons.bell, size: 28),
               ),
-              SizedBox(width: tokens.spacing.sp5),
               LayrzBadge(
                 label: 'Overflowing notifications',
                 count: 250,
                 child: Icon(MdiIcons.bell, size: 28),
               ),
-              SizedBox(width: tokens.spacing.sp5),
               LayrzBadge(
                 label: 'Sync pending',
                 icon: MdiIcons.sync,
                 type: LayrzBadgeType.info,
                 child: Icon(MdiIcons.cloud, size: 28),
               ),
-              SizedBox(width: tokens.spacing.sp5),
               LayrzBadge(
                 label: 'Online status',
                 type: LayrzBadgeType.success,
@@ -61,14 +60,15 @@ class BadgeSection extends StatelessWidget {
 
           Text('Count overflow boundary — 99 vs 100', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp5,
+            runSpacing: tokens.spacing.sp3,
             children: [
               LayrzBadge(
                 label: 'Below the cap',
                 count: 99,
                 child: Icon(MdiIcons.bell, size: 28),
               ),
-              SizedBox(width: tokens.spacing.sp5),
               LayrzBadge(
                 label: 'At the cap',
                 count: 100,
@@ -81,9 +81,11 @@ class BadgeSection extends StatelessWidget {
 
           Text('Corner alignments', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp4,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final alignment in LayrzBadgeAlignment.values) ...[
+              for (final alignment in LayrzBadgeAlignment.values)
                 LayrzBadge(
                   label: alignment.name,
                   count: 1,
@@ -99,8 +101,6 @@ class BadgeSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: tokens.spacing.sp4),
-              ],
             ],
           ),
 
@@ -108,9 +108,11 @@ class BadgeSection extends StatelessWidget {
 
           Text('Semantic color types', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp4,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final type in LayrzBadgeType.values.where((t) => t != LayrzBadgeType.custom)) ...[
+              for (final type in LayrzBadgeType.values.where((t) => t != LayrzBadgeType.custom))
                 Column(
                   children: [
                     LayrzBadgeVisual(count: 5, type: type),
@@ -118,8 +120,6 @@ class BadgeSection extends StatelessWidget {
                     Text(type.name, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
                   ],
                 ),
-                SizedBox(width: tokens.spacing.sp4),
-              ],
             ],
           ),
 
@@ -151,9 +151,11 @@ class BadgeSection extends StatelessWidget {
 
           Text('Standalone, by semantic state', style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
           SizedBox(height: tokens.spacing.sp2),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp4,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final state in _ConnectionState.values) ...[
+              for (final state in _ConnectionState.values)
                 Column(
                   children: [
                     LayrzBadgeVisual(type: state.type),
@@ -161,8 +163,6 @@ class BadgeSection extends StatelessWidget {
                     Text(state.label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
                   ],
                 ),
-                SizedBox(width: tokens.spacing.sp4),
-              ],
             ],
           ),
 
@@ -173,9 +173,11 @@ class BadgeSection extends StatelessWidget {
             style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp2),
-          Row(
+          Wrap(
+            spacing: tokens.spacing.sp4,
+            runSpacing: tokens.spacing.sp3,
             children: [
-              for (final state in _ConnectionState.values) ...[
+              for (final state in _ConnectionState.values)
                 Column(
                   children: [
                     LayrzBadge(
@@ -198,8 +200,6 @@ class BadgeSection extends StatelessWidget {
                     Text(state.label, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
                   ],
                 ),
-                SizedBox(width: tokens.spacing.sp4),
-              ],
             ],
           ),
         ],

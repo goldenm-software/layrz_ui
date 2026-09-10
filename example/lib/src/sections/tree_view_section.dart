@@ -135,63 +135,38 @@ class _TreeViewSectionState extends State<TreeViewSection> {
       description:
           'Expand/collapse and multi-node selection built on the SDK\'s TreeSliver. Compare '
           'independent selection (left) against cascading selection with a partial state (right).',
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isCompact = context.isCompact;
-          final content = isCompact
-              ? Column(
-                  spacing: tokens.spacing.sp3,
-                  children: [
-                    _buildDemoColumn(
-                      tokens: tokens,
-                      title: 'Independent selection (default)',
-                      nodes: _independentNodes,
-                      selectionController: _independentSelection,
-                      selectedIds: _independentSelectedIds,
-                      onSelectionChanged: (ids) => setState(() => _independentSelectedIds = ids),
-                    ),
-                    _buildDemoColumn(
-                      tokens: tokens,
-                      title: 'Cascading selection',
-                      nodes: _cascadingNodes,
-                      selectionController: _cascadingSelection,
-                      selectedIds: _cascadingSelectedIds,
-                      onSelectionChanged: (ids) => setState(() => _cascadingSelectedIds = ids),
-                    ),
-                  ],
-                )
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: tokens.spacing.sp3,
-                  children: [
-                    Expanded(
-                      child: _buildDemoColumn(
-                        tokens: tokens,
-                        title: 'Independent selection (default)',
-                        nodes: _independentNodes,
-                        selectionController: _independentSelection,
-                        selectedIds: _independentSelectedIds,
-                        onSelectionChanged: (ids) => setState(() => _independentSelectedIds = ids),
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildDemoColumn(
-                        tokens: tokens,
-                        title: 'Cascading selection',
-                        nodes: _cascadingNodes,
-                        selectionController: _cascadingSelection,
-                        selectedIds: _cascadingSelectedIds,
-                        onSelectionChanged: (ids) => setState(() => _cascadingSelectedIds = ids),
-                      ),
-                    ),
-                  ],
-                );
-
-          return Padding(
-            padding: EdgeInsets.all(tokens.spacing.sp3),
-            child: content,
-          );
-        },
+      child: Padding(
+        padding: EdgeInsets.all(tokens.spacing.sp3),
+        child: LayrzRow(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: tokens.spacing.sp3,
+          children: [
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              child: _buildDemoColumn(
+                tokens: tokens,
+                title: 'Independent selection (default)',
+                nodes: _independentNodes,
+                selectionController: _independentSelection,
+                selectedIds: _independentSelectedIds,
+                onSelectionChanged: (ids) => setState(() => _independentSelectedIds = ids),
+              ),
+            ),
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              child: _buildDemoColumn(
+                tokens: tokens,
+                title: 'Cascading selection',
+                nodes: _cascadingNodes,
+                selectionController: _cascadingSelection,
+                selectedIds: _cascadingSelectedIds,
+                onSelectionChanged: (ids) => setState(() => _cascadingSelectedIds = ids),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

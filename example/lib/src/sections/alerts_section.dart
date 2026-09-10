@@ -149,11 +149,13 @@ class _MaxLinesDemo extends StatelessWidget {
           style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
             // maxLines: 1
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              sm: 6,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp2,
@@ -170,7 +172,9 @@ class _MaxLinesDemo extends StatelessWidget {
               ),
             ),
             // maxLines: 3 (default)
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              sm: 6,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp2,
@@ -279,11 +283,13 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
         // Side-by-side: inert vs interactive comparison
         Text('Inert vs Interactive Comparison', style: tokens.typography.label),
         SizedBox(height: tokens.spacing.sp3),
-        Row(
+        LayrzRow(
           spacing: tokens.spacing.sp3,
           children: [
             // Inert (no onTap)
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              sm: 6,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp2,
@@ -299,7 +305,9 @@ class _InteractiveAlertsDemoState extends State<_InteractiveAlertsDemo> {
               ),
             ),
             // Interactive (with onTap)
-            Expanded(
+            LayrzCol(
+              xs: 12,
+              sm: 6,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: tokens.spacing.sp2,
@@ -405,8 +413,9 @@ class _AlertIconDemo extends StatelessWidget {
         SizedBox(height: tokens.spacing.sp3),
         // Row of icons at different sizes
         Text('Small (24)', style: tokens.typography.label),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzAlertIcon(
               type: LayrzAlertType.info,
@@ -432,8 +441,9 @@ class _AlertIconDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp3),
         Text('Medium (40)', style: tokens.typography.label),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzAlertIcon(
               type: LayrzAlertType.info,
@@ -459,8 +469,9 @@ class _AlertIconDemo extends StatelessWidget {
         ),
         SizedBox(height: tokens.spacing.sp3),
         Text('Large (56)', style: tokens.typography.label),
-        Row(
+        Wrap(
           spacing: tokens.spacing.sp2,
+          runSpacing: tokens.spacing.sp2,
           children: [
             LayrzAlertIcon(
               type: LayrzAlertType.info,

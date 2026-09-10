@@ -45,10 +45,13 @@ class CardsSection extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp4),
           Text('Background Color', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          LayrzRow(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: tokens.spacing.sp3,
             children: [
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -64,8 +67,9 @@ class CardsSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -90,10 +94,13 @@ class CardsSection extends StatelessWidget {
           SizedBox(height: tokens.spacing.sp4),
           Text('Interactive vs. Inert', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          LayrzRow(
             crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: tokens.spacing.sp3,
             children: [
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -109,8 +116,9 @@ class CardsSection extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

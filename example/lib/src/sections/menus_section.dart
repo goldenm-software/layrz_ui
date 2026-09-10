@@ -120,8 +120,10 @@ class MenusSection extends StatelessWidget {
           // Alignment variations
           _MenuShowcaseCard(
             title: 'Alignment Variations',
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Wrap(
+              alignment: WrapAlignment.spaceAround,
+              spacing: 24,
+              runSpacing: 16,
               children: [
                 Column(
                   mainAxisSize: MainAxisSize.min,

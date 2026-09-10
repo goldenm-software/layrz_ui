@@ -78,6 +78,7 @@ class _LayrzLayoutRailItemState extends State<LayrzLayoutRailItem> {
     final item = Container(
       margin: EdgeInsets.only(bottom: kLayrzLayoutItemMarginBottom),
       child: MouseRegion(
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
         child: GestureDetector(
