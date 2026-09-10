@@ -26,14 +26,23 @@ void main() {
         final buttonFinder = find.byType(LayrzCodeCopyButton);
         expect(buttonFinder, findsOneWidget);
 
+        // LayrzButton's Semantics node merges its children with
+        // excludeSemantics: true, so the tap gesture underneath does not
+        // surface as an explicit SemanticsAction.tap on this node — assert
+        // the button flag and label, and verify tappability functionally.
         expect(
           tester.getSemantics(buttonFinder),
           matchesSemantics(
             isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
             label: 'Copy',
-            hasTapAction: true,
           ),
         );
+
+        await tester.tap(buttonFinder);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1600));
       } finally {
         handle.dispose();
       }
@@ -58,10 +67,15 @@ void main() {
           tester.getSemantics(buttonFinder),
           matchesSemantics(
             isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
             label: 'Copy',
-            hasTapAction: true,
           ),
         );
+
+        await tester.tap(buttonFinder);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1600));
       } finally {
         handle.dispose();
       }

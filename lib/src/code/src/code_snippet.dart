@@ -2,14 +2,14 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/code/src/code_copy_button.dart';
 import 'package:layrz_ui/src/code/src/code_surface.dart';
-import 'package:layrz_ui/src/code/src/code_theme_extension.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/highlight/highlight.dart';
 
 /// A read-only, syntax-highlighted code snippet with an optional copy button.
 ///
 /// This is the "just show me the code" widget — a static block of source,
-/// always rendered in [LayrzCodeThemeExtension.dark] (code widgets never
+/// always rendered in the code module's dark theme (code widgets never
 /// follow the app's light theme), with a small affordance in the top-right
 /// corner to copy [code] to the clipboard.
 ///
@@ -68,8 +68,6 @@ class LayrzCodeSnippet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final codeTheme = context.maybeThemeExtension<LayrzCodeThemeExtension>() ?? const LayrzCodeThemeExtension.dark();
-
     return Stack(
       children: [
         LayrzCodeSurface(
@@ -79,15 +77,13 @@ class LayrzCodeSnippet extends StatelessWidget {
           maxHeight: maxHeight,
           fontSize: fontSize,
           padding: padding,
+          reservedTrailingSpace: showCopyButton ? kLayrzButtonCompactHeight + context.tokens.spacing.sp1 : 0,
         ),
         if (showCopyButton)
           Positioned(
             top: 0,
             right: 0,
-            child: LayrzCodeCopyButton(
-              text: code,
-              color: codeTheme.gutterForeground,
-            ),
+            child: LayrzCodeCopyButton(text: code),
           ),
       ],
     );

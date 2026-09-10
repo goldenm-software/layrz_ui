@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/code/src/code_theme_extension.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/highlight/highlight.dart';
 
@@ -56,6 +57,22 @@ class LayrzCodeSurface extends StatelessWidget {
   /// around).
   final EdgeInsets? padding;
 
+  /// Extra horizontal space, in logical pixels, to reserve on the right edge
+  /// of the code content for overlaid action buttons.
+  ///
+  /// This surface never renders any action button itself — callers that
+  /// overlay them (`LayrzCodeSnippet`, `LayrzCodeEditor`) position them
+  /// top-right via a `Stack`/`Positioned`, with no inset of their own on the
+  /// content below. Without a reserve, a long line's resting (unscrolled)
+  /// right edge runs directly under those buttons. This much padding is added
+  /// to the code content's right — never the gutter, which sits on the left
+  /// and is never covered — applied uniformly to every line, so clearance is
+  /// guaranteed at rest while a horizontally-scrolled line can still bring its
+  /// full text into view.
+  ///
+  /// Defaults to `0` (no reserve).
+  final double reservedTrailingSpace;
+
   /// Creates a read-only, syntax-highlighted [LayrzCodeSurface].
   const LayrzCodeSurface({
     super.key,
@@ -65,6 +82,7 @@ class LayrzCodeSurface extends StatelessWidget {
     this.maxHeight,
     this.fontSize = 14,
     this.padding,
+    this.reservedTrailingSpace = 0,
   });
 
   /// Resolves the active [LayrzCodeThemeExtension], falling back to the
@@ -144,12 +162,23 @@ class LayrzCodeSurface extends StatelessWidget {
     final codeTheme = _resolveCodeTheme(context);
     final tokens = context.tokens;
     final resolvedPadding = padding ?? tokens.spacing.pd3;
+    final contentPadding = reservedTrailingSpace > 0
+        ? resolvedPadding.copyWith(right: resolvedPadding.right + reservedTrailingSpace)
+        : resolvedPadding;
     final gutterStyle = codeTheme
         .styleForScope(LayrzHighlightScope.text, fontSize: fontSize)
         .copyWith(
           color: codeTheme.gutterForeground,
         );
-    final strutStyle = StrutStyle(fontSize: fontSize, height: gutterStyle.height ?? 1.4, forceStrutHeight: true);
+    // Pinned to the shared [kCodeLineHeightFactor] so the read-only surface
+    // and the editable [LayrzCodeEditor] lay code lines out at an identical
+    // height — the gutter and code column here share this same strut, and the
+    // editor forces the same factor on its `EditableText`.
+    final strutStyle = StrutStyle(
+      fontSize: fontSize,
+      height: kCodeLineHeightFactor,
+      forceStrutHeight: true,
+    );
 
     final lineCount = code.isEmpty ? 1 : code.split('\n').length;
 
@@ -159,9 +188,12 @@ class LayrzCodeSurface extends StatelessWidget {
     );
 
     // Horizontal scroll keeps long lines from wrapping or overflowing.
+    // `contentPadding` (not `resolvedPadding`) so the copy-button reserve
+    // (when requested) widens only the code content's right inset, never the
+    // gutter's — see `reserveCopyButtonSpace`'s doc comment.
     codeContent = SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Padding(padding: resolvedPadding, child: codeContent),
+      child: Padding(padding: contentPadding, child: codeContent),
     );
 
     Widget body = codeContent;

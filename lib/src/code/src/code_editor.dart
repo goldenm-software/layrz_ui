@@ -1,13 +1,17 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/code/src/code_copy_button.dart';
 import 'package:layrz_ui/src/code/src/code_editor_selection.dart';
 import 'package:layrz_ui/src/code/src/code_error.dart';
 import 'package:layrz_ui/src/code/src/code_gutter.dart';
+import 'package:layrz_ui/src/code/src/code_suggestions.dart';
 import 'package:layrz_ui/src/code/src/code_surface.dart';
 import 'package:layrz_ui/src/code/src/code_tab_indent.dart' as tab_indent;
 import 'package:layrz_ui/src/code/src/code_theme_extension.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/fonts/fonts.dart';
 import 'package:layrz_ui/src/highlight/highlight.dart';
@@ -134,10 +138,13 @@ class LayrzCodeEditor extends StatefulWidget {
   /// Defaults to `true`. Shown in both the editable and read-only branches.
   final bool showCopyButton;
 
-  /// The maximum height of the code area before it scrolls internally.
+  /// The fixed height of the code area, in logical pixels.
   ///
-  /// `null` (the default) leaves the height unconstrained.
-  final double? maxHeight;
+  /// The editor is always exactly this tall and never grows or shrinks with
+  /// the number of lines — content taller than the box scrolls, and a short
+  /// document leaves empty editable space below it. The caller owns this
+  /// dimension; change it to resize the editor. Defaults to `220`.
+  final double height;
 
   /// The font size, in logical pixels, used to render the code.
   ///
@@ -153,6 +160,32 @@ class LayrzCodeEditor extends StatefulWidget {
 
   /// Callback fired when the editor gains or loses focus.
   final ValueChanged<bool>? onFocusChanged;
+
+  /// Called when the user taps the run action.
+  ///
+  /// When non-null, a run (play) [LayrzButton] is shown in the editor's
+  /// top-right action row alongside the copy button. When `null`, no run
+  /// button is rendered. Wiring what "run" does is the caller's responsibility.
+  final VoidCallback? onRun;
+
+  /// Called when the user taps the lint action.
+  ///
+  /// When non-null, a lint [LayrzButton] is shown in the editor's top-right
+  /// action row. When `null`, no lint button is rendered.
+  final VoidCallback? onLint;
+
+  /// Extra autocomplete suggestions supplied by the caller, merged with the
+  /// language's built-in symbols.
+  ///
+  /// As the user types an identifier, a popup lists every built-in symbol for
+  /// [language] (Layrz Compute Language function names; Python keywords and
+  /// builtins) plus these entries whose text starts with the partial word
+  /// (case-insensitive). Use it for context-specific completions the editor
+  /// cannot know on its own — most importantly the Layrz Markup Language
+  /// `{{variable}}` names available in the current document, which have no
+  /// built-in list. Each accepted entry is inserted verbatim, so pass entries
+  /// in the exact form they should appear (e.g. `assetName` or `{{assetName}}`).
+  final List<String> suggestions;
 
   /// Creates a new [LayrzCodeEditor].
   const LayrzCodeEditor({
@@ -173,11 +206,14 @@ class LayrzCodeEditor extends StatefulWidget {
     this.hintText,
     this.helperText,
     this.showCopyButton = true,
-    this.maxHeight,
+    this.height = 220,
     this.fontSize = 14,
     this.dense = false,
     this.onTap,
     this.onFocusChanged,
+    this.onRun,
+    this.onLint,
+    this.suggestions = const [],
   });
 
   @override
@@ -216,6 +252,26 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
   late final EditableTextContextMenuBuilder _cachedContextMenuBuilder;
   final GlobalKey<EditableTextState> _editableTextKey = GlobalKey<EditableTextState>();
   late final TextSelectionGestureDetectorBuilder _gestureDetectorBuilder;
+
+  /// The autocomplete matches currently offered, or empty when the popup is
+  /// closed. Recomputed on every selection/text change from the word under the
+  /// caret; the popup renders only while this is non-empty.
+  List<String> _suggestionMatches = const [];
+
+  /// The index into [_suggestionMatches] highlighted for keyboard selection.
+  int _suggestionIndex = 0;
+
+  /// The source range the active completion would replace (the caret word).
+  LayrzCaretWord? _suggestionWord;
+
+  /// Links the caret anchor in the editor to the popup rendered in the root
+  /// [Overlay], so the floating suggestion list follows the caret and is never
+  /// clipped by the editor's rounded chrome or `maxHeight`.
+  final LayerLink _suggestionLink = LayerLink();
+
+  /// The live overlay entry hosting the suggestion popup, or `null` when the
+  /// popup is closed.
+  OverlayEntry? _suggestionOverlay;
 
   @override
   GlobalKey<EditableTextState> get editableTextKey => _editableTextKey;
@@ -303,6 +359,8 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
 
   @override
   void dispose() {
+    _suggestionOverlay?.remove();
+    _suggestionOverlay = null;
     _controller.removeListener(_handleSelectionOrTextChange);
     if (_ownsController) {
       _controller.dispose();
@@ -328,8 +386,103 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
 
   /// Rebuilds so the current-line highlight tracks caret movement, and so a
   /// programmatic text change (e.g. Tab indentation) repaints immediately.
+  /// Also recomputes the autocomplete matches for the word under the caret.
   void _handleSelectionOrTextChange() {
-    setState(() {});
+    setState(_recomputeSuggestions);
+  }
+
+  /// Recomputes [_suggestionMatches]/[_suggestionWord] from the identifier
+  /// under the caret. Clears them (closing the popup) when the field is
+  /// read-only/disabled, the selection is not a collapsed caret, or no
+  /// candidate completes the current word. Must run inside a `setState`.
+  void _recomputeSuggestions() {
+    if (widget.readOnly || widget.disabled) {
+      _suggestionMatches = const [];
+      _suggestionWord = null;
+      return;
+    }
+    final selection = _controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) {
+      _suggestionMatches = const [];
+      _suggestionWord = null;
+      return;
+    }
+    final caretWord = LayrzCodeSuggestions.caretWord(_controller.text, selection.baseOffset);
+    if (caretWord.word.isEmpty) {
+      _suggestionMatches = const [];
+      _suggestionWord = null;
+      return;
+    }
+    final matches = LayrzCodeSuggestions.matches(
+      caretWord.word,
+      builtins: LayrzCodeSuggestions.builtinsFor(widget.language),
+      extras: widget.suggestions,
+    );
+    _suggestionMatches = matches;
+    _suggestionWord = matches.isEmpty ? null : caretWord;
+    if (_suggestionIndex >= matches.length) {
+      _suggestionIndex = 0;
+    }
+  }
+
+  /// Replaces the caret word with [completion] and closes the popup, moving the
+  /// caret to the end of the inserted text and firing [LayrzCodeEditor.onChanged].
+  void _acceptSuggestion(String completion) {
+    final word = _suggestionWord;
+    if (word == null) {
+      return;
+    }
+    final text = _controller.text;
+    final newText = text.replaceRange(word.start, word.end, completion);
+    final caret = word.start + completion.length;
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: caret),
+    );
+    widget.onChanged?.call(newText);
+    setState(() {
+      _suggestionMatches = const [];
+      _suggestionWord = null;
+      _suggestionIndex = 0;
+    });
+  }
+
+  /// Closes the popup without inserting anything. Must run inside a `setState`.
+  void _closeSuggestions() {
+    _suggestionMatches = const [];
+    _suggestionWord = null;
+    _suggestionIndex = 0;
+  }
+
+  /// Force-opens the popup at the caret in response to Ctrl/Cmd+Space, showing
+  /// the full built-in + caller list when there is no partial word, or the
+  /// prefix-filtered list when there is. Returns whether anything opened.
+  bool _openSuggestionsManually() {
+    if (widget.readOnly || widget.disabled) {
+      return false;
+    }
+    final selection = _controller.selection;
+    if (!selection.isValid || !selection.isCollapsed) {
+      return false;
+    }
+    final caretWord = LayrzCodeSuggestions.caretWord(_controller.text, selection.baseOffset);
+    final matches = LayrzCodeSuggestions.matches(
+      caretWord.word,
+      builtins: LayrzCodeSuggestions.builtinsFor(widget.language),
+      extras: widget.suggestions,
+      includeAllOnEmpty: true,
+    );
+    if (matches.isEmpty) {
+      return false;
+    }
+    setState(() {
+      _suggestionMatches = matches;
+      // With no partial word there is nothing to replace, so the completion is
+      // inserted at the caret (an empty-range word at the caret offset).
+      _suggestionWord = caretWord;
+      _suggestionIndex = 0;
+    });
+    return true;
   }
 
   /// Returns the 1-based line number the caret currently sits on, or `null`
@@ -355,6 +508,40 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
     if (event is! KeyDownEvent) {
       return KeyEventResult.ignored;
     }
+
+    // Ctrl/Cmd+Space force-opens the autocomplete popup at the caret, showing
+    // the full list when there is no partial word. Handled before everything
+    // else so the space is never inserted into the text.
+    if (event.logicalKey == LogicalKeyboardKey.space &&
+        (HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed)) {
+      final opened = _openSuggestionsManually();
+      return opened ? KeyEventResult.handled : KeyEventResult.ignored;
+    }
+
+    // Autocomplete navigation takes priority while the popup is open — but
+    // ONLY over its own keys (arrows/Enter/Escape). Tab is never consumed by
+    // the popup, so it keeps indenting even mid-completion.
+    if (_suggestionMatches.isNotEmpty) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        setState(() => _suggestionIndex = (_suggestionIndex + 1) % _suggestionMatches.length);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        setState(
+          () => _suggestionIndex = (_suggestionIndex - 1 + _suggestionMatches.length) % _suggestionMatches.length,
+        );
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+        _acceptSuggestion(_suggestionMatches[_suggestionIndex]);
+        return KeyEventResult.handled;
+      }
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        setState(_closeSuggestions);
+        return KeyEventResult.handled;
+      }
+    }
+
     if (event.logicalKey != LogicalKeyboardKey.tab) {
       return KeyEventResult.ignored;
     }
@@ -379,6 +566,10 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
     _codeTheme = context.maybeThemeExtension<LayrzCodeThemeExtension>() ?? const LayrzCodeThemeExtension.dark();
     final tokens = context.tokens;
     final isDisabledOverall = widget.readOnly || widget.disabled;
+
+    // Sync the root-overlay popup after the frame, once the caret anchor's
+    // geometry for this build is laid out.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncSuggestionOverlay());
 
     final Widget body = isDisabledOverall ? _buildReadOnly() : _buildEditable();
 
@@ -417,35 +608,137 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
   /// Builds the read-only/disabled branch: a [LayrzCodeSurface] with the copy
   /// button overlaid, optionally dimmed when [LayrzCodeEditor.disabled].
   Widget _buildReadOnly() {
-    final surface = LayrzCodeSurface(
-      code: _controller.text,
-      language: widget.language,
-      showLineNumbers: widget.showLineNumbers,
-      maxHeight: widget.maxHeight,
-      fontSize: widget.fontSize,
+    final surface = SizedBox(
+      height: widget.height,
+      child: LayrzCodeSurface(
+        code: _controller.text,
+        language: widget.language,
+        showLineNumbers: widget.showLineNumbers,
+        maxHeight: widget.height,
+        fontSize: widget.fontSize,
+        reservedTrailingSpace: _actionRowReserve(context.tokens.spacing.sp1),
+      ),
     );
 
     return Stack(
       children: [
         widget.disabled ? Opacity(opacity: 0.5, child: surface) : surface,
-        if (widget.showCopyButton)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: LayrzCodeCopyButton(text: _controller.text, color: _codeTheme.gutterForeground),
-          ),
+        _buildActionRow(),
       ],
+    );
+  }
+
+  /// The number of buttons rendered in the top-right action row (lint, run,
+  /// copy), used to reserve enough horizontal space so code never runs behind
+  /// any of them.
+  int get _actionButtonCount =>
+      (widget.onLint != null ? 1 : 0) + (widget.onRun != null ? 1 : 0) + (widget.showCopyButton ? 1 : 0);
+
+  /// The horizontal space, in logical pixels, to reserve on the code content's
+  /// right so no line's resting right edge runs under the action row. Each
+  /// button is at most [kLayrzButtonCompactHeight] wide (Fab buttons are
+  /// square); a trailing gap of one spacing level keeps text clear of the
+  /// left-most button.
+  double _actionRowReserve(double gap) => _actionButtonCount == 0 ? 0 : _actionButtonCount * kLayrzButtonCompactHeight + gap;
+
+  /// Builds the top-right action row overlaid on the code box: the optional
+  /// lint and run buttons (shown only when their callback is provided) and the
+  /// copy button (shown when [LayrzCodeEditor.showCopyButton] is true), in that
+  /// order. Returns an empty [SizedBox] when nothing is shown so the [Stack]
+  /// stays cheap.
+  Widget _buildActionRow() {
+    final hasRun = widget.onRun != null;
+    final hasLint = widget.onLint != null;
+    if (!hasRun && !hasLint && !widget.showCopyButton) {
+      return const SizedBox.shrink();
+    }
+    return Positioned(
+      top: 0,
+      right: 0,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (hasLint)
+            LayrzButton(
+              labelText: 'Lint',
+              icon: MdiIcons.checkAll,
+              color: const Color(0xFFFFFFFF),
+              style: LayrzButtonStyle.textFab,
+              onTap: widget.onLint,
+            ),
+          if (hasRun)
+            LayrzButton(
+              labelText: 'Run',
+              icon: MdiIcons.play,
+              color: const Color(0xFFFFFFFF),
+              style: LayrzButtonStyle.textFab,
+              onTap: widget.onRun,
+            ),
+          if (widget.showCopyButton) LayrzCodeCopyButton(text: _controller.text),
+        ],
+      ),
     );
   }
 
   /// Builds the editable branch: gutter + [EditableText], sharing a single
   /// vertical [_scrollController] so line numbers never drift out of sync
   /// with the code — see the class-level "Gutter/scroll sync" note.
+  ///
+  /// Wrapped in the same outer chrome [LayrzCodeSurface] uses — a
+  /// [DecoratedBox] painted with [LayrzCodeThemeExtension.background] and
+  /// rounded with `tokens.radius.br2`, clipped by a matching [ClipRRect] —
+  /// so an editable editor renders with the same rounded corners and outer
+  /// padding as the read-only surface/snippet. The [ClipRRect] sits outside
+  /// the scrolling content (mirroring [LayrzCodeSurface.build]) so the
+  /// rounded clip never interferes with the gutter/text scroll-sync.
   Widget _buildEditable() {
     const font = LayrzJetBrainsMonoFont();
-    final baseStyle = font.body.copyWith(fontSize: widget.fontSize, color: _codeTheme.foreground);
-    final lineHeight = (baseStyle.height ?? 1.4) * widget.fontSize;
+    // An explicit `height` is mandatory here: without it, `EditableText`
+    // lays out each line at the font's intrinsic metric height while the
+    // gutter (and the error-line bands) are positioned on a fixed
+    // `lineHeight`, so the line numbers drift progressively out of sync down
+    // the file. Pinning `height` to [kCodeLineHeightFactor] makes every
+    // `EditableText` line box exactly `factor * fontSize` tall, matching the
+    // gutter. The [StrutStyle] on the `EditableText` below enforces that same
+    // box height even for lines whose glyphs (tall Unicode, emoji) would
+    // otherwise stretch the line — so alignment holds regardless of content.
+    final baseStyle = font.body.copyWith(
+      fontSize: widget.fontSize,
+      color: _codeTheme.foreground,
+      height: kCodeLineHeightFactor,
+    );
+    final strutStyle = StrutStyle(
+      fontFamily: baseStyle.fontFamily,
+      fontSize: widget.fontSize,
+      height: kCodeLineHeightFactor,
+      forceStrutHeight: true,
+    );
+    // The gutter rows and the per-line error/current-line bands must advance
+    // by the EXACT height `EditableText` lays each line out at — which is NOT
+    // simply `kCodeLineHeightFactor * fontSize`. Flutter derives the final
+    // line box from the font's own metrics plus the strut and rounds it, so
+    // e.g. factor 1.4 at fontSize 14 renders 20.0px per line, not 19.6. Using
+    // the computed value drifts by that fraction every line. Measuring one
+    // laid-out line with the identical style + strut yields the real advance,
+    // so gutter numbers and bands stay locked to the code no matter the font.
+    final lineHeight = (TextPainter(
+      text: TextSpan(text: 'A', style: baseStyle),
+      strutStyle: strutStyle,
+      textDirection: TextDirection.ltr,
+    )..layout()).preferredLineHeight;
     final lineCount = '\n'.allMatches(_controller.text).length + 1;
+    final tokens = context.tokens;
+    final resolvedPadding = tokens.spacing.pd3;
+    // Mirrors `LayrzCodeSurface.reserveCopyButtonSpace`: when the copy button
+    // is shown, the code content's right inset grows by the widest a
+    // Fab-styled `LayrzButton` ever renders (`kLayrzButtonCompactHeight`)
+    // plus a small gap, so a long line's resting right edge never runs under
+    // the overlaid button. Only the code content's padding grows — the
+    // gutter (left side) is never touched.
+    final actionReserve = _actionRowReserve(tokens.spacing.sp1);
+    final contentPadding = actionReserve > 0
+        ? resolvedPadding.copyWith(right: resolvedPadding.right + actionReserve)
+        : resolvedPadding;
 
     final editable = EditableText(
       key: _editableTextKey,
@@ -459,6 +752,11 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
       controller: _controller,
       focusNode: _focusNode,
       style: baseStyle,
+      // The very same strut used to measure `lineHeight` above, so the text's
+      // real line advance and the gutter/band positioning are guaranteed
+      // identical. `forceStrutHeight: true` makes the strut win over any
+      // taller glyph so line numbers never drift.
+      strutStyle: strutStyle,
       cursorColor: _codeTheme.foreground,
       backgroundCursorColor: _codeTheme.gutterForeground,
       selectionColor: _codeTheme.foreground.withValues(alpha: 0.24),
@@ -515,18 +813,31 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (widget.showLineNumbers)
-                    LayrzCodeGutter(
-                      lineCount: lineCount,
-                      currentLine: _focusNode.hasFocus ? _currentLine() : null,
-                      lineHeight: lineHeight,
-                      fontSize: widget.fontSize,
-                      errors: widget.errors,
-                      codeTheme: _codeTheme,
+                    Padding(
+                      padding: EdgeInsets.only(top: resolvedPadding.top, bottom: resolvedPadding.bottom),
+                      child: LayrzCodeGutter(
+                        lineCount: lineCount,
+                        currentLine: _focusNode.hasFocus ? _currentLine() : null,
+                        lineHeight: lineHeight,
+                        fontSize: widget.fontSize,
+                        errors: widget.errors,
+                        codeTheme: _codeTheme,
+                      ),
                     ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      child: tappableEditable,
+                    child: Stack(
+                      children: [
+                        ..._buildErrorLineBackgrounds(
+                          lineCount: lineCount,
+                          lineHeight: lineHeight,
+                          topInset: contentPadding.top,
+                        ),
+                        Padding(
+                          padding: contentPadding,
+                          child: tappableEditable,
+                        ),
+                        _buildCaretAnchor(contentPadding, lineHeight),
+                      ],
                     ),
                   ),
                 ],
@@ -537,23 +848,149 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
       ),
     );
 
-    final constrained = widget.maxHeight != null
-        ? ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: widget.maxHeight!),
-            child: content,
-          )
-        : content;
+    // Fixed height: the editor is always exactly `widget.height` tall and never
+    // grows with the line count. A short document leaves empty editable space
+    // below the code (the box's own background fills it); a tall one scrolls
+    // inside the shared vertical `SingleChildScrollView`.
+    final constrained = SizedBox(height: widget.height, child: content);
 
+    // Same outer chrome as `LayrzCodeSurface`: a rounded, colored
+    // `DecoratedBox` clipped by a matching `ClipRRect`, with the
+    // `ClipRRect` outside the scrolling content so the rounded clip never
+    // has to interact with the gutter/text scroll-sync — see this method's
+    // doc comment.
+    final chrome = DecoratedBox(
+      decoration: BoxDecoration(
+        color: _codeTheme.background,
+        borderRadius: tokens.radius.br2,
+      ),
+      child: ClipRRect(
+        borderRadius: tokens.radius.br2,
+        child: constrained,
+      ),
+    );
+
+    // The caret anchor: a zero-size `CompositedTransformTarget` positioned at
+    // the caret, which the root-overlay popup follows via [_suggestionLink].
+    // Sitting inside the scroll content, it moves with the caret as the code
+    // scrolls, and — being in the overlay — the popup escapes the editor's
+    // `ClipRRect`/`maxHeight` so it is never clipped.
     return Stack(
       children: [
-        constrained,
-        if (widget.showCopyButton)
-          Positioned(
-            top: 0,
-            right: 0,
-            child: LayrzCodeCopyButton(text: _controller.text, color: _codeTheme.gutterForeground),
-          ),
+        chrome,
+        _buildActionRow(),
       ],
     );
+  }
+
+  /// A zero-size [CompositedTransformTarget] positioned at the caret inside the
+  /// code area's [Stack] (the same coordinate space the [EditableText] and the
+  /// error bands live in), so the root-overlay popup follows it exactly.
+  ///
+  /// The caret rectangle from the live [RenderEditable] is in the editable
+  /// text's own local space; the text is inset by [contentPadding] within this
+  /// Stack, so the anchor is offset by that padding to land on the real caret.
+  Widget _buildCaretAnchor(EdgeInsets contentPadding, double lineHeight) {
+    final renderEditable = _editableTextKey.currentState?.renderEditable;
+    Offset caret = Offset(contentPadding.left, contentPadding.top);
+    if (renderEditable != null) {
+      final caretLocal = renderEditable.getLocalRectForCaret(_controller.selection.extent).bottomLeft;
+      caret = Offset(contentPadding.left + caretLocal.dx, contentPadding.top + caretLocal.dy);
+    }
+    return Positioned(
+      left: caret.dx,
+      top: caret.dy,
+      child: CompositedTransformTarget(
+        link: _suggestionLink,
+        child: const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  /// Inserts, updates, or removes the root-overlay suggestion popup to match
+  /// the current [_suggestionMatches]. Scheduled after the frame so the caret
+  /// anchor's geometry is up to date when the follower reads it.
+  void _syncSuggestionOverlay() {
+    if (!mounted) {
+      return;
+    }
+    if (_suggestionMatches.isEmpty) {
+      _suggestionOverlay?.remove();
+      _suggestionOverlay = null;
+      return;
+    }
+    if (_suggestionOverlay == null) {
+      _suggestionOverlay = OverlayEntry(builder: _buildSuggestionOverlay);
+      Overlay.of(context, rootOverlay: true).insert(_suggestionOverlay!);
+    } else {
+      _suggestionOverlay!.markNeedsBuild();
+    }
+  }
+
+  /// Builds the floating suggestion list, following the caret anchor via
+  /// [_suggestionLink] and offset just below it.
+  Widget _buildSuggestionOverlay(BuildContext context) {
+    return Positioned(
+      width: 280,
+      child: CompositedTransformFollower(
+        link: _suggestionLink,
+        showWhenUnlinked: false,
+        targetAnchor: Alignment.bottomLeft,
+        followerAnchor: Alignment.topLeft,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: LayrzCodeSuggestionList(
+            matches: _suggestionMatches,
+            selectedIndex: _suggestionIndex,
+            codeTheme: _codeTheme,
+            fontSize: widget.fontSize,
+            onAccept: _acceptSuggestion,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds the code-area half of the full-width error band for every line in
+  /// [widget.errors], as a list of independently-[Positioned] widgets meant
+  /// to be inserted into a [Stack] beneath the editable text.
+  ///
+  /// [LayrzCodeGutter] paints the matching left half behind the line numbers;
+  /// these widgets paint the right half behind the code itself so together
+  /// they read as one continuous tonal-red row — see the class-level
+  /// "Gutter/scroll sync" note and [LayrzCodeGutter]'s "Precedence" note
+  /// (an error always wins over the current-line highlight, which this
+  /// method does not paint at all — the current-line highlight is a gutter-
+  /// only affordance, matching prior behavior).
+  ///
+  /// Each returned widget is independently positioned at
+  /// `topInset + (line - 1) * lineHeight`, [lineHeight] tall, spanning the
+  /// full width — rather than one [Column] sized to the sum of every line —
+  /// so this never has to match the [Stack]'s own height exactly (which is
+  /// derived from the editable text and can differ from the estimated
+  /// [lineHeight] by a fractional pixel).
+  List<Widget> _buildErrorLineBackgrounds({
+    required int lineCount,
+    required double lineHeight,
+    required double topInset,
+  }) {
+    final errorByLine = LayrzCodeGutter.errorsByLine(widget.errors);
+    if (errorByLine.isEmpty) {
+      return const [];
+    }
+
+    final errorBackground = _codeTheme.errorColor.withValues(alpha: 0.12);
+
+    return [
+      for (var line = 1; line <= lineCount; line++)
+        if (errorByLine.containsKey(line))
+          Positioned(
+            top: topInset + (line - 1) * lineHeight,
+            left: 0,
+            right: 0,
+            height: lineHeight,
+            child: ColoredBox(color: errorBackground),
+          ),
+    ];
   }
 }

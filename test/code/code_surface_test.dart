@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/src/code/src/code_surface.dart';
 import 'package:layrz_ui/src/code/src/code_theme_extension.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/highlight/highlight.dart';
+import 'package:layrz_ui/src/theme/theme.dart';
 
 import '../helpers/pump_themed.dart';
 
@@ -175,6 +177,50 @@ void main() {
       final richTexts = tester.widgetList<RichText>(find.byType(RichText)).toList();
       final gutterText = _plainTextOf(richTexts.first.text);
       expect(gutterText, '1');
+    });
+
+    testWidgets('reservedTrailingSpace adds extra right padding to the code content', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const code = 'x = 1';
+      final reserve = kLayrzButtonCompactHeight + 4;
+      await pumpThemed(
+        tester,
+        LayrzCodeSurface(code: code, language: LayrzCodeLanguage.python, reservedTrailingSpace: reserve),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final defaultPadding = tokens.spacing.pd3;
+
+      final contentPadding = tester.widget<Padding>(
+        find.ancestor(of: find.byType(RichText).first, matching: find.byType(Padding)).first,
+      );
+      expect(
+        contentPadding.padding.resolve(TextDirection.ltr).right,
+        defaultPadding.right + reserve,
+      );
+    });
+
+    testWidgets('reservedTrailingSpace defaults to 0 (no extra right padding)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const code = 'x = 1';
+      await pumpThemed(
+        tester,
+        const LayrzCodeSurface(code: code, language: LayrzCodeLanguage.python),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final defaultPadding = tokens.spacing.pd3;
+
+      final contentPadding = tester.widget<Padding>(
+        find.ancestor(of: find.byType(RichText).first, matching: find.byType(Padding)).first,
+      );
+      expect(contentPadding.padding.resolve(TextDirection.ltr).right, defaultPadding.right);
     });
   });
 }

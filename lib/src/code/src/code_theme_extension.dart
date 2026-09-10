@@ -37,6 +37,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   final Color errorColor;
 
   /// The color for [LayrzHighlightScope.keyword] tokens.
+  ///
+  /// Keyword tokens are additionally rendered bold — see [styleForScope].
   final Color keyword;
 
   /// The color for [LayrzHighlightScope.builtin] tokens.
@@ -65,6 +67,21 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   /// The color for [LayrzHighlightScope.variable] tokens.
   final Color variable;
 
+  /// The color for [LayrzHighlightScope.operator] tokens.
+  ///
+  /// Brogrammer renders operators in the default foreground color rather
+  /// than a distinct accent. Unlike [keyword] and [function], operator
+  /// tokens are not rendered bold — see [styleForScope].
+  final Color operator;
+
+  /// The color for [LayrzHighlightScope.functionCall] tokens.
+  ///
+  /// A user-defined function call (e.g. Python `average(...)`) — kept
+  /// distinct from [function], which colors LCL/LML builtin function
+  /// names, so Python calls can be styled independently. Function-call
+  /// tokens are additionally rendered bold — see [styleForScope].
+  final Color functionCall;
+
   /// Creates a new [LayrzCodeThemeExtension] with every field required.
   ///
   /// Prefer [LayrzCodeThemeExtension.dark] unless every color needs to be
@@ -85,6 +102,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
     required this.constant,
     required this.decorator,
     required this.variable,
+    required this.operator,
+    required this.functionCall,
   });
 
   /// The default dark palette used by every layrz_ui code widget.
@@ -92,22 +111,26 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   /// Code widgets do not follow the app's light/dark mode — they are always
   /// dark, the same way most code editors are — so this is both the default
   /// and, in practice, the only palette most consumers ever need.
+  ///
+  /// Colors follow the Brogrammer theme.
   const LayrzCodeThemeExtension.dark()
-    : background = const Color(0xFF1A1A1A),
-      foreground = const Color(0xFFECF0F1),
-      gutterBackground = const Color(0xFF212121),
-      gutterForeground = const Color(0xFF6B6B6B),
-      currentLineBackground = const Color(0xFF252525),
-      errorColor = const Color(0xFFE74C3C),
-      keyword = const Color(0xFF9B59B6),
-      builtin = const Color(0xFF5DADE2),
-      function = const Color(0xFF3498DB),
-      string = const Color(0xFFF1C40F),
-      number = const Color(0xFF2ECC71),
-      comment = const Color(0xFF7F8C8D),
-      constant = const Color(0xFFE67E22),
-      decorator = const Color(0xFF1ABC9C),
-      variable = const Color(0xFF80DEEA);
+    : background = const Color(0xFF131313),
+      foreground = const Color(0xFFD6DBE5),
+      gutterBackground = const Color(0xFF131313),
+      gutterForeground = const Color(0xFF4A5158),
+      currentLineBackground = const Color(0xFF1F1F1F),
+      errorColor = const Color(0xFFF81118),
+      keyword = const Color(0xFFF81118),
+      builtin = const Color(0xFF3387CC),
+      function = const Color(0xFF3387CC),
+      string = const Color(0xFF2DC55E),
+      number = const Color(0xFFEE5D43),
+      comment = const Color(0xFF808080),
+      constant = const Color(0xFFEE5D43),
+      decorator = const Color(0xFF3387CC),
+      variable = const Color(0xFF3387CC),
+      operator = const Color(0xFFD6DBE5),
+      functionCall = const Color(0xFF2DC55E);
 
   @override
   LayrzCodeThemeExtension copyWith({
@@ -126,6 +149,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
     Color? constant,
     Color? decorator,
     Color? variable,
+    Color? operator,
+    Color? functionCall,
   }) {
     return LayrzCodeThemeExtension(
       background: background ?? this.background,
@@ -143,6 +168,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
       constant: constant ?? this.constant,
       decorator: decorator ?? this.decorator,
       variable: variable ?? this.variable,
+      operator: operator ?? this.operator,
+      functionCall: functionCall ?? this.functionCall,
     );
   }
 
@@ -167,6 +194,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
       constant: Color.lerp(constant, other.constant, t)!,
       decorator: Color.lerp(decorator, other.decorator, t)!,
       variable: Color.lerp(variable, other.variable, t)!,
+      operator: Color.lerp(operator, other.operator, t)!,
+      functionCall: Color.lerp(functionCall, other.functionCall, t)!,
     );
   }
 
@@ -197,6 +226,10 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
         return decorator;
       case LayrzHighlightScope.variable:
         return variable;
+      case LayrzHighlightScope.operator:
+        return operator;
+      case LayrzHighlightScope.functionCall:
+        return functionCall;
     }
   }
 
@@ -204,9 +237,11 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   /// [fontSize].
   ///
   /// The style is always JetBrains Mono ([LayrzJetBrainsMonoFont]), colored
-  /// via [colorForScope]. [LayrzHighlightScope.function] is rendered bold —
-  /// the only bold scope, matching layrz_theme's syntax highlighting — using
-  /// the font's `display` style (weight `700`) rather than `body` (weight
+  /// via [colorForScope]. [LayrzHighlightScope.keyword],
+  /// [LayrzHighlightScope.function], and [LayrzHighlightScope.functionCall]
+  /// are rendered bold — matching the Brogrammer theme, where keywords
+  /// (`import`/`def`/`return`) and call names are both bold — using the
+  /// font's `display` style (weight `700`) rather than `body` (weight
   /// `400`). Every other scope uses `body`.
   ///
   /// JetBrains Mono is a **variable** font: weight is only respected via
@@ -217,7 +252,11 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   TextStyle styleForScope(LayrzHighlightScope scope, {required double fontSize}) {
     const font = LayrzJetBrainsMonoFont();
     final color = colorForScope(scope);
-    final base = scope == LayrzHighlightScope.function ? font.display : font.body;
+    final isBold =
+        scope == LayrzHighlightScope.keyword ||
+        scope == LayrzHighlightScope.function ||
+        scope == LayrzHighlightScope.functionCall;
+    final base = isBold ? font.display : font.body;
     return base.copyWith(fontSize: fontSize, color: color);
   }
 
@@ -251,7 +290,9 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
           comment == other.comment &&
           constant == other.constant &&
           decorator == other.decorator &&
-          variable == other.variable;
+          variable == other.variable &&
+          operator == other.operator &&
+          functionCall == other.functionCall;
 
   @override
   int get hashCode => Object.hashAll([
@@ -270,6 +311,8 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
     constant,
     decorator,
     variable,
+    operator,
+    functionCall,
   ]);
 
   @override
@@ -279,5 +322,5 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
       'currentLineBackground: $currentLineBackground, errorColor: $errorColor, '
       'keyword: $keyword, builtin: $builtin, function: $function, string: $string, '
       'number: $number, comment: $comment, constant: $constant, decorator: $decorator, '
-      'variable: $variable)';
+      'variable: $variable, operator: $operator, functionCall: $functionCall)';
 }

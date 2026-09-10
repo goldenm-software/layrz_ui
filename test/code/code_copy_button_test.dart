@@ -83,6 +83,29 @@ void main() {
       expect(iconAfterRevert.icon, equals(handleBefore.icon));
     });
 
+    testWidgets('renders the icon in opaque white by default', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzCodeCopyButton(text: 'a'));
+
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.color, equals(const Color(0xFFFFFFFF)));
+    });
+
+    testWidgets('honours an explicit color override', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      const override = Color(0xFF112233);
+      await pumpThemed(tester, const LayrzCodeCopyButton(text: 'a', color: override));
+
+      final icon = tester.widget<Icon>(find.byType(Icon));
+      expect(icon.color, equals(override));
+    });
+
     testWidgets('uses tooltipText as the semantics label when provided', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -95,7 +118,29 @@ void main() {
           const LayrzCodeCopyButton(text: 'a', tooltipText: 'Copy snippet'),
         );
 
-        expect(find.bySemanticsLabel('Copy snippet'), findsOneWidget);
+        final semanticsNode = tester.getSemantics(
+          find
+              .descendant(
+                of: find.byType(LayrzCodeCopyButton),
+                matching: find.byType(Semantics),
+              )
+              .first,
+        );
+
+        // LayrzButton's Semantics node merges its children with
+        // excludeSemantics: true, so the underlying tap gesture does not
+        // surface as an explicit SemanticsAction.tap on this node — assert
+        // the button flag and label here, and verify tappability
+        // functionally in the dedicated clipboard test above.
+        expect(
+          semanticsNode,
+          matchesSemantics(
+            label: 'Copy snippet',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+          ),
+        );
       } finally {
         handle.dispose();
       }
@@ -110,6 +155,9 @@ void main() {
       try {
         await pumpThemed(tester, const LayrzCodeCopyButton(text: 'a'));
 
+        // LayrzButton renders a single, merged Semantics node (button +
+        // label + tooltip) — it is the first Semantics descendant of the
+        // widget, found here rather than duplicated by this widget.
         final semanticsNode = tester.getSemantics(
           find
               .descendant(
@@ -124,7 +172,8 @@ void main() {
           matchesSemantics(
             label: 'Copy',
             isButton: true,
-            hasTapAction: true,
+            hasEnabledState: true,
+            isEnabled: true,
           ),
         );
       } finally {

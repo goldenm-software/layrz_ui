@@ -2,34 +2,39 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/code/src/code_error.dart';
 import 'package:layrz_ui/src/code/src/code_theme_extension.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/fonts/fonts.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
 /// The line-number gutter drawn to the left of [LayrzCodeEditor]'s editable
 /// text.
 ///
-/// Renders one row per line of the edited document, right-aligned, colored
-/// with [LayrzCodeThemeExtension.gutterForeground] on
-/// [LayrzCodeThemeExtension.gutterBackground]. The row for [currentLine] (when
-/// non-null) is painted with [LayrzCodeThemeExtension.currentLineBackground]
-/// to mirror the current-line highlight drawn behind the code itself. Any
-/// line reported in [errors] is painted with
-/// [LayrzCodeThemeExtension.errorColor] and wrapped in a [LayrzTooltip]
-/// carrying that error's message.
+/// The line numbers are rendered as a **single** [RichText] sharing the exact
+/// same [StrutStyle] as the code text (the same approach `LayrzCodeSurface`
+/// uses for its read-only gutter). This is what keeps row `N` of the gutter
+/// flush against line `N` of the code: because both columns are laid out by
+/// the identical strut, their line boxes have the same height and the same
+/// baseline distribution, so the numbers never drift as the document grows.
+/// A per-row `Column` of individually-centered `Text` boxes — the earlier
+/// approach — does *not* share the code's strut and drifts cumulatively.
 ///
-/// **Scroll-sync contract**: this widget renders its rows in a plain
-/// [Column] with **no scrolling of its own** — [LayrzCodeEditor] places it
-/// and the editable text side by side inside one shared
-/// [SingleChildScrollView], so both columns move together under a single
-/// [ScrollController] and line `N` always lines up between the two. Giving
-/// the gutter its own scrollable would desynchronize it from the text the
-/// moment the two views scroll by different amounts (e.g. differing
-/// scrollbar insets), so this widget must never be wrapped in a second
-/// scroll view by its caller.
+/// Per-line backgrounds (the [currentLine] highlight and the tonal-red error
+/// band) are painted as [Positioned] layers **behind** the numbers, each at
+/// `(line - 1) * lineHeight`, so they line up with the code-area bands that
+/// [LayrzCodeEditor] positions on the same math.
 ///
-/// Each row's height matches [lineHeight] exactly, which the caller computes
-/// from the same [TextStyle] used to render the code, so row `N` in this
-/// gutter sits flush against line `N` of the code above it.
+/// **Precedence**: an error-marked line always wins its background over the
+/// current-line highlight, even when the caret sits on that very line —
+/// [errorsByLine] is consulted before [currentLine]. This gutter paints only
+/// its half (left) of the full-width error band; [LayrzCodeEditor]'s editable
+/// branch paints the matching background behind the code area on the right so
+/// the two halves read as one continuous row.
+///
+/// **Scroll-sync contract**: this widget renders with **no scrolling of its
+/// own** — [LayrzCodeEditor] places it and the editable text side by side
+/// inside one shared [SingleChildScrollView], so both columns move together
+/// under a single [ScrollController] and line `N` always lines up between the
+/// two. It must never be wrapped in a second scroll view by its caller.
 class LayrzCodeGutter extends StatelessWidget {
   /// The total number of lines to render one gutter row for.
   ///
@@ -44,8 +49,8 @@ class LayrzCodeGutter extends StatelessWidget {
   /// The height, in logical pixels, of a single gutter row.
   ///
   /// Must equal the line height of the code text rendered alongside this
-  /// gutter, or line numbers will drift out of alignment as the document
-  /// grows.
+  /// gutter (`kCodeLineHeightFactor * fontSize`), or line numbers will drift
+  /// out of alignment as the document grows.
   final double lineHeight;
 
   /// The font size, in logical pixels, used to render line numbers.
@@ -87,62 +92,88 @@ class LayrzCodeGutter extends StatelessWidget {
   Widget build(BuildContext context) {
     final errorByLine = errorsByLine(errors);
     const font = LayrzJetBrainsMonoFont();
-    final numberStyle = font.body.copyWith(fontSize: fontSize, color: codeTheme.gutterForeground);
-    final errorNumberStyle = numberStyle.copyWith(color: codeTheme.errorColor);
+    final numberStyle = font.body.copyWith(
+      fontSize: fontSize,
+      height: kCodeLineHeightFactor,
+      color: codeTheme.gutterForeground,
+    );
+    final errorColor = codeTheme.errorColor;
+
+    // The number column: one RichText per line, right-aligned, each carrying
+    // the code's strut so its line box matches the code line box exactly.
+    // Line numbers for error lines render in the opaque error color.
+    final numberSpans = <TextSpan>[];
+    for (var line = 1; line <= lineCount; line++) {
+      final isError = errorByLine.containsKey(line);
+      numberSpans.add(
+        TextSpan(
+          text: line == lineCount ? '$line' : '$line\n',
+          style: isError ? numberStyle.copyWith(color: errorColor) : numberStyle,
+        ),
+      );
+    }
+
+    final strutStyle = StrutStyle(
+      fontFamily: numberStyle.fontFamily,
+      fontSize: fontSize,
+      height: kCodeLineHeightFactor,
+      forceStrutHeight: true,
+    );
+
+    final numbers = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: RichText(
+        strutStyle: strutStyle,
+        textAlign: TextAlign.right,
+        text: TextSpan(children: numberSpans),
+      ),
+    );
 
     return ColoredBox(
       color: codeTheme.gutterBackground,
-      // `IntrinsicWidth` pins this column to its content's natural width
-      // (the widest line number) rather than stretching to fill whatever
-      // width its parent `Row` slot offers — which can be unbounded when
-      // this gutter sits beside an `Expanded` sibling under a
-      // `SingleChildScrollView` that itself received unbounded width from
-      // an ancestor (e.g. a bare `Center` in a test harness).
+      // `IntrinsicWidth` pins this column to its content's natural width (the
+      // widest line number) rather than stretching to fill an unbounded slot
+      // (which can happen when the gutter sits beside an `Expanded` sibling
+      // under a `SingleChildScrollView` given unbounded width by an ancestor).
       child: IntrinsicWidth(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
+            // Background bands, one per highlighted line, behind the numbers.
+            // Error bands win over the current-line band on the same line.
             for (var line = 1; line <= lineCount; line++)
-              _buildRow(
-                line: line,
-                isCurrent: line == currentLine,
-                error: errorByLine[line],
-                numberStyle: numberStyle,
-                errorNumberStyle: errorNumberStyle,
+              if (errorByLine.containsKey(line))
+                Positioned(
+                  top: (line - 1) * lineHeight,
+                  left: 0,
+                  right: 0,
+                  height: lineHeight,
+                  child: ColoredBox(color: errorColor.withValues(alpha: 0.12)),
+                )
+              else if (line == currentLine)
+                Positioned(
+                  top: (line - 1) * lineHeight,
+                  left: 0,
+                  right: 0,
+                  height: lineHeight,
+                  child: ColoredBox(color: codeTheme.currentLineBackground),
+                ),
+            numbers,
+            // Transparent per-line tooltip regions over error lines, so
+            // hovering the error's row surfaces its message.
+            for (final entry in errorByLine.entries)
+              Positioned(
+                top: (entry.key - 1) * lineHeight,
+                left: 0,
+                right: 0,
+                height: lineHeight,
+                child: LayrzTooltip(
+                  contentText: 'Line ${entry.key}, column ${entry.value.column}: ${entry.value.message}',
+                  child: const SizedBox.expand(),
+                ),
               ),
           ],
         ),
       ),
-    );
-  }
-
-  /// Builds a single gutter row for [line].
-  Widget _buildRow({
-    required int line,
-    required bool isCurrent,
-    required LayrzCodeError? error,
-    required TextStyle numberStyle,
-    required TextStyle errorNumberStyle,
-  }) {
-    final row = Container(
-      height: lineHeight,
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      color: isCurrent ? codeTheme.currentLineBackground : null,
-      child: Text(
-        '$line',
-        style: error != null ? errorNumberStyle : numberStyle,
-      ),
-    );
-
-    if (error == null) {
-      return row;
-    }
-
-    return LayrzTooltip(
-      contentText: 'Line $line, column ${error.column}: ${error.message}',
-      child: row,
     );
   }
 }

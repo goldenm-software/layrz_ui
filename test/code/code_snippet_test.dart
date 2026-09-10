@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:layrz_ui/src/code/src/code_copy_button.dart';
 import 'package:layrz_ui/src/code/src/code_snippet.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/highlight/highlight.dart';
+import 'package:layrz_ui/src/theme/theme.dart';
 
 import '../helpers/pump_themed.dart';
 
@@ -270,6 +272,46 @@ void main() {
         const LayrzCodeSnippet(code: '<root/>', language: LayrzCodeLanguage.lml),
       );
       expect(find.byType(LayrzCodeSnippet), findsOneWidget);
+    });
+
+    testWidgets('reserves right-side space for the copy button when shown', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const LayrzCodeSnippet(code: sampleCode, language: LayrzCodeLanguage.python, showCopyButton: true),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final defaultRight = tokens.spacing.pd3.right;
+
+      final contentPadding = tester.widget<Padding>(
+        find.ancestor(of: find.byType(RichText).first, matching: find.byType(Padding)).first,
+      );
+      final resolvedRight = contentPadding.padding.resolve(TextDirection.ltr).right;
+      expect(resolvedRight, defaultRight + kLayrzButtonCompactHeight + tokens.spacing.sp1);
+      expect(resolvedRight, greaterThan(defaultRight));
+    });
+
+    testWidgets('does not reserve right-side space when the copy button is hidden', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        const LayrzCodeSnippet(code: sampleCode, language: LayrzCodeLanguage.python, showCopyButton: false),
+      );
+
+      final tokens = LayrzThemeData.light().tokens;
+      final defaultRight = tokens.spacing.pd3.right;
+
+      final contentPadding = tester.widget<Padding>(
+        find.ancestor(of: find.byType(RichText).first, matching: find.byType(Padding)).first,
+      );
+      expect(contentPadding.padding.resolve(TextDirection.ltr).right, defaultRight);
     });
   });
 }

@@ -10,19 +10,30 @@ void main() {
     const theme = LayrzCodeThemeExtension.dark();
 
     test('has the expected default surface colors', () {
-      expect(theme.background, const Color(0xFF1A1A1A));
-      expect(theme.foreground, const Color(0xFFECF0F1));
+      expect(theme.background, const Color(0xFF131313));
+      expect(theme.foreground, const Color(0xFFD6DBE5));
     });
 
     test('has the expected default syntax colors', () {
-      expect(theme.function, const Color(0xFF3498DB));
-      expect(theme.string, const Color(0xFFF1C40F));
-      expect(theme.number, const Color(0xFF2ECC71));
-      expect(theme.constant, const Color(0xFFE67E22));
+      expect(theme.keyword, const Color(0xFFF81118));
+      expect(theme.function, const Color(0xFF3387CC));
+      expect(theme.string, const Color(0xFF2DC55E));
+      expect(theme.number, const Color(0xFFEE5D43));
+      expect(theme.constant, const Color(0xFFEE5D43));
+      expect(theme.comment, const Color(0xFF808080));
+      expect(theme.variable, const Color(0xFF3387CC));
+    });
+
+    test('has the expected default functionCall color', () {
+      expect(theme.functionCall, const Color(0xFF2DC55E));
     });
 
     test('has the expected default error color', () {
-      expect(theme.errorColor, const Color(0xFFE74C3C));
+      expect(theme.errorColor, const Color(0xFFF81118));
+    });
+
+    test('has the expected default operator color', () {
+      expect(theme.operator, const Color(0xFFD6DBE5));
     });
   });
 
@@ -64,6 +75,8 @@ void main() {
       constant: Color(0xFFFFFFFF),
       decorator: Color(0xFFFFFFFF),
       variable: Color(0xFFFFFFFF),
+      operator: Color(0xFFFFFFFF),
+      functionCall: Color(0xFFFFFFFF),
     );
 
     test('returns this unmodified when other is null', () {
@@ -102,6 +115,8 @@ void main() {
       expect(theme.colorForScope(LayrzHighlightScope.constant), theme.constant);
       expect(theme.colorForScope(LayrzHighlightScope.decorator), theme.decorator);
       expect(theme.colorForScope(LayrzHighlightScope.variable), theme.variable);
+      expect(theme.colorForScope(LayrzHighlightScope.operator), theme.operator);
+      expect(theme.colorForScope(LayrzHighlightScope.functionCall), theme.functionCall);
     });
   });
 
@@ -121,8 +136,35 @@ void main() {
       expect(style.fontSize, 14);
     });
 
-    test('non-bold scopes use body weight (wght 400)', () {
+    test('keyword scope is bold via fontVariations wght 700, not fontWeight', () {
       final style = theme.styleForScope(LayrzHighlightScope.keyword, fontSize: 14);
+
+      expect(style.fontVariations, isNotNull);
+      expect(
+        style.fontVariations!.any((v) => v.axis == 'wght' && v.value == 700),
+        isTrue,
+        reason: 'expected a wght=700 FontVariation for the bold keyword scope',
+      );
+      expect(style.color, theme.keyword);
+      expect(style.fontSize, 14);
+    });
+
+    test('functionCall scope is bold via fontVariations wght 700, not fontWeight', () {
+      final style = theme.styleForScope(LayrzHighlightScope.functionCall, fontSize: 14);
+
+      expect(style.fontVariations, isNotNull);
+      expect(
+        style.fontVariations!.any((v) => v.axis == 'wght' && v.value == 700),
+        isTrue,
+        reason: 'expected a wght=700 FontVariation for the bold functionCall scope',
+      );
+      expect(style.color, theme.functionCall);
+      expect(style.color, const Color(0xFF2DC55E));
+      expect(style.fontSize, 14);
+    });
+
+    test('non-bold scopes use body weight (wght 400)', () {
+      final style = theme.styleForScope(LayrzHighlightScope.string, fontSize: 14);
 
       expect(
         style.fontVariations!.any((v) => v.axis == 'wght' && v.value == 400),
@@ -134,6 +176,18 @@ void main() {
       final style = theme.styleForScope(LayrzHighlightScope.string, fontSize: 14);
 
       expect(style.color, theme.string);
+      expect(style.fontSize, 14);
+    });
+
+    test('operator scope is non-bold (wght 400) and resolves the operator color', () {
+      final style = theme.styleForScope(LayrzHighlightScope.operator, fontSize: 14);
+
+      expect(
+        style.fontVariations!.any((v) => v.axis == 'wght' && v.value == 400),
+        isTrue,
+        reason: 'expected a wght=400 FontVariation for the non-bold operator scope',
+      );
+      expect(style.color, theme.operator);
       expect(style.fontSize, 14);
     });
 
