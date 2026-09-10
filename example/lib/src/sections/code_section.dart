@@ -6,36 +6,52 @@ import '../common/showroom_section.dart';
 /// Sample Python source shown by the read-only snippet demo.
 ///
 /// A small, realistic function -- deliberately unremarkable so the syntax
-/// highlighting (keywords, strings, numbers, comments) is what stands out.
+/// highlighting (keywords, builtins, strings, numbers, comments, decorators,
+/// and operators) is what stands out.
 const String _pythonSnippet = '''
-def average_speed(distances, durations):
-    # distances in kilometers, durations in hours
-    total_distance = sum(distances)
-    total_duration = sum(durations)
-    if total_duration == 0:
-        return 0.0
-    return round(total_distance / total_duration, 2)
+# average speed over a window
+import statistics
+from typing import Optional
+
+
+@cached
+def average(values: list[int]) -> Optional[float]:
+    count = len(values)
+    total = sum(values)
+    if count == 0:
+        return None
+    return total / (count - 1)  # off-by-one on purpose
+
+
+PRIMARY = True
+LABEL = "sensor.speed"
+THRESHOLD = 0x1F
 ''';
 
 /// Sample Layrz Compute Language (LCL) expression shown by the read-only
-/// snippet demo, exercising a builtin function call, a comparison, and a
-/// nested `IF`.
+/// snippet demo.
+///
+/// LCL has no infix operators -- every operation, including comparison, is a
+/// nested builtin function call. This mirrors the true shape of the
+/// language: [COMPARE] receives the result of [GET_PARAM] (itself built from
+/// [CONCAT] and [PRIMARY_DEVICE]) against a [CONSTANT].
 const String _lclSnippet = '''
-IF(
-  COMPARE(GET_SENSOR('fuel_level'), '<', 15),
-  'Low fuel warning',
-  CONCAT('Fuel OK: ', TO_STR(GET_SENSOR('fuel_level')))
+COMPARE(
+  GET_PARAM(
+    CONCAT(
+      PRIMARY_DEVICE(),
+      ".alarm.event"
+    ),
+  ),
+  CONSTANT(1)
 )
 ''';
 
 /// Sample Layrz Markup Language (LML) snippet shown by the read-only snippet
-/// demo, mixing a `{{ mustache }}` variable with an embedded LCL function
-/// call so both parts of LML's highlighting surface are visible at once.
+/// demo -- plain prose with `{{ mustache }}` variable interpolation, which is
+/// the actual shape of LML: mostly text, with variables substituted inline.
 const String _lmlSnippet = '''
-Hello {{ asset.name }},
-
-Your current fuel level is TO_STR(GET_SENSOR('fuel_level'))%.
-Last seen: {{ asset.lastMessageAt }}.
+The name of the asset is {{assetName}} and it's a great asset, message sent at {{executedAt}}.
 ''';
 
 /// The initial source loaded into the editable [LayrzCodeEditor] demo.
@@ -99,6 +115,10 @@ class _CodeSectionState extends State<CodeSection> {
   /// every edit, including Tab/Shift+Tab indentation.
   String _editableValue = _editableSample;
 
+  /// The name of the last action button tapped (`Run` or `Lint`), shown below
+  /// the editable demo to prove `onRun`/`onLint` fire. `null` until first tap.
+  String? _lastAction;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -107,7 +127,7 @@ class _CodeSectionState extends State<CodeSection> {
       title: 'Code',
       description:
           'Syntax-highlighted code display and editing -- always rendered in the dark code '
-          'theme regardless of the app theme, across Python, LCL, and LML.',
+          'theme regardless of the app theme, across Python, Layrz Compute Language, and Layrz Markup Language.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -127,14 +147,14 @@ class _CodeSectionState extends State<CodeSection> {
             showLineNumbers: true,
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Text('LCL -- GET_SENSOR, COMPARE, IF', style: tokens.typography.title),
+          Text('Layrz Compute Language -- nested builtin function calls', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp2),
           const LayrzCodeSnippet(
             code: _lclSnippet,
             language: LayrzCodeLanguage.lcl,
           ),
           SizedBox(height: tokens.spacing.sp3),
-          Text('LML -- {{ mustache }} variables mixed with LCL functions', style: tokens.typography.title),
+          Text('Layrz Markup Language -- prose with {{ mustache }} variables', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp2),
           const LayrzCodeSnippet(
             code: _lmlSnippet,
@@ -157,11 +177,14 @@ class _CodeSectionState extends State<CodeSection> {
             language: LayrzCodeLanguage.python,
             value: _editableSample,
             onChanged: (value) => setState(() => _editableValue = value),
-            maxHeight: 220,
+            onRun: () => setState(() => _lastAction = 'Run'),
+            onLint: () => setState(() => _lastAction = 'Lint'),
+            height: 220,
           ),
           SizedBox(height: tokens.spacing.sp2),
           Text(
-            'Current length: ${_editableValue.length} characters',
+            'Current length: ${_editableValue.length} characters'
+            '${_lastAction == null ? '' : ' -- last action: $_lastAction'}',
             style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp4),
@@ -178,7 +201,7 @@ class _CodeSectionState extends State<CodeSection> {
             language: LayrzCodeLanguage.python,
             value: _editableSample,
             errors: _editableSampleErrors,
-            maxHeight: 220,
+            height: 220,
           ),
           SizedBox(height: tokens.spacing.sp4),
           Text('Read only', style: tokens.typography.title),
@@ -193,6 +216,23 @@ class _CodeSectionState extends State<CodeSection> {
             language: LayrzCodeLanguage.python,
             value: _readOnlyEditorSample,
             readOnly: true,
+          ),
+          SizedBox(height: tokens.spacing.sp4),
+          Text('Autocomplete', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp2),
+          Text(
+            'Type an identifier to get a popup of matches -- Layrz Compute Language function names plus '
+            'the caller-supplied variables below -- or press Ctrl/Cmd+Space to open the full list. '
+            'Arrow keys navigate, Enter or click accepts, Esc closes.',
+            style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+          ),
+          SizedBox(height: tokens.spacing.sp2),
+          const LayrzCodeEditor(
+            labelText: 'Layrz Compute Language with autocomplete',
+            language: LayrzCodeLanguage.lcl,
+            value: 'COMPARE(\n  GET_PARAM("speed"),\n  CONSTANT(1)\n)',
+            suggestions: ['assetName', 'triggerName', 'executedAt'],
+            height: 220,
           ),
         ],
       ),
