@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.0-prerelease.2
+
+A smaller follow-up to `1.0.0-prerelease.1`, focused on polish and fixes for the layout and
+scaffold shell rather than new components.
+
+**`LayrzLayout` state persistence via `LayrzLayoutController`.** `LayrzLayout` gained an optional
+`controller` parameter backed by a new `LayrzLayoutController`, which lets the shell persist its
+own state — rail scroll position, whether the notifications panel is open, and the current search
+query — across page navigations. The shell no longer resets itself every time the routed body
+changes underneath it.
+
+**Notification bell now opens its panel.** Fixed a defect where tapping the notification bell in
+`LayrzLayout` did nothing, in both the wide rail and the narrow drawer presentations. The
+notifications panel now opens correctly, and it picked up visual polish along the way — proper
+clipping and elevation, and closing on tap outside.
+
+**`LayrzScaffoldShell` detail pane is now top-anchored.** Fixed the detail pane rendering its
+content vertically centered instead of anchored at the top-left. Content now starts at the top in
+both the side-by-side layout and the narrow bottom-sheet presentation.
+
+**`LayrzAccordion` header corners stay consistent.** Fixed the accordion header fill so its
+rounded corners match whether the accordion is open or closed, instead of flipping shape between
+the two states.
+
 ## 1.0.0-prerelease.1
 
 First `1.0.0` pre-release. This is the largest changeset in the project's history — it lands the
