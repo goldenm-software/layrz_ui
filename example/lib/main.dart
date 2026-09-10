@@ -21,6 +21,7 @@ import 'src/sections/button_group_section.dart';
 import 'src/sections/buttons_section.dart';
 import 'src/sections/calendar_section.dart';
 import 'src/sections/chips_section.dart';
+import 'src/sections/code_section.dart';
 import 'src/sections/colors_section.dart';
 import 'src/sections/connection_indicator_section.dart';
 import 'src/sections/context_menu_section.dart';
@@ -289,6 +290,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/workspace-tabs',
           pageBuilder: (context, state) => NoTransitionPage(child: WorkspaceTabsSection()),
+        ),
+        GoRoute(
+          path: '/code',
+          pageBuilder: (context, state) => NoTransitionPage(child: CodeSection()),
         ),
         // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
         // (/find-spike) but intentionally not listed in the showroom sidebar.
