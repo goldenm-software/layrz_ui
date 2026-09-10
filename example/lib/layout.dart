@@ -108,6 +108,13 @@ class ShowroomLayout extends ConsumerWidget {
 
   List<LayrzNavigatorItem> _buildNavigationItems(BuildContext context, String currentRoute) {
     return [
+      LayrzNavigatorPage(
+        id: '/home',
+        labelText: 'Home',
+        icon: MdiIcons.homeOutline,
+        isSelected: currentRoute == '/home',
+        onTap: () => _navigateTo(context, '/home'),
+      ),
       LayrzNavigatorLabel('FOUNDATION'),
       LayrzNavigatorPage(
         id: '/access-paths',

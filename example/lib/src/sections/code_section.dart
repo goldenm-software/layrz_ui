@@ -126,8 +126,8 @@ class _CodeSectionState extends State<CodeSection> {
     return ShowroomSection(
       title: 'Code',
       description:
-          'Syntax-highlighted code display and editing -- always rendered in the dark code '
-          'theme regardless of the app theme, across Python, Layrz Compute Language, and Layrz Markup Language.',
+          'Syntax-highlighted code display and editing across Python, Layrz Compute Language, and Layrz Markup Language. '
+          'As you noticed, Code Editor and Code Snippet are only dark mode, why? Because light attracts bugs.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -32,6 +32,7 @@ import 'src/sections/elevation_section.dart';
 import 'src/sections/file_input_section.dart';
 import 'src/sections/form_section.dart';
 import 'src/sections/grid_section.dart';
+import 'src/sections/home_section.dart';
 import 'src/sections/images_section.dart';
 import 'src/sections/inputs_section.dart';
 import 'src/sections/layo_section.dart';
@@ -104,15 +105,19 @@ Future<void> main() async {
 /// To revert to the original named-route implementation, replace [ShowroomApp.build]
 /// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
 final _router = GoRouter(
-  initialLocation: '/typography',
+  initialLocation: '/home',
   routes: [
     GoRoute(
       path: '/',
-      redirect: (context, state) => '/buttons',
+      redirect: (context, state) => '/home',
     ),
     ShellRoute(
       builder: (context, state, child) => ShowroomLayout(child: child),
       routes: [
+        GoRoute(
+          path: '/home',
+          pageBuilder: (context, state) => NoTransitionPage(child: HomeSection()),
+        ),
         GoRoute(
           path: '/buttons',
           pageBuilder: (context, state) => NoTransitionPage(child: ButtonsSection()),
