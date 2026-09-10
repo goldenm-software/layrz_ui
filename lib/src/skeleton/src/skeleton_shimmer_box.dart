@@ -76,8 +76,8 @@ class _LayrzSkeletonShimmerBoxState extends State<LayrzSkeletonShimmerBox> with 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final baseColor = tokens.colors.sf3;
-    final highlightColor = tokens.colors.sf1;
+    final baseColor = context.isDark ? tokens.colors.sf1 : tokens.colors.sf3;
+    final highlightColor = context.isDark ? tokens.colors.sf3 : tokens.colors.sf1;
 
     final animation = LayrzSkeletonScope.maybeOf(context) ?? _fallbackController;
 
