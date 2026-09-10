@@ -714,13 +714,22 @@ void main() {
             tester,
             LayrzButton(
               labelText: 'Custom',
+              icon: MdiIcons.checkCircleOutline,
               style: style,
               color: customColor,
               onTap: () {},
             ),
           );
 
-          expect(findButtonLabel('Custom'), findsOneWidget);
+          // Fab variants are square and icon-only — they never render the
+          // label as visible text (it is exposed via tooltip/semantics), so
+          // only non-Fab styles show a "Custom" RichText. For Fab styles the
+          // per-style assertion is that the button builds and renders at all.
+          if (style.isFab) {
+            expect(find.byType(LayrzButton), findsOneWidget);
+          } else {
+            expect(findButtonLabel('Custom'), findsOneWidget);
+          }
         }
       });
     });

@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.0.0-prerelease.1
+
+First `1.0.0` pre-release. This is the largest changeset in the project's history — it lands the
+remaining M6/M7 data-display components and completes the initial component catalog.
+
+**New `LayrzMarkdown` (DESIGN-68) — a render-only Markdown view.** Parses Markdown via the pure-Dart
+`package:markdown` and renders the AST by hand on `package:flutter/widgets.dart` — no Material or
+Cupertino. Supports headings (`h1`–`h6`), bold/italic/strikethrough, ordered/unordered and nested
+lists, links via an `onTapLink(href, title)` callback (the widget never launches a URL itself),
+inline code, and fenced code blocks rendered through `LayrzCodeSnippet`. Raw HTML is dropped as an
+injection-safety measure, and an `isStreaming` mode holds the trailing incomplete block back so
+streamed content never flashes half-formed syntax.
+
+**New `LayrzTable<T>` (DESIGN-63) — a data table.** A full generic table with sortable columns
+(off-thread isolate sort), drag-to-reorder, a column-visibility menu, per-row and header context
+menus, a controller-driven event stream (`LayrzTableController`, `LayrzTableEvent`), configurable
+`LayrzTableOnTapBehavior`, an `actionsCount`-based action column, a reserved 2px top progress bar as
+the sole loading indicator, and full string localization.
+
+**New `LayrzCodeSnippet` and `LayrzCodeEditor` (DESIGN-65, DESIGN-66)** on a new Material-free
+syntax-highlighting engine (`LayrzSyntaxHighlighter`) for Python, Layrz Compute Language (LCL) and
+Layrz Markup Language (LML), in the always-dark "Brogrammer" palette. The editor adds a line-number
+gutter, autocomplete, and run/lint affordances.
+
+**New `LayrzCodeLanguage.plain`.** An empty-grammar language that renders any unrecognized fenced
+code as pure-white, unhighlighted text — used by `LayrzMarkdown` for code fences in languages the
+engine does not know.
+
+**New workspace tabs (DESIGN-203).** A tab-owns-content model with a connected panel and a resizable
+split view.
+
+**New `LayrzConnectionIndicator` (DESIGN-209).**
+
+**New dual-list and multi-select tab-strip pickers (DESIGN-43).**
+
+**`LayrzNavigatorPage` now exposes `contextMenuActions` (DESIGN-207).**
+
+**Beta dark mode.** An opt-in dark theme (`LayrzThemeData.dark()`, `LayrzApp.darkTheme`/`themeMode`)
+built by flattening the semantic color tokens to `Color` and adding a dark elevation overlay. Still
+beta; light mode remains the default.
+
+Plus numerous `LayrzTable` and dual-list fixes, and a full reorganization of the example showroom.
+
 ## 0.0.26
 
 **New `LayrzDynamicAvatarInput` — a composed avatar picker.** Its value is a
