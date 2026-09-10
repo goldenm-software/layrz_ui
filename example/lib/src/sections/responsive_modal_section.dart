@@ -245,9 +245,10 @@ class _PresentationSwitchShowcase extends StatelessWidget {
                 'Last opened as: $lastPresentation',
                 style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
               ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
+            Wrap(
+              alignment: WrapAlignment.start,
               spacing: tokens.spacing.sp2,
+              runSpacing: tokens.spacing.sp2,
               children: [
                 LayrzButton(
                   labelText: 'Open (auto)',
@@ -318,9 +319,10 @@ class _PinnedActionsShowcase extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
+    return Wrap(
+      alignment: WrapAlignment.start,
       spacing: tokens.spacing.sp2,
+      runSpacing: tokens.spacing.sp2,
       children: [
         LayrzButton(
           labelText: 'Open (auto)',

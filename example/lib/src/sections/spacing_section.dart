@@ -147,11 +147,16 @@ class _PaddingAccessors extends StatelessWidget {
       ('pd5', tokens.spacing.pd5, tokens.spacing.sp5),
     ];
 
-    return Row(
+    return LayrzRow(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp3,
       children: paddingLevels
           .map(
-            (item) => Expanded(
+            (item) => LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 4,
+              lg: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -206,11 +211,16 @@ class _MarginAccessors extends StatelessWidget {
       ('mg5', tokens.spacing.mg5, tokens.spacing.sp5),
     ];
 
-    return Row(
+    return LayrzRow(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: tokens.spacing.sp3,
       children: marginLevels
           .map(
-            (item) => Expanded(
+            (item) => LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 4,
+              lg: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

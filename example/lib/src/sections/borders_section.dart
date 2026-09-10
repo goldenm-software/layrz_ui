@@ -25,23 +25,31 @@ class BordersSection extends StatelessWidget {
           // Pre-built border sides
           Text('Pre-Built BorderSide Tokens', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          LayrzRow(
+            spacing: tokens.spacing.sp3,
             children: [
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: LayrzTooltip(
                   contentText: 'border.light — ${tokens.border.light.width.toStringAsFixed(1)}px',
                   child: _BorderSample(label: 'light', side: tokens.border.light),
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: LayrzTooltip(
                   contentText: 'border.normal — ${tokens.border.normal.width.toStringAsFixed(1)}px',
                   child: _BorderSample(label: 'normal', side: tokens.border.normal),
                 ),
               ),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(
+              LayrzCol(
+                xs: 12,
+                sm: 6,
+                lg: 4,
                 child: LayrzTooltip(
                   contentText: 'border.thick — ${tokens.border.thick.width.toStringAsFixed(1)}px',
                   child: _BorderSample(label: 'thick', side: tokens.border.thick),

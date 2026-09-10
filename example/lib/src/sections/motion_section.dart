@@ -31,11 +31,11 @@ class MotionSection extends StatelessWidget {
           // Interactive demonstrations
           Text('Interactive Demonstrations', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
-          Row(
+          LayrzRow(
+            spacing: tokens.spacing.sp3,
             children: [
-              Expanded(child: _HoverAnimationDemo(tokens: tokens)),
-              SizedBox(width: tokens.spacing.sp3),
-              Expanded(child: _PressAnimationDemo(tokens: tokens)),
+              LayrzCol(xs: 12, sm: 6, child: _HoverAnimationDemo(tokens: tokens)),
+              LayrzCol(xs: 12, sm: 6, child: _PressAnimationDemo(tokens: tokens)),
             ],
           ),
         ],

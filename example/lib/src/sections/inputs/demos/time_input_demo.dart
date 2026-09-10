@@ -43,14 +43,15 @@ class _TimeInputDemoState extends State<TimeInputDemo> {
               style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
             ),
             SizedBox(height: tokens.spacing.sp3),
-            Row(
+            Wrap(
+              spacing: tokens.spacing.sp2,
+              runSpacing: tokens.spacing.sp2,
               children: [
                 LayrzButton(
                   labelText: _showSeconds ? 'showSeconds: true' : 'showSeconds: false (default)',
                   style: _showSeconds ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
                   onTap: () => setState(() => _showSeconds = !_showSeconds),
                 ),
-                SizedBox(width: tokens.spacing.sp2),
                 LayrzButton(
                   labelText: _isAmPm ? 'AM/PM' : '24-hour',
                   style: _isAmPm ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,

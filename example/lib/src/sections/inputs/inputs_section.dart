@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import '../../common/showroom_section.dart';
 import 'input_demo.dart';
 import 'demos/text_input_demo.dart';
 import 'demos/textarea_input_demo.dart';
@@ -243,6 +244,14 @@ class _InputsSectionState extends State<InputsSection> {
   }
 
   /// Builds the detail pane content for a selected input component.
-  /// Renders all meaningful variants of that component.
-  Widget _buildDetails(InputDemo demo) => demo.details;
+  ///
+  /// Wraps [InputDemo.details] in the same [ShowroomSection] scaffold every
+  /// other showroom view uses (top-anchored, scrollable, full-width content
+  /// inside a [LayrzCard]), so a selected Inputs demo reads structurally
+  /// identically to e.g. the Buttons or Alerts section rather than as a bare,
+  /// unstyled pane.
+  Widget _buildDetails(InputDemo demo) => ShowroomSection(
+    title: demo.name,
+    child: demo.details,
+  );
 }

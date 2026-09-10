@@ -100,8 +100,9 @@ class _TransitionsSectionState extends State<TransitionsSection> {
   /// Builds the "Push" and "Back" controls that drive the nested
   /// [Navigator] using the currently selected [LayrzTransitionType].
   Widget _buildControls(LayrzTokens tokens) {
-    return Row(
+    return Wrap(
       spacing: tokens.spacing.sp2,
+      runSpacing: tokens.spacing.sp2,
       children: [
         LayrzButton(
           labelText: 'Push',
