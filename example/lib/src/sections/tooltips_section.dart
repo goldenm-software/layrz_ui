@@ -239,7 +239,7 @@ class _TextVariantsDemo extends StatelessWidget {
                         const TextSpan(text: ' and '),
                         TextSpan(
                           text: 'colored',
-                          style: TextStyle(color: tokens.colors.success[500]),
+                          style: TextStyle(color: tokens.colors.success),
                         ),
                         const TextSpan(text: ' text'),
                       ],
@@ -378,7 +378,7 @@ class _PassThroughDemoState extends State<_PassThroughDemo> {
               Text(
                 'Tap count: $_tapCount',
                 style: widget.tokens.typography.label.copyWith(
-                  color: widget.tokens.colors.success[500],
+                  color: widget.tokens.colors.success,
                 ),
               ),
               SizedBox(height: widget.tokens.spacing.sp2),

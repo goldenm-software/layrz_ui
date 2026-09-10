@@ -143,7 +143,7 @@ class _TypesShowcase extends StatelessWidget {
               LayrzProgressBar(
                 value: 0.6,
                 type: progressType,
-                color: progressType == LayrzProgressType.custom ? tokens.colors.primary.shade700 : null,
+                color: progressType == LayrzProgressType.custom ? tokens.colors.primary.darken(0.2) : null,
                 semanticLabel: progressType.name,
               ),
           ],
@@ -392,7 +392,7 @@ class _CircularShowcase extends StatelessWidget {
                     size: 90.0,
                     strokeWidth: 10.0,
                     type: LayrzProgressType.custom,
-                    color: tokens.colors.primary.shade700,
+                    color: tokens.colors.primary.darken(0.2),
                     semanticLabel: 'Custom size circular progress',
                   ),
                   Text('Size 90 / stroke 10', style: tokens.typography.label),

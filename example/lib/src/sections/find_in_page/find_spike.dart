@@ -810,18 +810,18 @@ class _LayrzFindSpikeState extends State<LayrzFindSpike> {
         painter: FindHighlightPainter(
           highlights: _highlights,
           currentIndex: visibleCurrentIndex,
-          // tokens.colors.selectionColor is the same swatch backing the
+          // tokens.colors.selectionColor is the same color backing the
           // app's text-selection highlight, so find-highlighting and text
-          // selection always read as one visual language. shade500 is a
+          // selection always read as one visual language. It is a
           // saturated blue, so alpha stays low (0.35) — enough to read as
           // "the current one" while the matched text remains fully legible
           // through the tint, the same way a text selection never recolors
           // the text itself.
-          currentColor: tokens.colors.selectionColor.shade500.withValues(alpha: 0.35),
-          // shade100 is very pale, so a somewhat higher alpha (0.45) still
+          currentColor: tokens.colors.selectionColor.withValues(alpha: 0.35),
+          // Lightened to a pale tint, so a somewhat higher alpha (0.45) still
           // keeps text fully readable while staying visually secondary to
           // the current match above.
-          otherColor: tokens.colors.selectionColor.shade100.withValues(alpha: 0.45),
+          otherColor: tokens.colors.selectionColor.lighten(0.6).withValues(alpha: 0.45),
         ),
       ),
     );

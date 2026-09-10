@@ -1,15 +1,26 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import 'src/providers/theme_mode_provider.dart';
+
+/// The showroom logo, light-background variant.
+const _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?3';
+
+/// The showroom logo, dark-background variant.
+const _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?3';
+
 /// Wraps a showroom page in the application shell.
 ///
-/// [ShowroomLayout] is a stateless container that renders a page inside
-/// [LayrzLayout]. The currently selected navigation entry is derived from the
-/// active route path via [GoRouterState.of].
-class ShowroomLayout extends StatelessWidget {
+/// [ShowroomLayout] is a container that renders a page inside [LayrzLayout].
+/// The currently selected navigation entry is derived from the active route
+/// path via [GoRouterState.of]. Reads [themeModeProvider] to swap the logo for
+/// its dark-background variant and to mark the active entry in the Theme
+/// section of the user menu.
+class ShowroomLayout extends ConsumerWidget {
   /// The page content rendered inside the layout's body slot.
   final Widget child;
 
@@ -17,9 +28,17 @@ class ShowroomLayout extends StatelessWidget {
   const ShowroomLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final routePath = GoRouterState.of(context).uri.path;
     final items = _buildNavigationItems(context, routePath);
+
+    final mode = ref.watch(themeModeProvider);
+    final isDark = switch (mode) {
+      LayrzThemeMode.light => false,
+      LayrzThemeMode.dark => true,
+      LayrzThemeMode.system => MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+    };
+    final accent = context.theme.primaryColor;
 
     return LayrzLayout(
       items: items,
@@ -28,7 +47,7 @@ class ShowroomLayout extends StatelessWidget {
         height: double.infinity,
         child: child,
       ),
-      logo: 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?3',
+      logo: isDark ? _kDarkLogo : _kLightLogo,
       userName: 'John Doe',
       userMenuItems: [
         LayrzDropdownEntry(
@@ -46,6 +65,25 @@ class ShowroomLayout extends StatelessWidget {
           labelText: 'Sign out',
           icon: MdiIcons.logout,
           onTap: () => debugPrint('Sign out tapped'),
+        ),
+        LayrzDropdownLabel(labelText: 'Theme'),
+        LayrzDropdownEntry(
+          labelText: 'Light',
+          icon: MdiIcons.weatherSunny,
+          color: mode == LayrzThemeMode.light ? accent : null,
+          onTap: () => ref.read(themeModeProvider.notifier).state = LayrzThemeMode.light,
+        ),
+        LayrzDropdownEntry(
+          labelText: 'Dark',
+          icon: MdiIcons.weatherNight,
+          color: mode == LayrzThemeMode.dark ? accent : null,
+          onTap: () => ref.read(themeModeProvider.notifier).state = LayrzThemeMode.dark,
+        ),
+        LayrzDropdownEntry(
+          labelText: 'System',
+          icon: MdiIcons.themeLightDark,
+          color: mode == LayrzThemeMode.system ? accent : null,
+          onTap: () => ref.read(themeModeProvider.notifier).state = LayrzThemeMode.system,
         ),
       ],
       notifications: [

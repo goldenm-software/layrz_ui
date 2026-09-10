@@ -1,6 +1,7 @@
 import 'package:example/fonts/fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:layrz_ui/layrz_ui.dart';
@@ -10,6 +11,7 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'src/sections/find_in_page/find_spike.dart';
 
 import 'layout.dart';
+import 'src/providers/theme_mode_provider.dart';
 import 'src/sections/access_paths_section.dart';
 import 'src/sections/accordion_section.dart';
 import 'src/sections/ai_marker_section.dart';
@@ -75,7 +77,7 @@ Future<void> main() async {
   final font = const OpenSansFont();
   // final font = const DoppioOneFont();
   await font.load();
-  runApp(ShowroomApp(font: font));
+  runApp(ProviderScope(child: ShowroomApp(font: font)));
 }
 
 /// The singleton go_router instance for the showroom application.
@@ -316,7 +318,11 @@ final _router = GoRouter(
 /// Uses [LayrzApp.router] with a go_router [GoRouter] configured with a [ShellRoute],
 /// ensuring the application shell persists across navigation while only the body
 /// content changes.
-class ShowroomApp extends StatelessWidget {
+///
+/// Reads [themeModeProvider] to decide which of [LayrzThemeData.light] and
+/// [LayrzThemeData.dark] is active, and re-evaluates the system status/navigation
+/// bar overlay style every time that mode changes.
+class ShowroomApp extends ConsumerWidget {
   /// Creates a new [ShowroomApp].
   ///
   /// The [font] parameter specifies which font to use in the theme. It must be
@@ -329,17 +335,31 @@ class ShowroomApp extends StatelessWidget {
   /// The custom font to use in the theme.
   final LayrzFont font;
 
-  @override
-  Widget build(BuildContext context) {
+  /// Resolves the effective [Brightness] for [mode] against the platform's
+  /// current brightness, then applies the matching system overlay style —
+  /// light icons over a dark effective brightness, dark icons over a light one.
+  void _applySystemOverlayStyle(BuildContext context, LayrzThemeMode mode) {
+    final isDark = switch (mode) {
+      LayrzThemeMode.light => false,
+      LayrzThemeMode.dark => true,
+      LayrzThemeMode.system => MediaQuery.platformBrightnessOf(context) == Brightness.dark,
+    };
+    final iconBrightness = isDark ? Brightness.light : Brightness.dark;
     SystemChrome.setSystemUIOverlayStyle(
       SystemUiOverlayStyle.dark.copyWith(
-        statusBarBrightness: LayrzPlatform.isIOS ? .light : .dark,
-        statusBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
+        statusBarBrightness: LayrzPlatform.isIOS ? .light : iconBrightness,
+        statusBarIconBrightness: LayrzPlatform.isIOS ? .light : iconBrightness,
         systemStatusBarContrastEnforced: true,
-        systemNavigationBarIconBrightness: LayrzPlatform.isIOS ? .light : .dark,
+        systemNavigationBarIconBrightness: LayrzPlatform.isIOS ? .light : iconBrightness,
         systemNavigationBarContrastEnforced: true,
       ),
     );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    _applySystemOverlayStyle(context, mode);
     return LayrzApp.router(
       routerConfig: _router,
       title: kAppTitle,
@@ -347,6 +367,8 @@ class ShowroomApp extends StatelessWidget {
         font: font,
         // primaryColor: LayrzColors.cyan,
       ),
+      darkTheme: LayrzThemeData.dark(font: font),
+      themeMode: mode,
       // To view the original component showroom, uncomment:
       // home: const Showroom(),
     );
