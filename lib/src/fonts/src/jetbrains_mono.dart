@@ -47,30 +47,35 @@ class LayrzJetBrainsMonoFont extends LayrzFont {
   @override
   TextStyle get display => const TextStyle(
     fontFamily: 'JetBrains Mono',
+    package: 'layrz_ui',
     fontVariations: [FontVariation('wght', 700)],
   );
 
   @override
   TextStyle get headline => const TextStyle(
     fontFamily: 'JetBrains Mono',
+    package: 'layrz_ui',
     fontVariations: [FontVariation('wght', 600)],
   );
 
   @override
   TextStyle get title => const TextStyle(
     fontFamily: 'JetBrains Mono',
+    package: 'layrz_ui',
     fontVariations: [FontVariation('wght', 600)],
   );
 
   @override
   TextStyle get body => const TextStyle(
     fontFamily: 'JetBrains Mono',
+    package: 'layrz_ui',
     fontVariations: [FontVariation('wght', 400)],
   );
 
   @override
   TextStyle get label => const TextStyle(
     fontFamily: 'JetBrains Mono',
+    package: 'layrz_ui',
     fontVariations: [FontVariation('wght', 400)],
   );
 }
