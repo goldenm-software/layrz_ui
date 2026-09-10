@@ -244,7 +244,7 @@ class _LayrzWorkspaceTabsState extends State<LayrzWorkspaceTabs> {
       panelRadius: tokens.radius.innerRadiusValue(outerRadius: tokens.radius.r3, spacer: tokens.spacing.sp1),
       // A single clear line traces the whole [active tab + card] silhouette,
       // marking the active content in the primary colour at a visible weight.
-      borderColor: tokens.colors.primary.shade500,
+      borderColor: tokens.colors.primary,
       borderWidth: 1.5,
       strokeOnly: strokeOnly,
     );

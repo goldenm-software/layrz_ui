@@ -123,7 +123,7 @@ class _WeekNumberCellState extends State<_WeekNumberCell> {
     if (!isInteractive) {
       textColor = tokens.colors.fg3;
     } else if (_isHovered) {
-      textColor = tokens.colors.primary.shade500;
+      textColor = tokens.colors.primary;
     } else {
       textColor = tokens.colors.fg3;
     }

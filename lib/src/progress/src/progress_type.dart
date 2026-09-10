@@ -38,15 +38,15 @@ enum LayrzProgressType {
   Color? colorToken(LayrzTokens tokens) {
     switch (this) {
       case LayrzProgressType.info:
-        return tokens.colors.info.shade500;
+        return tokens.colors.info;
       case LayrzProgressType.success:
-        return tokens.colors.success.shade500;
+        return tokens.colors.success;
       case LayrzProgressType.warning:
-        return tokens.colors.warning.shade500;
+        return tokens.colors.warning;
       case LayrzProgressType.danger:
-        return tokens.colors.danger.shade500;
+        return tokens.colors.danger;
       case LayrzProgressType.context:
-        return tokens.colors.contextual.shade500;
+        return tokens.colors.contextual;
       case LayrzProgressType.custom:
         return null;
     }

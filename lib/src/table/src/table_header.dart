@@ -288,7 +288,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
           ? Icon(
               controller.sortAscending ? MdiIcons.sortAscending : MdiIcons.sortDescending,
               size: tokens.spacing.sp3,
-              color: tokens.colors.primary.shade500,
+              color: tokens.colors.primary,
             )
           : null,
     );

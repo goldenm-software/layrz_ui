@@ -35,15 +35,15 @@ enum LayrzChipType {
   Color? colorToken(LayrzTokens tokens) {
     switch (this) {
       case LayrzChipType.info:
-        return tokens.colors.info.shade500;
+        return tokens.colors.info;
       case LayrzChipType.success:
-        return tokens.colors.success.shade500;
+        return tokens.colors.success;
       case LayrzChipType.warning:
-        return tokens.colors.warning.shade500;
+        return tokens.colors.warning;
       case LayrzChipType.danger:
-        return tokens.colors.danger.shade500;
+        return tokens.colors.danger;
       case LayrzChipType.context:
-        return tokens.colors.contextual.shade500;
+        return tokens.colors.contextual;
       case LayrzChipType.custom:
         return null;
     }

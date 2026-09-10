@@ -241,7 +241,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
     if (isDisabled) {
       trackColor = tokens.colors.sf3;
     } else if (widget.errors.isNotEmpty) {
-      final offColor = tokens.colors.danger.shade50;
+      final offColor = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf4);
       final onColor = tokens.colors.danger;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     } else if (_states.contains(WidgetState.hovered) || isFocusVisible || _states.contains(WidgetState.pressed)) {

@@ -131,7 +131,7 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
                 // only on an INACTIVE tab (its own closed shape); the active
                 // tab, being part of the connected silhouette, shows focus
                 // through that silhouette rather than a second closed outline.
-                borderColor: (!widget.isActive && widget.isFocused) ? tokens.colors.primary.shade500 : null,
+                borderColor: (!widget.isActive && widget.isFocused) ? tokens.colors.primary : null,
                 borderWidth: (!widget.isActive && widget.isFocused) ? 2.0 : tokens.border.stroke1,
               ),
               // A tab is a control, not selectable body text — disabled here

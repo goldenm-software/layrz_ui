@@ -54,19 +54,19 @@ enum LayrzConnectionState {
   ///
   /// Every non-[noData] state resolves to its swatch's `shade500`, except
   /// [disconnected] which uses the flat `fg1` foreground token (not a
-  /// swatch) and [noData] which uses `contextual.shade500`.
+  /// swatch) and [noData] which uses .contextual`.
   Color colorOf(LayrzTokens tokens) {
     switch (this) {
       case LayrzConnectionState.online:
-        return tokens.colors.success.shade500;
+        return tokens.colors.success;
       case LayrzConnectionState.idle:
-        return tokens.colors.warning.shade500;
+        return tokens.colors.warning;
       case LayrzConnectionState.offline:
-        return tokens.colors.danger.shade500;
+        return tokens.colors.danger;
       case LayrzConnectionState.disconnected:
         return tokens.colors.fg1;
       case LayrzConnectionState.noData:
-        return tokens.colors.contextual.shade500;
+        return tokens.colors.contextual;
     }
   }
 }

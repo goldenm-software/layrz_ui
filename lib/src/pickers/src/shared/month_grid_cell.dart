@@ -107,7 +107,7 @@ class LayrzPickersMonthGridCell extends StatelessWidget {
     // `LayrzPickersDayGridCell.build`'s own doc comment on this exact
     // point -- [LayrzColorSwatch.fromColor] derives shade50 by subtracting
     // 0.40 from the seed's HSL lightness, which clamps to fully opaque
-    // black for a dark seed (e.g. the default `kPrimaryColor`). Applying
+    // black for a dark seed (e.g. the default `kLightPrimaryColor`). Applying
     // [tokens.colors.tonalOpacity] alpha to the seed colour directly
     // sidesteps that defect entirely.
     if (isRejected && role != LayrzPickerCellRole.rangeInterior) {

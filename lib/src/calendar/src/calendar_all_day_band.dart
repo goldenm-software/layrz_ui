@@ -151,7 +151,7 @@ class _AllDayBarState extends State<_AllDayBar> {
     final rangeEnd = widget.rangeEnd;
     final columns = widget.columns;
     final isInteractive = entry.onTap != null;
-    final color = entry.color ?? tokens.colors.info.shade500;
+    final color = entry.color ?? tokens.colors.info;
     final contentColor = entry.isPreview ? color : color.contrastColor;
 
     final visibleStart = entry.start.isBefore(rangeStart)

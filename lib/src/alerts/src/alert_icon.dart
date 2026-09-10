@@ -66,9 +66,9 @@ class LayrzAlertIcon extends StatelessWidget {
     // Resolve accent colour.
     Color accentColor;
     if (type == LayrzAlertType.custom) {
-      accentColor = color ?? tokens.colors.primary.shade500;
+      accentColor = color ?? tokens.colors.primary;
     } else {
-      accentColor = type.colorToken(tokens) ?? tokens.colors.primary.shade500;
+      accentColor = type.colorToken(tokens) ?? tokens.colors.primary;
     }
 
     // Resolve icon.

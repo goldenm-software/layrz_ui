@@ -2,6 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/platform/platform.dart';
 import 'package:layrz_ui/src/search/search.dart';
@@ -316,8 +317,8 @@ class LayrzFindInPageHostState extends State<LayrzFindInPageHost> {
         painter: FindHighlightPainter(
           highlights: controller.highlights,
           currentIndex: visibleCurrentIndex,
-          currentColor: tokens.colors.selectionColor.shade500.withValues(alpha: 0.35),
-          otherColor: tokens.colors.selectionColor.shade100.withValues(alpha: 0.45),
+          currentColor: tokens.colors.selectionColor.withValues(alpha: 0.35),
+          otherColor: tokens.colors.selectionColor.lighten(0.6).withValues(alpha: 0.45),
         ),
       ),
     );

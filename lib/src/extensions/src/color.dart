@@ -127,6 +127,38 @@ extension LayrzColorExtensions on Color {
   /// ```
   Color flattenOn(Color background) => Color.alphaBlend(this, background);
 
+  /// Returns a darker variant of this colour by compositing black over it.
+  ///
+  /// [amount] is the opacity (0.0–1.0) of the black overlay: `0.0` returns this
+  /// colour unchanged, `1.0` returns opaque black. Implemented with
+  /// [Color.alphaBlend] so it uses the same compositing primitive as
+  /// [flattenOn], and preserves this colour's own alpha channel.
+  ///
+  /// This is the counterpart to [lighten]. Because a semantic token is a single
+  /// [Color] rather than a swatch, callers that previously reached for a darker
+  /// swatch shade (e.g. `danger.shade700`) derive it from the base colour here,
+  /// so the derived tone tracks any future change to the base.
+  Color darken([double amount = 0.1]) {
+    assert(amount >= 0.0 && amount <= 1.0, 'amount must be between 0.0 and 1.0');
+    final blended = Color.alphaBlend(Color.fromRGBO(0, 0, 0, amount), withValues(alpha: 1.0));
+    return blended.withValues(alpha: a);
+  }
+
+  /// Returns a lighter variant of this colour by compositing white over it.
+  ///
+  /// [amount] is the opacity (0.0–1.0) of the white overlay: `0.0` returns this
+  /// colour unchanged, `1.0` returns opaque white. Implemented with
+  /// [Color.alphaBlend], and preserves this colour's own alpha channel.
+  ///
+  /// This is a surface-independent lighten. For a tonal fill that must sit on a
+  /// specific surface, prefer [withOpacityValue] + [flattenOn], which lightens
+  /// toward that surface rather than toward white.
+  Color lighten([double amount = 0.1]) {
+    assert(amount >= 0.0 && amount <= 1.0, 'amount must be between 0.0 and 1.0');
+    final blended = Color.alphaBlend(Color.fromRGBO(255, 255, 255, amount), withValues(alpha: 1.0));
+    return blended.withValues(alpha: a);
+  }
+
   /// Whether this colour is fully opaque.
   ///
   /// Returns true if the alpha channel is at maximum (fully opaque),

@@ -202,12 +202,12 @@ class LayrzPasswordRequirements {
   Color colorFor(LayrzColorTokens colors) {
     switch (level) {
       case 0:
-        return colors.danger.shade500;
+        return colors.danger;
       case 1:
       case 2:
-        return colors.warning.shade500;
+        return colors.warning;
       default:
-        return colors.success.shade500;
+        return colors.success;
     }
   }
 

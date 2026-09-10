@@ -595,7 +595,7 @@ class _MultiDayBarState extends State<_MultiDayBar> {
     final columns = widget.columns;
     final slotIndex = widget.slotIndex;
     final isInteractive = entry.onTap != null;
-    final color = entry.color ?? tokens.colors.info.shade500;
+    final color = entry.color ?? tokens.colors.info;
     final contentColor = entry.isPreview ? color : color.contrastColor;
 
     // Clamp the entry's actual start/end to this week's visible range --

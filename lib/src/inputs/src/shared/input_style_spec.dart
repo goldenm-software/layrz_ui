@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Immutable specification of visual properties for a [LayrzTextInput] in a given interaction state.
@@ -69,7 +70,7 @@ class LayrzInputStyleSpec {
   /// | rest | `surface2` | transparent | `fg1` |
   /// | hover | `surface3` | transparent | `fg1` |
   /// | focus | `surface2` | `colors.primary` | `fg1` |
-  /// | error | `colors.danger.shade50` | `colors.danger` | `colors.danger` |
+  /// | error | tonal `colors.danger` over `sf2` | `colors.danger` | `colors.danger` |
   /// | disabled | `surface2` | transparent | `fg4` |
   /// | read-only | `surface2` | transparent | `fg1` |
   ///
@@ -103,8 +104,17 @@ class LayrzInputStyleSpec {
     }
 
     if (hasErrors) {
+      // The error fill differs by theme. On light it is a fixed near-white pink
+      // (#FFEBEE) — the historical value, and lighter than any danger-over-surface
+      // blend can reach, so it is a literal here rather than a derivation. On dark
+      // that pale wash is invisible, so dark uses a tonal danger tint over the
+      // resting surface instead. This single spec is the only place the error fill
+      // is resolved, so the literal lives here alone.
+      final backgroundColor = tokens.brightness == Brightness.dark
+          ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2)
+          : const Color(0xFFFFEBEE);
       return LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.danger.shade50,
+        backgroundColor: backgroundColor,
         borderColor: tokens.colors.danger,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.danger,

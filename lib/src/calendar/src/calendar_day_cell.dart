@@ -458,7 +458,7 @@ class _DateNumberState extends State<_DateNumber> {
     if (!isInteractive) {
       textColor = widget.color;
     } else if (_isHovered) {
-      textColor = tokens.colors.primary.shade500;
+      textColor = tokens.colors.primary;
     } else {
       textColor = widget.color;
     }
@@ -730,7 +730,7 @@ class _OverflowChipState extends State<_OverflowChip> {
     if (!isInteractive) {
       textColor = tokens.colors.fg2;
     } else if (_isHovered) {
-      textColor = tokens.colors.primary.shade500;
+      textColor = tokens.colors.primary;
     } else {
       textColor = tokens.colors.fg2;
     }

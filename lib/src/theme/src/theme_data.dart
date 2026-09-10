@@ -38,7 +38,7 @@ class LayrzThemeData {
   /// with different values without touching [LayrzApp] itself.
   ///
   /// Intentionally semi-transparent (see [LayrzThemeData.light]'s default,
-  /// `tokens.colors.selectionColor.shade500` tinted by
+  /// `tokens.colors.selectionColor` tinted by
   /// `tokens.colors.tonalOpacity`) so the selected text stays legible
   /// underneath the highlight rather than being fully obscured by an opaque
   /// fill.
@@ -63,6 +63,13 @@ class LayrzThemeData {
   /// from a live theme.
   final Map<Object, LayrzThemeExtension<dynamic>> extensions;
 
+  /// Whether this theme data represents a light or dark appearance.
+  ///
+  /// Defaults to [Brightness.light]. [LayrzThemeData.light] sets this to
+  /// [Brightness.light] and [LayrzThemeData.dark] sets it to [Brightness.dark].
+  /// Read via [BuildContext.isDark] to make brightness-dependent decisions.
+  final Brightness brightness;
+
   /// Creates a new [LayrzThemeData] with all token, icon theme, and extension values explicitly set.
   ///
   /// The [extensions] map is stored as-is; pass an empty map for no extensions.
@@ -73,12 +80,15 @@ class LayrzThemeData {
   /// [tokens] — so callers using this constructor directly must supply both
   /// explicitly. [LayrzThemeData.light()] computes sensible defaults from its
   /// own [tokens] and should be preferred unless full manual control is needed.
+  ///
+  /// [brightness] defaults to [Brightness.light].
   const LayrzThemeData({
     required this.tokens,
     required this.iconTheme,
     required this.selectionColor,
     required this.cursorColor,
     this.extensions = const {},
+    this.brightness = Brightness.light,
   });
 
   // ===== EXTENSION ACCESSORS =====
@@ -133,8 +143,8 @@ class LayrzThemeData {
 
   /// Primary brand color (deep navy blue by default).
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.primary.shade500].
-  Color get primaryColor => tokens.colors.primary.shade500;
+  /// Backwards-compatible shorthand for [tokens.colors.primary].
+  Color get primaryColor => tokens.colors.primary;
 
   /// Canvas / scaffold background color.
   ///
@@ -165,18 +175,18 @@ class LayrzThemeData {
   ///
   /// Renamed from [errorColor] to [dangerColor] in alignment with the token system.
   /// This getter provides backwards compatibility under the old name.
-  /// New code should use [tokens.colors.danger.shade500].
-  Color get dangerColor => tokens.colors.danger.shade500;
+  /// New code should use [tokens.colors.danger].
+  Color get dangerColor => tokens.colors.danger;
 
   /// Success semantic color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.success.shade500].
-  Color get successColor => tokens.colors.success.shade500;
+  /// Backwards-compatible shorthand for [tokens.colors.success].
+  Color get successColor => tokens.colors.success;
 
   /// Warning semantic color.
   ///
-  /// Backwards-compatible shorthand for [tokens.colors.warning.shade500].
-  Color get warningColor => tokens.colors.warning.shade500;
+  /// Backwards-compatible shorthand for [tokens.colors.warning].
+  Color get warningColor => tokens.colors.warning;
 
   /// Full text-style scale for this theme.
   ///
@@ -200,19 +210,19 @@ class LayrzThemeData {
   /// Builds a complete [LayrzTokens] set via [LayrzTokens.light], then wraps it
   /// in a [LayrzThemeData] with an [IconThemeData] seeded from the text color.
   ///
-  /// [primaryColor] overrides the default [kPrimaryColor].
+  /// [primaryColor] overrides the default [kLightPrimaryColor].
   /// [font] is the font to use for all text styles. If null, defaults to [LayrzRobotoFont].
   /// [extensions] is an iterable of [LayrzThemeExtension] instances that define
   ///   component-specific theme data. They are normalized to a map keyed by runtime type
   ///   and stored unmodifiable in the resulting theme. Defaults to an empty list.
   /// [selectionColor] overrides the app-wide text-selection highlight color (see
-  ///   [LayrzThemeData.selectionColor]). Defaults to `tokens.colors.selectionColor.shade500`
+  ///   [LayrzThemeData.selectionColor]). Defaults to `tokens.colors.selectionColor`
   ///   tinted by `tokens.colors.tonalOpacity` — a semi-transparent light blue that keeps
   ///   selected text legible underneath the highlight.
   /// [cursorColor] overrides the app-wide caret color (see [LayrzThemeData.cursorColor]).
-  ///   Defaults to `tokens.colors.primary.shade500`.
+  ///   Defaults to `tokens.colors.primary`.
   factory LayrzThemeData.light({
-    Color primaryColor = kPrimaryColor,
+    Color primaryColor = kLightPrimaryColor,
     LayrzFont? font,
     LayrzBreakpointTokens? breakpointTokens,
     Iterable<LayrzThemeExtension<dynamic>> extensions = const [],
@@ -237,9 +247,59 @@ class LayrzThemeData {
       tokens: tokens,
       iconTheme: iconTheme,
       selectionColor:
-          selectionColor ?? tokens.colors.selectionColor.shade500.withValues(alpha: tokens.colors.tonalOpacity),
-      cursorColor: cursorColor ?? tokens.colors.primary.shade500,
+          selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
+      cursorColor: cursorColor ?? tokens.colors.primary,
       extensions: extensionsMap,
+      brightness: Brightness.light,
+    );
+  }
+
+  /// BETA dark theme using Layrz brand defaults.
+  ///
+  /// Mirrors [LayrzThemeData.light] exactly, but builds its [LayrzTokens] via
+  /// [LayrzTokens.dark] and sets [brightness] to [Brightness.dark].
+  ///
+  /// [primaryColor] overrides the default [kDarkPrimaryColor].
+  /// [font] is the font to use for all text styles. If null, defaults to [LayrzRobotoFont].
+  /// [breakpointTokens] overrides the default [LayrzBreakpointTokens] when provided.
+  /// [extensions] is an iterable of [LayrzThemeExtension] instances that define
+  ///   component-specific theme data. They are normalized to a map keyed by runtime type
+  ///   and stored unmodifiable in the resulting theme. Defaults to an empty list.
+  /// [selectionColor] overrides the app-wide text-selection highlight color (see
+  ///   [LayrzThemeData.selectionColor]). Defaults to `tokens.colors.selectionColor`
+  ///   tinted by `tokens.colors.tonalOpacity`.
+  /// [cursorColor] overrides the app-wide caret color (see [LayrzThemeData.cursorColor]).
+  ///   Defaults to `tokens.colors.primary`.
+  factory LayrzThemeData.dark({
+    Color primaryColor = kDarkPrimaryColor,
+    LayrzFont? font,
+    LayrzBreakpointTokens? breakpointTokens,
+    Iterable<LayrzThemeExtension<dynamic>> extensions = const [],
+    Color? selectionColor,
+    Color? cursorColor,
+  }) {
+    var tokens = LayrzTokens.dark(
+      primaryColor: primaryColor,
+      font: font,
+    );
+
+    // Override breakpoints if custom tokens provided
+    if (breakpointTokens != null) {
+      tokens = tokens.copyWith(breakpoints: breakpointTokens);
+    }
+
+    final iconTheme = IconThemeData(color: tokens.colors.fg1, size: 24);
+    final extensionsMap = Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
+      {for (final ext in extensions) ext.type: ext},
+    );
+    return LayrzThemeData(
+      tokens: tokens,
+      iconTheme: iconTheme,
+      selectionColor:
+          selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
+      cursorColor: cursorColor ?? tokens.colors.primary,
+      extensions: extensionsMap,
+      brightness: Brightness.dark,
     );
   }
 
@@ -258,12 +318,16 @@ class LayrzThemeData {
   ///
   /// Note: Passing an empty iterable will clear all extensions; pass nothing
   /// to preserve them.
+  ///
+  /// [brightness] replaces the brightness flag when provided; otherwise it
+  /// carries over unchanged.
   LayrzThemeData copyWith({
     LayrzTokens? tokens,
     IconThemeData? iconTheme,
     Color? selectionColor,
     Color? cursorColor,
     Iterable<LayrzThemeExtension<dynamic>>? extensions,
+    Brightness? brightness,
   }) {
     final newExtensions = extensions != null
         ? Map<Object, LayrzThemeExtension<dynamic>>.unmodifiable(
@@ -277,6 +341,7 @@ class LayrzThemeData {
       selectionColor: selectionColor ?? this.selectionColor,
       cursorColor: cursorColor ?? this.cursorColor,
       extensions: newExtensions,
+      brightness: brightness ?? this.brightness,
     );
   }
 
@@ -289,6 +354,7 @@ class LayrzThemeData {
           iconTheme == other.iconTheme &&
           selectionColor == other.selectionColor &&
           cursorColor == other.cursorColor &&
+          brightness == other.brightness &&
           mapEquals(extensions, other.extensions);
 
   @override
@@ -298,6 +364,7 @@ class LayrzThemeData {
     iconTheme,
     selectionColor,
     cursorColor,
+    brightness,
     Object.hashAllUnordered(extensions.values),
   );
 }

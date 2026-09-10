@@ -153,7 +153,7 @@ class LayrzSnackbarStyleSpec {
   ///
   /// [type] selects the semantic accent via [LayrzSnackbarType.accentColor]. When
   /// [type] is [LayrzSnackbarType.custom], [customColor] supplies the accent
-  /// instead (falling back to `tokens.colors.primary.shade500` if null, so a spec
+  /// instead (falling back to `tokens.colors.primary` if null, so a spec
   /// can always be resolved even mid-construction) — used directly as the accent,
   /// on the assumption the caller picked a color legible on white.
   /// [customIcon] is accepted for signature symmetry with the constructor call
@@ -169,8 +169,8 @@ class LayrzSnackbarStyleSpec {
     IconData? customIcon,
   }) {
     final Color accent = type == LayrzSnackbarType.custom
-        ? (customColor ?? tokens.colors.primary.shade500)
-        : (type.accentColor(tokens) ?? tokens.colors.primary.shade500);
+        ? (customColor ?? tokens.colors.primary)
+        : (type.accentColor(tokens) ?? tokens.colors.primary);
 
     return LayrzSnackbarStyleSpec(
       surfaceColor: tokens.colors.sf1,

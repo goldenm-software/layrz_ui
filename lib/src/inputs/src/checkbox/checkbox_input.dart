@@ -240,7 +240,7 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
       backgroundColor = tokens.colors.sf3;
       borderColor = tokens.colors.fg4;
     } else if (widget.errors.isNotEmpty) {
-      final uncheckedBackground = tokens.colors.danger.shade50;
+      final uncheckedBackground = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf3);
       final checkedBackground = tokens.colors.danger;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.danger;

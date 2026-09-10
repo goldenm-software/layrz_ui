@@ -84,6 +84,17 @@ class LayrzApp extends StatefulWidget {
   /// The light [LayrzThemeData]. Defaults to [LayrzThemeData.light()] when not provided.
   final LayrzThemeData? theme;
 
+  /// The BETA dark [LayrzThemeData]. Defaults to [LayrzThemeData.dark()] when not provided.
+  ///
+  /// Only used when [themeMode] resolves to dark — either [LayrzThemeMode.dark]
+  /// directly, or [LayrzThemeMode.system] when the platform brightness is
+  /// [Brightness.dark].
+  final LayrzThemeData? darkTheme;
+
+  /// Which of [theme] and [darkTheme] is active. Defaults to [LayrzThemeMode.system],
+  /// which follows the operating system's brightness setting.
+  final LayrzThemeMode themeMode;
+
   // ── App metadata ────────────────────────────────────────────────────
 
   /// The one-line description of this app, shown in the OS task switcher.
@@ -239,6 +250,8 @@ class LayrzApp extends StatefulWidget {
     this.navigatorObservers = const [],
     this.initialRoute,
     this.theme,
+    this.darkTheme,
+    this.themeMode = LayrzThemeMode.system,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -273,6 +286,8 @@ class LayrzApp extends StatefulWidget {
     this.routeInformationProvider,
     this.backButtonDispatcher,
     this.theme,
+    this.darkTheme,
+    this.themeMode = LayrzThemeMode.system,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -460,7 +475,18 @@ class _LayrzAppState extends State<LayrzApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeData = widget.theme ?? LayrzThemeData.light();
+    final lightData = widget.theme ?? LayrzThemeData.light();
+    final darkData = widget.darkTheme ?? LayrzThemeData.dark();
+    final LayrzThemeData themeData;
+    switch (widget.themeMode) {
+      case LayrzThemeMode.light:
+        themeData = lightData;
+      case LayrzThemeMode.dark:
+        themeData = darkData;
+      case LayrzThemeMode.system:
+        final brightness = MediaQuery.maybePlatformBrightnessOf(context) ?? Brightness.light;
+        themeData = brightness == Brightness.dark ? darkData : lightData;
+    }
     final appColor = widget.color ?? themeData.primaryColor;
     final localizationsDelegates = _buildLocalizationsDelegates();
 

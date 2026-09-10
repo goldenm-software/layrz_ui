@@ -49,6 +49,15 @@ class LayrzTokens {
   /// All breakpoint tokens (band thresholds for responsive design).
   final LayrzBreakpointTokens breakpoints;
 
+  /// Whether this token set is the light or dark appearance.
+  ///
+  /// Defaults to [Brightness.light]. [LayrzTokens.light] sets [Brightness.light]
+  /// and [LayrzTokens.dark] sets [Brightness.dark]. Token-driven code that must
+  /// adapt to the appearance without a [BuildContext] — for example resolving an
+  /// error fill's tint strength, which needs to be stronger on a dark surface —
+  /// reads this rather than inferring brightness from a surface color.
+  final Brightness brightness;
+
   /// Creates a new [LayrzTokens] with all token categories explicitly set.
   const LayrzTokens({
     required this.colors,
@@ -59,6 +68,7 @@ class LayrzTokens {
     required this.border,
     required this.motion,
     required this.breakpoints,
+    this.brightness = Brightness.light,
   });
 
   /// Light theme tokens using Layrz brand defaults.
@@ -78,10 +88,10 @@ class LayrzTokens {
   /// [LayrzThemeData.light] instead, which is the public API entry point.
   ///
   /// Parameters:
-  ///   - [primaryColor]: The primary brand color (default: [kPrimaryColor]).
+  ///   - [primaryColor]: The primary brand color (default: [kLightPrimaryColor]).
   ///   - [font]: The font used for all text styles. If null, defaults to [LayrzRobotoFont].
   factory LayrzTokens.light({
-    Color primaryColor = kPrimaryColor,
+    Color primaryColor = kLightPrimaryColor,
     LayrzFont? font,
   }) {
     // Build color tokens first — they seed other tokens
@@ -122,6 +132,65 @@ class LayrzTokens {
       border: borderTokens,
       motion: motionTokens,
       breakpoints: breakpointTokens,
+      brightness: Brightness.light,
+    );
+  }
+
+  /// BETA dark theme tokens using Layrz brand defaults.
+  ///
+  /// Mirrors [LayrzTokens.light] exactly, but seeds from [LayrzColorTokens.dark]:
+  /// - [LayrzColorTokens.dark] is seeded with [primaryColor]
+  /// - [LayrzShadowTokens] is seeded with the resulting [colors.sf1] and [radius.r2]
+  /// - [LayrzBorderTokens] is seeded with [colors.divider]
+  /// - [LayrzTextTheme.defaults] is constructed with [colors.fg1] as the text color
+  ///   and the provided font
+  ///
+  /// Parameters:
+  ///   - [primaryColor]: The primary brand color (default: [kDarkPrimaryColor]).
+  ///   - [font]: The font used for all text styles. If null, defaults to [LayrzRobotoFont].
+  factory LayrzTokens.dark({
+    Color primaryColor = kDarkPrimaryColor,
+    LayrzFont? font,
+  }) {
+    // Build color tokens first — they seed other tokens
+    final colorTokens = LayrzColorTokens.dark(
+      primary: primaryColor,
+    );
+
+    // Build spacing and radius (independent of colors)
+    const spacingTokens = LayrzSpacingTokens();
+    const radiusTokens = LayrzRadiusTokens();
+
+    // Build derived tokens seeded from colors and radius
+    final shadowTokens = LayrzShadowTokens(
+      surfaceColor: colorTokens.sf1,
+      baseRadius: radiusTokens.r2,
+    );
+
+    final borderTokens = LayrzBorderTokens(dividerColor: colorTokens.divider);
+
+    // Build typography seeded from colors and font settings
+    final typographyTokens = LayrzTextTheme.defaults(
+      textColor: colorTokens.fg1,
+      font: font,
+    );
+
+    // Motion is independent
+    const motionTokens = LayrzMotionTokens();
+
+    // Breakpoints are independent
+    const breakpointTokens = LayrzBreakpointTokens();
+
+    return LayrzTokens(
+      colors: colorTokens,
+      typography: typographyTokens,
+      spacing: spacingTokens,
+      radius: radiusTokens,
+      shadow: shadowTokens,
+      border: borderTokens,
+      motion: motionTokens,
+      breakpoints: breakpointTokens,
+      brightness: Brightness.dark,
     );
   }
 
@@ -135,6 +204,7 @@ class LayrzTokens {
     LayrzBorderTokens? border,
     LayrzMotionTokens? motion,
     LayrzBreakpointTokens? breakpoints,
+    Brightness? brightness,
   }) {
     return LayrzTokens(
       colors: colors ?? this.colors,
@@ -145,6 +215,7 @@ class LayrzTokens {
       border: border ?? this.border,
       motion: motion ?? this.motion,
       breakpoints: breakpoints ?? this.breakpoints,
+      brightness: brightness ?? this.brightness,
     );
   }
 
@@ -160,8 +231,10 @@ class LayrzTokens {
           shadow == other.shadow &&
           border == other.border &&
           motion == other.motion &&
-          breakpoints == other.breakpoints;
+          breakpoints == other.breakpoints &&
+          brightness == other.brightness;
 
   @override
-  int get hashCode => Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints);
+  int get hashCode =>
+      Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints, brightness);
 }

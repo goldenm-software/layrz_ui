@@ -117,7 +117,7 @@ class _LayrzChipState extends State<LayrzChip> {
     final tokens = LayrzTheme.of(context).tokens;
 
     // Resolve accent color
-    final accent = widget.type.colorToken(tokens) ?? widget.color ?? tokens.colors.primary.shade500;
+    final accent = widget.type.colorToken(tokens) ?? widget.color ?? tokens.colors.primary;
 
     // Resolve style spec
     final spec = LayrzChipStyleSpec.resolve(

@@ -144,7 +144,7 @@ class _LayrzWorkspaceSplitViewState extends State<LayrzWorkspaceSplitView> {
                     child: Center(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: (_isDragging || _isHovered) ? tokens.colors.primary.shade500 : tokens.colors.divider,
+                          color: (_isDragging || _isHovered) ? tokens.colors.primary : tokens.colors.divider,
                           borderRadius: tokens.radius.br1,
                         ),
                         child: SizedBox(width: tokens.border.stroke2, height: double.infinity),

@@ -38,15 +38,15 @@ enum LayrzBadgeType {
   Color? colorToken(LayrzTokens tokens) {
     switch (this) {
       case LayrzBadgeType.info:
-        return tokens.colors.info.shade500;
+        return tokens.colors.info;
       case LayrzBadgeType.success:
-        return tokens.colors.success.shade500;
+        return tokens.colors.success;
       case LayrzBadgeType.warning:
-        return tokens.colors.warning.shade500;
+        return tokens.colors.warning;
       case LayrzBadgeType.danger:
-        return tokens.colors.danger.shade500;
+        return tokens.colors.danger;
       case LayrzBadgeType.context:
-        return tokens.colors.contextual.shade500;
+        return tokens.colors.contextual;
       case LayrzBadgeType.custom:
         return null;
     }

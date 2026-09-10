@@ -639,7 +639,8 @@ class _LayrzCodeEditorState extends State<LayrzCodeEditor> implements TextSelect
   /// button is at most [kLayrzButtonCompactHeight] wide (Fab buttons are
   /// square); a trailing gap of one spacing level keeps text clear of the
   /// left-most button.
-  double _actionRowReserve(double gap) => _actionButtonCount == 0 ? 0 : _actionButtonCount * kLayrzButtonCompactHeight + gap;
+  double _actionRowReserve(double gap) =>
+      _actionButtonCount == 0 ? 0 : _actionButtonCount * kLayrzButtonCompactHeight + gap;
 
   /// Builds the top-right action row overlaid on the code box: the optional
   /// lint and run buttons (shown only when their callback is provided) and the

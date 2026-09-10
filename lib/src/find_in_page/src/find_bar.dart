@@ -327,7 +327,7 @@ class _LayrzFindBarState extends State<LayrzFindBar> {
             height: kLayrzFindBarSearchingIndicatorHeight,
             borderRadius: 0,
             type: LayrzProgressType.custom,
-            color: tokens.colors.selectionColor.shade500,
+            color: tokens.colors.selectionColor,
           ),
         ),
       ),

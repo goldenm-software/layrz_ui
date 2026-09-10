@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The four colours [LayrzSliderPainter] needs to paint one frame of the
@@ -109,8 +110,8 @@ LayrzSliderColors resolveLayrzSliderColors({
   if (states.contains(WidgetState.pressed) || isDragging) {
     return LayrzSliderColors(
       trackColor: tokens.colors.sf3,
-      activeTrackColor: tokens.colors.primary.shade600,
-      thumbColor: tokens.colors.primary.shade600,
+      activeTrackColor: tokens.colors.primary.darken(0.12),
+      thumbColor: tokens.colors.primary.darken(0.12),
       thumbBorderColor: tokens.colors.sf1,
       thumbElevation: 2,
     );
@@ -121,7 +122,7 @@ LayrzSliderColors resolveLayrzSliderColors({
       trackColor: tokens.colors.sf3,
       activeTrackColor: tokens.colors.primary,
       thumbColor: tokens.colors.primary,
-      thumbBorderColor: isFocusVisible ? tokens.colors.primary.shade700 : tokens.colors.sf1,
+      thumbBorderColor: isFocusVisible ? tokens.colors.primary.darken(0.2) : tokens.colors.sf1,
       thumbElevation: 2,
     );
   }

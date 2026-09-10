@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
 
-import 'color_swatch.dart';
 import 'palette.dart';
 
 /// Immutable semantic color tokens for the layrz_ui design system.
@@ -16,8 +15,12 @@ import 'palette.dart';
 @immutable
 class LayrzColorTokens {
   /// The primary brand color used for interactive elements and prominent actions.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch primary;
+  ///
+  /// A single [Color]. Darker or lighter variants that widgets previously read
+  /// from a swatch shade are derived from this base via
+  /// `LayrzColorExtensions.darken` / `lighten` (or a tonal fill via
+  /// `withOpacityValue` + `flattenOn`).
+  final Color primary;
 
   /// The lightest surface step — the page canvas and the default fill for cards and panels.
   final Color sf1;
@@ -44,42 +47,44 @@ class LayrzColorTokens {
   final Color fg4;
 
   /// Semantic color for errors, destructive actions, and critical alerts.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch danger;
+  ///
+  /// A single [Color]. Darker/tonal variants are derived from this base via
+  /// `LayrzColorExtensions.darken` / `withOpacityValue` + `flattenOn`.
+  final Color danger;
 
   /// Semantic color for positive confirmations, valid input, and good status.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch success;
+  ///
+  /// A single [Color]; darker/tonal variants are derived from it.
+  final Color success;
 
   /// Semantic color for cautions, non-critical alerts, and warnings.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch warning;
+  ///
+  /// A single [Color]; darker/tonal variants are derived from it.
+  final Color warning;
 
   /// Semantic color for informational and neutral alerts.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch info;
+  ///
+  /// A single [Color]; darker/tonal variants are derived from it.
+  final Color info;
 
   /// Contextual color used for neutral status and informational elements.
   /// Named distinctly from "context" to avoid collision-prone naming in widget code.
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50 (lightest) to 900 (darkest).
-  final LayrzColorSwatch contextual;
+  ///
+  /// A single [Color]; darker/tonal variants are derived from it.
+  final Color contextual;
 
-  /// The tint swatch behind app-wide text selection and the find-in-page
-  /// highlight.
+  /// The tint behind app-wide text selection and the find-in-page highlight.
   ///
-  /// A [LayrzColorSwatch] providing ten tonal shades indexed from 50
-  /// (lightest) to 900 (darkest). Two shades are used directly by name:
-  /// [LayrzColorSwatch.shade500] is the primary selection tone — the
-  /// app-wide text-selection highlight (see `LayrzThemeData.selectionColor`)
-  /// and the find-spike's "current match" tint both derive from it — and
-  /// [LayrzColorSwatch.shade100] is the secondary tone used for the
-  /// find-spike's "other matches" tint. Keeping both on one swatch means text
-  /// selection and find-highlighting always read as the same visual language
-  /// rather than two independently-tuned colors.
+  /// A single [Color] used as the primary selection tone — the app-wide
+  /// text-selection highlight (see `LayrzThemeData.selectionColor`) and the
+  /// find-spike's "current match" tint both derive from it. The find-spike's
+  /// secondary "other matches" tint is derived from this same base (a lighter,
+  /// lower-alpha variant), so selection and find-highlighting always read as the
+  /// same visual language rather than two independently-tuned colors.
   ///
-  /// First-class themeable: a future dark theme overrides this single swatch
-  /// and both consumers pick up the new hue automatically.
-  final LayrzColorSwatch selectionColor;
+  /// First-class themeable: the dark theme overrides this single color and both
+  /// consumers pick up the new hue automatically.
+  final Color selectionColor;
 
   /// Color used for borders, dividers, and separator lines.
   final Color divider;
@@ -140,14 +145,14 @@ class LayrzColorTokens {
 
   /// Light theme color tokens using Layrz brand defaults.
   ///
-  /// [primary] defaults to [kPrimaryColor] and is wrapped in a [LayrzColorSwatch]
-  /// that generates ten tonal shades algorithmically.
-  /// All other colors use semantic light theme values with standard Material palettes.
+  /// [primary] defaults to [kLightPrimaryColor]. Every brand and semantic color
+  /// is a single [Color] (the former swatch's 500 shade); widgets derive darker
+  /// or tonal variants from these bases via `LayrzColorExtensions`.
   factory LayrzColorTokens.light({
-    Color primary = kPrimaryColor,
+    Color primary = kLightPrimaryColor,
   }) {
     return LayrzColorTokens(
-      primary: LayrzColorSwatch.fromColor(primary),
+      primary: primary,
       sf1: const Color(0xFFFCFCFC),
       sf2: const Color(0xFFF7F7F7),
       sf3: const Color(0xFFF0F0F0),
@@ -156,24 +161,53 @@ class LayrzColorTokens {
       fg2: const Color(0xFF4A4A5A),
       fg3: const Color(0xFF9E9E9E),
       fg4: const Color(0xFFC4C4C4),
-      // Semantic colors use the standard Material 500 shades and full swatch palettes
-      // (50, 100, 200, …, 900) for consistent, familiar appearance. These values are
-      // now defined as static constants in [LayrzColors] to centralize the palette.
-      danger: LayrzColors.red,
-      success: LayrzColors.green,
-      // Previous: LayrzColors.orange (Material orange, 500 = #FF9800). Replaced because
-      // its luminance (0.4372) made contrastColor pick black for content; #EF6C00
-      // (luminance 0.2908, LayrzColors.warningOrange) picks white. Restore this line to
-      // revert.
-      warning: LayrzColors.warningOrange,
-      info: LayrzColors.blue,
-      contextual: LayrzColors.grey,
-      selectionColor: LayrzColors.lightBlue,
+      danger: Color(0xFFF44336),
+      success: Color(0xFF4CAF50),
+      warning: Color(0xFFEF6C00),
+      info: Color(0xFF2196F3),
+      contextual: Color(0xFF9E9E9E),
+      selectionColor: Color(0xFF03A9F4),
       divider: const Color(0xFFE0E0E0),
       overlay: Color.fromRGBO(0, 0, 0, 0.5),
       tonalOpacity: 0.2,
       aiAccent: const Color(0xFF03A9F4),
       watermark: const Color(0xFF9E9E9E),
+    );
+  }
+
+  /// BETA dark theme color tokens using Layrz brand defaults.
+  ///
+  /// [primary] defaults to [kDarkPrimaryColor] (the Layrz orange accent), kept as
+  /// a single [Color]. The surface ramp ([sf1]–[sf4]) and foreground ramp
+  /// ([fg1]–[fg4]) hold dark-appropriate values. Semantic status colors
+  /// ([danger], [success], [warning], [info], [contextual]) and [selectionColor]
+  /// currently reuse the same 500-shade hues as [LayrzColorTokens.light] for this
+  /// beta — they are not yet independently tuned for dark surfaces, but because
+  /// each is a plain [Color] a theme can now retune any of them freely.
+  factory LayrzColorTokens.dark({
+    Color primary = kDarkPrimaryColor,
+  }) {
+    return LayrzColorTokens(
+      primary: primary,
+      sf1: const Color(0xFF12141C),
+      sf2: const Color(0xFF1A1D27),
+      sf3: const Color(0xFF232734),
+      sf4: const Color(0xFF2E3341),
+      fg1: const Color(0xFFECEEF3),
+      fg2: const Color(0xFFB8BDCB),
+      fg3: const Color(0xFF7A8194),
+      fg4: const Color(0xFF4A5063),
+      danger: Color(0xFFF44336),
+      success: Color(0xFF4CAF50),
+      warning: Color(0xFFEF6C00),
+      info: Color(0xFF2196F3),
+      contextual: Color(0xFF9E9E9E),
+      selectionColor: Color(0xFF03A9F4),
+      divider: const Color(0x14FFFFFF),
+      overlay: Color.fromRGBO(0, 0, 0, 0.6),
+      tonalOpacity: 0.24,
+      aiAccent: const Color(0xFF03A9F4),
+      watermark: const Color(0xFF3A3F4C),
     );
   }
 
@@ -201,9 +235,7 @@ class LayrzColorTokens {
     Color? watermark,
   }) {
     return LayrzColorTokens(
-      primary: primary == null
-          ? this.primary
-          : (primary is LayrzColorSwatch ? primary : LayrzColorSwatch.fromColor(primary)),
+      primary: primary ?? this.primary,
       sf1: sf1 ?? this.sf1,
       sf2: sf2 ?? this.sf2,
       sf3: sf3 ?? this.sf3,
@@ -212,26 +244,12 @@ class LayrzColorTokens {
       fg2: fg2 ?? this.fg2,
       fg3: fg3 ?? this.fg3,
       fg4: fg4 ?? this.fg4,
-      danger: danger == null
-          ? this.danger
-          : (danger is LayrzColorSwatch ? danger : LayrzColorSwatch(danger.toARGB32(), {50: danger})),
-      success: success == null
-          ? this.success
-          : (success is LayrzColorSwatch ? success : LayrzColorSwatch(success.toARGB32(), {50: success})),
-      warning: warning == null
-          ? this.warning
-          : (warning is LayrzColorSwatch ? warning : LayrzColorSwatch(warning.toARGB32(), {50: warning})),
-      info: info == null
-          ? this.info
-          : (info is LayrzColorSwatch ? info : LayrzColorSwatch(info.toARGB32(), {50: info})),
-      contextual: contextual == null
-          ? this.contextual
-          : (contextual is LayrzColorSwatch ? contextual : LayrzColorSwatch(contextual.toARGB32(), {50: contextual})),
-      selectionColor: selectionColor == null
-          ? this.selectionColor
-          : (selectionColor is LayrzColorSwatch
-                ? selectionColor
-                : LayrzColorSwatch(selectionColor.toARGB32(), {50: selectionColor})),
+      danger: danger ?? this.danger,
+      success: success ?? this.success,
+      warning: warning ?? this.warning,
+      info: info ?? this.info,
+      contextual: contextual ?? this.contextual,
+      selectionColor: selectionColor ?? this.selectionColor,
       divider: divider ?? this.divider,
       overlay: overlay ?? this.overlay,
       tonalOpacity: tonalOpacity ?? this.tonalOpacity,

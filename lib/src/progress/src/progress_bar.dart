@@ -83,7 +83,7 @@ class LayrzProgressBar extends StatefulWidget {
   /// [LayrzProgressType.custom].
   ///
   /// Ignored for every other [type]. When [type] is custom and this is null,
-  /// falls back to `tokens.colors.primary.shade500`.
+  /// falls back to `tokens.colors.primary`.
   final Color? color;
 
   /// The height of the bar in logical pixels. **Linear format only** —
