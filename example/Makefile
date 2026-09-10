@@ -30,3 +30,6 @@ build-android: clean
 	flutter build apk --release --no-tree-shake-icons
 	mv build/app/outputs/flutter-apk/app-release.apk ../com.layrz.ui.apk
 
+.PHONY: build-web
+build-web: clean
+	flutter build web --release --wasm --no-tree-shake-icons
