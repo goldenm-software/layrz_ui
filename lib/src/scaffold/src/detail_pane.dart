@@ -54,10 +54,26 @@ class DetailPane<T> extends StatelessWidget {
     if (content == null) {
       return const SizedBox.shrink();
     }
-    return SelectableRegion(
-      selectionControls: _selectionControls,
-      contextMenuBuilder: _buildContextMenu,
-      child: content,
+    // In the wide and folded layouts this pane sits inside an `Expanded`,
+    // which hands it a bounded box -- a shrink-wrapping [content] (e.g. a
+    // `Column(mainAxisSize: MainAxisSize.min)`) has no reason on its own to
+    // claim that whole box, so without an explicit top-left anchor it renders
+    // centered in the pane instead of flush with the top, unlike every other
+    // showroom-style view. In the narrow layout this same pane is instead the
+    // `builder` of a `LayrzBottomSheet`, which -- unless the caller opts out
+    // via `scrollable: false` -- wraps it in a `SingleChildScrollView` and so
+    // hands it *unbounded* height instead; `SizedBox.expand` would assert
+    // there. `Align` alone handles both: it fills the available space along
+    // any axis that is bounded (pinning [content] to that axis's top/left),
+    // and shrinks to [content]'s own size along any axis that is not --
+    // exactly what a scroll view's child needs.
+    return Align(
+      alignment: Alignment.topLeft,
+      child: SelectableRegion(
+        selectionControls: _selectionControls,
+        contextMenuBuilder: _buildContextMenu,
+        child: content,
+      ),
     );
   }
 
