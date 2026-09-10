@@ -22,6 +22,7 @@ import 'src/sections/borders_section.dart';
 import 'src/sections/button_group_section.dart';
 import 'src/sections/buttons_section.dart';
 import 'src/sections/calendar_section.dart';
+import 'src/sections/cards_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/code_section.dart';
 import 'src/sections/colors_section.dart';
@@ -39,10 +40,12 @@ import 'src/sections/layo_section.dart';
 import 'src/sections/markdown_section.dart';
 import 'src/sections/menus_section.dart';
 import 'src/sections/motion_section.dart';
+import 'src/sections/pickers/pickers_section.dart';
 import 'src/sections/progress_section.dart';
 import 'src/sections/radius_section.dart';
 import 'src/sections/refresh_section.dart';
 import 'src/sections/responsive_modal_section.dart';
+import 'src/sections/scaffold_shell_section.dart';
 import 'src/sections/sheets_section.dart';
 import 'src/sections/skeleton_section.dart';
 import 'src/sections/snackbar_section.dart';
@@ -82,6 +85,18 @@ Future<void> main() async {
   runApp(ProviderScope(child: ShowroomApp(font: font)));
 }
 
+/// Builds a [CustomTransitionPage] using [LayrzPageTransitions.fade] at the
+/// design system's own page-transition duration ([LayrzPageTransitions.durationOf]).
+///
+/// Every showroom route's `pageBuilder` delegates to this helper so the whole
+/// shell animates consistently on navigation, without repeating the same
+/// three-line [CustomTransitionPage] construction at every [GoRoute].
+CustomTransitionPage<void> _fadePage(BuildContext context, Widget child) => CustomTransitionPage<void>(
+  child: child,
+  transitionsBuilder: LayrzPageTransitions.fade,
+  transitionDuration: LayrzPageTransitions.durationOf(context),
+);
+
 /// The singleton go_router instance for the showroom application.
 ///
 /// Uses a [ShellRoute] to persist the [ShowroomLayout] shell while only
@@ -89,19 +104,14 @@ Future<void> main() async {
 /// entire layout (rail, drawer, search, notifications) on every navigation,
 /// dramatically improving performance.
 ///
-/// Most routes use [NoTransitionPage] since the shell's own body swap is the
-/// point of interest, not route animation. A representative subset — `/calendar`
-/// ([LayrzPageTransitions.fade]), `/tree-view` ([LayrzPageTransitions.slide]),
-/// and `/badges` ([LayrzPageTransitions.scale]) — instead use
-/// [CustomTransitionPage] with those builders, each passing
-/// `transitionDuration: LayrzPageTransitions.durationOf(context)` so the demo
-/// runs at the design system's own duration rather than go_router's default.
-/// This is deliberately a subset, not every route: leaving most routes
-/// transition-free keeps the contrast that makes the animated ones legible as
-/// a deliberate choice rather than the app's baseline behaviour. See the
-/// dedicated `/transitions` page (built on [TransitionsSection]) for every
-/// builder, including [LayrzPageTransitions.rotation] and
-/// [LayrzPageTransitions.none], driven interactively.
+/// Every route's `pageBuilder` returns a [CustomTransitionPage] built via the
+/// [_fadePage] helper, which always uses [LayrzPageTransitions.fade] at
+/// [LayrzPageTransitions.durationOf]'s duration — so the whole showroom
+/// animates consistently on navigation. See the dedicated `/transitions` page
+/// (built on [TransitionsSection]) to see every other builder, including
+/// [LayrzPageTransitions.slide], [LayrzPageTransitions.scale],
+/// [LayrzPageTransitions.rotation], and [LayrzPageTransitions.none], driven
+/// interactively.
 ///
 /// To revert to the original named-route implementation, replace [ShowroomApp.build]
 /// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
@@ -117,201 +127,201 @@ final _router = GoRouter(
       routes: [
         GoRoute(
           path: '/home',
-          pageBuilder: (context, state) => NoTransitionPage(child: HomeSection()),
+          pageBuilder: (context, state) => _fadePage(context, HomeSection()),
         ),
         GoRoute(
           path: '/buttons',
-          pageBuilder: (context, state) => NoTransitionPage(child: ButtonsSection()),
+          pageBuilder: (context, state) => _fadePage(context, ButtonsSection()),
         ),
         GoRoute(
           path: '/button-group',
-          pageBuilder: (context, state) => NoTransitionPage(child: ButtonGroupSection()),
+          pageBuilder: (context, state) => _fadePage(context, ButtonGroupSection()),
         ),
         GoRoute(
           path: '/alerts',
-          pageBuilder: (context, state) => NoTransitionPage(child: AlertsSection()),
+          pageBuilder: (context, state) => _fadePage(context, AlertsSection()),
         ),
         GoRoute(
           path: '/tooltips',
-          pageBuilder: (context, state) => NoTransitionPage(child: TooltipsSection()),
+          pageBuilder: (context, state) => _fadePage(context, TooltipsSection()),
         ),
         GoRoute(
           path: '/images',
-          pageBuilder: (context, state) => NoTransitionPage(child: ImagesSection()),
+          pageBuilder: (context, state) => _fadePage(context, ImagesSection()),
         ),
         GoRoute(
           path: '/menus',
-          pageBuilder: (context, state) => NoTransitionPage(child: MenusSection()),
+          pageBuilder: (context, state) => _fadePage(context, MenusSection()),
         ),
         GoRoute(
           path: '/chips',
-          pageBuilder: (context, state) => NoTransitionPage(child: ChipsSection()),
+          pageBuilder: (context, state) => _fadePage(context, ChipsSection()),
         ),
         GoRoute(
           path: '/text',
-          pageBuilder: (context, state) => NoTransitionPage(child: TextSection()),
+          pageBuilder: (context, state) => _fadePage(context, TextSection()),
         ),
         GoRoute(
           path: '/inputs',
-          pageBuilder: (context, state) => NoTransitionPage(child: InputsSection()),
+          pageBuilder: (context, state) => _fadePage(context, InputsSection()),
+        ),
+        GoRoute(
+          path: '/pickers',
+          pageBuilder: (context, state) => _fadePage(context, PickersSection()),
         ),
         GoRoute(
           path: '/grid',
-          pageBuilder: (context, state) => NoTransitionPage(child: GridSection()),
+          pageBuilder: (context, state) => _fadePage(context, GridSection()),
         ),
         GoRoute(
           path: '/context-menu',
-          pageBuilder: (context, state) => NoTransitionPage(child: ContextMenuSection()),
+          pageBuilder: (context, state) => _fadePage(context, ContextMenuSection()),
         ),
         GoRoute(
           path: '/dialogs',
-          pageBuilder: (context, state) => NoTransitionPage(child: DialogsSection()),
+          pageBuilder: (context, state) => _fadePage(context, DialogsSection()),
         ),
         GoRoute(
           path: '/responsive-modal',
-          pageBuilder: (context, state) => NoTransitionPage(child: ResponsiveModalSection()),
+          pageBuilder: (context, state) => _fadePage(context, ResponsiveModalSection()),
         ),
         GoRoute(
           path: '/sheets',
-          pageBuilder: (context, state) => NoTransitionPage(child: SheetsSection()),
+          pageBuilder: (context, state) => _fadePage(context, SheetsSection()),
         ),
         GoRoute(
           path: '/steppers',
-          pageBuilder: (context, state) => NoTransitionPage(child: StepperSection()),
+          pageBuilder: (context, state) => _fadePage(context, StepperSection()),
         ),
         GoRoute(
           path: '/typography',
-          pageBuilder: (context, state) => NoTransitionPage(child: TypographySection()),
+          pageBuilder: (context, state) => _fadePage(context, TypographySection()),
         ),
         GoRoute(
           path: '/colors',
-          pageBuilder: (context, state) => NoTransitionPage(child: ColorsSection()),
+          pageBuilder: (context, state) => _fadePage(context, ColorsSection()),
         ),
         GoRoute(
           path: '/spacing',
-          pageBuilder: (context, state) => NoTransitionPage(child: SpacingSection()),
+          pageBuilder: (context, state) => _fadePage(context, SpacingSection()),
         ),
         GoRoute(
           path: '/radius',
-          pageBuilder: (context, state) => NoTransitionPage(child: RadiusSection()),
+          pageBuilder: (context, state) => _fadePage(context, RadiusSection()),
         ),
         GoRoute(
           path: '/elevation',
-          pageBuilder: (context, state) => NoTransitionPage(child: ElevationSection()),
+          pageBuilder: (context, state) => _fadePage(context, ElevationSection()),
         ),
         GoRoute(
           path: '/borders',
-          pageBuilder: (context, state) => NoTransitionPage(child: BordersSection()),
+          pageBuilder: (context, state) => _fadePage(context, BordersSection()),
         ),
         GoRoute(
           path: '/motion',
-          pageBuilder: (context, state) => NoTransitionPage(child: MotionSection()),
+          pageBuilder: (context, state) => _fadePage(context, MotionSection()),
         ),
         GoRoute(
           path: '/access-paths',
-          pageBuilder: (context, state) => NoTransitionPage(child: AccessPathsSection()),
+          pageBuilder: (context, state) => _fadePage(context, AccessPathsSection()),
         ),
         GoRoute(
           path: '/calendar',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            child: CalendarSection(),
-            transitionsBuilder: LayrzPageTransitions.fade,
-            transitionDuration: LayrzPageTransitions.durationOf(context),
-          ),
+          pageBuilder: (context, state) => _fadePage(context, CalendarSection()),
         ),
         GoRoute(
           path: '/progress',
-          pageBuilder: (context, state) => NoTransitionPage(child: ProgressSection()),
+          pageBuilder: (context, state) => _fadePage(context, ProgressSection()),
         ),
         GoRoute(
           path: '/timeline',
-          pageBuilder: (context, state) => NoTransitionPage(child: TimelineSection()),
+          pageBuilder: (context, state) => _fadePage(context, TimelineSection()),
         ),
         GoRoute(
           path: '/tree-view',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            child: TreeViewSection(),
-            transitionsBuilder: LayrzPageTransitions.slide,
-            transitionDuration: LayrzPageTransitions.durationOf(context),
-          ),
+          pageBuilder: (context, state) => _fadePage(context, TreeViewSection()),
         ),
         GoRoute(
           path: '/badges',
-          pageBuilder: (context, state) => CustomTransitionPage<void>(
-            child: BadgeSection(),
-            transitionsBuilder: LayrzPageTransitions.scale,
-            transitionDuration: LayrzPageTransitions.durationOf(context),
-          ),
+          pageBuilder: (context, state) => _fadePage(context, BadgeSection()),
         ),
         GoRoute(
           path: '/connection-indicator',
-          pageBuilder: (context, state) => NoTransitionPage(child: ConnectionIndicatorSection()),
+          pageBuilder: (context, state) => _fadePage(context, ConnectionIndicatorSection()),
         ),
         GoRoute(
           path: '/transitions',
-          pageBuilder: (context, state) => NoTransitionPage(child: TransitionsSection()),
+          pageBuilder: (context, state) => _fadePage(context, TransitionsSection()),
         ),
         GoRoute(
           path: '/refresh',
-          pageBuilder: (context, state) => NoTransitionPage(child: RefreshSection()),
+          pageBuilder: (context, state) => _fadePage(context, RefreshSection()),
         ),
         GoRoute(
           path: '/snackbar',
-          pageBuilder: (context, state) => NoTransitionPage(child: SnackbarSection()),
+          pageBuilder: (context, state) => _fadePage(context, SnackbarSection()),
         ),
         GoRoute(
           path: '/accordion',
-          pageBuilder: (context, state) => NoTransitionPage(child: AccordionSection()),
+          pageBuilder: (context, state) => _fadePage(context, AccordionSection()),
         ),
         GoRoute(
           path: '/ai-marker',
-          pageBuilder: (context, state) => NoTransitionPage(child: AiMarkerSection()),
+          pageBuilder: (context, state) => _fadePage(context, AiMarkerSection()),
         ),
         GoRoute(
           path: '/skeleton',
-          pageBuilder: (context, state) => NoTransitionPage(child: SkeletonSection()),
+          pageBuilder: (context, state) => _fadePage(context, SkeletonSection()),
         ),
         GoRoute(
           path: '/form',
-          pageBuilder: (context, state) => NoTransitionPage(child: FormSection()),
+          pageBuilder: (context, state) => _fadePage(context, FormSection()),
         ),
         GoRoute(
           path: '/file-input',
-          pageBuilder: (context, state) => NoTransitionPage(child: FileInputSection()),
+          pageBuilder: (context, state) => _fadePage(context, FileInputSection()),
         ),
         GoRoute(
           path: '/layo',
-          pageBuilder: (context, state) => NoTransitionPage(child: LayoSection()),
+          pageBuilder: (context, state) => _fadePage(context, LayoSection()),
         ),
         GoRoute(
           path: '/markdown',
-          pageBuilder: (context, state) => NoTransitionPage(child: MarkdownSection()),
+          pageBuilder: (context, state) => _fadePage(context, MarkdownSection()),
         ),
         GoRoute(
           path: '/tab-view',
-          pageBuilder: (context, state) => NoTransitionPage(child: TabViewSection()),
+          pageBuilder: (context, state) => _fadePage(context, TabViewSection()),
         ),
         GoRoute(
           path: '/app-banner',
-          pageBuilder: (context, state) => NoTransitionPage(child: AppBannerSection()),
+          pageBuilder: (context, state) => _fadePage(context, AppBannerSection()),
         ),
         GoRoute(
           path: '/table',
-          pageBuilder: (context, state) => NoTransitionPage(child: TableSection()),
+          pageBuilder: (context, state) => _fadePage(context, TableSection()),
         ),
         GoRoute(
           path: '/workspace-tabs',
-          pageBuilder: (context, state) => NoTransitionPage(child: WorkspaceTabsSection()),
+          pageBuilder: (context, state) => _fadePage(context, WorkspaceTabsSection()),
         ),
         GoRoute(
           path: '/code',
-          pageBuilder: (context, state) => NoTransitionPage(child: CodeSection()),
+          pageBuilder: (context, state) => _fadePage(context, CodeSection()),
+        ),
+        GoRoute(
+          path: '/cards',
+          pageBuilder: (context, state) => _fadePage(context, CardsSection()),
+        ),
+        GoRoute(
+          path: '/scaffold-shell',
+          pageBuilder: (context, state) => _fadePage(context, ScaffoldShellSection()),
         ),
         // TEMPORARY: DESIGN-109 find-in-page spike route. Dev-only — reachable by direct URL
         // (/find-spike) but intentionally not listed in the showroom sidebar.
         GoRoute(
           path: '/find-spike',
-          pageBuilder: (context, state) => NoTransitionPage(child: LayrzFindSpike()),
+          pageBuilder: (context, state) => _fadePage(context, LayrzFindSpike()),
         ),
       ],
     ),

@@ -167,7 +167,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: tokens.spacing.sp2,
-              ),
+              ).add(EdgeInsets.only(bottom: tokens.spacing.sp2)),
               child: LayrzSearchInput(
                 hintText: context.l10n.actionSearch,
                 controller: _searchController,

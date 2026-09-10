@@ -2,133 +2,146 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-import 'input_demo.dart';
-import 'demos/text_input_demo.dart';
-import 'demos/textarea_input_demo.dart';
-import 'demos/number_input_demo.dart';
-import 'demos/slider_demo.dart';
-import 'demos/checkbox_input_demo.dart';
-import 'demos/switch_input_demo.dart';
-import 'demos/radio_input_demo.dart';
-import 'demos/search_input_demo.dart';
-import 'demos/combobox_input_demo.dart';
-import 'demos/select_input_demo.dart';
-import 'demos/duration_input_demo.dart';
-import 'demos/login_input_demo.dart';
+import '../inputs/input_demo.dart';
+import '../inputs/demos/date_input_demo.dart';
+import '../inputs/demos/date_range_input_demo.dart';
+import '../inputs/demos/time_input_demo.dart';
+import '../inputs/demos/time_range_input_demo.dart';
+import '../inputs/demos/datetime_input_demo.dart';
+import '../inputs/demos/datetime_range_input_demo.dart';
+import '../inputs/demos/month_input_demo.dart';
+import '../inputs/demos/month_range_input_demo.dart';
+import '../inputs/demos/color_input_demo.dart';
+import '../inputs/demos/dual_list_input_demo.dart';
+import '../inputs/demos/multi_select_input_demo.dart';
+import '../inputs/demos/emoji_input_demo.dart';
+import '../inputs/demos/icon_input_demo.dart';
+import '../inputs/demos/dynamic_avatar_input_demo.dart';
 
-/// A list-detail showcase of all input components in the layrz_ui design system.
+/// A list-detail showcase of all picker components in the layrz_ui design system.
 ///
-/// The left pane displays a searchable list of all input components,
+/// The left pane displays a searchable list of all picker components,
 /// ordered by category. The right pane shows all variants of the selected component.
 /// On narrow screens, panes toggle via a back affordance.
-class InputsSection extends StatefulWidget {
-  const InputsSection({super.key});
+///
+/// Mirrors the structure of `InputsSection` exactly, reusing the same [InputDemo]
+/// registry entry type and the same demo widgets under `../inputs/demos/`. The two
+/// sections were split so that date/time/color/selection pickers get their own
+/// dedicated showcase separate from the simpler text/numeric/boolean inputs.
+class PickersSection extends StatefulWidget {
+  /// Creates a new [PickersSection].
+  const PickersSection({super.key});
 
   @override
-  State<InputsSection> createState() => _InputsSectionState();
+  State<PickersSection> createState() => _PickersSectionState();
 }
 
-class _InputsSectionState extends State<InputsSection> {
+class _PickersSectionState extends State<PickersSection> {
   late LayrzScaffoldController _controller;
 
-  /// The canonical registry of all input component demos.
+  /// The canonical registry of all picker component demos.
   /// Ordered by category, then by name within each category.
   static const List<InputDemo> _allDemos = [
-    // Text category
+    // Date & Time category
     InputDemo(
-      id: 'text-input',
-      name: 'Text Input',
-      category: 'Text',
-      details: TextInputDemo(),
-      icon: MdiIcons.textBoxOutline,
+      id: 'date-input',
+      name: 'Date Input',
+      category: 'Date & Time',
+      details: DateInputDemo(),
+      icon: MdiIcons.calendarOutline,
     ),
     InputDemo(
-      id: 'textarea-input',
-      name: 'Text Area Input',
-      category: 'Text',
-      details: TextAreaInputDemo(),
-      icon: MdiIcons.textBoxMultipleOutline,
-    ),
-
-    // Numeric category
-    InputDemo(
-      id: 'number-input',
-      name: 'Number Input',
-      category: 'Numeric',
-      details: NumberInputDemo(),
-      icon: MdiIcons.numeric,
+      id: 'date-range-input',
+      name: 'Date Range Input',
+      category: 'Date & Time',
+      details: DateRangeInputDemo(),
+      icon: MdiIcons.calendarRangeOutline,
     ),
     InputDemo(
-      id: 'slider',
-      name: 'Slider',
-      category: 'Numeric',
-      details: SliderDemo(),
-      icon: MdiIcons.tuneVariant,
-    ),
-
-    // Boolean category
-    InputDemo(
-      id: 'checkbox-input',
-      name: 'Checkbox Input',
-      category: 'Boolean',
-      details: CheckboxInputDemo(),
-      icon: MdiIcons.checkboxMarkedOutline,
+      id: 'time-input',
+      name: 'Time Input',
+      category: 'Date & Time',
+      details: TimeInputDemo(),
+      icon: MdiIcons.clockOutline,
     ),
     InputDemo(
-      id: 'switch-input',
-      name: 'Switch Input',
-      category: 'Boolean',
-      details: SwitchInputDemo(),
-      icon: MdiIcons.toggleSwitchOutline,
-    ),
-
-    // Choice category
-    InputDemo(
-      id: 'radio-input',
-      name: 'Radio Input',
-      category: 'Choice',
-      details: RadioInputDemo(),
-      icon: MdiIcons.radioboxMarked,
+      id: 'time-range-input',
+      name: 'Time Range Input',
+      category: 'Date & Time',
+      details: TimeRangeInputDemo(),
+      icon: MdiIcons.clockTimeFourOutline,
     ),
     InputDemo(
-      id: 'combobox-input',
-      name: 'ComboBox Input',
-      category: 'Choice',
-      details: ComboBoxInputDemo(),
-      icon: MdiIcons.menuDown,
+      id: 'datetime-input',
+      name: 'DateTime Input',
+      category: 'Date & Time',
+      details: DateTimeInputDemo(),
+      icon: MdiIcons.calendarClockOutline,
     ),
     InputDemo(
-      id: 'select-input',
-      name: 'Select Input',
-      category: 'Choice',
-      details: SelectInputDemo(),
-      icon: MdiIcons.menuDown,
+      id: 'datetime-range-input',
+      name: 'DateTime Range Input',
+      category: 'Date & Time',
+      details: DateTimeRangeInputDemo(),
+      icon: MdiIcons.calendarClock,
+    ),
+    InputDemo(
+      id: 'month-input',
+      name: 'Month Input',
+      category: 'Date & Time',
+      details: MonthInputDemo(),
+      icon: MdiIcons.calendarMonthOutline,
+    ),
+    InputDemo(
+      id: 'month-range-input',
+      name: 'Month Range Input',
+      category: 'Date & Time',
+      details: MonthRangeInputDemo(),
+      icon: MdiIcons.calendarMultiselectOutline,
     ),
 
+    // Pickers category
     InputDemo(
-      id: 'duration-input',
-      name: 'Duration Input',
-      category: 'Choice',
-      details: DurationInputDemo(),
-      icon: MdiIcons.timerOutline,
+      id: 'color-input',
+      name: 'Color Input',
+      category: 'Pickers',
+      details: ColorInputDemo(),
+      icon: MdiIcons.paletteOutline,
     ),
-
-    // Search category
     InputDemo(
-      id: 'search-input',
-      name: 'Search Input',
-      category: 'Search',
-      details: SearchInputDemo(),
-      icon: MdiIcons.magnify,
+      id: 'multi-select-input',
+      name: 'Multi-Select Input',
+      category: 'Pickers',
+      details: MultiSelectInputDemo(),
+      icon: MdiIcons.checkboxMultipleMarkedOutline,
     ),
-
-    // Login category
     InputDemo(
-      id: 'login-input',
-      name: 'Login Inputs',
-      category: 'Login',
-      details: LoginInputDemo(),
-      icon: MdiIcons.formTextboxPassword,
+      id: 'dual-list-input',
+      name: 'Dual-List Input',
+      category: 'Pickers',
+      details: DualListInputDemo(),
+      icon: MdiIcons.swapHorizontal,
+    ),
+    InputDemo(
+      id: 'emoji-input',
+      name: 'Emoji Input',
+      category: 'Pickers',
+      details: EmojiInputDemo(),
+      icon: MdiIcons.emoticonOutline,
+    ),
+    InputDemo(
+      id: 'icon-input',
+      name: 'Icon Input',
+      category: 'Pickers',
+      details: IconInputDemo(),
+      icon: MdiIcons.shapeOutline,
+    ),
+    InputDemo(
+      id: 'dynamic-avatar-input',
+      name: 'Dynamic Avatar Input',
+      category: 'Pickers',
+      details: DynamicAvatarInputDemo(),
+      icon: MdiIcons.accountCircleOutline,
     ),
   ];
 
@@ -147,7 +160,7 @@ class _InputsSectionState extends State<InputsSection> {
   @override
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
-      title: Text('Inputs Showcase', style: context.tokens.typography.title),
+      title: Text('Pickers Showcase', style: context.tokens.typography.title),
       // 45.0 (LayrzButton FAB height) + 2 * 10.0 (LayrzRow's pd2 vertical padding
       // around the row content) = 65.0 is the minimum extent that fits the two
       // revealed edit/delete FABs without vertical overflow; 68.0 leaves a small
@@ -206,7 +219,7 @@ class _InputsSectionState extends State<InputsSection> {
     );
   }
 
-  /// Builds a tile for a single input component in the list.
+  /// Builds a tile for a single picker component in the list.
   /// Title is the component name, subtitle is the category.
   Widget _buildTile(InputDemo demo) {
     final tokens = context.tokens;
@@ -242,7 +255,7 @@ class _InputsSectionState extends State<InputsSection> {
     );
   }
 
-  /// Builds the detail pane content for a selected input component.
+  /// Builds the detail pane content for a selected picker component.
   /// Renders all meaningful variants of that component.
   Widget _buildDetails(InputDemo demo) => demo.details;
 }

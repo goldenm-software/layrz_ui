@@ -250,6 +250,13 @@ class ShowroomLayout extends ConsumerWidget {
         onTap: () => _navigateTo(context, '/calendar'),
       ),
       LayrzNavigatorPage(
+        id: '/cards',
+        labelText: 'Cards',
+        icon: MdiIcons.cardOutline,
+        isSelected: currentRoute == '/cards',
+        onTap: () => _navigateTo(context, '/cards'),
+      ),
+      LayrzNavigatorPage(
         id: '/chips',
         labelText: 'Chips',
         icon: MdiIcons.tagOutline,
@@ -320,6 +327,13 @@ class ShowroomLayout extends ConsumerWidget {
         onTap: () => _navigateTo(context, '/inputs'),
       ),
       LayrzNavigatorPage(
+        id: '/pickers',
+        labelText: 'Pickers',
+        icon: MdiIcons.calendarCursorOutline,
+        isSelected: currentRoute == '/pickers',
+        onTap: () => _navigateTo(context, '/pickers'),
+      ),
+      LayrzNavigatorPage(
         id: '/layo',
         labelText: 'Layo',
         icon: MdiIcons.robotHappyOutline,
@@ -367,6 +381,13 @@ class ShowroomLayout extends ConsumerWidget {
         icon: MdiIcons.monitorCellphone,
         isSelected: currentRoute == '/responsive-modal',
         onTap: () => _navigateTo(context, '/responsive-modal'),
+      ),
+      LayrzNavigatorPage(
+        id: '/scaffold-shell',
+        labelText: 'Scaffold Shell',
+        icon: MdiIcons.viewSplitVertical,
+        isSelected: currentRoute == '/scaffold-shell',
+        onTap: () => _navigateTo(context, '/scaffold-shell'),
       ),
       LayrzNavigatorPage(
         id: '/sheets',

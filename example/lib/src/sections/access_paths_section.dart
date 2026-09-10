@@ -162,12 +162,12 @@ class _AccessPathComparison extends StatelessWidget {
             SizedBox(height: tokens.spacing.sp3),
 
             // Path 1
-            _AccessPathRow(path: path1, value: value1, tokens: tokens),
+            _AccessPathRow(path: path1, value: value1),
 
             SizedBox(height: tokens.spacing.sp2),
 
             // Path 2
-            _AccessPathRow(path: path2, value: value2, tokens: tokens),
+            _AccessPathRow(path: path2, value: value2),
           ],
         );
       },
@@ -176,9 +176,13 @@ class _AccessPathComparison extends StatelessWidget {
 }
 
 /// A row displaying a single access path and its value.
+///
+/// Renders `path → value` as a single line of code through
+/// [LayrzCodeSnippet], using [LayrzCodeLanguage.plain] since a token access
+/// path is a Dart expression and the code module has no Dart grammar.
 class _AccessPathRow extends StatelessWidget {
   /// Creates a new [_AccessPathRow].
-  const _AccessPathRow({required this.path, required this.value, required this.tokens});
+  const _AccessPathRow({required this.path, required this.value});
 
   /// The access path as a code string.
   final String path;
@@ -186,34 +190,14 @@ class _AccessPathRow extends StatelessWidget {
   /// The value fetched via this path.
   final String value;
 
-  /// The token set.
-  final LayrzTokens tokens;
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(color: tokens.colors.sf3, borderRadius: tokens.radius.br2),
-      padding: tokens.spacing.pd2,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              path,
-              style: tokens.typography.label.copyWith(fontFamily: 'monospace', fontSize: 10),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          SizedBox(width: tokens.spacing.sp3),
-          Text(
-            '→ $value',
-            style: tokens.typography.label.copyWith(
-              color: tokens.colors.fg3,
-              fontFamily: 'monospace',
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ),
+    return LayrzCodeSnippet(
+      code: '$path → $value',
+      language: LayrzCodeLanguage.plain,
+      showLineNumbers: false,
+      showCopyButton: false,
+      fontSize: 12,
     );
   }
 }

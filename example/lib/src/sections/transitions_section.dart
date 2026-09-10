@@ -164,13 +164,19 @@ class _TransitionsSectionState extends State<TransitionsSection> {
 /// Purely decorative — it exists to give each pushed route distinguishable
 /// content (its [pageNumber] and, when pushed via the demo controls, the
 /// [transitionType] that animated it in) so a viewer can tell that a push
-/// actually happened rather than the same page re-rendering in place.
+/// actually happened rather than the same page re-rendering in place. The
+/// background color also cycles per [pageNumber] through [_backgroundPalette]
+/// — without a distinct background, an incoming and outgoing page would
+/// render identically and a fade/slide/scale/rotation transition between them
+/// would be invisible, defeating the point of the demo.
 class _DemoPage extends StatelessWidget {
   /// Creates a new [_DemoPage].
   const _DemoPage({required this.pageNumber, required this.transitionType});
 
-  /// The ordinal of this pushed page, shown so consecutive pushes are
-  /// visually distinguishable from one another.
+  /// The ordinal of this pushed page. Shown as "Page $pageNumber" and also
+  /// used to index into [_backgroundPalette] (via modulo), so consecutive
+  /// pushes are visually distinguishable both by label and by background
+  /// color.
   final int pageNumber;
 
   /// The [LayrzTransitionType] that animated this page in, or `null` for the
@@ -178,21 +184,39 @@ class _DemoPage extends StatelessWidget {
   /// there is nothing before it to transition from).
   final LayrzTransitionType? transitionType;
 
+  /// The fixed sequence of clearly-distinct [LayrzColorTokens] backgrounds
+  /// this page cycles through, indexed by [pageNumber]. Pulling from real
+  /// theme tokens (rather than hardcoded hex values) keeps the demo
+  /// theme-correct while still giving each push a saturated, unmistakably
+  /// different color from the last.
+  static List<Color> _backgroundPalette(LayrzColorTokens colors) => [
+    colors.primary,
+    colors.success,
+    colors.warning,
+    colors.danger,
+    colors.info,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
+    final palette = _backgroundPalette(tokens.colors);
+    final background = palette[pageNumber % palette.length];
 
     return ColoredBox(
-      color: tokens.colors.sf2,
+      color: background,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           spacing: tokens.spacing.sp2,
           children: [
-            Text('Page $pageNumber', style: tokens.typography.title),
+            Text(
+              'Page $pageNumber',
+              style: tokens.typography.title.copyWith(color: tokens.colors.sf1),
+            ),
             Text(
               transitionType == null ? 'initial route' : 'via ${transitionType!.name}',
-              style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+              style: tokens.typography.body.copyWith(color: tokens.colors.sf1.withValues(alpha: 0.85)),
             ),
           ],
         ),
