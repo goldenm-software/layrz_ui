@@ -7,7 +7,8 @@ import 'package:layrz_ui/layrz_ui.dart';
 ///
 /// Mirrors the constant of the same purpose in `layout.dart` — duplicated here
 /// (rather than imported) because the layout's constant is private to that file.
-const String _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?3';
+const String _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?5';
+const String _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?5';
 
 /// Sample `main.dart`-shaped snippet shown in the quick start section.
 ///
@@ -200,7 +201,10 @@ class _Hero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.network(_kLightLogo, height: isCompact ? 56 : 72),
+          Image.network(
+            context.isDark ? _kDarkLogo : _kLightLogo,
+            height: isCompact ? 56 : 72,
+          ),
           SizedBox(height: tokens.spacing.sp4),
           Text(
             'layrz_ui',

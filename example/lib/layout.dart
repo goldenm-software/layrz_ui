@@ -8,10 +8,10 @@ import 'package:layrz_ui/layrz_ui.dart';
 import 'src/providers/theme_mode_provider.dart';
 
 /// The showroom logo, light-background variant.
-const _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?3';
+const _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?5';
 
 /// The showroom logo, dark-background variant.
-const _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?3';
+const _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?5';
 
 /// Wraps a showroom page in the application shell.
 ///
