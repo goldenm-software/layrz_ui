@@ -294,7 +294,18 @@ class _LayrzWorkspaceTabStripState extends State<LayrzWorkspaceTabStrip> {
       child: DecoratedBox(
         decoration: BoxDecoration(color: tokens.colors.sf2),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+          // No bottom inset: the active tab's `mergeBottom` open border ends
+          // at its own bottom edge (see `LayrzWorkspaceTabChromePainter`),
+          // and that edge must land exactly on the content panel's top edge
+          // below (see `LayrzWorkspaceTabs`'s `Column([strip,
+          // Expanded(panel)])`) so the two open paths abut with no seam. A
+          // bottom inset here would leave a gap band between the tab's
+          // baseline and the panel, floating the tab above it.
+          padding: EdgeInsets.only(
+            top: tokens.spacing.sp1,
+            left: tokens.spacing.sp2,
+            right: tokens.spacing.sp2,
+          ),
           child: Row(
             children: [
               strip,

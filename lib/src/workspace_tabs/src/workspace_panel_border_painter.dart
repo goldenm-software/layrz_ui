@@ -103,24 +103,39 @@ class LayrzWorkspacePanelBorderPainter extends CustomPainter {
 
     // Clamp the gap span so the carved shoulders never cross the panel's
     // own rounded corners or each other, even if the active tab reports an
-    // implausible span (e.g. during a transient layout pass).
-    final sr = shoulderRadius.clamp(0.0, width / 2);
+    // implausible span (e.g. during a transient layout pass). The shoulder
+    // radius is additionally bounded so `r + sr` can never exceed half the
+    // panel's width -- otherwise the lower and upper bounds below would
+    // invert (`r + sr > width - r - sr`), which throws rather than clamps.
+    final sr = shoulderRadius.clamp(0.0, ((width / 2) - r).clamp(0.0, width / 2));
     final gapStart = left.clamp(r + sr, width - r - sr);
     final gapEnd = right.clamp(gapStart, width - r - sr);
 
     return Path()
-      // Start just after the top-left corner, sweep right along the top
-      // edge to where the active tab's left shoulder begins.
+      // Start just after the top-left corner, sweep right along the flat
+      // top edge to directly above the active tab's left edge — where the
+      // tab's own open border begins its shoulder (see
+      // `LayrzWorkspaceTabChromePainter._buildOpenBorderPath`'s
+      // `moveTo(0, height)`, which sits at this same x-offset).
       ..moveTo(r, 0)
-      ..lineTo(gapStart - sr, 0)
-      // Mirror of the tab chrome's own bottom-left shoulder: curves down
-      // and outward (in the panel's frame, "outward" means down into the
-      // gap) then back up to the tab's baseline — meeting the tab's own
-      // open border path with no seam.
-      ..cubicTo(gapStart - sr, sr, gapStart - sr, sr, gapStart, sr)
+      ..lineTo(gapStart, 0)
+      // True mirror of the tab chrome's own bottom-left shoulder
+      // (`cubicTo(-sr, height, -sr, height - sr, 0, height - sr)`,
+      // reflected about the shared baseline y=0, which post-fix is exactly
+      // the tab's baseline): both endpoints share the gap's x-offset — only
+      // the control points bulge sideways by [sr] — so this dips from the
+      // flat edge down to `(gapStart, sr)` with the same curvature and
+      // tangent the tab's own shoulder has at that point, abutting it with
+      // no seam.
+      ..cubicTo(gapStart - sr, 0, gapStart - sr, sr, gapStart, sr)
       // Skip the gap itself — the active tab's own chrome renders here.
       ..moveTo(gapEnd, sr)
-      ..cubicTo(gapEnd + sr, sr, gapEnd + sr, sr, gapEnd + sr, 0)
+      // Mirror of the tab's bottom-right shoulder
+      // (`cubicTo(width + sr, height - sr, width + sr, height, width,
+      // height)`, reflected the same way): curves back up from the tab's
+      // right shoulder endpoint to the flat top edge, symmetric with the
+      // left curve above.
+      ..cubicTo(gapEnd + sr, sr, gapEnd + sr, 0, gapEnd, 0)
       // Continue right to the top-right corner.
       ..lineTo(width - r, 0)
       ..arcToPoint(Offset(width, r), radius: Radius.circular(r), clockwise: true)

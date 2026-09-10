@@ -116,8 +116,17 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
                 fillColor: fillColor,
                 topRadius: topRadius,
                 shoulderRadius: shoulderRadius,
-                borderColor: widget.isFocused ? tokens.colors.primary.shade500 : null,
-                borderWidth: 2.0,
+                // The active tab's open (merged-bottom) border is stroked in
+                // the same colour+width as the content panel's border below
+                // it (`tokens.colors.divider` / `tokens.border.stroke1`), so
+                // the tab's top+sides+shoulders and the panel's outline read
+                // as one continuous line rather than two separately-styled
+                // shapes. Keyboard focus overrides this with the usual
+                // primary focus ring, on any tab (active or not).
+                borderColor: widget.isFocused
+                    ? tokens.colors.primary.shade500
+                    : (widget.isActive ? tokens.colors.divider : null),
+                borderWidth: widget.isFocused ? 2.0 : tokens.border.stroke1,
                 mergeBottom: widget.isActive,
               ),
               // A tab is a control, not selectable body text — disabled here

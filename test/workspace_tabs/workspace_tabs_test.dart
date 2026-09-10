@@ -384,6 +384,62 @@ void main() {
       expect(tester.widget<Text>(find.text('Alpha')).style?.fontWeight, isNot(FontWeight.w600));
       expect(tester.widget<Text>(find.text('Beta')).style?.fontWeight, FontWeight.w600);
     });
+
+    guardedTestWidgets(
+      "the active tab's open border colour and width match the panel border's, for a seamless outline",
+      (tester) async {
+        _setWideViewport(tester);
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 700,
+            height: 400,
+            child: LayrzWorkspaceTabs(
+              tabs: _buildTabs(),
+              activeId: 'a',
+              onTabSelected: (_) {},
+            ),
+          ),
+        );
+        // The active tab's rect is reported to the panel post-frame; let
+        // that settle so the panel's gap span is resolved too.
+        await tester.pump();
+
+        // Move the roving keyboard-traversal highlight off the active tab
+        // (it starts tracking the active tab by default -- see
+        // `_LayrzWorkspaceTabStripState._syncFocusedIndex`), so this test
+        // exercises the active tab's *default* look, not its focus-ring
+        // override. See the "ArrowRight then Enter activates the next tab"
+        // keyboard test above for the same pattern.
+        await tester.tap(find.text('Alpha'));
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+
+        final tokens = LayrzTheme.of(tester.element(find.text('Alpha'))).tokens;
+
+        final tabChromePainters = tester
+            .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .map((w) => w.painter)
+            .whereType<LayrzWorkspaceTabChromePainter>()
+            .where((p) => p.mergeBottom)
+            .toList();
+        expect(tabChromePainters, hasLength(1), reason: 'exactly one tab should render as the active (merged) one');
+        final activeTabPainter = tabChromePainters.single;
+
+        final panelPainter = tester
+            .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .map((w) => w.painter)
+            .whereType<LayrzWorkspacePanelBorderPainter>()
+            .single;
+
+        expect(activeTabPainter.borderColor, tokens.colors.divider);
+        expect(activeTabPainter.borderColor, panelPainter.borderColor);
+        expect(activeTabPainter.borderWidth, tokens.border.stroke1);
+        expect(activeTabPainter.borderWidth, panelPainter.borderWidth);
+      },
+    );
   });
 
   group('LayrzWorkspaceTabs — empty state', () {
