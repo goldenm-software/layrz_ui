@@ -47,7 +47,13 @@ const Duration kLayrzConnectionIndicatorTickInterval = Duration(minutes: 1);
 ///   [LayrzColorExtensions.contrastColor] for contrast). Requires a non-null
 ///   [child]; the widget never invents its own label/timestamp content here
 ///   — the state color alone conveys status, and [child] is entirely
-///   caller-owned content (e.g. an asset name).
+///   caller-owned content (e.g. an asset name). **The content's text and
+///   icon color is forced to the state color's contrast color for
+///   legibility**: a hard `DefaultTextStyle`/`IconTheme` is applied (not a
+///   `.merge`), so a caller-supplied `Text` carrying its own explicit color
+///   still renders in the contrast color — this guarantees every `.full`
+///   pill stays readable regardless of what color the caller's content
+///   asks for, most notably on the dark `fg1` Disconnected pill.
 ///
 /// **Clock source**: elapsed time is measured against [clock] (defaults to
 /// `DateTime.now`), never a timezone-database dependency — this mirrors the
@@ -189,9 +195,16 @@ class _LayrzConnectionIndicatorState extends State<LayrzConnectionIndicator> {
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
-        child: DefaultTextStyle.merge(
-          style: TextStyle(color: color.contrastColor),
-          child: IconTheme.merge(
+        // Deliberately a hard `DefaultTextStyle`/`IconTheme`, not `.merge`:
+        // `.merge` only fills in style fields the descendant left unset, so
+        // a caller-supplied `Text(..., style: someStyleWithAColor)` keeps its
+        // own explicit color and can win over `color.contrastColor` — on the
+        // dark `fg1` Disconnected pill that produced unreadable dark-on-dark
+        // text. Forcing the style here guarantees legibility on every state
+        // color regardless of what color the caller's content specifies.
+        child: DefaultTextStyle(
+          style: tokens.typography.label.copyWith(color: color.contrastColor),
+          child: IconTheme(
             data: IconThemeData(color: color.contrastColor),
             child: widget.child!,
           ),

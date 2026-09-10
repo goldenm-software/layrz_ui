@@ -223,6 +223,35 @@ void main() {
       expect(decoration.color, theme.tokens.colors.danger.shade500);
     });
 
+    guardedTestWidgets('forces contrastColor on a child Text with its own explicit dark color', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      // 40 days elapsed resolves to the disconnected state, whose color is
+      // the dark `fg1` token — the case that was unreadable before the fix,
+      // since the child's own explicit `fg1` color used to win over
+      // `contrastColor` under `DefaultTextStyle.merge`.
+      final receivedAt = fixedNow.subtract(const Duration(days: 40));
+      await pumpThemed(
+        tester,
+        LayrzConnectionIndicator(
+          receivedAt: receivedAt,
+          mode: LayrzConnectionIndicatorMode.full,
+          clock: () => fixedNow,
+          child: Text('unit-40', style: TextStyle(color: theme.tokens.colors.fg1)),
+        ),
+        theme: theme,
+      );
+
+      final defaultTextStyle = tester.widget<DefaultTextStyle>(
+        find.ancestor(of: find.text('unit-40'), matching: find.byType(DefaultTextStyle)).first,
+      );
+      expect(defaultTextStyle.style.color, theme.tokens.colors.fg1.contrastColor);
+      expect(defaultTextStyle.style.color, isNot(theme.tokens.colors.fg1));
+    });
+
     guardedTestWidgets('does not render LayrzBadgeVisual or LayrzTooltip in full mode', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
