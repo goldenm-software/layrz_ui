@@ -190,7 +190,7 @@ class _LayrzContextMenuLabelTile extends StatelessWidget {
       header: true,
       excludeSemantics: true,
       child: Container(
-        color: tokens.colors.sf3,
+        color: context.isDark ? tokens.colors.sf2 : tokens.colors.sf3,
         padding: EdgeInsets.symmetric(
           horizontal: tokens.spacing.sp3,
           vertical: tokens.spacing.sp2,
