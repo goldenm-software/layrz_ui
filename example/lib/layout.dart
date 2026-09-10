@@ -20,7 +20,13 @@ const _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?
 /// path via [GoRouterState.of]. Reads [themeModeProvider] to swap the logo for
 /// its dark-background variant and to mark the active entry in the Theme
 /// section of the user menu.
-class ShowroomLayout extends ConsumerWidget {
+///
+/// Holds a single, page-lifetime [LayrzLayoutController] so the layout's
+/// interactive state -- the nav rail's scroll offset (including on the
+/// mobile/drawer presentation), whether the notifications panel is open, and
+/// the current search query -- survives across route rebuilds instead of
+/// resetting every time `child` (the active showroom page) changes.
+class ShowroomLayout extends ConsumerStatefulWidget {
   /// The page content rendered inside the layout's body slot.
   final Widget child;
 
@@ -28,7 +34,34 @@ class ShowroomLayout extends ConsumerWidget {
   const ShowroomLayout({super.key, required this.child});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ShowroomLayout> createState() => _ShowroomLayoutState();
+}
+
+class _ShowroomLayoutState extends ConsumerState<ShowroomLayout> {
+  /// The controller backing this showroom's [LayrzLayout], created once for
+  /// the lifetime of this state and disposed in [dispose].
+  ///
+  /// Because [ShowroomLayout] wraps every route (see the shell route in the
+  /// example's router), a single instance here is shared across every page
+  /// navigation, which is what lets the nav rail's scroll offset, the
+  /// notifications panel's open state, and the search query persist as the
+  /// user moves between showroom pages.
+  late final LayrzLayoutController _layoutController;
+
+  @override
+  void initState() {
+    super.initState();
+    _layoutController = LayrzLayoutController();
+  }
+
+  @override
+  void dispose() {
+    _layoutController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final routePath = GoRouterState.of(context).uri.path;
     final items = _buildNavigationItems(context, routePath);
 
@@ -41,11 +74,12 @@ class ShowroomLayout extends ConsumerWidget {
     final accent = context.theme.primaryColor;
 
     return LayrzLayout(
+      controller: _layoutController,
       items: items,
       body: SizedBox(
         width: double.infinity,
         height: double.infinity,
-        child: child,
+        child: widget.child,
       ),
       logo: isDark ? _kDarkLogo : _kLightLogo,
       userName: 'John Doe',
@@ -101,6 +135,13 @@ class ShowroomLayout extends ConsumerWidget {
           id: '3',
           title: 'Alert',
           content: 'Critical: High CPU usage detected',
+          onTap: () {
+            LayrzDialog.show(
+              context,
+              title: Text('Alert'),
+              content: Text('Critical: High CPU usage detected'),
+            );
+          },
         ),
       ],
     );
