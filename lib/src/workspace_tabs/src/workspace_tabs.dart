@@ -1,6 +1,10 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/tokens/tokens.dart';
+
 import 'workspace_panel.dart';
+import 'workspace_silhouette_painter.dart';
 import 'workspace_tab.dart';
 import 'workspace_tab_strip.dart';
 
@@ -14,12 +18,35 @@ import 'workspace_tab_strip.dart';
 /// **Tab-owns-content model**: this supersedes the original bar-only
 /// design. [LayrzWorkspaceTabs] now renders both pieces as one connected
 /// whole — the strip on top (`LayrzWorkspaceTabStrip`), and directly below
-/// it a bordered panel (`LayrzWorkspacePanel`) whose top edge opens under
-/// the active tab and curves into that tab's own outward shoulders, so the
-/// two shapes trace a single continuous outline with no seam between them.
-/// The caller still owns [tabs] and [activeId], but content now lives on
-/// each [LayrzWorkspaceTab] itself rather than being rendered externally and
-/// keyed by id.
+/// it a bordered panel (`LayrzWorkspacePanel`). The caller still owns [tabs]
+/// and [activeId], but content now lives on each [LayrzWorkspaceTab] itself
+/// rather than being rendered externally and keyed by id.
+///
+/// **Browser frame**: the whole widget sits inside one rounded `sf2` outer
+/// frame with a small inset (`tokens.spacing.sp1`) — the "browser window
+/// chrome" holding both the tab strip and the content card. Inactive tabs
+/// are the same recessed `sf2`/`sf3` surface as the frame itself, so they
+/// read as part of that chrome; the active tab and the content card below
+/// it are the one `sf1` surface that pops forward out of the frame. The
+/// `sf1` card fills the frame's entire remaining inner area (out to the
+/// frame's own inner edge), with the tab strip's band sitting above it —
+/// see [LayrzWorkspaceSilhouettePainter] for how the card and the active
+/// tab's bump are one single painted shape.
+///
+/// **Single silhouette**: the active tab and the panel below it read as one
+/// connected surface — a single continuous outline traces the whole
+/// silhouette of [active tab bump + card], like a browser tab, and a single
+/// fill colour spans both regions with no seam between them. This widget is
+/// the one that owns that silhouette: it is the only place with both the
+/// strip's and the panel's geometry (via the active tab's rect, reported by
+/// [LayrzWorkspaceTabStrip.onActiveTabRectChanged], translated into this
+/// widget's own inner [Stack] coordinate space), so it layers a single
+/// [LayrzWorkspaceSilhouettePainter] as the *bottom* layer of that [Stack],
+/// beneath the strip and the panel — both of which paint only their own
+/// content on top of it (the strip paints no background of its own at all,
+/// and the panel paints no border or fill of its own either) — see
+/// [LayrzWorkspaceSilhouettePainter] for why a single painter replaces what
+/// used to be two independently-stroked, geometrically-matching paths.
 ///
 /// This is a deliberately different component from `LayrzTabView`, which
 /// owns a fixed, author-defined set of pill tabs and swaps its own child
@@ -119,20 +146,29 @@ class LayrzWorkspaceTabs extends StatefulWidget {
 }
 
 class _LayrzWorkspaceTabsState extends State<LayrzWorkspaceTabs> {
-  /// Anchors the content panel's [RenderBox], used as the coordinate-space
-  /// origin the active tab's reported rect (from
-  /// [LayrzWorkspaceTabStrip.onActiveTabRectChanged]) is translated into, so
-  /// [LayrzWorkspacePanel] can carve its top-border gap at the right
-  /// x-offset.
-  final GlobalKey _panelKey = GlobalKey();
+  /// Anchors the inner [Stack]'s own [RenderBox] — the one that layers the
+  /// silhouette overlay beneath the strip and the panel — used as the
+  /// coordinate-space origin the active tab's reported rect (from
+  /// [LayrzWorkspaceTabStrip.onActiveTabRectChanged]) is translated into.
+  final GlobalKey _stackKey = GlobalKey();
 
-  /// The active tab's horizontal span, in the panel's own local
+  /// The active tab's horizontal span, in the inner [Stack]'s own local
   /// coordinates. `null` until the strip's first rect report resolves it,
   /// or whenever no tab is active.
   double? _activeTabLeft;
 
   /// See [_activeTabLeft].
   double? _activeTabRight;
+
+  /// The active tab's top edge, in the inner [Stack]'s own local
+  /// y-coordinates — the vertical inset from the strip's own top (the
+  /// stack's origin) down to the active tab item's own top edge.
+  double? _activeTabTop;
+
+  /// The active tab's own rendered height, i.e. [LayrzWorkspaceSilhouettePainter.tabHeight]:
+  /// the distance from the tab's own top edge down to its baseline, where
+  /// it opens into the content card.
+  double? _activeTabHeight;
 
   /// The current split ratio for whichever tab is active, as the fraction
   /// of width given to [LayrzWorkspaceTab.left]. Reset to the default 50/50
@@ -149,65 +185,156 @@ class _LayrzWorkspaceTabsState extends State<LayrzWorkspaceTabs> {
   }
 
   /// Translates the active tab's global [rect] (reported by
-  /// [LayrzWorkspaceTabStrip]) into the content panel's own local
-  /// x-coordinates and stores it, or clears both bounds when [rect] is
+  /// [LayrzWorkspaceTabStrip]) into the inner [Stack]'s own local
+  /// coordinates and stores it, or clears all three bounds when [rect] is
   /// `null`.
   void _handleActiveTabRectChanged(Rect? rect) {
-    final panelBox = _panelKey.currentContext?.findRenderObject() as RenderBox?;
-    if (rect == null || panelBox == null || !panelBox.hasSize) {
-      if (_activeTabLeft != null || _activeTabRight != null) {
+    final stackBox = _stackKey.currentContext?.findRenderObject() as RenderBox?;
+    if (rect == null || stackBox == null || !stackBox.hasSize) {
+      if (_activeTabLeft != null || _activeTabRight != null || _activeTabTop != null || _activeTabHeight != null) {
         setState(() {
           _activeTabLeft = null;
           _activeTabRight = null;
+          _activeTabTop = null;
+          _activeTabHeight = null;
         });
       }
       return;
     }
 
-    final panelOriginX = panelBox.localToGlobal(Offset.zero).dx;
-    final left = rect.left - panelOriginX;
-    final right = rect.right - panelOriginX;
+    final stackOrigin = stackBox.localToGlobal(Offset.zero);
+    final left = rect.left - stackOrigin.dx;
+    final right = rect.right - stackOrigin.dx;
+    final top = rect.top - stackOrigin.dy;
+    final height = rect.height;
 
-    if (left != _activeTabLeft || right != _activeTabRight) {
+    if (left != _activeTabLeft || right != _activeTabRight || top != _activeTabTop || height != _activeTabHeight) {
       setState(() {
         _activeTabLeft = left;
         _activeTabRight = right;
+        _activeTabTop = top;
+        _activeTabHeight = height;
       });
     }
   }
 
+  /// Builds a [LayrzWorkspaceSilhouettePainter] for the current active-tab
+  /// geometry. The same painter configuration is used for both the fill layer
+  /// (beneath the strip) and the [strokeOnly] outline layer (above it), so the
+  /// two draws trace the identical path.
+  LayrzWorkspaceSilhouettePainter _silhouettePainter(
+    LayrzTokens tokens,
+    double tabTop,
+    double tabHeight,
+    double? left,
+    double? right, {
+    bool strokeOnly = false,
+  }) {
+    return LayrzWorkspaceSilhouettePainter(
+      fillColor: tokens.colors.sf1,
+      tabTop: tabTop,
+      tabHeight: tabHeight,
+      tabLeft: left,
+      tabRight: right,
+      tabTopRadius: tokens.radius.r2,
+      // No outward-flaring shoulder: the tab's sides run straight down to the
+      // baseline and meet the card's top edge directly (a flared shoulder
+      // produced an awkward "ear" at the junction).
+      shoulderRadius: 0.0,
+      panelRadius: tokens.radius.innerRadiusValue(outerRadius: tokens.radius.r3, spacer: tokens.spacing.sp1),
+      // A single clear line traces the whole [active tab + card] silhouette,
+      // marking the active content in the primary colour at a visible weight.
+      borderColor: tokens.colors.primary.shade500,
+      borderWidth: 1.5,
+      strokeOnly: strokeOnly,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tokens = context.tokens;
     final activeIndex = widget.tabs.indexWhere((t) => t.id == widget.activeId);
     final activeTab = activeIndex >= 0 ? widget.tabs[activeIndex] : null;
 
-    // The strip takes its intrinsic height; the panel expands to fill
-    // whatever height remains, so this widget is meant to sit inside a
-    // bounded-height (typically full-screen) ancestor -- see the class doc's
-    // "Full-screen / expanding layout" section.
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayrzWorkspaceTabStrip(
-          tabs: widget.tabs,
-          activeId: widget.activeId,
-          onTabSelected: widget.onTabSelected,
-          onTabClosed: widget.onTabClosed,
-          onNewTab: widget.onNewTab,
-          onReorder: widget.onReorder,
-          onActiveTabRectChanged: _handleActiveTabRectChanged,
+    final top = _activeTabTop;
+    final left = _activeTabLeft;
+    final right = _activeTabRight;
+    // The silhouette only has real geometry to paint once the strip has
+    // reported the active tab's rect at least once; until then (the very
+    // first frame) `tabHeight` is `0` and the silhouette degrades to a
+    // plain rounded rectangle (see
+    // `LayrzWorkspaceSilhouettePainter._buildSilhouettePath`'s `null`-span
+    // fallback). `IgnorePointer` keeps it from ever intercepting gestures
+    // meant for the strip or panel painted on top of it.
+    // The active tab's top, measured from the stack's own origin. The
+    // silhouette canvas starts at the stack top (`top: 0`) rather than at the
+    // tab's top, so there is always room (the frame's `sp1` inset) above the
+    // tab for its top border stroke to paint without being clipped at the
+    // canvas edge. The painter draws the tab bump starting at this `tabTop`.
+    final tabTop = top ?? 0.0;
+    // The tab band's bottom, measured from the stack's origin -- where the tab
+    // opens into the content card.
+    final tabHeight = (top ?? 0.0) + (_activeTabHeight ?? 0.0);
+
+    // The whole widget sits inside one rounded `sf2` "browser frame" with a
+    // `sp1` inset -- see the class doc's "Browser frame" section. Inside
+    // that inset, a single `Stack` layers the silhouette (bottom) beneath
+    // the strip and panel `Column` (top): the silhouette's local `y = 0` is
+    // the active tab's own top edge, so it is positioned at `top` (the
+    // tab's measured inset from the stack's own origin, i.e. the strip's
+    // top) and fills the rest of the inset area down to the stack's bottom
+    // -- the `sf1` card filling all the way to the frame's own inner edge.
+    return DecoratedBox(
+      decoration: BoxDecoration(color: tokens.colors.sf2, borderRadius: tokens.radius.br3),
+      child: Padding(
+        padding: tokens.spacing.pd1,
+        child: Stack(
+          key: _stackKey,
+          clipBehavior: Clip.none,
+          children: [
+            // Bottom layer: the silhouette's `sf1` FILL (and border) sits
+            // beneath the strip and panel, so the tab labels and card content
+            // draw on top of the shared fill.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: _silhouettePainter(tokens, tabTop, tabHeight, left, right)),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                LayrzWorkspaceTabStrip(
+                  tabs: widget.tabs,
+                  activeId: widget.activeId,
+                  onTabSelected: widget.onTabSelected,
+                  onTabClosed: widget.onTabClosed,
+                  onNewTab: widget.onNewTab,
+                  onReorder: widget.onReorder,
+                  onActiveTabRectChanged: _handleActiveTabRectChanged,
+                ),
+                Expanded(
+                  child: LayrzWorkspacePanel(
+                    tab: activeTab,
+                    splitRatio: _splitRatio,
+                    onSplitRatioChanged: (ratio) => setState(() => _splitRatio = ratio),
+                  ),
+                ),
+              ],
+            ),
+            // Top layer: the SAME silhouette outline painted stroke-only, on
+            // top of the strip, so the active tab's border is never covered by
+            // an adjacent inactive tab's opaque fill (which would crop it).
+            // Both layers build the identical path, so the strokes coincide.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _silhouettePainter(tokens, tabTop, tabHeight, left, right, strokeOnly: true),
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(
-          child: LayrzWorkspacePanel(
-            key: _panelKey,
-            tab: activeTab,
-            activeTabLeft: _activeTabLeft,
-            activeTabRight: _activeTabRight,
-            splitRatio: _splitRatio,
-            onSplitRatioChanged: (ratio) => setState(() => _splitRatio = ratio),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

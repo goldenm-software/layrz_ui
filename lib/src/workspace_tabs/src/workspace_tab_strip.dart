@@ -14,9 +14,10 @@ import 'workspace_tab_item.dart';
 /// keyboard traversal (arrow keys + Enter/Space), and hand-rolled
 /// drag-to-reorder. It reports the active tab's current on-screen [Rect]
 /// via [onActiveTabRectChanged] after every layout pass, so the parent
-/// [LayrzWorkspaceTabs] can translate it into the content panel's local
-/// coordinates and carve the panel border's connecting gap at the right
-/// x-offset — this widget itself has no notion of the panel below it.
+/// [LayrzWorkspaceTabs] can translate it into its own inner [Stack]'s local
+/// coordinates and position the active tab's bump at the right x-offset in
+/// its single [LayrzWorkspaceSilhouettePainter] — this widget itself has no
+/// notion of the panel below it.
 class LayrzWorkspaceTabStrip extends StatefulWidget {
   /// The tabs to render, in display order.
   final List<LayrzWorkspaceTab> tabs;
@@ -291,31 +292,36 @@ class _LayrzWorkspaceTabStripState extends State<LayrzWorkspaceTabStrip> {
     return Focus(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: tokens.colors.sf2),
-        child: Padding(
-          // No bottom inset: the active tab's `mergeBottom` open border ends
-          // at its own bottom edge (see `LayrzWorkspaceTabChromePainter`),
-          // and that edge must land exactly on the content panel's top edge
-          // below (see `LayrzWorkspaceTabs`'s `Column([strip,
-          // Expanded(panel)])`) so the two open paths abut with no seam. A
-          // bottom inset here would leave a gap band between the tab's
-          // baseline and the panel, floating the tab above it.
-          padding: EdgeInsets.only(
-            top: tokens.spacing.sp1,
-            left: tokens.spacing.sp2,
-            right: tokens.spacing.sp2,
-          ),
-          child: Row(
-            children: [
-              strip,
-              if (widget.tabs.isEmpty) const Spacer(),
-              if (widget.onNewTab != null) ...[
-                SizedBox(width: tokens.spacing.sp1),
-                LayrzWorkspaceNewTabButton(onTap: widget.onNewTab!),
-              ],
+      // The strip paints NO background of its own. The `sf2` "browser frame"
+      // is already painted by the outer `DecoratedBox` in `LayrzWorkspaceTabs`
+      // and shows through behind the tabs; the active tab + card `sf1`
+      // silhouette is painted beneath this strip (as the bottom layer of
+      // `LayrzWorkspaceTabs`'s own `Stack`) and shows through where the
+      // active tab sits. `sf2` frame + silhouette together are enough — this
+      // widget need not paint or carve anything of its own.
+      child: Padding(
+        // No bottom inset: the active tab's own footprint (the bump the
+        // single `LayrzWorkspaceSilhouettePainter` fills/strokes beneath
+        // this whole widget) must end at exactly this strip's own bottom
+        // edge -- see `LayrzWorkspaceTabs`'s `Column([strip,
+        // Expanded(panel)])` -- so the active tab visually rises directly
+        // out of the content card with no gap. A bottom inset here would
+        // leave a gap band between the tab's baseline and the panel,
+        // floating the tab above it.
+        padding: EdgeInsets.only(
+          top: tokens.spacing.sp1,
+          left: tokens.spacing.sp2,
+          right: tokens.spacing.sp2,
+        ),
+        child: Row(
+          children: [
+            strip,
+            if (widget.tabs.isEmpty) const Spacer(),
+            if (widget.onNewTab != null) ...[
+              SizedBox(width: tokens.spacing.sp1),
+              LayrzWorkspaceNewTabButton(onTap: widget.onNewTab!),
             ],
-          ),
+          ],
         ),
       ),
     );

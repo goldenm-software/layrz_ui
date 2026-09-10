@@ -1,8 +1,9 @@
 export 'src/workspace_new_tab_button.dart';
 export 'src/workspace_panel.dart';
-export 'src/workspace_panel_border_painter.dart';
+export 'src/workspace_silhouette_painter.dart';
 export 'src/workspace_split_view.dart';
 export 'src/workspace_tab.dart';
+export 'src/workspace_tab_bump_path.dart';
 export 'src/workspace_tab_chrome_painter.dart';
 export 'src/workspace_tab_item.dart';
 export 'src/workspace_tab_strip.dart';

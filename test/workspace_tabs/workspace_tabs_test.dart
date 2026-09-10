@@ -386,7 +386,7 @@ void main() {
     });
 
     guardedTestWidgets(
-      "the active tab's open border colour and width match the panel border's, for a seamless outline",
+      'the active tab + card silhouette is layered twice -- fill+stroke beneath the strip, stroke-only above it',
       (tester) async {
         _setWideViewport(tester);
 
@@ -402,8 +402,8 @@ void main() {
             ),
           ),
         );
-        // The active tab's rect is reported to the panel post-frame; let
-        // that settle so the panel's gap span is resolved too.
+        // The active tab's rect is reported to the silhouette post-frame;
+        // let that settle so its tab-bump span is resolved too.
         await tester.pump();
 
         // Move the roving keyboard-traversal highlight off the active tab
@@ -419,27 +419,194 @@ void main() {
 
         final tokens = LayrzTheme.of(tester.element(find.text('Alpha'))).tokens;
 
-        final tabChromePainters = tester
+        final silhouettePainters = tester
             .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .map((w) => w.painter)
+            .whereType<LayrzWorkspaceSilhouettePainter>()
+            .toList();
+        // Exactly two: a fill+stroke copy beneath the strip and a
+        // stroke-only copy above it, so the active tab's border is never
+        // cropped by an adjacent inactive tab's opaque fill -- see
+        // `LayrzWorkspaceTabs`'s `Stack` and its `_silhouettePainter` helper.
+        expect(silhouettePainters, hasLength(2));
+
+        final fillLayer = silhouettePainters.firstWhere((p) => !p.strokeOnly);
+        final strokeLayer = silhouettePainters.firstWhere((p) => p.strokeOnly);
+
+        // Both layers build the identical path from the identical geometry,
+        // differing only in `strokeOnly`.
+        for (final silhouette in [fillLayer, strokeLayer]) {
+          expect(silhouette.fillColor, tokens.colors.sf1);
+          expect(silhouette.borderColor, tokens.colors.primary.shade500);
+          expect(silhouette.borderWidth, 1.5);
+          expect(silhouette.tabLeft, isNotNull);
+          expect(silhouette.tabRight, isNotNull);
+          expect(silhouette.tabHeight, greaterThan(0.0));
+        }
+        expect(fillLayer.strokeOnly, isFalse);
+        expect(strokeLayer.strokeOnly, isTrue);
+
+        // The active tab's own `LayrzWorkspaceTabChromePainter` (rendered by
+        // its `LayrzWorkspaceTabItem`, unfocused here) contributes no fill
+        // and no border of its own -- the silhouette above is the only
+        // thing painting that region.
+        final activeTabItem = tester
+            .widgetList<LayrzWorkspaceTabItem>(find.byType(LayrzWorkspaceTabItem))
+            .firstWhere((item) => item.tab.label == 'Alpha');
+        expect(activeTabItem.isActive, isTrue);
+
+        final activeChromePainter = tester
+            .widgetList<CustomPaint>(
+              find.descendant(of: find.byWidget(activeTabItem), matching: find.byType(CustomPaint)),
+            )
             .map((w) => w.painter)
             .whereType<LayrzWorkspaceTabChromePainter>()
-            .where((p) => p.mergeBottom)
-            .toList();
-        expect(tabChromePainters, hasLength(1), reason: 'exactly one tab should render as the active (merged) one');
-        final activeTabPainter = tabChromePainters.single;
-
-        final panelPainter = tester
-            .widgetList<CustomPaint>(find.byType(CustomPaint))
-            .map((w) => w.painter)
-            .whereType<LayrzWorkspacePanelBorderPainter>()
             .single;
-
-        expect(activeTabPainter.borderColor, tokens.colors.divider);
-        expect(activeTabPainter.borderColor, panelPainter.borderColor);
-        expect(activeTabPainter.borderWidth, tokens.border.stroke1);
-        expect(activeTabPainter.borderWidth, panelPainter.borderWidth);
+        expect(activeChromePainter.fillColor, const Color(0x00000000));
+        expect(activeChromePainter.borderColor, isNull);
       },
     );
+
+    guardedTestWidgets(
+      'the active tab draws no closed chrome border of its own even when it holds keyboard focus',
+      (tester) async {
+        _setWideViewport(tester);
+
+        await pumpThemed(
+          tester,
+          SizedBox(
+            width: 700,
+            height: 400,
+            child: LayrzWorkspaceTabs(
+              tabs: _buildTabs(),
+              activeId: 'a',
+              onTabSelected: (_) {},
+            ),
+          ),
+        );
+        await tester.pump();
+
+        // The strip's roving keyboard-traversal highlight tracks the active
+        // tab by default (`_LayrzWorkspaceTabStripState._syncFocusedIndex`),
+        // so giving the strip focus alone is enough to put the *active* tab
+        // (Alpha) into the focused index -- unlike the sibling test above,
+        // this one does NOT press ArrowRight, so the active tab stays the
+        // focused one.
+        await tester.tap(find.text('Alpha'));
+        await tester.pump();
+
+        final activeTabItem = tester
+            .widgetList<LayrzWorkspaceTabItem>(find.byType(LayrzWorkspaceTabItem))
+            .firstWhere((item) => item.tab.label == 'Alpha');
+        expect(activeTabItem.isActive, isTrue);
+        expect(activeTabItem.isFocused, isTrue);
+
+        // Even focused, the active tab's own chrome painter must still pass
+        // a null border -- `LayrzWorkspaceTabItem.build` hardcodes
+        // `!widget.isActive && widget.isFocused` for both `borderColor` and
+        // `borderWidth`, so an active+focused tab never draws a closed focus
+        // ring of its own; only an inactive+focused tab does.
+        final activeChromePainter = tester
+            .widgetList<CustomPaint>(
+              find.descendant(of: find.byWidget(activeTabItem), matching: find.byType(CustomPaint)),
+            )
+            .map((w) => w.painter)
+            .whereType<LayrzWorkspaceTabChromePainter>()
+            .single;
+        expect(activeChromePainter.borderColor, isNull);
+
+        // Contrast: an inactive tab that is the focused index DOES draw a
+        // closed focus ring border.
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+        await tester.pump();
+
+        final nowFocusedTabItem = tester
+            .widgetList<LayrzWorkspaceTabItem>(find.byType(LayrzWorkspaceTabItem))
+            .firstWhere((item) => item.tab.label == 'Beta');
+        expect(nowFocusedTabItem.isActive, isFalse);
+        expect(nowFocusedTabItem.isFocused, isTrue);
+
+        final inactiveFocusedChromePainter = tester
+            .widgetList<CustomPaint>(
+              find.descendant(of: find.byWidget(nowFocusedTabItem), matching: find.byType(CustomPaint)),
+            )
+            .map((w) => w.painter)
+            .whereType<LayrzWorkspaceTabChromePainter>()
+            .single;
+        expect(inactiveFocusedChromePainter.borderColor, isNotNull);
+      },
+    );
+  });
+
+  group('LayrzWorkspaceTabs — browser frame', () {
+    guardedTestWidgets('the whole widget sits inside a rounded sf2 frame with sp1 padding', (tester) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          height: 400,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+
+      final tokens = LayrzTheme.of(tester.element(find.byType(LayrzWorkspaceTabs))).tokens;
+
+      final frame = tester.widget<DecoratedBox>(
+        find.descendant(of: find.byType(LayrzWorkspaceTabs), matching: find.byType(DecoratedBox)).first,
+      );
+      final decoration = frame.decoration as BoxDecoration;
+      expect(decoration.color, tokens.colors.sf2);
+      expect(decoration.borderRadius, tokens.radius.br3);
+
+      final padding = tester.widget<Padding>(
+        find.descendant(of: find.byType(DecoratedBox), matching: find.byType(Padding)).first,
+      );
+      expect(padding.padding, tokens.spacing.pd1);
+    });
+
+    guardedTestWidgets('the sf1 card fills to the frame\'s inner edge (the frame\'s radius minus its sp1 inset)', (
+      tester,
+    ) async {
+      _setWideViewport(tester);
+
+      await pumpThemed(
+        tester,
+        SizedBox(
+          width: 700,
+          height: 400,
+          child: LayrzWorkspaceTabs(
+            tabs: _buildTabs(),
+            activeId: 'a',
+            onTabSelected: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final tokens = LayrzTheme.of(tester.element(find.byType(LayrzWorkspaceTabs))).tokens;
+      final expectedCardRadius = tokens.radius.innerRadiusValue(
+        outerRadius: tokens.radius.r3,
+        spacer: tokens.spacing.sp1,
+      );
+
+      // Both the fill+stroke and stroke-only silhouette layers share the
+      // identical geometry, so either one attests to the shared panelRadius.
+      final silhouettePainters = tester
+          .widgetList<CustomPaint>(find.byType(CustomPaint))
+          .map((w) => w.painter)
+          .whereType<LayrzWorkspaceSilhouettePainter>()
+          .toList();
+      expect(silhouettePainters, hasLength(2));
+      for (final silhouette in silhouettePainters) {
+        expect(silhouette.panelRadius, expectedCardRadius);
+      }
+    });
   });
 
   group('LayrzWorkspaceTabs — empty state', () {

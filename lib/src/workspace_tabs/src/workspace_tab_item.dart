@@ -90,14 +90,20 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
     // presence in the layout is fixed, so it never shifts on hover.
     final showClose = widget.onClosed != null;
 
-    final fillColor = widget.isActive ? tokens.colors.sf1 : (_isHovered ? tokens.colors.sf3 : tokens.colors.sf2);
+    // The active tab paints no fill and no border of its own any more: it
+    // is part of the single unified [active tab + content card] silhouette
+    // painted once, beneath this whole strip, by
+    // `LayrzWorkspaceSilhouettePainter` -- see `LayrzWorkspaceTabs`. Only an
+    // inactive tab is a self-contained shape with its own recessed fill.
+    final fillColor = widget.isActive ? const Color(0x00000000) : (_isHovered ? tokens.colors.sf3 : tokens.colors.sf2);
     final labelColor = widget.isActive ? tokens.colors.fg1 : tokens.colors.fg2;
     final topRadius = tokens.radius.r2;
-    // The outward-flaring bottom shoulder is smaller than the inward top
-    // radius on every tab (active or not) — it's a subtle S-curve accent,
-    // not a mirrored corner, and it's token-driven rather than a hardcoded
-    // magic number.
-    final shoulderRadius = tokens.radius.r1;
+    // No outward-flaring shoulder: every tab's sides run straight down to the
+    // baseline (a flared shoulder produced an awkward "ear" where the active
+    // tab met the card's top edge). Must match
+    // `LayrzWorkspaceSilhouettePainter.shoulderRadius` and the strip
+    // background hole, both also `0`, so every tab shares one shape.
+    final shoulderRadius = 0.0;
 
     return Semantics(
       container: true,
@@ -116,18 +122,17 @@ class _LayrzWorkspaceTabItemState extends State<LayrzWorkspaceTabItem> {
                 fillColor: fillColor,
                 topRadius: topRadius,
                 shoulderRadius: shoulderRadius,
-                // The active tab's open (merged-bottom) border is stroked in
-                // the same colour+width as the content panel's border below
-                // it (`tokens.colors.divider` / `tokens.border.stroke1`), so
-                // the tab's top+sides+shoulders and the panel's outline read
-                // as one continuous line rather than two separately-styled
-                // shapes. Keyboard focus overrides this with the usual
-                // primary focus ring, on any tab (active or not).
-                borderColor: widget.isFocused
-                    ? tokens.colors.primary.shade500
-                    : (widget.isActive ? tokens.colors.divider : null),
-                borderWidth: widget.isFocused ? 2.0 : tokens.border.stroke1,
-                mergeBottom: widget.isActive,
+                // The active tab paints NO border of its own, ever -- its
+                // whole outline is the single unified [active tab + card]
+                // silhouette painted beneath the strip, whose bottom is open
+                // into the card. Drawing any closed border here (even a focus
+                // ring) would seal the tab's bottom edge and visually detach
+                // it from the card. A keyboard-focus ring is therefore drawn
+                // only on an INACTIVE tab (its own closed shape); the active
+                // tab, being part of the connected silhouette, shows focus
+                // through that silhouette rather than a second closed outline.
+                borderColor: (!widget.isActive && widget.isFocused) ? tokens.colors.primary.shade500 : null,
+                borderWidth: (!widget.isActive && widget.isFocused) ? 2.0 : tokens.border.stroke1,
               ),
               // A tab is a control, not selectable body text — disabled here
               // per the same convention `LayrzTabView`'s pills use (see

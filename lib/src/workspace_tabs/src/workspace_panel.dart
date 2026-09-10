@@ -2,7 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
-import 'workspace_panel_border_painter.dart';
 import 'workspace_split_view.dart';
 import 'workspace_tab.dart';
 
@@ -11,10 +10,15 @@ import 'workspace_tab.dart';
 /// [LayrzWorkspacePanel] renders whichever tab is active — its
 /// [LayrzWorkspaceTab.left] alone, or [LayrzWorkspaceTab.left] and
 /// [LayrzWorkspaceTab.right] side-by-side behind a resizable divider when
-/// [LayrzWorkspaceTab.right] is non-null — inside a bordered surface whose
-/// outline physically connects to the active tab above it: see
-/// [LayrzWorkspacePanelBorderPainter] for how the top border opens under
-/// [activeTabLeft]–[activeTabRight] and curves into the tab's own shoulders.
+/// [LayrzWorkspaceTab.right] is non-null — clipped to the card's own rounded
+/// shape.
+///
+/// This widget paints no fill and no border of its own: both come from the
+/// single [LayrzWorkspaceSilhouettePainter] that [LayrzWorkspaceTabs] layers
+/// beneath it, covering the active tab's bump and this panel's whole area as
+/// one continuous `sf1` surface. This widget's only job is to clip its
+/// content to that same rounded-card shape so content never bleeds past the
+/// card's own corners.
 ///
 /// This widget always expands to fill the height it is given — it is
 /// designed to sit as the `Expanded` child of the `Column` `LayrzWorkspaceTabs`
@@ -25,20 +29,8 @@ class LayrzWorkspacePanel extends StatelessWidget {
   /// matches no tab (e.g. transiently while the caller updates its own
   /// state after a close).
   ///
-  /// A `null` tab renders an empty, unbroken-border panel with no content.
+  /// A `null` tab renders an empty panel with no content.
   final LayrzWorkspaceTab? tab;
-
-  /// The active tab's left edge, in this panel's own local x-coordinates,
-  /// used to carve the top-border gap it visually connects through.
-  ///
-  /// `null` when [tab] is `null`, in which case the panel draws an unbroken
-  /// border.
-  final double? activeTabLeft;
-
-  /// The active tab's right edge, in this panel's own local x-coordinates.
-  ///
-  /// `null` when [tab] is `null`.
-  final double? activeTabRight;
 
   /// The current split ratio for [tab]'s split view (the fraction of width
   /// given to [LayrzWorkspaceTab.left]), used only when [tab] is non-null
@@ -57,8 +49,6 @@ class LayrzWorkspacePanel extends StatelessWidget {
   const LayrzWorkspacePanel({
     super.key,
     required this.tab,
-    required this.activeTabLeft,
-    required this.activeTabRight,
     required this.splitRatio,
     required this.onSplitRatioChanged,
   });
@@ -81,24 +71,21 @@ class LayrzWorkspacePanel extends StatelessWidget {
                   ),
           );
 
-    return CustomPaint(
-      painter: LayrzWorkspacePanelBorderPainter(
-        fillColor: tokens.colors.sf1,
-        outerRadius: tokens.radius.r3,
-        shoulderRadius: tokens.radius.r1,
-        activeTabLeft: activeTabLeft,
-        activeTabRight: activeTabRight,
-        borderColor: tokens.colors.divider,
-        borderWidth: tokens.border.stroke1,
-      ),
-      child: Padding(
-        // Keeps content clear of the painted border stroke on every side;
-        // the top inset additionally clears the carved gap's curve.
-        padding: EdgeInsets.all(tokens.border.stroke1),
-        child: ClipRRect(
-          borderRadius: tokens.radius.innerRadius(outerRadius: tokens.radius.r3, spacer: tokens.border.stroke1),
-          child: content,
-        ),
+    // The card's own outer radius matches the browser frame's inner edge
+    // (frame radius minus the frame's `sp1` inset) -- see
+    // `LayrzWorkspaceTabs.build`'s `panelRadius`. The content clip radius is
+    // that same value stepped in once more by the painted border's stroke
+    // width, so the clip hugs just inside the silhouette's own stroke.
+    final cardRadius = tokens.radius.innerRadiusValue(outerRadius: tokens.radius.r3, spacer: tokens.spacing.sp1);
+    final contentRadius = tokens.radius.innerRadiusValue(outerRadius: cardRadius, spacer: tokens.border.stroke1);
+
+    return Padding(
+      // Keeps content clear of the silhouette's own painted border stroke
+      // on every side.
+      padding: EdgeInsets.all(tokens.border.stroke1),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(contentRadius),
+        child: content,
       ),
     );
   }
