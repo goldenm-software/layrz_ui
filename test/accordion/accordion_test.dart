@@ -716,6 +716,103 @@ void main() {
       expect(finalHeight, closeTo(200.0, 0.5));
     });
 
+    /// Returns the [BorderRadius] painted by the header's own fill
+    /// [BoxDecoration], as built by `_buildHeader`.
+    ///
+    /// This is the header's *own* rounded corners -- distinct from
+    /// [outerShellBorderRadius]'s box, which is the outer bordered/shadowed
+    /// shell built by `_buildPanelShell`. DESIGN-92: the header fill used to
+    /// have no [BorderRadius] of its own at all (a plain rectangular
+    /// [AnimatedContainer.color] fill), so its square corners bled past the
+    /// outer shell's rounded stroke -- visible as a background-colored
+    /// corner artifact wherever the fill reached the panel's own edge. The
+    /// top corners are rounded in every state; the bottom corners are
+    /// rounded only while collapsed (where the header is the whole panel)
+    /// and interpolate down to square as the panel expands (where the body
+    /// sits flush below, and the header/body seam must stay a plain
+    /// hairline). This helper locates the header's own decoration to assert
+    /// that regression stays fixed in both directions.
+    BorderRadius headerFillBorderRadius(WidgetTester tester) {
+      final headerContainer = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
+      return (headerContainer.decoration as BoxDecoration).borderRadius! as BorderRadius;
+    }
+
+    testWidgets(
+      'DESIGN-92: header fill top corners are always rounded; bottom corners rounded only while collapsed',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        bool expanded = false;
+
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) => LayrzAccordion(
+              titleText: 'Corner artifact check',
+              expanded: expanded,
+              onExpansionChanged: (value) => setState(() => expanded = value),
+              body: const _BodyMarker(),
+            ),
+          ),
+        );
+
+        // Collapsed: the header fill's top corners must already match the
+        // outer shell's rounded radius -- not square -- or a sliver of the
+        // fill color would peek out past the border's rounded stroke.
+        final collapsedShellRadius = outerShellBorderRadius(tester);
+        final collapsedHeaderRadius = headerFillBorderRadius(tester);
+        expect(collapsedHeaderRadius.topLeft, equals(collapsedShellRadius.topLeft));
+        expect(collapsedHeaderRadius.topRight, equals(collapsedShellRadius.topRight));
+        // Collapsed, the header IS the whole panel -- its bottom corners
+        // are the panel's own bottom corners, and must match the shell
+        // radius too, or the same corner-bleed defect the top corners had
+        // shows up at the bottom of a closed panel instead.
+        expect(collapsedHeaderRadius.bottomLeft, equals(collapsedShellRadius.bottomLeft));
+        expect(collapsedHeaderRadius.bottomRight, equals(collapsedShellRadius.bottomRight));
+        // The radius itself must never be zero (i.e. this is genuinely
+        // rounded, not a coincidental match against an also-square value).
+        expect(collapsedHeaderRadius.topLeft, isNot(equals(Radius.zero)));
+        expect(collapsedHeaderRadius.bottomLeft, isNot(equals(Radius.zero)));
+
+        await tester.tap(find.text('Corner artifact check'));
+        await tester.pump();
+        // Roughly the midpoint of the 200ms dTransition reveal.
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Mid-reveal: the bottom radius must be strictly between the full
+        // collapsed radius and zero -- proving it interpolates smoothly
+        // with progress rather than snapping abruptly at either end. The
+        // top radius, meanwhile, must not move at all.
+        final midHeaderRadius = headerFillBorderRadius(tester);
+        expect(midHeaderRadius.topLeft, equals(collapsedShellRadius.topLeft));
+        expect(midHeaderRadius.topRight, equals(collapsedShellRadius.topRight));
+        expect(
+          midHeaderRadius.bottomLeft.x,
+          allOf(greaterThan(0.0), lessThan(collapsedShellRadius.bottomLeft.x)),
+          reason: 'bottom radius must be interpolating mid-reveal, not stuck at either end',
+        );
+
+        await tester.pumpAndSettle();
+
+        // Expanded and settled: the header fill's top corners must still
+        // match the shell radius. At full expansion the outer border has
+        // faded to fully transparent (see the cross-fade tests above), so
+        // the header fill's own top corners are the only thing defining the
+        // panel's top edge -- they must read as rounded, never square.
+        final expandedShellRadius = outerShellBorderRadius(tester);
+        final expandedHeaderRadius = headerFillBorderRadius(tester);
+        expect(expandedHeaderRadius.topLeft, equals(expandedShellRadius.topLeft));
+        expect(expandedHeaderRadius.topRight, equals(expandedShellRadius.topRight));
+        // But the bottom corners must now be square: the body sits flush
+        // beneath the header, and the header/body seam must stay a plain
+        // hairline, not a rounded notch.
+        expect(expandedHeaderRadius.bottomLeft, equals(Radius.zero));
+        expect(expandedHeaderRadius.bottomRight, equals(Radius.zero));
+      },
+    );
+
     testWidgets('rotates the chevron between collapsed and expanded', (tester) async {
       bool expanded = false;
 
