@@ -51,9 +51,9 @@ For detailed setup, fonts, and routing, see [**Getting Started**](https://github
 
 ---
 
-## Claude Code skills
+## Code skills
 
-`layrz_ui` ships **[Claude Code](https://claude.com/claude-code) skills** — one per component — so an AI coding agent working in your app knows how to use each widget correctly (props, factories, precedence, and idiomatic snippets).
+`layrz_ui` ships **agentic skills** — one per component — so an AI coding agent working in your app knows how to use each widget correctly (props, factories, precedence, and idiomatic snippets).
 
 They install two ways:
 
