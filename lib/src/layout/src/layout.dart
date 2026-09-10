@@ -8,6 +8,7 @@ import 'package:layrz_ui/src/selection/selection.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'drawer_scaffold.dart';
+import 'layout_controller.dart';
 import 'navigator_item.dart';
 import 'navigator_panel.dart';
 import 'notification_item.dart';
@@ -53,6 +54,7 @@ class LayrzLayout extends StatefulWidget {
     this.onNotificationTap,
     this.backgroundColor,
     this.selectableContent = true,
+    this.controller,
     super.key,
   });
 
@@ -135,6 +137,23 @@ class LayrzLayout extends StatefulWidget {
   /// are outside this region and cannot be selected.
   final bool selectableContent;
 
+  /// The controller that persists this layout's interactive state — the
+  /// navigation rail's scroll offset, whether the notifications panel is
+  /// open, and the current search query — across route rebuilds.
+  ///
+  /// When null (the default), [LayrzLayout] creates and owns an internal
+  /// [LayrzLayoutController], disposing it when the layout unmounts. This
+  /// keeps [LayrzLayout] fully backward-compatible: existing call sites that
+  /// do not pass a controller behave exactly as before.
+  ///
+  /// Pass an externally-owned controller to keep this state alive across
+  /// navigation — e.g. store one instance on a shell/router widget that
+  /// outlives individual page routes, and pass it to every [LayrzLayout]
+  /// instance those routes create. When a controller is supplied, the
+  /// caller is responsible for calling [LayrzLayoutController.dispose] on
+  /// it; [LayrzLayout] never disposes a controller it did not create.
+  final LayrzLayoutController? controller;
+
   @override
   State<LayrzLayout> createState() => _LayrzLayoutState();
 }
@@ -146,12 +165,27 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   /// Disposed when the state is disposed. Only created if [selectableContent] is true.
   late FocusNode _selectableFocusNode;
 
+  /// The effective [LayrzLayoutController] this layout is using — either
+  /// [LayrzLayout.controller] when supplied, or an internally-created
+  /// instance when it is null. See [_ownsController].
+  late LayrzLayoutController _controller;
+
+  /// Whether [_controller] was created internally by this state (`true`) or
+  /// supplied externally via [LayrzLayout.controller] (`false`).
+  ///
+  /// Mirrors the ownership discipline used by `LayrzTable`: an internally-
+  /// created controller is disposed by this state in [dispose]; an
+  /// externally-supplied controller is never disposed here — the caller
+  /// that created it owns its lifecycle.
+  bool _ownsController = false;
+
   @override
   void initState() {
     super.initState();
     if (widget.selectableContent) {
       _selectableFocusNode = FocusNode();
     }
+    _attachController(widget.controller);
   }
 
   @override
@@ -165,6 +199,44 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     if (oldWidget.selectableContent && !widget.selectableContent) {
       _selectableFocusNode.dispose();
     }
+    if (oldWidget.controller != widget.controller) {
+      _detachController();
+      _attachController(widget.controller);
+    }
+  }
+
+  /// Attaches [controller] as this state's [_controller].
+  ///
+  /// If [controller] is non-null, it is used directly and [_ownsController]
+  /// is set to `false` — this state never disposes an externally-supplied
+  /// controller. If [controller] is null, this state creates its own
+  /// internal [LayrzLayoutController] and sets [_ownsController] to `true`,
+  /// so it is disposed in [dispose].
+  void _attachController(LayrzLayoutController? controller) {
+    if (controller != null) {
+      _controller = controller;
+      _ownsController = false;
+    } else {
+      _controller = LayrzLayoutController();
+      _ownsController = true;
+    }
+    _controller.addListener(_onControllerChanged);
+  }
+
+  /// Detaches the current [_controller], removing its listener and, if this
+  /// state owns it (see [_ownsController]), disposing it.
+  void _detachController() {
+    _controller.removeListener(_onControllerChanged);
+    if (_ownsController) {
+      _controller.dispose();
+    }
+  }
+
+  /// Rebuilds this widget in response to a [_controller] state change —
+  /// e.g. the notifications panel opening/closing or the search query
+  /// changing.
+  void _onControllerChanged() {
+    setState(() {});
   }
 
   @override
@@ -172,6 +244,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
     if (widget.selectableContent) {
       _selectableFocusNode.dispose();
     }
+    _detachController();
     super.dispose();
   }
 
@@ -337,6 +410,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
                 onNotificationTap: widget.onNotificationTap,
                 onClose: null,
                 getInitials: _getInitials,
+                railScrollController: _controller.railScrollController,
               ),
             ),
           ),
@@ -366,19 +440,46 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         onDrawerTap: openDrawer,
       ),
       body: bodyWidget,
-      drawerBuilder: (closeDrawer) => LayrzLayoutNavigatorPanel(
-        tokens: tokens,
-        width: kLayrzLayoutDrawerWidth,
-        items: widget.items,
-        logo: widget.logo,
-        userName: widget.userName,
-        userAvatar: widget.userAvatar,
-        userMenuItems: widget.userMenuItems,
-        notifications: widget.notifications,
-        onNotificationTap: widget.onNotificationTap,
-        onClose: closeDrawer,
-        getInitials: _getInitials,
-      ),
+      drawerBuilder: (closeDrawer) {
+        // DESIGN-213 follow-up: the drawer presentation's nav panel (and the
+        // `SingleChildScrollView` inside it) is rebuilt from scratch on every
+        // rebuild of the drawer branch -- see LayrzLayoutDrawerScaffold.build,
+        // which invokes `widget.drawerBuilder` directly in its own `build`
+        // rather than caching the result. A freshly created scrollable always
+        // reattaches `_controller.railScrollController` at offset 0.0, so
+        // without an explicit restore the drawer's nav rail would silently
+        // reset to the top on every such rebuild (e.g. toggling the
+        // notifications panel, a search query change, or any other rebuild of
+        // this LayrzLayout).
+        //
+        // Schedule the restore for the frame after this build completes: the
+        // new scrollable's ScrollPosition is not attached yet while this
+        // builder runs, so `restoreRailScroll` (which needs `hasClients`) must
+        // run post-frame. `restoreRailScroll` itself is a cheap, idempotent
+        // no-op whenever the current offset already matches the saved one --
+        // true on the expanded/rail presentation's long-lived scrollable, and
+        // true here too once the jump has already been applied -- so
+        // scheduling it unconditionally on every build cannot loop or thrash.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _controller.restoreRailScroll();
+        });
+
+        return LayrzLayoutNavigatorPanel(
+          tokens: tokens,
+          width: kLayrzLayoutDrawerWidth,
+          items: widget.items,
+          logo: widget.logo,
+          userName: widget.userName,
+          userAvatar: widget.userAvatar,
+          userMenuItems: widget.userMenuItems,
+          notifications: widget.notifications,
+          onNotificationTap: widget.onNotificationTap,
+          onClose: closeDrawer,
+          getInitials: _getInitials,
+          railScrollController: _controller.railScrollController,
+        );
+      },
     );
   }
 }
