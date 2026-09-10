@@ -249,9 +249,20 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   /// silently no-ops on this font. Both `display` and `body` already encode
   /// their weight as a `fontVariations: [FontVariation('wght', ...)]` entry,
   /// so selecting between them is sufficient; no extra override is needed.
-  TextStyle styleForScope(LayrzHighlightScope scope, {required double fontSize}) {
+  ///
+  /// [forcePlainWhiteText], when `true`, overrides only the resolved color
+  /// for [LayrzHighlightScope.text] to pure white (`0xFFFFFFFF`), leaving
+  /// every other scope's color (and this scope's color for every other
+  /// caller) untouched. This exists solely so [LayrzCodeLanguage.plain] —
+  /// which classifies its entire input as [LayrzHighlightScope.text] via the
+  /// empty `plainGrammar` — reads as crisp white body text instead of the
+  /// slightly off-white [foreground] used by python/lcl/lml. Defaults to
+  /// `false`.
+  TextStyle styleForScope(LayrzHighlightScope scope, {required double fontSize, bool forcePlainWhiteText = false}) {
     const font = LayrzJetBrainsMonoFont();
-    final color = colorForScope(scope);
+    final color = forcePlainWhiteText && scope == LayrzHighlightScope.text
+        ? const Color(0xFFFFFFFF)
+        : colorForScope(scope);
     final isBold =
         scope == LayrzHighlightScope.keyword ||
         scope == LayrzHighlightScope.function ||
@@ -265,9 +276,14 @@ class LayrzCodeThemeExtension extends LayrzThemeExtension<LayrzCodeThemeExtensio
   ///
   /// Convenient for feeding a syntax-highlighting controller's style
   /// resolver in one call rather than invoking [styleForScope] per scope.
-  Map<LayrzHighlightScope, TextStyle> resolveStyles({required double fontSize}) {
+  ///
+  /// [forcePlainWhiteText] is forwarded to [styleForScope] for every scope —
+  /// see its doc comment. Defaults to `false`, which reproduces the exact
+  /// same styles as before this parameter existed.
+  Map<LayrzHighlightScope, TextStyle> resolveStyles({required double fontSize, bool forcePlainWhiteText = false}) {
     return {
-      for (final scope in LayrzHighlightScope.values) scope: styleForScope(scope, fontSize: fontSize),
+      for (final scope in LayrzHighlightScope.values)
+        scope: styleForScope(scope, fontSize: fontSize, forcePlainWhiteText: forcePlainWhiteText),
     };
   }
 

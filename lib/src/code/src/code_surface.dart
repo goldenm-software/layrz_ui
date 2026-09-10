@@ -101,9 +101,11 @@ class LayrzCodeSurface extends StatelessWidget {
   /// the rendered text.
   TextSpan _buildHighlightedSpan(LayrzCodeThemeExtension codeTheme) {
     final tokens = LayrzSyntaxHighlighter.tokenize(code, language);
-    final styles = codeTheme.resolveStyles(fontSize: fontSize);
+    final isPlain = language == LayrzCodeLanguage.plain;
+    final styles = codeTheme.resolveStyles(fontSize: fontSize, forcePlainWhiteText: isPlain);
     final defaultStyle =
-        styles[LayrzHighlightScope.text] ?? codeTheme.styleForScope(LayrzHighlightScope.text, fontSize: fontSize);
+        styles[LayrzHighlightScope.text] ??
+        codeTheme.styleForScope(LayrzHighlightScope.text, fontSize: fontSize, forcePlainWhiteText: isPlain);
 
     final spans = <TextSpan>[];
     var covered = 0;

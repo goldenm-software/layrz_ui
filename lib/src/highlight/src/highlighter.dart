@@ -1,6 +1,7 @@
 import 'package:layrz_ui/src/highlight/src/grammar.dart';
 import 'package:layrz_ui/src/highlight/src/grammars/lcl.dart';
 import 'package:layrz_ui/src/highlight/src/grammars/lml.dart';
+import 'package:layrz_ui/src/highlight/src/grammars/plain.dart';
 import 'package:layrz_ui/src/highlight/src/grammars/python.dart';
 import 'package:layrz_ui/src/highlight/src/language.dart';
 import 'package:layrz_ui/src/highlight/src/token.dart';
@@ -24,6 +25,8 @@ class LayrzSyntaxHighlighter {
         return lclGrammar;
       case LayrzCodeLanguage.lml:
         return lmlGrammar;
+      case LayrzCodeLanguage.plain:
+        return plainGrammar;
     }
   }
 

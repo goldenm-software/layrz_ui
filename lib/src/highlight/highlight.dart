@@ -1,6 +1,7 @@
 export 'src/grammar.dart';
 export 'src/grammars/lcl.dart';
 export 'src/grammars/lml.dart';
+export 'src/grammars/plain.dart';
 export 'src/grammars/python.dart';
 export 'src/highlighter.dart';
 export 'src/highlighting_controller.dart';

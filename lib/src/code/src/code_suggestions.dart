@@ -34,8 +34,9 @@ abstract final class LayrzCodeSuggestions {
   /// The built-in completion symbols for [language].
   ///
   /// Python contributes its keywords and builtins; Layrz Compute Language its
-  /// function names. Layrz Markup Language has none — it is prose, so its only
-  /// completions are the caller-supplied `{{variable}}` names.
+  /// function names. Layrz Markup Language and plain text have none — LML is
+  /// prose (its only completions are the caller-supplied `{{variable}}`
+  /// names) and plain text carries no grammar to draw symbols from.
   static List<String> builtinsFor(LayrzCodeLanguage language) {
     switch (language) {
       case LayrzCodeLanguage.python:
@@ -43,6 +44,7 @@ abstract final class LayrzCodeSuggestions {
       case LayrzCodeLanguage.lcl:
         return lclFunctionNames;
       case LayrzCodeLanguage.lml:
+      case LayrzCodeLanguage.plain:
         return const [];
     }
   }

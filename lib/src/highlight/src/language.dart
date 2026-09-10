@@ -25,4 +25,9 @@ enum LayrzCodeLanguage {
   /// Highlights the same function-call surface as [lcl], plus strings,
   /// numbers, and constants.
   lml,
+
+  /// Plain, unhighlighted text — every character is emitted as
+  /// [LayrzHighlightScope.text]; used for fenced code whose language is
+  /// unknown.
+  plain,
 }
