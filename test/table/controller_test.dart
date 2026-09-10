@@ -17,6 +17,8 @@ void main() {
       expect(controller.sortColumnKey, isNull);
       expect(controller.sortAscending, isTrue);
       expect(controller.selection, isEmpty);
+      expect(controller.visibleCount.value, 0);
+      expect(controller.totalCount.value, 0);
     });
 
     test('seeds columnOrder and hiddenColumns from constructor arguments', () {
@@ -48,6 +50,53 @@ void main() {
       expect(() => controller.columnOrder.add(const ValueKey('b')), throwsUnsupportedError);
       expect(() => controller.hiddenColumns.add(const ValueKey('b')), throwsUnsupportedError);
       expect(() => controller.selection.add(1), throwsUnsupportedError);
+    });
+  });
+
+  group('visibleCount / totalCount', () {
+    test('both notifiers default to 0', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      expect(controller.visibleCount.value, 0);
+      expect(controller.totalCount.value, 0);
+    });
+
+    test('updateCounts sets both notifier values', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      controller.updateCounts(visible: 3, total: 10);
+
+      expect(controller.visibleCount.value, 3);
+      expect(controller.totalCount.value, 10);
+    });
+
+    test('visibleCount notifies only when its value changes', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      var notifications = 0;
+      controller.visibleCount.addListener(() => notifications++);
+
+      controller.updateCounts(visible: 5, total: 10);
+      expect(notifications, 1);
+
+      // Same visible value (total changes) does not re-notify visibleCount.
+      controller.updateCounts(visible: 5, total: 8);
+      expect(notifications, 1);
+
+      controller.updateCounts(visible: 2, total: 8);
+      expect(notifications, 2);
+    });
+
+    test('visibleCount equals totalCount when nothing is filtered out', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      controller.updateCounts(visible: 7, total: 7);
+
+      expect(controller.visibleCount.value, controller.totalCount.value);
     });
   });
 

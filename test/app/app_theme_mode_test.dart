@@ -27,7 +27,7 @@ void main() {
       );
 
       expect(resolvedIsDark, isTrue);
-      expect(resolvedBackground, equals(const Color(0xFF12141C)));
+      expect(resolvedBackground, equals(const Color(0xFF29272C)));
     });
 
     testWidgets('LayrzThemeMode.light makes context.isDark false and uses the light background', (tester) async {

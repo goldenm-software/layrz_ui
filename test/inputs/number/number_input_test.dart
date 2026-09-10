@@ -951,10 +951,9 @@ void main() {
         ),
       );
 
-      final tokens = LayrzTokens.light();
-      final expectedBackgroundColor = tokens.colors.danger
-          .withOpacityValue(tokens.colors.tonalOpacity)
-          .flattenOn(tokens.colors.sf2);
+      // Light theme uses a fixed near-white error fill (#FFEBEE) — see
+      // LayrzInputStyleSpec.resolve; the dark theme uses a tonal danger tint.
+      const expectedBackgroundColor = Color(0xFFFFEBEE);
 
       // Find the chrome container inside LayrzInputChrome that renders the field background.
       // The chrome is the first Container descendant of LayrzInputChrome with a BoxDecoration.

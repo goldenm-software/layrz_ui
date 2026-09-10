@@ -182,10 +182,10 @@ void main() {
 
     test('dark theme has correct surface ramp', () {
       final tokens = LayrzColorTokens.dark();
-      expect(tokens.sf1, equals(const Color(0xFF12141C)));
-      expect(tokens.sf2, equals(const Color(0xFF1A1D27)));
-      expect(tokens.sf3, equals(const Color(0xFF232734)));
-      expect(tokens.sf4, equals(const Color(0xFF2E3341)));
+      expect(tokens.sf1, equals(const Color(0xFF29272C)));
+      expect(tokens.sf2, equals(const Color(0xFF322F35)));
+      expect(tokens.sf3, equals(const Color(0xFF3C3941)));
+      expect(tokens.sf4, equals(const Color(0xFF47444D)));
     });
 
     test('dark theme has correct foreground text colors', () {

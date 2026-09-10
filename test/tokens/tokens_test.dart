@@ -149,8 +149,24 @@ void main() {
       test('dark factory wires shadow.surfaceColor to dark colors.sf1', () {
         final tokens = LayrzTokens.dark();
 
-        expect(tokens.colors.sf1, equals(const Color(0xFF12141C)));
+        expect(tokens.colors.sf1, equals(const Color(0xFF29272C)));
         expect(tokens.shadow.surfaceColor, equals(tokens.colors.sf1));
+      });
+
+      test('dark factory boosts shadow opacity so a black shadow reads on dark', () {
+        final tokens = LayrzTokens.dark();
+
+        // Elevation on dark uses a black shadow (like light) but at a boosted
+        // opacity scale, plus a faint light outline at elevation 0. The lighter
+        // dark surface gives the black shadow the contrast it needs.
+        expect(tokens.shadow.shadowColor, equals(const Color(0xFF000000)));
+        expect(tokens.shadow.shadowOpacityScale, equals(2.0));
+        expect(tokens.shadow.outlineColor, equals(const Color(0x1FFFFFFF)));
+        expect(tokens.shadow.elevationOverlay, isFalse);
+
+        // Light theme keeps the black shadow at the default 1.0 scale.
+        expect(LayrzTokens.light().shadow.shadowColor, equals(const Color(0xFF000000)));
+        expect(LayrzTokens.light().shadow.shadowOpacityScale, equals(1.0));
       });
 
       test('dark factory wires border.dividerColor to dark colors.divider', () {

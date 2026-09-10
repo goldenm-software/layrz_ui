@@ -11,7 +11,7 @@ void main() {
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf1));
       expect(spec.headerContentColor, equals(tokens.colors.fg1));
-      expect(spec.borderColor, equals(tokens.colors.fg3));
+      expect(spec.borderColor, equals(tokens.colors.divider));
       expect(spec.borderWidth, equals(tokens.border.base));
       expect(spec.shadow, equals(tokens.shadow.elevation2));
     });
@@ -39,7 +39,7 @@ void main() {
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf2));
       expect(spec.headerContentColor, equals(tokens.colors.fg1));
-      expect(spec.borderColor, equals(tokens.colors.fg3));
+      expect(spec.borderColor, equals(tokens.colors.divider));
     });
 
     test('focused state resolves identically to hovered state', () {
@@ -56,7 +56,7 @@ void main() {
       );
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf3));
-      expect(spec.borderColor, equals(tokens.colors.fg3));
+      expect(spec.borderColor, equals(tokens.colors.divider));
     });
 
     test('pressed takes precedence over hovered', () {
@@ -68,7 +68,7 @@ void main() {
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf3));
     });
 
-    test('disabled state fades content and border to fg3, regardless of other states', () {
+    test('disabled state fades content to fg3 and uses the divider border, regardless of other states', () {
       final spec = LayrzAccordionStyleSpec.resolve(
         states: {WidgetState.disabled, WidgetState.hovered, WidgetState.pressed},
         tokens: tokens,
@@ -76,7 +76,7 @@ void main() {
 
       expect(spec.headerBackgroundColor, equals(tokens.colors.sf1));
       expect(spec.headerContentColor, equals(tokens.colors.fg3));
-      expect(spec.borderColor, equals(tokens.colors.fg3));
+      expect(spec.borderColor, equals(tokens.colors.divider));
     });
 
     test('disabled takes precedence over every other state', () {
@@ -89,7 +89,7 @@ void main() {
       expect(disabledWithOthers, equals(disabledOnly));
     });
 
-    test('border color is fg3 in every state, so the collapsed panel stays visible', () {
+    test('border color is the divider token in every state, so the collapsed panel stays visible', () {
       final states = [
         const <WidgetState>{},
         {WidgetState.hovered},
@@ -100,7 +100,7 @@ void main() {
 
       for (final s in states) {
         final spec = LayrzAccordionStyleSpec.resolve(states: s, tokens: tokens);
-        expect(spec.borderColor, equals(tokens.colors.fg3), reason: 'states: $s');
+        expect(spec.borderColor, equals(tokens.colors.divider), reason: 'states: $s');
       }
     });
 

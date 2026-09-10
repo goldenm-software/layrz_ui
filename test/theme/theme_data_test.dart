@@ -316,7 +316,7 @@ void main() {
 
       test('uses dark background color', () {
         final data = LayrzThemeData.dark();
-        expect(data.backgroundColor, equals(const Color(0xFF12141C)));
+        expect(data.backgroundColor, equals(const Color(0xFF29272C)));
       });
 
       test('creates IconThemeData with dark fg1 color and size 24', () {

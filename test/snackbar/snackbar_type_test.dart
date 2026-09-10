@@ -39,55 +39,38 @@ void main() {
     });
 
     group('accentColor resolution', () {
-      test('success type returns success.darken(0.3)', () {
-        expect(
-          LayrzSnackbarType.success.accentColor(tokens),
-          equals(tokens.colors.success.darken(0.3)),
-        );
+      // Each accent is the plain semantic token, matching the same semantic used
+      // by buttons/chips/badges rather than a darkened variant.
+      test('success type returns the plain success token', () {
+        expect(LayrzSnackbarType.success.accentColor(tokens), equals(tokens.colors.success));
       });
 
-      test('danger type returns danger.darken(0.22)', () {
-        expect(
-          LayrzSnackbarType.danger.accentColor(tokens),
-          equals(tokens.colors.danger.darken(0.22)),
-        );
+      test('danger type returns the plain danger token', () {
+        expect(LayrzSnackbarType.danger.accentColor(tokens), equals(tokens.colors.danger));
       });
 
-      test('warning type returns warning.darken(0.15)', () {
-        expect(
-          LayrzSnackbarType.warning.accentColor(tokens),
-          equals(tokens.colors.warning.darken(0.15)),
-        );
+      test('warning type returns the plain warning token', () {
+        expect(LayrzSnackbarType.warning.accentColor(tokens), equals(tokens.colors.warning));
       });
 
-      test('info type returns info.darken(0.3)', () {
-        expect(
-          LayrzSnackbarType.info.accentColor(tokens),
-          equals(tokens.colors.info.darken(0.3)),
-        );
+      test('info type returns the plain info token', () {
+        expect(LayrzSnackbarType.info.accentColor(tokens), equals(tokens.colors.info));
       });
 
-      test('context type returns contextual.darken(0.3)', () {
-        expect(
-          LayrzSnackbarType.context.accentColor(tokens),
-          equals(tokens.colors.contextual.darken(0.3)),
-        );
+      test('context type returns the plain contextual token', () {
+        expect(LayrzSnackbarType.context.accentColor(tokens), equals(tokens.colors.contextual));
       });
 
       test('custom type returns null (caller provides color)', () {
         expect(LayrzSnackbarType.custom.accentColor(tokens), isNull);
       });
 
-      test('accent colors match the derived-darken hexes', () {
-        // Each accent is `tokens.colors.<sem>.darken(<amount>)` composited over
-        // opaque black (see LayrzColorExtensions.darken). Computed from the
-        // light-theme base hexes: danger #F44336, success #4CAF50,
-        // warning #EF6C00, info #2196F3, contextual #9E9E9E.
-        expect(LayrzSnackbarType.danger.accentColor(tokens)!.toHex(), equals('#BE342A'));
-        expect(LayrzSnackbarType.success.accentColor(tokens)!.toHex(), equals('#357A38'));
-        expect(LayrzSnackbarType.warning.accentColor(tokens)!.toHex(), equals('#CB5C00'));
-        expect(LayrzSnackbarType.info.accentColor(tokens)!.toHex(), equals('#1769AA'));
-        expect(LayrzSnackbarType.context.accentColor(tokens)!.toHex(), equals('#6F6F6F'));
+      test('accent colors are the light-theme semantic hexes', () {
+        expect(LayrzSnackbarType.danger.accentColor(tokens)!.toHex(), equals('#F44336'));
+        expect(LayrzSnackbarType.success.accentColor(tokens)!.toHex(), equals('#4CAF50'));
+        expect(LayrzSnackbarType.warning.accentColor(tokens)!.toHex(), equals('#EF6C00'));
+        expect(LayrzSnackbarType.info.accentColor(tokens)!.toHex(), equals('#2196F3'));
+        expect(LayrzSnackbarType.context.accentColor(tokens)!.toHex(), equals('#9E9E9E'));
       });
     });
 
