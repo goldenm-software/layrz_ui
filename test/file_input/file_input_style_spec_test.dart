@@ -24,7 +24,10 @@ void main() {
         tokens: tokens,
         hasErrors: true,
       );
-      expect(spec.backgroundColor, tokens.colors.danger.shade50);
+      expect(
+        spec.backgroundColor,
+        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
+      );
       expect(spec.borderColor, tokens.colors.danger);
       expect(spec.contentColor, tokens.colors.danger);
     });

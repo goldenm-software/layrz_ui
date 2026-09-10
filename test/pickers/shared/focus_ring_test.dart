@@ -124,7 +124,7 @@ void main() {
       final decoration = ringBox.decoration as BoxDecoration;
 
       expect(decoration.border, isNotNull);
-      expect(decoration.border!.top.color, theme.tokens.colors.primary.shade500);
+      expect(decoration.border!.top.color, theme.tokens.colors.primary);
     });
 
     guardedTestWidgets('the border disappears again once focus moves away', (tester) async {

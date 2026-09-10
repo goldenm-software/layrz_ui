@@ -124,7 +124,7 @@ void main() {
         find.descendant(of: find.byType(LayrzBadgeVisual), matching: find.byType(Container)).first,
       );
       final decoration = container.decoration! as BoxDecoration;
-      expect(decoration.color, equals(tokens.colors.danger.shade500));
+      expect(decoration.color, equals(tokens.colors.danger));
     });
   });
 
@@ -135,8 +135,8 @@ void main() {
 
       final spec = LayrzBadgeStyleSpec.resolve(type: LayrzBadgeType.info, color: null, tokens: tokens);
 
-      expect(spec.backgroundColor, equals(tokens.colors.info.shade500));
-      expect(spec.contentColor, equals(tokens.colors.info.shade500.contrastColor));
+      expect(spec.backgroundColor, equals(tokens.colors.info));
+      expect(spec.contentColor, equals(tokens.colors.info.contrastColor));
     });
 
     testWidgets('resolve with type.custom and no color falls back to primary', (tester) async {
@@ -145,7 +145,7 @@ void main() {
 
       final spec = LayrzBadgeStyleSpec.resolve(type: LayrzBadgeType.custom, color: null, tokens: tokens);
 
-      expect(spec.backgroundColor, equals(tokens.colors.primary.shade500));
+      expect(spec.backgroundColor, equals(tokens.colors.primary));
     });
 
     testWidgets('an explicit color overrides the type regardless of type', (tester) async {

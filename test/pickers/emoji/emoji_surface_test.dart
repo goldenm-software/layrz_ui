@@ -248,7 +248,7 @@ void main() {
       final decoration = decoratedBox.decoration as BoxDecoration;
 
       final tokens = LayrzTokens.light();
-      expect(decoration.color, tokens.colors.primary.shade500);
+      expect(decoration.color, tokens.colors.primary);
     });
 
     guardedTestWidgets('an unselected chip paints a solid background color, not transparent', (tester) async {

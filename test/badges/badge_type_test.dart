@@ -6,39 +6,39 @@ import '../helpers/pump_themed.dart';
 
 void main() {
   group('LayrzBadgeType', () {
-    testWidgets('info resolves to tokens.colors.info.shade500', (tester) async {
+    testWidgets('info resolves to tokens.colors.info', (tester) async {
       await pumpThemed(tester, Container());
       final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
 
-      expect(LayrzBadgeType.info.colorToken(tokens), equals(tokens.colors.info.shade500));
+      expect(LayrzBadgeType.info.colorToken(tokens), equals(tokens.colors.info));
     });
 
-    testWidgets('success resolves to tokens.colors.success.shade500', (tester) async {
+    testWidgets('success resolves to tokens.colors.success', (tester) async {
       await pumpThemed(tester, Container());
       final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
 
-      expect(LayrzBadgeType.success.colorToken(tokens), equals(tokens.colors.success.shade500));
+      expect(LayrzBadgeType.success.colorToken(tokens), equals(tokens.colors.success));
     });
 
-    testWidgets('warning resolves to tokens.colors.warning.shade500', (tester) async {
+    testWidgets('warning resolves to tokens.colors.warning', (tester) async {
       await pumpThemed(tester, Container());
       final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
 
-      expect(LayrzBadgeType.warning.colorToken(tokens), equals(tokens.colors.warning.shade500));
+      expect(LayrzBadgeType.warning.colorToken(tokens), equals(tokens.colors.warning));
     });
 
-    testWidgets('danger resolves to tokens.colors.danger.shade500', (tester) async {
+    testWidgets('danger resolves to tokens.colors.danger', (tester) async {
       await pumpThemed(tester, Container());
       final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
 
-      expect(LayrzBadgeType.danger.colorToken(tokens), equals(tokens.colors.danger.shade500));
+      expect(LayrzBadgeType.danger.colorToken(tokens), equals(tokens.colors.danger));
     });
 
-    testWidgets('context resolves to tokens.colors.contextual.shade500', (tester) async {
+    testWidgets('context resolves to tokens.colors.contextual', (tester) async {
       await pumpThemed(tester, Container());
       final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
 
-      expect(LayrzBadgeType.context.colorToken(tokens), equals(tokens.colors.contextual.shade500));
+      expect(LayrzBadgeType.context.colorToken(tokens), equals(tokens.colors.contextual));
     });
 
     testWidgets('custom resolves to null, deferring to an explicit color', (tester) async {

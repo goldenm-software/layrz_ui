@@ -88,7 +88,7 @@ void main() {
       );
 
       final badge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
-      expect(badge.color, theme.tokens.colors.success.shade500);
+      expect(badge.color, theme.tokens.colors.success);
     });
 
     guardedTestWidgets('renders the warning color when idle (20 minutes elapsed)', (tester) async {
@@ -109,7 +109,7 @@ void main() {
       );
 
       final badge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
-      expect(badge.color, theme.tokens.colors.warning.shade500);
+      expect(badge.color, theme.tokens.colors.warning);
     });
 
     guardedTestWidgets('renders the danger color when offline (90 minutes elapsed)', (tester) async {
@@ -130,7 +130,7 @@ void main() {
       );
 
       final badge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
-      expect(badge.color, theme.tokens.colors.danger.shade500);
+      expect(badge.color, theme.tokens.colors.danger);
     });
 
     guardedTestWidgets('renders the fg1 color when disconnected (40 days elapsed)', (tester) async {
@@ -171,7 +171,7 @@ void main() {
       );
 
       final badge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
-      expect(badge.color, theme.tokens.colors.contextual.shade500);
+      expect(badge.color, theme.tokens.colors.contextual);
     });
   });
 
@@ -197,7 +197,7 @@ void main() {
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, theme.tokens.colors.success.shade500);
+      expect(decoration.color, theme.tokens.colors.success);
     });
 
     guardedTestWidgets('reflects the offline state color when stale', (tester) async {
@@ -220,7 +220,7 @@ void main() {
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
-      expect(decoration.color, theme.tokens.colors.danger.shade500);
+      expect(decoration.color, theme.tokens.colors.danger);
     });
 
     guardedTestWidgets('forces contrastColor on a child Text with its own explicit dark color', (tester) async {

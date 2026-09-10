@@ -109,7 +109,7 @@ void main() {
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      expect(segmentColors.where((c) => c == colors.warning.shade500).length, 1);
+      expect(segmentColors.where((c) => c == colors.warning).length, 1);
       expect(segmentColors.where((c) => c == colors.fg4).length, 3);
     });
 
@@ -125,7 +125,7 @@ void main() {
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      expect(segmentColors.where((c) => c == colors.warning.shade500).length, 2);
+      expect(segmentColors.where((c) => c == colors.warning).length, 2);
       expect(segmentColors.where((c) => c == colors.fg4).length, 2);
     });
 
@@ -141,7 +141,7 @@ void main() {
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      expect(segmentColors.where((c) => c == colors.success.shade500).length, 3);
+      expect(segmentColors.where((c) => c == colors.success).length, 3);
       expect(segmentColors.where((c) => c == colors.fg4).length, 1);
     });
 
@@ -157,7 +157,7 @@ void main() {
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      expect(segmentColors.where((c) => c == colors.success.shade500).length, 4);
+      expect(segmentColors.where((c) => c == colors.success).length, 4);
       expect(segmentColors.where((c) => c == colors.fg4).length, 0);
     });
 
@@ -176,7 +176,7 @@ void main() {
       // in password_strength_test.dart. This test locks in that the bar widget does
       // NOT filter out danger for level 0 the way the previous meter design did.
       final requirements = LayrzPasswordRequirements.evaluate('abcdefghijklmnop');
-      expect(requirements.colorFor(colors), colors.danger.shade500);
+      expect(requirements.colorFor(colors), colors.danger);
     });
   });
 
@@ -208,7 +208,7 @@ void main() {
       final colors = theme.tokens.colors;
 
       final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
-      final metIcons = icons.where((icon) => icon.color == colors.success.shade500);
+      final metIcons = icons.where((icon) => icon.color == colors.success);
       final unmetIcons = icons.where((icon) => icon.color == colors.fg4);
 
       expect(metIcons.length, 2, reason: 'lowercase + digit are met');
@@ -227,7 +227,7 @@ void main() {
       final colors = theme.tokens.colors;
 
       final icons = tester.widgetList<Icon>(find.byType(Icon)).toList();
-      final metIcons = icons.where((icon) => icon.color == colors.success.shade500);
+      final metIcons = icons.where((icon) => icon.color == colors.success);
 
       expect(metIcons.length, 4);
     });
@@ -243,7 +243,7 @@ void main() {
       final colors = theme.tokens.colors;
       final segmentColors = _segmentColors(tester);
 
-      final filledCount = segmentColors.where((c) => c == colors.warning.shade500).length;
+      final filledCount = segmentColors.where((c) => c == colors.warning).length;
       expect(filledCount, 1);
     });
   });

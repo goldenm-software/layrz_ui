@@ -312,7 +312,7 @@ void main() {
       );
 
       final painter = tester.widget<CustomPaint>(find.byType(CustomPaint).first).painter as LayrzProgressPainter;
-      expect(painter.indicatorColor, theme.tokens.colors.primary.shade500);
+      expect(painter.indicatorColor, theme.tokens.colors.primary);
     });
 
     testWidgets('applies a custom height', (tester) async {
@@ -945,23 +945,23 @@ void main() {
     final tokens = LayrzTokens.light();
 
     test('info resolves to the info swatch shade500', () {
-      expect(LayrzProgressType.info.colorToken(tokens), tokens.colors.info.shade500);
+      expect(LayrzProgressType.info.colorToken(tokens), tokens.colors.info);
     });
 
     test('success resolves to the success swatch shade500', () {
-      expect(LayrzProgressType.success.colorToken(tokens), tokens.colors.success.shade500);
+      expect(LayrzProgressType.success.colorToken(tokens), tokens.colors.success);
     });
 
     test('warning resolves to the warning swatch shade500', () {
-      expect(LayrzProgressType.warning.colorToken(tokens), tokens.colors.warning.shade500);
+      expect(LayrzProgressType.warning.colorToken(tokens), tokens.colors.warning);
     });
 
     test('danger resolves to the danger swatch shade500', () {
-      expect(LayrzProgressType.danger.colorToken(tokens), tokens.colors.danger.shade500);
+      expect(LayrzProgressType.danger.colorToken(tokens), tokens.colors.danger);
     });
 
     test('context resolves to the contextual swatch shade500', () {
-      expect(LayrzProgressType.context.colorToken(tokens), tokens.colors.contextual.shade500);
+      expect(LayrzProgressType.context.colorToken(tokens), tokens.colors.contextual);
     });
 
     test('custom resolves to null, deferring to an explicit color', () {
@@ -976,7 +976,7 @@ void main() {
       final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressType.success, color: null, tokens: tokens);
 
       expect(spec.trackColor, tokens.colors.sf3);
-      expect(spec.indicatorColor, tokens.colors.success.shade500);
+      expect(spec.indicatorColor, tokens.colors.success);
     });
 
     test('resolve honours an explicit color when type is custom', () {
@@ -993,7 +993,7 @@ void main() {
     test('resolve falls back to primary when type is custom and color is null', () {
       final spec = LayrzProgressStyleSpec.resolve(type: LayrzProgressType.custom, color: null, tokens: tokens);
 
-      expect(spec.indicatorColor, tokens.colors.primary.shade500);
+      expect(spec.indicatorColor, tokens.colors.primary);
     });
 
     test('copyWith replaces only the given fields', () {

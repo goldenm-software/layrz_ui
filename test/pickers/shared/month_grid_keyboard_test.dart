@@ -568,7 +568,7 @@ void main() {
       // of the other eleven months'.
       expect(borderedBoxes, hasLength(1));
       final decoration = borderedBoxes.single.decoration as BoxDecoration;
-      expect(decoration.border!.top.color, theme.tokens.colors.primary.shade500);
+      expect(decoration.border!.top.color, theme.tokens.colors.primary);
     });
   });
 }

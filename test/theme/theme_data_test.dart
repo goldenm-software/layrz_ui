@@ -7,7 +7,12 @@ void main() {
     group('light() factory', () {
       test('uses default primary color', () {
         final data = LayrzThemeData.light();
-        expect(data.primaryColor, equals(kPrimaryColor));
+        expect(data.primaryColor, equals(kLightPrimaryColor));
+      });
+
+      test('brightness is Brightness.light', () {
+        final data = LayrzThemeData.light();
+        expect(data.brightness, equals(Brightness.light));
       });
 
       test('uses default background color', () {
@@ -27,15 +32,15 @@ void main() {
         expect(data.iconTheme.size, equals(24));
       });
 
-      test('defaults selectionColor to tokens.colors.selectionColor.shade500 tinted by tonalOpacity', () {
+      test('defaults selectionColor to tokens.colors.selectionColor tinted by tonalOpacity', () {
         final data = LayrzThemeData.light();
-        final expected = data.tokens.colors.selectionColor.shade500.withValues(alpha: data.tokens.colors.tonalOpacity);
+        final expected = data.tokens.colors.selectionColor.withValues(alpha: data.tokens.colors.tonalOpacity);
         expect(data.selectionColor, equals(expected));
       });
 
-      test('defaults cursorColor to tokens.colors.primary.shade500', () {
+      test('defaults cursorColor to tokens.colors.primary', () {
         final data = LayrzThemeData.light();
-        expect(data.cursorColor, equals(data.tokens.colors.primary.shade500));
+        expect(data.cursorColor, equals(data.tokens.colors.primary));
       });
 
       test('accepts custom selectionColor', () {
@@ -85,8 +90,8 @@ void main() {
         data = LayrzThemeData.light();
       });
 
-      test('primaryColor delegates to tokens.colors.primary.shade500', () {
-        expect(data.primaryColor, equals(data.tokens.colors.primary.shade500));
+      test('primaryColor delegates to tokens.colors.primary', () {
+        expect(data.primaryColor, equals(data.tokens.colors.primary));
       });
 
       test('backgroundColor delegates to tokens.colors.sf1', () {
@@ -109,16 +114,16 @@ void main() {
         expect(data.borderColor, equals(data.tokens.colors.divider));
       });
 
-      test('dangerColor delegates to tokens.colors.danger.shade500', () {
-        expect(data.dangerColor, equals(data.tokens.colors.danger.shade500));
+      test('dangerColor delegates to tokens.colors.danger', () {
+        expect(data.dangerColor, equals(data.tokens.colors.danger));
       });
 
-      test('successColor delegates to tokens.colors.success.shade500', () {
-        expect(data.successColor, equals(data.tokens.colors.success.shade500));
+      test('successColor delegates to tokens.colors.success', () {
+        expect(data.successColor, equals(data.tokens.colors.success));
       });
 
-      test('warningColor delegates to tokens.colors.warning.shade500', () {
-        expect(data.warningColor, equals(data.tokens.colors.warning.shade500));
+      test('warningColor delegates to tokens.colors.warning', () {
+        expect(data.warningColor, equals(data.tokens.colors.warning));
       });
 
       test('textTheme delegates to tokens.typography', () {
@@ -185,6 +190,21 @@ void main() {
         expect(data2.cursorColor, equals(customCursorColor));
         expect(data2.selectionColor, equals(data1.selectionColor));
       });
+
+      test('replaces brightness when provided', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = data1.copyWith(brightness: Brightness.dark);
+
+        expect(data2.brightness, equals(Brightness.dark));
+        expect(data1.brightness, equals(Brightness.light));
+      });
+
+      test('preserves brightness when not provided', () {
+        final data1 = LayrzThemeData.dark();
+        final data2 = data1.copyWith(cursorColor: const Color(0xFF445566));
+
+        expect(data2.brightness, equals(Brightness.dark));
+      });
     });
 
     group('Equality', () {
@@ -220,6 +240,13 @@ void main() {
 
         expect(data1, isNot(equals(data2)));
       });
+
+      test('two instances with different brightness are unequal', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = data1.copyWith(brightness: Brightness.dark);
+
+        expect(data1, isNot(equals(data2)));
+      });
     });
 
     group('hashCode', () {
@@ -245,25 +272,74 @@ void main() {
 
         expect(data1.hashCode, isNot(equals(data2.hashCode)));
       });
+
+      test('two instances with different brightness have different hash codes', () {
+        final data1 = LayrzThemeData.light();
+        final data2 = data1.copyWith(brightness: Brightness.dark);
+
+        expect(data1.hashCode, isNot(equals(data2.hashCode)));
+      });
     });
 
-    group('Light mode only', () {
+    group('dark() factory (BETA)', () {
       test('LayrzThemeData.light() constructs without arguments', () {
         // Genuine no-throw contract: this is a zero-arg constructor smoke test --
-        // every parameter falls back to its default, and the sibling test below
-        // ('has no dark mode factory') already asserts the result is non-null.
+        // every parameter falls back to its default.
         expect(
           () => LayrzThemeData.light(),
           returnsNormally,
         );
       });
 
-      test('LayrzThemeData has no dark mode factory', () {
-        // This test documents that dark mode is not supported.
-        // The absence of LayrzThemeData.dark() is a compile-time guarantee.
-        // We verify that the API is light-only by checking that light() works.
-        final data = LayrzThemeData.light();
+      test('LayrzThemeData now has a dark mode factory', () {
+        // BETA dark mode (DESIGN-204): LayrzThemeData.dark() exists and
+        // produces a theme flagged as Brightness.dark.
+        expect(
+          () => LayrzThemeData.dark(),
+          returnsNormally,
+        );
+        final data = LayrzThemeData.dark();
         expect(data, isNotNull);
+        expect(data.brightness, equals(Brightness.dark));
+      });
+
+      test('uses default dark primary color', () {
+        final data = LayrzThemeData.dark();
+        expect(data.primaryColor, equals(kDarkPrimaryColor));
+      });
+
+      test('accepts custom primary color', () {
+        const customPrimary = Color(0xFF112233);
+        final data = LayrzThemeData.dark(primaryColor: customPrimary);
+        expect(data.primaryColor, equals(customPrimary));
+      });
+
+      test('uses dark background color', () {
+        final data = LayrzThemeData.dark();
+        expect(data.backgroundColor, equals(const Color(0xFF12141C)));
+      });
+
+      test('creates IconThemeData with dark fg1 color and size 24', () {
+        final data = LayrzThemeData.dark();
+        expect(data.iconTheme.color, equals(data.tokens.colors.fg1));
+        expect(data.iconTheme.size, equals(24));
+      });
+
+      test('defaults selectionColor to tokens.colors.selectionColor tinted by tonalOpacity', () {
+        final data = LayrzThemeData.dark();
+        final expected = data.tokens.colors.selectionColor.withValues(alpha: data.tokens.colors.tonalOpacity);
+        expect(data.selectionColor, equals(expected));
+      });
+
+      test('defaults cursorColor to tokens.colors.primary', () {
+        final data = LayrzThemeData.dark();
+        expect(data.cursorColor, equals(data.tokens.colors.primary));
+      });
+
+      test('light() and dark() produce unequal themes', () {
+        final light = LayrzThemeData.light();
+        final dark = LayrzThemeData.dark();
+        expect(light, isNot(equals(dark)));
       });
     });
 

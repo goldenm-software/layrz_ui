@@ -140,7 +140,7 @@ void main() {
 
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.success.shade500,
+          accent: tokens.colors.success,
           tokens: tokens,
           isInteractive: false,
         );
@@ -257,7 +257,7 @@ void main() {
 
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
@@ -431,11 +431,11 @@ void main() {
         const width = 300.0;
 
         final severities = [
-          (type: LayrzAlertType.info, color: tokens.colors.info.shade500),
-          (type: LayrzAlertType.success, color: tokens.colors.success.shade500),
-          (type: LayrzAlertType.warning, color: tokens.colors.warning.shade500),
-          (type: LayrzAlertType.danger, color: tokens.colors.danger.shade500),
-          (type: LayrzAlertType.context, color: tokens.colors.contextual.shade500),
+          (type: LayrzAlertType.info, color: tokens.colors.info),
+          (type: LayrzAlertType.success, color: tokens.colors.success),
+          (type: LayrzAlertType.warning, color: tokens.colors.warning),
+          (type: LayrzAlertType.danger, color: tokens.colors.danger),
+          (type: LayrzAlertType.context, color: tokens.colors.contextual),
         ];
 
         for (final severity in severities) {
@@ -556,7 +556,7 @@ void main() {
 
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.info.shade500,
+          accent: tokens.colors.info,
           tokens: tokens,
           isInteractive: false,
         );

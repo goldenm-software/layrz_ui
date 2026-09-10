@@ -11,7 +11,7 @@ void main() {
         await pumpThemed(tester, Container());
 
         final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
 
         final spec = LayrzChipStyleSpec.resolve(
           style: LayrzChipStyle.filled,
@@ -29,7 +29,7 @@ void main() {
         await pumpThemed(tester, Container());
 
         final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
-        final accent = tokens.colors.success.shade500;
+        final accent = tokens.colors.success;
 
         final spec = LayrzChipStyleSpec.resolve(
           style: LayrzChipStyle.outlined,
@@ -47,7 +47,7 @@ void main() {
         await pumpThemed(tester, Container());
 
         final tokens = LayrzTheme.of(tester.element(find.byType(Container))).tokens;
-        final accent = tokens.colors.danger.shade500;
+        final accent = tokens.colors.danger;
 
         final filledSpec = LayrzChipStyleSpec.resolve(
           style: LayrzChipStyle.filled,

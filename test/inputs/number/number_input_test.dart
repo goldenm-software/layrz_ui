@@ -938,7 +938,7 @@ void main() {
       expect(controller.text, 'abc123xyz');
     });
 
-    testWidgets('inner chrome background is danger.shade50 when errors are non-empty', (tester) async {
+    testWidgets('inner chrome background is a tonal danger fill when errors are non-empty', (tester) async {
       addTearDown(tester.view.resetPhysicalSize);
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
@@ -952,7 +952,9 @@ void main() {
       );
 
       final tokens = LayrzTokens.light();
-      final expectedBackgroundColor = tokens.colors.danger.shade50;
+      final expectedBackgroundColor = tokens.colors.danger
+          .withOpacityValue(tokens.colors.tonalOpacity)
+          .flattenOn(tokens.colors.sf2);
 
       // Find the chrome container inside LayrzInputChrome that renders the field background.
       // The chrome is the first Container descendant of LayrzInputChrome with a BoxDecoration.
@@ -978,12 +980,12 @@ void main() {
       expect(chromeContainer, isNotNull, reason: 'Chrome container should be found inside LayrzInputChrome');
       final decoration = chromeContainer!.decoration as BoxDecoration;
 
-      // Assert the chrome's background color is danger.shade50
+      // Assert the chrome's background color is the tonal danger fill over sf2
       expect(
         decoration.color,
         equals(expectedBackgroundColor),
         reason:
-            'Inner chrome background should be danger.shade50 (${expectedBackgroundColor.toString()}) '
+            'Inner chrome background should be the tonal danger fill (${expectedBackgroundColor.toString()}) '
             'but got ${decoration.color.toString()}',
       );
     });
@@ -1055,16 +1057,17 @@ void main() {
       );
 
       final tokens = LayrzTokens.light();
-      final expectedBackgroundColor = tokens.colors.danger.shade50;
       final expectedBorderColor = tokens.colors.danger;
 
-      // Resolve the spec for error state to get the cap's expected background
+      // Resolve the spec for error state to get the cap's (and the outer
+      // container's, which shares the same spec) expected background.
       final capSpec = LayrzInputStyleSpec.resolve(
         states: <WidgetState>{},
         tokens: tokens,
         hasErrors: true,
         readOnly: false,
       );
+      final expectedBackgroundColor = capSpec.backgroundColor;
       final expectedCapBackgroundColor = capSpec.backgroundColor;
 
       // Find the outer row Container (the one in _buildNumberInputRow) by looking for a Container
@@ -1091,12 +1094,12 @@ void main() {
       );
       final decoration = outerContainer.decoration as BoxDecoration;
 
-      // Assert the outer container's background color is danger.shade50
+      // Assert the outer container's background color is the tonal danger fill
       expect(
         decoration.color,
         equals(expectedBackgroundColor),
         reason:
-            'Outer container background should be danger.shade50 (${expectedBackgroundColor.toString()}) '
+            'Outer container background should be the tonal danger fill (${expectedBackgroundColor.toString()}) '
             'but got ${decoration.color.toString()}',
       );
 

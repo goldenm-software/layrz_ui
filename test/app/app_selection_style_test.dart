@@ -25,10 +25,10 @@ void main() {
         ),
       );
 
-      final expectedSelectionColor = theme.tokens.colors.selectionColor.shade500.withValues(
+      final expectedSelectionColor = theme.tokens.colors.selectionColor.withValues(
         alpha: theme.tokens.colors.tonalOpacity,
       );
-      final expectedCursorColor = theme.tokens.colors.primary.shade500;
+      final expectedCursorColor = theme.tokens.colors.primary;
 
       // These flow through `LayrzThemeData.selectionColor`/`.cursorColor`, whose
       // `.light()` defaults are computed from `tokens` as asserted above.
@@ -69,8 +69,8 @@ void main() {
       // future dark theme trivial to wire up.
       expect(resolvedStyle.selectionColor, equals(customSelectionColor));
       expect(resolvedStyle.cursorColor, equals(customCursorColor));
-      expect(resolvedStyle.selectionColor, isNot(equals(theme.tokens.colors.selectionColor.shade500)));
-      expect(resolvedStyle.cursorColor, isNot(equals(theme.tokens.colors.primary.shade500)));
+      expect(resolvedStyle.selectionColor, isNot(equals(theme.tokens.colors.selectionColor)));
+      expect(resolvedStyle.cursorColor, isNot(equals(theme.tokens.colors.primary)));
     });
 
     testWidgets('a custom theme changes the resolved selection and cursor colors', (tester) async {
@@ -94,10 +94,10 @@ void main() {
         ),
       );
 
-      expect(resolvedStyle.cursorColor, equals(theme.tokens.colors.primary.shade500));
+      expect(resolvedStyle.cursorColor, equals(theme.tokens.colors.primary));
       expect(
         resolvedStyle.selectionColor,
-        equals(theme.tokens.colors.selectionColor.shade500.withValues(alpha: theme.tokens.colors.tonalOpacity)),
+        equals(theme.tokens.colors.selectionColor.withValues(alpha: theme.tokens.colors.tonalOpacity)),
       );
     });
 
@@ -130,9 +130,9 @@ void main() {
 
       expect(
         resolvedStyle.selectionColor,
-        equals(theme.tokens.colors.selectionColor.shade500.withValues(alpha: theme.tokens.colors.tonalOpacity)),
+        equals(theme.tokens.colors.selectionColor.withValues(alpha: theme.tokens.colors.tonalOpacity)),
       );
-      expect(resolvedStyle.cursorColor, equals(theme.tokens.colors.primary.shade500));
+      expect(resolvedStyle.cursorColor, equals(theme.tokens.colors.primary));
     });
   });
 }

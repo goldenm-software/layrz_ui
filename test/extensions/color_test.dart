@@ -97,9 +97,9 @@ void main() {
         expect(roundTrip, equals(original));
       });
 
-      test('round-trip with kPrimaryColor', () {
-        final roundTrip = LayrzColorExtensions.fromHex(kPrimaryColor.toHex());
-        expect(roundTrip, equals(kPrimaryColor));
+      test('round-trip with kLightPrimaryColor', () {
+        final roundTrip = LayrzColorExtensions.fromHex(kLightPrimaryColor.toHex());
+        expect(roundTrip, equals(kLightPrimaryColor));
       });
     });
 
@@ -331,7 +331,7 @@ void main() {
       test('alert real case: tonal at 20% flattened onto surface', () {
         // Simulate the alert case: accent at tonalOpacity onto tokens.colors.sf2
         final tokens = LayrzTokens.light();
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final tonal = accent.withOpacityValue(tokens.colors.tonalOpacity);
 
         // Both methods should produce the same result

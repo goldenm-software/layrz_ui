@@ -74,15 +74,15 @@ void main() {
     final tokens = LayrzTokens.light();
 
     test('online resolves to the success token', () {
-      expect(LayrzConnectionState.online.colorOf(tokens), tokens.colors.success.shade500);
+      expect(LayrzConnectionState.online.colorOf(tokens), tokens.colors.success);
     });
 
     test('idle resolves to the warning token', () {
-      expect(LayrzConnectionState.idle.colorOf(tokens), tokens.colors.warning.shade500);
+      expect(LayrzConnectionState.idle.colorOf(tokens), tokens.colors.warning);
     });
 
     test('offline resolves to the danger token', () {
-      expect(LayrzConnectionState.offline.colorOf(tokens), tokens.colors.danger.shade500);
+      expect(LayrzConnectionState.offline.colorOf(tokens), tokens.colors.danger);
     });
 
     test('disconnected resolves to the fg1 foreground token (not a semantic swatch)', () {
@@ -90,7 +90,7 @@ void main() {
     });
 
     test('noData resolves to the contextual token', () {
-      expect(LayrzConnectionState.noData.colorOf(tokens), tokens.colors.contextual.shade500);
+      expect(LayrzConnectionState.noData.colorOf(tokens), tokens.colors.contextual);
     });
   });
 }

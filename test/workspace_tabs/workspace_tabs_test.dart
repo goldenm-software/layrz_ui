@@ -437,7 +437,7 @@ void main() {
         // differing only in `strokeOnly`.
         for (final silhouette in [fillLayer, strokeLayer]) {
           expect(silhouette.fillColor, tokens.colors.sf1);
-          expect(silhouette.borderColor, tokens.colors.primary.shade500);
+          expect(silhouette.borderColor, tokens.colors.primary);
           expect(silhouette.borderWidth, 1.5);
           expect(silhouette.tabLeft, isNotNull);
           expect(silhouette.tabRight, isNotNull);
