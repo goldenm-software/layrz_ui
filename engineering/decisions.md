@@ -388,6 +388,16 @@ Path forward: Consuming products needing additional modes should implement their
 
 If a dedicated multi-mode initiative is formally undertaken, see the **Update (2026-08-13)** section above for the known retrofit costs.
 
+**Update (2026-09-09) — Review Trigger fired: multi-mode initiative undertaken (DESIGN-204)**
+
+The team has formally undertaken the multi-mode support project that D7's Review Trigger
+required, unlocking the decision. A **beta** dark mode now exists in the tree under DESIGN-204.
+This does not retroactively change D7's original light-only reasoning; it records that the gate
+D7 defined has now been met by a deliberate team decision — not a release date, not a single
+product's request. The beta scope, palette, and API are captured in decision D78 below. Full
+production hardening of dark mode — auditing every light-only hardcode and high-contrast mode —
+remains ongoing, tracked as beta limitations in D78.
+
 ---
 
 ## D8: LayrzLayout Ships Exactly One Layout Design
@@ -5156,4 +5166,97 @@ keyboard affordance of its own the way the retired `RawMenuAnchor`-hosted panel 
   that container unchanged).
 - **D15**: Interaction-state feedback for the range bar and its cells stays colour/opacity/cursor
   only — the flat-`primary`-bar ruling in this entry is a direct application, not an exception.
+
+---
+
+## D78: Dark Mode (Beta) — Second Palette, `themeMode` API, `#FF9800` Dark Primary
+
+**Date**: 2026-09-09
+**Status**: Decided (Beta)
+**Category**: Architecture / Feature Scope / Theming
+
+### Context
+
+D7 locked layrz_ui to light mode only, with an explicit Review Trigger: reopening it required the
+team to formally commit to a multi-mode support project, not merely a release date or a single
+consuming product's request. That trigger has now fired — see the **Update (2026-09-09)** note
+appended to D7 above — and the team has undertaken the multi-mode initiative under DESIGN-204.
+This decision records the resulting **beta** dark-mode design: what shipped, what is intentionally
+still light-only, and what remains before dark mode can be called production-ready.
+
+### Decision
+
+Ship a second, complete color palette and the API surface to switch between them, scoped as beta:
+
+- **`kPrimaryColor` renamed to `kLightPrimaryColor`, no alias.** A new `kDarkPrimaryColor =
+  Color(0xFFFF9800)` (Layrz orange) is added alongside it. This mirrors D14's precedent of a clean
+  break with no back-compat constant.
+- **`LayrzColorTokens.dark()` factory**, a full sibling to `.light()`:
+  - Surfaces `sf1`..`sf4`: `#12141C` / `#1A1D27` / `#232734` / `#2E3341`
+  - Foregrounds `fg1`..`fg4`: `#ECEEF3` / `#B8BDCB` / `#7A8194` / `#4A5063`
+  - `divider`: `#1FFFFFFF`; `overlay`: black @ 0.6; `tonalOpacity`: `0.24`
+  - Semantic swatches — `danger`, `success`, `warning`, `info`, `contextual`,
+    `selectionColor` — **reuse the light swatches unchanged** for the beta. No dark-tuned semantic
+    palette exists yet.
+- **`LayrzTokens.dark()` factory**, mirroring `.light()` structurally — seeds shadow, border, and
+  typography tokens from the dark color set rather than introducing dark-specific shadow/border/
+  typography values of its own.
+- **`LayrzThemeData` gains a `brightness` field** (`Brightness.light` / `Brightness.dark`) and a
+  new `LayrzThemeData.dark()` factory.
+- **New `LayrzThemeMode { light, dark, system }` enum.**
+- **`LayrzApp` gains `darkTheme` (`LayrzThemeData?`) and `themeMode` (`LayrzThemeMode`, default
+  `system`) parameters** on both its default and `.router` constructors. `system` follows
+  `MediaQuery.platformBrightness`.
+- **`context.isDark` getter is re-added**, brightness-based. It is a distinct axis from
+  `context.isCompact` (width-based) — the two must never be substituted for each other, per the
+  existing `context.isCompact` convention in CLAUDE.md.
+- **Example app**: a Riverpod-driven theme switch exposed as three user-menu entries (Light / Dark
+  / System), plus a theme-aware logo swap, demonstrating the API end-to-end.
+
+### Breaking Change
+
+**`kPrimaryColor` no longer exists — it is `kLightPrimaryColor`, with no alias.** Any external
+consumer importing `kPrimaryColor` directly must update the reference. This is the same clean-break
+stance D14 took removing `kAccentColor`: an aliased rename would invite the old name to linger
+indefinitely, so none is provided.
+
+### Consequences
+
+- **This is a beta, not a production sign-off.** A number of light-only hardcodes were
+  deliberately left unfixed this pass and must be treated as known beta limitations, not silent
+  bugs:
+  - `lib/src/images/src/avatar.dart`'s `_kWhiteBackground`
+  - The snackbar module (`snackbar_style_spec.dart`, `snackbar_messenger.dart`)
+  - `ai_marker.dart`
+  - `skeleton_fill.dart`
+  - Picker range-hover lerps in `day_grid_cell.dart` and `month_grid_cell.dart`
+    (`Color.lerp(primary, white, 0.18)` assumes a light ground)
+  - Color-wheel chrome
+- **The code module (`lib/src/code/`) is intentionally out of scope.** It is always-dark by design
+  and keeps its own independent `LayrzCodeThemeExtension.dark()`, unrelated to this decision's
+  theme system.
+- **Semantic swatches (danger/success/warning/info/contextual/selectionColor) are shared between
+  light and dark for the beta.** A dark-tuned semantic palette, if one proves necessary, is future
+  work and not part of this decision.
+- **CLAUDE.md's D7-derived "light mode only" statements are now partially reopened.** Dark mode
+  exists in the tree and is usable, but it is beta — not the production-signed-off single-mode
+  posture D7 described. CLAUDE.md's project-facing wording should be read alongside this decision
+  and D7's 2026-09-09 update, not as still describing a light-only codebase.
+
+### Review Trigger
+
+Before dark mode can be called production-ready:
+- Every hardcode listed above must be audited and either fixed for dark or explicitly re-justified
+  as light-only by design.
+- A real-device visual pass is required, not just a widget-test pass.
+- High-contrast mode remains deferred — D7's original stance on high-contrast is untouched by this
+  decision and needs its own future decision to reopen.
+
+### Related Decisions
+
+- **D7**: The light-only decision this entry reopens under its own Review Trigger. D7's original
+  rationale and history stand unmodified; only its 2026-09-09 update records that the trigger
+  fired.
+- **D14**: Precedent for a clean-break rename with no alias (`kAccentColor`'s removal), followed
+  here for `kPrimaryColor` → `kLightPrimaryColor`.
 

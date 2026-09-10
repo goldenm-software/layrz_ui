@@ -17,6 +17,7 @@ filed in Notion, not invented ahead of time.
 |---|---|---|
 | 1 | DESIGN-101: LayrzForm (behavioural password-manager autofill wrapper wiring `finishAutofillContext`) | Merged · Review required |
 | 2 | DESIGN-110: Motion token standardization (cap `dDialog` at 250ms/`kPageTransitionDuration`; migrate hardcoded durations in `button_indicator`/`refresh_indicator` to motion tokens; point dropdown-menu/context-menu fade curves at the emphasized `easeInOutCirc` token) | Merged · Review required |
+| 3 | DESIGN-204: Dark mode (beta) — second palette (LayrzColorTokens.dark/LayrzTokens.dark/LayrzThemeData.dark), LayrzThemeMode + LayrzApp.darkTheme/themeMode, context.isDark, kPrimaryColor→kLightPrimaryColor rename, dark primary #FF9800; example Riverpod theme switch | In progress · Review required |
 
 **Note**: This table is the authoritative record of M9 work items, kept in step with the code in
 the same commit. The Notion ⚒️ Progress database is the shared, publicly linkable view of this
@@ -85,6 +86,49 @@ same status (rows are identified as `DESIGN-N` for cross-reference).
 **Touches**: `lib/src/buttons/src/button_indicator.dart`, `lib/src/context_menu/src/context_menu.dart`,
 `lib/src/menus/src/dropdown_menu.dart`, `lib/src/refresh/src/refresh_indicator.dart`,
 `lib/src/tokens/src/motion.dart`
+
+---
+
+### 3. Dark mode (beta) (DESIGN-204)
+
+**Status**: In progress · Review required
+
+**Domain**: Theme
+
+**What it does**:
+- Reopens D7's light-only decision under its own Review Trigger — the team formally undertook the
+  multi-mode initiative D7 required — and ships a **beta** second (dark) palette and the API to
+  switch to it. See [decision D78](decisions.md) for the full record.
+- Adds `LayrzColorTokens.dark()`, mirroring `.light()`'s field set: surfaces `sf1`..`sf4`
+  (`#12141C`/`#1A1D27`/`#232734`/`#2E3341`), foregrounds `fg1`..`fg4`
+  (`#ECEEF3`/`#B8BDCB`/`#7A8194`/`#4A5063`), divider `#1FFFFFFF`, overlay black @ 0.6, tonal
+  opacity `0.24`. Semantic swatches (danger/success/warning/info/contextual/selectionColor) reuse
+  the light values for this beta.
+- Adds `LayrzTokens.dark()`, seeding shadow/border/typography tokens from the dark color set.
+- Adds a `brightness` field and a `.dark()` factory to `LayrzThemeData`.
+- Adds the `LayrzThemeMode { light, dark, system }` enum.
+- Adds `darkTheme`/`themeMode` (default `system`, following `MediaQuery.platformBrightness`) to
+  both `LayrzApp` constructors.
+- Re-adds `context.isDark` (brightness-based — distinct from the width-based `context.isCompact`).
+- **Breaking rename**: `kPrimaryColor` → `kLightPrimaryColor`, no alias. A new
+  `kDarkPrimaryColor = Color(0xFFFF9800)` (Layrz orange) is added.
+- Example app demonstrates the switch via a Riverpod-driven Light/Dark/System user-menu selection
+  and a theme-aware logo swap.
+
+**Beta limitations** (deliberately not addressed this pass — tracked, not silent):
+- Light-only hardcodes left unfixed: `lib/src/images/src/avatar.dart` (`_kWhiteBackground`), the
+  snackbar module (`snackbar_style_spec.dart`, `snackbar_messenger.dart`), `ai_marker.dart`,
+  `skeleton_fill.dart`, picker range-hover lerps in `day_grid_cell.dart`/`month_grid_cell.dart`
+  (`Color.lerp(primary, white, 0.18)`), and color-wheel chrome.
+- The code module (`lib/src/code/`) is intentionally out of scope — it stays always-dark with its
+  own independent `LayrzCodeThemeExtension.dark()`.
+- Semantic swatches are shared between light and dark; no dark-tuned semantic palette exists yet.
+- High-contrast mode remains deferred, unrelated to this item.
+- Stops at **Review required**, not Done — a real-device visual pass is required before
+  production sign-off (see D78's Review Trigger), not just a green test suite.
+
+**API contract**: See [decision D78](decisions.md) for the full design record. Wiki documentation
+is tracked separately.
 
 ---
 
