@@ -343,19 +343,34 @@ If you believe you have hit the extreme condition, **stop and report it. Do not 
 - **Cross-module imports use `package:layrz_ui/src/`** — within `lib/`, use the absolute form `import 'package:layrz_ui/src/constants/constants.dart';` to reach other modules' per-module barrels, never relative paths. Same-module imports within `src/` may remain relative. Consumers in `test/` and `example/lib/` import the root barrel `import 'package:layrz_ui/layrz_ui.dart';`. Exemption: relative imports within `test/` for test-local helpers (like `import '../helpers/pump_themed.dart';`) are required and correct, since the package URI space covers only `lib/`. See decision D20 in `engineering/decisions.md`.
 - **SDK constraint** — Dart `>=3.13.0 <4.0.0` / Flutter `>=3.47.0`. These minima are required: `RawTooltip`, `RawMenuAnchor`, and `RawRadio` exist only in 3.47; lowering the floor would silently break them. Do not raise without checking the CI environment.
 
-### Light Mode Only
+### Theming & Dark Mode (Beta)
 
-**layrz_ui targets light mode only.** Dark mode is out of scope and has been removed entirely. See decision D7 in `engineering/decisions.md` for the rationale.
+**Light mode is the default and is fully production-ready.** Dark mode now exists as a **beta**
+(decision D78 in `engineering/decisions.md`, DESIGN-204). D7's original "light mode only" decision
+has been formally reopened — its Review Trigger fired when the team undertook a real multi-mode
+initiative — and D78 records what actually shipped. Read D7 for the original rationale and history,
+and D78 for the full beta design and its limitations list.
 
-Specifically removed from the codebase:
-- `LayrzThemeData.dark()` factory constructor
-- `LayrzThemeMode` enum and `LayrzApp.darkTheme`, `LayrzApp.themeMode` parameters
-- `context.isDark` extension
-- `kDarkBackgroundColor` constant
-- `errorColor` field (renamed to `dangerColor` for semantic clarity)
-- All dark-theme token variants
+The beta API surface:
+- `LayrzThemeMode { light, dark, system }` enum
+- `LayrzApp.darkTheme` and `LayrzApp.themeMode` parameters (default `system`, which follows platform
+  brightness) on both the default and `.router` constructors
+- `LayrzThemeData.dark()` factory and a new `LayrzThemeData.brightness` field
+- `LayrzColorTokens.dark()` and `LayrzTokens.dark()` factories
+- `context.isDark` getter, re-added, brightness-based
 
-The decision was made to not architect for dark mode; adding it later will require revisiting every token and every component that assumed a single light palette.
+**`context.isDark` (brightness-based) is a different axis from `context.isCompact` (width-based) —
+never substitute one for the other**, same as the existing rule for `isCompact` vs. `LayrzPlatform`.
+
+**Breaking change:** `kPrimaryColor` was renamed to `kLightPrimaryColor` with **no alias**; a new
+`kDarkPrimaryColor = Color(0xFFFF9800)` was added alongside it. `errorColor` remains renamed to
+`dangerColor` for semantic clarity, as before.
+
+**This is beta, not a production sign-off.** Several light-only hardcodes were deliberately left
+unfixed this pass and are known beta limitations, not bugs — e.g. `avatar.dart`'s
+`_kWhiteBackground`, the snackbar module, `ai_marker.dart`, and `skeleton_fill.dart`. See D78's
+Consequences section for the complete list and the Review Trigger that must clear before dark mode
+can be called production-ready.
 
 ---
 
