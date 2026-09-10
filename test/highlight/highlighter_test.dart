@@ -57,24 +57,18 @@ void main() {
       final stringToken = tokens.firstWhere((t) => t.scope == LayrzHighlightScope.string);
       expect(stringToken.end, code.length);
     });
+
+    test('COMPARE and GET_PARAM stay function-scoped, unaffected by the Python functionCall split', () {
+      const code = 'COMPARE(GET_PARAM("speed"), 10)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lcl);
+
+      final functionTexts = _texts(tokens.where((t) => t.scope == LayrzHighlightScope.function).toList(), code);
+      expect(functionTexts, containsAll(['COMPARE', 'GET_PARAM']));
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.functionCall)));
+    });
   });
 
   group('LayrzSyntaxHighlighter.tokenize (LML)', () {
-    test('recognizes the same function names as LCL', () {
-      const code = 'CONCAT(GET_PARAM("a"), GET_PARAM("b"))';
-      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
-
-      final functionTokens = tokens.where((t) => t.scope == LayrzHighlightScope.function).toList();
-      expect(functionTokens, hasLength(3));
-      expect(_texts(functionTokens, code), ['CONCAT', 'GET_PARAM', 'GET_PARAM']);
-    });
-
-    test('tokens cover the entire input contiguously', () {
-      const code = 'SUM(1, 2)';
-      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
-      expect(_texts(tokens, code).join(), code);
-    });
-
     test('recognizes a mustache template variable as `variable`', () {
       const code = 'Hello {{assetName}}!';
       final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
@@ -91,35 +85,61 @@ void main() {
       expect(code.substring(variableToken.start, variableToken.end), '{{ asset.name }}');
     });
 
-    test('recognizes an LCL function name injected inside LML as `function`', () {
-      const code = 'Speed is {{assetName}}: value={{SUM(1, 2)}}';
+    test('tokens cover the entire input contiguously', () {
+      const code = 'Hello {{assetName}}, welcome!';
       final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
-
-      // `{{SUM(1, 2)}}` is not a bare `{{ identifier }}` mustache variable
-      // (it contains parens and a comma), so the mustache rule does not
-      // swallow it whole — the embedded LCL function name inside is free to
-      // match the function-name rule instead.
-      final functionTokens = tokens.where((t) => t.scope == LayrzHighlightScope.function).toList();
-      expect(_texts(functionTokens, code), contains('SUM'));
+      expect(_texts(tokens, code).join(), code);
     });
 
-    test('mixes mustache variables and embedded LCL function calls in one document', () {
-      const code = 'Report for {{assetName}}: total={{ GET_SENSOR("speed") }} check {{ CONCAT("a", "b") }}';
+    test('tokenizes real prose correctly: only the two mustache spans are `variable`, and the '
+        "apostrophe in \"it's\" does not open a string", () {
+      const code = "The name of the asset is {{assetName}} and it's a great asset, message sent at {{executedAt}}.";
       final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
 
       final variableTokens = tokens.where((t) => t.scope == LayrzHighlightScope.variable).toList();
-      expect(_texts(variableTokens, code), contains('{{assetName}}'));
+      expect(_texts(variableTokens, code), ['{{assetName}}', '{{executedAt}}']);
 
-      final functionTokens = tokens.where((t) => t.scope == LayrzHighlightScope.function).toList();
-      expect(_texts(functionTokens, code), containsAll(['GET_SENSOR', 'CONCAT']));
+      // The apostrophe in "it's" must NOT open a string span — everything
+      // outside the two mustache variables is plain `text`.
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.string)));
 
-      final stringTokens = tokens.where((t) => t.scope == LayrzHighlightScope.string).toList();
-      expect(_texts(stringTokens, code), containsAll(['"speed"', '"a"', '"b"']));
+      final nonVariableTokens = tokens.where((t) => t.scope != LayrzHighlightScope.variable);
+      expect(nonVariableTokens, isNotEmpty);
+      for (final token in nonVariableTokens) {
+        expect(token.scope, LayrzHighlightScope.text);
+      }
 
       expect(_texts(tokens, code).join(), code);
     });
 
-    test('the mustache rule is tried before the function-name rule', () {
+    test('an LCL function name embedded in LML prose is no longer highlighted as `function`', () {
+      const code = 'Value is COMPARE and done';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
+
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.function)));
+
+      final compareStart = code.indexOf('COMPARE');
+      final compareToken = tokens.firstWhere((t) => t.start <= compareStart && t.end > compareStart);
+      expect(compareToken.scope, LayrzHighlightScope.text);
+    });
+
+    test('a number in LML prose is plain text, not `number`', () {
+      const code = 'There are 42 assets online';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
+
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.number)));
+      expect(_scopes(tokens), everyElement(LayrzHighlightScope.text));
+    });
+
+    test('`True` in LML prose is plain text, not `constant`', () {
+      const code = 'The result is True for this asset';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
+
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.constant)));
+      expect(_scopes(tokens), everyElement(LayrzHighlightScope.text));
+    });
+
+    test('the mustache rule is the only rule: a bare `{{assetName}}` tokenizes as one `variable` token', () {
       const code = '{{assetName}}';
       final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.lml);
 
@@ -205,12 +225,190 @@ void main() {
       expect(_texts(builtinTokens, code), containsAll(['print', 'len']));
     });
 
+    test('recognizes sum and round as builtins', () {
+      const code = 'total = sum(values)\navg = round(total / count, 2)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final builtinTokens = tokens.where((t) => t.scope == LayrzHighlightScope.builtin).toList();
+      expect(_texts(builtinTokens, code), containsAll(['sum', 'round']));
+    });
+
+    test('recognizes the newly added builtin peers', () {
+      const names = [
+        'min',
+        'max',
+        'abs',
+        'sorted',
+        'reversed',
+        'any',
+        'all',
+        'format',
+        'repr',
+        'hash',
+        'id',
+        'input',
+        'next',
+        'iter',
+        'bytes',
+        'frozenset',
+        'callable',
+        'getattr',
+        'setattr',
+        'hasattr',
+        'divmod',
+        'pow',
+        'chr',
+        'ord',
+      ];
+      for (final name in names) {
+        final code = '$name(x)';
+        final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+        final builtinTokens = tokens.where((t) => t.scope == LayrzHighlightScope.builtin).toList();
+        expect(_texts(builtinTokens, code), contains(name), reason: 'for builtin "$name"');
+      }
+    });
+
+    test('recognizes typing module names as builtins', () {
+      const code =
+          'def f(x: Optional[int]) -> List[str]:\n    y: Dict[str, Any] = {}\n    z: Union[Callable, None] = None';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final builtinTokens = tokens.where((t) => t.scope == LayrzHighlightScope.builtin).toList();
+      final builtinTexts = _texts(builtinTokens, code);
+      expect(builtinTexts, containsAll(['Optional', 'List', 'Dict', 'Union', 'Callable', 'Any', 'int', 'str']));
+
+      final operatorTokens = tokens.where((t) => t.scope == LayrzHighlightScope.operator).toList();
+      expect(_texts(operatorTokens, code), contains('->'));
+    });
+
+    test('recognizes == and -> as operator tokens', () {
+      const code = 'def f(x) -> int:\n    return x == 1';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final operatorTokens = tokens.where((t) => t.scope == LayrzHighlightScope.operator).toList();
+      expect(_texts(operatorTokens, code), containsAll(['->', '==']));
+    });
+
+    test('recognizes / and - as operator tokens', () {
+      const code = 'total / (count - 1)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final operatorTokens = tokens.where((t) => t.scope == LayrzHighlightScope.operator).toList();
+      expect(_texts(operatorTokens, code), containsAll(['/', '-']));
+    });
+
+    test('does NOT tokenize == inside a string as an operator', () {
+      const code = '"a == b"';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.operator)));
+      expect(tokens, hasLength(1));
+      expect(tokens.single.scope, LayrzHighlightScope.string);
+    });
+
+    test('does NOT tokenize -> inside a comment as an operator', () {
+      const code = '# a -> b';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      expect(tokens, hasLength(1));
+      expect(tokens.single.scope, LayrzHighlightScope.comment);
+    });
+
+    test('the . in a float literal stays part of the number, not an operator', () {
+      const code = 'x = 3.14';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final numberToken = tokens.firstWhere((t) => t.scope == LayrzHighlightScope.number);
+      expect(code.substring(numberToken.start, numberToken.end), '3.14');
+
+      // The `=` legitimately tokenizes as an operator; only the `.` inside
+      // the float literal must NOT be split out as one.
+      final operatorTokens = tokens.where((t) => t.scope == LayrzHighlightScope.operator).toList();
+      expect(_texts(operatorTokens, code), isNot(contains('.')));
+    });
+
     test('recognizes True/False/None as constants', () {
       const code = 'ok = True or False or None';
       final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
 
       final constantTokens = tokens.where((t) => t.scope == LayrzHighlightScope.constant).toList();
       expect(_texts(constantTokens, code), ['True', 'False', 'None']);
+    });
+
+    test('recognizes ALL-UPPERCASE identifiers as constants', () {
+      for (final name in ['PRIMARY', 'LABEL', 'THRESHOLD', 'MAX_SPEED']) {
+        final code = '$name = 1';
+        final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+        final constantTokens = tokens.where((t) => t.scope == LayrzHighlightScope.constant).toList();
+        expect(_texts(constantTokens, code), contains(name), reason: 'for identifier "$name"');
+      }
+    });
+
+    test('tokenizes a module-level constants snippet correctly end to end', () {
+      const code = 'PRIMARY = True\nLABEL = "sensor.speed"\nTHRESHOLD = 0x1F';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final constantTokens = tokens.where((t) => t.scope == LayrzHighlightScope.constant).toList();
+      expect(_texts(constantTokens, code), containsAll(['PRIMARY', 'LABEL', 'THRESHOLD', 'True']));
+
+      final stringTokens = tokens.where((t) => t.scope == LayrzHighlightScope.string).toList();
+      expect(_texts(stringTokens, code), contains('"sensor.speed"'));
+
+      final numberTokens = tokens.where((t) => t.scope == LayrzHighlightScope.number).toList();
+      expect(_texts(numberTokens, code), contains('0x1F'));
+
+      final operatorTokens = tokens.where((t) => t.scope == LayrzHighlightScope.operator).toList();
+      expect(operatorTokens, hasLength(3));
+      expect(_texts(operatorTokens, code), everyElement('='));
+    });
+
+    test('does NOT miscatch mixed-case names or lowercase identifiers as constants', () {
+      const code = 'def f(x: Optional[int]) -> List[str]:\n    count = 1\n    values = []';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final constantTexts = _texts(tokens.where((t) => t.scope == LayrzHighlightScope.constant).toList(), code);
+      expect(constantTexts, isNot(contains('Optional')));
+      expect(constantTexts, isNot(contains('List')));
+      expect(constantTexts, isNot(contains('count')));
+      expect(constantTexts, isNot(contains('values')));
+
+      final builtinTexts = _texts(tokens.where((t) => t.scope == LayrzHighlightScope.builtin).toList(), code);
+      expect(builtinTexts, containsAll(['Optional', 'List']));
+
+      // Unmatched source falls back to one-char `text` tokens (never a
+      // single multi-char token per word), so `count`/`values` are proven
+      // un-classified by confirming every character across each word's span
+      // is individually `text`, not by reassembling the whole word from one
+      // token.
+      for (final word in ['count', 'values']) {
+        final offset = code.indexOf(word);
+        for (var i = offset; i < offset + word.length; i++) {
+          final charToken = tokens.firstWhere((t) => t.start == i && t.end == i + 1);
+          expect(charToken.scope, LayrzHighlightScope.text, reason: 'char "${code[i]}" of "$word"');
+        }
+      }
+    });
+
+    test('does NOT miscatch a single uppercase letter as a constant', () {
+      const code = 'X = 1';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final constantTexts = _texts(tokens.where((t) => t.scope == LayrzHighlightScope.constant).toList(), code);
+      expect(constantTexts, isNot(contains('X')));
+
+      final textToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'X');
+      expect(textToken.scope, LayrzHighlightScope.text);
+    });
+
+    test('a Python keyword and builtin are unaffected by the constant rule', () {
+      const code = 'def foo():\n    return len(values)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final defToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'def');
+      expect(defToken.scope, LayrzHighlightScope.keyword);
+
+      final lenToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'len');
+      expect(lenToken.scope, LayrzHighlightScope.builtin);
     });
 
     test('an unterminated string runs to end-of-input without hanging', () {
@@ -252,6 +450,62 @@ def compute(x):
     test('empty input produces no tokens', () {
       final tokens = LayrzSyntaxHighlighter.tokenize('', LayrzCodeLanguage.python);
       expect(tokens, isEmpty);
+    });
+
+    test('recognizes the defined name in "def average(values):" as a functionCall', () {
+      const code = 'def average(values):\n    return sum(values) / len(values)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final defToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'def');
+      expect(defToken.scope, LayrzHighlightScope.keyword);
+
+      final nameToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'average');
+      expect(nameToken.scope, LayrzHighlightScope.functionCall);
+    });
+
+    test('recognizes a call to a user-defined function as functionCall', () {
+      const code = 'result = average(x)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final callToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'average');
+      expect(callToken.scope, LayrzHighlightScope.functionCall);
+    });
+
+    test('does NOT reclassify "len" as functionCall — builtins stay builtin', () {
+      const code = 'count = len(values)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final lenToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'len');
+      expect(lenToken.scope, LayrzHighlightScope.builtin);
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.functionCall)));
+    });
+
+    test('does NOT reclassify "sum" or "round" as functionCall — builtins stay builtin', () {
+      const code = 'total = sum(x)\navg = round(y)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final sumToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'sum');
+      final roundToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'round');
+      expect(sumToken.scope, LayrzHighlightScope.builtin);
+      expect(roundToken.scope, LayrzHighlightScope.builtin);
+    });
+
+    test('does NOT reclassify a keyword immediately followed by "(" as functionCall', () {
+      const code = 'if (x):\n    pass';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final ifToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'if');
+      expect(ifToken.scope, LayrzHighlightScope.keyword);
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.functionCall)));
+    });
+
+    test('an ALL-UPPERCASE name followed by "(" stays a constant, not functionCall', () {
+      const code = 'MAX_SPEED(x)';
+      final tokens = LayrzSyntaxHighlighter.tokenize(code, LayrzCodeLanguage.python);
+
+      final nameToken = tokens.firstWhere((t) => code.substring(t.start, t.end) == 'MAX_SPEED');
+      expect(nameToken.scope, LayrzHighlightScope.constant);
+      expect(_scopes(tokens), isNot(contains(LayrzHighlightScope.functionCall)));
     });
   });
 

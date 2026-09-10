@@ -38,6 +38,14 @@ enum LayrzHighlightScope {
 
   /// A template/interpolation variable, e.g. LML mustache `{{...}}`.
   variable,
+
+  /// An operator or punctuation-operator, e.g. Python `==`, `->`, `/`.
+  operator,
+
+  /// A user-defined function call, e.g. Python `average(...)`. Distinct
+  /// from [function] (used for Layrz Compute/Markup Language builtin
+  /// function names) so Python calls can be styled independently.
+  functionCall,
 }
 
 /// A single classified span of source text.
