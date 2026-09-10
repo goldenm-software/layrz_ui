@@ -9,6 +9,7 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'navigator_item.dart';
 import 'notification_item.dart';
+import 'notifications_panel.dart';
 import 'rail_item.dart';
 import 'user_chrome.dart';
 
@@ -63,6 +64,12 @@ class LayrzLayoutNavigatorPanel extends StatefulWidget {
 
     /// Function to derive initials from a name.
     required this.getInitials,
+
+    /// The scroll controller attached to the navigation rail's scrollable, so
+    /// the rail's scroll offset survives route rebuilds when a
+    /// LayrzLayoutController is supplied. When null, the scrollable manages
+    /// its own offset.
+    this.railScrollController,
     super.key,
   });
 
@@ -101,6 +108,12 @@ class LayrzLayoutNavigatorPanel extends StatefulWidget {
 
   /// Function to derive initials from a name.
   final String Function(String?) getInitials;
+
+  /// The scroll controller attached to the navigation rail's scrollable, so
+  /// the rail's scroll offset survives route rebuilds when a
+  /// LayrzLayoutController is supplied. When null, the scrollable manages its
+  /// own offset.
+  final ScrollController? railScrollController;
 }
 
 class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
@@ -179,6 +192,7 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
             // Navigation items
             Expanded(
               child: SingleChildScrollView(
+                controller: widget.railScrollController,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: _buildFilteredItems(tokens),
@@ -367,61 +381,68 @@ class _LayrzLayoutNavigatorPanelState extends State<LayrzLayoutNavigatorPanel> {
   }
 
   Widget _buildNotificationsRow(LayrzTokens tokens) {
-    return Builder(
-      builder: (context) {
+    return LayrzLayoutNotificationsPanel(
+      tokens: tokens,
+      notifications: widget.notifications,
+      onNotificationTap: widget.onNotificationTap,
+      anchorBuilder: (context, isOpen, onTap) {
         final isCompact = context.isCompact;
         final rowHeight = isCompact ? kLayrzLayoutCompactNotificationsRowHeight : kLayrzLayoutNotificationsRowHeight;
         final iconSize = isCompact ? kLayrzLayoutCompactIconSize : kLayrzLayoutIconSize;
         final fontSize = isCompact ? tokens.typography.body.fontSize : tokens.typography.label.fontSize;
 
-        return Container(
-          height: rowHeight,
-          decoration: BoxDecoration(
-            color: tokens.colors.sf3,
-            borderRadius: BorderRadius.circular(8.0),
-          ),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 10.0),
-                child: Icon(
-                  MdiIcons.bellRingOutline,
-                  size: iconSize,
-                  color: tokens.colors.fg2,
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: SelectionContainer.disabled(
-                    child: Text(
-                      'Notifications',
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: kLayrzLayoutNotificationsLabelFontWeight,
-                        color: tokens.colors.fg1,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-              ),
-              if (widget.notifications.isNotEmpty)
+        return GestureDetector(
+          key: const ValueKey('notifications_bell_row'),
+          onTap: onTap,
+          child: Container(
+            height: rowHeight,
+            decoration: BoxDecoration(
+              color: tokens.colors.sf3,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: Row(
+              children: [
                 Padding(
-                  padding: const EdgeInsets.only(right: 10.0),
-                  child: SelectionContainer.disabled(
-                    child: Text(
-                      widget.notifications.length.toString(),
-                      style: TextStyle(
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.w500,
-                        color: tokens.colors.fg2,
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: Icon(
+                    MdiIcons.bellRingOutline,
+                    size: iconSize,
+                    color: tokens.colors.fg2,
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8.0),
+                    child: SelectionContainer.disabled(
+                      child: Text(
+                        'Notifications',
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: kLayrzLayoutNotificationsLabelFontWeight,
+                          color: tokens.colors.fg1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
                 ),
-            ],
+                if (widget.notifications.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10.0),
+                    child: SelectionContainer.disabled(
+                      child: Text(
+                        widget.notifications.length.toString(),
+                        style: TextStyle(
+                          fontSize: fontSize,
+                          fontWeight: FontWeight.w500,
+                          color: tokens.colors.fg2,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

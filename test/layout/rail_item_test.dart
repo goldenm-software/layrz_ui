@@ -219,6 +219,38 @@ void main() {
     });
   });
 
+  group('LayrzLayoutRailItem - pointer cursor', () {
+    testWidgets('MouseRegion sets SystemMouseCursors.click', (WidgetTester tester) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      final homeLabel = find.text('Home', findRichText: true);
+      expect(homeLabel, findsOneWidget);
+
+      final mouseRegionFinder = find.ancestor(
+        of: homeLabel,
+        matching: find.byType(MouseRegion),
+      );
+      expect(mouseRegionFinder, findsWidgets);
+
+      final mouseRegion = tester.widget<MouseRegion>(mouseRegionFinder.first);
+      expect(mouseRegion.cursor, equals(SystemMouseCursors.click));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('LayrzLayoutRailItem - DESIGN-207 contextMenuActions', () {
     testWidgets('wraps the item in LayrzContextMenu when contextMenuActions is non-empty', (
       WidgetTester tester,
