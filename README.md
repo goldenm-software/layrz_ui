@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/goldenm-software/layrz_ui/main/layrz-ui-logo-white.png">
+    <img alt="Layrz" src="https://raw.githubusercontent.com/goldenm-software/layrz_ui/main/layrz-ui-logo.png" width="360">
+  </picture>
+</p>
+
 # layrz_ui
 
 A Material-free, Cupertino-free Flutter design system — the next generation of [layrz_theme](https://github.com/goldenm-software/layrz_theme).
@@ -15,7 +22,7 @@ Add layrz_ui to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  layrz_ui: ^0.0.7
+  layrz_ui: ^1.0.0
 ```
 
 Then create your first app:
@@ -75,16 +82,6 @@ Complete guides, API references, and component documentation live in the [**GitH
 
 ---
 
-## Roadmap
-
-Live progress across milestones M1–M8 is tracked on the [Notion board](https://layrz.notion.site/3bf1a14cf90480c996cad105cdc60d80?v=3bf1a14cf90480118d09000c19185bd6).
-
-- **Parity with `layrz_theme`** — full widget-by-widget port of every component in the latest release
-- **New layout system** — a redesigned responsive layout engine built from scratch on `widgets.dart`
-- **go_router only** — Navigator 1.0 support will be dropped; `go_router` will be the sole routing solution
-
----
-
 ## Kotlin Gradle Plugin warning
 
 `layrz_ui` depends on `desktop_drop` and `file_picker`, whose Android plugin modules apply the
@@ -139,13 +136,32 @@ make run-macos
 
 ## FAQ
 
+### Is `layrz_ui` the same as `layrz_theme`? Should I use one or the other?
+
+They are **two different packages** solving the same job in two different ways — `layrz_ui` is the successor, and new projects should use it.
+
+`layrz_theme` is built **on top of Material Design 3**. Every widget it ships wraps a Material widget, and every app that uses it pulls in `package:flutter/material.dart`. That was a reasonable foundation, but it means inheriting all of Material's opinions, weight, and behavior — theme resolution, ink ripples, implicit `MaterialApp`/`Scaffold` scaffolding, and a large transitive dependency surface — even for parts of your UI that never wanted to look or behave like Material.
+
+`layrz_ui` is a **clean break**. It is built exclusively on `package:flutter/widgets.dart` and `dart:ui` — **no Material, no Cupertino, anywhere.** It re-implements the entire Layrz design language from primitives (`DecoratedBox`, `CustomPaint`, `GestureDetector`, `RichText`), the same way Flutter itself keeps `widgets` separate from `material` and `cupertino`. The design token system (`LayrzTokens` — colors, typography, spacing, radius, shadow, border, motion) drives every component, so you change one token and the whole system follows.
+
+**Why choose `layrz_ui` over `layrz_theme`:**
+
+- **No platform framework coupling** — your widget tree contains only what you put in it. No Material or Cupertino chrome leaks in, and the dependency graph is leaner.
+- **Full visual control** — every pixel is yours. Components read their look from `LayrzTokens`, not from an opaque Material `ThemeData`.
+- **Consistent, semantic theming** — one primary, plus semantic `danger`/`success`/`warning`/`info` colors used the same way everywhere.
+- **Responsive by design** — breakpoint tokens and `context.isCompact` give every component the same compact/wide decision, so layouts adapt consistently.
+- **Accessible by default** — every visual component ships with semantics, so assistive technology is a first-class concern, not an afterthought.
+- **Same design language, cleaner foundation** — `layrz_ui` does the same jobs as `layrz_theme` with none of the Material baggage. It is the drop-in replacement Layrz projects should migrate to.
+
+`layrz_theme` remains available for existing apps, but it is no longer where new design-system work happens. **New projects should start on `layrz_ui`; existing `layrz_theme` apps should plan to migrate.**
+
+### Why create a new library instead of updating `layrz_theme`?
+
+Pretty simple: `layrz_theme` is built around Material 3, so changing the design means fighting the design system underneath it. Every adjustment has to work *with* Material's assumptions rather than around them, which makes even small changes complex and awkward, and often produces results that don't look quite the way we wanted. Building a design system from scratch — as `layrz_ui` does, straight on `package:flutter/widgets.dart` — meant we owned every decision. The result is cleaner, more efficient, and exactly what we set out to build.
+
 ### Why is this package called `layrz_ui`?
 
 All packages developed by [Layrz](https://layrz.com) are prefixed with `layrz_`. Check out our other packages on [pub.dev](https://pub.dev/publishers/layrz.com/packages).
-
-### Why does this library exist?
-
-`layrz_theme` was built on Material Design 3 and served us well, but coupling the design system to Material means inheriting all of its opinions, weight, and constraints. `layrz_ui` is the clean break — same Layrz design language, zero Material dependency.
 
 ### Do you have other libraries?
 
