@@ -189,10 +189,10 @@ class LayrzColorTokens {
   }) {
     return LayrzColorTokens(
       primary: primary,
-      sf1: const Color(0xFF12141C),
-      sf2: const Color(0xFF1A1D27),
-      sf3: const Color(0xFF232734),
-      sf4: const Color(0xFF2E3341),
+      sf1: const Color(0xFF29272C),
+      sf2: const Color(0xFF322F35),
+      sf3: const Color(0xFF3C3941),
+      sf4: const Color(0xFF47444D),
       fg1: const Color(0xFFECEEF3),
       fg2: const Color(0xFFB8BDCB),
       fg3: const Color(0xFF7A8194),

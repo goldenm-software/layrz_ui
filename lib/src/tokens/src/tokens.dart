@@ -161,10 +161,16 @@ class LayrzTokens {
     const spacingTokens = LayrzSpacingTokens();
     const radiusTokens = LayrzRadiusTokens();
 
-    // Build derived tokens seeded from colors and radius
+    // Build derived tokens seeded from colors and radius. On dark, a drop shadow
+    // reads weakly against the dark surface, so elevation is signalled the way
+    // Material dark does it — raised surfaces are lightened by level via the
+    // elevation overlay — with the black shadow kept only as a minor accent.
     final shadowTokens = LayrzShadowTokens(
       surfaceColor: colorTokens.sf1,
       baseRadius: radiusTokens.r2,
+      shadowColor: const Color(0xFF000000),
+      outlineColor: const Color(0x1FFFFFFF),
+      shadowOpacityScale: 2.0,
     );
 
     final borderTokens = LayrzBorderTokens(dividerColor: colorTokens.divider);
@@ -235,6 +241,5 @@ class LayrzTokens {
           brightness == other.brightness;
 
   @override
-  int get hashCode =>
-      Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints, brightness);
+  int get hashCode => Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints, brightness);
 }

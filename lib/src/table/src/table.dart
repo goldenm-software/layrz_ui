@@ -448,6 +448,11 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
     if (!mounted) return;
     setState(() => _displayedItems = filtered);
 
+    // Push the filtered/total counts onto the controller's ValueListenables so
+    // consumers can observe them (e.g. an "X of Y" label) without listening to
+    // the whole controller.
+    _controller.updateCounts(visible: filtered.length, total: items.length);
+
     if (_lastReportedCount != filtered.length) {
       _lastReportedCount = filtered.length;
       _notifyFilteredCountChanged(filtered.length);

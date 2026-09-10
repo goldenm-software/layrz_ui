@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
 import 'package:layrz_ui/src/table/src/events.dart';
 
@@ -97,6 +97,14 @@ class LayrzTableController<T> extends ChangeNotifier {
   /// The set of currently-selected rows, of the table's row type [T].
   final Set<T> _selection = <T>{};
 
+  /// Backing notifier for [visibleCount] — the number of rows currently shown
+  /// after the active search filter. Driven by the [LayrzTable] widget.
+  final ValueNotifier<int> _visibleCount = ValueNotifier<int>(0);
+
+  /// Backing notifier for [totalCount] — the number of rows in the unfiltered
+  /// data set. Driven by the [LayrzTable] widget.
+  final ValueNotifier<int> _totalCount = ValueNotifier<int>(0);
+
   /// The broadcast stream controller backing [events]. Created eagerly so
   /// [events] is always listenable, and closed in [dispose].
   final StreamController<LayrzTableEvent<T>> _eventsController = StreamController<LayrzTableEvent<T>>.broadcast();
@@ -130,6 +138,34 @@ class LayrzTableController<T> extends ChangeNotifier {
 
   /// The current set of selected rows, of the table's row type [T].
   Set<T> get selection => Set<T>.unmodifiable(_selection);
+
+  /// The number of rows currently visible after the active search filter, as a
+  /// [ValueListenable].
+  ///
+  /// With no search text this equals [totalCount]; with a search active it is
+  /// the count of rows that match. It is `0` until the associated [LayrzTable]
+  /// has completed its first layout. Wrap it in a `ValueListenableBuilder` to
+  /// rebuild only when the count changes (e.g. an "X of Y" results label),
+  /// without listening to the controller's other state.
+  ValueListenable<int> get visibleCount => _visibleCount;
+
+  /// The number of rows in the unfiltered data set, as a [ValueListenable].
+  ///
+  /// This is the length of the table's full item list, independent of any
+  /// search filter. It is `0` until the associated [LayrzTable] has completed
+  /// its first layout.
+  ValueListenable<int> get totalCount => _totalCount;
+
+  /// Updates the [visibleCount] and [totalCount] notifiers.
+  ///
+  /// Called by [LayrzTable] each time it recomputes its filtered rows. This is
+  /// the write side of the read-only [visibleCount]/[totalCount] listenables;
+  /// consumers observe the notifiers rather than calling this. Each notifier
+  /// only notifies its listeners when its value actually changes.
+  void updateCounts({required int visible, required int total}) {
+    _visibleCount.value = visible;
+    _totalCount.value = total;
+  }
 
   /// A broadcast stream of every state change this controller makes.
   ///
@@ -543,6 +579,8 @@ class LayrzTableController<T> extends ChangeNotifier {
   @override
   void dispose() {
     _eventsController.close();
+    _visibleCount.dispose();
+    _totalCount.dispose();
     super.dispose();
   }
 }

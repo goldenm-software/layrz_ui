@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// Semantic type classification for [LayrzSnackbar] icon and accent color.
@@ -90,14 +89,14 @@ enum LayrzSnackbarType {
   /// [tokens] supplies the live color tokens to resolve from, so custom themes are
   /// respected rather than hardcoding hex values.
   ///
-  /// Resolution derives each accent from the base semantic [Color] via
-  /// `LayrzColorExtensions.darken`, rather than reading a fixed swatch shade, so
-  /// the accent tracks any future change to the base semantic color:
-  /// - `danger` → `tokens.colors.danger.darken(0.22)`.
-  /// - `success` → `tokens.colors.success.darken(0.3)`.
-  /// - `warning` → `tokens.colors.warning.darken(0.15)`.
-  /// - `info` → `tokens.colors.info.darken(0.3)`.
-  /// - `context` → `tokens.colors.contextual.darken(0.3)`.
+  /// Each accent is the plain semantic token, so the snackbar accent matches the
+  /// same semantic used everywhere else (buttons, chips, badges) rather than a
+  /// darkened variant:
+  /// - `danger` → `tokens.colors.danger`.
+  /// - `success` → `tokens.colors.success`.
+  /// - `warning` → `tokens.colors.warning`.
+  /// - `info` → `tokens.colors.info`.
+  /// - `context` → `tokens.colors.contextual`.
   ///
   /// For [custom], returns null — the caller must provide an explicit `color`.
   Color? accentColor(LayrzTokens tokens) {
@@ -105,15 +104,15 @@ enum LayrzSnackbarType {
       case LayrzSnackbarType.custom:
         return null;
       case LayrzSnackbarType.success:
-        return tokens.colors.success.darken(0.3);
+        return tokens.colors.success;
       case LayrzSnackbarType.danger:
-        return tokens.colors.danger.darken(0.22);
+        return tokens.colors.danger;
       case LayrzSnackbarType.warning:
-        return tokens.colors.warning.darken(0.15);
+        return tokens.colors.warning;
       case LayrzSnackbarType.info:
-        return tokens.colors.info.darken(0.3);
+        return tokens.colors.info;
       case LayrzSnackbarType.context:
-        return tokens.colors.contextual.darken(0.3);
+        return tokens.colors.contextual;
     }
   }
 }
