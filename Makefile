@@ -99,3 +99,12 @@ build-android:
 	@rm -rf com.layrz.ui.apk
 	@echo "Building Android APK..."
 	$(MAKE) -C example build-android
+
+.PHONY: build-web
+build-web:
+	@echo "Cleaning previous build artifacts..."
+	@rm -rf example/build/web
+	@echo "Building web app..."
+	$(MAKE) -C example build-web
+	@echo "Deploying web app..."
+	@uv run tool/deploy_web.py

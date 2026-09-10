@@ -1,0 +1,17 @@
+{
+  "name": "layrz-ui",
+  "owner": {
+    "name": "Golden M, Inc.",
+    "email": "kenny@goldenm.com"
+  },
+  "metadata": {
+    "description": "Claude Code skills for layrz_ui Flutter widget library"
+  },
+  "plugins": [
+    {
+      "name": "layrz-ui",
+      "source": "./",
+      "description": "Skills for using layrz_ui components in Flutter projects"
+    }
+  ]
+}

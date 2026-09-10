@@ -51,6 +51,29 @@ For detailed setup, fonts, and routing, see [**Getting Started**](https://github
 
 ---
 
+## Claude Code skills
+
+`layrz_ui` ships **[Claude Code](https://claude.com/claude-code) skills** — one per component — so an AI coding agent working in your app knows how to use each widget correctly (props, factories, precedence, and idiomatic snippets).
+
+They install two ways:
+
+**As Dart package skills** — once `layrz_ui` is a dependency, pull the skills into your project:
+
+```sh
+dart run skills@ get
+```
+
+**As a Claude Code plugin** — add this repo as a plugin marketplace and install:
+
+```sh
+claude plugin marketplace add goldenm-software/layrz_ui
+claude plugin install layrz-ui@layrz-ui
+```
+
+Both surface the same `layrz-ui-*` skills (e.g. `layrz-ui-button`, `layrz-ui-text-input`).
+
+---
+
 ## Why layrz_ui?
 
 Flutter's Material and Cupertino layers are opinionated and heavyweight. `layrz_ui` decouples the Layrz design system from both, the same way Flutter itself separates `widgets` from `material` and `cupertino`. The result is a leaner dependency graph, full control over every pixel, and no unwanted platform chrome.
